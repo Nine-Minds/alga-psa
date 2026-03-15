@@ -94,6 +94,7 @@ export interface FindContactByEmailOutput {
   contact_id: string;
   name: string;
   email: string;
+  matched_email?: string;
   client_id: string;
   user_id?: string;
   user_type?: 'internal' | 'client';
@@ -267,6 +268,7 @@ export async function findContactByEmail(
           contact_id: '',
           name: displayName || normalizedEmail,
           email: normalizeEmailAddress(internalUser.email) ?? normalizedEmail,
+          matched_email: normalizedEmail,
           client_id: '',
           user_id: internalUser.user_id,
           user_type: 'internal' as const,
@@ -326,6 +328,7 @@ export async function findContactByEmail(
         const hydrated = candidatesById.get(candidate.contact_id) ?? candidate;
         return {
           ...candidate,
+          matched_email: normalizedEmail,
           phone: getDefaultPhoneNumber(hydrated),
           user_id: candidate?.user_id ?? undefined,
           user_type: candidate?.user_id ? 'client' : undefined,

@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type RegisteredAction = {
@@ -218,6 +220,75 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
     });
   });
 
+  it('T037: workflow acknowledgement mapping keeps using matchedClient.email as the primary contact email', async () => {
+    const workflowPath = path.resolve(
+      __dirname,
+      '../../workflows/email-processing-workflow.v2.json'
+    );
+    const workflow = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
+    const findStepById = (node: any, id: string): any | null => {
+      if (Array.isArray(node)) {
+        for (const entry of node) {
+          const found = findStepById(entry, id);
+          if (found) return found;
+        }
+        return null;
+      }
+      if (node && typeof node === 'object') {
+        if (node.id === id) {
+          return node;
+        }
+        for (const value of Object.values(node)) {
+          const found = findStepById(value, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    const sendAckStep = findStepById(workflow, 'ack-email-action');
+
+    expect(sendAckStep.config.actionId).toBe('send_ticket_acknowledgement_email');
+    expect(sendAckStep.config.inputMapping.contactEmail).toEqual({
+      $expr: 'vars.ticketContext.matchedClient.email',
+    });
+  });
+
+  it('T038: find_contact_by_email output schema preserves matched_email separately from the primary contact email', async () => {
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'contact-1',
+      name: 'Billing Contact',
+      email: 'primary@example.com',
+      matched_email: 'billing@example.com',
+      client_id: 'client-1',
+      client_name: 'Client 1',
+    });
+
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+
+    const action = registeredActions.find((entry) => entry.id === 'find_contact_by_email');
+    expect(action).toBeDefined();
+
+    const output = await action!.handler(
+      {
+        email: 'billing@example.com',
+      },
+      { tenantId: 'tenant-1' }
+    );
+
+    expect(action!.outputSchema?.parse(output)).toEqual({
+      success: true,
+      contact: {
+        contact_id: 'contact-1',
+        name: 'Billing Contact',
+        email: 'primary@example.com',
+        matched_email: 'billing@example.com',
+        client_id: 'client-1',
+        client_name: 'Client 1',
+      },
+    });
+  });
+
   it('T025: unmatched parsed-email sender defaults to contact authorship', async () => {
     findContactByEmailMock.mockResolvedValue(null);
 
@@ -258,7 +329,7 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
     );
   });
 
-  it('T037/T038: runtime email actions keep primary contact email and matched sender email separate', async () => {
+  it('runtime email actions keep primary contact email and matched sender email separate', async () => {
     findContactByEmailMock.mockResolvedValue({
       contact_id: 'contact-1',
       client_id: 'client-1',

@@ -392,7 +392,10 @@ export async function processInboundEmailInApp(
     return { outcome: 'skipped', reason: 'self_notification' };
   }
 
-  const buildCommentEmailMetadata = () => ({
+  const buildCommentEmailMetadata = (options: {
+    matchedSenderEmail?: string | null;
+    primaryContactEmail?: string | null;
+  } = {}) => ({
     messageId: emailData.id,
     provider: emailData.provider,
     providerId,
@@ -402,6 +405,8 @@ export async function processInboundEmailInApp(
     from: emailData.from,
     fromAddress: senderEmail ?? undefined,
     fromName: senderName,
+    matchedAddress: options.matchedSenderEmail ?? senderEmail ?? undefined,
+    contactEmail: options.primaryContactEmail ?? undefined,
     to: emailData.to,
     subject: emailData.subject,
     receivedAt: emailData.receivedAt,
@@ -492,7 +497,10 @@ export async function processInboundEmailInApp(
             author_id: matchedSenderContact?.user_id,
             contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContactId,
             metadata: {
-              email: buildCommentEmailMetadata(),
+              email: buildCommentEmailMetadata({
+                matchedSenderEmail: matchedSenderContact?.matched_email ?? senderEmail ?? null,
+                primaryContactEmail: matchedSenderContact?.email ?? null,
+              }),
               parser: {
                 confidence: parsedEmail?.confidence,
                 strategy: parsedEmail?.strategy,
@@ -611,7 +619,10 @@ export async function processInboundEmailInApp(
         author_id: matchedSenderContact?.user_id,
         contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContactId,
         metadata: {
-          email: buildCommentEmailMetadata(),
+          email: buildCommentEmailMetadata({
+            matchedSenderEmail: matchedSenderContact?.matched_email ?? senderEmail ?? null,
+            primaryContactEmail: matchedSenderContact?.email ?? null,
+          }),
           parser: {
             confidence: parsedEmail?.confidence,
             strategy: parsedEmail?.strategy,
@@ -810,7 +821,10 @@ export async function processInboundEmailInApp(
       author_id: commentAuthorUserId ?? undefined,
       contact_id: commentAuthorContactId ?? undefined,
       metadata: {
-        email: buildCommentEmailMetadata(),
+        email: buildCommentEmailMetadata({
+          matchedSenderEmail: matchedSenderContact?.matched_email ?? senderEmail ?? null,
+          primaryContactEmail: matchedSenderContact?.email ?? null,
+        }),
         parser: {
           confidence: parsedEmail?.confidence,
           strategy: parsedEmail?.strategy,

@@ -86,7 +86,9 @@ const matchedClientSchema = z.object({
   clientId: z.string().optional().describe('Client ID'),
   clientName: z.string().optional().describe('Client name'),
   contactId: z.string().optional().describe('Contact ID'),
-  contactName: z.string().optional().describe('Contact name')
+  contactName: z.string().optional().describe('Contact name'),
+  primaryEmail: z.string().email().optional().describe('Primary/default contact email from contacts.email'),
+  matchedEmail: z.string().email().optional().describe('Exact sender email that matched the contact lookup')
 }).describe('Client/contact matched from email address');
 
 /**

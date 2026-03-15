@@ -277,9 +277,12 @@ Working memory for adding multiple email addresses to contacts using a compatibi
 
 ## Update (2026-03-15, inbound matched-email preservation)
 - Completed `F023` and flipped `T036` and `T037` to implemented.
-- Confirmed `processInboundEmailInApp` already preserved the exact sender email separately from the matched contact’s primary/default email by:
-  - using `senderEmail` when building inbound email metadata (`metadata.email.fromAddress`)
-  - using the matched contact only for authorship/contact resolution (`contact_id`, `author_id`, `client_id`)
+- Updated `shared/services/email/processInboundEmailInApp.ts` so inbound comment metadata now preserves both:
+  - `metadata.email.matchedAddress` for the exact sender address that matched lookup
+  - `metadata.email.contactEmail` for the matched contact's primary/default `contacts.email`
+- Kept the existing authorship routing intact:
+  - `contact_id`, `author_id`, and `client_id` continue to resolve from the matched contact record
+  - default-email consumers can continue to treat `contacts.email` as authoritative
 - Added a focused regression covering the additional-email-match path:
   - `shared/services/email/__tests__/processInboundEmailInApp.additionalPaths.test.ts`
 - Verification runbook used:
@@ -287,11 +290,15 @@ Working memory for adding multiple email addresses to contacts using a compatibi
 
 ## Update (2026-03-15, runtime matched-email contracts)
 - Completed `F024` and flipped `T038` to implemented.
+- Updated `shared/workflow/actions/emailWorkflowActions.ts` so workflow contact lookups now return `matched_email` alongside the primary/default `email`.
 - Updated `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts` so runtime contact outputs now expose:
   - `email` for the primary/default `contacts.email`
   - `matched_email` for the exact sender email that matched when it differs from the primary email
+- Updated `shared/workflow/runtime/schemas/emailWorkflowSchemas.ts` so the shared runtime schema vocabulary can describe both the primary/default email and the matched sender email separately.
 - Extended runtime registry coverage:
+  - `shared/workflow/actions/__tests__/emailWorkflowActions.findContactByEmail.context.test.ts`
   - `shared/workflow/runtime/actions/__tests__/registerEmailWorkflowActions.contactAuthorship.test.ts`
 - Verification runbook used:
-  - `cd shared && pnpm vitest run workflow/runtime/actions/__tests__/registerEmailWorkflowActions.contactAuthorship.test.ts --coverage=false`
-  - `cd server && pnpm vitest run src/test/integration/emailServiceContactLookup.integration.test.ts --coverage=false`
+  - `cd shared && pnpm vitest run workflow/actions/__tests__/emailWorkflowActions.findContactByEmail.context.test.ts workflow/runtime/actions/__tests__/registerEmailWorkflowActions.contactAuthorship.test.ts services/email/__tests__/processInboundEmailInApp.additionalPaths.test.ts --coverage=false`
+- Constraint observed:
+  - `cd server && pnpm vitest run src/test/integration/workflowRuntimeV2.email.integration.test.ts --coverage=false` is currently blocked locally because the configured `server` test database does not exist in this environment.
