@@ -119,6 +119,8 @@ export type MappableField =
   | 'full_name'
   | 'phone_number'
   | 'email'
+  | 'primary_email_type'
+  | 'additional_email_addresses'
   | 'client'
   | 'role'
   | 'notes'

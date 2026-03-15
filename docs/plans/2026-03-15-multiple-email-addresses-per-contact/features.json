@@ -162,7 +162,7 @@
   {
     "id": "F019",
     "description": "Update contact CSV template, mapping, preview, import, and export behavior for primary-email labels plus additional email rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-12",
       "FR-19"

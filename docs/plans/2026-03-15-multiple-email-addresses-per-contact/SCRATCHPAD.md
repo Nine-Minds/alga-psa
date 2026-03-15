@@ -208,3 +208,25 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `server/src/test/unit/contacts/ContactSummaryEmail.contract.test.ts`
 - Verification runbook used:
   - `cd server && pnpm vitest run src/test/unit/contacts/ContactSummaryEmail.contract.test.ts src/test/unit/contacts/ContactsAdditionalEmailSearch.contract.test.ts src/test/integration/contactServiceEmailSearch.integration.test.ts --coverage=false`
+
+## Update (2026-03-15, contact CSV hybrid email support)
+- Completed `F019` and flipped `T028` through `T030` to implemented.
+- Added a shared CSV email-field helper in `packages/clients/src/lib/contactCsvEmailFields.ts` so contact CSV import/export/template generation uses one representation for:
+  - `primary_email_type`
+  - `additional_email_addresses` as `label:email@example.com | label:email@example.com`
+- Updated `contactActions.tsx` so contact CSV flows now:
+  - export primary email labels and formatted additional-email rows while keeping scalar `email` as the primary/default address
+  - generate a CSV template with the new hybrid email columns and example values
+  - check existing emails across both `contacts.email` and `contact_additional_email_addresses`
+  - import/create/update contacts with primary label metadata and additional-email rows
+  - support updating an existing contact when the import row matches one of that contact's additional email addresses
+- Updated `ContactsImportDialog.tsx` so CSV mapping, validation, preview, and upload copy understand the new hybrid-email fields and collision checks.
+- Added/updated regression coverage in `server/src/test/integration/contactCsvPhoneImportExport.integration.test.ts` for:
+  - template/copy contract
+  - create/update import behavior with primary and additional email rows
+  - export formatting for primary labels and additional-email representation
+- Verification runbook used:
+  - `cd server && pnpm vitest run src/test/integration/contactCsvPhoneImportExport.integration.test.ts --coverage=false`
+- Gotchas discovered:
+  - Import updates that match by an additional email need pre-normalization before calling `ContactModel.updateContact`, otherwise the model correctly rejects a raw primary-email change that has not been expressed as a promote/swap.
+  - When the import row promotes an existing additional email to primary, the import layer must omit the old primary from the incoming additional-email list because the model appends the demoted primary row transactionally during the swap.

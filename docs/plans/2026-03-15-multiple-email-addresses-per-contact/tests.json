@@ -228,7 +228,7 @@
   {
     "id": "T028",
     "description": "CSV template and preview copy describe the primary email plus additional-email fields correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -236,7 +236,7 @@
   {
     "id": "T029",
     "description": "CSV import creates or updates a contact with a primary email and additional-email rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -244,7 +244,7 @@
   {
     "id": "T030",
     "description": "CSV export includes primary-email label metadata and the chosen additional-email representation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]

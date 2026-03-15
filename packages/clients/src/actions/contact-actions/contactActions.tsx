@@ -1,6 +1,13 @@
 'use server'
 
-import type { DeletionValidationResult, IClient, IContact, ImportContactResult, ITag, MappableField } from '@alga-psa/types';
+import type {
+  ContactEmailAddressInput,
+  DeletionValidationResult,
+  IClient,
+  IContact,
+  ImportContactResult,
+  ITag,
+} from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -17,6 +24,12 @@ import {
   buildContactCreatedPayload,
   buildContactUpdatedPayload,
 } from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders';
+import {
+  formatContactCsvAdditionalEmailAddresses,
+  formatContactCsvPrimaryEmailType,
+  isValidContactCsvEmailValue,
+  normalizeContactCsvEmailValue,
+} from '../../lib/contactCsvEmailFields';
 
 function maybeUserActor(user: any) {
   const userId = user?.user_id;
@@ -43,6 +56,12 @@ type ContactActionInput = Omit<Partial<IContact>, 'phone_numbers' | 'additional_
   primary_email_canonical_type?: CreateContactInput['primary_email_canonical_type'];
   primary_email_custom_type?: CreateContactInput['primary_email_custom_type'];
   additional_email_addresses?: CreateContactInput['additional_email_addresses'];
+};
+
+type ContactImportData = Omit<Partial<IContact>, 'additional_email_addresses'> & {
+  additional_email_addresses?: CreateContactInput['additional_email_addresses'];
+  tags?: string;
+  primary_email_custom_type?: string | null;
 };
 
 function getDerivedDefaultPhone(contact: Pick<IContact, 'default_phone_number' | 'phone_numbers'>): string {
@@ -742,7 +761,17 @@ export async function exportContactsToCSV(
   clients: IClient[],
   contactTags: Record<string, ITag[]>
 ): Promise<string> {
-  const fields = ['full_name', 'email', 'phone_number', 'client', 'role', 'notes', 'tags'];
+  const fields = [
+    'full_name',
+    'email',
+    'primary_email_type',
+    'additional_email_addresses',
+    'phone_number',
+    'client',
+    'role',
+    'notes',
+    'tags',
+  ];
 
   const data = contacts.map((contact): Record<string, string> => {
     const client = clients.find(c => c.client_id === contact.client_id);
@@ -752,6 +781,8 @@ export async function exportContactsToCSV(
     return {
       full_name: contact.full_name || '',
       email: contact.email || '',
+      primary_email_type: formatContactCsvPrimaryEmailType(contact),
+      additional_email_addresses: formatContactCsvAdditionalEmailAddresses(contact.additional_email_addresses),
       phone_number: getDerivedDefaultPhone(contact),
       client: client?.client_name || '',
       role: contact.role || '',
@@ -768,6 +799,8 @@ export async function generateContactCSVTemplate(): Promise<string> {
     {
       full_name: 'Alice Liddell',
       email: 'alice@wonderland.com',
+      primary_email_type: 'work',
+      additional_email_addresses: 'personal:alice.home@wonderland.com | billing:accounts@wonderland.com',
       phone_number: '+1-555-CURIOUS',
       client: 'Mad Hatter Tea Client',
       role: 'Chief Explorer',
@@ -777,6 +810,8 @@ export async function generateContactCSVTemplate(): Promise<string> {
     {
       full_name: 'Mad Hatter',
       email: 'hatter@teaparty.wonderland',
+      primary_email_type: 'other',
+      additional_email_addresses: 'billing:tea-bills@teaparty.wonderland | personal:hatter.afterhours@teaparty.wonderland',
       phone_number: '+1-555-TEA-TIME',
       client: 'Mad Hatter Tea Client',
       role: 'Chief Tea Ceremony Expert',
@@ -785,12 +820,75 @@ export async function generateContactCSVTemplate(): Promise<string> {
     }
   ];
 
-  const fields = ['full_name', 'email', 'phone_number', 'client', 'role', 'notes', 'tags'];
+  const fields = [
+    'full_name',
+    'email',
+    'primary_email_type',
+    'additional_email_addresses',
+    'phone_number',
+    'client',
+    'role',
+    'notes',
+    'tags',
+  ];
 
   return unparseCSV(templateData, fields);
 }
 
-type ContactImportData = Partial<IContact> & { tags?: string };
+function normalizeImportedEmailList(emails: Array<string | null | undefined>): string[] {
+  return [...new Set(
+    emails
+      .map((email) => normalizeContactCsvEmailValue(email))
+      .filter((email): email is string => Boolean(email))
+  )];
+}
+
+async function findExistingContactByImportedEmails(
+  trx: Knex.Transaction,
+  tenant: string,
+  emails: string[]
+): Promise<IContact | undefined> {
+  if (emails.length === 0) {
+    return undefined;
+  }
+
+  const directMatches = await trx('contacts')
+    .select('contact_name_id')
+    .whereIn('email', emails)
+    .andWhere('tenant', tenant);
+
+  const additionalMatches = await trx('contact_additional_email_addresses')
+    .select('contact_name_id')
+    .whereIn('normalized_email_address', emails)
+    .andWhere('tenant', tenant);
+
+  const contactIds = [...new Set([
+    ...directMatches.map((row: { contact_name_id: string }) => row.contact_name_id),
+    ...additionalMatches.map((row: { contact_name_id: string }) => row.contact_name_id),
+  ])];
+
+  if (contactIds.length > 1) {
+    throw new Error('VALIDATION_ERROR: Imported email addresses match multiple existing contacts');
+  }
+
+  if (contactIds.length === 0) {
+    return undefined;
+  }
+
+  const contact = await ContactModel.getContactById(contactIds[0], tenant, trx);
+  return contact ?? undefined;
+}
+
+function toContactEmailAddressInput(
+  row: Pick<NonNullable<IContact['additional_email_addresses']>[number], 'email_address' | 'canonical_type' | 'custom_type' | 'display_order'>
+): ContactEmailAddressInput {
+  return {
+    email_address: row.email_address,
+    canonical_type: row.canonical_type ?? null,
+    custom_type: row.custom_type ?? null,
+    display_order: row.display_order,
+  };
+}
 
 export const importContactsFromCSV = withAuth(async (
   user,
@@ -814,11 +912,13 @@ export const importContactsFromCSV = withAuth(async (
             throw new Error('VALIDATION_ERROR: Full name is required');
           }
 
-          if (contactData.email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(contactData.email.trim())) {
-              throw new Error(`VALIDATION_ERROR: Invalid email format for contact: ${contactData.full_name}`);
-            }
+          const normalizedPrimaryEmail = normalizeContactCsvEmailValue(contactData.email);
+          if (normalizedPrimaryEmail !== contactData.email) {
+            contactData.email = normalizedPrimaryEmail ?? undefined;
+          }
+
+          if (contactData.email && !isValidContactCsvEmailValue(contactData.email)) {
+            throw new Error(`VALIDATION_ERROR: Invalid email format for contact: ${contactData.full_name}`);
           }
 
           if (contactData.client_id) {
@@ -831,28 +931,36 @@ export const importContactsFromCSV = withAuth(async (
             }
           }
 
+          const importEmails = normalizeImportedEmailList([
+            contactData.email,
+            ...(contactData.additional_email_addresses ?? []).map((row) => row.email_address),
+          ]);
+
           let existingContact: IContact | undefined = undefined;
-          if (contactData.email) {
-            existingContact = await trx('contacts')
-              .where({ email: contactData.email.trim().toLowerCase(), tenant })
-              .first();
-          }
+          let matchedByEmail = false;
+          existingContact = await findExistingContactByImportedEmails(trx, tenant, importEmails);
+          matchedByEmail = Boolean(existingContact);
 
           if (!existingContact) {
-            existingContact = await trx('contacts')
+            const existingContactRow = await trx('contacts')
+              .select('contact_name_id')
               .where({
                 full_name: contactData.full_name.trim(),
                 tenant,
                 client_id: contactData.client_id
               })
               .first();
+
+            if (existingContactRow?.contact_name_id) {
+              existingContact = await ContactModel.getContactById(existingContactRow.contact_name_id, tenant, trx) ?? undefined;
+            }
           }
 
           if (existingContact && !updateExisting) {
-            const duplicateField = contactData.email && existingContact.email === contactData.email.trim().toLowerCase() ? 'email' : 'name';
+            const duplicateField = matchedByEmail ? 'email' : 'name';
             results.push({
               success: false,
-              message: `VALIDATION_ERROR: Contact with this ${duplicateField} already exists: ${duplicateField === 'email' ? contactData.email : contactData.full_name}`,
+              message: `VALIDATION_ERROR: Contact with this ${duplicateField} already exists: ${duplicateField === 'email' ? importEmails[0] ?? contactData.email : contactData.full_name}`,
               originalData: contactData
             });
             continue;
@@ -861,9 +969,49 @@ export const importContactsFromCSV = withAuth(async (
           let savedContact: IContact;
 
           if (existingContact && updateExisting) {
+            const normalizedImportedPrimaryEmail = normalizeContactCsvEmailValue(contactData.email);
+            if (
+              normalizedImportedPrimaryEmail &&
+              normalizedImportedPrimaryEmail !== existingContact.email?.toLowerCase()
+            ) {
+              const baseAdditionalRows = (
+                contactData.additional_email_addresses
+                ?? existingContact.additional_email_addresses?.map(toContactEmailAddressInput)
+                ?? []
+              )
+                .filter((row) =>
+                  normalizeContactCsvEmailValue(row.email_address) !== existingContact.email?.toLowerCase()
+                )
+                .map((row, index) => ({
+                  ...row,
+                  display_order: index,
+                }));
+
+              const hasPromotedEmailRow = baseAdditionalRows.some((row) =>
+                normalizeContactCsvEmailValue(row.email_address) === normalizedImportedPrimaryEmail
+              );
+
+              if (!hasPromotedEmailRow) {
+                const matchingExistingAdditionalRow = existingContact.additional_email_addresses?.find((row) =>
+                  normalizeContactCsvEmailValue(row.email_address) === normalizedImportedPrimaryEmail
+                );
+
+                if (matchingExistingAdditionalRow) {
+                  baseAdditionalRows.push({
+                    email_address: matchingExistingAdditionalRow.email_address,
+                    canonical_type: matchingExistingAdditionalRow.canonical_type ?? null,
+                    custom_type: matchingExistingAdditionalRow.custom_type ?? null,
+                    display_order: baseAdditionalRows.length,
+                  });
+                }
+              }
+
+              contactData.additional_email_addresses = baseAdditionalRows;
+            }
+
             const updateData: UpdateContactInput = {
               full_name: contactData.full_name.trim(),
-              email: contactData.email?.trim().toLowerCase() ?? existingContact.email ?? undefined,
+              email: contactData.email ?? existingContact.email ?? undefined,
               phone_numbers: contactData.phone_numbers
                 ?? (contactData.phone_number !== undefined
                   ? buildDefaultPhoneNumbers(contactData.phone_number)
@@ -873,6 +1021,15 @@ export const importContactsFromCSV = withAuth(async (
               role: normalizeOptionalText(contactData.role) ?? existingContact.role ?? undefined,
               notes: normalizeOptionalText(contactData.notes) ?? existingContact.notes ?? undefined,
             };
+
+            if (contactData.primary_email_canonical_type !== undefined || contactData.primary_email_custom_type !== undefined) {
+              updateData.primary_email_canonical_type = contactData.primary_email_canonical_type ?? null;
+              updateData.primary_email_custom_type = contactData.primary_email_custom_type ?? null;
+            }
+
+            if (contactData.additional_email_addresses !== undefined) {
+              updateData.additional_email_addresses = contactData.additional_email_addresses;
+            }
 
             savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
 
@@ -907,7 +1064,10 @@ export const importContactsFromCSV = withAuth(async (
           } else {
             const contactToCreate = {
               full_name: contactData.full_name.trim(),
-              email: contactData.email?.trim().toLowerCase() || '',
+              email: contactData.email || '',
+              primary_email_canonical_type: contactData.primary_email_canonical_type,
+              primary_email_custom_type: contactData.primary_email_custom_type,
+              additional_email_addresses: contactData.additional_email_addresses,
               phone_numbers: contactData.phone_numbers ?? buildDefaultPhoneNumbers(contactData.phone_number),
               client_id: contactData.client_id || undefined,
               is_inactive: contactData.is_inactive || false,
@@ -1016,23 +1176,34 @@ export const checkExistingEmails = withAuth(async (
       throw new Error('VALIDATION_ERROR: No email addresses provided');
     }
 
-    const sanitizedEmails = emails.map(email => {
-      const trimmedEmail = email.trim().toLowerCase();
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(trimmedEmail)) {
-        throw new Error(`VALIDATION_ERROR: Invalid email format: ${email}`);
-      }
-      return trimmedEmail;
-    });
+    const invalidEmail = emails.find((email) => !isValidContactCsvEmailValue(email));
+    if (invalidEmail) {
+      throw new Error(`VALIDATION_ERROR: Invalid email format: ${invalidEmail}`);
+    }
 
-    const existingContacts = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+    const sanitizedEmails = normalizeImportedEmailList(emails);
+    if (sanitizedEmails.length === 0) {
+      throw new Error('VALIDATION_ERROR: No valid email addresses provided');
+    }
+
+    const existingEmails = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const primaryEmails = await trx('contacts')
         .select('email')
         .whereIn('email', sanitizedEmails)
         .andWhere('tenant', tenant);
+
+      const additionalEmails = await trx('contact_additional_email_addresses')
+        .select('normalized_email_address')
+        .whereIn('normalized_email_address', sanitizedEmails)
+        .andWhere('tenant', tenant);
+
+      return [
+        ...primaryEmails.map((contact: { email: string }) => contact.email),
+        ...additionalEmails.map((row: { normalized_email_address: string }) => row.normalized_email_address),
+      ];
     });
 
-    return existingContacts.map((contact: { email: string }): string => contact.email);
+    return [...new Set(existingEmails)];
   } catch (err) {
     console.error('Error checking existing emails:', err);
 
