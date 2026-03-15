@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Chat } from '../chat/Chat';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { Plus } from 'lucide-react';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { getChatMessagesAction } from '../../lib/chat-actions/chatActions';
 
 import '../chat/chat.css';
@@ -47,14 +48,26 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeChatMessages, setActiveChatMessages] = useState<any[]>([]);
+  const [hasActiveMessages, setHasActiveMessages] = useState(false);
+  const [showNewChatConfirmation, setShowNewChatConfirmation] = useState(false);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(384);
 
-  const handleNewChat = () => {
+  const resetChatSession = () => {
     setActiveChatId(null);
     setActiveChatMessages([]);
+    setHasActiveMessages(false);
     setChatKey(prev => prev + 1);
+  };
+
+  const handleNewChat = () => {
+    if (hasActiveMessages) {
+      setShowNewChatConfirmation(true);
+      return;
+    }
+
+    resetChatSession();
   };
 
   void auth_token;
@@ -161,11 +174,25 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                 onUserInput={() => void 0}
                 hf={null}
                 initialChatId={activeChatId}
+                onHasMessagesChange={setHasActiveMessages}
               />
             </div>
           </div>
         </div>
       </Collapsible.Content>
+      <ConfirmationDialog
+        id="confirm-new-chat"
+        isOpen={showNewChatConfirmation}
+        onClose={() => setShowNewChatConfirmation(false)}
+        onConfirm={() => {
+          setShowNewChatConfirmation(false);
+          resetChatSession();
+        }}
+        title="Start a new chat?"
+        message="Your current chat will be cleared from the sidebar. Saved messages remain in chat history."
+        confirmLabel="Start New Chat"
+        cancelLabel="Keep Current Chat"
+      />
     </Collapsible.Root>
   );
 };

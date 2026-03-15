@@ -204,6 +204,7 @@ type ChatProps = {
   autoSendPrompt?: string | null;
   onChatIdChange?: (chatId: string | null) => void;
   autoApprovedHttpMethods?: string[];
+  onHasMessagesChange?: (hasMessages: boolean) => void;
 };
 
 const AUTO_APPROVED_METHODS_STORAGE_KEY = 'chat:autoApprovedHttpMethods';
@@ -262,6 +263,7 @@ export const Chat: React.FC<ChatProps> = ({
   autoSendPrompt,
   onChatIdChange,
   autoApprovedHttpMethods,
+  onHasMessagesChange,
 }) => {
   const textareaId = useId();
   const [messageText, setMessageText] = useState('');
@@ -1026,6 +1028,14 @@ export const Chat: React.FC<ChatProps> = ({
   const displayMessages = [...activePersistedMessages, ...newChatMessages].filter(
     (message) => resolveDisplayMessageRole(message as DisplayChatMessage) !== 'function',
   );
+  const hasVisibleMessages =
+    displayMessages.length > 0 ||
+    incomingMessage.trim().length > 0 ||
+    fullMessage.trim().length > 0;
+
+  useEffect(() => {
+    onHasMessagesChange?.(hasVisibleMessages);
+  }, [hasVisibleMessages, onHasMessagesChange]);
 
   const handleRetryFromMessage = useCallback(
     (messageIndex: number) => {
