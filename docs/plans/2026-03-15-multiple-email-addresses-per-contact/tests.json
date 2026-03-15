@@ -317,7 +317,7 @@
   {
     "id": "T039",
     "description": "Workflow business-operation `contacts.find` and `contacts.search` match contacts through additional email rows while keeping summary email fields on `contact.email`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]

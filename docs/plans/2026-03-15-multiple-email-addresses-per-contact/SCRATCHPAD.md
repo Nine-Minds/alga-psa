@@ -302,3 +302,13 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `cd shared && pnpm vitest run workflow/actions/__tests__/emailWorkflowActions.findContactByEmail.context.test.ts workflow/runtime/actions/__tests__/registerEmailWorkflowActions.contactAuthorship.test.ts services/email/__tests__/processInboundEmailInApp.additionalPaths.test.ts --coverage=false`
 - Constraint observed:
   - `cd server && pnpm vitest run src/test/integration/workflowRuntimeV2.email.integration.test.ts --coverage=false` is currently blocked locally because the configured `server` test database does not exist in this environment.
+
+## Update (2026-03-15, workflow business contact email search)
+- Completed `F025` and flipped `T039` to implemented.
+- Updated `shared/workflow/runtime/actions/businessOperations/contacts.ts` so:
+  - `contacts.find` resolves email lookups through `ContactModel.getContactByEmail`, which now covers both primary and additional contact emails
+  - `contacts.search` keeps summary rows sourced from `contacts.email` while adding an `EXISTS` search clause for `contact_additional_email_addresses`
+- Added focused unit coverage:
+  - `shared/workflow/runtime/actions/__tests__/businessOperations.contacts.emailSearch.test.ts`
+- Verification runbook used:
+  - `cd shared && pnpm vitest run workflow/runtime/actions/__tests__/businessOperations.contacts.emailSearch.test.ts --coverage=false`

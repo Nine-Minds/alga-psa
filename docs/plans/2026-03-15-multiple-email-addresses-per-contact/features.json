@@ -217,7 +217,7 @@
   {
     "id": "F025",
     "description": "Update workflow business-operation contact lookup/search and related CRM summaries to search additional emails while keeping summary email fields backed by `contacts.email`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-12",
       "FR-15",
