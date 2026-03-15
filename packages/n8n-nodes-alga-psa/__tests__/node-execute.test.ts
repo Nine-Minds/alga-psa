@@ -624,6 +624,41 @@ describe('Node execute operations', () => {
     });
   });
 
+  it('contact create request body includes primary email metadata and additional email rows when provided', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          ...baseContactCreateParams,
+          contactCreateAdditionalFields: {
+            email: 'ada@example.com',
+            primary_email_canonical_type: 'billing',
+            additional_email_addresses: JSON.stringify([
+              {
+                email_address: 'ada.personal@example.com',
+                canonical_type: 'personal',
+                display_order: 0,
+              },
+            ]),
+          },
+        },
+      ],
+      () => ({ data: { contact_name_id: 'contact-1' } }),
+    );
+
+    expect(requests[0]?.body).toMatchObject({
+      full_name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      primary_email_canonical_type: 'billing',
+      additional_email_addresses: [
+        {
+          email_address: 'ada.personal@example.com',
+          canonical_type: 'personal',
+          display_order: 0,
+        },
+      ],
+    });
+  });
+
   it('T021: contact create unwraps a successful data wrapper into the created contact object', async () => {
     const { output } = await executeNode(
       [

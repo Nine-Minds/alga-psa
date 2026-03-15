@@ -234,6 +234,61 @@ export function parseContactPhoneNumbers(value: unknown): IDataObject[] | undefi
   });
 }
 
+export function parseContactEmailAddresses(value: unknown): IDataObject[] | undefined {
+  const parsed = normalizeJsonInput(value, 'additional_email_addresses');
+
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error('additional_email_addresses must be a JSON array');
+  }
+
+  return parsed.map((entry, index) => {
+    if (!isObject(entry)) {
+      throw new Error(`additional_email_addresses[${index}] must be an object`);
+    }
+
+    const emailAddress = ensureNonEmpty(
+      entry.email_address,
+      `additional_email_addresses[${index}].email_address`,
+    );
+    const additionalEmailId = normalizeOptionalUuid(
+      entry.contact_additional_email_address_id,
+      `additional_email_addresses[${index}].contact_additional_email_address_id`,
+    );
+    const canonicalType =
+      entry.canonical_type === undefined || entry.canonical_type === null
+        ? undefined
+        : ensureNonEmpty(entry.canonical_type, `additional_email_addresses[${index}].canonical_type`);
+    const customType =
+      entry.custom_type === undefined || entry.custom_type === null
+        ? undefined
+        : ensureNonEmpty(entry.custom_type, `additional_email_addresses[${index}].custom_type`);
+
+    if (
+      entry.display_order !== undefined &&
+      (!Number.isInteger(entry.display_order) || Number(entry.display_order) < 0)
+    ) {
+      throw new Error(
+        `additional_email_addresses[${index}].display_order must be a non-negative integer`,
+      );
+    }
+
+    const displayOrder =
+      entry.display_order === undefined ? undefined : Number(entry.display_order);
+
+    return compactObject({
+      contact_additional_email_address_id: additionalEmailId,
+      email_address: emailAddress,
+      canonical_type: canonicalType,
+      custom_type: customType,
+      display_order: displayOrder,
+    });
+  });
+}
+
 export function buildContactCreatePayload(input: {
   fullName: string;
   additionalFields?: IDataObject;
@@ -244,6 +299,13 @@ export function buildContactCreatePayload(input: {
   return compactObject({
     full_name: input.fullName,
     email: additional.email,
+    primary_email_canonical_type: additional.primary_email_canonical_type,
+    primary_email_custom_type: additional.primary_email_custom_type,
+    primary_email_custom_type_id: normalizeOptionalUuid(
+      additional.primary_email_custom_type_id,
+      'primary_email_custom_type_id',
+    ),
+    additional_email_addresses: parseContactEmailAddresses(additional.additional_email_addresses),
     client_id: clientId,
     role: additional.role,
     notes: additional.notes,
@@ -258,6 +320,13 @@ export function buildContactUpdatePayload(additionalFields: IDataObject = {}): I
   return compactObject({
     full_name: additionalFields.full_name,
     email: additionalFields.email,
+    primary_email_canonical_type: additionalFields.primary_email_canonical_type,
+    primary_email_custom_type: additionalFields.primary_email_custom_type,
+    primary_email_custom_type_id: normalizeOptionalUuid(
+      additionalFields.primary_email_custom_type_id,
+      'primary_email_custom_type_id',
+    ),
+    additional_email_addresses: parseContactEmailAddresses(additionalFields.additional_email_addresses),
     client_id: clientId,
     role: additionalFields.role,
     notes: additionalFields.notes,

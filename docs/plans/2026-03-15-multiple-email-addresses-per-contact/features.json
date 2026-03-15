@@ -236,7 +236,7 @@
   {
     "id": "F027",
     "description": "Update n8n contact node fields, parsers, docs, and examples for scalar primary email plus additional email rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-19"
     ]

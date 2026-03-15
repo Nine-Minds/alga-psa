@@ -5,6 +5,7 @@ import {
   buildContactUpdatePayload,
   formatAlgaApiError,
   normalizeSuccessResponse,
+  parseContactEmailAddresses,
   parseContactPhoneNumbers,
 } from '../nodes/AlgaPsa/helpers';
 import { buildAlgaApiRequestOptions } from '../nodes/AlgaPsa/transport';
@@ -195,6 +196,60 @@ describe('Transport and normalization helpers', () => {
     });
   });
 
+  it('contact payload builders accept primary email metadata and additional email rows', () => {
+    const createPayload = buildContactCreatePayload({
+      fullName: 'Ada Lovelace',
+      additionalFields: {
+        email: 'ada@example.com',
+        primary_email_canonical_type: 'billing',
+        additional_email_addresses: JSON.stringify([
+          {
+            email_address: 'ada.personal@example.com',
+            canonical_type: 'personal',
+            display_order: 0,
+          },
+        ]),
+      },
+    });
+
+    expect(createPayload).toEqual({
+      full_name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      primary_email_canonical_type: 'billing',
+      additional_email_addresses: [
+        {
+          email_address: 'ada.personal@example.com',
+          canonical_type: 'personal',
+          display_order: 0,
+        },
+      ],
+    });
+
+    const updatePayload = buildContactUpdatePayload({
+      primary_email_custom_type: 'Escalations',
+      additional_email_addresses: JSON.stringify([
+        {
+          contact_additional_email_address_id: '00000000-0000-0000-0000-000000000010',
+          email_address: 'ada.billing@example.com',
+          custom_type: 'Billing Alias',
+          display_order: 1,
+        },
+      ]),
+    });
+
+    expect(updatePayload).toEqual({
+      primary_email_custom_type: 'Escalations',
+      additional_email_addresses: [
+        {
+          contact_additional_email_address_id: '00000000-0000-0000-0000-000000000010',
+          email_address: 'ada.billing@example.com',
+          custom_type: 'Billing Alias',
+          display_order: 1,
+        },
+      ],
+    });
+  });
+
   it('T014: contact list query builder serializes pagination and core filters correctly', () => {
     const query = buildContactListQuery({
       page: 3,
@@ -257,5 +312,25 @@ describe('Transport and normalization helpers', () => {
         ]),
       ),
     ).toThrow('phone_numbers[0].phone_number is required');
+  });
+
+  it('parseContactEmailAddresses accepts JSON arrays of labeled additional email rows', () => {
+    const parsed = parseContactEmailAddresses(
+      JSON.stringify([
+        {
+          email_address: 'ada.personal@example.com',
+          canonical_type: 'personal',
+          display_order: 0,
+        },
+      ]),
+    );
+
+    expect(parsed).toEqual([
+      {
+        email_address: 'ada.personal@example.com',
+        canonical_type: 'personal',
+        display_order: 0,
+      },
+    ]);
   });
 });

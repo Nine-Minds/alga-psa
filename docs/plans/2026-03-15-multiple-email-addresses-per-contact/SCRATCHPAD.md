@@ -330,3 +330,24 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `cd server && pnpm vitest run src/test/unit/validation/contactPhoneSchemas.test.ts src/test/unit/api/contactService.hybridEmailFields.test.ts --coverage=false`
 - Constraint observed:
   - A DB-backed `ContactService` integration variant was not kept because local Postgres connectivity to the `.env.localtest` harness is currently blocked (`EPERM` to `127.0.0.1:5438` / `::1:5438`) in this environment.
+
+## Update (2026-03-15, n8n hybrid email payloads)
+- Completed `F027` and flipped `T042` to implemented.
+- Updated `packages/n8n-nodes-alga-psa/nodes/AlgaPsa/helpers.ts` so contact create/update payload builders now preserve:
+  - scalar `email` as the primary/default address
+  - `primary_email_canonical_type`
+  - `primary_email_custom_type`
+  - `primary_email_custom_type_id`
+  - `additional_email_addresses`
+- Added `parseContactEmailAddresses` to normalize the freeform JSON field used for additional email rows and keep n8n validation errors local to the node layer.
+- Updated `packages/n8n-nodes-alga-psa/nodes/AlgaPsa/AlgaPsa.node.ts` so contact create/update operations expose hybrid-email fields in the node UI.
+- Updated supporting docs and examples:
+  - `packages/n8n-nodes-alga-psa/README.md`
+  - `packages/n8n-nodes-alga-psa/examples/create-update-contact.workflow.json`
+- Added focused package coverage:
+  - `packages/n8n-nodes-alga-psa/__tests__/helpers.test.ts`
+  - `packages/n8n-nodes-alga-psa/__tests__/node-description-loadoptions.test.ts`
+  - `packages/n8n-nodes-alga-psa/__tests__/node-execute.test.ts`
+  - `packages/n8n-nodes-alga-psa/__tests__/docs.test.ts`
+- Verification runbook used:
+  - `cd packages/n8n-nodes-alga-psa && ../../node_modules/.bin/vitest run --config vitest.config.ts __tests__/helpers.test.ts __tests__/node-description-loadoptions.test.ts __tests__/node-execute.test.ts __tests__/docs.test.ts`

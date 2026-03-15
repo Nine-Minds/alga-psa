@@ -341,7 +341,7 @@
   {
     "id": "T042",
     "description": "n8n contact parsers, docs, and example payloads accept the hybrid email fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
