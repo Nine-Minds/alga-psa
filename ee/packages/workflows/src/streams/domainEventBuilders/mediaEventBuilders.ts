@@ -1,1 +1,1 @@
-export * from '../../../../../../shared/workflow/streams/domainEventBuilders/mediaEventBuilders';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders.js';

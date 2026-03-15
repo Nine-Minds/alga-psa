@@ -1,36 +1,36 @@
-export * from '../../../../../shared/workflow/streams';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/assetEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/capacityThresholdEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/clientEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/contactEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/contractEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/crmInteractionNoteEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/documentAssociationEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/documentGeneratedEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/emailFeedbackEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/externalMappingEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/inboundEmailReplyEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/integrationConnectionEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/integrationSyncEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/integrationTokenEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/integrationWebhookEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/mediaEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/scheduleBlockEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/surveyEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/tagEventBuilders';
-export * from '../../../../../shared/workflow/streams/domainEventBuilders/technicianDispatchEventBuilders';
-export * from '../../../../../shared/workflow/streams/redisStreamClient';
+export * from '@alga-psa/shared/workflow/streams';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/appointmentEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/assetEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/capacityThresholdEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/contractEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/crmInteractionNoteEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentAssociationEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentGeneratedEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailFeedbackEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/externalMappingEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/inboundEmailReplyEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/integrationConnectionEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/integrationSyncEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/integrationTokenEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/integrationWebhookEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/scheduleBlockEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/surveyEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/tagEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/technicianDispatchEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/redisStreamClient.js';
 export {
   buildNotificationDeliveredPayload,
   buildNotificationFailedPayload,
   buildNotificationReadPayload,
   buildNotificationSentPayload,
-} from '../../../../../shared/workflow/streams/domainEventBuilders/notificationEventBuilders';
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/notificationEventBuilders.js';
 export { buildWorkflowPayload } from '@alga-psa/event-schemas';
 export type { WorkflowActor, WorkflowEventPublishContext } from '@alga-psa/event-schemas';

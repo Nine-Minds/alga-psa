@@ -1,1 +1,1 @@
-export * from '../../../../../shared/workflow/streams/eventBusSchema';
+export * from '@alga-psa/shared/workflow/streams/eventBusSchema.js';

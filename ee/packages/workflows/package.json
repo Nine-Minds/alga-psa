@@ -59,11 +59,11 @@
       "types": "./src/bundle/*.ts"
     },
     "./streams": {
-      "import": "./src/streams/index.ts",
+      "import": "./dist/streams/index.mjs",
       "types": "./src/streams/index.ts"
     },
     "./streams/*": {
-      "import": "./src/streams/*.ts",
+      "import": "./dist/streams/*.mjs",
       "types": "./src/streams/*.ts"
     },
     "./expression-authoring": {
@@ -71,11 +71,11 @@
       "types": "./src/expression-authoring/index.ts"
     },
     "./secrets": {
-      "import": "./src/secrets/index.ts",
+      "import": "./dist/secrets/index.mjs",
       "types": "./src/secrets/index.ts"
     },
     "./services": {
-      "import": "./src/services/index.ts",
+      "import": "./dist/services/index.mjs",
       "types": "./src/services/index.ts"
     },
     "./adapters/*": {
