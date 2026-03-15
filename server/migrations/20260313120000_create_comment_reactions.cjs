@@ -9,56 +9,60 @@
 
 exports.up = async function(knex) {
   // ── Ticket comment reactions ──
-  await knex.schema.createTable('comment_reactions', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('reaction_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
-    table.uuid('comment_id').notNullable();
-    table.uuid('user_id').notNullable();
-    table.text('emoji').notNullable();
-    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
+  if (!(await knex.schema.hasTable('comment_reactions'))) {
+    await knex.schema.createTable('comment_reactions', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('reaction_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
+      table.uuid('comment_id').notNullable();
+      table.uuid('user_id').notNullable();
+      table.text('emoji').notNullable();
+      table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
 
-    table.primary(['reaction_id', 'tenant']);
+      table.primary(['reaction_id', 'tenant']);
 
-    table.foreign('tenant').references('tenants.tenant');
-    table.foreign(['tenant', 'comment_id'])
-      .references(['tenant', 'comment_id'])
-      .inTable('comments');
-    table.foreign(['tenant', 'user_id'])
-      .references(['tenant', 'user_id'])
-      .inTable('users');
+      table.foreign('tenant').references('tenants.tenant');
+      table.foreign(['tenant', 'comment_id'])
+        .references(['tenant', 'comment_id'])
+        .inTable('comments');
+      table.foreign(['tenant', 'user_id'])
+        .references(['tenant', 'user_id'])
+        .inTable('users');
 
-    table.unique(['tenant', 'comment_id', 'user_id', 'emoji'], {
-      indexName: 'uq_comment_reactions_user_emoji'
+      table.unique(['tenant', 'comment_id', 'user_id', 'emoji'], {
+        indexName: 'uq_comment_reactions_user_emoji'
+      });
+      table.index(['tenant', 'comment_id'], 'idx_comment_reactions_comment');
+      table.index(['tenant', 'comment_id', 'created_at'], 'idx_comment_reactions_comment_created');
     });
-    table.index(['tenant', 'comment_id'], 'idx_comment_reactions_comment');
-    table.index(['tenant', 'comment_id', 'created_at'], 'idx_comment_reactions_comment_created');
-  });
+  }
 
   // ── Project task comment reactions ──
-  await knex.schema.createTable('project_task_comment_reactions', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('reaction_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
-    table.uuid('task_comment_id').notNullable();
-    table.uuid('user_id').notNullable();
-    table.text('emoji').notNullable();
-    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
+  if (!(await knex.schema.hasTable('project_task_comment_reactions'))) {
+    await knex.schema.createTable('project_task_comment_reactions', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('reaction_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
+      table.uuid('task_comment_id').notNullable();
+      table.uuid('user_id').notNullable();
+      table.text('emoji').notNullable();
+      table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
 
-    table.primary(['reaction_id', 'tenant']);
+      table.primary(['reaction_id', 'tenant']);
 
-    table.foreign('tenant').references('tenants.tenant');
-    table.foreign(['tenant', 'task_comment_id'])
-      .references(['tenant', 'task_comment_id'])
-      .inTable('project_task_comments');
-    table.foreign(['tenant', 'user_id'])
-      .references(['tenant', 'user_id'])
-      .inTable('users');
+      table.foreign('tenant').references('tenants.tenant');
+      table.foreign(['tenant', 'task_comment_id'])
+        .references(['tenant', 'task_comment_id'])
+        .inTable('project_task_comments');
+      table.foreign(['tenant', 'user_id'])
+        .references(['tenant', 'user_id'])
+        .inTable('users');
 
-    table.unique(['tenant', 'task_comment_id', 'user_id', 'emoji'], {
-      indexName: 'uq_task_comment_reactions_user_emoji'
+      table.unique(['tenant', 'task_comment_id', 'user_id', 'emoji'], {
+        indexName: 'uq_task_comment_reactions_user_emoji'
+      });
+      table.index(['tenant', 'task_comment_id'], 'idx_task_comment_reactions_comment');
+      table.index(['tenant', 'task_comment_id', 'created_at'], 'idx_task_comment_reactions_comment_created');
     });
-    table.index(['tenant', 'task_comment_id'], 'idx_task_comment_reactions_comment');
-    table.index(['tenant', 'task_comment_id', 'created_at'], 'idx_task_comment_reactions_comment_created');
-  });
+  }
 
   // ── Citus distribution ──
   const citusFn = await knex.raw(`
