@@ -10,6 +10,7 @@ import {
   TicketCommentAddedEvent
 } from '@alga-psa/event-schemas';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
@@ -282,6 +283,26 @@ async function sendNotificationIfEnabled(
         tenantId: params.tenantId
       });
       return;
+    }
+
+    if (isEmailProviderError && (error as any).isRetryable === true) {
+      const queue = EventEmailRetryQueue.getInstance();
+      if (queue.isReady()) {
+        await queue.enqueue(params, {
+          retryAfterMs:
+            typeof (error as any).metadata?.retryAfterMs === 'number'
+              ? (error as any).metadata.retryAfterMs
+              : undefined,
+        });
+
+        logger.warn('[TicketEmailSubscriber] Retryable email send failure queued for delayed retry:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          subtypeName,
+          recipient: params.to,
+          tenantId: params.tenantId
+        });
+        return;
+      }
     }
 
     logger.error('[TicketEmailSubscriber] Error in sendNotificationIfEnabled:', {
