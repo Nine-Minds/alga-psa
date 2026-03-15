@@ -31,3 +31,4 @@ export * from './ticketCategoryActions';
 export * from './ticketResourceActions';
 export * from './teamAssignmentActions';
 export * from './materialCatalogActions';
+export * from './ticketExportActions';

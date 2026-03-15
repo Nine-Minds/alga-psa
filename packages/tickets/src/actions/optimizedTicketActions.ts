@@ -1372,6 +1372,33 @@ export const getTicketsForList = withAuth(async (
 });
 
 /**
+ * Get all ticket IDs matching the current filters (no pagination).
+ * Used for "select all matching" functionality.
+ */
+export const getAllMatchingTicketIds = withAuth(async (
+  user,
+  { tenant },
+  filters: ITicketListFilters
+): Promise<string[]> => {
+  const {knex: db} = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    const validatedFilters = cleanFilterValues(
+      validateData(ticketListFiltersSchema, filters) as ITicketListFilters
+    );
+
+    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+
+    const rows = await baseQuery.clone().clearSelect().clearOrder().select('t.ticket_id');
+    return rows.map((row: { ticket_id: string }) => row.ticket_id);
+  });
+});
+
+/**
  * Get all options needed for ticket forms and filters
  * This consolidates multiple API calls into a single request
  */
