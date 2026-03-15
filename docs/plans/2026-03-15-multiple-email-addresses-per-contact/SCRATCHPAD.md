@@ -239,10 +239,9 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `contact_additional_email_addresses.normalized_email_address`
 - Updated `findContactByEmailAddress` in `packages/clients/src/actions/queryActions.ts` to defer to the shared model helper instead of running a primary-only SQL query.
 - `createOrFindContactByEmail` now inherits the hybrid lookup behavior through `ContactModel.getContactByEmail` while still creating new contacts with only a primary email on `contacts.email` when no match exists.
-- Added DB-backed regression coverage in `server/src/test/integration/contactEmailLookup.integration.test.ts` for:
-  - additional-email lookup through `findContactByEmailAddress`
-  - primary-only creation through `createOrFindContactByEmail`
-  - existing-contact reuse through `createOrFindContactByEmail` when only an additional email matches
+- Added focused no-DB regression coverage:
+  - `shared/models/__tests__/contactModel.getContactByEmail.test.ts`
+  - `server/src/test/unit/contacts/contactEmailLookup.contract.test.ts`
 - Verification runbook used:
-  - `cd server && pnpm vitest run src/test/integration/contactEmailLookup.integration.test.ts --coverage=false`
-  - A focused rerun of `server/src/test/integration/contactCsvPhoneImportExport.integration.test.ts` is still blocked in this Codex harness because Postgres on `127.0.0.1:5438` is not reachable (`EPERM` before test setup), so the DB-backed import regression remains in place but was not executable here.
+  - `cd shared && pnpm vitest run models/__tests__/contactModel.getContactByEmail.test.ts --coverage=false`
+  - `cd server && pnpm vitest run src/test/unit/contacts/contactEmailLookup.contract.test.ts --coverage=false`
