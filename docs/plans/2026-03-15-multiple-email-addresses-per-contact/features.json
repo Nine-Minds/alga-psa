@@ -1,170 +1,282 @@
 [
   {
     "id": "F001",
-    "description": "Add contact email row types to shared contact interfaces, replacing scalar contact email with `email_addresses`, `default_email_address`, and `default_email_type`.",
-    "implemented": false,
-    "prdRefs": ["FR-01", "FR-22"]
+    "description": "Add shared canonical email-label constants, primary-email label metadata, and additional-email row interfaces while retaining scalar `contact.email` as the primary/default email.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-01",
+      "FR-02",
+      "FR-03",
+      "FR-04"
+    ]
   },
   {
     "id": "F002",
-    "description": "Create database tables and constraints for contact email rows and tenant-scoped custom email label definitions.",
-    "implemented": false,
-    "prdRefs": ["FR-01", "FR-02", "FR-04", "FR-06"]
+    "description": "Keep `@alga-psa/types` and other cross-package contact contracts in parity with the hybrid primary-plus-additional email model.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-16",
+      "FR-19"
+    ]
   },
   {
     "id": "F003",
-    "description": "Add a migration that converts existing scalar contact email values into one default email row per contact and removes the scalar database column.",
-    "implemented": false,
-    "prdRefs": ["FR-07"]
+    "description": "Add primary-email label metadata columns to `contacts` so the default email stored in `contacts.email` carries a label.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-01",
+      "FR-02"
+    ]
   },
   {
     "id": "F004",
-    "description": "Implement shared contact-model validation for multi-email rows, including canonical/custom label validation, exactly-one-default enforcement, and row ordering.",
-    "implemented": false,
-    "prdRefs": ["FR-03", "FR-04", "FR-05"]
+    "description": "Create a tenant-scoped email-label definitions table reusable by both primary and additional contact emails.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-04"
+    ]
   },
   {
     "id": "F005",
-    "description": "Enforce tenant-wide uniqueness on normalized email addresses in both create and update contact flows.",
-    "implemented": false,
-    "prdRefs": ["FR-06"]
+    "description": "Create an ordered `contact_additional_email_addresses` table that stores only non-default contact email addresses.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-03"
+    ]
   },
   {
     "id": "F006",
-    "description": "Implement contact-model persistence helpers to replace and hydrate email rows and derive default email summary fields on reads.",
-    "implemented": false,
-    "prdRefs": ["FR-01", "FR-02", "FR-22"]
+    "description": "Enforce tenant-wide normalized-email uniqueness across both `contacts.email` and `contact_additional_email_addresses`.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-05"
+    ]
   },
   {
     "id": "F007",
-    "description": "Update contact search and lookup paths to match any stored email row instead of a scalar contact email column.",
-    "implemented": false,
-    "prdRefs": ["FR-11", "FR-12", "FR-14"]
+    "description": "Backfill existing contacts with safe primary-email label metadata without changing current `contacts.email` values or required-email behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-01",
+      "FR-08"
+    ]
   },
   {
     "id": "F008",
-    "description": "Create a shared `ContactEmailAddressesEditor` component modeled on `ContactPhoneNumbersEditor`, including row add/remove/reorder/default behavior.",
-    "implemented": false,
-    "prdRefs": ["FR-08"]
+    "description": "Validate create/update payloads for primary-email labels and additional-email rows, rejecting duplicates, malformed values, and additional rows that repeat the primary email.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-02",
+      "FR-03",
+      "FR-04",
+      "FR-05"
+    ]
   },
   {
     "id": "F009",
-    "description": "Support canonical email labels `work`, `personal`, `billing`, and `other`, plus custom labels with tenant suggestion lookup and cleanup behavior.",
-    "implemented": false,
-    "prdRefs": ["FR-03", "FR-04"]
+    "description": "Persist and hydrate primary-email label metadata and additional-email rows transactionally in the shared contact model.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-02",
+      "FR-03"
+    ]
   },
   {
     "id": "F010",
-    "description": "Wire the contact create dialog to save normalized multi-email rows instead of a scalar email field.",
-    "implemented": false,
-    "prdRefs": ["FR-08"]
+    "description": "Implement transactional default-swap behavior that promotes an additional email into `contacts.email`, demotes the old primary email into the child table, and disallows deleting the primary email directly.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-06",
+      "FR-07"
+    ]
   },
   {
     "id": "F011",
-    "description": "Wire contact edit/detail screens to save and render multi-email rows and remove scalar contact-email editing.",
-    "implemented": false,
-    "prdRefs": ["FR-08", "FR-09"]
+    "description": "Auto-create, reuse, and clean up tenant-scoped custom email labels for both primary and additional contact emails.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-04"
+    ]
   },
   {
     "id": "F012",
-    "description": "Update contact list and client contact list screens to display the derived default email summary.",
+    "description": "Update contact domain-event builders and full-contact workflow contracts to include primary-email label metadata and additional-email rows while keeping summary email fields sourced from `contacts.email`.",
     "implemented": false,
-    "prdRefs": ["FR-10"]
+    "prdRefs": [
+      "FR-16"
+    ]
   },
   {
     "id": "F013",
-    "description": "Update contact pickers and search result payloads to return and display default-email summaries from the multi-email model.",
+    "description": "Create a shared `ContactEmailAddressesEditor` that renders the primary/default email row plus additional email rows with add/remove/reorder/promote interactions.",
     "implemented": false,
-    "prdRefs": ["FR-10", "FR-11"]
+    "prdRefs": [
+      "FR-09",
+      "FR-10"
+    ]
   },
   {
     "id": "F014",
-    "description": "Update inbound email shared services to match contacts by any stored email row and return both matched sender email and default email context.",
+    "description": "Support canonical email labels plus tenant-scoped custom-label suggestions in the shared email editor, mirroring the phone-label UX.",
     "implemented": false,
-    "prdRefs": ["FR-12", "FR-13"]
+    "prdRefs": [
+      "FR-04",
+      "FR-09"
+    ]
   },
   {
     "id": "F015",
-    "description": "Update workflow email actions and runtime email-processing actions to resolve contacts through the email-row model.",
+    "description": "Wire contact create/edit/detail surfaces to the hybrid email model, including primary label editing and rendering of additional emails.",
     "implemented": false,
-    "prdRefs": ["FR-14", "FR-15"]
+    "prdRefs": [
+      "FR-09",
+      "FR-10"
+    ]
   },
   {
     "id": "F016",
-    "description": "Update workflow/runtime contact payload schemas to expose `email_addresses`, `default_email_address`, and `default_email_type`.",
+    "description": "Wire quick-add contact creation flows, including inline contact creation in client flows, to author the hybrid primary-plus-additional email payload.",
     "implemented": false,
-    "prdRefs": ["FR-15", "FR-22"]
+    "prdRefs": [
+      "FR-09"
+    ]
   },
   {
     "id": "F017",
-    "description": "Update the email-processing workflow definition so matched sender email and default outbound email are mapped distinctly.",
+    "description": "Keep list, picker, and summary surfaces anchored on `contacts.email` while exposing the richer email model where detailed contact rendering is needed.",
     "implemented": false,
-    "prdRefs": ["FR-13", "FR-15"]
+    "prdRefs": [
+      "FR-10",
+      "FR-11"
+    ]
   },
   {
     "id": "F018",
-    "description": "Update ticket email subscriber logic to resolve requester/default contact email from the multi-email model.",
+    "description": "Update contact query actions and `ContactService` list/search/filter/sort/export behavior to match both primary and additional emails while returning/displaying `contacts.email` as the summary address.",
     "implemented": false,
-    "prdRefs": ["FR-16"]
+    "prdRefs": [
+      "FR-11",
+      "FR-12"
+    ]
   },
   {
     "id": "F019",
-    "description": "Update project notifications, surveys, and invoice-contact sends to use the resolved default contact email.",
+    "description": "Update contact CSV template, mapping, preview, import, and export behavior for primary-email labels plus additional email rows.",
     "implemented": false,
-    "prdRefs": ["FR-17", "FR-18"]
+    "prdRefs": [
+      "FR-12",
+      "FR-19"
+    ]
   },
   {
     "id": "F020",
-    "description": "Update watch-list contact selection and related picker logic to use default-email summaries from the multi-email model.",
+    "description": "Update shared `findContactByEmailAddress` and `createOrFindContactByEmail` helpers to search both primary and additional emails while creating new contacts with only a primary email in `contacts.email`.",
     "implemented": false,
-    "prdRefs": ["FR-10", "FR-17"]
+    "prdRefs": [
+      "FR-13",
+      "FR-15"
+    ]
   },
   {
     "id": "F021",
-    "description": "Update portal invitation, portal recovery, and contact-driven registration flows so contact default email is the canonical invite/login address.",
+    "description": "Update shared `EmailService.findContactByEmail` and `EmailService.createOrFindContact` to understand the hybrid contact-email model and preserve both matched email and primary email where needed.",
     "implemented": false,
-    "prdRefs": ["FR-19"]
+    "prdRefs": [
+      "FR-13",
+      "FR-14",
+      "FR-15"
+    ]
   },
   {
     "id": "F022",
-    "description": "Update auth-adjacent contact verification and registration helpers to resolve contacts by any stored email row.",
+    "description": "Update shared workflow email actions to search both primary and additional contact emails while creating new contacts with a primary email only.",
     "implemented": false,
-    "prdRefs": ["FR-19"]
+    "prdRefs": [
+      "FR-13",
+      "FR-15"
+    ]
   },
   {
     "id": "F023",
-    "description": "Update REST contact schemas and contact API services to accept and return the multi-email contact contract.",
+    "description": "Update `processInboundEmailInApp` so contact matching can hit an additional email while preserving the exact matched sender email separately from `contacts.email`.",
     "implemented": false,
-    "prdRefs": ["FR-20", "FR-22"]
+    "prdRefs": [
+      "FR-13",
+      "FR-14"
+    ]
   },
   {
     "id": "F024",
-    "description": "Update ticket/contact API response schemas that currently expose scalar contact email summaries to derive them from the default email row.",
+    "description": "Update runtime email-action schemas and workflow mappings so matched inbound email and primary/default contact email remain unambiguous under the hybrid model.",
     "implemented": false,
-    "prdRefs": ["FR-20", "FR-22"]
+    "prdRefs": [
+      "FR-14",
+      "FR-16"
+    ]
   },
   {
     "id": "F025",
-    "description": "Update n8n contact create/update/list support to use the multi-email contract instead of scalar contact email.",
+    "description": "Update workflow business-operation contact lookup/search and related CRM summaries to search additional emails while keeping summary email fields backed by `contacts.email`.",
     "implemented": false,
-    "prdRefs": ["FR-21"]
+    "prdRefs": [
+      "FR-12",
+      "FR-15",
+      "FR-16"
+    ]
   },
   {
     "id": "F026",
-    "description": "Update integration helpers and email/contact lookup actions to resolve contacts through stored email rows.",
+    "description": "Update REST contact schemas, controllers, and API services to accept and return primary-email label metadata plus additional email rows without removing scalar `email`.",
     "implemented": false,
-    "prdRefs": ["FR-21"]
+    "prdRefs": [
+      "FR-16",
+      "FR-19"
+    ]
   },
   {
     "id": "F027",
-    "description": "Update test fixtures, factories, and helper builders that currently construct contacts with scalar email.",
+    "description": "Update n8n contact node fields, parsers, docs, and examples for scalar primary email plus additional email rows.",
     "implemented": false,
-    "prdRefs": ["FR-01", "FR-22"]
+    "prdRefs": [
+      "FR-19"
+    ]
   },
   {
     "id": "F028",
-    "description": "Add representative DB-backed migration/model coverage for multi-email contact creation, update, lookup, and uniqueness.",
+    "description": "Update integration and client-lookup helpers that resolve contacts by email so they search both the primary email column and additional-email rows.",
     "implemented": false,
-    "prdRefs": ["FR-06", "FR-07"]
+    "prdRefs": [
+      "FR-12",
+      "FR-15",
+      "FR-19"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Update external sync, import, and export adapters only where contact parsing or lookup-by-email must understand additional contact emails, while preserving `contacts.email` as the default summary/send address.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-17",
+      "FR-19"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Update factories, seeds, fixtures, and shared test helpers to create contacts with a labeled primary email and optional additional-email rows.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-19",
+      "FR-20"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Preserve compatibility for existing `contacts.email` consumers, including notifications, portal/auth, billing, watcher, and scheduling flows, under the default-swap model.",
+    "implemented": false,
+    "prdRefs": [
+      "FR-17",
+      "FR-18",
+      "FR-20"
+    ]
   }
 ]

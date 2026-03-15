@@ -6,177 +6,174 @@
 
 ## Summary
 
-Allow contacts to store multiple email addresses, each with a label and a single default. Match inbound email against any stored address, send outbound contact email to the default address, and remove the scalar contact email model in one coordinated migration.
+Allow contacts to keep a required primary email on `contacts.email`, add labeled additional email addresses in a child table, and let users promote an additional email to default by swapping it into `contacts.email`. The design preserves compatibility for the large set of existing application surfaces that already treat `contacts.email` as the canonical default email while still enabling inbound matching and search across multiple stored addresses.
 
 ## Problem
 
-The current contact model allows only one email address. That is too restrictive for real customer records, where a single contact may have separate work, personal, and billing addresses. The scalar model also leaks into many unrelated areas: inbound email matching, portal invitations, ticket notifications, workflow actions, pickers, integrations, and APIs. As a result, the application cannot represent real-world contact communication preferences without either overwriting information or creating duplicate contacts.
+The current contact model allows only one email address, which is too restrictive for real customer records. A single contact may need work, personal, and billing addresses, but duplicating contacts to represent those variants causes inbound-email ambiguity and data quality issues.
+
+At the same time, a full normalization of contact email would force contract changes across a large part of the product because many existing surfaces already read `contacts.email` as the default send/login/summary address. A safer design should add support for more addresses without breaking those default-email consumers.
 
 ## Goals
 
-1. Let a contact store multiple email addresses with one default address.
-2. Support canonical labels plus tenant-scoped custom labels using the same model as contact phone labels.
-3. Preserve tenant-wide uniqueness for every stored email address.
-4. Match inbound email against any stored contact email address.
-5. Send outbound contact email to the contact's default email address.
-6. Remove the scalar `contacts.email` database model and update all contracts in one pass.
+1. Let a contact store multiple labeled email addresses.
+2. Keep `contacts.email` as the required authoritative default email.
+3. Let users change the default by swapping an additional email into `contacts.email`.
+4. Support canonical labels plus tenant-scoped custom labels using the same general model as contact phone labels.
+5. Enforce tenant-wide uniqueness across both primary and additional contact emails.
+6. Match inbound email and contact lookups by either the primary or an additional email address.
+7. Preserve compatibility for existing outbound, portal, auth, and summary consumers that already use `contacts.email`.
 
 ## Non-goals
 
-- Supporting duplicate contact email addresses within a tenant.
-- Multi-email support for internal users in this effort.
-- Compatibility rollout with long-lived scalar `contact.email` persistence in the database.
-- Advanced email preference rules beyond one default email address.
-- Shared-contact or shared-mailbox fan-out semantics for watch lists or notifications beyond existing email-based behavior.
+- Replacing `contacts.email` with a fully normalized email collection in this effort.
+- Making `contacts.email` nullable.
+- Allowing a contact to have no primary/default email.
+- Treating additional emails as independent login aliases for portal or client-user auth.
+- Rewriting every `contacts.email` consumer to a new default-email field when existing behavior can remain unchanged.
+- Re-keying existing email-snapshot recipient records unless the surface explicitly re-resolves the contact from user input.
 
 ## Users and Primary Flows
 
 **Primary users**
 - Service desk agents managing contacts
 - Operators handling inbound email and ticketing
-- Staff sending notifications, surveys, invoices, and portal invitations
-- Automation/integration flows creating or resolving contacts
+- Staff sending notifications, invoices, surveys, and portal invitations
+- Automation and integration flows that create or resolve contacts by email
 
 ### Flow A — Manage Contact Emails
 1. User opens contact create or edit.
-2. User adds one or more email rows.
-3. User assigns canonical or custom labels.
-4. User chooses exactly one default row.
-5. The system validates uniqueness, label correctness, and default selection before save.
+2. User edits the primary email row, including its label.
+3. User adds, labels, reorders, or deletes additional email rows.
+4. User promotes an additional email to default.
+5. The system swaps the promoted row into `contacts.email` and moves the previous primary email into the additional-email table.
 
 ### Flow B — Match Inbound Email
 1. An inbound message arrives from a sender address.
-2. The system normalizes the sender address and looks up any matching contact email row.
+2. The system normalizes the sender address and searches both `contacts.email` and additional email rows.
 3. The system resolves the owning contact uniquely.
-4. Ticket/comment authorship uses the matched sender address.
-5. Any follow-up outbound contact send uses that contact's default email.
+4. Ticket/comment authorship preserves the matched sender address.
+5. Any default outbound contact send still uses `contacts.email`.
 
-### Flow C — Send Outbound Contact Email
+### Flow C — Existing Default-Email Sends
 1. A workflow or product surface needs to email a contact.
-2. The system resolves the contact's default email address.
-3. The send path uses that address consistently.
-4. If the contact has no default email because it has no email rows, the existing surface-specific validation/error behavior applies.
-
-### Flow D — Portal / Client User Invitation
-1. A portal invitation or registration flow targets a contact.
-2. The system uses the contact's current default email as the canonical invitation/login address.
-3. If the default email changes later, future contact-driven invite/login operations use the new default.
+2. The surface reads `contacts.email`.
+3. The send path continues to work without needing a new derived default-email field.
+4. If the default was changed earlier, the promoted address is already present in `contacts.email`.
 
 ## UX / UI Notes
 
-- Use a shared `ContactEmailAddressesEditor` modeled directly on `ContactPhoneNumbersEditor`.
-- Canonical labels: `work`, `personal`, `billing`, `other`, plus `custom`.
+- Use a shared `ContactEmailAddressesEditor` modeled on the phone-number editor.
+- The editor should render a pinned primary/default row plus a list of additional rows.
+- Canonical labels: `work`, `personal`, `billing`, `other`.
 - Custom labels must support freeform entry and tenant-scoped suggestions.
-- If a custom label is no longer used anywhere in the tenant, it should be eligible for cleanup, like phone labels.
-- Detail screens show all email rows and mark the default.
-- List screens, pickers, and summary cards show the derived default email.
-- Validation should mirror the phone editor pattern: row-level errors, duplicate custom-label checks, and exactly-one-default enforcement.
+- Users cannot delete the primary email row directly.
+- To change default, users promote an additional email, which swaps it with the current primary row.
+- Detail views show the primary/default email distinctly, with additional emails listed underneath.
+- List screens, pickers, and summary cards continue showing `contacts.email` as the default summary address.
 
 ## Functional Requirements
 
 ### Data Model and Validation
 
-**FR-01**: Contacts store email addresses as a normalized child collection, not as a scalar database column.
+**FR-01**: `contacts.email` remains required and is the authoritative default contact email.
 
-**FR-02**: Each email row includes address, normalized address, label metadata, default flag, and display order.
+**FR-02**: The primary contact email stored on `contacts` gains label metadata.
 
-**FR-03**: Canonical email labels are `work`, `personal`, `billing`, and `other`.
+**FR-03**: Non-default contact emails are stored as an ordered child collection separate from `contacts.email`.
 
-**FR-04**: Custom email labels are tenant-scoped, normalized for dedupe, and reusable across contacts.
+**FR-04**: Canonical email labels are `work`, `personal`, `billing`, and `other`, and custom labels are tenant-scoped and reusable across primary and additional emails.
 
-**FR-05**: A contact with one or more email rows must have exactly one default email row.
+**FR-05**: Every normalized email address is unique per tenant across both `contacts.email` and additional email rows.
 
-**FR-06**: Every normalized email address is unique per tenant across all contacts.
+**FR-06**: Promoting an additional email to default swaps both the email value and its label metadata with the current `contacts.email` values.
 
-**FR-07**: Existing contacts migrate to one default email row seeded from the previous scalar email value.
+**FR-07**: A contact can never lose its primary/default email; deleting the current default directly is disallowed.
 
-### Contact CRUD and UI
+**FR-08**: Existing contacts migrate without changing their current `contacts.email` values and gain safe initial primary-email label metadata.
 
-**FR-08**: Contact create/edit screens support adding, removing, reordering, and defaulting multiple email rows.
+### Contact CRUD and Discovery
 
-**FR-09**: Contact detail views display all email rows with label and default indication.
+**FR-09**: Contact create/edit screens support editing the primary email label plus adding, removing, reordering, and promoting additional email rows.
 
-**FR-10**: Contact list, picker, and summary views display the derived default email.
+**FR-10**: Contact detail views display the primary/default email distinctly and list all additional emails with labels.
 
-**FR-11**: Contact search by email matches any stored email row.
+**FR-11**: Contact list, picker, and summary views continue to display `contacts.email` as the visible default email.
 
-### Inbound and Workflow Behavior
+**FR-12**: Contact search, filter, import, and export by email must be able to match both primary and additional email addresses.
 
-**FR-12**: Inbound email sender matching resolves contacts by any stored email address.
+### Inbound Email and Workflow Lookups
 
-**FR-13**: Inbound processing preserves the matched sender address separately from the contact's default email.
+**FR-13**: Inbound email sender matching resolves contacts by either the primary or an additional stored email address.
 
-**FR-14**: Workflow/runtime contact lookup actions resolve contacts by any stored email address.
+**FR-14**: Inbound and workflow contexts preserve the matched sender email separately when it differs from `contacts.email`.
 
-**FR-15**: Workflow/runtime contact payloads expose multi-email data plus derived default email information.
+**FR-15**: Shared contact lookup and create-or-find helpers search both storage locations while creating new contacts with the primary email stored in `contacts.email`.
 
-### Outbound Email Behavior
+**FR-16**: Workflow/domain-event/full-contact contracts expose primary-email label metadata and additional email rows where a full contact shape is needed, while summary email fields continue to use `contacts.email`.
 
-**FR-16**: Ticket notifications to requester contacts send to the contact's default email.
+### Compatibility and Integrations
 
-**FR-17**: Project notifications, surveys, invoices, portal invitations, and other contact-addressed sends use the contact's default email.
+**FR-17**: Existing outbound notifications, portal/auth flows, client-user linking, billing sends, and similar default-email consumers continue to use `contacts.email` without needing a new default-email field.
 
-**FR-18**: Surfaces that require a contact email continue to fail explicitly when the contact has no email rows.
+**FR-18**: Existing email-keyed watcher and recipient snapshot behavior remains compatible unless a surface explicitly re-resolves a contact from user-supplied email input.
 
-### Portal, Auth, API, and Integrations
+**FR-19**: REST, n8n, CSV, and integration contracts add support for primary-email labels and additional email rows without removing scalar `email`.
 
-**FR-19**: Portal invitation and contact-driven registration flows use the contact's default email automatically.
-
-**FR-20**: Public/API schemas remove scalar contact email write contracts and replace them with multi-email contracts.
-
-**FR-21**: n8n and integration helpers support the new multi-email contact contract in the same release.
-
-**FR-22**: Any contract that still needs a summary email in responses uses the derived default email from the multi-email model, not a stored scalar column.
+**FR-20**: Automated coverage includes DB-backed uniqueness, swap, and lookup tests plus compatibility regressions for major `contacts.email` consumers.
 
 ## Non-functional Requirements
 
-- Keep validation and editor behavior aligned with the existing phone-number implementation to minimize UX divergence.
-- Avoid ambiguous lookup behavior by enforcing tenant-wide uniqueness on every email row.
-- Preserve stable behavior for existing email-driven workflows after migration.
-- Update test coverage across database, UI, API, workflow, and notification layers in the same effort.
+- Keep the email-label editor behavior aligned with the existing phone-number label model where practical.
+- Favor compatibility by preserving `contacts.email` as the authoritative default field.
+- Avoid ambiguous contact resolution by enforcing tenant-wide uniqueness across both storage locations.
+- Keep the migration safe and reversible by preserving existing primary email values and layering additional-email support around them.
 
 ## Data / API / Integrations
 
-### Proposed Contact Email Row Shape
+### Proposed Shape
 
-Each email row should follow the phone-row pattern:
+Primary/default email remains on `contacts`:
 
-- `contact_email_address_id`
+- `email`
+- primary email label metadata fields
+
+Additional emails live in a child table:
+
+- `contact_additional_email_address_id`
 - `email_address`
 - `normalized_email_address`
-- `canonical_type`
-- `custom_email_type_id`
-- `custom_type`
-- `is_default`
+- label metadata
 - `display_order`
 
 ### API Direction
 
-- Remove scalar contact email as a write field.
-- Add `email_addresses` to create/update contracts.
-- Return `email_addresses`, `default_email_address`, and `default_email_type` in contact read contracts.
-- Update any legacy summary response fields to be derived from the default email if still needed by response consumers.
+- Keep `email` in create/update/read contracts as the primary/default email.
+- Add primary-email label fields to create/update/read contracts.
+- Add `additional_email_addresses` to create/update/read contracts.
+- Keep response summary email fields sourced from `contacts.email`.
 
 ### Workflow Direction
 
-- `findContactByEmail` and related actions must search child email rows.
-- Inbound workflow context should expose both:
+- `findContactByEmail` and related lookup helpers must search both `contacts.email` and additional email rows.
+- Workflow contexts that care about inbound authorship should preserve:
   - matched sender email
-  - resolved contact default email
+  - primary/default contact email from `contacts.email`
 
 ## Risks and Migration Notes
 
-- This is a broad one-pass contract break and will require coordinated updates across UI, shared runtime code, APIs, and integrations.
-- Portal and auth behavior becomes explicitly tied to the current default contact email; changing the default changes future invitation/login targeting.
-- Watch-list and recipient-dedupe behavior is still email-keyed and must be audited so contact selection keeps predictable outcomes.
-- Existing tests and fixtures that build contacts with scalar `email` will need widespread updates.
+- The main schema risk is cross-location uniqueness: the system must prevent duplicates between `contacts.email` and the additional-email table in both directions.
+- Default-swap behavior must be transactional so the primary and additional rows cannot drift.
+- CSV/import/export and API contracts still need real updates, even with the safer compatibility model.
+- Some recipient stores, such as watcher-like email snapshots, may intentionally remain email-keyed rather than dynamically following future contact default swaps.
+- Existing tests and fixtures that only know about scalar email will still need widespread updates to cover primary labels and additional emails.
 
 ## Acceptance Criteria / Definition Of Done
 
-1. Contacts can create, edit, view, and save multiple labeled email addresses with one default.
-2. Tenant-wide uniqueness is enforced on every stored email address.
-3. Inbound email processing can resolve a contact by any stored email address.
-4. Outbound contact-targeted sends use the resolved default email.
-5. Portal, auth-adjacent contact flows, API schemas, workflow actions, and integrations are updated to the multi-email model.
-6. Existing contact data migrates successfully off the scalar email column.
-7. Automated coverage includes DB-backed migration/model tests plus representative UI, workflow, notification, and API tests.
+1. Contacts can keep a labeled primary/default email and add labeled additional emails.
+2. Users can promote an additional email to default, and the system swaps it into `contacts.email`.
+3. Tenant-wide uniqueness is enforced across both primary and additional contact emails.
+4. Inbound email processing and lookup helpers can resolve a contact by any stored email address.
+5. Existing default-email consumers continue to operate against `contacts.email`.
+6. REST/API, CSV, n8n, and integration contracts support the hybrid model.
+7. Automated coverage proves swap behavior, uniqueness, inbound lookup, and compatibility for key `contacts.email` consumers.
