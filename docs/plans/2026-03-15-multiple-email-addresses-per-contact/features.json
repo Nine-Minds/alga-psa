@@ -272,7 +272,7 @@
   {
     "id": "F031",
     "description": "Preserve compatibility for existing `contacts.email` consumers, including notifications, portal/auth, billing, watcher, and scheduling flows, under the default-swap model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-17",
       "FR-18",

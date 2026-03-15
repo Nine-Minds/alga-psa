@@ -126,6 +126,17 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `shared/models/__tests__/contactInterfaceParity.test.ts` for contract parity between shared interfaces and `@alga-psa/types`.
 - Decision made to model primary email label metadata as explicit columns on `contacts` and use child rows for additional emails only.
 - Constraint to keep: keep `contacts.email` as authoritative default and compatibility boundary for downstream consumers.
+- (2026-03-15) Completed compatibility/regression closeout for default-email consumers:
+  - Added `server/src/test/unit/contacts/ContactEmailDefaultConsumer.contract.test.ts` to lock portal/auth, billing, survey, project, ticket, and scheduling flows onto `contacts.email`.
+  - Extended `shared/lib/tickets/__tests__/watchList.test.ts` to prove watcher recipients remain email-keyed snapshots even if later contact metadata differs.
+  - Added `server/src/test/integration/contactEmailLookup.integration.test.ts` regression covering create -> promote additional email -> lookup by both addresses -> uniqueness guards.
+- (2026-03-15) Found and fixed a real cross-table uniqueness bug while finishing `T049`:
+  - `check_contact_additional_email_uniqueness()` originally compared against `NEW.normalized_email_address` inside a `BEFORE` trigger, but generated columns are not available there yet.
+  - Fixed the migration trigger to normalize from `NEW.email_address` directly.
+  - Updated `ContactModel.updateContact()` promotion flow to clear existing additional-email rows before swapping the primary email, then reinsert the final additional-email set after the primary update so immediate uniqueness triggers never observe an invalid intermediate state.
+- (2026-03-15) Verification run for the final closeout:
+  - `cd server && pnpm vitest run src/test/unit/migrations/contactAdditionalEmailAddressesMigration.test.ts src/test/unit/contacts/ContactEmailDefaultConsumer.contract.test.ts src/test/integration/contactModelEmailAddresses.integration.test.ts src/test/integration/contactEmailLookup.integration.test.ts --coverage=false`
+  - `cd shared && pnpm vitest run lib/tickets/__tests__/watchList.test.ts --coverage=false`
 - Completed shared email editor milestone:
   - Added `packages/clients/src/components/contacts/ContactEmailAddressesEditor.tsx` with:
     - pinned primary/default row

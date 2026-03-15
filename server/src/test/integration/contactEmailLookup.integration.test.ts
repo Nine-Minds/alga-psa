@@ -193,4 +193,93 @@ describe('contact email lookup integration', () => {
       }),
     ]));
   });
+
+  it('T049: create, swap, lookup by both addresses, and uniqueness guards hold after promoting an additional email', async () => {
+    const tenantId = uuidv4();
+    const clientId = uuidv4();
+    testState.tenant = tenantId;
+
+    await createTenant(db, tenantId);
+    await createClient(db, tenantId, clientId, 'Swap Lookup Client');
+
+    const originalPrimaryEmail = `owner-${tenantId}@acme.com`;
+    const promotedEmail = `billing-${tenantId}@acme.com`;
+
+    const createdContact = await db.transaction((trx) =>
+      ContactModel.createContact({
+        full_name: 'Swap Lookup Contact',
+        email: originalPrimaryEmail,
+        client_id: clientId,
+        primary_email_canonical_type: 'work',
+        additional_email_addresses: [
+          {
+            email_address: promotedEmail,
+            canonical_type: 'billing',
+            display_order: 0,
+          },
+        ],
+        phone_numbers: [],
+      }, tenantId, trx)
+    );
+
+    await db.transaction((trx) =>
+      ContactModel.updateContact(createdContact.contact_name_id, {
+        email: promotedEmail,
+        additional_email_addresses: [
+          {
+            email_address: promotedEmail,
+            canonical_type: 'billing',
+            display_order: 0,
+          },
+        ],
+      }, tenantId, trx)
+    );
+
+    const promotedLookup = await findContactByEmailAddress(promotedEmail);
+    const demotedLookup = await findContactByEmailAddress(originalPrimaryEmail);
+
+    expect(promotedLookup).toMatchObject({
+      contact_name_id: createdContact.contact_name_id,
+      email: promotedEmail,
+    });
+    expect(demotedLookup).toMatchObject({
+      contact_name_id: createdContact.contact_name_id,
+      email: promotedEmail,
+    });
+    expect(demotedLookup?.additional_email_addresses).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        email_address: originalPrimaryEmail,
+        canonical_type: 'work',
+      }),
+    ]));
+
+    await expect(
+      db.transaction((trx) =>
+        ContactModel.createContact({
+          full_name: 'Duplicate Demoted Email',
+          email: originalPrimaryEmail,
+          client_id: clientId,
+          phone_numbers: [],
+        }, tenantId, trx)
+      )
+    ).rejects.toThrow();
+
+    await expect(
+      db.transaction((trx) =>
+        ContactModel.createContact({
+          full_name: 'Duplicate Promoted Email',
+          email: `secondary-${tenantId}@acme.com`,
+          client_id: clientId,
+          additional_email_addresses: [
+            {
+              email_address: promotedEmail,
+              canonical_type: 'billing',
+              display_order: 0,
+            },
+          ],
+          phone_numbers: [],
+        }, tenantId, trx)
+      )
+    ).rejects.toThrow();
+  });
 });

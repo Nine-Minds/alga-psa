@@ -808,7 +808,7 @@ export class ContactModel {
         : (updateData.primary_email_canonical_type ?? null);
       updateData.primary_email_custom_type_id = primaryEmailCustomTypeId;
     }
-    const shouldReplaceAdditionalEmailAddressesFirst =
+    const shouldClearAdditionalEmailAddressesBeforePrimarySwap =
       promotedEmailRow !== null &&
       updateData.additional_email_addresses !== undefined;
 
@@ -830,8 +830,13 @@ export class ContactModel {
       }
     }
 
-    if (shouldReplaceAdditionalEmailAddressesFirst && updateData.additional_email_addresses !== undefined) {
-      await this.replaceAdditionalEmailAddresses(contactId, tenant, updateData.additional_email_addresses, trx, now);
+    if (shouldClearAdditionalEmailAddressesBeforePrimarySwap) {
+      // During a primary-email promotion, clear the existing additional rows before
+      // updating contacts.email so immediate uniqueness triggers never see both
+      // the old and new primary addresses in conflicting locations at once.
+      await trx('contact_additional_email_addresses')
+        .where({ tenant, contact_name_id: contactId })
+        .delete();
     }
 
     await trx('contacts')
@@ -841,7 +846,7 @@ export class ContactModel {
     if (updateData.phone_numbers !== undefined) {
       await this.replacePhoneNumbers(contactId, tenant, updateData.phone_numbers, trx, now);
     }
-    if (updateData.additional_email_addresses !== undefined && !shouldReplaceAdditionalEmailAddressesFirst) {
+    if (updateData.additional_email_addresses !== undefined) {
       await this.replaceAdditionalEmailAddresses(contactId, tenant, updateData.additional_email_addresses, trx, now);
     }
 

@@ -373,7 +373,7 @@
   {
     "id": "T046",
     "description": "Portal invitation, registration, and client-user linking flows remain compatible because they continue to use `contacts.email` after additional emails are added or the default is swapped.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -381,7 +381,7 @@
   {
     "id": "T047",
     "description": "Ticket, project, survey, billing, and scheduling contact-email sends continue to use the current `contacts.email` after a default swap.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -389,7 +389,7 @@
   {
     "id": "T048",
     "description": "Watcher and other email-snapshot recipient behavior remains compatible under the hybrid model unless the surface explicitly re-resolves the contact from email input.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -397,7 +397,7 @@
   {
     "id": "T049",
     "description": "A DB-backed end-to-end regression covers create -> add additional email -> promote additional email to default -> lookup by both addresses -> verify uniqueness guards.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F010",

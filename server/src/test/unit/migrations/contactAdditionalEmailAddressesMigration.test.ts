@@ -46,7 +46,7 @@ describe('contact additional email addresses migrations', () => {
   it('T006: builds cross-table uniqueness checks via triggers', () => {
     expect(migration).toContain('check_contact_primary_email_uniqueness');
     expect(migration).toContain('check_contact_additional_email_uniqueness');
-    expect(migration).toContain('LOWER(BTRIM(c.email)) = NEW.normalized_email_address');
+    expect(migration).toContain('LOWER(BTRIM(c.email)) = LOWER(BTRIM(NEW.email_address))');
     expect(migration).toContain('cea.normalized_email_address = normalized_primary');
   });
 

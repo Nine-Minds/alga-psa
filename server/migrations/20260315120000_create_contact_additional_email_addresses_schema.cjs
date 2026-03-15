@@ -128,7 +128,7 @@ exports.up = async function up(knex) {
         SELECT 1
         FROM contacts AS c
         WHERE c.tenant = NEW.tenant
-          AND LOWER(BTRIM(c.email)) = NEW.normalized_email_address
+          AND LOWER(BTRIM(c.email)) = LOWER(BTRIM(NEW.email_address))
       ) THEN
         RAISE EXCEPTION 'An additional email address already exists as a contact primary email in this tenant';
       END IF;
