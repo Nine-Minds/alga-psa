@@ -312,3 +312,18 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `shared/workflow/runtime/actions/__tests__/businessOperations.contacts.emailSearch.test.ts`
 - Verification runbook used:
   - `cd shared && pnpm vitest run workflow/runtime/actions/__tests__/businessOperations.contacts.emailSearch.test.ts --coverage=false`
+
+## Update (2026-03-15, REST contact hybrid email contracts)
+- Completed `F026` and flipped `T040` and `T041` to implemented.
+- Updated `server/src/lib/api/schemas/contact.ts` so REST contact schemas now accept and return:
+  - scalar `email` as the primary/default address
+  - `primary_email_canonical_type`
+  - `primary_email_custom_type_id`
+  - `primary_email_type` on responses
+  - `additional_email_addresses`
+- Updated `server/src/lib/api/services/ContactService.ts#create` so create requests stop dropping the hybrid email fields before they reach `ContactModel.createContact`.
+- Added focused unit coverage:
+  - `server/src/test/unit/validation/contactEmailSchemas.test.ts`
+  - `server/src/test/unit/api/contactServiceEmailAddresses.test.ts`
+- Verification runbook used:
+  - `cd server && pnpm vitest run src/test/unit/validation/contactEmailSchemas.test.ts src/test/unit/api/contactServiceEmailAddresses.test.ts --coverage=false`

@@ -227,7 +227,7 @@
   {
     "id": "F026",
     "description": "Update REST contact schemas, controllers, and API services to accept and return primary-email label metadata plus additional email rows without removing scalar `email`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-16",
       "FR-19"
