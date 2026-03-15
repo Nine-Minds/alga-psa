@@ -222,11 +222,13 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - support updating an existing contact when the import row matches one of that contact's additional email addresses
 - Updated `ContactsImportDialog.tsx` so CSV mapping, validation, preview, and upload copy understand the new hybrid-email fields and collision checks.
 - Added/updated regression coverage in `server/src/test/integration/contactCsvPhoneImportExport.integration.test.ts` for:
-  - template/copy contract
-  - create/update import behavior with primary and additional email rows
-  - export formatting for primary labels and additional-email representation
+  - DB-backed create/update import behavior with primary and additional email rows when the local test Postgres harness is available
+- Added no-DB contract coverage for the CSV email representation and import wiring:
+  - `server/src/test/unit/contacts/contactCsvEmailImportExport.contract.test.ts`
+  - `server/src/test/unit/contacts/contactCsvImport.contract.test.ts`
 - Verification runbook used:
-  - `cd server && pnpm vitest run src/test/integration/contactCsvPhoneImportExport.integration.test.ts --coverage=false`
+  - `cd server && pnpm vitest run src/test/unit/contacts/contactCsvEmailImportExport.contract.test.ts src/test/unit/contacts/contactCsvImport.contract.test.ts --coverage=false`
 - Gotchas discovered:
   - Import updates that match by an additional email need pre-normalization before calling `ContactModel.updateContact`, otherwise the model correctly rejects a raw primary-email change that has not been expressed as a promote/swap.
   - When the import row promotes an existing additional email to primary, the import layer must omit the old primary from the incoming additional-email list because the model appends the demoted primary row transactionally during the swap.
+  - A focused rerun of `server/src/test/integration/contactCsvPhoneImportExport.integration.test.ts` is still blocked in this Codex harness because Postgres on `127.0.0.1:5438` is not reachable (`EPERM` before test setup), so the DB-backed import regression remains in place but was not executable here.
