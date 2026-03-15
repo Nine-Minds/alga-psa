@@ -101,7 +101,7 @@
   {
     "id": "F012",
     "description": "Update contact domain-event builders and full-contact workflow contracts to include primary-email label metadata and additional-email rows while keeping summary email fields sourced from `contacts.email`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-16"
     ]

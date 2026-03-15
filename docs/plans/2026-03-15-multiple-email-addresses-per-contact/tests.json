@@ -135,7 +135,7 @@
   {
     "id": "T017",
     "description": "Contact created and updated domain-event payloads include primary-email label metadata and additional-email rows while keeping summary email fields on `email`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]

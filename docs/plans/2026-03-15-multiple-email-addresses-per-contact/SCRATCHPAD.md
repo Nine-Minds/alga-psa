@@ -143,3 +143,21 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `pnpm vitest run src/test/integration/contactModelEmailAddresses.integration.test.ts` from `server/`
 - Gotcha discovered:
   - The first draft of the model only supported custom primary labels by stored definition ID, which was insufficient for create/update flows and broke promotion of custom-labeled additional emails. The fix was to treat primary labels like additional rows at the input boundary, then resolve/create the tenant-scoped label definition inside the model transaction.
+
+## Update (2026-03-15, event/workflow contracts)
+- Completed `F012` and flipped `T017` to implemented.
+- Updated contact domain-event builders to emit:
+  - `primaryEmailCanonicalType`
+  - `primaryEmailCustomTypeId`
+  - `primaryEmailType`
+  - `additionalEmailAddresses`
+  while still leaving the summary/default address on top-level `email`.
+- Added an alias rule in `buildContactUpdatedPayload` so workflow/event diffs treat input-only `primary_email_custom_type` changes as changes to the persisted `primary_email_type` and `primary_email_custom_type_id` fields.
+- Updated both schema copies of CRM event payloads:
+  - `shared/workflow/runtime/schemas/crmEventSchemas.ts`
+  - `packages/event-schemas/src/schemas/domain/crmEventSchemas.ts`
+- Updated both workflow event publishers that build `CONTACT_CREATED` payloads:
+  - `server/src/lib/api/services/ContactService.ts`
+  - `packages/clients/src/actions/contact-actions/contactActions.tsx`
+- Verification runbook used:
+  - `pnpm vitest run workflow/streams/domainEventBuilders/__tests__/contactEventBuilders.test.ts` from `shared/`

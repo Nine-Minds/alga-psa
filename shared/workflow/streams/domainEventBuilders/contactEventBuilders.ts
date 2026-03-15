@@ -1,4 +1,7 @@
-import type { IContactPhoneNumber } from '../../../interfaces/contact.interfaces';
+import type {
+  IContactEmailAddress,
+  IContactPhoneNumber,
+} from '../../../interfaces/contact.interfaces';
 
 type ContactLike = Record<string, unknown> & {
   contact_name_id: string;
@@ -7,6 +10,13 @@ type ContactLike = Record<string, unknown> & {
 
 function snakeToCamel(value: string): string {
   return value.replace(/_([a-z])/g, (_, c) => String(c).toUpperCase());
+}
+
+function expandUpdatedContactFieldKey(value: string): string[] {
+  if (value === 'primary_email_custom_type') {
+    return ['primary_email_type', 'primary_email_custom_type_id'];
+  }
+  return [value];
 }
 
 function normalizeChangeValue(value: unknown): unknown {
@@ -33,6 +43,10 @@ export function buildContactCreatedPayload(params: {
   clientId: string;
   fullName: string;
   email?: string;
+  primaryEmailCanonicalType?: string | null;
+  primaryEmailCustomTypeId?: string | null;
+  primaryEmailType?: string | null;
+  additionalEmailAddresses?: IContactEmailAddress[];
   phoneNumbers?: IContactPhoneNumber[];
   defaultPhoneNumber?: string;
   defaultPhoneType?: string;
@@ -44,6 +58,10 @@ export function buildContactCreatedPayload(params: {
     clientId: params.clientId,
     fullName: params.fullName,
     ...(params.email ? { email: params.email } : {}),
+    ...(params.primaryEmailCanonicalType !== undefined ? { primaryEmailCanonicalType: params.primaryEmailCanonicalType } : {}),
+    ...(params.primaryEmailCustomTypeId ? { primaryEmailCustomTypeId: params.primaryEmailCustomTypeId } : {}),
+    ...(params.primaryEmailType ? { primaryEmailType: params.primaryEmailType } : {}),
+    ...(params.additionalEmailAddresses?.length ? { additionalEmailAddresses: params.additionalEmailAddresses } : {}),
     ...(params.phoneNumbers?.length ? { phoneNumbers: params.phoneNumbers } : {}),
     ...(params.defaultPhoneNumber ? { defaultPhoneNumber: params.defaultPhoneNumber } : {}),
     ...(params.defaultPhoneType ? { defaultPhoneType: params.defaultPhoneType } : {}),
@@ -63,23 +81,28 @@ export function buildContactUpdatedPayload(params: {
 }): Record<string, unknown> {
   const updatedFields: string[] = [];
   const changes: Record<string, { previous: unknown; new: unknown }> = {};
+  const seenPaths = new Set<string>();
 
   for (const key of params.updatedFieldKeys) {
-    if (key === 'tenant') continue;
-    if (key === 'updated_at') continue;
-    if (key === 'created_at') continue;
-    if (key === 'contact_name_id') continue;
+    for (const resolvedKey of expandUpdatedContactFieldKey(key)) {
+      if (resolvedKey === 'tenant') continue;
+      if (resolvedKey === 'updated_at') continue;
+      if (resolvedKey === 'created_at') continue;
+      if (resolvedKey === 'contact_name_id') continue;
 
-    const previousValue = params.before[key];
-    const newValue = params.after[key];
-    if (areValuesEqual(previousValue, newValue)) continue;
+      const previousValue = params.before[resolvedKey];
+      const newValue = params.after[resolvedKey];
+      if (areValuesEqual(previousValue, newValue)) continue;
 
-    const path = snakeToCamel(key);
-    updatedFields.push(path);
-    changes[path] = {
-      previous: normalizeChangeValue(previousValue),
-      new: normalizeChangeValue(newValue),
-    };
+      const path = snakeToCamel(resolvedKey);
+      if (seenPaths.has(path)) continue;
+      seenPaths.add(path);
+      updatedFields.push(path);
+      changes[path] = {
+        previous: normalizeChangeValue(previousValue),
+        new: normalizeChangeValue(newValue),
+      };
+    }
   }
 
   return {
