@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -16,6 +16,7 @@ import CreditExpirationInfo from '../CreditExpirationInfo';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
+import { resolveInvoiceTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -56,6 +57,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const selectedTemplate = templates.find(t => t.template_id === selectedTemplateId) || null;
+  const resolvedPreviewPrintSettings = useMemo(
+    () => resolveInvoiceTemplatePrintSettingsFromAst(selectedTemplate?.templateAst ?? null),
+    [selectedTemplate]
+  );
 
   // Track container width for dynamic scaling
   useEffect(() => {
@@ -133,11 +138,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   };
 
   // Calculate scale based on container width
-  // Standard US Letter size is 8.5" x 11" = 816px x 1056px at 96 DPI
-  // We'll use 816px as our base width
-  // A4 paper height is 1123px + padding/container (~1200px total)
-  const baseInvoiceWidth = 816;
-  const baseInvoiceHeight = 1200; // Approximate total height including paper container
+  const paperShellChromePx = 24;
+  const baseInvoiceWidth = resolvedPreviewPrintSettings.pageWidthPx + paperShellChromePx;
+  const baseInvoiceHeight = resolvedPreviewPrintSettings.pageHeightPx + paperShellChromePx;
   const scale = containerWidth > 0 ? Math.min(containerWidth / baseInvoiceWidth, 1) : 1;
 
   if (!invoiceId) {
@@ -266,7 +269,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               )}
             </div>
 
-            <div className="mb-4 max-h-[600px] overflow-y-auto overflow-x-hidden">
+            <div className="mb-4 max-h-[600px] overflow-y-auto overflow-x-auto">
               <div
                 style={{
                   width: `${baseInvoiceWidth * scale}px`,
@@ -281,7 +284,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     transition: 'transform 0.2s ease-out'
                   }}
                 >
-                  <PaperInvoice>
+                  <PaperInvoice templateAst={selectedTemplate?.templateAst ?? null}>
                     <TemplateRenderer
                       template={selectedTemplate}
                       invoiceData={detailedInvoiceData}

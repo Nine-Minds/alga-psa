@@ -9,6 +9,7 @@ import type {
 } from '@alga-psa/types';
 import type { InvoiceTemplateEvaluationResult } from './evaluator';
 import { decodeInvoiceTemplatePathExpression } from './templateInterpolationFilters';
+import { resolveInvoiceTemplatePrintSettingsFromAst } from './printSettings';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -23,6 +24,21 @@ type RenderContext = {
 
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const parsePxLength = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const numeric = Number.parseFloat(trimmed.replace(/px$/i, '').trim());
+  return Number.isFinite(numeric) ? numeric : undefined;
+};
 
 const joinClassNames = (...values: Array<string | null | undefined | false>): string =>
   values.filter(Boolean).join(' ');
@@ -101,6 +117,38 @@ const resolveStyleRef = (
           .join(' ')
       : null;
   return { className, style: styleDeclarationToReactStyle(styleRef.inline) };
+};
+
+const resolveSyntheticRootDocumentStyle = (ast: InvoiceTemplateAst): React.CSSProperties | undefined => {
+  if (ast.layout.type !== 'document' || !isRecord(ast.metadata?.printSettings)) {
+    return undefined;
+  }
+
+  const documentInlineStyle = isRecord(ast.layout.style?.inline) ? ast.layout.style.inline : undefined;
+  const documentPaddingPx = parsePxLength(documentInlineStyle?.padding);
+  if (documentPaddingPx !== undefined && documentPaddingPx > 0) {
+    return undefined;
+  }
+
+  const pageSectionCandidate =
+    ast.layout.children.length === 1 && ast.layout.children[0]?.type === 'section'
+      ? ast.layout.children[0]
+      : null;
+  const pageInlineStyle = isRecord(pageSectionCandidate?.style?.inline) ? pageSectionCandidate.style.inline : undefined;
+  const pagePaddingPx = parsePxLength(pageInlineStyle?.padding);
+  if (pagePaddingPx !== undefined && pagePaddingPx > 0) {
+    return undefined;
+  }
+
+  const resolvedPrintSettings = resolveInvoiceTemplatePrintSettingsFromAst(ast);
+  if (resolvedPrintSettings.marginPx <= 0) {
+    return undefined;
+  }
+
+  return {
+    padding: `${resolvedPrintSettings.marginPx}px`,
+    boxSizing: 'border-box',
+  };
 };
 
 const formatValue = (value: unknown, format: InvoiceTemplateValueFormat | undefined, ctx: RenderContext): string => {
@@ -274,7 +322,8 @@ const renderNode = (
   node: InvoiceTemplateNode,
   evaluation: InvoiceTemplateEvaluationResult,
   scope: RenderScope,
-  ctx: RenderContext
+  ctx: RenderContext,
+  rootDocumentStyleOverride?: React.CSSProperties
 ): React.ReactNode => {
   const nodeTypeClass = `ast-node ast-node-type-${sanitizeCssIdentifier(node.type)}`;
   const { className: styleClassName, style } = resolveStyleRef(node.style);
@@ -283,7 +332,12 @@ const renderNode = (
   switch (node.type) {
     case 'document':
       return (
-        <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+        <div
+          key={node.id}
+          id={node.id}
+          className={elementClassName || undefined}
+          style={rootDocumentStyleOverride ? { ...(style ?? {}), ...rootDocumentStyleOverride } : style}
+        >
           {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
         </div>
       );
@@ -476,8 +530,13 @@ export const InvoiceTemplateAstRenderer: React.FC<InvoiceTemplateReactRendererPr
     (invoiceRecord as Record<string, unknown>).currencyCode ?? ast.metadata?.currencyCode ?? 'USD'
   );
   const locale = String(ast.metadata?.locale ?? 'en-US');
+  const rootDocumentStyleOverride = resolveSyntheticRootDocumentStyle(ast);
 
-  return <div className="invoice-template-root">{renderNode(ast.layout, evaluation, {}, { currencyCode, locale })}</div>;
+  return (
+    <div className="invoice-template-root">
+      {renderNode(ast.layout, evaluation, {}, { currencyCode, locale }, rootDocumentStyleOverride)}
+    </div>
+  );
 };
 
 export interface InvoiceTemplateRenderOutput {

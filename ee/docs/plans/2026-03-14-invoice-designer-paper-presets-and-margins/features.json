@@ -1,0 +1,151 @@
+[
+  {
+    "id": "F001",
+    "description": "Create a shared invoice print preset registry for `Letter`, `A4`, and `Legal`, including mm dimensions, editor px dimensions, and unit conversion helpers",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Extend invoice template AST metadata/schema with explicit print settings fields for named paper preset identity and uniform margin in millimeters",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Infer resolved print settings from legacy page/document width, height, and padding when explicit print metadata is absent",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Preserve print settings through workspace AST import/export and template save/reopen round-trips",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add a designer-store action that applies print settings by synchronizing document/page node `size`, `baseSize`, `style.width`, `style.height`, and page `layout.padding`",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Initialize new designer workspaces with explicit default print settings and matching document/page geometry",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Add reachable designer UI controls for selecting a named paper preset without requiring direct page-node selection",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Add reachable designer UI controls for editing a uniform margin value in millimeters with validation and safe bounds",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Update the design canvas, artboard bounds, and rulers to derive page dimensions from resolved print settings instead of fixed page constants alone",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Update the preview paper shell to derive visible sheet size and printable inset from resolved print settings instead of hard-coded CSS dimensions and padding",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Ensure authoritative preview export/render uses the resolved page size and margin so preview content matches configured print settings",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Introduce a shared PDF print-options resolver that converts template print settings into Puppeteer `format` and uniform `margin` options",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Wire `server/src/services/pdf-generation.service.ts` to the shared print-options resolver instead of hard-coded `A4` and fixed margin defaults",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Wire `packages/billing/src/services/pdfGenerationService.ts` to the shared print-options resolver instead of hard-coded `A4` defaults",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Keep both current invoice PDF generation paths behaviorally consistent for the same template print settings",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Problem"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Preserve existing templates without explicit print metadata through load, preview, save, and PDF generation without a database migration",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Add focused regression coverage for schema validation, workspace round-trips, canvas reshape, preview shell sizing, and both PDF print-settings paths",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]

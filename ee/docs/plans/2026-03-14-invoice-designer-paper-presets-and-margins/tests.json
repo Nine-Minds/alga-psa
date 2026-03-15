@@ -1,0 +1,322 @@
+[
+  {
+    "id": "T001",
+    "description": "Preset registry returns correct physical dimensions for `Letter`, `A4`, and `Legal`",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T002",
+    "description": "Preset conversion helpers map preset dimensions to deterministic editor pixel sizes",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T003",
+    "description": "AST schema accepts valid explicit print metadata with supported paper preset and positive uniform margin",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T004",
+    "description": "AST schema rejects unknown paper preset values",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T005",
+    "description": "AST schema rejects invalid uniform margin values outside the supported range",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F008"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T006",
+    "description": "Legacy inference maps `816 x 1056` plus current page padding to a resolved `Letter` page configuration when explicit metadata is absent",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F016"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T007",
+    "description": "Legacy inference recognizes known A4 page dimensions and resolves them to the `A4` preset when explicit metadata is absent",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F016"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T008",
+    "description": "Explicit print metadata wins over inferred legacy width/height/padding when both are present",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T009",
+    "description": "Workspace AST export preserves explicit print metadata on the template AST",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T010",
+    "description": "Workspace AST import hydrates resolved page size and page padding from explicit print metadata",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T011",
+    "description": "Saving and reopening a template preserves the selected paper preset and margin",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F016"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T012",
+    "description": "Store action updates document/page node size, baseSize, width, height, and padding together in one logical change",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T013",
+    "description": "Applying a paper preset updates both hidden document and page nodes to matching geometry",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F009"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T014",
+    "description": "Applying a margin updates page layout padding to the resolved printable inset value",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F008"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T015",
+    "description": "New designer workspaces bootstrap with explicit default print settings and matching document/page geometry",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T016",
+    "description": "Designer UI renders named preset options `Letter`, `A4`, and `Legal` in a reachable page-setup control",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T017",
+    "description": "Selecting `A4` from the paper preset control reshapes the visible design canvas without requiring page-node selection",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F009"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T018",
+    "description": "Selecting `Legal` from the paper preset control reshapes the visible design canvas and ruler extents",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F009"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T019",
+    "description": "Margin control accepts valid millimeter input and updates the resolved printable inset live",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T020",
+    "description": "Margin control rejects or clamps invalid values instead of producing broken page geometry",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F010"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T021",
+    "description": "Canvas artboard width and height derive from the resolved page preset rather than always using the legacy fixed constants",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T022",
+    "description": "Preview paper shell no longer falls back to fixed `800px` width and `1123px` height when explicit print settings are present",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T023",
+    "description": "Preview paper shell reflects the selected preset and margin for `Letter`",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T024",
+    "description": "Preview paper shell reflects the selected preset and margin for `A4`",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T025",
+    "description": "Authoritative preview export contains page width, height, and padding derived from the resolved print settings",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T026",
+    "description": "Shared PDF print-options resolver returns the expected Puppeteer `format` and uniform `margin` for explicit print settings",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T027",
+    "description": "Shared PDF print-options resolver produces consistent fallback output for legacy templates without explicit print metadata",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F016"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T028",
+    "description": "Server-side PDF generation service passes resolved `format` and `margin` options to `page.pdf(...)`",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T029",
+    "description": "Package-level billing PDF generation service passes resolved `format` and `margin` options to `page.pdf(...)`",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T030",
+    "description": "Server and package PDF services resolve identical print options for the same template print settings",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T031",
+    "description": "Invoice PDF API/service path generates a PDF successfully for a template with explicit paper preset and margin settings",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F015"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T032",
+    "description": "Billing action PDF generation path generates a PDF successfully for a template with explicit paper preset and margin settings",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T033",
+    "description": "Existing templates without explicit print metadata still load, preview, save, and generate PDFs successfully through fallback behavior",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T034",
+    "description": "Regression suite covers schema, workspace round-trip, designer reshape, preview shell sizing, and both PDF settings paths",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "type": "integration"
+  }
+]

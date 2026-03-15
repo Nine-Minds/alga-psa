@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { InvoiceTemplateTransformOperation } from '@alga-psa/types';
+import {
+  DEFAULT_INVOICE_PRINT_SETTINGS,
+  resolveInvoiceTemplatePrintSettings,
+  type InvoiceTemplatePrintSettings,
+  type InvoiceTemplateTransformOperation,
+} from '@alga-psa/types';
 
 import {
   deleteNode as patchDeleteNode,
@@ -11,7 +16,6 @@ import {
   unsetNodeProp as patchUnsetNodeProp,
 } from './patchOps';
 import { getPresetById, LegacyLayoutPresetLayout } from '../constants/presets';
-import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 import {
   canNestWithinParent,
   getAllowedChildrenForType,
@@ -230,6 +234,7 @@ interface DesignerState {
     options?: { defaults?: DesignerNodeDefaults; parentId?: string }
   ) => void;
   insertPreset: (presetId: string, dropPoint?: Point, parentId?: string) => void;
+  applyPrintSettings: (settings: Partial<InvoiceTemplatePrintSettings>) => void;
   // Generic patch API (primary path going forward).
   setNodeProp: (nodeId: string, path: string, value: unknown, commit?: boolean) => void;
   unsetNodeProp: (nodeId: string, path: string, commit?: boolean) => void;
@@ -280,6 +285,168 @@ export const createEmptyDesignerTransformWorkspace = (): DesignerTransformWorksp
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const parsePxLength = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed.length) {
+      return undefined;
+    }
+
+    const numeric = Number.parseFloat(trimmed.replace(/px$/i, '').trim());
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }
+
+  return undefined;
+};
+
+const getNodeMetadata = (node: DesignerNode | undefined): Record<string, unknown> => {
+  if (!node || !isPlainObject(node.props)) {
+    return {};
+  }
+
+  return isPlainObject(node.props.metadata) ? (node.props.metadata as Record<string, unknown>) : {};
+};
+
+const getNodeLayout = (node: DesignerNode | undefined): Partial<DesignerContainerLayout> => {
+  if (!node || !isPlainObject(node.props)) {
+    return {};
+  }
+
+  return isPlainObject(node.props.layout) ? (node.props.layout as Partial<DesignerContainerLayout>) : {};
+};
+
+const getNodeStyle = (node: DesignerNode | undefined): Partial<DesignerNodeStyle> => {
+  if (!node || !isPlainObject(node.props)) {
+    return {};
+  }
+
+  return isPlainObject(node.props.style) ? (node.props.style as Partial<DesignerNodeStyle>) : {};
+};
+
+const getNodePropSize = (node: DesignerNode | undefined): Partial<Size> => {
+  if (!node || !isPlainObject(node.props) || !isPlainObject(node.props.size)) {
+    return {};
+  }
+
+  return node.props.size as Partial<Size>;
+};
+
+const getDocumentAndPageNodes = (nodes: DesignerNode[]): {
+  documentNode: DesignerNode | undefined;
+  pageNode: DesignerNode | undefined;
+} => {
+  const documentNode = nodes.find((node) => node.type === 'document');
+  const pageNode = documentNode
+    ? nodes.find((node) => node.parentId === documentNode.id && node.type === 'page')
+    : nodes.find((node) => node.type === 'page');
+
+  return { documentNode, pageNode };
+};
+
+const resolveCurrentWorkspacePrintSettings = (nodes: DesignerNode[]) => {
+  const { documentNode, pageNode } = getDocumentAndPageNodes(nodes);
+  const documentMetadata = getNodeMetadata(documentNode);
+  const documentPropSize = getNodePropSize(documentNode);
+  const pagePropSize = getNodePropSize(pageNode);
+  const pageStyle = getNodeStyle(pageNode);
+  const pageLayout = getNodeLayout(pageNode);
+
+  return resolveInvoiceTemplatePrintSettings({
+    printSettings: isPlainObject(documentMetadata.printSettings)
+      ? (documentMetadata.printSettings as Partial<InvoiceTemplatePrintSettings>)
+      : undefined,
+    pageWidthPx:
+      pageNode?.size.width ??
+      (typeof pagePropSize.width === 'number' ? pagePropSize.width : undefined) ??
+      parsePxLength(pageStyle.width),
+    pageHeightPx:
+      pageNode?.size.height ??
+      (typeof pagePropSize.height === 'number' ? pagePropSize.height : undefined) ??
+      parsePxLength(pageStyle.height),
+    documentWidthPx:
+      documentNode?.size.width ??
+      (typeof documentPropSize.width === 'number' ? documentPropSize.width : undefined),
+    documentHeightPx:
+      documentNode?.size.height ??
+      (typeof documentPropSize.height === 'number' ? documentPropSize.height : undefined),
+    pagePaddingPx: parsePxLength(pageLayout.padding),
+  });
+};
+
+const applyResolvedPrintSettingsToNodes = (
+  nodes: DesignerNode[],
+  settings: Partial<InvoiceTemplatePrintSettings>
+): DesignerNode[] => {
+  const current = resolveCurrentWorkspacePrintSettings(nodes);
+  const resolved = resolveInvoiceTemplatePrintSettings({
+    printSettings: {
+      paperPreset: settings.paperPreset ?? current.paperPreset,
+      marginMm: typeof settings.marginMm === 'number' ? settings.marginMm : current.marginMm,
+    },
+  });
+  if (
+    current.paperPreset === resolved.paperPreset &&
+    current.marginMm === resolved.marginMm &&
+    current.pageWidthPx === resolved.pageWidthPx &&
+    current.pageHeightPx === resolved.pageHeightPx &&
+    current.marginPx === resolved.marginPx
+  ) {
+    return nodes;
+  }
+
+  return nodes.map((node) => {
+    if (node.type !== 'document' && node.type !== 'page') {
+      return node;
+    }
+
+    const metadata = {
+      ...getNodeMetadata(node),
+      printSettings: {
+        paperPreset: resolved.paperPreset,
+        marginMm: resolved.marginMm,
+      },
+    };
+    const style = {
+      ...getNodeStyle(node),
+      width: `${resolved.pageWidthPx}px`,
+      height: `${resolved.pageHeightPx}px`,
+    };
+    const layout =
+      node.type === 'page'
+        ? {
+            ...getNodeLayout(node),
+            padding: `${resolved.marginPx}px`,
+          }
+        : getNodeLayout(node);
+
+    return {
+      ...node,
+      props: {
+        ...node.props,
+        metadata,
+        layout,
+        style,
+        size: {
+          width: resolved.pageWidthPx,
+          height: resolved.pageHeightPx,
+        },
+      },
+      size: {
+        width: resolved.pageWidthPx,
+        height: resolved.pageHeightPx,
+      },
+      baseSize: {
+        width: resolved.pageWidthPx,
+        height: resolved.pageHeightPx,
+      },
+    };
+  });
+};
 
 const sanitizePersistedNodeProps = (props: Record<string, unknown> | undefined): Record<string, unknown> => {
   // Persist only authored component props. Runtime geometry (position/size) and editor-only hints
@@ -618,67 +785,92 @@ const mapLegacyPresetLayoutToCss = (layout: LegacyLayoutPresetLayout): DesignerC
   };
 };
 
-const createDocumentNode = (): DesignerNode => ({
-  id: DOCUMENT_NODE_ID,
-  type: 'document',
-  props: {
-    name: 'Document',
-    metadata: {},
-    layout: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0px',
-      padding: '0px',
-      justifyContent: 'flex-start',
-      alignItems: 'stretch',
-    },
-    style: {
-      width: `${Math.round(DESIGNER_CANVAS_BOUNDS.width)}px`,
-      height: `${Math.round(DESIGNER_CANVAS_BOUNDS.height)}px`,
-    },
-  },
-  position: { x: 0, y: 0 },
-  size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-  baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-  canRotate: false,
-  allowResize: false,
-  rotation: 0,
-  layoutPresetId: undefined,
-  parentId: null,
-  children: [],
-  allowedChildren: getAllowedChildrenForType('document'),
-});
+const createDocumentNode = (): DesignerNode => {
+  const resolvedPrintSettings = resolveInvoiceTemplatePrintSettings({
+    printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
+  });
 
-const createPageNode = (parentId: string, index = 1): DesignerNode => ({
-  id: `${DEFAULT_PAGE_NODE_ID}-${index}-${generateId()}`,
-  type: 'page',
-  props: {
-    name: `Page ${index}`,
-    metadata: {},
-    layout: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '32px',
-      padding: '40px', // Page margins
-      justifyContent: 'flex-start',
-      alignItems: 'stretch',
+  return {
+    id: DOCUMENT_NODE_ID,
+    type: 'document',
+    props: {
+      name: 'Document',
+      metadata: {
+        printSettings: {
+          paperPreset: resolvedPrintSettings.paperPreset,
+          marginMm: resolvedPrintSettings.marginMm,
+        },
+      },
+      layout: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0px',
+        padding: '0px',
+        justifyContent: 'flex-start',
+        alignItems: 'stretch',
+      },
+      style: {
+        width: `${resolvedPrintSettings.pageWidthPx}px`,
+        height: `${resolvedPrintSettings.pageHeightPx}px`,
+      },
+      size: {
+        width: resolvedPrintSettings.pageWidthPx,
+        height: resolvedPrintSettings.pageHeightPx,
+      },
     },
-    style: {
-      width: `${Math.round(DESIGNER_CANVAS_BOUNDS.width)}px`,
-      height: `${Math.round(DESIGNER_CANVAS_BOUNDS.height)}px`,
+    position: { x: 0, y: 0 },
+    size: { width: resolvedPrintSettings.pageWidthPx, height: resolvedPrintSettings.pageHeightPx },
+    baseSize: { width: resolvedPrintSettings.pageWidthPx, height: resolvedPrintSettings.pageHeightPx },
+    canRotate: false,
+    allowResize: false,
+    rotation: 0,
+    layoutPresetId: undefined,
+    parentId: null,
+    children: [],
+    allowedChildren: getAllowedChildrenForType('document'),
+  };
+};
+
+const createPageNode = (parentId: string, index = 1): DesignerNode => {
+  const resolvedPrintSettings = resolveInvoiceTemplatePrintSettings({
+    printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
+  });
+
+  return {
+    id: `${DEFAULT_PAGE_NODE_ID}-${index}-${generateId()}`,
+    type: 'page',
+    props: {
+      name: `Page ${index}`,
+      metadata: {},
+      layout: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '32px',
+        padding: `${resolvedPrintSettings.marginPx}px`,
+        justifyContent: 'flex-start',
+        alignItems: 'stretch',
+      },
+      style: {
+        width: `${resolvedPrintSettings.pageWidthPx}px`,
+        height: `${resolvedPrintSettings.pageHeightPx}px`,
+      },
+      size: {
+        width: resolvedPrintSettings.pageWidthPx,
+        height: resolvedPrintSettings.pageHeightPx,
+      },
     },
-  },
-  position: { x: 0, y: 0 },
-  size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-  baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-  canRotate: false,
-  allowResize: false,
-  rotation: 0,
-  layoutPresetId: undefined,
-  parentId,
-  children: [],
-  allowedChildren: getAllowedChildrenForType('page'),
-});
+    position: { x: 0, y: 0 },
+    size: { width: resolvedPrintSettings.pageWidthPx, height: resolvedPrintSettings.pageHeightPx },
+    baseSize: { width: resolvedPrintSettings.pageWidthPx, height: resolvedPrintSettings.pageHeightPx },
+    canRotate: false,
+    allowResize: false,
+    rotation: 0,
+    layoutPresetId: undefined,
+    parentId,
+    children: [],
+    allowedChildren: getAllowedChildrenForType('page'),
+  };
+};
 
 const createInitialNodes = (): DesignerNode[] => {
   const documentNode = createDocumentNode();
@@ -1052,6 +1244,22 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           selectedNodeId: createdNodes.at(-1)?.id ?? state.selectedNodeId,
         };
       }, false, 'designer/insertPreset');
+    },
+
+    applyPrintSettings: (settings) => {
+      setWithIndex((state) => {
+        const nodes = applyResolvedPrintSettingsToNodes(state.nodes, settings);
+        if (nodes === state.nodes) {
+          return state;
+        }
+
+        const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
+        return {
+          nodes,
+          history,
+          historyIndex,
+        };
+      }, false, 'designer/applyPrintSettings');
     },
 
     setNodeProp: (nodeId, path, value, commit = true) => {

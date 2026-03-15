@@ -48,6 +48,11 @@ export {
   DEFAULT_ACCOUNTING_EXPORT_STATUSES,
   getTaxImportState,
 } from '@alga-psa/types';
+export {
+  resolveInvoicePdfPrintOptionsFromAst,
+  resolveInvoicePrintResolutionInputFromAst,
+  resolveInvoiceTemplatePrintSettingsFromAst,
+} from './lib/invoice-template-ast/printSettings';
 
 // Legacy accounting integration helpers (used by server adapters/workflows)
 export { AccountingMappingResolver } from './services/accountingMappingResolver';

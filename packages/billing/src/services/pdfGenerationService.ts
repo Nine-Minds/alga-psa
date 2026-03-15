@@ -1,13 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
-import puppeteer, { Page } from 'puppeteer';
+import { Page } from 'puppeteer';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import type { FileStore } from '@alga-psa/storage/types/storage';
+import type { InvoiceTemplateAst } from '@alga-psa/types';
 import { getStorageProviderFactoryAsync, getFileStoreModelAsync } from '../lib/documentsHelpers';
 
 import { getInvoiceForRendering } from '../actions/invoiceQueries';
-import { getInvoiceTemplates, renderTemplateOnServer } from '../actions/invoiceTemplates';
+import { getInvoiceTemplate, getInvoiceTemplates, renderTemplateOnServer } from '../actions/invoiceTemplates';
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
+import { resolveInvoicePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { browserPoolService } from './browserPoolService';
 
 interface PDFGenerationOptions {
@@ -31,8 +33,8 @@ export class PDFGenerationService {
       throw new Error('Only invoiceId is supported by @alga-psa/billing PDFGenerationService');
     }
 
-    const htmlContent = await this.getInvoiceHtml(options.invoiceId);
-    return this.generatePDFBuffer(htmlContent);
+    const { htmlContent, templateAst } = await this.getInvoiceHtml(options.invoiceId);
+    return this.generatePDFBuffer(htmlContent, templateAst);
   }
 
   async generateAndStore(options: PDFGenerationOptions): Promise<FileStore> {
@@ -76,7 +78,9 @@ export class PDFGenerationService {
     });
   }
 
-  private async getInvoiceHtml(invoiceId: string): Promise<string> {
+  private async getInvoiceHtml(
+    invoiceId: string
+  ): Promise<{ htmlContent: string; templateAst: InvoiceTemplateAst | null }> {
     return runWithTenant(this.tenant, async () => {
       const [dbInvoiceData, templates] = await Promise.all([getInvoiceForRendering(invoiceId), getInvoiceTemplates()]);
 
@@ -108,15 +112,27 @@ export class PDFGenerationService {
         throw new Error('No invoice templates available for PDF generation');
       }
 
+      const selectedTemplate = templates.find((entry: any) => entry.template_id === templateId) ?? null;
+      let templateAst = (selectedTemplate?.templateAst ?? null) as InvoiceTemplateAst | null;
+      if (!templateAst && templateId) {
+        const canonicalTemplate = await getInvoiceTemplate(templateId);
+        templateAst = (canonicalTemplate?.templateAst ?? null) as InvoiceTemplateAst | null;
+      }
+
       const invoiceViewModel = mapDbInvoiceToWasmViewModel(dbInvoiceData);
-      const rendered = await renderTemplateOnServer(templateId, invoiceViewModel);
+      const rendered = await renderTemplateOnServer(templateId, invoiceViewModel, {
+        templateAst,
+      });
 
       // Render into a standalone HTML document for puppeteer.
-      return `<!doctype html><html><head><meta charset=\"utf-8\" /><style>${rendered.css}</style></head><body>${rendered.html}</body></html>`;
+      return {
+        htmlContent: `<!doctype html><html><head><meta charset=\"utf-8\" /><style>${rendered.css}</style></head><body>${rendered.html}</body></html>`,
+        templateAst,
+      };
     });
   }
 
-  private async generatePDFBuffer(htmlContent: string): Promise<Buffer> {
+  private async generatePDFBuffer(htmlContent: string, templateAst?: InvoiceTemplateAst | null): Promise<Buffer> {
     // Prefer the pool (mirrors server implementation), but fall back to direct launch if needed.
     let browser = await browserPoolService.getBrowser();
     let page: Page | null = null;
@@ -124,10 +140,7 @@ export class PDFGenerationService {
     try {
       page = await browser.newPage();
       await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-      });
+      const pdfBuffer = await page.pdf(resolveInvoicePdfPrintOptionsFromAst(templateAst));
       return Buffer.from(pdfBuffer);
     } finally {
       if (page) {
