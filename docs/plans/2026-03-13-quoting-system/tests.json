@@ -693,7 +693,7 @@
   {
     "id": "T080",
     "description": "Standard template: 'standard-quote-default' renders valid HTML with all sections",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
