@@ -637,7 +637,7 @@
   {
     "id": "T074",
     "description": "Version history: works for quotes with 3+ versions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
