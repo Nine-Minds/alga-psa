@@ -970,7 +970,7 @@
   {
     "id": "T112",
     "description": "Conversion: converted_invoice_id set on quote after invoice creation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ]
