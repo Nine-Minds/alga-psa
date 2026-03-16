@@ -179,4 +179,37 @@ describe('QuoteDetail accepted optional item review state', () => {
     expect(screen.getByText('Optional security bundle')).toBeTruthy();
     expect(screen.getByText('Optional onboarding workshop')).toBeTruthy();
   });
+
+  it('T118: converted quotes show links to the created contract and invoice on the detail view', async () => {
+    getQuoteMock.mockResolvedValueOnce({
+      quote_id: 'quote-converted-1',
+      quote_number: 'Q-0099',
+      version: 1,
+      client_id: 'client-1',
+      contact_id: 'contact-1',
+      title: 'Converted quote',
+      description: 'Converted scope',
+      quote_date: '2026-03-10T00:00:00.000Z',
+      valid_until: '2026-03-25T00:00:00.000Z',
+      status: 'converted',
+      currency_code: 'USD',
+      subtotal: 15000,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 15000,
+      converted_contract_id: 'contract-123',
+      converted_invoice_id: 'invoice-456',
+      quote_items: [],
+      activities: [],
+    });
+
+    const QuoteDetail = (await import('../../src/components/billing-dashboard/quotes/QuoteDetail')).default;
+
+    render(<QuoteDetail quoteId="quote-converted-1" onBack={vi.fn()} onEdit={vi.fn()} onSelectVersion={vi.fn()} />);
+
+    await waitFor(() => expect(getQuoteMock).toHaveBeenCalledWith('quote-converted-1'));
+
+    expect(await screen.findByText('Open Converted Contract')).toBeTruthy();
+    expect(screen.getByText('Open Converted Invoice')).toBeTruthy();
+  });
 });

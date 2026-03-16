@@ -371,3 +371,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T115 complete — Added a combined-conversion status assertion that confirms successful dual conversion stamps the quote as `converted` with a `converted_at` timestamp.
 - (2026-03-16) T116 complete — Added preview coverage for `buildQuoteConversionPreview()`, proving recurring items route to contracts, one-time items route to invoices, and deselected/recurring-discount rows land in the excluded bucket.
 - (2026-03-16) T117 complete — Added optional-selection conversion coverage showing deselected optional recurring and one-time items are excluded from both the created contract lines and invoice charges.
+- (2026-03-16) T118 complete — Extended `packages/billing/tests/quote/quoteDetail.test.tsx` so converted quotes render the post-conversion buttons for opening the created contract and invoice directly from quote detail.

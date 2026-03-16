@@ -1019,7 +1019,7 @@
   {
     "id": "T118",
     "description": "Conversion: post-conversion quote detail shows links to created contract and invoice",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109"
     ]
