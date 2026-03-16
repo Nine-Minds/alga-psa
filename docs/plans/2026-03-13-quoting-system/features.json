@@ -917,6 +917,14 @@
     ]
   },
   {
+    "id": "F110a",
+    "description": "P6: Approval statuses migration — extend quotes status constraint to allow pending_approval and approved",
+    "implemented": true,
+    "prdRefs": [
+      "P6-FR1"
+    ]
+  },
+  {
     "id": "F111",
     "description": "P6: Internal approval — 'Submit for Approval' action on draft quotes",
     "implemented": true,

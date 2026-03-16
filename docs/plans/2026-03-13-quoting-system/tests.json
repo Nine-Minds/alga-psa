@@ -1025,6 +1025,14 @@
     ]
   },
   {
+    "id": "T119a",
+    "description": "Approval migration: quotes status constraint allows pending_approval and approved",
+    "implemented": false,
+    "featureIds": [
+      "F110a"
+    ]
+  },
+  {
     "id": "T120",
     "description": "Approval: approve changes status from pending_approval to approved",
     "implemented": false,
