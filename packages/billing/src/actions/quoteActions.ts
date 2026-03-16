@@ -438,6 +438,37 @@ export const createQuoteRevision = withAuth(async (
   return await knex.transaction((trx) => Quote.createRevision(trx, tenant, quoteId, getActorUserId(user)));
 });
 
+export const submitQuoteForApproval = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string
+): Promise<IQuote | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const quote = await Quote.getById(knex, tenant, quoteId);
+
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+  }
+
+  if (quote.is_template) {
+    throw new Error('Quote templates cannot be submitted for approval');
+  }
+
+  if (quote.status !== 'draft') {
+    throw new Error('Only draft quotes can be submitted for approval');
+  }
+
+  return await Quote.update(knex, tenant, quoteId, {
+    status: 'pending_approval',
+    updated_by: getActorUserId(user),
+  });
+});
+
 export const listQuoteVersions = withAuth(async (
   user,
   { tenant },

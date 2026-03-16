@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, deleteQuote, getQuote, getQuoteConversionPreview, listQuoteVersions, resendQuote, sendQuoteReminder, updateQuote } from '../../../actions/quoteActions';
+import { convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, deleteQuote, getQuote, getQuoteConversionPreview, listQuoteVersions, resendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
@@ -165,6 +165,30 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
+  const handleSubmitForApproval = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      setNotice(null);
+      const result = await submitQuoteForApproval(quote.quote_id);
+
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      setQuote(result);
+      setNotice('Quote submitted for internal approval.');
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to submit quote for approval');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
   const handleResendQuote = async () => {
     if (!quote) {
       return;
@@ -293,6 +317,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         return (
           <>
             {onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>Edit</Button> : null}
+            <Button id="quote-detail-submit-approval" onClick={() => void handleSubmitForApproval()} disabled={isWorking}>Submit for Approval</Button>
             <Button id="quote-detail-send" disabled>Send</Button>
             <Button id="quote-detail-delete" variant="outline" onClick={() => void handleDelete()} disabled={isWorking}>Delete</Button>
           </>

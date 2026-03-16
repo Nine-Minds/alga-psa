@@ -919,7 +919,7 @@
   {
     "id": "F111",
     "description": "P6: Internal approval — 'Submit for Approval' action on draft quotes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR1"
     ]
