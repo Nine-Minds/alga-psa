@@ -994,7 +994,7 @@
   {
     "id": "T115",
     "description": "Conversion: status set to 'converted' after successful conversion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F106"
     ]
