@@ -331,7 +331,8 @@ export async function convertQuoteToDraftContract(
 export async function convertQuoteToDraftInvoice(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  quoteId: string
+  quoteId: string,
+  performedBy?: string | null
 ): Promise<QuoteToInvoiceConversionResult> {
   const quote = await Quote.getById(knexOrTrx, tenant, quoteId);
 
@@ -459,8 +460,30 @@ export async function convertQuoteToDraftInvoice(
     .where({ tenant, invoice_id: invoiceId })
     .first();
 
+  await knexOrTrx('quotes')
+    .where({ tenant, quote_id: quote.quote_id })
+    .update({
+      converted_invoice_id: invoiceId,
+      updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
+      updated_at: nowIso,
+    });
+
+  await QuoteActivity.create(knexOrTrx, tenant, {
+    quote_id: quote.quote_id,
+    activity_type: 'converted_to_invoice',
+    description: `Quote converted to draft invoice ${invoiceNumber}`,
+    performed_by: performedBy ?? null,
+    metadata: {
+      invoice_id: invoiceId,
+      invoice_number: invoiceNumber,
+      one_time_item_count: oneTimeItems.length,
+    },
+  });
+
+  const refreshedQuote = await Quote.getById(knexOrTrx, tenant, quote.quote_id);
+
   return {
-    quote,
+    quote: refreshedQuote as IQuote,
     invoice: {
       ...invoice,
       invoice_charges: invoiceChargeRows,

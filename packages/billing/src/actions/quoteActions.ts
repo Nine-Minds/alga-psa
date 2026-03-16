@@ -720,6 +720,6 @@ export const convertQuoteToInvoice = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
-    return convertQuoteToDraftInvoice(trx, tenant, quoteId);
+    return convertQuoteToDraftInvoice(trx, tenant, quoteId, getActorUserId(user));
   });
 });

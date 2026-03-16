@@ -871,7 +871,7 @@
   {
     "id": "F105",
     "description": "P5: Quote → Invoice — set converted_invoice_id, wrap in transaction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR2"
     ]
