@@ -978,7 +978,7 @@
   {
     "id": "T113",
     "description": "Conversion: combined conversion creates both contract and invoice in single transaction",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F106"
     ]
