@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '@alga-psa/workflows/streams/workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/workflow-streams/workflowEventPublishHelpers';
 import { ticketTimeEntryAddedEventPayloadSchema } from '@alga-psa/workflows/runtime/schemas/ticketEventSchemas';
 import { buildTicketTimeEntryAddedWorkflowEvent } from '../../lib/api/services/timeEntryWorkflowEvents';
 

@@ -77,6 +77,8 @@
       "@alga-psa/ee-microsoft-teams/*": ["ee/packages/microsoft-teams/src/*"],
       "@alga-psa/ee-stubs": ["packages/ee/src/index.ts"],
       "@alga-psa/ee-stubs/*": ["packages/ee/src/*"],
+      "@alga-psa/workflow-streams": ["packages/workflow-streams/src/streams"],
+      "@alga-psa/workflow-streams/*": ["packages/workflow-streams/src/streams/*"],
       "@alga-psa/workflows": ["ee/packages/workflows/src"],
       "@alga-psa/workflows/*": ["ee/packages/workflows/src/*"],
       "@alga-psa/formatting": ["packages/formatting/src"],

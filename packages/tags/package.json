@@ -50,6 +50,7 @@
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*"
   },
   "peerDependencies": {

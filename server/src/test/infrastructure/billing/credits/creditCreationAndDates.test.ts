@@ -60,7 +60,7 @@ vi.mock('@alga-psa/core/logger', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflows/streams/eventBusSchema', () => ({
+vi.mock('@alga-psa/workflow-streams/eventBusSchema', () => ({
   BaseEvent: class {},
   Event: class {
     id = 'mock-event-id';
@@ -72,7 +72,7 @@ vi.mock('@alga-psa/workflows/streams/eventBusSchema', () => ({
   convertToWorkflowEvent: vi.fn((event) => event)
 }));
 
-vi.mock('@alga-psa/workflows/streams/workflowEventSchema', () => ({
+vi.mock('@alga-psa/workflow-streams/workflowEventSchema', () => ({
   WorkflowEventBaseSchema: {}
 }));
 

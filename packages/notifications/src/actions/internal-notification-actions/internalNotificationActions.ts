@@ -28,7 +28,7 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationReadPayload,
   buildNotificationSentPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 
 /**
  * Get user's locale preference with fallback hierarchy:

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
 import { workflowEventPayloadSchemas } from '@alga-psa/workflows/runtime/schemas/workflowEventPayloadSchemas';
-import { buildWorkflowPayload } from '@alga-psa/workflows/streams/workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '../../streams/workflowEventPublishHelpers.js';
 
 describe('workflow event simulator schemas', () => {
   it('exports JSON schema for every registered workflow event payload schema', () => {

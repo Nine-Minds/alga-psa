@@ -45,18 +45,8 @@ export function SchedulingProjectTaskDetails({
         </div>
 
         <div>
-          <Text size="2" weight="bold">Start Date</Text>
-          <Text size="2" className="block mt-1">{formatDateTime(task.start_date)}</Text>
-        </div>
-
-        <div>
           <Text size="2" weight="bold">Due Date</Text>
           <Text size="2" className="block mt-1">{formatDateTime(task.due_date)}</Text>
-        </div>
-
-        <div>
-          <Text size="2" weight="bold">Completed</Text>
-          <Text size="2" className="block mt-1">{formatDateTime(task.completed_at)}</Text>
         </div>
 
         <div>
@@ -66,7 +56,7 @@ export function SchedulingProjectTaskDetails({
               {task.checklist_items.map((item) => (
                 <li key={item.checklist_item_id}>
                   {item.completed ? '[x] ' : '[ ] '}
-                  {item.item_text || 'Untitled item'}
+                  {item.item_name || 'Untitled item'}
                 </li>
               ))}
             </ul>

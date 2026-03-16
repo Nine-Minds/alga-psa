@@ -28,6 +28,7 @@
     "@alga-psa/db": "file:../../packages/db",
     "@alga-psa/shared": "file:../../shared",
     "@alga-psa/sla": "file:../../packages/sla",
+    "@alga-psa/workflow-streams": "file:../../packages/workflow-streams",
     "@alga-psa/workflows": "file:../packages/workflows",
     "@aws-sdk/client-s3": "^3.984.0",
     "@aws-sdk/s3-request-presigner": "^3.984.0",

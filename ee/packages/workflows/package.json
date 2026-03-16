@@ -58,14 +58,6 @@
       "import": "./src/bundle/*.ts",
       "types": "./src/bundle/*.ts"
     },
-    "./streams": {
-      "import": "./dist/streams/index.mjs",
-      "types": "./src/streams/index.ts"
-    },
-    "./streams/*": {
-      "import": "./dist/streams/*.mjs",
-      "types": "./src/streams/*.ts"
-    },
     "./expression-authoring": {
       "import": "./src/expression-authoring/index.ts",
       "types": "./src/expression-authoring/index.ts"
@@ -73,10 +65,6 @@
     "./secrets": {
       "import": "./dist/secrets/index.mjs",
       "types": "./src/secrets/index.ts"
-    },
-    "./services": {
-      "import": "./dist/services/index.mjs",
-      "types": "./src/services/index.ts"
     },
     "./adapters/*": {
       "import": "./src/adapters/*.ts",
