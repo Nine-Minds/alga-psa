@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 
 import {
@@ -66,6 +65,9 @@ const SIMPLE_ARRAY_ITEM_TYPE_OPTIONS: Array<{ value: WorkflowAiSimpleArrayItemTy
 
 const cloneFields = (fields: WorkflowAiSimpleField[]): WorkflowAiSimpleField[] =>
   JSON.parse(JSON.stringify(fields)) as WorkflowAiSimpleField[];
+
+const countFieldsInTree = (fields: WorkflowAiSimpleField[]): number =>
+  fields.reduce((total, field) => total + 1 + countFieldsInTree(field.children ?? []), 0);
 
 const updateFieldInTree = (
   fields: WorkflowAiSimpleField[],
@@ -177,23 +179,36 @@ const FieldEditor: React.FC<{
 
   return (
     <div className="rounded-md border border-gray-200 bg-white p-3" style={{ marginLeft: depth > 0 ? depth * 16 : 0 }}>
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.3fr)_160px_120px_auto]">
-        <Input
-          id={`${stepId}-ai-field-name-${field.id}`}
-          label="Field name"
-          value={field.name}
-          disabled={disabled}
-          onChange={(event) => onUpdate(field.id, (current) => ({ ...current, name: event.target.value }))}
-        />
+      <div className="space-y-3">
+        <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
+          <span>Field name</span>
+          <input
+            id={`${stepId}-ai-field-name-${field.id}`}
+            className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
+            value={field.name}
+            disabled={disabled}
+            onChange={(event) => onUpdate(field.id, (current) => ({ ...current, name: event.target.value }))}
+          />
+        </label>
 
         <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-          <span>Field type</span>
+          <span>{isArray ? 'Array items' : 'Field type'}</span>
           <select
-            aria-label="Field type"
-            className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
+            aria-label={isArray ? 'Array items' : 'Field type'}
+            className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"
             disabled={disabled}
-            value={field.type}
+            value={isArray ? field.arrayItemType ?? 'string' : field.type}
             onChange={(event) => {
+              if (isArray) {
+                const nextArrayItemType = event.target.value as WorkflowAiSimpleArrayItemType;
+                onUpdate(field.id, (current) => ({
+                  ...current,
+                  arrayItemType: nextArrayItemType,
+                  children: nextArrayItemType === 'object' ? current.children ?? [] : undefined,
+                }));
+                return;
+              }
+
               const nextType = event.target.value as WorkflowAiSimpleFieldType;
               onUpdate(field.id, (current) => ({
                 ...current,
@@ -203,64 +218,13 @@ const FieldEditor: React.FC<{
               }));
             }}
           >
-            {SIMPLE_FIELD_TYPE_OPTIONS.map((option) => (
+            {(isArray ? SIMPLE_ARRAY_ITEM_TYPE_OPTIONS : SIMPLE_FIELD_TYPE_OPTIONS).map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
         </label>
 
-        {isArray ? (
-          <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            <span>Array items</span>
-            <select
-              aria-label="Array items"
-              className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
-              disabled={disabled}
-              value={field.arrayItemType ?? 'string'}
-              onChange={(event) => {
-                const nextArrayItemType = event.target.value as WorkflowAiSimpleArrayItemType;
-                onUpdate(field.id, (current) => ({
-                  ...current,
-                  arrayItemType: nextArrayItemType,
-                  children: nextArrayItemType === 'object' ? current.children ?? [] : undefined,
-                }));
-              }}
-            >
-              {SIMPLE_ARRAY_ITEM_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-        ) : (
-          <label className="flex items-center gap-2 pt-6 text-xs font-medium text-gray-700">
-            <input
-              aria-label="Required"
-              type="checkbox"
-              checked={Boolean(field.required)}
-              disabled={disabled}
-              onChange={(event) => onUpdate(field.id, (current) => ({ ...current, required: event.target.checked }))}
-            />
-            Required
-          </label>
-        )}
-
-        <div className="flex items-end justify-end">
-          <Button
-            id={`${stepId}-ai-remove-${field.id}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={disabled}
-            onClick={() => onRemove(field.id)}
-          >
-            <Trash2 className="mr-1 h-3.5 w-3.5" />
-            Remove
-          </Button>
-        </div>
-      </div>
-
-      {isArray && (
-        <label className="mt-3 flex items-center gap-2 text-xs font-medium text-gray-700">
+        <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
           <input
             aria-label="Required"
             type="checkbox"
@@ -270,7 +234,22 @@ const FieldEditor: React.FC<{
           />
           Required
         </label>
-      )}
+
+        <div className="flex justify-end">
+          <Button
+            id={`${stepId}-ai-remove-${field.id}`}
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={disabled}
+            onClick={() => onRemove(field.id)}
+            aria-label="Remove field"
+          >
+            <Trash2 className="mr-1 h-3.5 w-3.5" />
+            Remove
+          </Button>
+        </div>
+      </div>
 
       <div className="mt-3">
         <TextArea
@@ -338,8 +317,30 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
   const [advancedText, setAdvancedText] = useState<string>(derivedState.advancedText);
   const [validationErrors, setValidationErrors] = useState<string[]>(derivedState.validationErrors);
   const [fallbackMessage, setFallbackMessage] = useState<string | null>(derivedState.fallbackMessage);
+  const modeRef = useRef(mode);
+  const simpleFieldsRef = useRef(simpleFields);
 
   useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
+  useEffect(() => {
+    simpleFieldsRef.current = simpleFields;
+  }, [simpleFields]);
+
+  useEffect(() => {
+    if (modeRef.current === 'simple' && derivedState.mode === 'simple') {
+      const persistedLocalSchema = JSON.stringify(buildWorkflowAiSimpleSchema(simpleFieldsRef.current));
+      const persistedDerivedSchema = JSON.stringify(buildWorkflowAiSimpleSchema(derivedState.fields));
+      const localDraftFieldCount = countFieldsInTree(simpleFieldsRef.current);
+      const derivedFieldCount = countFieldsInTree(derivedState.fields);
+
+      // Preserve locally drafted simple-mode fields that have not been serialized yet.
+      if (persistedLocalSchema === persistedDerivedSchema && localDraftFieldCount > derivedFieldCount) {
+        return;
+      }
+    }
+
     setMode(derivedState.mode);
     setSimpleFields(cloneFields(derivedState.fields));
     setAdvancedText(derivedState.advancedText);

@@ -5,8 +5,44 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { WorkflowAiSchemaSection } from '../WorkflowAiSchemaSection';
+import type { WorkflowAiSchemaMode, WorkflowJsonSchema } from '@alga-psa/workflows/authoring';
 
 describe('WorkflowAiSchemaSection', () => {
+  it('keeps a newly added simple-mode field visible when the parent rehydrates from the emitted schema', () => {
+    type ControlledConfig = {
+      actionId: string;
+      aiOutputSchemaMode: WorkflowAiSchemaMode;
+      aiOutputSchema?: WorkflowJsonSchema;
+      aiOutputSchemaText?: string;
+    };
+
+    const ControlledHarness = () => {
+      const [config, setConfig] = React.useState<ControlledConfig>({
+        actionId: 'ai.infer',
+        aiOutputSchemaMode: 'simple',
+        aiOutputSchema: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+      });
+
+      return (
+        <WorkflowAiSchemaSection
+          stepId="step-controlled"
+          config={config}
+          onChange={(patch) => setConfig((current) => ({ ...current, ...patch }))}
+        />
+      );
+    };
+
+    const { container } = render(<ControlledHarness />);
+
+    fireEvent.click(screen.getByRole('button', { name: /add field/i }));
+
+    expect(container.querySelector('input[id*="-ai-field-name-"]')).toBeTruthy();
+  });
+
   it('T008/T010: simple mode persists inline schema config as fields are added and removed', () => {
     const onChange = vi.fn();
 
