@@ -64,6 +64,31 @@ describe('Quote infrastructure', () => {
     await cleanupContext();
   }, 30000);
 
+  async function createFinancialQuote(overrides: Record<string, unknown> = {}) {
+    return Quote.create(context.db, context.tenantId, {
+      client_id: context.clientId,
+      title: 'Financial quote',
+      quote_date: '2026-03-13T00:00:00.000Z',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      subtotal: 0,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 0,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: context.userId,
+      ...overrides,
+    });
+  }
+
+  async function loadQuoteRow(quoteId: string) {
+    return context.db('quotes').where({ tenant: context.tenantId, quote_id: quoteId }).first();
+  }
+
+  async function loadQuoteItemRow(quoteItemId: string) {
+    return context.db('quote_items').where({ tenant: context.tenantId, quote_item_id: quoteItemId }).first();
+  }
+
   it('T001: Migration creates quotes table with expected columns and types', async () => {
     const columns = await context.db('quotes').columnInfo();
 
@@ -475,6 +500,304 @@ describe('Quote infrastructure', () => {
     expect(reloadedItem.tax_region).toBe('US-NY');
     expect(Number(reloadedItem.tax_rate)).toBe(9);
     expect(Number(reloadedItem.tax_amount)).toBeGreaterThan(0);
+  });
+
+  it('T056: Discount: percentage discount calculates correct amount from target item total', async () => {
+    const quote = await createFinancialQuote();
+
+    const baseItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Primary line',
+      quantity: 2,
+      unit_price: 500,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const discountItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: '10% off',
+      quantity: 1,
+      unit_price: 0,
+      is_discount: true,
+      discount_type: 'percentage',
+      discount_percentage: 10,
+      applies_to_item_id: baseItem.quote_item_id,
+      created_by: context.userId,
+    });
+
+    const reloadedDiscount = await loadQuoteItemRow(discountItem.quote_item_id);
+    expect(Number(reloadedDiscount.total_price)).toBe(100);
+    expect(Number(reloadedDiscount.net_amount)).toBe(100);
+  });
+
+  it('T057: Discount: fixed discount stores exact amount as total_price', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Primary line',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const discountItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Fixed discount',
+      quantity: 1,
+      unit_price: 250,
+      is_discount: true,
+      discount_type: 'fixed',
+      created_by: context.userId,
+    });
+
+    const reloadedDiscount = await loadQuoteItemRow(discountItem.quote_item_id);
+    expect(Number(reloadedDiscount.total_price)).toBe(250);
+  });
+
+  it("T058: Discount: applies_to_item_id scopes discount to specific item's net_amount", async () => {
+    const quote = await createFinancialQuote();
+
+    const firstItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Targeted item',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Untargeted item',
+      quantity: 1,
+      unit_price: 2000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const discountItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: '50% targeted discount',
+      quantity: 1,
+      unit_price: 0,
+      is_discount: true,
+      discount_type: 'percentage',
+      discount_percentage: 50,
+      applies_to_item_id: firstItem.quote_item_id,
+      created_by: context.userId,
+    });
+
+    const reloadedDiscount = await loadQuoteItemRow(discountItem.quote_item_id);
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedDiscount.total_price)).toBe(500);
+    expect(Number(reloadedQuote.discount_total)).toBe(500);
+  });
+
+  it('T059: Discount: applies_to_service_id scopes discount to all items of that service', async () => {
+    const targetServiceId = await createTestService(context, {
+      service_name: 'Target service',
+      billing_method: 'fixed',
+      default_rate: 1000,
+    });
+    const otherServiceId = await createTestService(context, {
+      service_name: 'Other service',
+      billing_method: 'fixed',
+      default_rate: 5000,
+    });
+
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: targetServiceId,
+      description: 'Target one',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: targetServiceId,
+      description: 'Target two',
+      quantity: 1,
+      unit_price: 3000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: otherServiceId,
+      description: 'Other item',
+      quantity: 1,
+      unit_price: 5000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const discountItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: '10% target service discount',
+      quantity: 1,
+      unit_price: 0,
+      is_discount: true,
+      discount_type: 'percentage',
+      discount_percentage: 10,
+      applies_to_service_id: targetServiceId,
+      created_by: context.userId,
+    });
+
+    const reloadedDiscount = await loadQuoteItemRow(discountItem.quote_item_id);
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedDiscount.total_price)).toBe(400);
+    expect(Number(reloadedQuote.discount_total)).toBe(400);
+  });
+
+  it('T060: Discount: quote-level discount (no target) applies to full subtotal', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Line one',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Line two',
+      quantity: 1,
+      unit_price: 2000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const discountItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: '10% quote discount',
+      quantity: 1,
+      unit_price: 0,
+      is_discount: true,
+      discount_type: 'percentage',
+      discount_percentage: 10,
+      created_by: context.userId,
+    });
+
+    const reloadedDiscount = await loadQuoteItemRow(discountItem.quote_item_id);
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedDiscount.total_price)).toBe(300);
+    expect(Number(reloadedQuote.discount_total)).toBe(300);
+  });
+
+  it('T061: Totals: subtotal equals sum of non-discount item total_prices', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Line one',
+      quantity: 2,
+      unit_price: 600,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Line two',
+      quantity: 1,
+      unit_price: 800,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount',
+      quantity: 1,
+      unit_price: 100,
+      is_discount: true,
+      discount_type: 'fixed',
+      created_by: context.userId,
+    });
+
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedQuote.subtotal)).toBe(2000);
+  });
+
+  it('T062: Totals: discount_total equals sum of discount line amounts', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Base item',
+      quantity: 1,
+      unit_price: 3000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount one',
+      quantity: 1,
+      unit_price: 100,
+      is_discount: true,
+      discount_type: 'fixed',
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Discount two',
+      quantity: 1,
+      unit_price: 250,
+      is_discount: true,
+      discount_type: 'fixed',
+      created_by: context.userId,
+    });
+
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedQuote.discount_total)).toBe(350);
+  });
+
+  it('T063: Totals: total_amount = subtotal - discount_total + tax', async () => {
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ region_code: 'US-NY', is_tax_exempt: false });
+    await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 10 });
+
+    const serviceId = await createTestService(context, {
+      service_name: 'Taxed service',
+      billing_method: 'fixed',
+      default_rate: 500,
+    });
+
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: serviceId,
+      description: 'Taxed line',
+      quantity: 2,
+      unit_price: 500,
+      is_taxable: true,
+      created_by: context.userId,
+    });
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Fixed discount',
+      quantity: 1,
+      unit_price: 100,
+      is_discount: true,
+      discount_type: 'fixed',
+      created_by: context.userId,
+    });
+
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedQuote.subtotal)).toBe(1000);
+    expect(Number(reloadedQuote.discount_total)).toBe(100);
+    expect(Number(reloadedQuote.tax)).toBe(100);
+    expect(Number(reloadedQuote.total_amount)).toBe(1000);
   });
 
   it('T022: getByNumber returns the correct quote within a tenant', async () => {

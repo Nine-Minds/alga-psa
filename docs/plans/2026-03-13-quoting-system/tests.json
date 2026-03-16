@@ -493,7 +493,7 @@
   {
     "id": "T056",
     "description": "Discount: percentage discount calculates correct amount from target item total",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
