@@ -675,6 +675,50 @@ describe('quoteActions', () => {
     );
   });
 
+
+  it('T127: saveQuoteAsTemplate creates a business template and copies items', async () => {
+    const templateQuoteId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce({
+        ...templateQuote,
+        quote_id: QUOTE_ID,
+        quote_number: 'Q-0012',
+        is_template: false,
+        client_id: baseQuoteInput.client_id,
+        contact_id: 'contact-1',
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+        status: 'sent',
+      } as any)
+      .mockResolvedValueOnce({
+        quote_id: templateQuoteId,
+        quote_number: null,
+        title: 'Template quote Template',
+        is_template: true,
+        quote_items: templateQuote.quote_items,
+      } as any);
+    vi.spyOn(Quote, 'create').mockResolvedValueOnce({ quote_id: templateQuoteId } as any);
+
+    const { saveQuoteAsTemplate } = await import('../../src/actions/quoteActions');
+    const result = await saveQuoteAsTemplate(QUOTE_ID);
+
+    expect(Quote.create).toHaveBeenCalledWith(
+      mockTrx,
+      TENANT_ID,
+      expect.objectContaining({
+        is_template: true,
+        title: 'Template quote Template',
+        created_by: USER_ID,
+      })
+    );
+    expect(QuoteItem.create).toHaveBeenCalledTimes(templateQuote.quote_items.length);
+    expect(result).toMatchObject({
+      quote_id: templateQuoteId,
+      quote_number: null,
+      is_template: true,
+    });
+  });
+
   it('T089: sendQuote rejects quotes not in draft or approved status', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce({

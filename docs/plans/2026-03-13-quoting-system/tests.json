@@ -1099,7 +1099,7 @@
   {
     "id": "T127",
     "description": "Save as Template: creates business template from existing quote with is_template=true, copies items",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F120"
     ]

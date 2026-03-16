@@ -380,3 +380,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T123 complete — Added `sendQuote` coverage showing that tenants with quote approval disabled can send draft quotes directly, while still running through the normal PDF/email/send-state pipeline.
 - (2026-03-16) T124 complete — Added `duplicateQuote` action coverage in `packages/billing/tests/quote/quoteActions.test.ts`, confirming a new numbered draft quote is created and repopulated with cloned line items from the source quote.
 - (2026-03-16) T125 complete — Extended duplication coverage to assert duplicated quote items come back with brand-new `quote_item_id` values instead of reusing the source quote’s row identifiers.
+- (2026-03-16) T127 complete — Added `saveQuoteAsTemplate` action coverage confirming the action creates an `is_template=true` quote shell and clones the source quote’s line items into that new business template.
