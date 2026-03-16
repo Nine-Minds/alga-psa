@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "P0-1: Update .github/known-cycles.json baseline (remove resolved cycles)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P0-1"]
   },
   {

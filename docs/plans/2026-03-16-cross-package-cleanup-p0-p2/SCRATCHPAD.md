@@ -76,14 +76,21 @@ cd server && npx vitest run path/to/test.test.ts
 - **2026-03-16:** P0-1 test files moved to `ee/packages/workflows/` (not `packages/workflows/`) because the tests reference EE-specific domain event builders
 - **2026-03-16:** `nx graph` has brace_expansion bug — may need `npx nx reset` or skip circular dep checking for some commits
 - **2026-03-16:** `@alga-psa/shared` added as devDependency to `ee/packages/workflows/package.json` for moved test imports
+- **2026-03-16:** Removed 18 baseline cycles that all contained the resolved `@alga-psa/shared -> @alga-psa/workflows` edge; used manual baseline pruning because local Nx graph generation is still broken by the `brace_expansion_1.default` runtime error
 
 ## Current State (2026-03-16)
 
 - **Branch:** cleanup/circular_deps (rebased on origin/main)
 - **Uncommitted:** P0-1 test file moves (10 files moved, ee/packages/workflows/package.json modified)
-- **Known cycles baseline:** 30 cycles (18 involve shared->workflows edge, which P0-1 should fix)
+- **Known cycles baseline:** 12 cycles after removing the 18 entries that depended on the resolved shared->workflows edge
 - **auth-compat callers:** 2 EE files (ee/server/src/app/api/extensions/_auth.ts, ee/server/src/app/api/provisioning/tenants/route.ts)
 - **msp-composition missing re-exports:** assets/, billing/, clients/
+
+## 2026-03-16 Progress Log
+
+- Verified `shared/` only references `@alga-psa/workflows` in a comment within `shared/types/product-email-domains.d.ts`.
+- Verified moved workflow tests compile with `cd ee/packages/workflows && npx tsc --noEmit`; `cd shared && npx tsc --noEmit` also passes.
+- `npx nx graph --file=/tmp/graph.json` still fails locally with `brace_expansion_1.default is not a function`, including under Node 20, so cycle-baseline verification currently relies on the removed import edge plus baseline pruning.
 
 ## Gotchas
 
