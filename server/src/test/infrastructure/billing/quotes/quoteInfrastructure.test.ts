@@ -118,6 +118,19 @@ describe('Quote infrastructure', () => {
     ]));
   });
 
+
+  it('T119a: Approval migration allows pending_approval and approved in the quote status constraint', async () => {
+    const constraint = await context.db('pg_constraint as c')
+      .join('pg_class as t', 'c.conrelid', 't.oid')
+      .select(context.db.raw('pg_get_constraintdef(c.oid) as definition'))
+      .where('t.relname', 'quotes')
+      .where('c.conname', 'quotes_status_check')
+      .first<{ definition: string }>();
+
+    expect(constraint?.definition).toContain("'pending_approval'");
+    expect(constraint?.definition).toContain("'approved'");
+  });
+
   it('T003: Migration creates quote_items with quote-specific fields', async () => {
     const columns = await context.db('quote_items').columnInfo();
 
