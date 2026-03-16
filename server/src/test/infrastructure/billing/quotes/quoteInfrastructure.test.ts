@@ -24,11 +24,17 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { createTenant, createClient } from '../../../../../test-utils/testDataFactory';
+import { createTenant, createClient, createClientLocation } from '../../../../../test-utils/testDataFactory';
 import { createTestService, setupClientTaxConfiguration } from '../../../../../test-utils/billingTestHelpers';
 import Quote from '../../../../../../packages/billing/src/models/quote';
 import QuoteActivity from '../../../../../../packages/billing/src/models/quoteActivity';
 import QuoteItem from '../../../../../../packages/billing/src/models/quoteItem';
+import { mapDbQuoteToViewModel } from '../../../../../../packages/billing/src/lib/adapters/quoteAdapters';
+import { getStandardQuoteTemplateAstByCode } from '../../../../../../packages/billing/src/lib/quote-template-ast/standardTemplates';
+import { resolveQuoteTemplateAst } from '../../../../../../packages/billing/src/lib/quote-template-ast/templateSelection';
+import { evaluateInvoiceTemplateAst } from '../../../../../../packages/billing/src/lib/invoice-template-ast/evaluator';
+import { createQuotePDFGenerationService } from '../../../../../../packages/billing/src/services/quotePdfGenerationService';
+import { browserPoolService } from '../../../../../../packages/billing/src/services/browserPoolService';
 import { TaxService } from '../../../../../../packages/billing/src/services/taxService';
 
 process.env.DB_PORT = '5432';
@@ -1058,6 +1064,255 @@ describe('Quote infrastructure', () => {
       'standard-quote-default',
       'standard-quote-detailed',
     ]);
+  });
+
+  it('T077: QuoteViewModel: correctly maps all quote fields including items with optional/recurring metadata', async () => {
+    const quote = await createFinancialQuote({
+      title: 'Mapped quote',
+      description: 'Mapped scope',
+      client_notes: 'Client note',
+      terms_and_conditions: 'Net 30',
+    });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Mapped line',
+      quantity: 2,
+      unit_price: 1500,
+      phase: 'Phase 1',
+      is_optional: true,
+      is_selected: true,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+
+    expect(viewModel?.quote_number).toBe(quote.quote_number);
+    expect(viewModel?.title).toBe('Mapped quote');
+    expect(viewModel?.scope_of_work).toBe('Mapped scope');
+    expect(viewModel?.line_items[0]).toMatchObject({
+      description: 'Mapped line',
+      is_optional: true,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      phase: 'Phase 1',
+    });
+    expect(viewModel?.phases[0]?.name).toBe('Phase 1');
+  });
+
+  it('T078: AST bindings: quoteNumber, quoteDate, validUntil resolve to correct quote values', async () => {
+    const quote = await createFinancialQuote();
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+    const ast = getStandardQuoteTemplateAstByCode('standard-quote-default');
+
+    expect(viewModel).toBeTruthy();
+    expect(ast).toBeTruthy();
+
+    const evaluation = evaluateInvoiceTemplateAst(ast!, viewModel as unknown as Record<string, unknown>);
+    expect(evaluation.bindings.quoteNumber).toBe(quote.quote_number);
+    expect(String(evaluation.bindings.quoteDate)).toBe(String(quote.quote_date));
+    expect(String(evaluation.bindings.validUntil)).toBe(String(quote.valid_until));
+  });
+
+  it('T079: AST bindings: lineItems collection includes is_optional and is_recurring flags per item', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Bound line',
+      quantity: 1,
+      unit_price: 1000,
+      is_optional: true,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+    const ast = getStandardQuoteTemplateAstByCode('standard-quote-default');
+    const evaluation = evaluateInvoiceTemplateAst(ast!, viewModel as unknown as Record<string, unknown>);
+    const [lineItem] = evaluation.bindings.lineItems as Array<Record<string, unknown>>;
+
+    expect(lineItem.is_optional).toBe(true);
+    expect(lineItem.is_recurring).toBe(true);
+  });
+
+  it('T080: Standard template: standard-quote-default renders valid HTML with all sections', async () => {
+    const quote = await createFinancialQuote({ description: 'Scope copy', terms_and_conditions: 'Standard terms' });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Rendered line',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const preview = await createQuotePDFGenerationService(context.tenantId).renderPreview({
+      quoteId: quote.quote_id,
+      templateCode: 'standard-quote-default',
+    });
+
+    expect(preview.html).toContain('Quote');
+    expect(preview.html).toContain('Scope of Work');
+    expect(preview.html).toContain('Validity');
+    expect(preview.html).toContain('Terms &amp; Conditions');
+    expect(preview.html).toContain('Rendered line');
+  });
+
+  it('T081: Standard template: standard-quote-detailed renders phase grouping and optional item markers', async () => {
+    const quote = await createFinancialQuote({ description: 'Detailed scope', terms_and_conditions: 'Detailed terms' });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Detailed line',
+      quantity: 1,
+      unit_price: 1000,
+      phase: 'Phase 1',
+      is_optional: true,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const preview = await createQuotePDFGenerationService(context.tenantId).renderPreview({
+      quoteId: quote.quote_id,
+      templateCode: 'standard-quote-detailed',
+    });
+
+    expect(preview.html).toContain('Overview');
+    expect(preview.html).toContain('Phase');
+    expect(preview.html).toContain('Optional');
+    expect(preview.html).toContain('Recurring');
+    expect(preview.html).toContain('Phase 1');
+  });
+
+  it('T082: Adapter: mapDbQuoteToViewModel fetches and joins client, contact, tenant data', async () => {
+    const contactId = crypto.randomUUID();
+    await context.db('contacts').insert({
+      tenant: context.tenantId,
+      contact_name_id: contactId,
+      full_name: 'Billing Contact',
+      email: 'billing-contact@example.com',
+      client_id: context.clientId,
+      created_at: context.db.fn.now(),
+      updated_at: context.db.fn.now(),
+    });
+    await context.db('contact_phone_numbers').insert({
+      tenant: context.tenantId,
+      contact_phone_number_id: crypto.randomUUID(),
+      contact_name_id: contactId,
+      phone_number: '555-1212',
+      canonical_type: 'work',
+      is_default: true,
+      display_order: 0,
+      created_at: context.db.fn.now(),
+      updated_at: context.db.fn.now(),
+    });
+
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ billing_email: 'client-billing@example.com' });
+    await createClientLocation(context.db, context.clientId, context.tenantId, {
+      address_line1: '100 Client Way',
+      city: 'Albany',
+      state_province: 'NY',
+      postal_code: '12207',
+      country_name: 'United States',
+    });
+    await context.db('client_locations')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ is_default: true, is_billing_address: true });
+
+    const tenantClientId = await createClient(context.db, context.tenantId, 'Tenant HQ', { billing_email: 'hq@example.com' });
+    await createClientLocation(context.db, tenantClientId, context.tenantId, {
+      address_line1: '1 MSP Plaza',
+      city: 'Buffalo',
+      state_province: 'NY',
+      postal_code: '14202',
+      country_name: 'United States',
+    });
+    await context.db('client_locations')
+      .where({ tenant: context.tenantId, client_id: tenantClientId })
+      .update({ is_default: true, is_billing_address: true });
+    await context.db('tenant_companies').insert({
+      tenant: context.tenantId,
+      client_id: tenantClientId,
+      is_default: true,
+    }).onConflict(['tenant', 'client_id']).ignore();
+
+    const quote = await createFinancialQuote({ contact_id: contactId });
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+
+    expect(viewModel?.client?.name).toBe('Test Client');
+    expect(viewModel?.client?.email).toBe('client-billing@example.com');
+    expect(viewModel?.contact?.name).toBe('Billing Contact');
+    expect(viewModel?.contact?.phone).toBe('555-1212');
+    expect(viewModel?.tenant?.name).toBe('Tenant HQ');
+    expect(viewModel?.tenant?.address).toContain('1 MSP Plaza');
+  });
+
+  it('T085: Preview: renders quote template in-browser without Puppeteer', async () => {
+    const quote = await createFinancialQuote();
+    const getBrowserSpy = vi.spyOn(browserPoolService, 'getBrowser');
+
+    const preview = await createQuotePDFGenerationService(context.tenantId).renderPreview({
+      quoteId: quote.quote_id,
+      templateCode: 'standard-quote-default',
+    });
+
+    expect(preview.html.length).toBeGreaterThan(0);
+    expect(getBrowserSpy).not.toHaveBeenCalled();
+    getBrowserSpy.mockRestore();
+  });
+
+  it('T086: Template selection: uses quote-specific template_id if set', async () => {
+    const customTemplateId = crypto.randomUUID();
+    await context.db('quote_document_templates').insert({
+      tenant: context.tenantId,
+      template_id: customTemplateId,
+      name: 'Custom Quote Template',
+      version: 1,
+      templateAst: getStandardQuoteTemplateAstByCode('standard-quote-detailed'),
+      is_default: false,
+    });
+
+    const quote = await createFinancialQuote({ template_id: customTemplateId });
+    const resolved = await resolveQuoteTemplateAst(context.db, context.tenantId, quote.quote_id);
+
+    expect(resolved.source).toBe('quote');
+    expect(resolved.templateId).toBe(customTemplateId);
+  });
+
+  it('T087: Template selection: falls back to tenant default when no per-quote template', async () => {
+    await context.db('quote_document_template_assignments').insert({
+      tenant: context.tenantId,
+      scope_type: 'tenant',
+      scope_id: null,
+      template_source: 'standard',
+      standard_quote_document_template_code: 'standard-quote-detailed',
+      created_by: context.userId,
+    });
+
+    const quote = await createFinancialQuote();
+    const resolved = await resolveQuoteTemplateAst(context.db, context.tenantId, quote.quote_id);
+
+    expect(resolved.source).toBe('tenant-default');
+    expect(resolved.standardCode).toBe('standard-quote-detailed');
+  });
+
+  it('T088: Template selection: falls back to standard-quote-default when no tenant default', async () => {
+    const quote = await createFinancialQuote();
+    const resolved = await resolveQuoteTemplateAst(context.db, context.tenantId, quote.quote_id);
+
+    expect(resolved.source).toBe('standard-fallback');
+    expect(resolved.standardCode).toBe('standard-quote-default');
   });
 
   it('T022: getByNumber returns the correct quote within a tenant', async () => {

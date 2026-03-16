@@ -669,7 +669,7 @@
   {
     "id": "T077",
     "description": "QuoteViewModel: correctly maps all quote fields including items with optional/recurring metadata",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ]
