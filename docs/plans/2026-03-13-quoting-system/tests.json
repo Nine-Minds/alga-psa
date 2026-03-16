@@ -605,7 +605,7 @@
   {
     "id": "T070",
     "description": "Versioning: old version status set to 'superseded' after revision",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
