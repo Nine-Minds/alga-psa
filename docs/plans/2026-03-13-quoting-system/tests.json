@@ -894,7 +894,7 @@
   {
     "id": "T103",
     "description": "Client portal: cannot accept/reject expired quote",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093",
       "F094"
