@@ -911,7 +911,7 @@
   {
     "id": "T105",
     "description": "Conversion: recurring fixed-price item creates contract_line + _fixed_config",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099",
       "F100"
