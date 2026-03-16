@@ -581,7 +581,7 @@
   {
     "id": "T067",
     "description": "Totals: toggling optional item back on includes it in totals",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]

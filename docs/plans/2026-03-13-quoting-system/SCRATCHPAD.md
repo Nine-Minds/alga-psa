@@ -312,3 +312,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T064 complete — Added quote-item infrastructure coverage proving a second line-item insert immediately recalculates persisted quote subtotal and total_amount.
 - (2026-03-16) T065 complete — Added quote-item deletion coverage proving removing a line forces persisted quote totals to recalculate against the remaining items.
 - (2026-03-16) T066 complete — Added optional-item selection coverage proving `is_selected=false` removes an optional line from persisted quote totals.
+- (2026-03-16) T067 complete — Added optional-item reselection coverage proving toggling `is_selected` back to true restores the optional line into persisted quote totals.
