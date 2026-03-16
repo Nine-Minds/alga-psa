@@ -929,7 +929,7 @@
   {
     "id": "T107",
     "description": "Conversion: recurring usage item creates contract_line + _usage_config",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099",
       "F100"
