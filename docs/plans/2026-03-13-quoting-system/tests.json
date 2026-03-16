@@ -509,7 +509,7 @@
   {
     "id": "T058",
     "description": "Discount: applies_to_item_id scopes discount to specific item's net_amount",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
