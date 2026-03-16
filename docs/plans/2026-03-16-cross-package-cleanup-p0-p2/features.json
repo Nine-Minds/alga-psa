@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "P0-2: Document violation matrix by source and target package",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P0-2"]
   },
   {

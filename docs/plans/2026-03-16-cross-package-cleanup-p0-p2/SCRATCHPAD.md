@@ -95,6 +95,33 @@ cd server && npx vitest run path/to/test.test.ts
 - Pending workflow-test file moves and the related `ee/packages/workflows/package.json` devDependency update are ready to commit as the final P0-1 code delta.
 - Authoritative `npm run lint` baseline is `103` `no-feature-to-feature-imports` violations when run directly from repo root.
 
+### P0-2 Violation Breakdown (from `/tmp/p0-lint.log`)
+
+```text
+By source package
+38 client-portal
+14 workflows
+13 tickets
+12 clients
+10 projects
+ 9 billing
+ 3 assets
+ 2 users
+ 2 integrations
+
+By target package
+39 documents
+13 tickets
+ 9 billing
+ 8 sla
+ 7 clients
+ 6 scheduling
+ 6 projects
+ 6 integrations
+ 5 workflows
+ 4 users
+```
+
 ## Gotchas
 
 - `npm run lint` is the correct command (not `npx nx run-many --target=lint` which misses ~50% of violations)
