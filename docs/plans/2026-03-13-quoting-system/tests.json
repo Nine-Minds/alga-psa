@@ -541,7 +541,7 @@
   {
     "id": "T062",
     "description": "Totals: discount_total equals sum of discount line amounts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
