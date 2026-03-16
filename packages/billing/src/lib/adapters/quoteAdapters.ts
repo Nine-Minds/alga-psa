@@ -139,7 +139,7 @@ async function fetchContactParty(
   }
 
   const contact = await knexOrTrx('contacts')
-    .select('full_name', 'email', 'phone_number')
+    .select('full_name', 'email')
     .where({ tenant, contact_name_id: contactId })
     .first<Record<string, unknown>>();
 
@@ -147,10 +147,23 @@ async function fetchContactParty(
     return null;
   }
 
+  let phoneNumber: string | null = null;
+  const hasContactPhoneNumbersTable = await knexOrTrx.schema.hasTable('contact_phone_numbers');
+  if (hasContactPhoneNumbersTable) {
+    const phoneRecord = await knexOrTrx('contact_phone_numbers')
+      .select('phone_number')
+      .where({ tenant, contact_name_id: contactId })
+      .orderBy('is_default', 'desc')
+      .orderBy('display_order', 'asc')
+      .first<Record<string, unknown>>();
+
+    phoneNumber = asTrimmedString(phoneRecord?.phone_number) || null;
+  }
+
   return {
     name: asTrimmedString(contact.full_name) || 'Contact',
     email: asTrimmedString(contact.email) || null,
-    phone: asTrimmedString(contact.phone_number) || null,
+    phone: phoneNumber,
     address: null,
     logo_url: null,
   };

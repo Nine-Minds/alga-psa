@@ -325,3 +325,5 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T075 complete — Added infrastructure coverage proving the tenant-scoped quote document template table stores `templateAst` as JSONB.
 - (2026-03-16) T076 complete — Added seed coverage proving the standard quote document template table contains both the default and detailed seeded template codes.
 - (2026-03-16) T076a complete — Added repeatability coverage that reruns the standard quote template migration twice against an existing table and confirms the upsert path stays deduplicated.
+- (2026-03-16) Discovery — `mapDbQuoteToViewModel()` still selected legacy `contacts.phone_number` even though the March 9 contact-phone migration moved phone data into `contact_phone_numbers`, so quote previews/details could not safely hydrate contact phone info.
+- (2026-03-16) F078a complete — Updated quote contact-party mapping to read phone data from `contact_phone_numbers` with default/display-order fallback, restoring QuoteViewModel compatibility with the current contact schema.

@@ -679,6 +679,14 @@
     ]
   },
   {
+    "id": "F078a",
+    "description": "P3: Quote adapter compatibility — resolve contact phone data from the current contact_phone_numbers schema when mapping quote view models",
+    "implemented": true,
+    "prdRefs": [
+      "P3-FR5"
+    ]
+  },
+  {
     "id": "F079",
     "description": "P3: PDF generation — extend or create service for quote PDFs using Puppeteer pipeline",
     "implemented": true,
