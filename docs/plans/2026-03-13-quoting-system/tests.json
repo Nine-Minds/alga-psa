@@ -846,7 +846,7 @@
   {
     "id": "T097a",
     "description": "Client portal: optional item selections persist across page reloads",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
