@@ -26,6 +26,7 @@ const createQuoteBaseSchema = z.object({
   quote_date: z.coerce.date(),
   valid_until: z.coerce.date(),
   po_number: z.string().trim().max(255).optional().nullable(),
+  opportunity_id: z.string().uuid().optional().nullable(),
   internal_notes: z.string().optional().nullable(),
   client_notes: z.string().optional().nullable(),
   terms_and_conditions: z.string().optional().nullable(),

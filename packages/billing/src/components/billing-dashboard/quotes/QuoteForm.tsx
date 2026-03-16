@@ -29,6 +29,7 @@ interface QuoteFormState {
   quote_date: string;
   valid_until: string;
   po_number: string;
+  opportunity_id: string;
   client_notes: string;
   terms_and_conditions: string;
 }
@@ -42,6 +43,7 @@ const EMPTY_FORM: QuoteFormState = {
   quote_date: '',
   valid_until: '',
   po_number: '',
+  opportunity_id: '',
   client_notes: '',
   terms_and_conditions: '',
 };
@@ -93,6 +95,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
           quote_date: toDateInputValue(quote.quote_date),
           valid_until: toDateInputValue(quote.valid_until),
           po_number: quote.po_number || '',
+          opportunity_id: quote.opportunity_id || '',
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
         });
@@ -156,6 +159,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
         quote_date: form.quote_date,
         valid_until: form.valid_until,
         po_number: form.po_number || null,
+        opportunity_id: form.opportunity_id || null,
         client_notes: form.client_notes || null,
         terms_and_conditions: form.terms_and_conditions || null,
         subtotal: 0,

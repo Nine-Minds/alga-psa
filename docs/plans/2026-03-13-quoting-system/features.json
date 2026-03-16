@@ -951,7 +951,7 @@
   {
     "id": "F115",
     "description": "P6: CRM/opportunity linking — opportunity_id field on quotes, display on detail",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR3"
     ]
