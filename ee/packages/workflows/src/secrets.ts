@@ -1,1 +1,1 @@
-export * from '@alga-psa/shared/workflow/secrets/index.js';
+export * from '@alga-psa/shared/workflow/secrets';

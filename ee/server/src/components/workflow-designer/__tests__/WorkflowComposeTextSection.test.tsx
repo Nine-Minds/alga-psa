@@ -188,8 +188,8 @@ const baseDataContext: DataContext = {
 const baseOutputs: ComposeTextOutput[] = [
   {
     id: 'output-1',
-    label: 'Prompt',
-    stableKey: 'prompt',
+    label: 'Text',
+    stableKey: 'text',
     document: { version: 1, blocks: [] },
   },
   {
@@ -242,7 +242,7 @@ describe('WorkflowComposeTextSection', () => {
   it('T027/T028: renders the output list, supports selection, and adds outputs with generated stable keys', async () => {
     render(<Harness />);
 
-    expect(screen.getByText('Prompt')).toBeInTheDocument();
+    expect(screen.getByText('Text')).toBeInTheDocument();
     expect(screen.getByText('Email Body')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Email Body email_body/i }));
@@ -277,6 +277,15 @@ describe('WorkflowComposeTextSection', () => {
     await waitFor(() => {
       expect(screen.getAllByText('Stable keys must be lowercase snake_case identifiers.').length).toBeGreaterThan(0);
     });
+  });
+
+  it('creates a generic default output when compose-text starts without outputs', async () => {
+    render(<Harness initialOutputs={[]} />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Text')).toBeInTheDocument();
+    });
+    expect(screen.getByDisplayValue('text')).toBeInTheDocument();
   });
 
   it('T031/T032: inserts reference chips from the standard workflow reference picker and removing them updates the serialized document', async () => {
