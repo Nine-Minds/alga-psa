@@ -377,3 +377,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T120 complete — Added `approveQuote` action coverage to confirm `pending_approval` quotes move to `approved` and emit an explicit approval activity/comment for the audit trail.
 - (2026-03-16) T121 complete — Added `requestQuoteApprovalChanges` coverage in `packages/billing/tests/quote/quoteActions.test.ts`, verifying the approval-review path returns the quote to draft and records the reviewer’s requested-change comment.
 - (2026-03-16) T122 complete — Added an approval-permission denial case in `packages/billing/tests/quote/quoteActions.test.ts`, proving `approveQuote` is blocked without `quotes:approve` and does not mutate quote state or activity history.
+- (2026-03-16) T123 complete — Added `sendQuote` coverage showing that tenants with quote approval disabled can send draft quotes directly, while still running through the normal PDF/email/send-state pipeline.

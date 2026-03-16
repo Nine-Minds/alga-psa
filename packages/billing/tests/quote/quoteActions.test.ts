@@ -550,6 +550,38 @@ describe('quoteActions', () => {
     expect(QuoteActivity.create).not.toHaveBeenCalled();
   });
 
+
+  it('T123: sendQuote allows draft quotes to be sent directly when approval is disabled', async () => {
+    approvalSettingsMock.mockResolvedValueOnce({ approvalRequired: false });
+    const draftQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(draftQuote as any)
+      .mockResolvedValueOnce({ ...draftQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    const result = await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(approvalSettingsMock).toHaveBeenCalledWith(mockKnex, TENANT_ID);
+    expect(Quote.update).toHaveBeenCalledWith(
+      mockKnex,
+      TENANT_ID,
+      QUOTE_ID,
+      expect.objectContaining({ status: 'sent' })
+    );
+    expect(result).toMatchObject({ status: 'sent' });
+  });
+
   it('T089: sendQuote rejects quotes not in draft or approved status', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce({

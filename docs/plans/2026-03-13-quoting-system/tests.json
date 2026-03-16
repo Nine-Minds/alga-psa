@@ -1067,7 +1067,7 @@
   {
     "id": "T123",
     "description": "Approval: when disabled per tenant, draft\u2192sent transition allowed directly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F113"
     ]
