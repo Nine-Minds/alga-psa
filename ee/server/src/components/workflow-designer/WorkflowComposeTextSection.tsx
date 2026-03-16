@@ -122,7 +122,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
       onChange({
         version: 1,
         outputs: [
-          createComposeTextOutput('Prompt', [], uuidv4),
+          createComposeTextOutput('Text', [], uuidv4),
         ],
       });
       return;
