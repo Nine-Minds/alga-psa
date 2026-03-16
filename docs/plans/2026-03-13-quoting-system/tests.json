@@ -573,7 +573,7 @@
   {
     "id": "T066",
     "description": "Totals: toggling optional item off excludes it from totals",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
