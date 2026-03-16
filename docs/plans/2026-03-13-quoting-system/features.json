@@ -839,7 +839,7 @@
   {
     "id": "F101",
     "description": "P5: Quote → Contract — create client_contracts assignment with start_date",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR1"
     ]

@@ -7,6 +7,7 @@ import Quote from '../models/quote';
 export interface QuoteToContractConversionResult {
   quote: IQuote;
   contract: IContract;
+  clientContractId?: string;
 }
 
 interface ContractLineMapping {
@@ -228,8 +229,26 @@ export async function convertQuoteToDraftContract(
     );
   }
 
+  if (!quote.client_id) {
+    throw new Error('Quotes must be linked to a client before they can be converted to a contract');
+  }
+
+  const clientContractId = uuidv4();
+  await knexOrTrx('client_contracts').insert({
+    tenant,
+    client_contract_id: clientContractId,
+    client_id: quote.client_id,
+    contract_id: contract.contract_id,
+    start_date: quote.accepted_at || quote.quote_date || nowIso,
+    end_date: null,
+    is_active: false,
+    created_at: nowIso,
+    updated_at: nowIso,
+  });
+
   return {
     quote,
     contract,
+    clientContractId,
   };
 }
