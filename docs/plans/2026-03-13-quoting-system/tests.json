@@ -938,7 +938,7 @@
   {
     "id": "T108",
     "description": "Conversion: client_contracts assignment created with correct client and dates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101"
     ]
