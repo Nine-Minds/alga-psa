@@ -337,3 +337,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T086 complete — Added template-selection coverage proving a quote-specific `template_id` overrides tenant defaults and standard fallback resolution.
 - (2026-03-16) T087 complete — Added template-selection coverage proving tenant-level document template assignments are used when a quote has no explicit override.
 - (2026-03-16) T088 complete — Added template-selection fallback coverage proving quote rendering falls back to `standard-quote-default` when no assignment exists.
+- (2026-03-16) T083 complete — Added unit coverage for `QuotePDFGenerationService.generatePDF()`, mocking the browser pool and AST pipeline to verify it returns a PDF buffer from quote data.
