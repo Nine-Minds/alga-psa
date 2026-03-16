@@ -629,7 +629,7 @@
   {
     "id": "T073",
     "description": "Version history: query returns all versions ordered by version number",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
