@@ -501,7 +501,7 @@
   {
     "id": "T057",
     "description": "Discount: fixed discount stores exact amount as total_price",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]

@@ -302,3 +302,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T054 complete — Added reverse-charge quote tax coverage so client tax settings that enable reverse charge persist zero tax on quote items.
 - (2026-03-16) T055 complete — Added quote-item persistence coverage for tax recomputation, verifying recalculation writes the resolved `tax_region` and rounded `tax_rate` back onto the stored quote line.
 - (2026-03-16) T056 complete — Added quote infrastructure coverage for percentage discount lines targeted at a single quote item, asserting the recalculated discount total uses that item's net amount.
+- (2026-03-16) T057 complete — Added fixed-discount infrastructure coverage proving discount rows persist their exact amount into `total_price` during recalculation.
