@@ -765,7 +765,7 @@
   {
     "id": "T089",
     "description": "Send: sendQuote rejects quotes not in draft/approved status",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]

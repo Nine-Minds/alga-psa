@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Quote from '../../src/models/quote';
+import QuoteActivity from '../../src/models/quoteActivity';
 import QuoteItem from '../../src/models/quoteItem';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
@@ -16,11 +17,22 @@ const currentUser = {
 };
 
 const mockTrx = { scope: 'trx' };
-const mockKnex = {
-  transaction: async (handler: (trx: typeof mockTrx) => Promise<unknown>) => handler(mockTrx),
-};
+const mockKnex: any = vi.fn();
+mockKnex.transaction = async (handler: (trx: typeof mockTrx) => Promise<unknown>) => handler(mockTrx);
 const createTenantKnex = vi.fn();
 const hasPermissionMock = vi.fn();
+const sendEmailMock = vi.fn();
+const getTenantEmailServiceInstance = vi.fn(() => ({ sendEmail: (...args: any[]) => sendEmailMock(...args) }));
+const generatePDFMock = vi.fn();
+const approvalSettingsMock = vi.fn();
+
+const makeQuery = (result: any) => {
+  const chain: any = {};
+  chain.select = vi.fn(() => chain);
+  chain.where = vi.fn(() => chain);
+  chain.first = vi.fn(async () => result);
+  return chain;
+};
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
@@ -35,6 +47,30 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
+}));
+
+vi.mock('@alga-psa/email', () => ({
+  TenantEmailService: {
+    getInstance: (...args: any[]) => getTenantEmailServiceInstance(...args),
+  },
+}));
+
+vi.mock('../../src/lib/quoteApprovalSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/lib/quoteApprovalSettings')>();
+  return {
+    ...actual,
+    getQuoteApprovalWorkflowSettings: (...args: any[]) => approvalSettingsMock(...args),
+  };
+});
+
+vi.mock('../../src/services', () => ({
+  buildQuoteConversionPreview: vi.fn(),
+  convertQuoteToDraftContract: vi.fn(),
+  convertQuoteToDraftContractAndInvoice: vi.fn(),
+  convertQuoteToDraftInvoice: vi.fn(),
+  createQuotePDFGenerationService: vi.fn(() => ({
+    generatePDF: (...args: any[]) => generatePDFMock(...args),
+  })),
 }));
 
 const baseQuoteInput = {
@@ -115,13 +151,23 @@ describe('quoteActions', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+    mockKnex.mockImplementation((table: string) => {
+      if (table === 'tenants') {
+        return makeQuery({ client_name: 'Acme MSP' });
+      }
+      throw new Error(`Unexpected mockKnex table access: ${table}`);
+    });
     createTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: TENANT_ID });
     hasPermissionMock.mockResolvedValue(true);
+    generatePDFMock.mockResolvedValue(Buffer.from('pdf-content'));
+    sendEmailMock.mockResolvedValue({ success: true, messageId: 'message-1' });
+    approvalSettingsMock.mockResolvedValue({ approvalRequired: false });
     vi.spyOn(Quote, 'create').mockResolvedValue({ quote_id: QUOTE_ID } as any);
     vi.spyOn(Quote, 'update').mockResolvedValue({ quote_id: QUOTE_ID } as any);
     vi.spyOn(Quote, 'getById').mockResolvedValue({ quote_id: QUOTE_ID, quote_number: 'Q-0001' } as any);
     vi.spyOn(Quote, 'listByTenant').mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 25, totalPages: 1 } as any);
     vi.spyOn(Quote, 'delete').mockResolvedValue(undefined as any);
+    vi.spyOn(QuoteActivity, 'create').mockResolvedValue({ activity_id: 'activity-1' } as any);
     vi.spyOn(QuoteItem, 'create').mockImplementation(async (_knex, _tenant, input) => ({
       quote_item_id: QUOTE_ITEM_ID,
       ...input,
@@ -387,5 +433,168 @@ describe('quoteActions', () => {
     await expect(updateQuote(QUOTE_ID, { status: 'sent' } as any)).rejects.toThrow(
       'Quote templates do not participate in status transitions'
     );
+  });
+
+  it('T089: sendQuote rejects quotes not in draft or approved status', async () => {
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce({
+        quote_id: QUOTE_ID,
+        quote_number: 'Q-0001',
+        title: 'Quote',
+        total_amount: 5000,
+        currency_code: 'USD',
+        valid_until: '2026-03-20T00:00:00.000Z',
+        status: 'sent',
+        is_template: false,
+        client_id: null,
+        contact_id: null,
+      } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+
+    await expect(sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] })).rejects.toThrow(
+      'Only draft or approved quotes can be sent'
+    );
+  });
+
+  it('T090: sendQuote generates PDF, sends email, and updates status to sent', async () => {
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent', sent_at: '2026-03-13T12:00:00.000Z' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    const result = await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(generatePDFMock).toHaveBeenCalledWith({ quoteId: QUOTE_ID });
+    expect(sendEmailMock).toHaveBeenCalled();
+    expect(Quote.update).toHaveBeenCalledWith(
+      mockKnex,
+      TENANT_ID,
+      QUOTE_ID,
+      expect.objectContaining({ status: 'sent', updated_by: USER_ID, sent_at: expect.any(String) })
+    );
+    expect(result).toMatchObject({ status: 'sent' });
+  });
+
+  it('T090a: sendQuote sends to all provided email addresses', async () => {
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['one@example.com', 'two@example.com'] });
+
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      to: ['one@example.com', 'two@example.com'],
+    }));
+  });
+
+  it('T091: sendQuote logs a sent activity', async () => {
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(QuoteActivity.create).toHaveBeenCalledWith(
+      mockKnex,
+      TENANT_ID,
+      expect.objectContaining({
+        quote_id: QUOTE_ID,
+        activity_type: 'sent',
+        metadata: expect.objectContaining({ recipients: ['client@example.com'], message_id: 'message-1' }),
+      })
+    );
+  });
+
+  it('T092: quote sent email includes summary details and PDF attachment', async () => {
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      subject: 'Quote Q-0001 from Acme MSP',
+      html: expect.stringContaining('Q-0001'),
+      text: expect.stringContaining('Valid Until:'),
+      attachments: [expect.objectContaining({ filename: 'Quote_Q-0001.pdf', content: Buffer.from('pdf-content') })],
+    }));
+  });
+
+  it('T093: sendQuote passes quote entity metadata for email logging', async () => {
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'quote',
+      entityId: QUOTE_ID,
+    }));
   });
 });
