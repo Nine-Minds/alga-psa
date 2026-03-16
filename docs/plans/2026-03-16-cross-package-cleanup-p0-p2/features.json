@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "P1-3: Delete server/src/lib/auth-compat.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P1-3"]
   },
   {
