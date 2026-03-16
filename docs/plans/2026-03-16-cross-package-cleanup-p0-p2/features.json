@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "P0-2: Run authoritative lint count (npm run lint | grep no-feature-to-feature-imports | wc -l)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P0-2"]
   },
   {

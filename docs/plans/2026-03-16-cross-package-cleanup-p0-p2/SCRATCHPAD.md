@@ -93,6 +93,7 @@ cd server && npx vitest run path/to/test.test.ts
 - `npx nx graph --file=/tmp/graph.json` still fails locally with `brace_expansion_1.default is not a function`, including under Node 20, so cycle-baseline verification currently relies on the removed import edge plus baseline pruning.
 - `npm run build` passed from repo root after the workflow test moves and cycle-baseline update; build emitted existing Next.js webpack warnings only.
 - Pending workflow-test file moves and the related `ee/packages/workflows/package.json` devDependency update are ready to commit as the final P0-1 code delta.
+- Authoritative `npm run lint` baseline is `103` `no-feature-to-feature-imports` violations when run directly from repo root.
 
 ## Gotchas
 
