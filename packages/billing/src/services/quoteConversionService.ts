@@ -9,6 +9,12 @@ export interface QuoteToContractConversionResult {
   contract: IContract;
 }
 
+interface ContractLineMapping {
+  item: IQuoteItem;
+  contractLineId: string;
+  contractLineType: 'Fixed' | 'Hourly' | 'Usage';
+}
+
 function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 'Usage' {
   if (item.billing_method === 'hourly') {
     return 'Hourly';
@@ -93,32 +99,134 @@ export async function convertQuoteToDraftContract(
   });
 
   const nowIso = new Date().toISOString();
-  await knexOrTrx('contract_lines').insert(
-    recurringItems.map((item, index) => {
-      const contractLineType = mapQuoteItemToContractLineType(item);
+  const contractLineMappings: ContractLineMapping[] = recurringItems.map((item) => ({
+    item,
+    contractLineId: uuidv4(),
+    contractLineType: mapQuoteItemToContractLineType(item),
+  }));
 
-      return {
+  await knexOrTrx('contract_lines').insert(
+    contractLineMappings.map(({ item, contractLineId, contractLineType }, index) => ({
+      tenant,
+      contract_line_id: contractLineId,
+      contract_id: contract.contract_id,
+      contract_line_name: item.service_name || item.description,
+      description: item.description,
+      billing_frequency: item.billing_frequency || billingFrequency,
+      is_custom: true,
+      contract_line_type: contractLineType,
+      billing_timing: getContractLineBillingTiming(item),
+      display_order: index,
+      custom_rate: contractLineType === 'Fixed' ? item.unit_price : null,
+      enable_proration: false,
+      billing_cycle_alignment: 'start',
+      minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
+      round_up_to_nearest: contractLineType === 'Hourly' ? 15 : null,
+      is_active: false,
+      created_at: nowIso,
+      updated_at: nowIso,
+    }))
+  );
+
+  const configRows = contractLineMappings.map(({ item, contractLineId, contractLineType }) => {
+    if (!item.service_id) {
+      throw new Error('Recurring quote items must be linked to a catalog service before converting to a contract');
+    }
+
+    return {
+      item,
+      contractLineId,
+      contractLineType,
+      configId: uuidv4(),
+      serviceId: item.service_id,
+    };
+  });
+
+  await knexOrTrx('contract_line_services').insert(
+    configRows.map(({ contractLineId, serviceId, item }) => ({
+      tenant,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      quantity: item.quantity,
+      custom_rate: item.unit_price,
+      created_at: nowIso,
+      updated_at: nowIso,
+    }))
+  );
+
+  await knexOrTrx('contract_line_service_configuration').insert(
+    configRows.map(({ configId, contractLineId, contractLineType, serviceId, item }) => ({
+      tenant,
+      config_id: configId,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      configuration_type: contractLineType,
+      custom_rate: item.unit_price,
+      quantity: item.quantity,
+      created_at: nowIso,
+      updated_at: nowIso,
+    }))
+  );
+
+  const fixedConfigRows = configRows.filter((row) => row.contractLineType === 'Fixed');
+  if (fixedConfigRows.length > 0) {
+    await knexOrTrx('contract_line_service_fixed_config').insert(
+      fixedConfigRows.map(({ configId, item }) => ({
         tenant,
-        contract_line_id: uuidv4(),
-        contract_id: contract.contract_id,
-        contract_line_name: item.service_name || item.description,
-        description: item.description,
-        billing_frequency: item.billing_frequency || billingFrequency,
-        is_custom: true,
-        contract_line_type: contractLineType,
-        billing_timing: getContractLineBillingTiming(item),
-        display_order: index,
-        custom_rate: contractLineType === 'Fixed' ? item.unit_price : null,
-        enable_proration: false,
-        billing_cycle_alignment: 'start',
-        minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
-        round_up_to_nearest: contractLineType === 'Hourly' ? 15 : null,
-        is_active: false,
+        config_id: configId,
+        base_rate: item.unit_price,
         created_at: nowIso,
         updated_at: nowIso,
-      };
-    })
-  );
+      }))
+    );
+  }
+
+  const hourlyConfigRows = configRows.filter((row) => row.contractLineType === 'Hourly');
+  if (hourlyConfigRows.length > 0) {
+    await knexOrTrx('contract_line_service_hourly_configs').insert(
+      hourlyConfigRows.map(({ configId, item }) => ({
+        tenant,
+        config_id: configId,
+        hourly_rate: item.unit_price,
+        minimum_billable_time: 15,
+        round_up_to_nearest: 15,
+        created_at: nowIso,
+        updated_at: nowIso,
+      }))
+    );
+
+    await knexOrTrx('contract_line_service_hourly_config').insert(
+      hourlyConfigRows.map(({ configId }) => ({
+        tenant,
+        config_id: configId,
+        minimum_billable_time: 15,
+        round_up_to_nearest: 15,
+        enable_overtime: false,
+        overtime_rate: null,
+        overtime_threshold: null,
+        enable_after_hours_rate: false,
+        after_hours_multiplier: null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      }))
+    );
+  }
+
+  const usageConfigRows = configRows.filter((row) => row.contractLineType === 'Usage');
+  if (usageConfigRows.length > 0) {
+    await knexOrTrx('contract_line_service_usage_config').insert(
+      usageConfigRows.map(({ configId, item }) => ({
+        tenant,
+        config_id: configId,
+        unit_of_measure: item.unit_of_measure || 'unit',
+        enable_tiered_pricing: false,
+        minimum_usage: 0,
+        base_rate: item.unit_price,
+        created_at: nowIso,
+        updated_at: nowIso,
+      }))
+    );
+  }
 
   return {
     quote,

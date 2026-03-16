@@ -831,7 +831,7 @@
   {
     "id": "F100",
     "description": "P5: Quote → Contract — create service configurations (_fixed_config, _hourly_config, _usage_config) per contract line",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR1"
     ]
