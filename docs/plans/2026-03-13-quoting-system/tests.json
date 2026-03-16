@@ -533,7 +533,7 @@
   {
     "id": "T061",
     "description": "Totals: subtotal equals sum of non-discount item total_prices",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
