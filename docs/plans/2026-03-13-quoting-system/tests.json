@@ -659,6 +659,14 @@
     ]
   },
   {
+    "id": "T076a",
+    "description": "Template migration: standard quote template seed upsert succeeds on repeated runs",
+    "implemented": false,
+    "featureIds": [
+      "F071a"
+    ]
+  },
+  {
     "id": "T077",
     "description": "QuoteViewModel: correctly maps all quote fields including items with optional/recurring metadata",
     "implemented": false,

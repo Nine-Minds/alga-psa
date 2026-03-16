@@ -605,6 +605,15 @@
     ]
   },
   {
+    "id": "F071a",
+    "description": "P3: Standard quote template seed migration — upsert seeded AST rows without failing on templateAst conflict updates",
+    "implemented": true,
+    "prdRefs": [
+      "P3-FR1",
+      "P3-FR4"
+    ]
+  },
+  {
     "id": "F072",
     "description": "P3: Database migration — create quote_document_template_assignments table",
     "implemented": true,

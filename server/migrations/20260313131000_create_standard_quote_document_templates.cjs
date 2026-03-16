@@ -196,7 +196,7 @@ exports.up = async function up(knex) {
     .merge({
       name: knex.raw('EXCLUDED.name'),
       version: knex.raw('EXCLUDED.version'),
-      templateAst: knex.raw('EXCLUDED.templateAst'),
+      templateAst: knex.raw('EXCLUDED."templateAst"'),
       is_default: knex.raw('EXCLUDED.is_default'),
       updated_at: knex.fn.now(),
     });
