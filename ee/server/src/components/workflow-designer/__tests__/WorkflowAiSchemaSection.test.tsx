@@ -59,6 +59,68 @@ describe('WorkflowAiSchemaSection', () => {
     });
   });
 
+  it('keeps unnamed draft fields visible across the config round-trip', () => {
+    const ControlledSection = () => {
+      const [config, setConfig] = React.useState({
+        actionId: 'ai.infer',
+        aiOutputSchemaMode: 'simple' as const,
+        aiOutputSchema: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+      });
+
+      return (
+        <WorkflowAiSchemaSection
+          stepId="step-controlled"
+          config={config}
+          onChange={(patch) => setConfig((current) => ({ ...current, ...patch }))}
+        />
+      );
+    };
+
+    render(<ControlledSection />);
+
+    fireEvent.click(screen.getByRole('button', { name: /add field/i }));
+
+    expect(screen.getAllByRole('textbox')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /remove/i })).toBeInTheDocument();
+  });
+
+  it('keeps focus on the field name input while typing through the config round-trip', () => {
+    const ControlledSection = () => {
+      const [config, setConfig] = React.useState({
+        actionId: 'ai.infer',
+        aiOutputSchemaMode: 'simple' as const,
+        aiOutputSchema: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+      });
+
+      return (
+        <WorkflowAiSchemaSection
+          stepId="step-focus"
+          config={config}
+          onChange={(patch) => setConfig((current) => ({ ...current, ...patch }))}
+        />
+      );
+    };
+
+    render(<ControlledSection />);
+
+    fireEvent.click(screen.getByRole('button', { name: /add field/i }));
+
+    const fieldNameInput = screen.getAllByRole('textbox')[0] as HTMLInputElement;
+    fieldNameInput.focus();
+    fireEvent.change(fieldNameInput, { target: { value: 'a' } });
+
+    expect(fieldNameInput.value).toBe('a');
+    expect(document.activeElement).toBe(fieldNameInput);
+  });
+
   it('T018/T019: advanced mode edits raw inline JSON Schema and surfaces validation feedback', () => {
     const onChange = vi.fn();
 

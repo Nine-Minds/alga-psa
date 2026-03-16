@@ -1,1 +1,1 @@
-export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders.js';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders';

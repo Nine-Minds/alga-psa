@@ -67,6 +67,50 @@ const SIMPLE_ARRAY_ITEM_TYPE_OPTIONS: Array<{ value: WorkflowAiSimpleArrayItemTy
 const cloneFields = (fields: WorkflowAiSimpleField[]): WorkflowAiSimpleField[] =>
   JSON.parse(JSON.stringify(fields)) as WorkflowAiSimpleField[];
 
+const hasUnnamedSimpleField = (fields: WorkflowAiSimpleField[]): boolean =>
+  fields.some((field) => {
+    if (!field.name.trim()) {
+      return true;
+    }
+
+    return field.children ? hasUnnamedSimpleField(field.children) : false;
+  });
+
+const hasMatchingPersistedSimpleSchema = (
+  localFields: WorkflowAiSimpleField[],
+  persistedFields: WorkflowAiSimpleField[]
+): boolean =>
+  JSON.stringify(buildWorkflowAiSimpleSchema(localFields)) ===
+  JSON.stringify(buildWorkflowAiSimpleSchema(persistedFields));
+
+const areEquivalentSimpleFields = (
+  leftFields: WorkflowAiSimpleField[],
+  rightFields: WorkflowAiSimpleField[]
+): boolean => {
+  if (leftFields.length !== rightFields.length) {
+    return false;
+  }
+
+  return leftFields.every((leftField, index) => {
+    const rightField = rightFields[index];
+    if (!rightField) {
+      return false;
+    }
+
+    if (
+      leftField.name !== rightField.name ||
+      leftField.type !== rightField.type ||
+      leftField.description !== rightField.description ||
+      Boolean(leftField.required) !== Boolean(rightField.required) ||
+      leftField.arrayItemType !== rightField.arrayItemType
+    ) {
+      return false;
+    }
+
+    return areEquivalentSimpleFields(leftField.children ?? [], rightField.children ?? []);
+  });
+};
+
 const updateFieldInTree = (
   fields: WorkflowAiSimpleField[],
   fieldId: string,
@@ -177,19 +221,33 @@ const FieldEditor: React.FC<{
 
   return (
     <div className="rounded-md border border-gray-200 bg-white p-3" style={{ marginLeft: depth > 0 ? depth * 16 : 0 }}>
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.3fr)_160px_120px_auto]">
+      <div className="flex items-start justify-end">
+        <Button
+          id={`${stepId}-ai-remove-${field.id}`}
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={disabled}
+          onClick={() => onRemove(field.id)}
+        >
+          <Trash2 className="mr-1 h-3.5 w-3.5" />
+          Remove
+        </Button>
+      </div>
+
+      <div className="mt-2 space-y-3">
         <Input
           id={`${stepId}-ai-field-name-${field.id}`}
-          label="Field name"
+          label="Name"
           value={field.name}
           disabled={disabled}
           onChange={(event) => onUpdate(field.id, (current) => ({ ...current, name: event.target.value }))}
         />
 
         <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-          <span>Field type</span>
+          <span>Answer type</span>
           <select
-            aria-label="Field type"
+            aria-label="Answer type"
             className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
             disabled={disabled}
             value={field.type}
@@ -232,7 +290,7 @@ const FieldEditor: React.FC<{
             </select>
           </label>
         ) : (
-          <label className="flex items-center gap-2 pt-6 text-xs font-medium text-gray-700">
+          <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
             <input
               aria-label="Required"
               type="checkbox"
@@ -243,20 +301,6 @@ const FieldEditor: React.FC<{
             Required
           </label>
         )}
-
-        <div className="flex items-end justify-end">
-          <Button
-            id={`${stepId}-ai-remove-${field.id}`}
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={disabled}
-            onClick={() => onRemove(field.id)}
-          >
-            <Trash2 className="mr-1 h-3.5 w-3.5" />
-            Remove
-          </Button>
-        </div>
       </div>
 
       {isArray && (
@@ -341,7 +385,24 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
 
   useEffect(() => {
     setMode(derivedState.mode);
-    setSimpleFields(cloneFields(derivedState.fields));
+    setSimpleFields((currentFields) => {
+      if (
+        derivedState.mode === 'simple' &&
+        areEquivalentSimpleFields(currentFields, derivedState.fields)
+      ) {
+        return currentFields;
+      }
+
+      if (
+        derivedState.mode === 'simple' &&
+        hasUnnamedSimpleField(currentFields) &&
+        hasMatchingPersistedSimpleSchema(currentFields, derivedState.fields)
+      ) {
+        return currentFields;
+      }
+
+      return cloneFields(derivedState.fields);
+    });
     setAdvancedText(derivedState.advancedText);
     setValidationErrors(derivedState.validationErrors);
     setFallbackMessage(derivedState.fallbackMessage);
@@ -412,9 +473,9 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
   return (
     <div className="space-y-3 rounded-md border border-gray-200 bg-white p-4">
       <div>
-        <div className="text-sm font-semibold text-gray-800">AI output schema</div>
+        <div className="text-sm font-semibold text-gray-800">AI response format</div>
         <div className="text-xs text-gray-500">
-          Define the structured JSON saved to downstream workflow variables.
+          Choose what the AI response should include for later steps.
         </div>
       </div>
 

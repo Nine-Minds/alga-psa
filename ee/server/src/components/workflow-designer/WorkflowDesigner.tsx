@@ -117,6 +117,7 @@ import type {
   InputMapping
 } from '@alga-psa/workflows/runtime/client';
 import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@alga-psa/workflows/authoring';
+import { EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from '@alga-psa/shared/workflow/runtime/schemas/emptyWorkflowPayloadSchema';
 import {
   isWorkflowAiInferAction,
   isWorkflowComposeTextAction,
@@ -275,8 +276,6 @@ const LEGACY_WORKFLOW_NODE_IDS = new Set<string>([
   'email.renderCommentBlocks'
 ]);
 
-const DEFAULT_PAYLOAD_SCHEMA = 'payload.EmailWorkflowPayload.v1';
-
 const isTimeTrigger = (trigger?: WorkflowTrigger | null): boolean =>
   trigger?.type === 'schedule' || trigger?.type === 'recurring';
 
@@ -317,7 +316,7 @@ const createDefaultDefinition = (): WorkflowDefinition => ({
   version: 1,
   name: 'New Workflow',
   description: '',
-  payloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA,
+  payloadSchemaRef: EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
   steps: []
 });
 
@@ -1439,14 +1438,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       version: 1,
       name: 'New Workflow',
       description: '',
-      payloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA,
+      payloadSchemaRef: EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
       steps: []
     };
 
     return (
       !areStructurallyEqual(activeDefinition, pristineUnsavedDraft) ||
-      payloadSchemaModeDraft !== 'inferred' ||
-      pinnedPayloadSchemaRefDraft !== DEFAULT_PAYLOAD_SCHEMA
+      payloadSchemaModeDraft !== 'pinned' ||
+      pinnedPayloadSchemaRefDraft !== EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF
     );
   }, [
     activeDefinition,
@@ -1783,7 +1782,19 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setTriggerTypeSelection(nextType);
 
     if (nextType === 'manual') {
-      setActiveDefinition((current) => (current ? { ...current, trigger: undefined } : current));
+      setPayloadSchemaModeDraft('pinned');
+      setSchemaInferenceEnabled(false);
+      setPinnedPayloadSchemaRefDraft(EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF);
+      setSchemaRefAdvanced(false);
+      setActiveDefinition((current) => (
+        current
+          ? {
+              ...current,
+              trigger: undefined,
+              payloadSchemaRef: EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
+            }
+          : current
+      ));
       return;
     }
 
@@ -2298,9 +2309,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const draft = createDefaultDefinition();
     setActiveDefinition(draft);
     setActiveWorkflowId(null);
-    setPayloadSchemaModeDraft('inferred');
+    setPayloadSchemaModeDraft('pinned');
     setTriggerTypeSelection('manual');
-    setSchemaInferenceEnabled(true);
+    setSchemaInferenceEnabled(false);
     setContractSettingsExpanded(false);
     setSchemaRefAdvanced(false);
     setPinnedPayloadSchemaRefDraft(draft.payloadSchemaRef ?? '');
@@ -3689,7 +3700,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                             </>
                           ) : (
                             <>
-                              Choose a trigger to define available data. Manual workflows need a locked schema before publishing or running.
+                              No trigger uses <span className="font-mono">{EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF}</span> by default. Change it in Advanced schema settings if this workflow needs a different manual contract.
                             </>
                           )}
                         </div>
