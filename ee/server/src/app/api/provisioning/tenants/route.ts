@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TenantService, TenantProvisioningError } from '../../../../services/provisioning';
 import { CreateTenantSchema } from '../../../../services/provisioning/types/tenant.schema';
 import { ZodError } from 'zod';
-import { getServerSession } from '@/lib/auth-compat';
-import { hasPermission } from '@alga-psa/auth';
+import { getSession, hasPermission } from '@alga-psa/auth';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession();
+    const session = await getSession();
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },

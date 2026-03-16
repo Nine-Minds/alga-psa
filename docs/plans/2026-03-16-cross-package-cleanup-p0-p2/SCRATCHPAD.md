@@ -123,6 +123,7 @@ By target package
 ```
 
 - Migrated `ee/server/src/app/api/extensions/_auth.ts` to call `getSession()` directly from `@alga-psa/auth`, removing its dependency on `@/lib/auth-compat`.
+- Migrated `ee/server/src/app/api/provisioning/tenants/route.ts` to call `getSession()` directly from `@alga-psa/auth`, leaving `server/src/lib/auth-compat.ts` with no remaining callers.
 
 ## Gotchas
 

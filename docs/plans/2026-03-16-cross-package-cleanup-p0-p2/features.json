@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "P1-3: Migrate ee/server/src/app/api/provisioning/tenants/route.ts from auth-compat to @alga-psa/auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P1-3"]
   },
   {
