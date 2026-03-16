@@ -813,7 +813,7 @@
   {
     "id": "T094",
     "description": "Client portal: QuotesTab loads and displays client's quotes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089",
       "F090"
