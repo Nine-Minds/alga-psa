@@ -1,13 +1,15 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { FileText, Settings } from 'lucide-react';
-import type { IInvoiceTemplate, TaxSource } from '@alga-psa/types';
+import type { IInvoiceTemplate, IQuote, TaxSource } from '@alga-psa/types';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import { getInvoiceForRendering, getInvoicePurchaseOrderSummary, type InvoicePurchaseOrderSummary } from '@alga-psa/billing/actions/invoiceQueries';
+import { getQuoteByConvertedInvoiceId } from '@alga-psa/billing/actions/quoteActions';
 import { mapDbInvoiceToWasmViewModel } from '../../../lib/adapters/invoiceAdapters';
 import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
@@ -47,6 +49,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   isFinalized,
   creditApplied = 0
 }) => {
+  const router = useRouter();
   const [detailedInvoiceData, setDetailedInvoiceData] = useState<WasmInvoiceViewModel | null>(null);
   const [poSummary, setPoSummary] = useState<InvoicePurchaseOrderSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,6 +57,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [taxSource, setTaxSource] = useState<TaxSource>('internal');
+  const [sourceQuote, setSourceQuote] = useState<IQuote | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   // Match Drafts/Finalized row selection: default to first template when URL has invoiceId but no templateId (e.g. deep link from recurring history).
@@ -133,6 +137,44 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     loadInvoiceData();
   }, [invoiceId]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSourceQuote = async () => {
+      if (!invoiceId) {
+        if (isMounted) {
+          setSourceQuote(null);
+        }
+        return;
+      }
+
+      try {
+        const result = await getQuoteByConvertedInvoiceId(invoiceId);
+        if (!isMounted) {
+          return;
+        }
+
+        if (result && !('permissionError' in result)) {
+          setSourceQuote(result);
+          return;
+        }
+
+        setSourceQuote(null);
+      } catch (sourceQuoteError) {
+        console.error(`Error fetching source quote for invoice ${invoiceId}:`, sourceQuoteError);
+        if (isMounted) {
+          setSourceQuote(null);
+        }
+      }
+    };
+
+    void loadSourceQuote();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [invoiceId]);
+
   const handleAction = async (action: () => Promise<void>, actionName: string) => {
     setIsActionLoading(true);
     setError(null);
@@ -197,6 +239,18 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             <AlertDescription className="text-sm">{error}</AlertDescription>
           </Alert>
         )}
+
+        {sourceQuote ? (
+          <div className="mb-4">
+            <Button
+              id="invoice-preview-open-source-quote"
+              variant="outline"
+              onClick={() => router.push(`/msp/billing?tab=quotes&quoteId=${sourceQuote.quote_id}`)}
+            >
+              View Source Quote {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
+            </Button>
+          </div>
+        ) : null}
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">

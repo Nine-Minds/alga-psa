@@ -113,6 +113,38 @@ const Quote = {
     return mapQuoteRecord(knexOrTrx, tenant, quote ?? null);
   },
 
+  async getByConvertedContractId(
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    contractId: string
+  ): Promise<IQuote | null> {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting quote by converted contract');
+    }
+
+    const quote = await knexOrTrx('quotes')
+      .where({ tenant, converted_contract_id: contractId })
+      .first();
+
+    return mapQuoteRecord(knexOrTrx, tenant, quote ?? null);
+  },
+
+  async getByConvertedInvoiceId(
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    invoiceId: string
+  ): Promise<IQuote | null> {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting quote by converted invoice');
+    }
+
+    const quote = await knexOrTrx('quotes')
+      .where({ tenant, converted_invoice_id: invoiceId })
+      .first();
+
+    return mapQuoteRecord(knexOrTrx, tenant, quote ?? null);
+  },
+
   async listByTenant(
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,

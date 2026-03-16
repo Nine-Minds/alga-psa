@@ -903,7 +903,7 @@
   {
     "id": "F109",
     "description": "P5: Post-conversion links — quote detail links to converted contract/invoice, and vice versa",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR6"
     ]

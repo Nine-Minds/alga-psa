@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -58,6 +59,7 @@ function hasConvertibleOneTimeItems(quote: IQuote | null): boolean {
 type ConversionMode = 'contract' | 'invoice' | 'both';
 
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
+  const router = useRouter();
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [versions, setVersions] = useState<IQuote[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -371,6 +373,29 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             <AlertTitle>Quote Update</AlertTitle>
             <AlertDescription>{notice}</AlertDescription>
           </Alert>
+        ) : null}
+
+        {quote.converted_contract_id || quote.converted_invoice_id ? (
+          <section className="flex flex-wrap gap-2 rounded-lg border border-border p-4">
+            {quote.converted_contract_id ? (
+              <Button
+                id="quote-detail-open-converted-contract"
+                variant="outline"
+                onClick={() => router.push(`/msp/billing?tab=client-contracts&contractId=${quote.converted_contract_id}`)}
+              >
+                Open Converted Contract
+              </Button>
+            ) : null}
+            {quote.converted_invoice_id ? (
+              <Button
+                id="quote-detail-open-converted-invoice"
+                variant="outline"
+                onClick={() => router.push(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${quote.converted_invoice_id}`)}
+              >
+                Open Converted Invoice
+              </Button>
+            ) : null}
+          </section>
         ) : null}
 
         <section className="grid gap-4 rounded-lg border border-border p-4 md:grid-cols-2 xl:grid-cols-3">

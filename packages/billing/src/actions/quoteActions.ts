@@ -770,3 +770,31 @@ export const getQuoteConversionPreview = withAuth(async (
 
   return buildQuoteConversionPreview(quote);
 });
+
+export const getQuoteByConvertedContractId = withAuth(async (
+  user,
+  { tenant },
+  contractId: string,
+): Promise<IQuote | null | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return Quote.getByConvertedContractId(knex, tenant, contractId);
+});
+
+export const getQuoteByConvertedInvoiceId = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string,
+): Promise<IQuote | null | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return Quote.getByConvertedInvoiceId(knex, tenant, invoiceId);
+});
