@@ -1,0 +1,236 @@
+[
+  {
+    "id": "F001",
+    "description": "P0-1: Verify moved test files compile in ee/packages/workflows (npx tsc --noEmit)",
+    "implemented": true,
+    "prdRefs": ["P0-1"]
+  },
+  {
+    "id": "F002",
+    "description": "P0-1: Verify no shared/ files import @alga-psa/workflows (grep confirms 0 actual imports)",
+    "implemented": true,
+    "prdRefs": ["P0-1"]
+  },
+  {
+    "id": "F003",
+    "description": "P0-1: Update .github/known-cycles.json baseline (remove resolved cycles)",
+    "implemented": false,
+    "prdRefs": ["P0-1"]
+  },
+  {
+    "id": "F004",
+    "description": "P0-1: Full build passes (npm run build)",
+    "implemented": false,
+    "prdRefs": ["P0-1"]
+  },
+  {
+    "id": "F005",
+    "description": "P0-1: Commit test file moves",
+    "implemented": false,
+    "prdRefs": ["P0-1"]
+  },
+  {
+    "id": "F006",
+    "description": "P0-2: Run authoritative lint count (npm run lint | grep no-feature-to-feature-imports | wc -l)",
+    "implemented": false,
+    "prdRefs": ["P0-2"]
+  },
+  {
+    "id": "F007",
+    "description": "P0-2: Document violation matrix by source and target package",
+    "implemented": false,
+    "prdRefs": ["P0-2"]
+  },
+  {
+    "id": "F008",
+    "description": "P1-3: Migrate ee/server/src/app/api/extensions/_auth.ts from auth-compat to @alga-psa/auth",
+    "implemented": false,
+    "prdRefs": ["P1-3"]
+  },
+  {
+    "id": "F009",
+    "description": "P1-3: Migrate ee/server/src/app/api/provisioning/tenants/route.ts from auth-compat to @alga-psa/auth",
+    "implemented": false,
+    "prdRefs": ["P1-3"]
+  },
+  {
+    "id": "F010",
+    "description": "P1-3: Delete server/src/lib/auth-compat.ts",
+    "implemented": false,
+    "prdRefs": ["P1-3"]
+  },
+  {
+    "id": "F011",
+    "description": "P1-3: Build passes after auth-compat deletion (npm run build)",
+    "implemented": false,
+    "prdRefs": ["P1-3"]
+  },
+  {
+    "id": "F012",
+    "description": "P1-3: Commit auth-compat deletion",
+    "implemented": false,
+    "prdRefs": ["P1-3"]
+  },
+  {
+    "id": "F013",
+    "description": "P1-4: Add 'export * from ./assets' to msp-composition/src/index.ts",
+    "implemented": false,
+    "prdRefs": ["P1-4"]
+  },
+  {
+    "id": "F014",
+    "description": "P1-4: Add 'export * from ./billing' to msp-composition/src/index.ts",
+    "implemented": false,
+    "prdRefs": ["P1-4"]
+  },
+  {
+    "id": "F015",
+    "description": "P1-4: Add 'export * from ./clients' to msp-composition/src/index.ts",
+    "implemented": false,
+    "prdRefs": ["P1-4"]
+  },
+  {
+    "id": "F016",
+    "description": "P1-4: Build passes after wiring exports (npm run build)",
+    "implemented": false,
+    "prdRefs": ["P1-4"]
+  },
+  {
+    "id": "F017",
+    "description": "P1-4: Commit msp-composition export wiring",
+    "implemented": false,
+    "prdRefs": ["P1-4"]
+  },
+  {
+    "id": "F018",
+    "description": "P2-5a: Identify all projects -> clients cross-package violations",
+    "implemented": false,
+    "prdRefs": ["P2-5a"]
+  },
+  {
+    "id": "F019",
+    "description": "P2-5a: Create or update ClientCrossFeatureContext in packages/clients/src/context/",
+    "implemented": false,
+    "prdRefs": ["P2-5a"]
+  },
+  {
+    "id": "F020",
+    "description": "P2-5a: Create MspClientCrossFeatureProvider in packages/msp-composition/src/clients/ (if not exists)",
+    "implemented": false,
+    "prdRefs": ["P2-5a"]
+  },
+  {
+    "id": "F021",
+    "description": "P2-5a: Update violating files to use context instead of direct imports",
+    "implemented": false,
+    "prdRefs": ["P2-5a"]
+  },
+  {
+    "id": "F022",
+    "description": "P2-5a: Build passes, violation count reduced",
+    "implemented": false,
+    "prdRefs": ["P2-5a"]
+  },
+  {
+    "id": "F023",
+    "description": "P2-5a: Commit client composition layer changes",
+    "implemented": false,
+    "prdRefs": ["P2-5a"]
+  },
+  {
+    "id": "F024",
+    "description": "P2-5b: Identify all X -> documents cross-package violations (6+ packages)",
+    "implemented": false,
+    "prdRefs": ["P2-5b"]
+  },
+  {
+    "id": "F025",
+    "description": "P2-5b: Move entity image actions (uploadEntityImage, deleteEntityImage) to @alga-psa/storage or horizontal package",
+    "implemented": false,
+    "prdRefs": ["P2-5b"]
+  },
+  {
+    "id": "F026",
+    "description": "P2-5b: Create DocumentsCrossFeatureContext for UI component violations",
+    "implemented": false,
+    "prdRefs": ["P2-5b"]
+  },
+  {
+    "id": "F027",
+    "description": "P2-5b: Update all document-importing files to use context or horizontal imports",
+    "implemented": false,
+    "prdRefs": ["P2-5b"]
+  },
+  {
+    "id": "F028",
+    "description": "P2-5b: Build passes, documents target violations significantly reduced",
+    "implemented": false,
+    "prdRefs": ["P2-5b"]
+  },
+  {
+    "id": "F029",
+    "description": "P2-5b: Commit document violation fixes",
+    "implemented": false,
+    "prdRefs": ["P2-5b"]
+  },
+  {
+    "id": "F030",
+    "description": "P2-5c: Categorize client-portal violations as fixable vs acceptable (inherent composition)",
+    "implemented": false,
+    "prdRefs": ["P2-5c"]
+  },
+  {
+    "id": "F031",
+    "description": "P2-5c: Apply eslint-disable with justification for acceptable client-portal violations",
+    "implemented": false,
+    "prdRefs": ["P2-5c"]
+  },
+  {
+    "id": "F032",
+    "description": "P2-5c: Create client-portal-composition package OR context facades for fixable violations",
+    "implemented": false,
+    "prdRefs": ["P2-5c"]
+  },
+  {
+    "id": "F033",
+    "description": "P2-5c: Build passes, client-portal violations handled",
+    "implemented": false,
+    "prdRefs": ["P2-5c"]
+  },
+  {
+    "id": "F034",
+    "description": "P2-5c: Commit client-portal violation fixes",
+    "implemented": false,
+    "prdRefs": ["P2-5c"]
+  },
+  {
+    "id": "F035",
+    "description": "P2-6: Identify type-only cross-vertical imports eligible for @alga-psa/types",
+    "implemented": false,
+    "prdRefs": ["P2-6"]
+  },
+  {
+    "id": "F036",
+    "description": "P2-6: Move identified types to packages/types/src/",
+    "implemented": false,
+    "prdRefs": ["P2-6"]
+  },
+  {
+    "id": "F037",
+    "description": "P2-6: Update all callers to import from @alga-psa/types",
+    "implemented": false,
+    "prdRefs": ["P2-6"]
+  },
+  {
+    "id": "F038",
+    "description": "P2-6: Build passes, violation count reduced",
+    "implemented": false,
+    "prdRefs": ["P2-6"]
+  },
+  {
+    "id": "F039",
+    "description": "P2-6: Commit type extraction",
+    "implemented": false,
+    "prdRefs": ["P2-6"]
+  }
+]
