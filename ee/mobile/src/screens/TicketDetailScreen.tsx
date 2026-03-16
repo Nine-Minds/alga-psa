@@ -1982,14 +1982,8 @@ function ActionChip({
   );
 }
 
-const QUICK_EMOJIS = [
-  String.fromCodePoint(0x1F44D), // 👍
-  String.fromCodePoint(0x1F44E), // 👎
-  String.fromCodePoint(0x2764, 0xFE0F), // ❤️
-  String.fromCodePoint(0x1F602), // 😂
-  String.fromCodePoint(0x1F389), // 🎉
-  String.fromCodePoint(0x1F440), // 👀
-];
+const QUICK_EMOJIS = ['👍', '👎', '❤️', '😂', '🎉', '👀'];
+
 
 export function CommentsSection({
   comments,
