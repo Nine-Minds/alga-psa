@@ -113,7 +113,7 @@
   },
   {
     "id": "T015",
-    "description": "Schema: status transition validation allows draft→sent but rejects draft→accepted",
+    "description": "Schema: status transition validation allows draft\u2192sent but rejects draft\u2192accepted",
     "implemented": true,
     "featureIds": [
       "F009"
@@ -121,7 +121,7 @@
   },
   {
     "id": "T016",
-    "description": "Schema: status transition validation allows sent→accepted, sent→rejected, sent→expired, sent→cancelled",
+    "description": "Schema: status transition validation allows sent\u2192accepted, sent\u2192rejected, sent\u2192expired, sent\u2192cancelled",
     "implemented": true,
     "featureIds": [
       "F009"
@@ -129,7 +129,7 @@
   },
   {
     "id": "T017",
-    "description": "Schema: status transition validation allows accepted→converted but rejects converted→draft",
+    "description": "Schema: status transition validation allows accepted\u2192converted but rejects converted\u2192draft",
     "implemented": true,
     "featureIds": [
       "F009"
@@ -902,7 +902,7 @@
   },
   {
     "id": "T104",
-    "description": "Conversion: Quote→Contract creates draft contract with correct name and dates",
+    "description": "Conversion: Quote\u2192Contract creates draft contract with correct name and dates",
     "implemented": true,
     "featureIds": [
       "F098"
@@ -953,7 +953,7 @@
   },
   {
     "id": "T110",
-    "description": "Conversion: Quote→Invoice creates draft invoice with is_manual=true",
+    "description": "Conversion: Quote\u2192Invoice creates draft invoice with is_manual=true",
     "implemented": true,
     "featureIds": [
       "F103"
@@ -1027,7 +1027,7 @@
   {
     "id": "T119",
     "description": "Approval: 'Submit for Approval' changes status from draft to pending_approval",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F111"
     ]
@@ -1058,7 +1058,7 @@
   },
   {
     "id": "T122",
-    "description": "Approval: quotes:approve permission required — user without it gets denied",
+    "description": "Approval: quotes:approve permission required \u2014 user without it gets denied",
     "implemented": false,
     "featureIds": [
       "F114"
@@ -1066,7 +1066,7 @@
   },
   {
     "id": "T123",
-    "description": "Approval: when disabled per tenant, draft→sent transition allowed directly",
+    "description": "Approval: when disabled per tenant, draft\u2192sent transition allowed directly",
     "implemented": false,
     "featureIds": [
       "F113"

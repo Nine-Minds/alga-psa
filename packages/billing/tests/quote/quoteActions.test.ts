@@ -435,6 +435,33 @@ describe('quoteActions', () => {
     );
   });
 
+
+  it('T119: submitQuoteForApproval changes status from draft to pending_approval', async () => {
+    vi.spyOn(Quote, 'getById').mockResolvedValueOnce({
+      quote_id: QUOTE_ID,
+      status: 'draft',
+      is_template: false,
+    } as any);
+    vi.spyOn(Quote, 'update').mockResolvedValueOnce({
+      quote_id: QUOTE_ID,
+      status: 'pending_approval',
+    } as any);
+
+    const { submitQuoteForApproval } = await import('../../src/actions/quoteActions');
+    const result = await submitQuoteForApproval(QUOTE_ID);
+
+    expect(Quote.update).toHaveBeenCalledWith(
+      mockKnex,
+      TENANT_ID,
+      QUOTE_ID,
+      expect.objectContaining({
+        status: 'pending_approval',
+        updated_by: USER_ID,
+      })
+    );
+    expect(result).toMatchObject({ quote_id: QUOTE_ID, status: 'pending_approval' });
+  });
+
   it('T089: sendQuote rejects quotes not in draft or approved status', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce({
