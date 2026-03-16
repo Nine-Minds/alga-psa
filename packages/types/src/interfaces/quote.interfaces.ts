@@ -114,6 +114,31 @@ export interface IQuoteListItem extends IQuote {
   display_quote_number: string;
 }
 
+export type QuoteConversionTarget = 'contract' | 'invoice' | 'excluded';
+
+export interface QuoteConversionPreviewItem {
+  quote_item_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  is_optional: boolean;
+  is_selected: boolean;
+  is_recurring: boolean;
+  is_discount?: boolean;
+  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
+  target: QuoteConversionTarget;
+  reason?: string | null;
+}
+
+export interface QuoteConversionPreview {
+  quote_id: string;
+  available_actions: Array<'contract' | 'invoice' | 'both'>;
+  contract_items: QuoteConversionPreviewItem[];
+  invoice_items: QuoteConversionPreviewItem[];
+  excluded_items: QuoteConversionPreviewItem[];
+}
+
 export interface QuoteViewModelParty {
   name: string;
   address?: string | null;

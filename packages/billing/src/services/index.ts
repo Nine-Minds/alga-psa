@@ -9,6 +9,7 @@ export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials } from './quoteCalculationService';
 export { QuotePDFGenerationService, createQuotePDFGenerationService } from './quotePdfGenerationService';
 export {
+  buildQuoteConversionPreview,
   convertQuoteToDraftContract,
   convertQuoteToDraftContractAndInvoice,
   convertQuoteToDraftInvoice,

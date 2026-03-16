@@ -1,5 +1,12 @@
 import type { Knex } from 'knex';
-import type { IContract, IInvoice, IQuote, IQuoteItem } from '@alga-psa/types';
+import type {
+  IContract,
+  IInvoice,
+  IQuote,
+  IQuoteItem,
+  QuoteConversionPreview,
+  QuoteConversionPreviewItem,
+} from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import Contract from '../models/contract';
@@ -22,6 +29,27 @@ export interface QuoteToBothConversionResult {
   contract: IContract;
   invoice: IInvoice;
   clientContractId?: string;
+}
+
+function toPreviewItem(
+  item: IQuoteItem,
+  target: QuoteConversionPreviewItem['target'],
+  reason?: string | null
+): QuoteConversionPreviewItem {
+  return {
+    quote_item_id: item.quote_item_id,
+    description: item.description,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    total_price: item.total_price,
+    is_optional: item.is_optional,
+    is_selected: item.is_selected,
+    is_recurring: item.is_recurring,
+    is_discount: item.is_discount,
+    billing_method: item.billing_method ?? null,
+    target,
+    reason: reason ?? null,
+  };
 }
 
 interface ContractLineMapping {
@@ -105,6 +133,62 @@ function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
 
     return false;
   });
+}
+
+export function buildQuoteConversionPreview(quote: IQuote): QuoteConversionPreview {
+  const quoteItems = quote.quote_items ?? [];
+  const recurringItems = getSelectedRecurringItems(quoteItems);
+  const oneTimeItems = getSelectedOneTimeItems(quoteItems);
+  const recurringIds = new Set(recurringItems.map((item) => item.quote_item_id));
+  const oneTimeIds = new Set(oneTimeItems.map((item) => item.quote_item_id));
+
+  const contractItems: QuoteConversionPreviewItem[] = [];
+  const invoiceItems: QuoteConversionPreviewItem[] = [];
+  const excludedItems: QuoteConversionPreviewItem[] = [];
+
+  for (const item of quoteItems) {
+    if (recurringIds.has(item.quote_item_id)) {
+      contractItems.push(toPreviewItem(item, 'contract'));
+      continue;
+    }
+
+    if (oneTimeIds.has(item.quote_item_id)) {
+      invoiceItems.push(toPreviewItem(item, 'invoice'));
+      continue;
+    }
+
+    let reason = 'Item is not eligible for conversion';
+    if (item.is_optional && item.is_selected === false) {
+      reason = 'Optional item was deselected by the client';
+    } else if (item.is_discount && item.is_recurring) {
+      reason = 'Recurring discount lines are excluded from contract conversion';
+    } else if (item.is_recurring && !item.service_id) {
+      reason = 'Recurring items must reference a catalog service before contract conversion';
+    } else if (item.is_discount) {
+      reason = 'Discount line does not apply to any converted one-time item';
+    }
+
+    excludedItems.push(toPreviewItem(item, 'excluded', reason));
+  }
+
+  const availableActions: Array<'contract' | 'invoice' | 'both'> = [];
+  if (contractItems.length > 0) {
+    availableActions.push('contract');
+  }
+  if (invoiceItems.length > 0) {
+    availableActions.push('invoice');
+  }
+  if (contractItems.length > 0 && invoiceItems.length > 0) {
+    availableActions.push('both');
+  }
+
+  return {
+    quote_id: quote.quote_id,
+    available_actions: availableActions,
+    contract_items: contractItems,
+    invoice_items: invoiceItems,
+    excluded_items: excludedItems,
+  };
 }
 
 export async function convertQuoteToDraftContract(

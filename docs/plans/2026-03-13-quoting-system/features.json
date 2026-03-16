@@ -887,7 +887,7 @@
   {
     "id": "F107",
     "description": "P5: Conversion preview — show mapping of items to contract lines vs invoice charges before converting",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR4"
     ]
