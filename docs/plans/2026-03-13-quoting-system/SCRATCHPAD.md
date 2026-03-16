@@ -332,3 +332,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T079 complete — Added collection-binding coverage proving `lineItems` exposes optional and recurring flags for template rendering.
 - (2026-03-16) T080 complete — Added default quote template preview coverage proving the rendered HTML includes the expected core sections and line-item content.
 - (2026-03-16) T081 complete — Added detailed quote template preview coverage proving the rendered HTML surfaces phase, optional, and recurring markers in the detailed layout.
+- (2026-03-16) T082 complete — Added adapter integration coverage proving quote view-model hydration joins client, contact, and tenant-company records from the database.

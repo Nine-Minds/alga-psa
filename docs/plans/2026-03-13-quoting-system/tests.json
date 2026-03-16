@@ -709,7 +709,7 @@
   {
     "id": "T082",
     "description": "Adapter: mapDbQuoteToViewModel fetches and joins client, contact, tenant data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
