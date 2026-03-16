@@ -773,7 +773,7 @@
   {
     "id": "T090",
     "description": "Send: sendQuote generates PDF, sends email to specified address(es), updates sent_at and status to 'sent'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
