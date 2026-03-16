@@ -719,6 +719,55 @@ describe('quoteActions', () => {
     });
   });
 
+
+  it('T128: saveQuoteAsTemplate strips client-specific fields from the new template', async () => {
+    const templateQuoteId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    vi.spyOn(Quote, 'getById').mockResolvedValueOnce({
+      ...templateQuote,
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0013',
+      is_template: false,
+      client_id: baseQuoteInput.client_id,
+      contact_id: 'contact-2',
+      quote_date: baseQuoteInput.quote_date,
+      valid_until: baseQuoteInput.valid_until,
+      status: 'accepted',
+    } as any);
+    vi.spyOn(Quote, 'create').mockResolvedValueOnce({ quote_id: templateQuoteId } as any);
+    vi.spyOn(Quote, 'getById').mockResolvedValueOnce({
+      quote_id: templateQuoteId,
+      quote_number: null,
+      is_template: true,
+      client_id: null,
+      contact_id: null,
+      quote_date: null,
+      valid_until: null,
+      status: 'draft',
+    } as any);
+
+    const { saveQuoteAsTemplate } = await import('../../src/actions/quoteActions');
+    const result = await saveQuoteAsTemplate(QUOTE_ID);
+
+    expect(Quote.create).toHaveBeenCalledWith(
+      mockTrx,
+      TENANT_ID,
+      expect.objectContaining({
+        client_id: null,
+        contact_id: null,
+        quote_date: null,
+        valid_until: null,
+        is_template: true,
+      })
+    );
+    expect(result).toMatchObject({
+      client_id: null,
+      contact_id: null,
+      quote_date: null,
+      valid_until: null,
+      is_template: true,
+    });
+  });
+
   it('T089: sendQuote rejects quotes not in draft or approved status', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce({

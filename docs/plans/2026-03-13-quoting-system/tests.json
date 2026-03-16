@@ -1107,7 +1107,7 @@
   {
     "id": "T128",
     "description": "Save as Template: template does not copy quote-specific fields (client, contact, dates, status)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F120"
     ]
