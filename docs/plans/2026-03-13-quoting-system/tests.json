@@ -589,7 +589,7 @@
   {
     "id": "T068",
     "description": "Versioning: revise creates new quote row with version+1 and parent_quote_id set",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]

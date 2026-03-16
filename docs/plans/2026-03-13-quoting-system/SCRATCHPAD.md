@@ -315,3 +315,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T067 complete — Added optional-item reselection coverage proving toggling `is_selected` back to true restores the optional line into persisted quote totals.
 - (2026-03-16) Discovery — quote revisions were still blocked by the original unique `(tenant, quote_number)` index, so Phase 2 versioning needed a follow-up migration to make quote-number uniqueness version-aware while preserving base-number lookups.
 - (2026-03-16) F064a complete — Added a follow-up migration that replaces the unique base-number index with a version-aware uniqueness constraint and updated `Quote.getByNumber()` to resolve the latest version for a shared quote number.
+- (2026-03-16) T068 complete — Added infrastructure coverage proving `Quote.createRevision()` creates a new draft row with `version + 1` and a stable `parent_quote_id` root link.

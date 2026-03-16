@@ -912,6 +912,121 @@ describe('Quote infrastructure', () => {
     expect(Number(reloadedQuote.total_amount)).toBe(1500);
   });
 
+  it('T068: Versioning: revise creates new quote row with version+1 and parent_quote_id set', async () => {
+    const quote = await createFinancialQuote({ status: 'sent' });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Revision source line',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const revision = await Quote.createRevision(context.db, context.tenantId, quote.quote_id, context.userId);
+
+    expect(revision.version).toBe(2);
+    expect(revision.parent_quote_id).toBe(quote.quote_id);
+    expect(revision.status).toBe('draft');
+  });
+
+  it('T069: Versioning: revise copies all quote_items to new version with new item_ids', async () => {
+    const quote = await createFinancialQuote({ status: 'sent' });
+
+    const firstItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Copied line one',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const secondItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Copied line two',
+      quantity: 2,
+      unit_price: 300,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const revision = await Quote.createRevision(context.db, context.tenantId, quote.quote_id, context.userId);
+
+    expect(revision.quote_items).toHaveLength(2);
+    expect(revision.quote_items?.map((item) => item.description)).toEqual(['Copied line one', 'Copied line two']);
+    expect(revision.quote_items?.some((item) => item.quote_item_id === firstItem.quote_item_id || item.quote_item_id === secondItem.quote_item_id)).toBe(false);
+  });
+
+  it('T070: Versioning: old version status set to superseded after revision', async () => {
+    const quote = await createFinancialQuote({ status: 'sent' });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Superseded line',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    await Quote.createRevision(context.db, context.tenantId, quote.quote_id, context.userId);
+
+    const sourceQuote = await loadQuoteRow(quote.quote_id);
+    expect(sourceQuote.status).toBe('superseded');
+  });
+
+  it('T071: Versioning: new version has same quote_number as original', async () => {
+    const quote = await createFinancialQuote({ status: 'sent' });
+
+    const revision = await Quote.createRevision(context.db, context.tenantId, quote.quote_id, context.userId);
+
+    expect(revision.quote_number).toBe(quote.quote_number);
+  });
+
+  it('T072: Versioning: can revise a rejected quote (creates new version from rejected)', async () => {
+    const quote = await createFinancialQuote({ status: 'rejected' });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Rejected source line',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const revision = await Quote.createRevision(context.db, context.tenantId, quote.quote_id, context.userId);
+
+    expect(revision.version).toBe(2);
+    expect(revision.parent_quote_id).toBe(quote.quote_id);
+    expect(revision.status).toBe('draft');
+  });
+
+  it('T073: Version history: query returns all versions ordered by version number', async () => {
+    const quote = await createFinancialQuote({ status: 'sent' });
+
+    const revisionTwo = await Quote.createRevision(context.db, context.tenantId, quote.quote_id, context.userId);
+    await Quote.update(context.db, context.tenantId, revisionTwo.quote_id, { status: 'sent', updated_by: context.userId });
+    const revisionThree = await Quote.createRevision(context.db, context.tenantId, revisionTwo.quote_id, context.userId);
+
+    const versions = await Quote.listVersions(context.db, context.tenantId, quote.quote_id);
+    expect(versions.map((version) => version.version)).toEqual([1, 2, 3]);
+    expect(versions[2].quote_id).toBe(revisionThree.quote_id);
+  });
+
+  it('T074: Version history: works for quotes with 3+ versions', async () => {
+    const quote = await createFinancialQuote({ status: 'sent' });
+
+    const revisionTwo = await Quote.createRevision(context.db, context.tenantId, quote.quote_id, context.userId);
+    await Quote.update(context.db, context.tenantId, revisionTwo.quote_id, { status: 'sent', updated_by: context.userId });
+    const revisionThree = await Quote.createRevision(context.db, context.tenantId, revisionTwo.quote_id, context.userId);
+
+    const versions = await Quote.listVersions(context.db, context.tenantId, revisionThree.quote_id);
+    expect(versions).toHaveLength(3);
+    expect(versions.at(-1)?.version).toBe(3);
+  });
+
   it('T022: getByNumber returns the correct quote within a tenant', async () => {
     const quote = await Quote.create(context.db, context.tenantId, {
       client_id: context.clientId,
