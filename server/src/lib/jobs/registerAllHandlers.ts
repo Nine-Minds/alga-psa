@@ -13,6 +13,7 @@ import {
   expiringCreditsNotificationHandler,
   ExpiringCreditsNotificationJobData,
 } from './handlers/expiringCreditsNotificationHandler';
+import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import {
   creditReconciliationHandler,
   CreditReconciliationJobData,
@@ -164,6 +165,17 @@ export async function registerAllJobHandlers(
       name: 'expiring-credits-notification',
       handler: async (_jobId, data) => {
         await expiringCreditsNotificationHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<ExpireQuotesJobData & BaseJobData>(
+    {
+      name: 'expire-quotes',
+      handler: async (_jobId, data) => {
+        await expireQuotesHandler(data);
       },
       retry: { maxAttempts: 3 },
     },

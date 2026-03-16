@@ -983,7 +983,7 @@
   {
     "id": "F118",
     "description": "P6: Auto-expiration background job — scheduled bulk expiration + notification",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR6"
     ]
