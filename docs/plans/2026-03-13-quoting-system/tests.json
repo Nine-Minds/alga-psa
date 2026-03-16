@@ -920,7 +920,7 @@
   {
     "id": "T106",
     "description": "Conversion: recurring hourly item creates contract_line + _hourly_config",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099",
       "F100"
