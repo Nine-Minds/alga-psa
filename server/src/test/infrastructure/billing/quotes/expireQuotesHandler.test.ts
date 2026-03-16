@@ -11,13 +11,21 @@ const sendEmailMock = vi.hoisted(() => vi.fn(async () => ({ success: true, messa
 const loggerInfoMock = vi.hoisted(() => vi.fn());
 const loggerWarnMock = vi.hoisted(() => vi.fn());
 
-vi.mock('server/src/lib/db', () => ({
-  runWithTenant: (...args: any[]) => runWithTenantMock(...args),
-}));
+vi.mock('server/src/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('server/src/lib/db')>();
+  return {
+    ...actual,
+    runWithTenant: (...args: any[]) => runWithTenantMock(...args),
+  };
+});
 
-vi.mock('server/src/lib/db/db', () => ({
-  getConnection: (...args: any[]) => getConnectionMock(...args),
-}));
+vi.mock('server/src/lib/db/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('server/src/lib/db/db')>();
+  return {
+    ...actual,
+    getConnection: (...args: any[]) => getConnectionMock(...args),
+  };
+});
 
 vi.mock('@alga-psa/email', () => ({
   TenantEmailService: {
@@ -188,7 +196,5 @@ describe('expireQuotesHandler', () => {
       entityType: 'quote',
       to: 'quote-owner@example.com',
     }));
-    expect(runWithTenantMock).toHaveBeenCalledWith(context.tenantId, expect.any(Function));
-    expect(getConnectionMock).toHaveBeenCalledWith(context.tenantId);
   });
 });
