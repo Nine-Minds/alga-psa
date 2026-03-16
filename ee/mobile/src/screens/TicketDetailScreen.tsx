@@ -24,6 +24,7 @@ import { copyToClipboard } from "../clipboard/clipboard";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useToast } from "../ui/toast/ToastProvider";
+import EmojiPicker from "rn-emoji-keyboard";
 import {
   extractPlainTextFromRichEditorJson,
   extractPlainTextFromSerializedRichEditorContent,
@@ -2020,6 +2021,7 @@ export function CommentsSection({
   // Local reactions state (initialized from comment data, updated optimistically)
   const [reactionsOverrides, setReactionsOverrides] = useState<Record<string, AggregatedReaction[]>>({});
   const [emojiPickerCommentId, setEmojiPickerCommentId] = useState<string | null>(null);
+  const [fullEmojiPickerCommentId, setFullEmojiPickerCommentId] = useState<string | null>(null);
 
   const config = getAppConfig();
   const client = useMemo(() => {
@@ -2036,15 +2038,6 @@ export function CommentsSection({
     },
     [comments, reactionsOverrides],
   );
-
-  const reactionUserNames = useMemo(() => {
-    // Merge all reaction_user_names from comments
-    const names: Record<string, string> = {};
-    for (const c of comments) {
-      if (c.reaction_user_names) Object.assign(names, c.reaction_user_names);
-    }
-    return names;
-  }, [comments]);
 
   const handleToggleReaction = useCallback(
     async (commentId: string, emoji: string) => {
@@ -2260,6 +2253,17 @@ export function CommentsSection({
                         <Text style={{ fontSize: 20 }}>{emoji}</Text>
                       </Pressable>
                     ))}
+                    <Pressable
+                      onPress={() => {
+                        setEmojiPickerCommentId(null);
+                        setFullEmojiPickerCommentId(c.comment_id!);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel="More emojis"
+                      style={({ pressed }) => ({ padding: 4, borderRadius: 8, opacity: pressed ? 0.5 : 1 })}
+                    >
+                      <Text style={{ fontSize: 16, color: colors.textSecondary }}>...</Text>
+                    </Pressable>
                   </View>
                 ) : null}
               </View>
@@ -2282,6 +2286,17 @@ export function CommentsSection({
           ) : null}
         </View>
       )}
+
+      <EmojiPicker
+        onEmojiSelected={(emojiObject) => {
+          if (fullEmojiPickerCommentId) {
+            void handleToggleReaction(fullEmojiPickerCommentId, emojiObject.emoji);
+          }
+          setFullEmojiPickerCommentId(null);
+        }}
+        open={fullEmojiPickerCommentId !== null}
+        onClose={() => setFullEmojiPickerCommentId(null)}
+      />
     </View>
   );
 }
