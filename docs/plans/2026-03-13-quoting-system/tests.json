@@ -1010,7 +1010,7 @@
   {
     "id": "T117",
     "description": "Conversion: optional items with is_selected=false (excluded by client) are not converted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F098",
       "F103"
