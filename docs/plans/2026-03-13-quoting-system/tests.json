@@ -653,7 +653,7 @@
   {
     "id": "T076",
     "description": "Template migration: standard_quote_templates seeded with default and detailed templates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
