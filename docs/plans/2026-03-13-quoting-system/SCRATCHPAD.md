@@ -308,3 +308,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T060 complete — Added quote-level discount coverage proving unscoped discount lines fall back to the full non-discount subtotal.
 - (2026-03-16) T061 complete — Added quote totals coverage verifying `subtotal` is the sum of non-discount line totals even when discount rows are present.
 - (2026-03-16) T062 complete — Added quote totals coverage verifying `discount_total` is the sum of all recalculated discount-line amounts.
+- (2026-03-16) T063 complete — Added quote totals coverage with live tax + discount data, asserting `total_amount` persists as subtotal minus discounts plus tax.

@@ -549,7 +549,7 @@
   {
     "id": "T063",
     "description": "Totals: total_amount = subtotal - discount_total + tax",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
