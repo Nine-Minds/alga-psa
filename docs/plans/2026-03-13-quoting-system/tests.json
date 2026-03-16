@@ -525,7 +525,7 @@
   {
     "id": "T060",
     "description": "Discount: quote-level discount (no target) applies to full subtotal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]

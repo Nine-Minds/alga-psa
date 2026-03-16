@@ -305,3 +305,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T057 complete — Added fixed-discount infrastructure coverage proving discount rows persist their exact amount into `total_price` during recalculation.
 - (2026-03-16) T058 complete — Added scoped item-discount coverage verifying `applies_to_item_id` discounts only price against the targeted quote line and not the full quote subtotal.
 - (2026-03-16) T059 complete — Added service-scoped discount coverage verifying `applies_to_service_id` aggregates all matching service lines and excludes other services from the discount base.
+- (2026-03-16) T060 complete — Added quote-level discount coverage proving unscoped discount lines fall back to the full non-discount subtotal.
