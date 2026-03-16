@@ -298,3 +298,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) F071a complete — P3: Fixed the standard quote-document-template seed migration so repeated runs/upserts now reference `EXCLUDED."templateAst"` correctly, unblocking infra tests and tenant bootstrap flows.
 - (2026-03-16) T051 complete — Added quote infrastructure tax coverage that spies on `TaxService.calculateTax()` during quote-item creation to verify taxable lines call the tax service with the item net amount and resolved region.
 - (2026-03-16) T052 complete — Added quote-item infrastructure coverage proving `is_taxable=false` short-circuits the tax service result to zero tax on the persisted line item.
+- (2026-03-16) T053 complete — Added tax-exempt client coverage in the quote infrastructure suite, verifying quote-item tax stays at zero when the client is marked tax exempt.

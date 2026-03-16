@@ -469,7 +469,7 @@
   {
     "id": "T053",
     "description": "Tax: tax-exempt client gets zero tax on all items",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
