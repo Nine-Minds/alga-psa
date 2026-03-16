@@ -878,7 +878,7 @@
   {
     "id": "T101",
     "description": "Client portal: first view sets viewed_at timestamp and logs activity",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F096"
     ]
