@@ -313,3 +313,5 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T065 complete — Added quote-item deletion coverage proving removing a line forces persisted quote totals to recalculate against the remaining items.
 - (2026-03-16) T066 complete — Added optional-item selection coverage proving `is_selected=false` removes an optional line from persisted quote totals.
 - (2026-03-16) T067 complete — Added optional-item reselection coverage proving toggling `is_selected` back to true restores the optional line into persisted quote totals.
+- (2026-03-16) Discovery — quote revisions were still blocked by the original unique `(tenant, quote_number)` index, so Phase 2 versioning needed a follow-up migration to make quote-number uniqueness version-aware while preserving base-number lookups.
+- (2026-03-16) F064a complete — Added a follow-up migration that replaces the unique base-number index with a version-aware uniqueness constraint and updated `Quote.getByNumber()` to resolve the latest version for a shared quote number.

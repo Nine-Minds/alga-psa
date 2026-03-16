@@ -549,6 +549,15 @@
     ]
   },
   {
+    "id": "F064a",
+    "description": "P2: Versioning infrastructure — allow quote_number reuse across revisions via version-aware uniqueness and latest-version lookup by base quote number",
+    "implemented": true,
+    "prdRefs": [
+      "P2-FR4",
+      "P2-FR5"
+    ]
+  },
+  {
     "id": "F065",
     "description": "P2: Version history — query all versions by parent_quote_id chain",
     "implemented": true,

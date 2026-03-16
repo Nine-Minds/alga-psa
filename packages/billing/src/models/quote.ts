@@ -108,6 +108,7 @@ const Quote = {
 
     const quote = await knexOrTrx('quotes')
       .where({ tenant, quote_number: quoteNumber })
+      .orderBy('version', 'desc')
       .first();
 
     return mapQuoteRecord(knexOrTrx, tenant, quote ?? null);
