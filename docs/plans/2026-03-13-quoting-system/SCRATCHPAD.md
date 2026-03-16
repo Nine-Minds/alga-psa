@@ -318,3 +318,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T068 complete — Added infrastructure coverage proving `Quote.createRevision()` creates a new draft row with `version + 1` and a stable `parent_quote_id` root link.
 - (2026-03-16) T069 complete — Added revision-copy coverage proving every source quote line is cloned onto the new revision with fresh `quote_item_id` values.
 - (2026-03-16) T070 complete — Added revision lifecycle coverage proving the source quote is marked `superseded` when a new revision is created.
+- (2026-03-16) T071 complete — Added revision numbering coverage proving new versions retain the original base `quote_number`.

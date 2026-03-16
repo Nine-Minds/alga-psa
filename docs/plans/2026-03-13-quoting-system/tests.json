@@ -613,7 +613,7 @@
   {
     "id": "T071",
     "description": "Versioning: new version has same quote_number as original",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
