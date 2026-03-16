@@ -862,7 +862,7 @@
   {
     "id": "T098a",
     "description": "MSP detail view: accepted quote with optional items shows client's selections highlighted for review",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093a"
     ]
