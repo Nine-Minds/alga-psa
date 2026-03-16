@@ -462,6 +462,43 @@ describe('quoteActions', () => {
     expect(result).toMatchObject({ quote_id: QUOTE_ID, status: 'pending_approval' });
   });
 
+
+  it('T120: approveQuote changes status from pending_approval to approved', async () => {
+    vi.spyOn(Quote, 'getById').mockResolvedValueOnce({
+      quote_id: QUOTE_ID,
+      status: 'pending_approval',
+      is_template: false,
+    } as any);
+    vi.spyOn(Quote, 'update').mockResolvedValueOnce({
+      quote_id: QUOTE_ID,
+      status: 'approved',
+    } as any);
+
+    const { approveQuote } = await import('../../src/actions/quoteActions');
+    const result = await approveQuote(QUOTE_ID, 'Looks good');
+
+    expect(Quote.update).toHaveBeenCalledWith(
+      mockKnex,
+      TENANT_ID,
+      QUOTE_ID,
+      expect.objectContaining({
+        status: 'approved',
+        updated_by: USER_ID,
+      })
+    );
+    expect(QuoteActivity.create).toHaveBeenCalledWith(
+      mockKnex,
+      TENANT_ID,
+      expect.objectContaining({
+        quote_id: QUOTE_ID,
+        activity_type: 'approved',
+        description: 'Quote approved: Looks good',
+        metadata: { comment: 'Looks good' },
+      })
+    );
+    expect(result).toMatchObject({ quote_id: QUOTE_ID, status: 'approved' });
+  });
+
   it('T089: sendQuote rejects quotes not in draft or approved status', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce({

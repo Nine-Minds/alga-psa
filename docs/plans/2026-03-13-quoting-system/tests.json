@@ -1043,7 +1043,7 @@
   {
     "id": "T120",
     "description": "Approval: approve changes status from pending_approval to approved",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F113"
     ]
