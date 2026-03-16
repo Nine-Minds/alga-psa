@@ -536,6 +536,20 @@ describe('quoteActions', () => {
     expect(result).toMatchObject({ quote_id: QUOTE_ID, status: 'draft' });
   });
 
+
+  it('T122: approveQuote requires quotes:approve permission', async () => {
+    hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => (
+      !(resource === 'quotes' && action === 'approve')
+    ));
+
+    const { approveQuote } = await import('../../src/actions/quoteActions');
+    const result = await approveQuote(QUOTE_ID, 'Denied');
+
+    expect(result).toEqual({ permissionError: 'Permission denied: Cannot approve quotes' });
+    expect(Quote.update).not.toHaveBeenCalled();
+    expect(QuoteActivity.create).not.toHaveBeenCalled();
+  });
+
   it('T089: sendQuote rejects quotes not in draft or approved status', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce({

@@ -1059,7 +1059,7 @@
   {
     "id": "T122",
     "description": "Approval: quotes:approve permission required \u2014 user without it gets denied",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114"
     ]
