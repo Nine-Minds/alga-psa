@@ -1083,7 +1083,7 @@
   {
     "id": "T125",
     "description": "Duplication: duplicated items have new item_ids (not referencing original)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119"
     ]

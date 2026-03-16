@@ -634,6 +634,47 @@ describe('quoteActions', () => {
     });
   });
 
+
+  it('T125: duplicateQuote gives duplicated items fresh item IDs', async () => {
+    const duplicatedQuoteId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const duplicatedItemIds = ['new-item-1', 'new-item-2'];
+
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce({
+        ...templateQuote,
+        quote_id: QUOTE_ID,
+        quote_number: 'Q-0008',
+        is_template: false,
+      } as any)
+      .mockResolvedValueOnce({
+        quote_id: duplicatedQuoteId,
+        quote_number: 'Q-0100',
+        status: 'draft',
+        is_template: false,
+        quote_items: [
+          { ...templateQuote.quote_items[0], quote_item_id: duplicatedItemIds[0] },
+          { ...templateQuote.quote_items[1], quote_item_id: duplicatedItemIds[1] },
+        ],
+      } as any);
+    vi.spyOn(Quote, 'create').mockResolvedValueOnce({ quote_id: duplicatedQuoteId } as any);
+    vi.spyOn(QuoteItem, 'create')
+      .mockResolvedValueOnce({ ...templateQuote.quote_items[0], quote_item_id: duplicatedItemIds[0] } as any)
+      .mockResolvedValueOnce({ ...templateQuote.quote_items[1], quote_item_id: duplicatedItemIds[1] } as any);
+
+    const { duplicateQuote } = await import('../../src/actions/quoteActions');
+    const result = await duplicateQuote(QUOTE_ID);
+
+    expect(result).toMatchObject({
+      quote_items: [
+        expect.objectContaining({ quote_item_id: duplicatedItemIds[0] }),
+        expect.objectContaining({ quote_item_id: duplicatedItemIds[1] }),
+      ],
+    });
+    expect(result.quote_items?.map((item: any) => item.quote_item_id)).not.toEqual(
+      templateQuote.quote_items.map((item) => item.quote_item_id)
+    );
+  });
+
   it('T089: sendQuote rejects quotes not in draft or approved status', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce({
