@@ -1002,7 +1002,7 @@
   {
     "id": "T116",
     "description": "Conversion: preview correctly categorizes items as contract-bound vs invoice-bound",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F107"
     ]
