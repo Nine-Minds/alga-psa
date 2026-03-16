@@ -661,7 +661,7 @@
   {
     "id": "T076a",
     "description": "Template migration: standard quote template seed upsert succeeds on repeated runs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071a"
     ]

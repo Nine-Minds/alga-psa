@@ -324,3 +324,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T074 complete — Added 3-version history coverage proving `Quote.listVersions()` resolves the full chain even when queried from the latest revision.
 - (2026-03-16) T075 complete — Added infrastructure coverage proving the tenant-scoped quote document template table stores `templateAst` as JSONB.
 - (2026-03-16) T076 complete — Added seed coverage proving the standard quote document template table contains both the default and detailed seeded template codes.
+- (2026-03-16) T076a complete — Added repeatability coverage that reruns the standard quote template migration twice against an existing table and confirms the upsert path stays deduplicated.
