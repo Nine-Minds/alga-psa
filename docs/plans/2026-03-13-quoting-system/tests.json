@@ -725,7 +725,7 @@
   {
     "id": "T084",
     "description": "PDF: stores generated file in file storage and returns file_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
