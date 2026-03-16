@@ -12,6 +12,8 @@ interface QuoteStatusBadgeProps {
 const QUOTE_STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
   draft: 'secondary',
   sent: 'info',
+  pending_approval: 'warning',
+  approved: 'primary',
   accepted: 'success',
   rejected: 'error',
   expired: 'warning',

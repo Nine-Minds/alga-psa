@@ -3,6 +3,8 @@ import type { QuoteStatus } from '@alga-psa/types';
 
 export const quoteStatusSchema = z.enum([
   'draft',
+  'pending_approval',
+  'approved',
   'sent',
   'accepted',
   'rejected',
@@ -114,7 +116,9 @@ export const updateQuoteItemSchema = createQuoteItemBaseSchema.partial().extend(
 });
 
 export const QUOTE_ALLOWED_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
-  draft: ['sent', 'cancelled'],
+  draft: ['pending_approval', 'sent', 'cancelled'],
+  pending_approval: ['approved', 'cancelled'],
+  approved: ['sent', 'cancelled'],
   sent: ['accepted', 'rejected', 'expired', 'cancelled'],
   accepted: ['converted', 'cancelled'],
   rejected: ['cancelled'],

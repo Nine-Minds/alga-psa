@@ -5,6 +5,8 @@ import type { InvoiceTemplateAst } from '../lib/invoice-template-ast';
 
 export type QuoteStatus =
   | 'draft'
+  | 'pending_approval'
+  | 'approved'
   | 'sent'
   | 'accepted'
   | 'rejected'
@@ -225,6 +227,8 @@ export interface IQuoteDocumentTemplate extends TenantEntity {
 
 export const QUOTE_STATUS_METADATA: Record<QuoteStatus, { label: string; description: string }> = {
   draft: { label: 'Draft', description: 'Quote is being prepared' },
+  pending_approval: { label: 'Pending Approval', description: 'Quote is waiting for internal approval' },
+  approved: { label: 'Approved', description: 'Quote is approved and ready to send' },
   sent: { label: 'Sent', description: 'Quote has been sent to the client' },
   accepted: { label: 'Accepted', description: 'Client accepted the quote' },
   rejected: { label: 'Rejected', description: 'Client rejected the quote' },

@@ -911,7 +911,7 @@
   {
     "id": "F110",
     "description": "P6: Internal approval — 'pending_approval' and 'approved' statuses added to QuoteStatus",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR1"
     ]
