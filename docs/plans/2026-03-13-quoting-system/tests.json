@@ -485,7 +485,7 @@
   {
     "id": "T055",
     "description": "Tax: per-item tax_region and tax_rate stored correctly after calculation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]

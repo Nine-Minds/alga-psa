@@ -300,3 +300,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T052 complete — Added quote-item infrastructure coverage proving `is_taxable=false` short-circuits the tax service result to zero tax on the persisted line item.
 - (2026-03-16) T053 complete — Added tax-exempt client coverage in the quote infrastructure suite, verifying quote-item tax stays at zero when the client is marked tax exempt.
 - (2026-03-16) T054 complete — Added reverse-charge quote tax coverage so client tax settings that enable reverse charge persist zero tax on quote items.
+- (2026-03-16) T055 complete — Added quote-item persistence coverage for tax recomputation, verifying recalculation writes the resolved `tax_region` and rounded `tax_rate` back onto the stored quote line.
