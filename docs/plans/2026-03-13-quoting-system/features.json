@@ -855,7 +855,7 @@
   {
     "id": "F103",
     "description": "P5: Quote → Invoice conversion — create draft invoice (is_manual=true) from one-time items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR2"
     ]

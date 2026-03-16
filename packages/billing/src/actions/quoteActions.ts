@@ -7,13 +7,13 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { IContract, IQuote, IQuoteItem, IQuoteListItem, PaginatedResult } from '@alga-psa/types';
+import type { IContract, IInvoice, IQuote, IQuoteItem, IQuoteListItem, PaginatedResult } from '@alga-psa/types';
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate } from '../lib/quote-email-templates';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
-import { convertQuoteToDraftContract, createQuotePDFGenerationService } from '../services';
+import { convertQuoteToDraftContract, convertQuoteToDraftInvoice, createQuotePDFGenerationService } from '../services';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -699,5 +699,27 @@ export const convertQuoteToContract = withAuth(async (
 
   return await knex.transaction(async (trx) => {
     return convertQuoteToDraftContract(trx, tenant, quoteId, getActorUserId(user));
+  });
+});
+
+export const convertQuoteToInvoice = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+): Promise<{ quote: IQuote; invoice: IInvoice } | ActionPermissionError> => {
+  const createDenied = await requireBillingCreatePermission(user);
+  if (createDenied) {
+    return createDenied;
+  }
+
+  const updateDenied = await requireBillingUpdatePermission(user);
+  if (updateDenied) {
+    return updateDenied;
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return await knex.transaction(async (trx) => {
+    return convertQuoteToDraftInvoice(trx, tenant, quoteId);
   });
 });

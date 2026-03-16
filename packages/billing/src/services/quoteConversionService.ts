@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
-import type { IContract, IQuote, IQuoteItem } from '@alga-psa/types';
+import type { IContract, IInvoice, IQuote, IQuoteItem } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import { SharedNumberingService } from '@shared/services/numberingService';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
@@ -9,6 +10,11 @@ export interface QuoteToContractConversionResult {
   quote: IQuote;
   contract: IContract;
   clientContractId?: string;
+}
+
+export interface QuoteToInvoiceConversionResult {
+  quote: IQuote;
+  invoice: IInvoice;
 }
 
 interface ContractLineMapping {
@@ -38,6 +44,20 @@ function getContractLineBillingTiming(item: IQuoteItem): 'arrears' | 'advance' {
 function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
   return items.filter((item) => {
     if (!item.is_recurring || item.is_discount) {
+      return false;
+    }
+
+    if (item.is_optional && item.is_selected === false) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
+  return items.filter((item) => {
+    if (item.is_recurring) {
       return false;
     }
 
@@ -274,5 +294,87 @@ export async function convertQuoteToDraftContract(
     quote: refreshedQuote as IQuote,
     contract,
     clientContractId,
+  };
+}
+
+export async function convertQuoteToDraftInvoice(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string
+): Promise<QuoteToInvoiceConversionResult> {
+  const quote = await Quote.getById(knexOrTrx, tenant, quoteId);
+
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+  }
+
+  if (quote.is_template) {
+    throw new Error('Quote templates cannot be converted to invoices');
+  }
+
+  if (quote.status !== 'accepted') {
+    throw new Error('Only accepted quotes can be converted to invoices');
+  }
+
+  if (quote.converted_invoice_id) {
+    const existingInvoice = await knexOrTrx('invoices')
+      .where({ tenant, invoice_id: quote.converted_invoice_id })
+      .first();
+
+    if (existingInvoice) {
+      return {
+        quote: await Quote.getById(knexOrTrx, tenant, quote.quote_id) as IQuote,
+        invoice: {
+          ...existingInvoice,
+          invoice_charges: await knexOrTrx('invoice_charges').where({ tenant, invoice_id: existingInvoice.invoice_id }),
+        } as IInvoice,
+      };
+    }
+  }
+
+  if (!quote.client_id) {
+    throw new Error('Quotes must be linked to a client before they can be converted to an invoice');
+  }
+
+  const oneTimeItems = getSelectedOneTimeItems(quote.quote_items ?? []);
+  if (oneTimeItems.length === 0) {
+    throw new Error('Quote does not contain any one-time items selected for invoice conversion');
+  }
+
+  const nowIso = new Date().toISOString();
+  const invoiceNumber = await SharedNumberingService.getNextNumber('INVOICE', {
+    knex: knexOrTrx,
+    tenant,
+  });
+
+  const invoiceId = uuidv4();
+  await knexOrTrx('invoices').insert({
+    tenant,
+    invoice_id: invoiceId,
+    client_id: quote.client_id,
+    po_number: quote.po_number ?? null,
+    invoice_date: quote.accepted_at || quote.quote_date || nowIso,
+    due_date: quote.accepted_at || quote.quote_date || nowIso,
+    subtotal: 0,
+    tax: 0,
+    total_amount: 0,
+    currency_code: quote.currency_code,
+    status: 'draft',
+    invoice_number: invoiceNumber,
+    credit_applied: 0,
+    is_manual: true,
+    tax_source: quote.tax_source ?? 'internal',
+  });
+
+  const invoice = await knexOrTrx('invoices')
+    .where({ tenant, invoice_id: invoiceId })
+    .first();
+
+  return {
+    quote,
+    invoice: {
+      ...invoice,
+      invoice_charges: [],
+    } as IInvoice,
   };
 }
