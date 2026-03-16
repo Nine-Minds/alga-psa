@@ -959,7 +959,7 @@
   {
     "id": "F116",
     "description": "P6: Phase/section grouping UI — visual section headers, drag between sections, collapsible",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR4"
     ]
