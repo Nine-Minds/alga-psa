@@ -797,7 +797,7 @@
   {
     "id": "T092",
     "description": "Email: 'Quote Sent' email includes quote summary and PDF attachment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ]
