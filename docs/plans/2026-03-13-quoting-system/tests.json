@@ -749,7 +749,7 @@
   {
     "id": "T087",
     "description": "Template selection: falls back to tenant default when no per-quote template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]

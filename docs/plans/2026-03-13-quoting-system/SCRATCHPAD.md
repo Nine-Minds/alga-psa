@@ -335,3 +335,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T082 complete — Added adapter integration coverage proving quote view-model hydration joins client, contact, and tenant-company records from the database.
 - (2026-03-16) T085 complete — Added preview-service coverage proving `renderPreview()` returns HTML/CSS without touching the Puppeteer browser pool.
 - (2026-03-16) T086 complete — Added template-selection coverage proving a quote-specific `template_id` overrides tenant defaults and standard fallback resolution.
+- (2026-03-16) T087 complete — Added template-selection coverage proving tenant-level document template assignments are used when a quote has no explicit override.
