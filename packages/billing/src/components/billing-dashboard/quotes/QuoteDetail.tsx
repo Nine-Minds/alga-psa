@@ -4,10 +4,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import type { IClient, IContact, IQuote } from '@alga-psa/types';
+import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { deleteQuote, getQuote, listQuoteVersions, resendQuote, sendQuoteReminder, updateQuote } from '../../../actions/quoteActions';
+import { convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, deleteQuote, getQuote, getQuoteConversionPreview, listQuoteVersions, resendQuote, sendQuoteReminder, updateQuote } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
@@ -38,6 +39,24 @@ function formatQuoteNumber(quote: IQuote): string {
   return quote.version > 1 ? `${baseNumber} v${quote.version}` : baseNumber;
 }
 
+function hasConvertibleRecurringItems(quote: IQuote | null): boolean {
+  return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && (!item.is_optional || item.is_selected !== false)));
+}
+
+function hasConvertibleOneTimeItems(quote: IQuote | null): boolean {
+  const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && (!item.is_optional || item.is_selected !== false));
+  if (oneTimeItems.some((item) => !item.is_discount)) {
+    return true;
+  }
+
+  const oneTimeItemIds = new Set(oneTimeItems.filter((item) => !item.is_discount).map((item) => item.quote_item_id));
+  const oneTimeServiceIds = new Set(oneTimeItems.filter((item) => !item.is_discount && item.service_id).map((item) => item.service_id));
+
+  return oneTimeItems.some((item) => item.is_discount && (!item.applies_to_item_id || oneTimeItemIds.has(item.applies_to_item_id) || (item.applies_to_service_id ? oneTimeServiceIds.has(item.applies_to_service_id) : true)));
+}
+
+type ConversionMode = 'contract' | 'invoice' | 'both';
+
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [versions, setVersions] = useState<IQuote[]>([]);
@@ -47,6 +66,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [conversionMode, setConversionMode] = useState<ConversionMode | null>(null);
+  const [conversionPreview, setConversionPreview] = useState<QuoteConversionPreview | null>(null);
+  const [isConversionDialogOpen, setIsConversionDialogOpen] = useState(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   useEffect(() => {
     void loadQuote();
@@ -86,6 +109,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     () => (quote?.quote_items || []).filter((item) => item.is_optional),
     [quote?.quote_items]
   );
+  const canConvertToContract = useMemo(() => hasConvertibleRecurringItems(quote), [quote]);
+  const canConvertToInvoice = useMemo(() => hasConvertibleOneTimeItems(quote), [quote]);
+  const canConvertToBoth = canConvertToContract && canConvertToInvoice;
 
   const handleDelete = async () => {
     if (!quote) {
@@ -185,6 +211,74 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
+  const handleOpenConversionDialog = async (mode: ConversionMode) => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsPreviewLoading(true);
+      setError(null);
+      setNotice(null);
+      setConversionMode(mode);
+      const preview = await getQuoteConversionPreview(quote.quote_id);
+
+      if ('permissionError' in preview) {
+        throw new Error(preview.permissionError);
+      }
+
+      setConversionPreview(preview);
+      setIsConversionDialogOpen(true);
+    } catch (previewError) {
+      setError(previewError instanceof Error ? previewError.message : 'Failed to load conversion preview');
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
+  const handleConfirmConversion = async () => {
+    if (!quote || !conversionMode) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      setNotice(null);
+
+      if (conversionMode === 'contract') {
+        const result = await convertQuoteToContract(quote.quote_id);
+        if ('permissionError' in result) {
+          throw new Error(result.permissionError);
+        }
+        setQuote(result.quote);
+        setNotice(`Created draft contract ${result.contract.contract_name}.`);
+      } else if (conversionMode === 'invoice') {
+        const result = await convertQuoteToInvoice(quote.quote_id);
+        if ('permissionError' in result) {
+          throw new Error(result.permissionError);
+        }
+        setQuote(result.quote);
+        setNotice(`Created draft invoice ${result.invoice.invoice_number}.`);
+      } else {
+        const result = await convertQuoteToBoth(quote.quote_id);
+        if ('permissionError' in result) {
+          throw new Error(result.permissionError);
+        }
+        setQuote(result.quote);
+        setNotice(`Created draft contract ${result.contract.contract_name} and draft invoice ${result.invoice.invoice_number}.`);
+      }
+
+      setIsConversionDialogOpen(false);
+      setConversionPreview(null);
+      setConversionMode(null);
+    } catch (conversionError) {
+      setError(conversionError instanceof Error ? conversionError.message : 'Failed to convert quote');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
   const renderPrimaryActions = () => {
     if (!quote) {
       return null;
@@ -213,9 +307,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       case 'accepted':
         return (
           <>
-            <Button id="quote-detail-convert-contract" disabled>Convert to Contract</Button>
-            <Button id="quote-detail-convert-invoice" disabled>Convert to Invoice</Button>
-            <Button id="quote-detail-convert-both" disabled>Convert to Both</Button>
+            <Button id="quote-detail-convert-contract" onClick={() => void handleOpenConversionDialog('contract')} disabled={isWorking || isPreviewLoading || !canConvertToContract}>Convert to Contract</Button>
+            <Button id="quote-detail-convert-invoice" onClick={() => void handleOpenConversionDialog('invoice')} disabled={isWorking || isPreviewLoading || !canConvertToInvoice}>Convert to Invoice</Button>
+            <Button id="quote-detail-convert-both" onClick={() => void handleOpenConversionDialog('both')} disabled={isWorking || isPreviewLoading || !canConvertToBoth}>Convert to Both</Button>
           </>
         );
       default:
@@ -455,6 +549,96 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           )}
         </section>
       </Box>
+      <Dialog id="quote-conversion-preview" isOpen={isConversionDialogOpen} onClose={() => setIsConversionDialogOpen(false)}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Conversion Preview</DialogTitle>
+            <DialogDescription>
+              Review what this quote conversion will create before confirming.
+            </DialogDescription>
+          </DialogHeader>
+
+          {conversionPreview ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-border p-3">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Contract Items</div>
+                  <div className="mt-1 text-lg font-semibold">{conversionPreview.contract_items.length}</div>
+                </div>
+                <div className="rounded-lg border border-border p-3">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Invoice Items</div>
+                  <div className="mt-1 text-lg font-semibold">{conversionPreview.invoice_items.length}</div>
+                </div>
+                <div className="rounded-lg border border-border p-3">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Excluded Items</div>
+                  <div className="mt-1 text-lg font-semibold">{conversionPreview.excluded_items.length}</div>
+                </div>
+              </div>
+
+              <section className="space-y-2 rounded-lg border border-border p-4">
+                <h3 className="text-base font-semibold">Will Become Contract Lines</h3>
+                {conversionPreview.contract_items.length ? (
+                  <div className="space-y-2">
+                    {conversionPreview.contract_items.map((item) => (
+                      <div key={item.quote_item_id} className="rounded-md border border-border p-3">
+                        <div className="font-medium text-foreground">{item.description}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.billing_method || 'fixed'} • Qty {item.quantity} • {formatCurrency(item.total_price, quote.currency_code || 'USD')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No recurring items will convert to a contract.</p>
+                )}
+              </section>
+
+              <section className="space-y-2 rounded-lg border border-border p-4">
+                <h3 className="text-base font-semibold">Will Become Invoice Charges</h3>
+                {conversionPreview.invoice_items.length ? (
+                  <div className="space-y-2">
+                    {conversionPreview.invoice_items.map((item) => (
+                      <div key={item.quote_item_id} className="rounded-md border border-border p-3">
+                        <div className="font-medium text-foreground">{item.description}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.is_discount ? 'Discount' : (item.billing_method || 'fixed')} • Qty {item.quantity} • {formatCurrency(item.total_price, quote.currency_code || 'USD')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No one-time items will convert to an invoice.</p>
+                )}
+              </section>
+
+              {conversionPreview.excluded_items.length ? (
+                <section className="space-y-2 rounded-lg border border-border p-4">
+                  <h3 className="text-base font-semibold">Excluded from Conversion</h3>
+                  <div className="space-y-2">
+                    {conversionPreview.excluded_items.map((item) => (
+                      <div key={item.quote_item_id} className="rounded-md border border-border p-3">
+                        <div className="font-medium text-foreground">{item.description}</div>
+                        <div className="text-sm text-muted-foreground">{item.reason || 'Not converted'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-10">
+              <LoadingIndicator text="Loading conversion preview..." spinnerProps={{ size: 'sm' }} />
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button id="quote-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>Cancel</Button>
+            <Button id="quote-conversion-confirm" onClick={() => void handleConfirmConversion()} disabled={isWorking || !conversionPreview || (conversionMode === 'contract' && !conversionPreview.contract_items.length) || (conversionMode === 'invoice' && !conversionPreview.invoice_items.length) || (conversionMode === 'both' && (!conversionPreview.contract_items.length || !conversionPreview.invoice_items.length))}>
+              {conversionMode === 'contract' ? 'Create Draft Contract' : conversionMode === 'invoice' ? 'Create Draft Invoice' : 'Create Both Records'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

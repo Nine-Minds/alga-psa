@@ -895,7 +895,7 @@
   {
     "id": "F108",
     "description": "P5: Conversion UI — dialog with 'To Contract'/'To Invoice'/'To Both' options and confirm",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR5"
     ]
