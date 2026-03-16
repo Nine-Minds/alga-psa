@@ -870,7 +870,7 @@
   {
     "id": "T100",
     "description": "Client portal: Reject requires comment, sets rejected_at, rejection_reason, status to 'rejected'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094"
     ]
