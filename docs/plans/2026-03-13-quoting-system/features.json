@@ -991,7 +991,7 @@
   {
     "id": "F119",
     "description": "P6: Quote duplication — create new draft quote from existing, copy items, generate new number",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR7"
     ]

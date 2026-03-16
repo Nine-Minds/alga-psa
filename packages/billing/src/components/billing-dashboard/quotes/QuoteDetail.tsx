@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, deleteQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, requestQuoteApprovalChanges, resendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
+import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, deleteQuote, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, requestQuoteApprovalChanges, resendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
@@ -295,6 +295,29 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
+  const handleDuplicateQuote = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      setNotice(null);
+      const result = await duplicateQuote(quote.quote_id);
+
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      router.push(`/msp/billing?tab=quotes&quoteId=${result.quote_id}&mode=edit`);
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to duplicate quote');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
   const handleOpenConversionDialog = async (mode: ConversionMode) => {
     if (!quote) {
       return;
@@ -457,6 +480,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           <div className="flex flex-wrap gap-2">
             <Button id="quote-detail-back" variant="outline" onClick={onBack}>Back</Button>
             {renderPrimaryActions()}
+            {!quote.is_template ? (
+              <Button id="quote-detail-duplicate" variant="outline" onClick={() => void handleDuplicateQuote()} disabled={isWorking}>Duplicate</Button>
+            ) : null}
             <Button id="quote-detail-view-pdf" variant="outline" disabled>View PDF</Button>
             <Button id="quote-detail-view-history" variant="outline" disabled>View History</Button>
           </div>
