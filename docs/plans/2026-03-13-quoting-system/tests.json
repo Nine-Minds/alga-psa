@@ -962,7 +962,7 @@
   {
     "id": "T111",
     "description": "Conversion: one-time items mapped to invoice_charges with correct tax/discount data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F104"
     ]
