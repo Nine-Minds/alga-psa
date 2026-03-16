@@ -1,0 +1,145 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/kb-articles"
+      },
+      "metadata": {
+        "description": "List knowledge base articles with optional filtering by status, audience, type, and category. Returns paginated results with article metadata and document names.",
+        "examples": [
+          {
+            "name": "List published articles",
+            "request": {
+              "query": { "status": "published", "limit": 10 }
+            }
+          },
+          {
+            "name": "Search articles",
+            "request": {
+              "query": { "search": "password reset" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/kb-articles"
+      },
+      "metadata": {
+        "description": "Create a new KB article. Before creating, call GET /api/v1/kb-articles/categories to find available categories. Content can be markdown text or BlockNote JSON. Articles are created in 'draft' status — call POST /api/v1/kb-articles/{id}/publish to make them visible.",
+        "examples": [
+          {
+            "name": "Create a how-to article with markdown content",
+            "request": {
+              "body": {
+                "title": "How to Reset User Password",
+                "article_type": "how_to",
+                "audience": "internal",
+                "content": "# Steps\n\n1. Navigate to Settings > Users\n2. Find the user\n3. Click Reset Password\n4. The user will receive an email with a reset link",
+                "content_format": "markdown"
+              }
+            }
+          },
+          {
+            "name": "Create a troubleshooting article for clients",
+            "request": {
+              "body": {
+                "title": "VPN Connection Issues",
+                "article_type": "troubleshooting",
+                "audience": "client",
+                "content": "# Problem\n\nVPN disconnects frequently.\n\n# Solution\n\n1. Check your internet connection\n2. Restart the VPN client\n3. If the issue persists, contact support",
+                "content_format": "markdown"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/kb-articles/{id}"
+      },
+      "metadata": {
+        "description": "Get a KB article by ID, including its document name and block content data."
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/kb-articles/{id}"
+      },
+      "metadata": {
+        "description": "Update KB article metadata (title, slug, type, audience, category, status). To update the article body content, use PUT /api/v1/kb-articles/{id}/content instead."
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/kb-articles/{id}/publish"
+      },
+      "metadata": {
+        "description": "Publish a KB article. Sets status to 'published' and auto-enables client visibility for client/public audience articles."
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/kb-articles/{id}/content"
+      },
+      "metadata": {
+        "description": "Update the body content of a KB article. Send content as markdown (default) or BlockNote JSON. Markdown is recommended for AI-generated content.",
+        "examples": [
+          {
+            "name": "Update content with markdown",
+            "request": {
+              "body": {
+                "content": "# Updated Article\n\nNew content goes here.",
+                "format": "markdown"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/kb-articles/{id}/content"
+      },
+      "metadata": {
+        "description": "Get the body content of a KB article as readable markdown text. Use this to read what an article currently says."
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/kb-articles/categories"
+      },
+      "metadata": {
+        "description": "List available categories for KB articles. Call this before creating articles to find the right category_id."
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/kb-articles/templates"
+      },
+      "metadata": {
+        "description": "List KB article templates. Templates provide pre-built content structures for different article types."
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/kb-articles/from-ticket/{ticketId}"
+      },
+      "metadata": {
+        "description": "Create a KB article pre-populated from a ticket's title, description, and resolution. Useful for turning resolved tickets into knowledge base documentation."
+      }
+    }
+  ]
+}
