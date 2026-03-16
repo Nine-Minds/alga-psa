@@ -685,7 +685,7 @@
   {
     "id": "T079",
     "description": "AST bindings: lineItems collection includes is_optional and is_recurring flags per item",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]

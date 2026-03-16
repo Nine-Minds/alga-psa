@@ -329,3 +329,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) F078a complete — Updated quote contact-party mapping to read phone data from `contact_phone_numbers` with default/display-order fallback, restoring QuoteViewModel compatibility with the current contact schema.
 - (2026-03-16) T077 complete — Added QuoteViewModel mapping coverage proving quote metadata, optional/recurring line-item flags, and phase grouping are preserved in the mapped rendering contract.
 - (2026-03-16) T078 complete — Added binding-evaluation coverage proving the shared quote AST bindings resolve quote number and date fields from the mapped view model.
+- (2026-03-16) T079 complete — Added collection-binding coverage proving `lineItems` exposes optional and recurring flags for template rendering.
