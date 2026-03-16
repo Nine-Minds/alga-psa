@@ -800,6 +800,118 @@ describe('Quote infrastructure', () => {
     expect(Number(reloadedQuote.total_amount)).toBe(1000);
   });
 
+  it('T064: Totals: adding an item triggers recalculation of all totals', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'First line',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Second line',
+      quantity: 1,
+      unit_price: 500,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedQuote.subtotal)).toBe(1500);
+    expect(Number(reloadedQuote.total_amount)).toBe(1500);
+  });
+
+  it('T065: Totals: removing an item triggers recalculation', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'First line',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const secondItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Second line',
+      quantity: 1,
+      unit_price: 500,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    await QuoteItem.delete(context.db, context.tenantId, secondItem.quote_item_id);
+
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedQuote.subtotal)).toBe(1000);
+    expect(Number(reloadedQuote.total_amount)).toBe(1000);
+  });
+
+  it('T066: Totals: toggling optional item off excludes it from totals', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Required line',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const optionalItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Optional line',
+      quantity: 1,
+      unit_price: 500,
+      is_optional: true,
+      is_selected: true,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    await QuoteItem.update(context.db, context.tenantId, optionalItem.quote_item_id, { is_selected: false });
+
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedQuote.subtotal)).toBe(1000);
+    expect(Number(reloadedQuote.total_amount)).toBe(1000);
+  });
+
+  it('T067: Totals: toggling optional item back on includes it in totals', async () => {
+    const quote = await createFinancialQuote();
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Required line',
+      quantity: 1,
+      unit_price: 1000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+    const optionalItem = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      description: 'Optional line',
+      quantity: 1,
+      unit_price: 500,
+      is_optional: true,
+      is_selected: true,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    await QuoteItem.update(context.db, context.tenantId, optionalItem.quote_item_id, { is_selected: false });
+    await QuoteItem.update(context.db, context.tenantId, optionalItem.quote_item_id, { is_selected: true });
+
+    const reloadedQuote = await loadQuoteRow(quote.quote_id);
+    expect(Number(reloadedQuote.subtotal)).toBe(1500);
+    expect(Number(reloadedQuote.total_amount)).toBe(1500);
+  });
+
   it('T022: getByNumber returns the correct quote within a tenant', async () => {
     const quote = await Quote.create(context.db, context.tenantId, {
       client_id: context.clientId,

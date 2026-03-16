@@ -557,7 +557,7 @@
   {
     "id": "T064",
     "description": "Totals: adding an item triggers recalculation of all totals",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
