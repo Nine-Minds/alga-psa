@@ -822,7 +822,7 @@
   {
     "id": "T095",
     "description": "Client portal: QuotesTab only shows quotes for authenticated client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
