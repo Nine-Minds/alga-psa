@@ -461,7 +461,7 @@
   {
     "id": "T052",
     "description": "Tax: is_taxable=false items get zero tax_amount",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
