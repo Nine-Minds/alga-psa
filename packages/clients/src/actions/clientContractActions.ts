@@ -33,6 +33,39 @@ function maybeUserActor(user: any) {
   return { actorType: 'USER' as const, actorUserId: userId };
 }
 
+const assertContractOwnedByClient = (
+  contract: {
+    contract_id?: string;
+    is_template?: boolean | null;
+    owner_client_id?: string | null;
+  } | undefined,
+  clientId: string,
+  contractId: string
+) => {
+  if (!contract) {
+    throw new Error(`Contract ${contractId} not found or inactive`);
+  }
+
+  if (contract.is_template === true) {
+    return;
+  }
+
+  const ownerClientId =
+    typeof contract.owner_client_id === 'string' && contract.owner_client_id.trim().length > 0
+      ? contract.owner_client_id.trim()
+      : null;
+
+  if (!ownerClientId) {
+    throw new Error(`Contract ${contractId} must have an owning client before it can be assigned`);
+  }
+
+  if (ownerClientId !== clientId) {
+    throw new Error(
+      `Contract ${contractId} belongs to a different client and cannot be assigned to client ${clientId}`
+    );
+  }
+};
+
 /**
  * Get all active contracts for a client.
  */
@@ -229,9 +262,7 @@ export const createClientContract = withAuth(async (
     }
     const contractExists = await contractQuery.first();
 
-    if (!contractExists) {
-      throw new Error(`Contract ${input.contract_id} not found or inactive`);
-    }
+    assertContractOwnedByClient(contractExists, input.client_id, input.contract_id);
 
     if (input.is_active) {
       const overlapping = await trx('client_contracts')

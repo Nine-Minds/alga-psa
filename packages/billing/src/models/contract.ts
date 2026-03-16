@@ -18,6 +18,29 @@ import {
   checkAndReactivateExpiredContract as checkAndReactivateExpiredContractShared,
 } from '@alga-psa/shared/billingClients';
 
+const normalizeOwnerClientId = (value: unknown): string | null => (
+  typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
+);
+
+const assertNonTemplateContractOwner = (
+  contract: Partial<IContract>,
+  operation: 'create' | 'update'
+): void => {
+  const isTemplate = contract.is_template === true;
+  if (isTemplate) {
+    return;
+  }
+
+  if (contract.owner_client_id === undefined && operation === 'update') {
+    return;
+  }
+
+  const ownerClientId = normalizeOwnerClientId(contract.owner_client_id);
+  if (!ownerClientId) {
+    throw new Error('Non-template contracts require an owning client');
+  }
+};
+
 /**
  * Contract model with tenant-explicit methods.
  * All methods require an explicit tenant parameter for multi-tenant safety.
@@ -369,9 +392,12 @@ const Contract = {
       throw new Error('Tenant context is required for creating contracts');
     }
 
+    assertNonTemplateContractOwner(contract, 'create');
+
     const timestamp = new Date().toISOString();
     const payload = {
       ...contract,
+      owner_client_id: normalizeOwnerClientId(contract.owner_client_id),
       contract_id: uuidv4(),
       tenant,
       created_at: timestamp,
@@ -401,8 +427,13 @@ const Contract = {
     }
 
     try {
+      assertNonTemplateContractOwner(updateData, 'update');
+
       const sanitized: Partial<IContract> = {
         ...updateData,
+        owner_client_id: updateData.owner_client_id === undefined
+          ? undefined
+          : normalizeOwnerClientId(updateData.owner_client_id),
         tenant: undefined,
         contract_id: undefined,
         created_at: undefined,

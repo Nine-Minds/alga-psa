@@ -320,6 +320,7 @@ export const planServiceWithConfigResponseSchema = z.object({
 export const createContractSchema = z.object({
   contract_name: z.string().min(1, 'Contract name is required').max(255),
   contract_description: z.string().optional(),
+  owner_client_id: uuidSchema,
   billing_frequency: billingFrequencySchema,
   is_active: z.boolean().optional().default(true)
 });
@@ -330,6 +331,7 @@ export const contractResponseSchema = z.object({
   contract_id: uuidSchema,
   contract_name: z.string(),
   contract_description: z.string().nullable(),
+  owner_client_id: uuidSchema,
   billing_frequency: billingFrequencySchema,
   is_active: z.boolean(),
   created_at: z.string().datetime(),

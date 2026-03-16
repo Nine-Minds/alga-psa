@@ -2,13 +2,13 @@
   {
     "id": "F001",
     "description": "Schema: add `contracts.owner_client_id` for non-template client ownership",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F002",
     "description": "Types/API: add `owner_client_id` to contract interfaces and normal app create/update payloads",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
@@ -68,25 +68,25 @@
   {
     "id": "F012",
     "description": "Guardrail: non-template contract creation requires an owning client in supported app flows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F013",
     "description": "Guardrail: assignment create/update rejects attaching a non-template contract to a different client than `owner_client_id`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Security / Permissions"]
   },
   {
     "id": "F014",
     "description": "Guardrail: renewal-draft creation carries owner client to the new draft contract",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {
     "id": "F015",
     "description": "Guardrail: legacy standalone contract create paths are aligned so they cannot recreate cross-client shared contracts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {

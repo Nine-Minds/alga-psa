@@ -679,6 +679,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext
   ): Promise<ContractResponse> {
     const { knex } = await this.getKnex();
+
+    if (typeof data.owner_client_id !== 'string' || data.owner_client_id.trim().length === 0) {
+      throw new Error('Non-template contracts require an owning client');
+    }
     
     return withTransaction(knex, async (trx) => {
       const { contract_description, ...rest } = data as any;
@@ -687,6 +691,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           contract_id: uuidv4(),
           ...rest,
           contract_description,
+          owner_client_id: data.owner_client_id.trim(),
         },
         context
       );

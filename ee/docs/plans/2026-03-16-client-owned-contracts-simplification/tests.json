@@ -2,13 +2,13 @@
   {
     "id": "T001",
     "description": "Schema migration adds `contracts.owner_client_id` and keeps template contracts unaffected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
     "id": "T002",
     "description": "Type wiring exposes `owner_client_id` on contract interfaces used by billing actions and UI loaders",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
@@ -74,37 +74,37 @@
   {
     "id": "T013",
     "description": "Non-template contract creation via supported app flow requires an owner client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T014",
     "description": "Attempting to create a non-template contract without owner client fails outside migration/internal exemption paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F015"]
   },
   {
     "id": "T015",
     "description": "Assigning a client-owned contract to a different client than `owner_client_id` is rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T016",
     "description": "Updating an existing assignment to point at a contract owned by a different client is rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T017",
     "description": "Renewal draft creation copies the source client as `owner_client_id` on the draft contract",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T018",
     "description": "Legacy API/service path cannot create a new cross-client shared non-template contract after guardrails are added",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {

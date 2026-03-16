@@ -8,6 +8,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import Contract from '../src/models/contract';
 
+vi.mock('@alga-psa/shared/billingClients', () => ({
+  hasActiveContractForClient: vi.fn(),
+  getClientIdsWithActiveContracts: vi.fn(),
+  checkAndReactivateExpiredContract: vi.fn(),
+}));
+
 // Mock Knex to test validation logic without database
 const createMockKnex = () => {
   const mockInsert = vi.fn().mockReturnThis();
@@ -143,6 +149,7 @@ describe('Contract Model', () => {
       const { knex } = createMockKnex();
       const contract = {
         contract_name: 'Test Contract',
+        owner_client_id: 'client-123',
         billing_frequency: 'monthly',
         currency_code: 'USD',
         is_active: true,
@@ -151,6 +158,59 @@ describe('Contract Model', () => {
 
       await expect(Contract.create(knex, '', contract)).rejects.toThrow(
         'Tenant context is required for creating contracts'
+      );
+    });
+
+    it('rejects non-template contract creation without an owner client', async () => {
+      const { knex } = createMockKnex();
+
+      await expect(
+        Contract.create(knex, 'tenant-1', {
+          contract_name: 'Shared Contract',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          is_active: true,
+          status: 'draft',
+          is_template: false,
+        })
+      ).rejects.toThrow('Non-template contracts require an owning client');
+    });
+
+    it('allows template contract creation without an owner client', async () => {
+      const { knex, mocks } = createMockKnex();
+      mocks.returning.mockResolvedValue([
+        {
+          contract_id: 'template-1',
+          tenant: 'tenant-1',
+          contract_name: 'Template Contract',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          is_active: true,
+          status: 'published',
+          is_template: true,
+          owner_client_id: null,
+        },
+      ]);
+
+      await expect(
+        Contract.create(knex, 'tenant-1', {
+          contract_name: 'Template Contract',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          is_active: true,
+          status: 'published',
+          is_template: true,
+        })
+      ).resolves.toMatchObject({
+        contract_id: 'template-1',
+        is_template: true,
+      });
+
+      expect(mocks.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contract_name: 'Template Contract',
+          owner_client_id: null,
+        })
       );
     });
   });

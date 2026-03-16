@@ -15,6 +15,7 @@ export interface IContract extends TenantEntity {
   contract_id: string;
   contract_name: string;
   contract_description?: string | null;
+  owner_client_id?: string | null;
   billing_frequency: string;
   currency_code: string;
   is_active: boolean;

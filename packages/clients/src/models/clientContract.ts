@@ -185,6 +185,40 @@ const getRenewalDefaultSelectionConfig = async (
   };
 };
 
+const validateContractOwnershipForClient = (params: {
+  contract: {
+    contract_id?: string;
+    is_template?: boolean | null;
+    owner_client_id?: string | null;
+  } | undefined;
+  contractId: string;
+  clientId: string;
+}): void => {
+  const contract = params.contract;
+  if (!contract) {
+    throw new Error(`Contract ${params.contractId} not found or inactive`);
+  }
+
+  if (contract.is_template === true) {
+    return;
+  }
+
+  const ownerClientId =
+    typeof contract.owner_client_id === 'string' && contract.owner_client_id.trim().length > 0
+      ? contract.owner_client_id.trim()
+      : null;
+
+  if (!ownerClientId) {
+    throw new Error(`Contract ${params.contractId} must have an owning client before it can be assigned`);
+  }
+
+  if (ownerClientId !== params.clientId) {
+    throw new Error(
+      `Contract ${params.contractId} belongs to a different client and cannot be assigned to client ${params.clientId}`
+    );
+  }
+};
+
 const withRenewalDefaultsJoin = (
   query: Knex.QueryBuilder,
   joinDefaultSettings: boolean
@@ -484,9 +518,11 @@ const ClientContract = {
         .where({ contract_id: contractId, tenant, is_active: true })
         .first();
 
-      if (!contractExists) {
-        throw new Error(`Contract ${contractId} not found or inactive`);
-      }
+      validateContractOwnershipForClient({
+        contract: contractExists,
+        contractId,
+        clientId,
+      });
 
       if (startDate) {
         const overlapping = await db('client_contracts')
@@ -579,10 +615,25 @@ const ClientContract = {
         tenant: undefined,
         client_contract_id: undefined,
         client_id: undefined,
-        contract_id: undefined,
         created_at: undefined,
         updated_at: new Date().toISOString(),
       };
+
+      if (updateData.contract_id && updateData.contract_id !== existing.contract_id) {
+        const nextContract = await db('contracts')
+          .where({ contract_id: updateData.contract_id, tenant })
+          .first();
+
+        validateContractOwnershipForClient({
+          contract: nextContract,
+          contractId: updateData.contract_id,
+          clientId: existing.client_id,
+        });
+
+        throw new Error('Changing the contract header for an existing assignment is not supported');
+      }
+
+      sanitized.contract_id = undefined;
 
       if (updateData.start_date !== undefined && updateData.start_date !== existing.start_date) {
         const contract = await db('contracts')

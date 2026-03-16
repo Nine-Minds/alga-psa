@@ -381,6 +381,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
       const contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'> = {
         contract_name: contractName,
         contract_description: contractDescription || undefined,
+        owner_client_id: clientId,
         billing_frequency: billingFrequency,
         is_active: saveAsActive,
         status: (saveAsActive ? 'active' : 'draft') as 'active' | 'draft',

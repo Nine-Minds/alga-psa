@@ -826,6 +826,7 @@ export const createClientContractFromWizard = withAuth(async (
         .update({
           contract_name: submission.contract_name,
           contract_description: submission.description ?? null,
+          owner_client_id: submission.client_id,
           billing_frequency: submission.billing_frequency ?? 'monthly',
           currency_code: submission.currency_code,
           is_active: !isDraft,
@@ -838,6 +839,7 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         contract_name: submission.contract_name,
         contract_description: submission.description ?? null,
+        owner_client_id: submission.client_id,
         billing_frequency: submission.billing_frequency ?? 'monthly',
         currency_code: submission.currency_code,
         is_active: !isDraft,
