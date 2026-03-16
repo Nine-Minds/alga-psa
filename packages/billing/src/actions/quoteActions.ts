@@ -92,6 +92,14 @@ const requireSettingsUpdatePermission = async (user: unknown): Promise<ActionPer
   return null;
 };
 
+const requireQuoteApprovePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
+  if (!await hasPermission(user as any, 'quotes', 'approve')) {
+    return permissionError('Permission denied: Cannot approve quotes');
+  }
+
+  return null;
+};
+
 const getActorUserId = (user: unknown): string | null => {
   if (!user || typeof user !== 'object') {
     return null;
@@ -228,7 +236,7 @@ export const updateQuote = withAuth(async (
   quoteId: string,
   input: Partial<IQuote>
 ): Promise<IQuote | ActionPermissionError> => {
-  const denied = await requireBillingUpdatePermission(user);
+  const denied = await requireQuoteApprovePermission(user);
   if (denied) {
     return denied;
   }
@@ -525,7 +533,7 @@ export const approveQuote = withAuth(async (
   quoteId: string,
   comment?: string
 ): Promise<IQuote | ActionPermissionError> => {
-  const denied = await requireBillingUpdatePermission(user);
+  const denied = await requireQuoteApprovePermission(user);
   if (denied) {
     return denied;
   }
@@ -563,7 +571,7 @@ export const requestQuoteApprovalChanges = withAuth(async (
   quoteId: string,
   comment: string
 ): Promise<IQuote | ActionPermissionError> => {
-  const denied = await requireBillingUpdatePermission(user);
+  const denied = await requireQuoteApprovePermission(user);
   if (denied) {
     return denied;
   }

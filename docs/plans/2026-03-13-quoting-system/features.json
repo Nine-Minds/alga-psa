@@ -943,7 +943,7 @@
   {
     "id": "F114",
     "description": "P6: quotes:approve permission — separate from billing:update",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR2"
     ]
