@@ -4,9 +4,10 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom';
 import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown, Eye, FileVideo } from 'lucide-react';
 import type { IDocument } from '@alga-psa/types';
-import { 
+import {
   getDocumentsByEntity,
-  removeDocumentAssociations
+  removeDocumentAssociations,
+  ensureEntityFolders
 } from '@alga-psa/documents/actions/documentActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -145,6 +146,13 @@ export default function TaskDocumentsSimple({
     }
   }, [initialDocuments]);
 
+  // Ensure entity-scoped default folders exist on first access
+  useEffect(() => {
+    if (taskId) {
+      void ensureEntityFolders(taskId, 'project_task');
+    }
+  }, [taskId]);
+
   // Refetch documents from the server (only in edit mode)
   const refetchDocuments = useCallback(async () => {
     if (isPendingMode) return; // Don't fetch in pending mode
@@ -268,8 +276,13 @@ export default function TaskDocumentsSimple({
       await fetchDocuments();
     }
 
-    // Show folder selector first
-    setShowFolderModal(true);
+    if (isPendingMode) {
+      // Skip folder selection in pending mode - default to root
+      handleFolderSelected(null);
+    } else {
+      // Show folder selector first
+      setShowFolderModal(true);
+    }
   };
 
   const handleFolderSelected = async (folderPath: string | null) => {
@@ -577,6 +590,7 @@ export default function TaskDocumentsSimple({
               userId={currentUser.user_id}
               entityId={isPendingMode ? undefined : taskId}
               entityType={isPendingMode ? undefined : "project_task"}
+              folderPath={isPendingMode ? null : undefined}
               onUploadComplete={async (result) => {
                 setShowUpload(false);
                 if (result?.success && result.document) {
