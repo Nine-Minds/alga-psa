@@ -267,3 +267,5 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T039 complete — Item model: reorder updates display_order for all items in batch. Added quote-item batch reorder coverage.
 - (2026-03-13) T040 complete — Activity model: create stores activity with all fields and auto-timestamps. Added quote activity creation coverage.
 - (2026-03-13) T041 complete — Activity model: listByQuoteId returns activities in chronological order. Added quote activity ordering coverage.
+- (2026-03-16) F098 complete — P5: Added `convertQuoteToDraftContract()` plus the `convertQuoteToContract` action so accepted quotes with selected recurring items can now create a draft contract shell seeded from the quote title/description/currency and recurring billing cadence.
+- (2026-03-16) F098 complete — P5: Added `convertQuoteToDraftContract()` plus the `convertQuoteToContract` action so accepted quotes with selected recurring items can now create a draft contract shell seeded from the quote title/description/currency and recurring billing cadence.

@@ -815,7 +815,7 @@
   {
     "id": "F098",
     "description": "P5: Quote → Contract conversion — create draft contract from recurring quote items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR1"
     ]
