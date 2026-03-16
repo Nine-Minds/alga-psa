@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "P0-1: Full build passes (npm run build)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P0-1"]
   },
   {

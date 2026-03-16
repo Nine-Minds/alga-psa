@@ -91,6 +91,7 @@ cd server && npx vitest run path/to/test.test.ts
 - Verified `shared/` only references `@alga-psa/workflows` in a comment within `shared/types/product-email-domains.d.ts`.
 - Verified moved workflow tests compile with `cd ee/packages/workflows && npx tsc --noEmit`; `cd shared && npx tsc --noEmit` also passes.
 - `npx nx graph --file=/tmp/graph.json` still fails locally with `brace_expansion_1.default is not a function`, including under Node 20, so cycle-baseline verification currently relies on the removed import edge plus baseline pruning.
+- `npm run build` passed from repo root after the workflow test moves and cycle-baseline update; build emitted existing Next.js webpack warnings only.
 
 ## Gotchas
 
