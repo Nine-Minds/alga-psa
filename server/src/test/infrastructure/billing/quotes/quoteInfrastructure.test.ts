@@ -1,11 +1,35 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockedTenantConnection = vi.hoisted(() => ({
+  db: null as any,
+  tenant: null as string | null,
+}));
+
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => {
+      if (!mockedTenantConnection.db || !mockedTenantConnection.tenant) {
+        throw new Error('Mock tenant connection not initialized');
+      }
+
+      return {
+        knex: mockedTenantConnection.db,
+        tenant: mockedTenantConnection.tenant,
+      };
+    }),
+  };
+});
+
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTenant, createClient } from '../../../../../test-utils/testDataFactory';
-import { createTestService } from '../../../../../test-utils/billingTestHelpers';
+import { createTestService, setupClientTaxConfiguration } from '../../../../../test-utils/billingTestHelpers';
 import Quote from '../../../../../../packages/billing/src/models/quote';
 import QuoteActivity from '../../../../../../packages/billing/src/models/quoteActivity';
 import QuoteItem from '../../../../../../packages/billing/src/models/quoteItem';
+import { TaxService } from '../../../../../../packages/billing/src/services/taxService';
 
 process.env.DB_PORT = '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
@@ -26,9 +50,13 @@ describe('Quote infrastructure', () => {
 
   beforeEach(async () => {
     context = await resetContext();
+    mockedTenantConnection.db = context.db;
+    mockedTenantConnection.tenant = context.tenantId;
   }, 30000);
 
   afterEach(async () => {
+    mockedTenantConnection.db = null;
+    mockedTenantConnection.tenant = null;
     await rollbackContext();
   }, 30000);
 
@@ -232,6 +260,221 @@ describe('Quote infrastructure', () => {
 
     expect((await Quote.getById(context.db, context.tenantId, draftQuote.quote_id))?.status).toBe('draft');
     expect((await Quote.getById(context.db, context.tenantId, acceptedQuote.quote_id))?.status).toBe('accepted');
+  });
+
+  it('T051: Tax: calculateTax called per taxable item with correct net_amount and region', async () => {
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ region_code: 'US-NY', is_tax_exempt: false });
+    await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 8.875 });
+
+    const serviceId = await createTestService(context, {
+      service_name: 'Managed Endpoint',
+      billing_method: 'fixed',
+      default_rate: 1500,
+    });
+
+    const quote = await Quote.create(context.db, context.tenantId, {
+      client_id: context.clientId,
+      title: 'Taxable quote',
+      quote_date: '2026-03-13T00:00:00.000Z',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      subtotal: 0,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 0,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: context.userId,
+    });
+
+    const calculateTaxSpy = vi.spyOn(TaxService.prototype, 'calculateTax').mockResolvedValue({ taxAmount: 270, taxRate: 9 });
+
+    await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: serviceId,
+      description: 'Managed Endpoint',
+      quantity: 2,
+      unit_price: 1500,
+      is_taxable: true,
+      created_by: context.userId,
+    });
+
+    expect(calculateTaxSpy).toHaveBeenCalledWith(
+      context.clientId,
+      3000,
+      expect.any(String),
+      'US-NY',
+      true,
+      'USD'
+    );
+
+    calculateTaxSpy.mockRestore();
+  });
+
+  it('T052: Tax: is_taxable=false items get zero tax_amount', async () => {
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ region_code: 'US-NY', is_tax_exempt: false });
+    await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 8.875 });
+
+    const serviceId = await createTestService(context, {
+      service_name: 'Non-taxable Service',
+      billing_method: 'fixed',
+      default_rate: 5000,
+    });
+
+    const quote = await Quote.create(context.db, context.tenantId, {
+      client_id: context.clientId,
+      title: 'Non-taxable quote',
+      quote_date: '2026-03-13T00:00:00.000Z',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      subtotal: 0,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 0,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: context.userId,
+    });
+
+    const item = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: serviceId,
+      description: 'Non-taxable Service',
+      quantity: 1,
+      unit_price: 5000,
+      is_taxable: false,
+      created_by: context.userId,
+    });
+
+    const reloadedItem = await context.db('quote_items').where({ tenant: context.tenantId, quote_item_id: item.quote_item_id }).first();
+    expect(Number(reloadedItem.tax_amount)).toBe(0);
+  });
+
+  it('T053: Tax: tax-exempt client gets zero tax on all items', async () => {
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ region_code: 'US-NY', is_tax_exempt: true });
+    await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 8.875 });
+
+    const serviceId = await createTestService(context, {
+      service_name: 'Exempt Service',
+      billing_method: 'fixed',
+      default_rate: 5000,
+    });
+
+    const quote = await Quote.create(context.db, context.tenantId, {
+      client_id: context.clientId,
+      title: 'Tax exempt quote',
+      quote_date: '2026-03-13T00:00:00.000Z',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      subtotal: 0,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 0,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: context.userId,
+    });
+
+    const item = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: serviceId,
+      description: 'Exempt Service',
+      quantity: 1,
+      unit_price: 5000,
+      is_taxable: true,
+      created_by: context.userId,
+    });
+
+    const reloadedItem = await context.db('quote_items').where({ tenant: context.tenantId, quote_item_id: item.quote_item_id }).first();
+    expect(Number(reloadedItem.tax_amount)).toBe(0);
+  });
+
+  it('T054: Tax: reverse charge applicable client gets zero tax', async () => {
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ region_code: 'US-NY', is_tax_exempt: false });
+    await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 8.875 });
+    await context.db('client_tax_settings')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ is_reverse_charge_applicable: true });
+
+    const serviceId = await createTestService(context, {
+      service_name: 'Reverse Charge Service',
+      billing_method: 'fixed',
+      default_rate: 5000,
+    });
+
+    const quote = await Quote.create(context.db, context.tenantId, {
+      client_id: context.clientId,
+      title: 'Reverse charge quote',
+      quote_date: '2026-03-13T00:00:00.000Z',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      subtotal: 0,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 0,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: context.userId,
+    });
+
+    const item = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: serviceId,
+      description: 'Reverse Charge Service',
+      quantity: 1,
+      unit_price: 5000,
+      is_taxable: true,
+      created_by: context.userId,
+    });
+
+    const reloadedItem = await context.db('quote_items').where({ tenant: context.tenantId, quote_item_id: item.quote_item_id }).first();
+    expect(Number(reloadedItem.tax_amount)).toBe(0);
+  });
+
+  it('T055: Tax: per-item tax_region and tax_rate stored correctly after calculation', async () => {
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ region_code: 'US-NY', is_tax_exempt: false });
+    await setupClientTaxConfiguration(context, { regionCode: 'US-NY', taxPercentage: 8.875 });
+
+    const serviceId = await createTestService(context, {
+      service_name: 'Regional Tax Service',
+      billing_method: 'fixed',
+      default_rate: 10000,
+    });
+
+    const quote = await Quote.create(context.db, context.tenantId, {
+      client_id: context.clientId,
+      title: 'Regional tax quote',
+      quote_date: '2026-03-13T00:00:00.000Z',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      subtotal: 0,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 0,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: context.userId,
+    });
+
+    const item = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id,
+      service_id: serviceId,
+      description: 'Regional Tax Service',
+      quantity: 1,
+      unit_price: 10000,
+      is_taxable: true,
+      created_by: context.userId,
+    });
+
+    const reloadedItem = await context.db('quote_items').where({ tenant: context.tenantId, quote_item_id: item.quote_item_id }).first();
+    expect(reloadedItem.tax_region).toBe('US-NY');
+    expect(Number(reloadedItem.tax_rate)).toBe(9);
+    expect(Number(reloadedItem.tax_amount)).toBeGreaterThan(0);
   });
 
   it('T022: getByNumber returns the correct quote within a tenant', async () => {

@@ -453,7 +453,7 @@
   {
     "id": "T051",
     "description": "Tax: calculateTax called per taxable item with correct net_amount and region",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
