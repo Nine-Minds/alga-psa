@@ -838,7 +838,7 @@
   {
     "id": "T097",
     "description": "Client portal: toggling optional item on/off recalculates displayed total and persists is_selected server-side",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
