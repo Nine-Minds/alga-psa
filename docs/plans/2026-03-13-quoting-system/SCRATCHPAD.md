@@ -331,3 +331,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T078 complete — Added binding-evaluation coverage proving the shared quote AST bindings resolve quote number and date fields from the mapped view model.
 - (2026-03-16) T079 complete — Added collection-binding coverage proving `lineItems` exposes optional and recurring flags for template rendering.
 - (2026-03-16) T080 complete — Added default quote template preview coverage proving the rendered HTML includes the expected core sections and line-item content.
+- (2026-03-16) T081 complete — Added detailed quote template preview coverage proving the rendered HTML surfaces phase, optional, and recurring markers in the detailed layout.
