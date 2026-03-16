@@ -733,7 +733,7 @@
   {
     "id": "T085",
     "description": "Preview: renders quote template in-browser without Puppeteer",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
