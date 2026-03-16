@@ -477,7 +477,7 @@
   {
     "id": "T054",
     "description": "Tax: reverse charge applicable client gets zero tax",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
