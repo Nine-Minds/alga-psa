@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers.js';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   csatAlertTriggeredEventPayloadSchema,
   surveyExpiredEventPayloadSchema,
   surveyReminderSentEventPayloadSchema,
   surveyResponseReceivedEventPayloadSchema,
   surveySentEventPayloadSchema,
-} from '@alga-psa/workflows/runtime/schemas/communicationsEventSchemas';
+} from '../communicationsEventSchemas';
 import {
   buildCsatAlertTriggeredPayload,
   buildSurveyExpiredPayload,
   buildSurveyReminderSentPayload,
   buildSurveyResponseReceivedPayload,
   buildSurveySentPayload,
-} from '../surveyEventBuilders';
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/surveyEventBuilders';
 
 describe('surveyEventBuilders', () => {
   it('builds a schema-valid SURVEY_SENT payload when enriched', () => {

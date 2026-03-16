@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
+import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '../index';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 

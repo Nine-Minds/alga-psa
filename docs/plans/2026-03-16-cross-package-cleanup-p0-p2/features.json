@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "P0-1: Commit test file moves",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P0-1"]
   },
   {

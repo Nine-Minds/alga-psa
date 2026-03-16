@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { inboundEmailReplyReceivedEventPayloadSchema } from '@alga-psa/workflows/runtime/schemas/communicationsEventSchemas';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers.js';
-import { buildInboundEmailReplyReceivedPayload } from '../inboundEmailReplyEventBuilders';
+import { inboundEmailReplyReceivedEventPayloadSchema } from '../communicationsEventSchemas';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
+import { buildInboundEmailReplyReceivedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 
 describe('buildInboundEmailReplyReceivedPayload', () => {
   it('builds a schema-valid payload when enriched', () => {
