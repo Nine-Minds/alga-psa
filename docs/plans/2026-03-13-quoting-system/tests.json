@@ -1051,7 +1051,7 @@
   {
     "id": "T121",
     "description": "Approval: reject returns quote to draft with comment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F113"
     ]
