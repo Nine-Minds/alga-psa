@@ -741,7 +741,7 @@
   {
     "id": "T086",
     "description": "Template selection: uses quote-specific template_id if set",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]
