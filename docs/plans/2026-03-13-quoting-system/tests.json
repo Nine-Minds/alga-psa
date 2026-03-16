@@ -854,7 +854,7 @@
   {
     "id": "T098",
     "description": "Client portal: Accept persists optional item selections and sets accepted_at, accepted_by, status to 'accepted'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]
