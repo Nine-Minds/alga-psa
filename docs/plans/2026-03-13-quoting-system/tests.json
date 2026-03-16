@@ -565,7 +565,7 @@
   {
     "id": "T065",
     "description": "Totals: removing an item triggers recalculation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
