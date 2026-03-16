@@ -1091,7 +1091,7 @@
   {
     "id": "T126",
     "description": "Auto-expiration job: bulk-expires all sent quotes past valid_until",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118"
     ]
