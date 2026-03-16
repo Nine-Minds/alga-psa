@@ -122,6 +122,8 @@ By target package
  4 users
 ```
 
+- Migrated `ee/server/src/app/api/extensions/_auth.ts` to call `getSession()` directly from `@alga-psa/auth`, removing its dependency on `@/lib/auth-compat`.
+
 ## Gotchas
 
 - `npm run lint` is the correct command (not `npx nx run-many --target=lint` which misses ~50% of violations)

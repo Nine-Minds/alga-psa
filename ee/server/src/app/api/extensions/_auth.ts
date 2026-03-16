@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from '@/lib/auth-compat'
-import { hasPermission } from '@alga-psa/auth'
+import { getSession, hasPermission } from '@alga-psa/auth'
 import { getCurrentUser } from '@alga-psa/user-composition/actions'
 
 type ExtensionPermissionAction = 'read' | 'write'
 
 export async function requireExtensionApiAccess(action: ExtensionPermissionAction): Promise<NextResponse | null> {
-  const session = await getServerSession()
+  const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
@@ -26,4 +25,3 @@ export async function requireExtensionApiAccess(action: ExtensionPermissionActio
 
   return null
 }
-
