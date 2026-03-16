@@ -886,7 +886,7 @@
   {
     "id": "T102",
     "description": "Client portal: second view does not overwrite viewed_at",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F096"
     ]

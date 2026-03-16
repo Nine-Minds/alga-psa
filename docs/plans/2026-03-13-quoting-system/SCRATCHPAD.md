@@ -354,3 +354,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T098 complete — Added portal acceptance coverage proving `acceptClientQuote()` persists optional selections, stamps `accepted_at`/`accepted_by`, moves the quote to `accepted`, and records the MSP-review metadata for selected vs. deselected optional items.
 - (2026-03-16) T100 complete — Added rejection-flow coverage that rejects blank comments, trims valid comments, persists `rejected_at` and `rejection_reason`, and logs the client rejection activity payload.
 - (2026-03-16) T101 complete — Added first-view coverage for `getClientQuoteById()`, asserting the portal stamps `viewed_at` once via the quotes table update path and records a dedicated `viewed` activity entry.
+- (2026-03-16) T102 complete — The portal quote action tests now cover repeat views, proving an existing `viewed_at` timestamp is left unchanged and no duplicate `viewed` activity is emitted.
