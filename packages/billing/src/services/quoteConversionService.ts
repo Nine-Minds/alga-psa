@@ -13,6 +13,40 @@ import Contract from '../models/contract';
 import Quote from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 
+const tableColumnCache = new Map<string, Set<string>>();
+
+async function getTableColumns(
+  knexOrTrx: Knex | Knex.Transaction,
+  tableName: string
+): Promise<Set<string>> {
+  const cached = tableColumnCache.get(tableName);
+  if (cached) {
+    return cached;
+  }
+
+  const columnInfo = await knexOrTrx(tableName).columnInfo();
+  const columns = new Set(Object.keys(columnInfo));
+  tableColumnCache.set(tableName, columns);
+  return columns;
+}
+
+async function insertRowsUsingExistingColumns(
+  knexOrTrx: Knex | Knex.Transaction,
+  tableName: string,
+  rows: Record<string, unknown>[]
+): Promise<void> {
+  if (rows.length === 0) {
+    return;
+  }
+
+  const columns = await getTableColumns(knexOrTrx, tableName);
+  const filteredRows = rows.map((row) => Object.fromEntries(
+    Object.entries(row).filter(([key, value]) => columns.has(key) && value !== undefined)
+  ));
+
+  await knexOrTrx(tableName).insert(filteredRows);
+}
+
 export interface QuoteToContractConversionResult {
   quote: IQuote;
   contract: IContract;
@@ -287,7 +321,9 @@ export async function convertQuoteToDraftContract(
     };
   });
 
-  await knexOrTrx('contract_line_services').insert(
+  await insertRowsUsingExistingColumns(
+    knexOrTrx,
+    'contract_line_services',
     configRows.map(({ contractLineId, serviceId, item }) => ({
       tenant,
       contract_line_id: contractLineId,
@@ -328,18 +364,6 @@ export async function convertQuoteToDraftContract(
 
   const hourlyConfigRows = configRows.filter((row) => row.contractLineType === 'Hourly');
   if (hourlyConfigRows.length > 0) {
-    await knexOrTrx('contract_line_service_hourly_configs').insert(
-      hourlyConfigRows.map(({ configId, item }) => ({
-        tenant,
-        config_id: configId,
-        hourly_rate: item.unit_price,
-        minimum_billable_time: 15,
-        round_up_to_nearest: 15,
-        created_at: nowIso,
-        updated_at: nowIso,
-      }))
-    );
-
     await knexOrTrx('contract_line_service_hourly_config').insert(
       hourlyConfigRows.map(({ configId }) => ({
         tenant,
@@ -351,6 +375,18 @@ export async function convertQuoteToDraftContract(
         overtime_threshold: null,
         enable_after_hours_rate: false,
         after_hours_multiplier: null,
+        created_at: nowIso,
+        updated_at: nowIso,
+      }))
+    );
+
+    await knexOrTrx('contract_line_service_hourly_configs').insert(
+      hourlyConfigRows.map(({ configId, item }) => ({
+        tenant,
+        config_id: configId,
+        hourly_rate: item.unit_price,
+        minimum_billable_time: 15,
+        round_up_to_nearest: 15,
         created_at: nowIso,
         updated_at: nowIso,
       }))
@@ -534,7 +570,7 @@ export async function convertQuoteToDraftInvoice(
       : null,
   }));
 
-  await knexOrTrx('invoice_charges').insert(invoiceChargeRows);
+  await insertRowsUsingExistingColumns(knexOrTrx, 'invoice_charges', invoiceChargeRows);
 
   const invoiceSubtotal = invoiceChargeRows.reduce((sum, row) => sum + Number(row.net_amount), 0);
   const invoiceTax = invoiceChargeRows.reduce((sum, row) => sum + Number(row.tax_amount), 0);

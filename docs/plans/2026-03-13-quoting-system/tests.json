@@ -903,7 +903,7 @@
   {
     "id": "T104",
     "description": "Conversion: Quote→Contract creates draft contract with correct name and dates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F098"
     ]
