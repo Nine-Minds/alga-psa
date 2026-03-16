@@ -621,7 +621,7 @@
   {
     "id": "T072",
     "description": "Versioning: can revise a rejected quote (creates new version from rejected)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
