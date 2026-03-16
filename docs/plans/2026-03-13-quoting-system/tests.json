@@ -677,7 +677,7 @@
   {
     "id": "T078",
     "description": "AST bindings: quoteNumber, quoteDate, validUntil resolve to correct quote values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
