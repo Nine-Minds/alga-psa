@@ -967,7 +967,7 @@
   {
     "id": "F117",
     "description": "P6: Quote document template editor — adapt invoice template designer for quote document templates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR5"
     ]

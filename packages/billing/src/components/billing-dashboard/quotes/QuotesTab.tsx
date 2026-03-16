@@ -204,6 +204,9 @@ const QuotesTab: React.FC = () => {
             </div>
 
               <div className="flex flex-wrap gap-2">
+                <Button id="quotes-document-templates" variant="outline" onClick={() => router.push('/msp/quote-document-templates')}>
+                  Document Templates
+                </Button>
                 <Button id="quotes-approval-queue" variant="outline" onClick={() => router.push('/msp/quote-approvals')}>
                   Approval Queue
                 </Button>
