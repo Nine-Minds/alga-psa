@@ -3,6 +3,7 @@ import type { IContract, IQuote, IQuoteItem } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
+import QuoteActivity from '../models/quoteActivity';
 
 export interface QuoteToContractConversionResult {
   quote: IQuote;
@@ -51,7 +52,8 @@ function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
 export async function convertQuoteToDraftContract(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  quoteId: string
+  quoteId: string,
+  performedBy?: string | null
 ): Promise<QuoteToContractConversionResult> {
   const quote = await Quote.getById(knexOrTrx, tenant, quoteId);
 
@@ -71,7 +73,7 @@ export async function convertQuoteToDraftContract(
     const existingContract = await Contract.getById(knexOrTrx, tenant, quote.converted_contract_id);
     if (existingContract) {
       return {
-        quote,
+        quote: await Quote.getById(knexOrTrx, tenant, quote.quote_id) as IQuote,
         contract: existingContract,
       };
     }
@@ -246,8 +248,30 @@ export async function convertQuoteToDraftContract(
     updated_at: nowIso,
   });
 
+  await knexOrTrx('quotes')
+    .where({ tenant, quote_id: quote.quote_id })
+    .update({
+      converted_contract_id: contract.contract_id,
+      updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
+      updated_at: nowIso,
+    });
+
+  await QuoteActivity.create(knexOrTrx, tenant, {
+    quote_id: quote.quote_id,
+    activity_type: 'converted_to_contract',
+    description: `Quote converted to draft contract ${contract.contract_name}`,
+    performed_by: performedBy ?? null,
+    metadata: {
+      contract_id: contract.contract_id,
+      client_contract_id: clientContractId,
+      recurring_item_count: recurringItems.length,
+    },
+  });
+
+  const refreshedQuote = await Quote.getById(knexOrTrx, tenant, quote.quote_id);
+
   return {
-    quote,
+    quote: refreshedQuote as IQuote,
     contract,
     clientContractId,
   };

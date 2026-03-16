@@ -698,6 +698,6 @@ export const convertQuoteToContract = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
-    return convertQuoteToDraftContract(trx, tenant, quoteId);
+    return convertQuoteToDraftContract(trx, tenant, quoteId, getActorUserId(user));
   });
 });

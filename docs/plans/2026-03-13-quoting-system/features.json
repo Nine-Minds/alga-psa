@@ -847,7 +847,7 @@
   {
     "id": "F102",
     "description": "P5: Quote → Contract — set converted_contract_id on quote, wrap in transaction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR1"
     ]
