@@ -11,7 +11,7 @@ import { CacheFactory } from '../cache/CacheFactory';
 import type { IDocument, IDocumentAssociationInput } from '@alga-psa/types';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildDocumentAssociatedPayload } from '@alga-psa/workflows/streams';
+import { buildDocumentAssociatedPayload } from '@alga-psa/workflow-streams';
 
 interface BlockContentInput {
   block_data: any; // JSON data from block editor

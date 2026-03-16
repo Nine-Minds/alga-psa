@@ -15,13 +15,11 @@ export interface SchedulingProjectTaskDetailsRecord {
   project_status_mapping_id: string | null;
   status_id: string | null;
   due_date: Date | string | null;
-  start_date: Date | string | null;
-  completed_at: Date | string | null;
   assigned_to: string | null;
   assigned_to_name: string | null;
   checklist_items: Array<{
     checklist_item_id: string;
-    item_text: string | null;
+    item_name: string | null;
     completed: boolean;
   }>;
 }
@@ -58,12 +56,10 @@ export const getSchedulingProjectTaskById = withAuth(async (
       .select(
         'pt.task_id',
         'pt.task_name',
-        'pt.task_description',
+        'pt.description as task_description',
         'pt.phase_id',
         'pt.project_status_mapping_id',
         'pt.due_date',
-        'pt.start_date',
-        'pt.completed_at',
         'pt.assigned_to',
         'pp.phase_name',
         'pp.project_id',
@@ -84,7 +80,7 @@ export const getSchedulingProjectTaskById = withAuth(async (
         task_id: taskId,
         tenant,
       })
-      .select('checklist_item_id', 'item_text', 'completed')
+      .select('checklist_item_id', 'item_name', 'completed')
       .orderBy('created_at', 'asc');
 
     return {

@@ -6,7 +6,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients';
 import {
   buildClientCreatedPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type { IClient, IContact } from '@alga-psa/types';

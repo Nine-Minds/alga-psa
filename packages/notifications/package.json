@@ -37,6 +37,7 @@
     "@alga-psa/ui": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*"
   },
   "devDependencies": {

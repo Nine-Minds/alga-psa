@@ -45,6 +45,7 @@
     "@alga-psa/event-bus": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*"
   },
   "devDependencies": {

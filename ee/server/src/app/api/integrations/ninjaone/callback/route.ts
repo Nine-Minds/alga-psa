@@ -24,7 +24,7 @@ import {
   generateWebhookSecret,
 } from '../../../../../lib/integrations/ninjaone/webhooks/webhookRegistration';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { buildIntegrationConnectedPayload } from '@alga-psa/workflows/streams';
+import { buildIntegrationConnectedPayload } from '@alga-psa/workflow-streams';
 
 // Secret names
 const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';

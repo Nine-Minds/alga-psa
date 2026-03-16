@@ -21,7 +21,7 @@ import {
   buildContractStatusChangedPayload,
   buildContractUpdatedPayload,
   computeContractRenewalUpcoming,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import {
   buildClientContractUpdatedFieldsAndChanges,
   deriveClientContractWorkflowStatus,

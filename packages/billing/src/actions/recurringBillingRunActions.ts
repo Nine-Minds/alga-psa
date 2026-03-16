@@ -8,7 +8,7 @@ import {
   buildRecurringBillingRunCompletedPayload,
   buildRecurringBillingRunFailedPayload,
   buildRecurringBillingRunStartedPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 
 export type RecurringBillingRunInvoiceFailure = {
   billingCycleId: string;

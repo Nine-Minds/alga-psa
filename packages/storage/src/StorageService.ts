@@ -32,11 +32,11 @@ import { isValidUUID } from '@alga-psa/validation';
 import {
   buildDocumentDeletedPayload,
   buildDocumentUploadedPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import {
   buildFileUploadedPayload,
   buildMediaProcessingSucceededPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {

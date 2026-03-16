@@ -14,7 +14,7 @@ import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,
   computeContractRenewalUpcoming,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 
 
 import ContractLine from '../models/contractLine';

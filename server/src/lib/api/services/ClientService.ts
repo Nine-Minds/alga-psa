@@ -30,8 +30,8 @@ import {
   buildClientOwnerAssignedPayload,
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
-} from '@alga-psa/workflows/streams';
-import { buildContactPrimarySetPayload } from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
+import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
 
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;

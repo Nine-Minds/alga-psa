@@ -1,0 +1,27 @@
+{
+  "name": "@alga-psa/workflow-streams",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/workflow-streams/src",
+  "projectType": "library",
+  "tags": ["scope:workflow-streams", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop",
+      "dependsOn": []
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/workflow-streams/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { buildExternalMappingChangedPayload } from '@alga-psa/workflows/streams';
+import { buildExternalMappingChangedPayload } from '@alga-psa/workflow-streams';
 
 export type TenantExternalEntityMappingRow = {
   id: string;

@@ -36,12 +36,12 @@ vi.mock('../src/models/storage', () => ({
   },
 }));
 
-vi.mock('@alga-psa/workflows/streams/domainEventBuilders/documentStorageEventBuilders', () => ({
+vi.mock('@alga-psa/workflow-streams/domainEventBuilders/documentStorageEventBuilders', () => ({
   buildDocumentDeletedPayload: vi.fn((args: Record<string, unknown>) => args),
   buildDocumentUploadedPayload: vi.fn((args: Record<string, unknown>) => args),
 }));
 
-vi.mock('@alga-psa/workflows/streams/domainEventBuilders/mediaEventBuilders', () => ({
+vi.mock('@alga-psa/workflow-streams/domainEventBuilders/mediaEventBuilders', () => ({
   buildFileUploadedPayload: vi.fn((args: Record<string, unknown>) => args),
   buildMediaProcessingSucceededPayload: vi.fn((args: Record<string, unknown>) => args),
 }));

@@ -117,6 +117,8 @@
       "@alga-psa/msp-composition/*": ["packages/msp-composition/src/*"],
       "@alga-psa/scheduling": ["packages/scheduling/src"],
       "@alga-psa/scheduling/*": ["packages/scheduling/src/*"],
+      "@alga-psa/workflow-streams": ["packages/workflow-streams/src/streams"],
+      "@alga-psa/workflow-streams/*": ["packages/workflow-streams/src/streams/*"],
       "@alga-psa/workflows": ["ee/packages/workflows/src"],
       "@alga-psa/workflows/*": ["ee/packages/workflows/src/*"],
       "@alga-psa/ee-stubs": ["ee/server/src/index.ts"],

@@ -18,7 +18,7 @@ import {
 } from '@alga-psa/documents/actions/documentBlockContentActions';
 import type { IDocument } from '@alga-psa/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildNoteCreatedPayload } from '@alga-psa/workflows/streams';
+import { buildNoteCreatedPayload } from '@alga-psa/workflow-streams';
 
 export interface ContactNoteContent {
   document: IDocument | null;

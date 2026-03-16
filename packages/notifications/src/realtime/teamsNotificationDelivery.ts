@@ -7,7 +7,7 @@ import {
   buildNotificationDeliveredPayload,
   buildNotificationFailedPayload,
   buildNotificationSentPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import type { InternalNotification } from '../types/internalNotification';
 
 type TeamsNotificationCategory =

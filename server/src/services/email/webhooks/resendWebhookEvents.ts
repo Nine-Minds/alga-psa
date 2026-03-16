@@ -6,7 +6,7 @@ import {
   buildEmailComplaintReceivedPayload,
   buildEmailDeliveredPayload,
   buildEmailUnsubscribedPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 
 type ResendWebhookEvent = {
   type?: string;

@@ -18,7 +18,7 @@ import { StorageProviderFactory, generateStoragePath } from '@alga-psa/storage';
 import { FileStoreModel } from 'server/src/models/storage';
 import logger from '@alga-psa/core/logger';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { buildDocumentGeneratedPayload } from '@alga-psa/workflows/streams';
+import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 
 interface PDFGenerationOptions {
   invoiceId?: string;

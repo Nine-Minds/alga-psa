@@ -35,6 +35,7 @@
     "@alga-psa/user-composition": "*",
     "@alga-psa/users": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "zod": "^3.22.4"
   },

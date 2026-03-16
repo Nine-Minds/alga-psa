@@ -2,7 +2,7 @@ import logger from '@shared/core/logger.js';
 import {
   RedisStreamClient,
   WorkflowEventBaseSchema,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
 import {
   WorkflowDefinitionModelV2,

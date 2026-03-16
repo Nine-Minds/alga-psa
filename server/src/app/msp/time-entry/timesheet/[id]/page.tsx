@@ -51,7 +51,7 @@ export default async function TimeSheetPage({ params }: { params: Promise<{ id: 
     }
 
     return (
-      <TimeSheetClient 
+      <TimeSheetClient
         timeSheet={timeSheet}
         currentUser={currentUser}
         isManager={isManager}

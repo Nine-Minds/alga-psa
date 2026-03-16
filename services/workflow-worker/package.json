@@ -17,6 +17,7 @@
   "dependencies": {
     "@alga-psa/shared": "^1.0.0",
     "@alga-psa/storage": "*",
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@eslint/plugin-kit": "0.3.5",
     "@js-temporal/polyfill": "^0.4.4",

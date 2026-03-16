@@ -30,7 +30,7 @@ import os from 'os';
 import {
   buildMediaProcessingFailedPayload,
   buildMediaProcessingSucceededPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 
 async function loadSharp() {
   try {

@@ -55,7 +55,7 @@ vi.mock('@shared/db/admin.js', () => ({
   getAdminConnection: (...args: unknown[]) => getAdminConnectionMock(...args)
 }));
 
-vi.mock('@alga-psa/workflows/streams', () => ({
+vi.mock('@alga-psa/workflow-streams', () => ({
   RedisStreamClient: class {
     async initialize() {
       return redisInitializeMock();
