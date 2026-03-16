@@ -789,7 +789,7 @@
   {
     "id": "T091",
     "description": "Send: sendQuote logs 'sent' activity",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
