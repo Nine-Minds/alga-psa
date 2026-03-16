@@ -17,6 +17,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-16) Migration strategy for shared contracts with invoice history: preserve the original `contract_id` on the invoiced assignment and clone for the other assignment(s).
 - (2026-03-16) Migration strategy for shared contracts without invoice history: preserve the original `contract_id` on the earliest-starting assignment and clone for the other assignment(s).
 - (2026-03-16) Scope choice: this pass includes the data migration plus backend guardrails and targeted UI/reporting cleanup needed to stop reinforcing the shared-contract model.
+- (2026-03-16) Migration sequencing: keep the existing `20260316120000_add_contract_owner_client_id.cjs` schema migration for `owner_client_id`, and run the shared-contract split as a follow-up migration (`20260316121000_client_owned_contracts_simplification.cjs`) so Knex ordering is deterministic.
+- (2026-03-16) Safety boundary: clone-target invoice history is allowed and handled by preserved-assignment selection plus `client_contracts` repointing; only contract-scoped docs, pricing schedules, and contract-line history (`time_entries` / `usage_tracking`) are treated as unsupported retargeting for this migration helper pass.
 - (2026-03-16) First implementation batch landed the owner-client invariant in creation/assignment code before the shared-contract split migration: nullable schema column first, code guardrails now, stricter DB not-null/backfill later once migrated data is safe.
 - (2026-03-16) Legacy `/contracts` API create path should fail at validation/service time when `owner_client_id` is absent, not silently create another shareable non-template header.
 
@@ -46,6 +48,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - neither has document associations
   - neither has direct `time_entries` or `usage_tracking` tied to those contract-line IDs
   - only `Managed IT Services` has invoice history, and only on the `The Green Thumb` assignment
+- (2026-03-16) The branch already had `F001/F002/F012-F015` runtime wiring in place: `IContract.owner_client_id`, billing dialog/wizard ownership writes, renewal draft ownership propagation, client-assignment ownership checks, and API schema/service ownership validation were already committed before the migration/helper batch.
+- (2026-03-16) The missing implementation gap was the shared-contract split itself. Added:
+  - `server/migrations/20260316121000_client_owned_contracts_simplification.cjs`
+  - `server/migrations/utils/client_owned_contracts_simplification.cjs`
+  - `server/src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts`
 - (2026-03-16) `ContractDialog`, `createClientContractFromWizard`, and `createRenewalDraftForQueueItem` were all writing raw `contracts` rows without `owner_client_id`; those paths now stamp the client owner explicitly.
 - (2026-03-16) `ClientContract.assignContractToClient` and `createClientContract` needed separate ownership checks because they do not share a single repository helper today.
 - (2026-03-16) `updateClientContract` already ignored `contract_id` changes; guardrail now rejects cross-client repoint attempts explicitly instead of silently dropping them.
@@ -64,10 +71,12 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - join shared contract targets to `client_contracts`, `contracts`, `contract_lines`, `invoices`, `time_entries`, `usage_tracking`, `document_associations`, and `contract_pricing_schedules`
 - (2026-03-16) Structural plan validation:
   - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-16-client-owned-contracts-simplification`
+- (2026-03-16) Focused ownership + migration verification:
+  - `cd server && npx vitest run ../packages/billing/tests/contract.test.ts ../packages/billing/tests/renewalsQueueActions.createDraft.wiring.test.ts ../packages/clients/src/models/clientContract.ownerGuardrails.test.ts ../packages/types/src/interfaces/contractOwnerClient.typecheck.test.ts src/test/unit/api/contractCreateOwnerClientSchema.test.ts src/test/unit/migrations/clientOwnedContractOwnerMigration.test.ts src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts`
 - (2026-03-16) Guardrail verification:
   - `npx vitest run tests/contract.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts` (workdir `packages/billing`)
   - `npx vitest run src/models/clientContract.ownerGuardrails.test.ts` (workdir `packages/clients`)
-  - `npx vitest run src/test/unit/migrations/clientOwnedContractOwnerMigration.test.ts src/test/unit/api/contractCreateOwnerClientSchema.test.ts` (workdir `server`)
+  - `mkdir -p coverage/.tmp && npx vitest run src/test/unit/api/contractCreateOwnerClientSchema.test.ts src/test/unit/migrations/clientOwnedContractOwnerMigration.test.ts src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts` (workdir `server`)
   - `npx vitest run src/interfaces/contractOwnerClient.typecheck.test.ts` (workdir `packages/types`)
   - `npx tsc -p packages/types/tsconfig.json --noEmit`
   - `npx tsc -p packages/billing/tsconfig.json --noEmit`
@@ -82,6 +91,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-16) Completed `F013`/`T015`/`T016`: client-contract assignment create/update now reject non-template contracts whose `owner_client_id` is missing or belongs to a different client.
 - (2026-03-16) Completed `F014`/`T017`: renewal draft creation now copies the source assignment client onto the draft contract header as `owner_client_id`.
 - (2026-03-16) Completed `F015`/`T018`: legacy API/service contract creation now requires `owner_client_id` via Zod validation plus a service-level runtime check.
+- (2026-03-16) Completed `F003-F011` and `T003-T012`: added `server/migrations/20260316121000_client_owned_contracts_simplification.cjs` plus `server/migrations/utils/client_owned_contracts_simplification.cjs` to detect shared non-template contracts, pick the preserved assignment by invoice/earliest-start rules, clone contract headers/lines/configuration rows for clone targets, repoint assignments, backfill `owner_client_id`, and fail closed on invoice/document/pricing/time/usage references that would need explicit historical retargeting.
 
 ## Links / References
 

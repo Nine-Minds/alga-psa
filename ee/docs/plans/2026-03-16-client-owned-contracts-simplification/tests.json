@@ -14,61 +14,61 @@
   {
     "id": "T003",
     "description": "Preflight query identifies shared non-template contracts with more than one distinct client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
     "id": "T004",
     "description": "Selection rule preserves the only invoiced assignment when a shared contract has invoice history on exactly one assignment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F010"]
   },
   {
     "id": "T005",
     "description": "Selection rule preserves the earliest-starting assignment when a shared contract has no invoice history",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T006",
     "description": "Migration backfills `owner_client_id` on preserved non-template contracts to the preserved assignment client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T007",
     "description": "Migration clones contract header rows with fresh `contract_id` values for every non-preserved assignment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T008",
     "description": "Migration clones all source `contract_lines` to the new contract with fresh line IDs and preserved descriptive/rate fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T009",
     "description": "Migration clones required contract-line child/configuration rows so cloned contracts remain billable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T010",
     "description": "Migration repoints non-preserved `client_contracts.contract_id` rows to the cloned contract IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
     "id": "T011",
     "description": "DB-backed sanity: preserved invoiced assignment still retains the original `contract_id` after migration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F010"]
   },
   {
     "id": "T012",
     "description": "Migration aborts with a clear error when a clone-target assignment has unsupported historical references that would require retargeting",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {

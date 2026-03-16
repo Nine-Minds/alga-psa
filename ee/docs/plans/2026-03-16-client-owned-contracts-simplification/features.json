@@ -14,55 +14,55 @@
   {
     "id": "F003",
     "description": "Migration: detect non-template contracts linked to more than one distinct client",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F004",
     "description": "Migration: choose the preserved assignment by invoice-history rule, otherwise earliest `start_date`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F005",
     "description": "Migration: backfill `owner_client_id` onto preserved non-template contracts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F006",
     "description": "Migration: clone contract header rows for non-preserved shared assignments with fresh `contract_id` values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F007",
     "description": "Migration: clone `contract_lines` for cloned contracts with fresh `contract_line_id` values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F008",
     "description": "Migration: clone contract-line child/configuration records needed for cloned contracts to remain self-contained",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F009",
     "description": "Migration: repoint non-preserved `client_contracts.contract_id` rows to their cloned contracts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F010",
     "description": "Migration: preserve original `contract_id` for the single invoiced assignment when invoice history exists",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F011",
     "description": "Migration safety: abort shared-contract groups that require historical reference retargeting outside this pass",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Non-functional Requirements"]
   },
   {
