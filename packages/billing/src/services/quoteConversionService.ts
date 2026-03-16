@@ -56,7 +56,7 @@ function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
 }
 
 function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
-  return items.filter((item) => {
+  const includedItems = items.filter((item) => {
     if (item.is_recurring) {
       return false;
     }
@@ -66,6 +66,37 @@ function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
     }
 
     return true;
+  });
+
+  const baseItemIds = new Set(
+    includedItems
+      .filter((item) => !item.is_discount)
+      .map((item) => item.quote_item_id)
+  );
+  const baseServiceIds = new Set(
+    includedItems
+      .filter((item) => !item.is_discount && item.service_id)
+      .map((item) => item.service_id as string)
+  );
+
+  return includedItems.filter((item) => {
+    if (!item.is_discount) {
+      return true;
+    }
+
+    if (!item.applies_to_item_id && !item.applies_to_service_id) {
+      return true;
+    }
+
+    if (item.applies_to_item_id && baseItemIds.has(item.applies_to_item_id)) {
+      return true;
+    }
+
+    if (item.applies_to_service_id && baseServiceIds.has(item.applies_to_service_id)) {
+      return true;
+    }
+
+    return false;
   });
 }
 
@@ -366,6 +397,64 @@ export async function convertQuoteToDraftInvoice(
     tax_source: quote.tax_source ?? 'internal',
   });
 
+  const invoiceItemIdsByQuoteItemId = new Map<string, string>();
+  const invoiceChargeRows = oneTimeItems.map((item) => {
+    const itemId = uuidv4();
+    invoiceItemIdsByQuoteItemId.set(item.quote_item_id, itemId);
+
+    const netAmount = item.is_discount
+      ? -Math.abs(Number(item.net_amount ?? item.total_price ?? (item.quantity * item.unit_price)))
+      : Number(item.net_amount ?? (item.quantity * item.unit_price));
+    const taxAmount = item.is_discount ? 0 : Number(item.tax_amount ?? 0);
+
+    return {
+      tenant,
+      item_id: itemId,
+      invoice_id: invoiceId,
+      service_id: item.service_id ?? null,
+      service_item_kind: item.service_item_kind ?? null,
+      service_sku: item.service_sku ?? null,
+      service_name: item.service_name ?? null,
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      net_amount: netAmount,
+      tax_amount: taxAmount,
+      tax_region: item.tax_region ?? null,
+      tax_rate: item.tax_rate ?? 0,
+      total_price: netAmount + taxAmount,
+      is_manual: true,
+      is_taxable: item.is_discount ? false : (item.is_taxable ?? true),
+      is_discount: item.is_discount ?? false,
+      discount_type: item.discount_type ?? null,
+      discount_percentage: item.discount_percentage ?? null,
+      applies_to_item_id: item.applies_to_item_id ?? null,
+      applies_to_service_id: item.applies_to_service_id ?? null,
+      created_by: quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? null,
+      updated_by: quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? null,
+      created_at: nowIso,
+      updated_at: nowIso,
+    };
+  }).map((row) => ({
+    ...row,
+    applies_to_item_id: row.applies_to_item_id
+      ? (invoiceItemIdsByQuoteItemId.get(row.applies_to_item_id) ?? null)
+      : null,
+  }));
+
+  await knexOrTrx('invoice_charges').insert(invoiceChargeRows);
+
+  const invoiceSubtotal = invoiceChargeRows.reduce((sum, row) => sum + Number(row.net_amount), 0);
+  const invoiceTax = invoiceChargeRows.reduce((sum, row) => sum + Number(row.tax_amount), 0);
+
+  await knexOrTrx('invoices')
+    .where({ tenant, invoice_id: invoiceId })
+    .update({
+      subtotal: Math.round(invoiceSubtotal),
+      tax: Math.round(invoiceTax),
+      total_amount: Math.round(invoiceSubtotal + invoiceTax),
+    });
+
   const invoice = await knexOrTrx('invoices')
     .where({ tenant, invoice_id: invoiceId })
     .first();
@@ -374,7 +463,7 @@ export async function convertQuoteToDraftInvoice(
     quote,
     invoice: {
       ...invoice,
-      invoice_charges: [],
+      invoice_charges: invoiceChargeRows,
     } as IInvoice,
   };
 }

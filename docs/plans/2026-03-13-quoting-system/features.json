@@ -863,7 +863,7 @@
   {
     "id": "F104",
     "description": "P5: Quote → Invoice — create invoice_charges from quote_items with tax/discount data",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR2"
     ]
