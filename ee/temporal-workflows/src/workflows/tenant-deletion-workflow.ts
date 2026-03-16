@@ -41,6 +41,7 @@ const {
   updateDeletionStatus,
   deleteTenantData,
   cancelTenantStripeSubscription,
+  sendCancellationConfirmationEmail,
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: '10 minutes',
   retry: {
@@ -203,6 +204,22 @@ export async function tenantDeletionWorkflow(
       } else {
         log.info('No active Stripe subscription to cancel');
       }
+    }
+
+    // Step 2.7: Send cancellation confirmation emails to all tenant users
+    state.step = 'sending_cancellation_email';
+    log.info('Sending cancellation confirmation emails', { tenantId: input.tenantId });
+    try {
+      const emailResult = await sendCancellationConfirmationEmail(input.tenantId, state.tenantName || 'your organization');
+      log.info('Cancellation emails sent', {
+        sent: emailResult.emailsSent,
+        failed: emailResult.emailsFailed,
+      });
+    } catch (emailError) {
+      // Email failure should not block the deletion workflow
+      log.warn('Failed to send cancellation confirmation emails (continuing with deletion)', {
+        error: emailError instanceof Error ? emailError.message : 'Unknown error',
+      });
     }
 
     // Step 3: Tag client as 'Canceled' in management tenant

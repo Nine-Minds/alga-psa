@@ -42,6 +42,7 @@ export type TenantDeletionStep =
   | 'getting_tenant_info'
   | 'deactivating_users'
   | 'canceling_stripe_subscription'
+  | 'sending_cancellation_email'
   | 'tagging_client'
   | 'deactivating_master_client'
   | 'collecting_stats'
@@ -170,4 +171,10 @@ export interface DeleteTenantDataResult {
   error?: string;
   deletedRecords?: number;
   tablesAffected?: number;
+}
+
+export interface SendCancellationEmailResult {
+  emailsSent: number;
+  emailsFailed: number;
+  errors?: string[];
 }
