@@ -517,7 +517,7 @@
   {
     "id": "T059",
     "description": "Discount: applies_to_service_id scopes discount to all items of that service",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
