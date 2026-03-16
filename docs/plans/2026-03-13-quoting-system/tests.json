@@ -805,7 +805,7 @@
   {
     "id": "T093",
     "description": "Email: sent email logged in email_sending_logs with entity_type='quote'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]

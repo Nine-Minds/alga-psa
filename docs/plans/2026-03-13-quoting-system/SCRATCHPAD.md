@@ -345,3 +345,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) T090a complete — Added multi-recipient send coverage proving `sendQuote()` forwards every provided email address to the outbound message.
 - (2026-03-16) T091 complete — Added activity-log coverage proving `sendQuote()` records a `sent` quote activity with recipients and email message metadata.
 - (2026-03-16) T092 complete — Added email-payload coverage proving the quote-sent email includes summary details and a PDF attachment named for the quote number.
+- (2026-03-16) T093 complete — Added email-logging coverage proving quote sends pass `entityType=quote` and `entityId` into the email service for downstream audit logging.
