@@ -597,7 +597,7 @@
   {
     "id": "T069",
     "description": "Versioning: revise copies all quote_items to new version with new item_ids",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
