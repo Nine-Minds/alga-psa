@@ -645,7 +645,7 @@
   {
     "id": "T075",
     "description": "Template migration: quote_templates table has templateAst JSONB column",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]

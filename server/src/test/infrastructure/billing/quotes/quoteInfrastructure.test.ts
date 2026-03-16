@@ -1027,6 +1027,39 @@ describe('Quote infrastructure', () => {
     expect(versions.at(-1)?.version).toBe(3);
   });
 
+  it('T075: Template migration: quote_templates table has templateAst JSONB column', async () => {
+    const columns = await context.db('quote_document_templates').columnInfo();
+
+    expect(columns.templateAst.type).toBe('jsonb');
+  });
+
+  it('T076: Template migration: standard_quote_templates seeded with default and detailed templates', async () => {
+    const rows = await context.db('standard_quote_document_templates')
+      .select('standard_quote_document_template_code')
+      .orderBy('standard_quote_document_template_code', 'asc');
+
+    expect(rows.map((row) => row.standard_quote_document_template_code)).toEqual([
+      'standard-quote-default',
+      'standard-quote-detailed',
+    ]);
+  });
+
+  it('T076a: Template migration: standard quote template seed upsert succeeds on repeated runs', async () => {
+    const migration = await import('../../../../../migrations/20260313131000_create_standard_quote_document_templates.cjs');
+
+    await migration.up(context.db);
+    await migration.up(context.db);
+
+    const rows = await context.db('standard_quote_document_templates')
+      .select('standard_quote_document_template_code')
+      .orderBy('standard_quote_document_template_code', 'asc');
+
+    expect(rows.map((row) => row.standard_quote_document_template_code)).toEqual([
+      'standard-quote-default',
+      'standard-quote-detailed',
+    ]);
+  });
+
   it('T022: getByNumber returns the correct quote within a tenant', async () => {
     const quote = await Quote.create(context.db, context.tenantId, {
       client_id: context.clientId,
