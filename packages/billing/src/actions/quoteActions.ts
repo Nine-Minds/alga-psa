@@ -528,6 +528,93 @@ export const duplicateQuote = withAuth(async (
   });
 });
 
+export const saveQuoteAsTemplate = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string
+): Promise<IQuote | ActionPermissionError> => {
+  const denied = await requireBillingCreatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return await knex.transaction(async (trx) => {
+    const sourceQuote = await Quote.getById(trx, tenant, quoteId);
+    if (!sourceQuote) {
+      throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+    }
+
+    if (sourceQuote.is_template) {
+      throw new Error('Quote is already a template');
+    }
+
+    const actorUserId = getActorUserId(user);
+    const templateQuote = await Quote.create(trx, tenant, {
+      client_id: null,
+      contact_id: null,
+      title: `${sourceQuote.title} Template`,
+      description: sourceQuote.description ?? null,
+      quote_date: null,
+      valid_until: null,
+      po_number: null,
+      internal_notes: sourceQuote.internal_notes ?? null,
+      client_notes: sourceQuote.client_notes ?? null,
+      terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
+      currency_code: sourceQuote.currency_code,
+      tax_source: sourceQuote.tax_source ?? 'internal',
+      is_template: true,
+      opportunity_id: null,
+      created_by: actorUserId,
+      subtotal: 0,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 0,
+    } as any);
+
+    for (const sourceItem of sourceQuote.quote_items ?? []) {
+      await QuoteItem.create(trx, tenant, {
+        quote_id: templateQuote.quote_id,
+        service_id: sourceItem.service_id ?? null,
+        service_item_kind: sourceItem.service_item_kind ?? null,
+        service_name: sourceItem.service_name ?? null,
+        service_sku: sourceItem.service_sku ?? null,
+        billing_method: sourceItem.billing_method ?? null,
+        description: sourceItem.description,
+        quantity: sourceItem.quantity,
+        unit_price: sourceItem.unit_price,
+        unit_of_measure: sourceItem.unit_of_measure ?? null,
+        display_order: sourceItem.display_order,
+        phase: sourceItem.phase ?? null,
+        is_optional: sourceItem.is_optional,
+        is_selected: true,
+        is_recurring: sourceItem.is_recurring,
+        billing_frequency: sourceItem.billing_frequency ?? null,
+        is_discount: sourceItem.is_discount ?? false,
+        discount_type: sourceItem.discount_type ?? null,
+        discount_percentage: sourceItem.discount_percentage ?? null,
+        applies_to_item_id: sourceItem.applies_to_item_id ?? null,
+        applies_to_service_id: sourceItem.applies_to_service_id ?? null,
+        is_taxable: sourceItem.is_taxable ?? true,
+        tax_region: sourceItem.tax_region ?? null,
+        tax_rate: sourceItem.tax_rate ?? null,
+        created_by: actorUserId,
+      });
+    }
+
+    await QuoteActivity.create(trx, tenant, {
+      quote_id: templateQuote.quote_id,
+      activity_type: 'created_from_quote',
+      description: `Template created from ${sourceQuote.quote_number || sourceQuote.title}`,
+      performed_by: actorUserId,
+      metadata: { source_quote_id: sourceQuote.quote_id },
+    });
+
+    return await Quote.getById(trx, tenant, templateQuote.quote_id) as IQuote;
+  });
+});
+
 export const createQuoteRevision = withAuth(async (
   user,
   { tenant },

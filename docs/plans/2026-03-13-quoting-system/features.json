@@ -999,7 +999,7 @@
   {
     "id": "F120",
     "description": "P6: 'Save as Template' action — create a business template from an existing quote",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR7"
     ]
