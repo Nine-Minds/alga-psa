@@ -13,6 +13,37 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
 }));
 
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  __esModule: true,
+  default: ({
+    id,
+    options,
+    value,
+    onValueChange,
+    disabled,
+  }: {
+    id?: string;
+    options: Array<{ value: string; label: string; is_inactive?: boolean }>;
+    value?: string;
+    onValueChange?: (value: string) => void;
+    disabled?: boolean;
+  }) => (
+    <select
+      data-testid={id}
+      value={value ?? ''}
+      disabled={disabled}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      <option value="">--</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value} disabled={option.is_inactive}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ id, label, ...props }: any) => (
     <label htmlFor={id}>
@@ -24,28 +55,6 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
 
 vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: ({ children }: any) => <div>{children}</div>,
-}));
-
-vi.mock('../mapping/SourceDataTree', () => ({
-  SourceDataTree: ({ context, onSelectField }: any) => {
-    const renderField = (field: any): React.ReactNode[] => ([
-      <button
-        key={field.path}
-        type="button"
-        onClick={() => onSelectField(field.path)}
-      >
-        {field.path}
-      </button>,
-      ...(field.children ?? []).flatMap((child: any) => renderField(child)),
-    ]);
-
-    return (
-      <div data-testid="compose-source-browser">
-        {context.payload.flatMap((field: any) => renderField(field))}
-        {context.vars.flatMap((step: any) => step.fields.flatMap((field: any) => renderField(field)))}
-      </div>
-    );
-  },
 }));
 
 vi.mock('../WorkflowComposeTextDocumentEditor', async () => {
@@ -270,12 +279,20 @@ describe('WorkflowComposeTextSection', () => {
     });
   });
 
-  it('T031/T032: inserts reference chips from the workflow source browser and removing them updates the serialized document', async () => {
+  it('T031/T032: inserts reference chips from the standard workflow reference picker and removing them updates the serialized document', async () => {
     const onOutputsChange = vi.fn();
     render(<Harness onOutputsChange={onOutputsChange} />);
 
     fireEvent.click(screen.getByRole('button', { name: /insert reference/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'payload.ticket.id' }));
+
+    expect(screen.queryByText('Workflow source browser')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId('step-1-compose-text-reference-scope'), {
+      target: { value: 'payload' },
+    });
+    fireEvent.change(screen.getByTestId('step-1-compose-text-reference-field'), {
+      target: { value: 'payload.ticket.id' },
+    });
 
     expect(screen.getByText('id')).toBeInTheDocument();
 
@@ -287,11 +304,38 @@ describe('WorkflowComposeTextSection', () => {
       });
     });
 
+    fireEvent.click(screen.getByRole('button', { name: /insert reference/i }));
+    fireEvent.change(screen.getByTestId('step-1-compose-text-reference-scope'), {
+      target: { value: 'vars' },
+    });
+    fireEvent.change(screen.getByTestId('step-1-compose-text-reference-step'), {
+      target: { value: 'ticketResult' },
+    });
+    fireEvent.change(screen.getByTestId('step-1-compose-text-reference-field'), {
+      target: { value: 'vars.ticketResult.subject' },
+    });
+
+    expect(screen.getByText('subject')).toBeInTheDocument();
+
+    await waitFor(() => {
+      const latestOutputs = onOutputsChange.mock.lastCall?.[0] as ComposeTextOutput[];
+      expect(latestOutputs?.[0]?.document.blocks[0]).toEqual({
+        type: 'paragraph',
+        children: [
+          { type: 'reference', path: 'payload.ticket.id', label: 'id' },
+          { type: 'reference', path: 'vars.ticketResult.subject', label: 'subject' },
+        ],
+      });
+    });
+
     fireEvent.click(screen.getByRole('button', { name: /remove reference id/i }));
 
     await waitFor(() => {
       const latestOutputs = onOutputsChange.mock.lastCall?.[0] as ComposeTextOutput[];
-      expect(latestOutputs?.[0]?.document.blocks).toEqual([]);
+      expect(latestOutputs?.[0]?.document.blocks[0]).toEqual({
+        type: 'paragraph',
+        children: [{ type: 'reference', path: 'vars.ticketResult.subject', label: 'subject' }],
+      });
     });
   });
 

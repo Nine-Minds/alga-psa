@@ -3346,7 +3346,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                     return (
                       <div className="space-y-3">
-                        <div className="grid gap-4 lg:grid-cols-[220px,1fr]">
+                        <div className="space-y-4">
                           <div>
                             <label htmlFor="workflow-designer-trigger-type" className="block text-sm font-medium text-gray-700 mb-1">
                               Trigger type
@@ -3425,29 +3425,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                                 {selectedOption && (
                                   <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <Badge className={selectedOption.source === 'system' ? 'bg-purple-500/15 text-purple-600 border-purple-500/30' : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'}>
-                                        {selectedOption.source === 'system' ? 'System' : 'Tenant'}
-                                      </Badge>
-                                      <Badge className={
-                                        selectedOption.status === 'active' ? 'bg-success/15 text-success border-success/30'
-                                          : selectedOption.status === 'beta' ? 'bg-warning/15 text-warning-foreground border-warning/30'
-                                            : selectedOption.status === 'draft' ? 'bg-muted text-muted-foreground border-border'
-                                              : 'bg-destructive/15 text-destructive border-destructive/30'
-                                      }>
-                                        {selectedOption.status.charAt(0).toUpperCase() + selectedOption.status.slice(1)}
-                                      </Badge>
-                                      {(showTriggerSchemaDetails || selectedOption.payload_schema_ref_status !== 'known') && (
-                                        <Badge className={schemaBadgeClass(selectedOption.payload_schema_ref_status)}>
-                                          {schemaBadgeLabel(selectedOption.payload_schema_ref_status)}
-                                        </Badge>
-                                      )}
-                                      {selectedOption.category && (
-                                        <Badge className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[rgb(var(--color-border-200))]">
-                                          {selectedOption.category}
-                                        </Badge>
-                                      )}
-                                    </div>
                                     {selectedOption.description && (
                                       <div className="text-xs text-gray-600">{selectedOption.description}</div>
                                     )}

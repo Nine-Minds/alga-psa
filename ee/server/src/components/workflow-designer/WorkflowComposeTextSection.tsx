@@ -8,7 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Card } from '@alga-psa/ui/components/Card';
 
-import { SourceDataTree, type DataField, type DataTreeContext } from './mapping/SourceDataTree';
+import { type DataField, type DataTreeContext } from './mapping/SourceDataTree';
 import { WorkflowComposeTextDocumentEditor, type WorkflowComposeTextDocumentEditorHandle } from './WorkflowComposeTextDocumentEditor';
 import {
   buildComposeTextReferencePath,
@@ -19,6 +19,11 @@ import {
 } from './workflowComposeTextUtils';
 import type { DataContext } from './workflowDataContext';
 import type { ComposeTextOutput } from '@alga-psa/workflows/authoring';
+import {
+  ReferenceScopeSelector,
+  buildReferenceSourceModel,
+  type ReferenceSourceScope,
+} from './workflowReferenceSelector';
 
 type WorkflowComposeTextSectionProps = {
   stepId: string;
@@ -104,7 +109,10 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
     [config]
   );
   const [selectedOutputId, setSelectedOutputId] = useState<string | null>(outputs[0]?.id ?? null);
-  const [showReferenceBrowser, setShowReferenceBrowser] = useState(false);
+  const [showReferencePicker, setShowReferencePicker] = useState(false);
+  const [selectedReferenceScope, setSelectedReferenceScope] = useState<ReferenceSourceScope | ''>('');
+  const [selectedReferenceStep, setSelectedReferenceStep] = useState('');
+  const [selectedReferenceField, setSelectedReferenceField] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [insertError, setInsertError] = useState<string | null>(null);
   const editorRef = useRef<WorkflowComposeTextDocumentEditorHandle | null>(null);
@@ -131,6 +139,16 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
     ? findOutputErrors(selectedOutput.id, validationErrors)
     : { label: [], stableKey: [], document: [] };
   const referenceTreeContext = useMemo(() => buildDataTreeContext(dataContext), [dataContext]);
+  const referenceSourceModel = useMemo(
+    () => buildReferenceSourceModel(referenceTreeContext, [], dataContext.payloadSchema ?? undefined),
+    [dataContext.payloadSchema, referenceTreeContext]
+  );
+
+  const resetReferenceSelection = useCallback(() => {
+    setSelectedReferenceScope('');
+    setSelectedReferenceStep('');
+    setSelectedReferenceField(null);
+  }, []);
 
   const emitOutputsChange = useCallback((nextOutputs: ComposeTextOutput[]) => {
     onChange({
@@ -191,6 +209,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
   }, [saveAs]);
 
   const handleReferenceSelect = useCallback((path: string) => {
+    setSelectedReferenceField(path);
     const inserted = editorRef.current?.insertReference({
       path,
       label: getReferenceLabel(path),
@@ -198,11 +217,34 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
 
     if (inserted) {
       setInsertError(null);
-      setShowReferenceBrowser(false);
+      setShowReferencePicker(false);
+      resetReferenceSelection();
       return;
     }
 
     setInsertError('References cannot be inserted inside code blocks. Move the cursor to another block and try again.');
+  }, [resetReferenceSelection]);
+
+  const handleReferencePickerToggle = useCallback(() => {
+    setInsertError(null);
+    setShowReferencePicker((current) => {
+      const next = !current;
+      if (next) {
+        resetReferenceSelection();
+      }
+      return next;
+    });
+  }, [resetReferenceSelection]);
+
+  const handleReferenceScopeChange = useCallback((scope: ReferenceSourceScope | '') => {
+    setSelectedReferenceScope(scope);
+    setSelectedReferenceStep('');
+    setSelectedReferenceField(null);
+  }, []);
+
+  const handleReferenceStepChange = useCallback((step: string) => {
+    setSelectedReferenceStep(step);
+    setSelectedReferenceField(null);
   }, []);
 
   return (
@@ -420,21 +462,26 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                   size="sm"
                   variant="outline"
                   disabled={disabled}
-                  onClick={() => setShowReferenceBrowser((current) => !current)}
+                  onClick={handleReferencePickerToggle}
                 >
                   Insert reference
                 </Button>
               </div>
 
-              {showReferenceBrowser && (
+              {showReferencePicker && (
                 <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
-                  <div className="mb-2 text-xs font-semibold text-gray-700">Workflow source browser</div>
-                  <SourceDataTree
-                    context={referenceTreeContext}
-                    onSelectField={handleReferenceSelect}
-                    maxHeight="240px"
-                    compact
+                  <div className="mb-2 text-xs font-semibold text-gray-700">Insert workflow reference</div>
+                  <ReferenceScopeSelector
+                    idPrefix={`${stepId}-compose-text`}
+                    model={referenceSourceModel}
+                    targetType={undefined}
+                    selectedScope={selectedReferenceScope}
+                    selectedStep={selectedReferenceStep}
+                    selectedField={selectedReferenceField}
                     disabled={disabled}
+                    onScopeChange={handleReferenceScopeChange}
+                    onStepChange={handleReferenceStepChange}
+                    onFieldChange={handleReferenceSelect}
                   />
                 </div>
               )}
