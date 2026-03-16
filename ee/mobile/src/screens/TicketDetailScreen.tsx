@@ -6,7 +6,7 @@ import { useTheme } from "../ui/ThemeContext";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, updateTicketAssignment, updateTicketAttributes, updateTicketPriority, updateTicketStatus, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
+import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, toggleCommentReaction, updateTicketAssignment, updateTicketAttributes, updateTicketPriority, updateTicketStatus, type AggregatedReaction, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
 import React, { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
@@ -1311,6 +1311,7 @@ export function TicketDetailBody({
             error={commentsError}
             onLinkPress={handleRichTextLinkPress}
             baseUrl={config.ok ? config.baseUrl : null}
+            ticketId={ticketId}
           />
           <View style={{ height: spacing.sm }} />
           <CommentComposer
@@ -1980,6 +1981,15 @@ function ActionChip({
   );
 }
 
+const QUICK_EMOJIS = [
+  String.fromCodePoint(0x1F44D), // 👍
+  String.fromCodePoint(0x1F44E), // 👎
+  String.fromCodePoint(0x2764, 0xFE0F), // ❤️
+  String.fromCodePoint(0x1F602), // 😂
+  String.fromCodePoint(0x1F389), // 🎉
+  String.fromCodePoint(0x1F440), // 👀
+];
+
 export function CommentsSection({
   comments,
   visibleCount,
@@ -1989,6 +1999,7 @@ export function CommentsSection({
   error,
   onLinkPress,
   baseUrl,
+  ticketId,
 }: {
   comments: TicketComment[];
   visibleCount: number;
@@ -1998,12 +2009,84 @@ export function CommentsSection({
   error: string | null;
   onLinkPress?: (url: string) => void;
   baseUrl?: string | null;
+  ticketId: string;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const { session } = useAuth();
   const startIndex = Math.max(0, comments.length - visibleCount);
   const visible = comments.slice(startIndex);
+
+  // Local reactions state (initialized from comment data, updated optimistically)
+  const [reactionsOverrides, setReactionsOverrides] = useState<Record<string, AggregatedReaction[]>>({});
+  const [emojiPickerCommentId, setEmojiPickerCommentId] = useState<string | null>(null);
+
+  const config = getAppConfig();
+  const client = useMemo(() => {
+    if (!config.ok) return null;
+    return createApiClient({ baseUrl: config.baseUrl, getUserAgentTag: () => "mobile" });
+  }, [config]);
+
+  const getReactions = useCallback(
+    (commentId: string | undefined): AggregatedReaction[] => {
+      if (!commentId) return [];
+      if (reactionsOverrides[commentId]) return reactionsOverrides[commentId];
+      const comment = comments.find((c) => c.comment_id === commentId);
+      return comment?.reactions ?? [];
+    },
+    [comments, reactionsOverrides],
+  );
+
+  const reactionUserNames = useMemo(() => {
+    // Merge all reaction_user_names from comments
+    const names: Record<string, string> = {};
+    for (const c of comments) {
+      if (c.reaction_user_names) Object.assign(names, c.reaction_user_names);
+    }
+    return names;
+  }, [comments]);
+
+  const handleToggleReaction = useCallback(
+    async (commentId: string, emoji: string) => {
+      if (!client || !session) return;
+
+      const userId = session.user?.id ?? "";
+
+      // Optimistic update
+      setReactionsOverrides((prev) => {
+        const current = prev[commentId] ?? comments.find((c) => c.comment_id === commentId)?.reactions ?? [];
+        const existing = current.find((r) => r.emoji === emoji);
+        if (existing?.currentUserReacted) {
+          const updated = existing.count === 1
+            ? current.filter((r) => r.emoji !== emoji)
+            : current.map((r) => r.emoji === emoji ? { ...r, count: r.count - 1, currentUserReacted: false, userIds: r.userIds.filter((id) => id !== userId) } : r);
+          return { ...prev, [commentId]: updated };
+        }
+        if (existing) {
+          return { ...prev, [commentId]: current.map((r) => r.emoji === emoji ? { ...r, count: r.count + 1, currentUserReacted: true, userIds: [...r.userIds, userId] } : r) };
+        }
+        return { ...prev, [commentId]: [...current, { emoji, count: 1, userIds: [userId], currentUserReacted: true }] };
+      });
+
+      setEmojiPickerCommentId(null);
+
+      // Fire-and-forget: the next comments refresh will sync server state.
+      // No rollback — avoids flicker when server hasn't been deployed yet
+      // or on transient network errors.
+      void toggleCommentReaction(client, {
+        apiKey: session.accessToken,
+        ticketId,
+        commentId,
+        emoji,
+      });
+    },
+    [client, session, ticketId, comments],
+  );
+
+  // Clear overrides when comments refresh (server data is now authoritative)
+  useEffect(() => {
+    setReactionsOverrides({});
+  }, [comments.map((c) => c.comment_id).join(",")]);
 
   return (
     <View
@@ -2118,6 +2201,67 @@ export function CommentsSection({
                     </View>
                   )
                 )}
+                {/* Reaction pills + add button */}
+                {!isSystemEvent && c.comment_id ? (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", marginTop: spacing.xs, gap: 4 }}>
+                    {getReactions(c.comment_id).map((r) => (
+                      <Pressable
+                        key={r.emoji}
+                        onPress={() => void handleToggleReaction(c.comment_id!, r.emoji)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${r.emoji} ${r.count}${r.currentUserReacted ? ", you reacted" : ""}`}
+                        style={({ pressed }) => ({
+                          flexDirection: "row",
+                          alignItems: "center",
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: r.currentUserReacted ? colors.primary : colors.border,
+                          backgroundColor: r.currentUserReacted ? `${colors.primary}18` : colors.background,
+                          opacity: pressed ? 0.7 : 1,
+                        })}
+                      >
+                        <Text style={{ fontSize: 14 }}>{r.emoji}</Text>
+                        <Text style={{ fontSize: 12, marginLeft: 3, color: r.currentUserReacted ? colors.primary : colors.textSecondary, fontWeight: r.currentUserReacted ? "600" : "400" }}>
+                          {r.count}
+                        </Text>
+                      </Pressable>
+                    ))}
+                    <Pressable
+                      onPress={() => setEmojiPickerCommentId(emojiPickerCommentId === c.comment_id ? null : c.comment_id!)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Add reaction"
+                      style={({ pressed }) => ({
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: colors.background,
+                        opacity: pressed ? 0.7 : 1,
+                      })}
+                    >
+                      <Text style={{ fontSize: 14 }}>+</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                {/* Quick emoji picker */}
+                {emojiPickerCommentId === c.comment_id ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 2, backgroundColor: colors.background, borderRadius: 16, padding: 4, borderWidth: 1, borderColor: colors.border, alignSelf: "flex-start" }}>
+                    {QUICK_EMOJIS.map((emoji) => (
+                      <Pressable
+                        key={emoji}
+                        onPress={() => void handleToggleReaction(c.comment_id!, emoji)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`React with ${emoji}`}
+                        style={({ pressed }) => ({ padding: 4, borderRadius: 8, opacity: pressed ? 0.5 : 1 })}
+                      >
+                        <Text style={{ fontSize: 20 }}>{emoji}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             );
           })}
