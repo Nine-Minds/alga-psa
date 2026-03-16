@@ -61,9 +61,9 @@ describe('WorkflowAiSchemaSection', () => {
 
   it('keeps unnamed draft fields visible across the config round-trip', () => {
     const ControlledSection = () => {
-      const [config, setConfig] = React.useState({
+      const [config, setConfig] = React.useState<Record<string, unknown>>({
         actionId: 'ai.infer',
-        aiOutputSchemaMode: 'simple' as const,
+        aiOutputSchemaMode: 'simple',
         aiOutputSchema: {
           type: 'object',
           properties: {},
@@ -90,9 +90,9 @@ describe('WorkflowAiSchemaSection', () => {
 
   it('keeps focus on the field name input while typing through the config round-trip', () => {
     const ControlledSection = () => {
-      const [config, setConfig] = React.useState({
+      const [config, setConfig] = React.useState<Record<string, unknown>>({
         actionId: 'ai.infer',
-        aiOutputSchemaMode: 'simple' as const,
+        aiOutputSchemaMode: 'simple',
         aiOutputSchema: {
           type: 'object',
           properties: {},

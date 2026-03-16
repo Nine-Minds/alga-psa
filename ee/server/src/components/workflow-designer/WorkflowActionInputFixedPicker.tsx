@@ -60,7 +60,7 @@ type WorkflowPickerData = {
   ticketOptions: TicketFieldOptions | null;
   contacts: IContact[];
   users: IUser[];
-  teams: Omit<ITeam, 'members'>[];
+  teams: ITeam[];
 };
 
 const EMPTY_PICKER_DATA: WorkflowPickerData = {
@@ -378,7 +378,10 @@ const loadWorkflowPickerData = async (
       return {
         ...EMPTY_PICKER_DATA,
         users,
-        teams,
+        teams: teams.map((team) => ({
+          ...team,
+          members: [],
+        })),
       };
     }
     default:
