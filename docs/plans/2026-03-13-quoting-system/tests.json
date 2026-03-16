@@ -830,7 +830,7 @@
   {
     "id": "T096",
     "description": "Client portal: QuoteDetail shows full line items with optional item indicators",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]
