@@ -4,12 +4,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, deleteQuote, getQuote, getQuoteConversionPreview, listQuoteVersions, resendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
+import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, deleteQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, requestQuoteApprovalChanges, resendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
@@ -72,6 +73,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [conversionPreview, setConversionPreview] = useState<QuoteConversionPreview | null>(null);
   const [isConversionDialogOpen, setIsConversionDialogOpen] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [approvalRequired, setApprovalRequired] = useState(false);
+  const [approvalDialogMode, setApprovalDialogMode] = useState<'approve' | 'changes' | null>(null);
+  const [approvalComment, setApprovalComment] = useState('');
 
   useEffect(() => {
     void loadQuote();
@@ -80,10 +84,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const loadQuote = async () => {
     try {
       setIsLoading(true);
-      const [loadedQuote, loadedClients, loadedContacts] = await Promise.all([
+      const [loadedQuote, loadedClients, loadedContacts, approvalSettings] = await Promise.all([
         getQuote(quoteId),
         getAllClientsForBilling(false),
         getAllContacts('active'),
+        getQuoteApprovalSettings(),
       ]);
 
       if (!loadedQuote || 'permissionError' in loadedQuote) {
@@ -93,6 +98,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setQuote(loadedQuote);
       setClients(loadedClients);
       setContacts(loadedContacts);
+      setApprovalRequired(!('permissionError' in approvalSettings) && approvalSettings.approvalRequired === true);
 
       const loadedVersions = await listQuoteVersions(quoteId);
       setVersions(Array.isArray(loadedVersions) ? loadedVersions : []);
@@ -184,6 +190,58 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setNotice('Quote submitted for internal approval.');
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : 'Failed to submit quote for approval');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleApproveQuote = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      setNotice(null);
+      const result = await approveQuote(quote.quote_id, approvalComment);
+
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      setQuote(result);
+      setApprovalDialogMode(null);
+      setApprovalComment('');
+      setNotice('Quote approved and is ready to send.');
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to approve quote');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleRequestChanges = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      setNotice(null);
+      const result = await requestQuoteApprovalChanges(quote.quote_id, approvalComment);
+
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      setQuote(result);
+      setApprovalDialogMode(null);
+      setApprovalComment('');
+      setNotice('Quote returned to draft with requested changes.');
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to request quote changes');
     } finally {
       setIsWorking(false);
     }
@@ -317,9 +375,18 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         return (
           <>
             {onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>Edit</Button> : null}
-            <Button id="quote-detail-submit-approval" onClick={() => void handleSubmitForApproval()} disabled={isWorking}>Submit for Approval</Button>
+            {approvalRequired ? (
+              <Button id="quote-detail-submit-approval" onClick={() => void handleSubmitForApproval()} disabled={isWorking}>Submit for Approval</Button>
+            ) : null}
             <Button id="quote-detail-send" disabled>Send</Button>
             <Button id="quote-detail-delete" variant="outline" onClick={() => void handleDelete()} disabled={isWorking}>Delete</Button>
+          </>
+        );
+      case 'pending_approval':
+        return (
+          <>
+            <Button id="quote-detail-approve" onClick={() => setApprovalDialogMode('approve')} disabled={isWorking}>Approve</Button>
+            <Button id="quote-detail-request-changes" variant="outline" onClick={() => setApprovalDialogMode('changes')} disabled={isWorking}>Request Changes</Button>
           </>
         );
       case 'sent':
@@ -339,6 +406,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             <Button id="quote-detail-convert-both" onClick={() => void handleOpenConversionDialog('both')} disabled={isWorking || isPreviewLoading || !canConvertToBoth}>Convert to Both</Button>
           </>
         );
+      case 'approved':
+        return <Button id="quote-detail-send-approved" disabled>Send</Button>;
       default:
         return onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>Edit</Button> : null;
     }

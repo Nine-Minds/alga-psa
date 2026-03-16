@@ -935,7 +935,7 @@
   {
     "id": "F113",
     "description": "P6: Internal approval — approve/reject with comment, configurable per tenant",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR1"
     ]

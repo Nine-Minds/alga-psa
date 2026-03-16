@@ -117,7 +117,7 @@ export const updateQuoteItemSchema = createQuoteItemBaseSchema.partial().extend(
 
 export const QUOTE_ALLOWED_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
   draft: ['pending_approval', 'sent', 'cancelled'],
-  pending_approval: ['approved', 'cancelled'],
+  pending_approval: ['approved', 'draft', 'cancelled'],
   approved: ['sent', 'cancelled'],
   sent: ['accepted', 'rejected', 'expired', 'cancelled'],
   accepted: ['converted', 'cancelled'],

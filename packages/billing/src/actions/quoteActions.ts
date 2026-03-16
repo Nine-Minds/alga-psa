@@ -12,6 +12,7 @@ import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate } from '../lib/quote-email-templates';
+import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, createQuotePDFGenerationService } from '../services';
 
@@ -78,6 +79,14 @@ const requireBillingReadPermission = async (user: unknown): Promise<ActionPermis
 const requireBillingDeletePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'delete')) {
     return permissionError('Permission denied: Cannot delete quotes');
+  }
+
+  return null;
+};
+
+const requireSettingsUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
+  if (!await hasPermission(user as any, 'settings', 'update')) {
+    return permissionError('Permission denied: Cannot update quote approval settings');
   }
 
   return null;
@@ -483,6 +492,114 @@ export const listQuoteVersions = withAuth(async (
   return await Quote.listVersions(knex, tenant, quoteId);
 });
 
+export const getQuoteApprovalSettings = withAuth(async (
+  user,
+  { tenant }
+): Promise<QuoteApprovalWorkflowSettings | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return await loadQuoteApprovalWorkflowSettings(knex, tenant);
+});
+
+export const updateQuoteApprovalSettings = withAuth(async (
+  user,
+  { tenant },
+  approvalRequired: boolean
+): Promise<QuoteApprovalWorkflowSettings | ActionPermissionError> => {
+  const denied = await requireSettingsUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return await persistQuoteApprovalWorkflowRequired(knex, tenant, approvalRequired);
+});
+
+export const approveQuote = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  comment?: string
+): Promise<IQuote | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const quote = await Quote.getById(knex, tenant, quoteId);
+
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+  }
+
+  if (quote.status !== 'pending_approval') {
+    throw new Error('Only quotes pending approval can be approved');
+  }
+
+  const updatedQuote = await Quote.update(knex, tenant, quoteId, {
+    status: 'approved',
+    updated_by: getActorUserId(user),
+  });
+
+  await QuoteActivity.create(knex, tenant, {
+    quote_id: quoteId,
+    activity_type: 'approved',
+    description: comment?.trim() ? `Quote approved: ${comment.trim()}` : 'Quote approved',
+    performed_by: getActorUserId(user),
+    metadata: { comment: comment?.trim() || null },
+  });
+
+  return updatedQuote;
+});
+
+export const requestQuoteApprovalChanges = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  comment: string
+): Promise<IQuote | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const trimmedComment = comment.trim();
+  if (!trimmedComment) {
+    throw new Error('A comment is required when requesting quote changes');
+  }
+
+  const { knex } = await createTenantKnex();
+  const quote = await Quote.getById(knex, tenant, quoteId);
+
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+  }
+
+  if (quote.status !== 'pending_approval') {
+    throw new Error('Only quotes pending approval can be sent back for changes');
+  }
+
+  const updatedQuote = await Quote.update(knex, tenant, quoteId, {
+    status: 'draft',
+    updated_by: getActorUserId(user),
+  });
+
+  await QuoteActivity.create(knex, tenant, {
+    quote_id: quoteId,
+    activity_type: 'approval_changes_requested',
+    description: `Approval changes requested: ${trimmedComment}`,
+    performed_by: getActorUserId(user),
+    metadata: { comment: trimmedComment },
+  });
+
+  return updatedQuote;
+});
+
 export const sendQuote = withAuth(async (
   user,
   { tenant },
@@ -505,7 +622,13 @@ export const sendQuote = withAuth(async (
     throw new Error('Quote templates cannot be sent to clients');
   }
 
-  if (quote.status !== 'draft' && quote.status !== ('approved' as any)) {
+  const approvalSettings = await loadQuoteApprovalWorkflowSettings(knex, tenant);
+
+  if (approvalSettings.approvalRequired) {
+    if (quote.status !== 'approved') {
+      throw new Error('Only approved quotes can be sent when quote approval is required');
+    }
+  } else if (quote.status !== 'draft' && quote.status !== 'approved') {
     throw new Error('Only draft or approved quotes can be sent');
   }
 

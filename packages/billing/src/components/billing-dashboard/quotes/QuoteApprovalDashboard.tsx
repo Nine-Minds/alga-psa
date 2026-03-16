@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { ColumnDefinition, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
-import { listQuotes } from '../../../actions/quoteActions';
+import { getQuoteApprovalSettings, listQuotes, updateQuoteApprovalSettings } from '../../../actions/quoteActions';
 import QuoteDetail from './QuoteDetail';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
@@ -35,9 +36,12 @@ const QuoteApprovalDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'pending_approval' | 'approved'>('pending_approval');
+  const [approvalRequired, setApprovalRequired] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   useEffect(() => {
     void loadQuotes(statusFilter);
+    void loadSettings();
   }, [statusFilter]);
 
   const loadQuotes = async (status: 'pending_approval' | 'approved') => {
@@ -64,6 +68,28 @@ const QuoteApprovalDashboard: React.FC = () => {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load quote approvals');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadSettings = async () => {
+    const result = await getQuoteApprovalSettings();
+    if (!('permissionError' in result)) {
+      setApprovalRequired(result.approvalRequired === true);
+    }
+  };
+
+  const handleApprovalRequiredChange = async (checked: boolean) => {
+    try {
+      setIsSavingSettings(true);
+      const result = await updateQuoteApprovalSettings(checked);
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+      setApprovalRequired(result.approvalRequired);
+    } catch (settingsError) {
+      setError(settingsError instanceof Error ? settingsError.message : 'Failed to update quote approval settings');
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
@@ -121,7 +147,20 @@ const QuoteApprovalDashboard: React.FC = () => {
             <h1 className="text-2xl font-semibold text-foreground">Quote Approvals</h1>
             <p className="text-sm text-muted-foreground">Review quotes waiting for manager approval before they can be sent to clients.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-foreground">Approval required before sending</div>
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={approvalRequired}
+                  onCheckedChange={handleApprovalRequiredChange}
+                  disabled={isSavingSettings}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {approvalRequired ? 'Draft quotes must be approved before sending.' : 'Draft quotes can be sent without approval.'}
+                </span>
+              </div>
+            </div>
             <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
               Status
               <select
