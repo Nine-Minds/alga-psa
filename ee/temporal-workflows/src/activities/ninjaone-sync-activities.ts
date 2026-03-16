@@ -6,7 +6,7 @@ import { heartbeat } from '@temporalio/activity';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { withTransaction } from '@alga-psa/db';
-import { getRedisStreamClient } from '@alga-psa/workflows/streams';
+import { getRedisStreamClient } from '@alga-psa/workflow-streams';
 
 import { createNinjaOneClient, NinjaOneClient } from '@ee/lib/integrations/ninjaone/ninjaOneClient';
 import {

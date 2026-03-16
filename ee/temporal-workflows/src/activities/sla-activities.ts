@@ -12,7 +12,7 @@ import {
   checkEscalationNeeded,
   escalateTicket,
 } from '@alga-psa/sla/services/escalationService';
-import { getRedisStreamClient } from '@alga-psa/workflows/streams';
+import { getRedisStreamClient } from '@alga-psa/workflow-streams';
 
 const logger = () => Context.current().log;
 

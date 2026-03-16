@@ -6,7 +6,7 @@ import { useTheme } from "../ui/ThemeContext";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
-import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, updateTicketAssignment, updateTicketAttributes, updateTicketPriority, updateTicketStatus, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
+import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, toggleCommentReaction, updateTicketAssignment, updateTicketAttributes, updateTicketPriority, updateTicketStatus, type AggregatedReaction, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
 import React, { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
@@ -24,6 +24,7 @@ import { copyToClipboard } from "../clipboard/clipboard";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useToast } from "../ui/toast/ToastProvider";
+import EmojiPicker from "rn-emoji-keyboard";
 import {
   extractPlainTextFromRichEditorJson,
   extractPlainTextFromSerializedRichEditorContent,
@@ -1311,6 +1312,7 @@ export function TicketDetailBody({
             error={commentsError}
             onLinkPress={handleRichTextLinkPress}
             baseUrl={config.ok ? config.baseUrl : null}
+            ticketId={ticketId}
           />
           <View style={{ height: spacing.sm }} />
           <CommentComposer
@@ -1733,11 +1735,18 @@ function StatusPickerModal({
   const { t } = useTranslation("tickets");
   const busy = loading || updating;
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
-        <Text style={{ ...typography.title, color: colors.text }}>{t("statusPicker.title")}</Text>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }} onPress={onClose} />
+      <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: spacing.xl, maxHeight: "70%" }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.lg, paddingBottom: spacing.sm }}>
+          <Text style={{ ...typography.title, color: colors.text }}>{t("statusPicker.title")}</Text>
+          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t("common:close")} hitSlop={12}>
+            <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600" }}>{t("common:close")}</Text>
+          </Pressable>
+        </View>
+
         {busy ? (
-          <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
+          <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
             <ActivityIndicator />
             <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
               {loading ? t("common:loading") : t("common:saving")}
@@ -1745,23 +1754,23 @@ function StatusPickerModal({
           </View>
         ) : null}
         {error ? (
-          <Text style={{ ...typography.caption, marginTop: spacing.md, color: colors.danger }}>
+          <Text style={{ ...typography.caption, paddingHorizontal: spacing.lg, color: colors.danger }}>
             {error}
           </Text>
         ) : null}
         {updateError ? (
-          <Text style={{ ...typography.caption, marginTop: spacing.md, color: colors.danger }}>
+          <Text style={{ ...typography.caption, paddingHorizontal: spacing.lg, color: colors.danger }}>
             {updateError}
           </Text>
         ) : null}
 
-        <View style={{ marginTop: spacing.lg }}>
+        <ScrollView style={{ paddingHorizontal: spacing.lg }}>
           {statuses.map((s) => (
             <Pressable
               key={s.status_id}
               accessibilityRole="button"
               accessibilityLabel={t("statusPicker.setStatus", { name: s.name })}
-              disabled={busy}
+              disabled={busy || s.status_id === currentStatusId}
               onPress={() => {
                 onSelect(s.status_id);
               }}
@@ -1771,7 +1780,7 @@ function StatusPickerModal({
                 borderRadius: 12,
                 borderWidth: 1,
                 borderColor: s.status_id === currentStatusId ? colors.primary : colors.border,
-                backgroundColor: colors.card,
+                backgroundColor: s.status_id === currentStatusId ? colors.primaryLight ?? colors.card : colors.card,
                 opacity: busy ? 0.65 : pressed ? 0.95 : 1,
                 marginBottom: spacing.sm,
               })}
@@ -1785,10 +1794,7 @@ function StatusPickerModal({
               </Text>
             </Pressable>
           ))}
-        </View>
-
-        <View style={{ flex: 1 }} />
-        <PrimaryButton onPress={onClose}>{t("common:done")}</PrimaryButton>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -1976,6 +1982,9 @@ function ActionChip({
   );
 }
 
+const QUICK_EMOJIS = ['👍', '👎', '❤️', '😂', '🎉', '👀'];
+
+
 export function CommentsSection({
   comments,
   visibleCount,
@@ -1985,6 +1994,7 @@ export function CommentsSection({
   error,
   onLinkPress,
   baseUrl,
+  ticketId,
 }: {
   comments: TicketComment[];
   visibleCount: number;
@@ -1994,12 +2004,76 @@ export function CommentsSection({
   error: string | null;
   onLinkPress?: (url: string) => void;
   baseUrl?: string | null;
+  ticketId: string;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const { session } = useAuth();
   const startIndex = Math.max(0, comments.length - visibleCount);
   const visible = comments.slice(startIndex);
+
+  // Local reactions state (initialized from comment data, updated optimistically)
+  const [reactionsOverrides, setReactionsOverrides] = useState<Record<string, AggregatedReaction[]>>({});
+  const [emojiPickerCommentId, setEmojiPickerCommentId] = useState<string | null>(null);
+  const [fullEmojiPickerCommentId, setFullEmojiPickerCommentId] = useState<string | null>(null);
+
+  const config = getAppConfig();
+  const client = useMemo(() => {
+    if (!config.ok) return null;
+    return createApiClient({ baseUrl: config.baseUrl, getUserAgentTag: () => "mobile" });
+  }, [config]);
+
+  const getReactions = useCallback(
+    (commentId: string | undefined): AggregatedReaction[] => {
+      if (!commentId) return [];
+      if (reactionsOverrides[commentId]) return reactionsOverrides[commentId];
+      const comment = comments.find((c) => c.comment_id === commentId);
+      return comment?.reactions ?? [];
+    },
+    [comments, reactionsOverrides],
+  );
+
+  const handleToggleReaction = useCallback(
+    async (commentId: string, emoji: string) => {
+      if (!client || !session) return;
+
+      const userId = session.user?.id ?? "";
+
+      // Optimistic update
+      setReactionsOverrides((prev) => {
+        const current = prev[commentId] ?? comments.find((c) => c.comment_id === commentId)?.reactions ?? [];
+        const existing = current.find((r) => r.emoji === emoji);
+        if (existing?.currentUserReacted) {
+          const updated = existing.count === 1
+            ? current.filter((r) => r.emoji !== emoji)
+            : current.map((r) => r.emoji === emoji ? { ...r, count: r.count - 1, currentUserReacted: false, userIds: r.userIds.filter((id) => id !== userId) } : r);
+          return { ...prev, [commentId]: updated };
+        }
+        if (existing) {
+          return { ...prev, [commentId]: current.map((r) => r.emoji === emoji ? { ...r, count: r.count + 1, currentUserReacted: true, userIds: [...r.userIds, userId] } : r) };
+        }
+        return { ...prev, [commentId]: [...current, { emoji, count: 1, userIds: [userId], currentUserReacted: true }] };
+      });
+
+      setEmojiPickerCommentId(null);
+
+      // Fire-and-forget: the next comments refresh will sync server state.
+      // No rollback — avoids flicker when server hasn't been deployed yet
+      // or on transient network errors.
+      void toggleCommentReaction(client, {
+        apiKey: session.accessToken,
+        ticketId,
+        commentId,
+        emoji,
+      });
+    },
+    [client, session, ticketId, comments],
+  );
+
+  // Clear overrides when comments refresh (server data is now authoritative)
+  useEffect(() => {
+    setReactionsOverrides({});
+  }, [comments.map((c) => c.comment_id).join(",")]);
 
   return (
     <View
@@ -2114,6 +2188,78 @@ export function CommentsSection({
                     </View>
                   )
                 )}
+                {/* Reaction pills + add button */}
+                {!isSystemEvent && c.comment_id ? (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", marginTop: spacing.xs, gap: 4 }}>
+                    {getReactions(c.comment_id).map((r) => (
+                      <Pressable
+                        key={r.emoji}
+                        onPress={() => void handleToggleReaction(c.comment_id!, r.emoji)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${r.emoji} ${r.count}${r.currentUserReacted ? ", you reacted" : ""}`}
+                        style={({ pressed }) => ({
+                          flexDirection: "row",
+                          alignItems: "center",
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: r.currentUserReacted ? colors.primary : colors.border,
+                          backgroundColor: r.currentUserReacted ? `${colors.primary}18` : colors.background,
+                          opacity: pressed ? 0.7 : 1,
+                        })}
+                      >
+                        <Text style={{ fontSize: 14 }}>{r.emoji}</Text>
+                        <Text style={{ fontSize: 12, marginLeft: 3, color: r.currentUserReacted ? colors.primary : colors.textSecondary, fontWeight: r.currentUserReacted ? "600" : "400" }}>
+                          {r.count}
+                        </Text>
+                      </Pressable>
+                    ))}
+                    <Pressable
+                      onPress={() => setEmojiPickerCommentId(emojiPickerCommentId === c.comment_id ? null : c.comment_id!)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Add reaction"
+                      style={({ pressed }) => ({
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: colors.background,
+                        opacity: pressed ? 0.7 : 1,
+                      })}
+                    >
+                      <Text style={{ fontSize: 14 }}>+</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                {/* Quick emoji picker */}
+                {emojiPickerCommentId === c.comment_id ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 2, backgroundColor: colors.background, borderRadius: 16, padding: 4, borderWidth: 1, borderColor: colors.border, alignSelf: "flex-start" }}>
+                    {QUICK_EMOJIS.map((emoji) => (
+                      <Pressable
+                        key={emoji}
+                        onPress={() => void handleToggleReaction(c.comment_id!, emoji)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`React with ${emoji}`}
+                        style={({ pressed }) => ({ padding: 4, borderRadius: 8, opacity: pressed ? 0.5 : 1 })}
+                      >
+                        <Text style={{ fontSize: 20 }}>{emoji}</Text>
+                      </Pressable>
+                    ))}
+                    <Pressable
+                      onPress={() => {
+                        setEmojiPickerCommentId(null);
+                        setFullEmojiPickerCommentId(c.comment_id!);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel="More emojis"
+                      style={({ pressed }) => ({ padding: 4, borderRadius: 8, opacity: pressed ? 0.5 : 1 })}
+                    >
+                      <Text style={{ fontSize: 16, color: colors.textSecondary }}>...</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
             );
           })}
@@ -2134,6 +2280,17 @@ export function CommentsSection({
           ) : null}
         </View>
       )}
+
+      <EmojiPicker
+        onEmojiSelected={(emojiObject) => {
+          if (fullEmojiPickerCommentId) {
+            void handleToggleReaction(fullEmojiPickerCommentId, emojiObject.emoji);
+          }
+          setFullEmojiPickerCommentId(null);
+        }}
+        open={fullEmojiPickerCommentId !== null}
+        onClose={() => setFullEmojiPickerCommentId(null)}
+      />
     </View>
   );
 }

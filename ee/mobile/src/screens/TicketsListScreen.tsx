@@ -952,23 +952,6 @@ function FiltersModal({
             })}
           </View>
         ) : null}
-        <TextInput
-          value={filters.priorityName}
-          onChangeText={(priorityName) => setFilters({ ...filters, priorityName })}
-          placeholder={t("filters.priorityPlaceholder")}
-          placeholderTextColor={theme.colors.placeholder}
-          accessibilityLabel={t("filters.priorityAccessibility")}
-          style={{
-            paddingVertical: theme.spacing.sm,
-            paddingHorizontal: theme.spacing.md,
-            borderRadius: theme.borderRadius.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            marginTop: theme.spacing.sm,
-          }}
-        />
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.updatedSince")}</Text>
         <OptionRow

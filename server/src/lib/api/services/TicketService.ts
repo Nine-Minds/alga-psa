@@ -30,6 +30,7 @@ import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketRichRender';
 import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+import { aggregateReactions } from '@alga-psa/types';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
 const TICKET_MOBILE_LIST_FIELDS = [
@@ -696,6 +697,31 @@ export class TicketService extends BaseService<ITicket> {
       })
     );
 
+    // Batch-fetch reactions for all comments
+    const commentIds = comments.map(c => c.comment_id).filter(Boolean) as string[];
+    let reactionsMap: Record<string, any[]> = {};
+    let reactionUserNames: Record<string, string> = {};
+    if (commentIds.length > 0) {
+      const reactionRows = await knex('comment_reactions')
+        .where({ tenant: context.tenant })
+        .whereIn('comment_id', commentIds)
+        .select('comment_id', 'emoji', 'user_id')
+        .orderBy('created_at', 'asc');
+
+      reactionsMap = aggregateReactions(reactionRows, 'comment_id', context.userId);
+
+      const reactionUserIds = [...new Set(reactionRows.map(r => r.user_id))];
+      if (reactionUserIds.length > 0) {
+        const reactionUsers = await knex('users')
+          .where({ tenant: context.tenant })
+          .whereIn('user_id', reactionUserIds)
+          .select('user_id', 'first_name', 'last_name');
+        for (const u of reactionUsers) {
+          reactionUserNames[u.user_id] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown';
+        }
+      }
+    }
+
     // Map database fields to API response format
     return comments.map(comment => ({
       ...comment,
@@ -706,7 +732,9 @@ export class TicketService extends BaseService<ITicket> {
       created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
       author_contact_id: comment.author_contact_id || comment.contact_id || null,
       author_contact_name: comment.author_contact_name || null,
-      author_contact_email: comment.author_contact_email || null
+      author_contact_email: comment.author_contact_email || null,
+      reactions: reactionsMap[comment.comment_id] ?? [],
+      reaction_user_names: reactionUserNames,
     }));
   }
 

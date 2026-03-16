@@ -1,4 +1,4 @@
-import { Editor, type Content } from '@tiptap/core';
+import { Editor, type AnyExtension, type Content } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import StarterKit from '@tiptap/starter-kit';
 import { convertBlockContentToHTML } from '../../../formatting/src/blocknoteUtils';
@@ -127,7 +127,7 @@ export class TicketMobileEditorRuntime {
           Image.configure({
             inline: false,
             allowBase64: false,
-          }),
+          }) as AnyExtension,
         ],
         content: initialContent,
         editorProps: {

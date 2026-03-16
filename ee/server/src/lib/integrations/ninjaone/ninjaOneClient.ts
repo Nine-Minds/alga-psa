@@ -14,7 +14,7 @@ import {
   buildIntegrationTokenExpiringPayload,
   buildIntegrationTokenRefreshFailedPayload,
   getIntegrationTokenExpiringStatus,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import type {
   NinjaOneOAuthCredentials,
   NinjaOneOAuthTokenResponse,

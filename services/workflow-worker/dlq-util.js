@@ -10,7 +10,7 @@
  *   node dlq-util.js reprocess <executionId> <messageId>
  */
 
-import { getRedisStreamClient } from '@alga-psa/workflows/streams';
+import { getRedisStreamClient } from '@alga-psa/workflow-streams';
 import dotenv from 'dotenv';
 
 // Load environment variables

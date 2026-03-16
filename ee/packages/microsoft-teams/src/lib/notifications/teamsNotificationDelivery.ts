@@ -7,7 +7,7 @@ import {
   buildNotificationDeliveredPayload,
   buildNotificationFailedPayload,
   buildNotificationSentPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import { buildTeamsPersonalTabDeepLinkFromPsaUrl } from '../teams/teamsDeepLinks';
 
 type TeamsNotificationCategory =

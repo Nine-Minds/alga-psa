@@ -255,6 +255,21 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       hasLoadedRef.current = true;
       lastContentRef.current = content;
       lastEditableRef.current = editable;
+
+      // Inject theme-aware styles into the WebView
+      if (theme.mode === "dark") {
+        const darkCss = `
+          html, body { background-color: ${theme.colors.card} !important; color: ${theme.colors.text} !important; }
+          .ProseMirror, .bn-editor, [class*="editor"] { background-color: transparent !important; color: ${theme.colors.text} !important; }
+          a { color: ${theme.colors.primary} !important; }
+          code { background-color: rgba(255,255,255,0.1) !important; }
+          blockquote { border-left-color: ${theme.colors.border} !important; }
+        `.replace(/\n/g, " ");
+        webViewRef.current?.injectJavaScript(
+          `(function(){var s=document.createElement('style');s.id='rn-dark-mode';s.textContent=${JSON.stringify(darkCss)};document.head.appendChild(s);})();true;`,
+        );
+      }
+
       bridgeRef.current?.initialize({
         content,
         editable,

@@ -20,7 +20,7 @@ import { IUser } from '@shared/interfaces/user.interfaces';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCreatedPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import {
   ITaskImportRow,
   ITaskImportValidationResult,

@@ -13,7 +13,7 @@ import {
   buildContactArchivedPayload,
   buildContactCreatedPayload,
   buildContactUpdatedPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import { NotFoundError } from '../middleware/apiMiddleware';
 import {
   ContactFilterData,

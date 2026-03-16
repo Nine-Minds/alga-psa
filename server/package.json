@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.0.6-rc4",
+  "version": "1.0.7-rc4",
   "private": true,
   "type": "module",
   "engines": {
@@ -56,6 +56,7 @@
     "migrate:ee:status": "node scripts/run-ee-migrations.js status"
   },
   "dependencies": {
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@anthropic-ai/sdk": "^0.36.3",
     "@assemblyscript/loader": "^0.27.36",

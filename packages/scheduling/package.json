@@ -28,6 +28,10 @@
     "./lib/timeEntryLauncher": {
       "import": "./src/lib/timeEntryLauncher.tsx",
       "types": "./src/lib/timeEntryLauncher.tsx"
+    },
+    "./context/*": {
+      "import": "./src/context/*.tsx",
+      "types": "./src/context/*.tsx"
     }
   },
   "scripts": {
@@ -42,6 +46,7 @@
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "rrule": "^2.7.2",
     "zod": "^3.22.4"

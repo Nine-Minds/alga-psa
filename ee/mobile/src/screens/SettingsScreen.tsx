@@ -82,11 +82,7 @@ export function SettingsScreen() {
 
   return (
     <View style={{ flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background }}>
-      <Text style={{ ...theme.typography.title, marginBottom: theme.spacing.sm, color: theme.colors.text }}>
-        {t("title")}
-      </Text>
-
-      <View style={{ marginTop: theme.spacing.lg }}>
+      <View>
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
           {t("sections.account")}
         </Text>

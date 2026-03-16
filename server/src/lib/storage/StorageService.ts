@@ -28,7 +28,7 @@ import { LocalProviderConfig, S3ProviderConfig } from '../../types/storage';
 import { createTenantKnex } from '../db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { isValidUUID } from '@alga-psa/validation';
-import { buildFileUploadedPayload } from '@alga-psa/workflows/streams';
+import { buildFileUploadedPayload } from '@alga-psa/workflow-streams';
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {

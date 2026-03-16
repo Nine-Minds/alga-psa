@@ -35,7 +35,7 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';

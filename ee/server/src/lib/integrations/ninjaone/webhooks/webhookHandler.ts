@@ -15,7 +15,7 @@ import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildIntegrationWebhookReceivedPayload,
   sanitizeIntegrationWebhookRawPayload,
-} from '@alga-psa/workflows/streams';
+} from '@alga-psa/workflow-streams';
 import { NinjaOneSyncEngine } from '../sync/syncEngine';
 import {
   NinjaOneWebhookPayload,
