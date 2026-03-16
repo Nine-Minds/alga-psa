@@ -1,11 +1,30 @@
 import type { Knex } from 'knex';
 import type { IContract, IQuote, IQuoteItem } from '@alga-psa/types';
+import { v4 as uuidv4 } from 'uuid';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
 
 export interface QuoteToContractConversionResult {
   quote: IQuote;
   contract: IContract;
+}
+
+function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 'Usage' {
+  if (item.billing_method === 'hourly') {
+    return 'Hourly';
+  }
+
+  if (item.billing_method === 'usage') {
+    return 'Usage';
+  }
+
+  return 'Fixed';
+}
+
+function getContractLineBillingTiming(item: IQuoteItem): 'arrears' | 'advance' {
+  return item.billing_method === 'hourly' || item.billing_method === 'usage'
+    ? 'arrears'
+    : 'advance';
 }
 
 function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
@@ -72,6 +91,34 @@ export async function convertQuoteToDraftContract(
       conversion_kind: 'quote_to_contract',
     },
   });
+
+  const nowIso = new Date().toISOString();
+  await knexOrTrx('contract_lines').insert(
+    recurringItems.map((item, index) => {
+      const contractLineType = mapQuoteItemToContractLineType(item);
+
+      return {
+        tenant,
+        contract_line_id: uuidv4(),
+        contract_id: contract.contract_id,
+        contract_line_name: item.service_name || item.description,
+        description: item.description,
+        billing_frequency: item.billing_frequency || billingFrequency,
+        is_custom: true,
+        contract_line_type: contractLineType,
+        billing_timing: getContractLineBillingTiming(item),
+        display_order: index,
+        custom_rate: contractLineType === 'Fixed' ? item.unit_price : null,
+        enable_proration: false,
+        billing_cycle_alignment: 'start',
+        minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
+        round_up_to_nearest: contractLineType === 'Hourly' ? 15 : null,
+        is_active: false,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+    })
+  );
 
   return {
     quote,

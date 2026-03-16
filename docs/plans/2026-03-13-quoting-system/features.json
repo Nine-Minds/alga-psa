@@ -823,7 +823,7 @@
   {
     "id": "F099",
     "description": "P5: Quote → Contract — create contract_lines with correct billing method per item",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR1"
     ]
