@@ -757,7 +757,7 @@
   {
     "id": "T088",
     "description": "Template selection: falls back to standard-quote-default when no tenant default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]
