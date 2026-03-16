@@ -174,6 +174,8 @@ const QuotesTab: React.FC = () => {
                 >
                   <option value="all">All</option>
                   <option value="draft">Drafts</option>
+                  <option value="pending_approval">Pending Approval</option>
+                  <option value="approved">Approved</option>
                   <option value="sent">Sent</option>
                   <option value="accepted">Accepted</option>
                   <option value="rejected">Rejected</option>
@@ -201,9 +203,14 @@ const QuotesTab: React.FC = () => {
               </label>
             </div>
 
-              <Button id="quotes-new-quote" onClick={() => router.push('/msp/billing?tab=quotes&quoteId=new')}>
-                New Quote
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button id="quotes-approval-queue" variant="outline" onClick={() => router.push('/msp/quote-approvals')}>
+                  Approval Queue
+                </Button>
+                <Button id="quotes-new-quote" onClick={() => router.push('/msp/billing?tab=quotes&quoteId=new')}>
+                  New Quote
+                </Button>
+              </div>
             </div>
 
             <DataTable

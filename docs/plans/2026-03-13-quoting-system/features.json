@@ -927,7 +927,7 @@
   {
     "id": "F112",
     "description": "P6: Internal approval — approval dashboard following ManagerApprovalDashboard pattern",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P6-FR1"
     ]
