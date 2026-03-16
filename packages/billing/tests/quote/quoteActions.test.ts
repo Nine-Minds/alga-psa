@@ -582,6 +582,58 @@ describe('quoteActions', () => {
     expect(result).toMatchObject({ status: 'sent' });
   });
 
+
+  it('T124: duplicateQuote creates a draft copy with a new quote number and copied items', async () => {
+    const duplicatedQuoteId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const duplicatedQuote = {
+      quote_id: duplicatedQuoteId,
+      quote_number: 'Q-0099',
+      status: 'draft',
+      is_template: false,
+      quote_items: [
+        { quote_item_id: 'dup-item-1', description: templateQuote.quote_items[0].description },
+        { quote_item_id: 'dup-item-2', description: templateQuote.quote_items[1].description },
+      ],
+    };
+
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce({
+        ...templateQuote,
+        quote_id: QUOTE_ID,
+        quote_number: 'Q-0007',
+        is_template: false,
+        client_id: baseQuoteInput.client_id,
+        contact_id: 'contact-1',
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+      } as any)
+      .mockResolvedValueOnce(duplicatedQuote as any);
+    vi.spyOn(Quote, 'create').mockResolvedValueOnce({ quote_id: duplicatedQuoteId } as any);
+
+    const { duplicateQuote } = await import('../../src/actions/quoteActions');
+    const result = await duplicateQuote(QUOTE_ID);
+
+    expect(Quote.create).toHaveBeenCalledWith(
+      mockTrx,
+      TENANT_ID,
+      expect.objectContaining({
+        title: templateQuote.title,
+        is_template: false,
+        created_by: USER_ID,
+      })
+    );
+    expect(QuoteItem.create).toHaveBeenCalledTimes(templateQuote.quote_items.length);
+    expect(result).toMatchObject({
+      quote_id: duplicatedQuoteId,
+      quote_number: 'Q-0099',
+      status: 'draft',
+      quote_items: expect.arrayContaining([
+        expect.objectContaining({ description: 'Managed Endpoint' }),
+        expect.objectContaining({ description: 'Onboarding' }),
+      ]),
+    });
+  });
+
   it('T089: sendQuote rejects quotes not in draft or approved status', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce({

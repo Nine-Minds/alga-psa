@@ -1075,7 +1075,7 @@
   {
     "id": "T124",
     "description": "Duplication: creates new quote with new number, draft status, copied items",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119"
     ]
