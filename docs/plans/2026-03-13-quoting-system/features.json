@@ -879,7 +879,7 @@
   {
     "id": "F106",
     "description": "P5: Combined conversion — contract for recurring + invoice for one-time in single transaction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P5-FR3"
     ]

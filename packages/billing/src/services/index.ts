@@ -10,8 +10,10 @@ export { recalculateQuoteFinancials } from './quoteCalculationService';
 export { QuotePDFGenerationService, createQuotePDFGenerationService } from './quotePdfGenerationService';
 export {
   convertQuoteToDraftContract,
+  convertQuoteToDraftContractAndInvoice,
   convertQuoteToDraftInvoice,
   type QuoteToContractConversionResult,
+  type QuoteToBothConversionResult,
   type QuoteToInvoiceConversionResult,
 } from './quoteConversionService';
 export { ContractLineServiceConfigurationService } from './contractLineServiceConfigurationService';

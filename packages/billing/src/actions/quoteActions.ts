@@ -13,7 +13,7 @@ import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate } from '../lib/quote-email-templates';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
-import { convertQuoteToDraftContract, convertQuoteToDraftInvoice, createQuotePDFGenerationService } from '../services';
+import { convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, createQuotePDFGenerationService } from '../services';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -721,5 +721,32 @@ export const convertQuoteToInvoice = withAuth(async (
 
   return await knex.transaction(async (trx) => {
     return convertQuoteToDraftInvoice(trx, tenant, quoteId, getActorUserId(user));
+  });
+});
+
+export const convertQuoteToBoth = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+): Promise<{ quote: IQuote; contract: IContract; invoice: IInvoice } | ActionPermissionError> => {
+  const createDenied = await requireBillingCreatePermission(user);
+  if (createDenied) {
+    return createDenied;
+  }
+
+  const updateDenied = await requireBillingUpdatePermission(user);
+  if (updateDenied) {
+    return updateDenied;
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return await knex.transaction(async (trx) => {
+    const result = await convertQuoteToDraftContractAndInvoice(trx, tenant, quoteId, getActorUserId(user));
+    return {
+      quote: result.quote,
+      contract: result.contract,
+      invoice: result.invoice,
+    };
   });
 });

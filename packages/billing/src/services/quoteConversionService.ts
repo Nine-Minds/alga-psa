@@ -17,6 +17,13 @@ export interface QuoteToInvoiceConversionResult {
   invoice: IInvoice;
 }
 
+export interface QuoteToBothConversionResult {
+  quote: IQuote;
+  contract: IContract;
+  invoice: IInvoice;
+  clientContractId?: string;
+}
+
 interface ContractLineMapping {
   item: IQuoteItem;
   contractLineId: string;
@@ -488,5 +495,66 @@ export async function convertQuoteToDraftInvoice(
       ...invoice,
       invoice_charges: invoiceChargeRows,
     } as IInvoice,
+  };
+}
+
+export async function convertQuoteToDraftContractAndInvoice(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null
+): Promise<QuoteToBothConversionResult> {
+  const quote = await Quote.getById(knexOrTrx, tenant, quoteId);
+
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+  }
+
+  if (quote.status !== 'accepted') {
+    throw new Error('Only accepted quotes can be converted');
+  }
+
+  if (quote.converted_contract_id || quote.converted_invoice_id) {
+    throw new Error('Quote has already started conversion and cannot be converted to both again');
+  }
+
+  const recurringItems = getSelectedRecurringItems(quote.quote_items ?? []);
+  const oneTimeItems = getSelectedOneTimeItems(quote.quote_items ?? []);
+
+  if (recurringItems.length === 0 || oneTimeItems.length === 0) {
+    throw new Error('Quote must contain both recurring and one-time items to convert to both records');
+  }
+
+  const contractResult = await convertQuoteToDraftContract(knexOrTrx, tenant, quoteId, performedBy);
+  const invoiceResult = await convertQuoteToDraftInvoice(knexOrTrx, tenant, quoteId, performedBy);
+  const nowIso = new Date().toISOString();
+
+  await knexOrTrx('quotes')
+    .where({ tenant, quote_id: quoteId })
+    .update({
+      status: 'converted',
+      converted_at: nowIso,
+      updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
+      updated_at: nowIso,
+    });
+
+  await QuoteActivity.create(knexOrTrx, tenant, {
+    quote_id: quoteId,
+    activity_type: 'converted',
+    description: 'Quote converted to both a draft contract and a draft invoice',
+    performed_by: performedBy ?? null,
+    metadata: {
+      contract_id: contractResult.contract.contract_id,
+      invoice_id: invoiceResult.invoice.invoice_id,
+    },
+  });
+
+  const refreshedQuote = await Quote.getById(knexOrTrx, tenant, quoteId);
+
+  return {
+    quote: refreshedQuote as IQuote,
+    contract: contractResult.contract,
+    invoice: invoiceResult.invoice,
+    clientContractId: contractResult.clientContractId,
   };
 }
