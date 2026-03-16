@@ -5,13 +5,21 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { WorkflowAiSchemaSection } from '../WorkflowAiSchemaSection';
+import type { WorkflowAiSchemaMode, WorkflowJsonSchema } from '@alga-psa/workflows/authoring';
 
 describe('WorkflowAiSchemaSection', () => {
   it('keeps a newly added simple-mode field visible when the parent rehydrates from the emitted schema', () => {
+    type ControlledConfig = {
+      actionId: string;
+      aiOutputSchemaMode: WorkflowAiSchemaMode;
+      aiOutputSchema?: WorkflowJsonSchema;
+      aiOutputSchemaText?: string;
+    };
+
     const ControlledHarness = () => {
-      const [config, setConfig] = React.useState({
+      const [config, setConfig] = React.useState<ControlledConfig>({
         actionId: 'ai.infer',
-        aiOutputSchemaMode: 'simple' as const,
+        aiOutputSchemaMode: 'simple',
         aiOutputSchema: {
           type: 'object',
           properties: {},
