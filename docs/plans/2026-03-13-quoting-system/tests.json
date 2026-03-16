@@ -781,7 +781,7 @@
   {
     "id": "T090a",
     "description": "Send: sendQuote accepts array of email addresses and sends to all of them",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]

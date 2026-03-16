@@ -342,3 +342,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-16) Discovery — billing package tests now exercise `@alga-psa/email` via `sendQuote`, so the package Vitest config needed an `@alga-psa/email` alias alongside the existing auth/core/db aliases.
 - (2026-03-16) T089 complete — Extended the quote action unit suite to cover `sendQuote()` state validation, with billing-package Vitest aliases updated to resolve the email package during send-email action tests.
 - (2026-03-16) T090 complete — Added `sendQuote()` success-path coverage proving it generates a PDF, sends email, and persists the quote status as `sent`.
+- (2026-03-16) T090a complete — Added multi-recipient send coverage proving `sendQuote()` forwards every provided email address to the outbound message.
