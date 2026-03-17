@@ -26,6 +26,8 @@ import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
 import logger from '@alga-psa/core/logger';
+import type { IRecurringRunExecutionWindowIdentity } from '@alga-psa/types';
+import { buildClientBillingCycleExecutionWindow } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 // =============================================================================
 // NEW JOB RUNNER ABSTRACTION EXPORTS
@@ -202,11 +204,35 @@ export const scheduleInvoiceGeneration = async (
   runAt: Date,
   tenantId: string
 ): Promise<string | null> => {
+  return await scheduleRecurringWindowInvoiceGeneration({
+    clientId,
+    billingCycleId,
+    runAt,
+    tenantId,
+    executionWindow: buildClientBillingCycleExecutionWindow({
+      billingCycleId,
+      clientId,
+    }),
+  });
+};
+
+export const scheduleRecurringWindowInvoiceGeneration = async (input: {
+  clientId: string;
+  runAt: Date;
+  tenantId: string;
+  billingCycleId?: string;
+  executionWindow: IRecurringRunExecutionWindowIdentity;
+}): Promise<string | null> => {
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleScheduledJob<GenerateInvoiceData>(
     'generate-invoice',
-    runAt,
-    { clientId, billingCycleId, tenantId }
+    input.runAt,
+    {
+      clientId: input.clientId,
+      billingCycleId: input.billingCycleId,
+      executionWindow: input.executionWindow,
+      tenantId: input.tenantId,
+    }
   );
 };
 

@@ -11,6 +11,9 @@ const userIdSchema = uuidSchema('User ID');
 const deliveryMethodSchema = z.enum(['email', 'portal', 'print']).describe('Invoice delivery method');
 const recurringBillingRunSelectionModeSchema = z.enum(['due_service_periods']).describe('How recurring billing selected charge timing for the run');
 const recurringBillingRunWindowIdentitySchema = z.enum(['billing_cycle_window']).describe('How the current recurring run identified invoice windows');
+const recurringBillingRunExecutionWindowKindSchema = z
+  .enum(['billing_cycle_window', 'contract_cadence_window'])
+  .describe('Which recurring execution-window kinds the run was prepared to process');
 
 export const invoiceGeneratedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   invoiceId: invoiceIdSchema,
@@ -224,6 +227,7 @@ export const recurringBillingRunStartedEventPayloadSchema = BaseDomainEventPaylo
   initiatedByUserId: userIdSchema.optional(),
   selectionMode: recurringBillingRunSelectionModeSchema,
   windowIdentity: recurringBillingRunWindowIdentitySchema,
+  executionWindowKinds: z.array(recurringBillingRunExecutionWindowKindSchema).min(1).optional(),
 }).describe('Payload for RECURRING_BILLING_RUN_STARTED');
 
 export type RecurringBillingRunStartedEventPayload = z.infer<typeof recurringBillingRunStartedEventPayloadSchema>;
@@ -236,6 +240,7 @@ export const recurringBillingRunCompletedEventPayloadSchema = BaseDomainEventPay
   warnings: z.array(z.string()).optional(),
   selectionMode: recurringBillingRunSelectionModeSchema,
   windowIdentity: recurringBillingRunWindowIdentitySchema,
+  executionWindowKinds: z.array(recurringBillingRunExecutionWindowKindSchema).min(1).optional(),
 }).describe('Payload for RECURRING_BILLING_RUN_COMPLETED');
 
 export type RecurringBillingRunCompletedEventPayload = z.infer<typeof recurringBillingRunCompletedEventPayloadSchema>;
@@ -248,6 +253,7 @@ export const recurringBillingRunFailedEventPayloadSchema = BaseDomainEventPayloa
   retryable: z.boolean().optional(),
   selectionMode: recurringBillingRunSelectionModeSchema,
   windowIdentity: recurringBillingRunWindowIdentitySchema,
+  executionWindowKinds: z.array(recurringBillingRunExecutionWindowKindSchema).min(1).optional(),
 }).describe('Payload for RECURRING_BILLING_RUN_FAILED');
 
 export type RecurringBillingRunFailedEventPayload = z.infer<typeof recurringBillingRunFailedEventPayloadSchema>;

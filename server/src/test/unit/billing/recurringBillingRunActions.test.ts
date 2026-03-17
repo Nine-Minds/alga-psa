@@ -95,6 +95,7 @@ describe('recurring billing run actions', () => {
       initiatedByUserId: 'user-1',
       selectionMode: 'due_service_periods',
       windowIdentity: 'billing_cycle_window',
+      executionWindowKinds: ['billing_cycle_window'],
     });
     expect(mocks.buildRecurringBillingRunCompletedPayload).toHaveBeenCalledWith({
       runId: result.runId,
@@ -103,6 +104,7 @@ describe('recurring billing run actions', () => {
       failedCount: 0,
       selectionMode: 'due_service_periods',
       windowIdentity: 'billing_cycle_window',
+      executionWindowKinds: ['billing_cycle_window'],
     });
     expect(mocks.publishWorkflowEvent).toHaveBeenNthCalledWith(
       1,
@@ -165,6 +167,7 @@ describe('recurring billing run actions', () => {
       failedCount: 0,
       selectionMode: 'due_service_periods',
       windowIdentity: 'billing_cycle_window',
+      executionWindowKinds: ['billing_cycle_window'],
     });
   });
 });

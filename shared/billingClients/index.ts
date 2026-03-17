@@ -17,4 +17,5 @@ export * from './billingSchedule';
 export * from './clientCadenceScheduleContext';
 export * from './clientContractStatus';
 export * from './recurringTiming';
+export * from './recurringRunExecutionIdentity';
 export * from './clientCadenceServicePeriods';

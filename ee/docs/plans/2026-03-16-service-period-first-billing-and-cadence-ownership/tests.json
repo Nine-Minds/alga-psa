@@ -1576,7 +1576,7 @@
   {
     "id": "T181",
     "description": "Recurring run execution identity supports client-cadence scheduling without relying only on billingCycleId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F151",
       "F155"
@@ -1585,7 +1585,7 @@
   {
     "id": "T182",
     "description": "Recurring run execution identity supports contract-cadence scheduling as a first-class path",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F151",
       "F156"

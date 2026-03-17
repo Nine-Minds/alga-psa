@@ -1,5 +1,18 @@
 export type RecurringBillingRunSelectionMode = 'due_service_periods';
 export type RecurringBillingRunWindowIdentity = 'billing_cycle_window';
+export type RecurringBillingRunExecutionWindowKind =
+  | 'billing_cycle_window'
+  | 'contract_cadence_window';
+
+function normalizeExecutionWindowKinds(
+  windowKinds?: RecurringBillingRunExecutionWindowKind[],
+): RecurringBillingRunExecutionWindowKind[] | undefined {
+  if (!windowKinds?.length) {
+    return undefined;
+  }
+
+  return Array.from(new Set(windowKinds)).sort() as RecurringBillingRunExecutionWindowKind[];
+}
 
 export type RecurringBillingRunStartedPayloadInput = {
   runId: string;
@@ -8,6 +21,7 @@ export type RecurringBillingRunStartedPayloadInput = {
   initiatedByUserId?: string;
   selectionMode?: RecurringBillingRunSelectionMode;
   windowIdentity?: RecurringBillingRunWindowIdentity;
+  executionWindowKinds?: RecurringBillingRunExecutionWindowKind[];
 };
 
 export function buildRecurringBillingRunStartedPayload(input: RecurringBillingRunStartedPayloadInput) {
@@ -18,6 +32,7 @@ export function buildRecurringBillingRunStartedPayload(input: RecurringBillingRu
     initiatedByUserId: input.initiatedByUserId,
     selectionMode: input.selectionMode ?? 'due_service_periods',
     windowIdentity: input.windowIdentity ?? 'billing_cycle_window',
+    executionWindowKinds: normalizeExecutionWindowKinds(input.executionWindowKinds),
   };
 }
 
@@ -29,6 +44,7 @@ export type RecurringBillingRunCompletedPayloadInput = {
   warnings?: string[];
   selectionMode?: RecurringBillingRunSelectionMode;
   windowIdentity?: RecurringBillingRunWindowIdentity;
+  executionWindowKinds?: RecurringBillingRunExecutionWindowKind[];
 };
 
 export function buildRecurringBillingRunCompletedPayload(input: RecurringBillingRunCompletedPayloadInput) {
@@ -40,6 +56,7 @@ export function buildRecurringBillingRunCompletedPayload(input: RecurringBilling
     warnings: input.warnings?.length ? input.warnings : undefined,
     selectionMode: input.selectionMode ?? 'due_service_periods',
     windowIdentity: input.windowIdentity ?? 'billing_cycle_window',
+    executionWindowKinds: normalizeExecutionWindowKinds(input.executionWindowKinds),
   };
 }
 
@@ -51,6 +68,7 @@ export type RecurringBillingRunFailedPayloadInput = {
   retryable?: boolean;
   selectionMode?: RecurringBillingRunSelectionMode;
   windowIdentity?: RecurringBillingRunWindowIdentity;
+  executionWindowKinds?: RecurringBillingRunExecutionWindowKind[];
 };
 
 export function buildRecurringBillingRunFailedPayload(input: RecurringBillingRunFailedPayloadInput) {
@@ -62,5 +80,6 @@ export function buildRecurringBillingRunFailedPayload(input: RecurringBillingRun
     retryable: input.retryable,
     selectionMode: input.selectionMode ?? 'due_service_periods',
     windowIdentity: input.windowIdentity ?? 'billing_cycle_window',
+    executionWindowKinds: normalizeExecutionWindowKinds(input.executionWindowKinds),
   };
 }

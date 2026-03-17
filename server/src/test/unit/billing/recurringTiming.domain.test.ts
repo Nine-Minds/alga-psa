@@ -21,6 +21,11 @@ import {
 import { DEFAULT_CADENCE_OWNER as sharedDefaultCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { RECURRING_RANGE_SEMANTICS } from '@alga-psa/types';
 import {
+  buildClientBillingCycleExecutionWindow as buildClientExecutionWindow,
+  buildContractCadenceExecutionWindow as buildContractExecutionWindow,
+  listRecurringRunExecutionWindowKinds as listExecutionWindowKinds,
+} from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
+import {
   buildMonthlyRecurringFixture,
   buildMonthlyServicePeriods,
   buildRecurringInvoiceWindow as buildInvoiceWindow,
@@ -145,6 +150,57 @@ describe('recurring timing shared domain', () => {
           period.sourceObligation.chargeFamily === 'license',
       ),
     ).toBe(true);
+  });
+
+  it('T181: recurring run execution identity supports client-cadence scheduling without relying only on a raw billingCycleId string', () => {
+    const window = buildClientExecutionWindow({
+      billingCycleId: 'cycle-2025-01',
+      clientId: 'client-1',
+      windowStart: '2025-01-01',
+      windowEnd: '2025-02-01',
+    });
+
+    expect(window).toEqual({
+      kind: 'billing_cycle_window',
+      identityKey: 'billing_cycle_window:client:client-1:cycle-2025-01:2025-01-01:2025-02-01',
+      cadenceOwner: 'client',
+      billingCycleId: 'cycle-2025-01',
+      clientId: 'client-1',
+      windowStart: '2025-01-01',
+      windowEnd: '2025-02-01',
+    });
+    expect(listExecutionWindowKinds([window])).toEqual(['billing_cycle_window']);
+  });
+
+  it('T182: recurring run execution identity supports contract-cadence windows as a first-class scheduling shape', () => {
+    const contractWindow = buildContractExecutionWindow({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+    const clientWindow = buildClientExecutionWindow({
+      billingCycleId: 'cycle-2025-02',
+      clientId: 'client-1',
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+    });
+
+    expect(contractWindow).toEqual({
+      kind: 'contract_cadence_window',
+      identityKey: 'contract_cadence_window:contract:client-1:contract-1:line-1:2025-02-08:2025-03-08',
+      cadenceOwner: 'contract',
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+    expect(listExecutionWindowKinds([clientWindow, contractWindow, contractWindow])).toEqual([
+      'billing_cycle_window',
+      'contract_cadence_window',
+    ]);
   });
 
   it('T015: activity-window intersection trims start boundaries under half-open semantics', () => {

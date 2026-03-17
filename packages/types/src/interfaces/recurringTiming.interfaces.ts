@@ -3,6 +3,13 @@ import type { ISO8601String } from '../lib/temporal';
 export const CADENCE_OWNERS = ['client', 'contract'] as const;
 export type CadenceOwner = (typeof CADENCE_OWNERS)[number];
 
+export const RECURRING_RUN_EXECUTION_WINDOW_KINDS = [
+  'billing_cycle_window',
+  'contract_cadence_window',
+] as const;
+export type RecurringRunExecutionWindowKind =
+  (typeof RECURRING_RUN_EXECUTION_WINDOW_KINDS)[number];
+
 export const DUE_POSITIONS = ['advance', 'arrears'] as const;
 export type DuePosition = (typeof DUE_POSITIONS)[number];
 
@@ -81,6 +88,18 @@ export interface IRecurringInvoiceDetailTiming {
   servicePeriodEnd: ISO8601String;
   invoiceWindowStart: ISO8601String;
   invoiceWindowEnd: ISO8601String;
+}
+
+export interface IRecurringRunExecutionWindowIdentity {
+  kind: RecurringRunExecutionWindowKind;
+  identityKey: string;
+  cadenceOwner: CadenceOwner;
+  clientId?: string;
+  billingCycleId?: string | null;
+  contractId?: string | null;
+  contractLineId?: string | null;
+  windowStart?: ISO8601String | null;
+  windowEnd?: ISO8601String | null;
 }
 
 export interface ICadenceBoundaryGeneratorInput {

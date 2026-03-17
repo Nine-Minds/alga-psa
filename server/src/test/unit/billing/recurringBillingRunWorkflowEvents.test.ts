@@ -34,8 +34,10 @@ describe('recurring billing workflow event payloads', () => {
 
     expect(startedPayload.selectionMode).toBe('due_service_periods');
     expect(startedPayload.windowIdentity).toBe('billing_cycle_window');
+    expect(startedPayload.executionWindowKinds).toBeUndefined();
     expect(completedPayload.selectionMode).toBe('due_service_periods');
     expect(completedPayload.windowIdentity).toBe('billing_cycle_window');
+    expect(completedPayload.executionWindowKinds).toBeUndefined();
 
     recurringBillingRunStartedEventPayloadSchema.parse(
       buildWorkflowPayload(startedPayload as any, {
@@ -64,11 +66,35 @@ describe('recurring billing workflow event payloads', () => {
 
     expect(failedPayload.selectionMode).toBe('due_service_periods');
     expect(failedPayload.windowIdentity).toBe('billing_cycle_window');
+    expect(failedPayload.executionWindowKinds).toBeUndefined();
 
     recurringBillingRunFailedEventPayloadSchema.parse(
       buildWorkflowPayload(failedPayload as any, {
         tenantId: TENANT_ID,
         occurredAt: failedAt,
+        actor: { actorType: 'USER', actorUserId: USER_ID },
+      })
+    );
+  });
+
+  it('allows recurring run workflow metadata to describe mixed client and contract execution-window kinds explicitly', () => {
+    const startedAt = '2026-03-17T12:00:00.000Z';
+    const payload = buildRecurringBillingRunStartedPayload({
+      runId: RUN_ID,
+      startedAt,
+      initiatedByUserId: USER_ID,
+      executionWindowKinds: ['contract_cadence_window', 'billing_cycle_window', 'contract_cadence_window'],
+    });
+
+    expect(payload.executionWindowKinds).toEqual([
+      'billing_cycle_window',
+      'contract_cadence_window',
+    ]);
+
+    recurringBillingRunStartedEventPayloadSchema.parse(
+      buildWorkflowPayload(payload as any, {
+        tenantId: TENANT_ID,
+        occurredAt: startedAt,
         actor: { actorType: 'USER', actorUserId: USER_ID },
       })
     );

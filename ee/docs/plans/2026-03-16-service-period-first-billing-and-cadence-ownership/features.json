@@ -1352,7 +1352,7 @@
   {
     "id": "F151",
     "description": "Define a recurring-run execution identity separate from raw billingCycleId so client-cadence and contract-cadence work can both be scheduled deterministically",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 5",
       "Invoice and billing-flow requirements"
