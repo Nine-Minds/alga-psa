@@ -542,12 +542,8 @@ export default function ProjectDetail({
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
   const kanbanHeaderRef = useRef<HTMLDivElement>(null);
   const scrollbarTrackRef = useRef<HTMLDivElement>(null);
+  const scrollbarThumbRef = useRef<HTMLDivElement>(null);
   const stickyStatusStripRef = useRef<HTMLDivElement>(null);
-  const [boardScrollMetrics, setBoardScrollMetrics] = useState({
-    clientWidth: 0,
-    scrollLeft: 0,
-    scrollWidth: 0
-  });
   const [kanbanHeaderHeight, setKanbanHeaderHeight] = useState(0);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedsRef = useRef<{ horizontal: number; vertical: number; column: HTMLElement | null }>({
@@ -677,6 +673,24 @@ export default function ProjectDetail({
     };
   }, []);
 
+  const updateKanbanScrollbarThumb = useCallback(() => {
+    const thumb = scrollbarThumbRef.current;
+    const geometry = getKanbanScrollbarGeometry();
+    if (!thumb || !geometry) return;
+
+    if (geometry.scrollRange === 0 || geometry.maxThumbOffset === 0) {
+      thumb.style.width = '100%';
+      thumb.style.transform = 'translateX(0)';
+      thumb.classList.add(styles.kanbanScrollbarThumbStatic);
+      return;
+    }
+
+    const thumbOffset = (geometry.container.scrollLeft / geometry.scrollRange) * geometry.maxThumbOffset;
+    thumb.style.width = `${(geometry.thumbWidth / geometry.trackWidth) * 100}%`;
+    thumb.style.transform = `translateX(${thumbOffset}px)`;
+    thumb.classList.remove(styles.kanbanScrollbarThumbStatic);
+  }, [getKanbanScrollbarGeometry]);
+
   const setKanbanScrollFromThumbOffset = useCallback((nextThumbOffset: number) => {
     const geometry = getKanbanScrollbarGeometry();
     if (!geometry) return;
@@ -739,27 +753,8 @@ export default function ProjectDetail({
     let isSyncing = false;
     let observedBoard: HTMLElement | null = null;
 
-    const updateMetrics = () => {
-      const board = container.querySelector('[data-kanban-board="true"]') as HTMLElement | null;
-      const boardWidth = board
-        ? Math.max(board.scrollWidth, Math.ceil(board.getBoundingClientRect().width))
-        : 0;
-      const scrollWidth = Math.max(container.scrollWidth, container.clientWidth, boardWidth);
-      const nextMetrics = {
-        clientWidth: container.clientWidth,
-        scrollLeft: container.scrollLeft,
-        scrollWidth
-      };
-
-      setBoardScrollMetrics((prev) => (
-        prev.clientWidth === nextMetrics.clientWidth &&
-        prev.scrollLeft === nextMetrics.scrollLeft &&
-        prev.scrollWidth === nextMetrics.scrollWidth
-      ) ? prev : nextMetrics);
-    };
-
     const ro = new ResizeObserver(() => {
-      updateMetrics();
+      updateKanbanScrollbarThumb();
     });
 
     const observeBoard = () => {
@@ -784,7 +779,7 @@ export default function ProjectDetail({
 
       if (source !== 'container') container.scrollLeft = nextLeft;
       if (stickyStrip && source !== 'sticky') stickyStrip.scrollLeft = nextLeft;
-      updateMetrics();
+      updateKanbanScrollbarThumb();
       isSyncing = false;
     };
 
@@ -802,10 +797,10 @@ export default function ProjectDetail({
     let nestedRafId: number | null = null;
     const rafId = window.requestAnimationFrame(() => {
       observeBoard();
-      updateMetrics();
+      updateKanbanScrollbarThumb();
       nestedRafId = window.requestAnimationFrame(() => {
         observeBoard();
-        updateMetrics();
+        updateKanbanScrollbarThumb();
       });
     });
 
@@ -823,17 +818,7 @@ export default function ProjectDetail({
       }
       ro.disconnect();
     };
-  }, [showStickyStatusNames, viewMode, kanbanZoomLevel, visibleKanbanStatuses.length, selectedPhase?.phase_id, isLoadingTasks]);
-
-  const hasHorizontalOverflow = boardScrollMetrics.scrollWidth - boardScrollMetrics.clientWidth > 1;
-  const scrollbarThumbWidthPercent = boardScrollMetrics.scrollWidth > 0
-    ? hasHorizontalOverflow
-      ? Math.min(100, Math.max((boardScrollMetrics.clientWidth / boardScrollMetrics.scrollWidth) * 100, 12))
-      : 100
-    : 100;
-  const scrollbarThumbLeftPercent = hasHorizontalOverflow
-    ? (boardScrollMetrics.scrollLeft / (boardScrollMetrics.scrollWidth - boardScrollMetrics.clientWidth)) * (100 - scrollbarThumbWidthPercent)
-    : 0;
+  }, [showStickyStatusNames, viewMode, kanbanZoomLevel, visibleKanbanStatuses.length, selectedPhase?.phase_id, isLoadingTasks, updateKanbanScrollbarThumb]);
 
   // Track header height so the sticky status strip can stack below it when both are active
   useEffect(() => {
@@ -2654,12 +2639,9 @@ export default function ProjectDetail({
                 >
                   <div
                     data-kanban-scrollbar-thumb="true"
-                    className={`${styles.kanbanScrollbarThumb} ${!hasHorizontalOverflow ? styles.kanbanScrollbarThumbStatic : ''}`}
+                    ref={scrollbarThumbRef}
+                    className={styles.kanbanScrollbarThumb}
                     onPointerDown={handleKanbanScrollbarThumbPointerDown}
-                    style={{
-                      left: `${scrollbarThumbLeftPercent}%`,
-                      width: `${scrollbarThumbWidthPercent}%`
-                    }}
                   />
                 </div>
               </div>
