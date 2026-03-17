@@ -11692,6 +11692,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     },
+    "playbooks": [
+      "kb/search-and-read",
+      "kb/find-relevant-articles"
+    ],
     "examples": [
       {
         "name": "List published articles",
@@ -11703,10 +11707,30 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "Search articles",
+        "name": "Search articles by keyword",
         "request": {
           "query": {
             "search": "password reset"
+          }
+        },
+        "notes": "Searches by title and slug. Use this to find relevant KB articles before answering user questions."
+      },
+      {
+        "name": "List troubleshooting articles for clients",
+        "request": {
+          "query": {
+            "status": "published",
+            "audience": "client",
+            "article_type": "troubleshooting"
+          }
+        },
+        "notes": "Filter by audience and type to find specific article sets."
+      },
+      {
+        "name": "List articles needing review",
+        "request": {
+          "query": {
+            "status": "review"
           }
         }
       }
@@ -11788,6 +11812,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     },
+    "playbooks": [
+      "kb/create-article",
+      "kb/create-from-resolution"
+    ],
     "examples": [
       {
         "name": "Create a how-to article with markdown content",
@@ -11799,7 +11827,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "content": "# Steps\n\n1. Navigate to Settings > Users\n2. Find the user\n3. Click Reset Password\n4. The user will receive an email with a reset link",
             "content_format": "markdown"
           }
-        }
+        },
+        "notes": "Always use content_format 'markdown' when generating content. Articles start in 'draft' status — call POST /api/v1/kb-articles/{id}/publish after creation to make them live."
       },
       {
         "name": "Create a troubleshooting article for clients",
@@ -11811,7 +11840,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "content": "# Problem\n\nVPN disconnects frequently.\n\n# Solution\n\n1. Check your internet connection\n2. Restart the VPN client\n3. If the issue persists, contact support",
             "content_format": "markdown"
           }
-        }
+        },
+        "notes": "Client-audience articles become visible in the client portal once published."
+      },
+      {
+        "name": "Create an FAQ article",
+        "request": {
+          "body": {
+            "title": "How do I change my notification settings?",
+            "article_type": "faq",
+            "audience": "client",
+            "content": "## Question\n\nHow do I change my notification settings?\n\n## Answer\n\nGo to **Settings > Notifications** in the client portal. You can toggle email and in-app notifications for each category.",
+            "content_format": "markdown",
+            "review_cycle_days": 90
+          }
+        },
+        "notes": "FAQ articles should be concise. review_cycle_days ensures articles are reviewed periodically."
       }
     ]
   },
@@ -11960,6 +12004,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "tags": [
       "Knowledge Base"
     ],
+    "playbooks": [
+      "kb/create-article",
+      "kb/publish-workflow"
+    ],
     "approvalRequired": false,
     "parameters": [
       {
@@ -12018,9 +12066,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/kb-articles/{id}/content",
     "displayName": "Get KB article content",
     "summary": "Get KB article content",
-    "description": "Get the body content of a KB article as readable markdown text. Use this to read what an article currently says.",
+    "description": "Get the body content of a KB article as readable markdown text. Use this to read what an article currently says. Always call this before answering questions about article content — do not rely on article metadata alone.",
     "tags": [
       "Knowledge Base"
+    ],
+    "playbooks": [
+      "kb/search-and-read",
+      "kb/find-relevant-articles"
     ],
     "approvalRequired": false,
     "parameters": [
@@ -12102,6 +12154,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     },
+    "playbooks": [
+      "kb/update-article-content"
+    ],
     "examples": [
       {
         "name": "Update content with markdown",
@@ -12110,7 +12165,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "content": "# Updated Article\n\nNew content goes here.",
             "format": "markdown"
           }
-        }
+        },
+        "notes": "Always use format 'markdown' for AI-generated content. Read the existing content first with GET /api/v1/kb-articles/{id}/content to preserve any sections that should remain."
+      },
+      {
+        "name": "Append a troubleshooting section",
+        "request": {
+          "body": {
+            "content": "# Problem\n\nUsers cannot log in after password reset.\n\n# Root Cause\n\nBrowser cached old session cookies.\n\n# Resolution\n\n1. Clear browser cookies for the application domain\n2. Close all browser tabs\n3. Open a new browser window and sign in",
+            "format": "markdown"
+          }
+        },
+        "notes": "When writing troubleshooting articles, structure with Problem, Root Cause, and Resolution sections."
       }
     ]
   },
@@ -12198,9 +12264,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/kb-articles/from-ticket/{ticketId}",
     "displayName": "Create KB article from ticket",
     "summary": "Create KB article from ticket",
-    "description": "Create a KB article pre-populated from a ticket's title, description, and resolution. Useful for turning resolved tickets into knowledge base documentation.",
+    "description": "Create a KB article pre-populated from a ticket's title, description, and resolution. Useful for turning resolved tickets into knowledge base documentation. The created article will be a 'troubleshooting' type in 'draft' status — review and publish after creation.",
     "tags": [
       "Knowledge Base"
+    ],
+    "playbooks": [
+      "kb/create-from-resolution",
+      "kb/capture-ticket-knowledge"
     ],
     "approvalRequired": false,
     "parameters": [

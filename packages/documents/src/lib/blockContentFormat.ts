@@ -25,8 +25,14 @@ export const detectBlockContentFormat = (blockData: unknown): BlockContentFormat
     }
 
     const first = parsed[0] as Record<string, unknown> | undefined;
-    if (first && typeof first === 'object' && 'props' in first) {
-      return 'blocknote';
+    if (first && typeof first === 'object') {
+      // BlockNote blocks always have a 'type' field (paragraph, heading, etc.)
+      // and may have 'props'. ProseMirror content is always wrapped in
+      // { type: 'doc', content: [...] }, never a top-level array, so any
+      // array of typed objects is BlockNote.
+      if ('props' in first || 'type' in first) {
+        return 'blocknote';
+      }
     }
     return 'unknown';
   }
@@ -277,6 +283,8 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
         ],
       };
     }
+    case 'horizontalRule':
+      return { type: 'horizontalRule' };
     case 'table': {
       const tableText = extractTextFromUnknown(block.content);
       const content = tableText ? [{ type: 'text', text: tableText }] : [];
