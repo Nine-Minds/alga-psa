@@ -110,7 +110,7 @@
   {
     "id": "T019",
     "description": "P2-5a: packages/clients/src/context/ClientCrossFeatureContext.tsx exists with exported context + hook",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
