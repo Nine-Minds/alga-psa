@@ -41,6 +41,7 @@
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/shared": "*",
+    "@alga-psa/storage": "*",
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",

@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "P2-5b: Move entity image actions (uploadEntityImage, deleteEntityImage) to @alga-psa/storage or horizontal package",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5b"]
   },
   {
