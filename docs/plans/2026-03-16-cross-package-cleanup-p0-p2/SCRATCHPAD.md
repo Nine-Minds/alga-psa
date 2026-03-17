@@ -127,6 +127,7 @@ By target package
 - Deleted `server/src/lib/auth-compat.ts`; the compatibility wrapper is fully retired in favor of `getSession()` from `@alga-psa/auth`.
 - `npm run build` still passes after deleting `server/src/lib/auth-compat.ts`; only pre-existing webpack warnings were emitted.
 - Auth-compat retirement is now represented by the committed `F008`-`F011` change series, so the P1-3 code path is fully checked in.
+- Added `export * from './assets'` to `packages/msp-composition/src/index.ts` to expose the existing assets composition barrel from the package root.
 
 ## Gotchas
 

@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "P1-4: Add 'export * from ./assets' to msp-composition/src/index.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P1-4"]
   },
   {
