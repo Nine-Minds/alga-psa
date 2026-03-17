@@ -147,6 +147,7 @@ By target package
 - T003 verified a fresh repo-root `npm run build` succeeds after the workflow moves, auth cleanup, and storage entity-image extraction work.
 - T004 hit the documented local skip condition: `npx nx graph --file=/tmp/graph.json` still fails with `brace_expansion_1.default is not a function`, so cycle verification continues to rely on the pruned baseline and removed import edge.
 - T005 confirmed `.github/known-cycles.json` now contains `12` baselined cycles, down from the prior `30`.
+- T006 reconfirmed that the direct lint command remains the authoritative measurement path; after the later document cleanup it reports `98` current violations.
 
 ## Gotchas
 

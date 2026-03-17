@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "P0-2: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | wc -l produces a number (authoritative count)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
