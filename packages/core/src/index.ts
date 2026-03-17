@@ -40,7 +40,6 @@ export * from './constants/currency';
 
 // Types barrel export
 export * from './types';
-export * from './context/DocumentsCrossFeatureContext';
 
 // Deletion infrastructure
 export * from './config/deletion';

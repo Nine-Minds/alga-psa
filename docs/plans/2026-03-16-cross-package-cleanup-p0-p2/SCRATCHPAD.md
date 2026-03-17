@@ -141,6 +141,7 @@ By target package
 - P2-5b inventory from the authoritative lint log: `documents` is still the top target with 39 warnings sourced from `projects` (10), `clients` (10), `client-portal` (7), `tickets` (5), `assets` (3), `users` (2), `workflows` (1), and `billing` (1). Common import shapes are entity-image helpers, document utilities, `Documents`/`DocumentUpload` UI, and KB types.
 - Moved the public `uploadEntityImage` / `deleteEntityImage` entrypoint to `@alga-psa/storage` and updated the `client-portal`, `teams`, `users`, `tenancy`, and `clients` callers to import from the horizontal package instead of `@alga-psa/documents`.
 - Added a horizontal `DocumentsCrossFeatureContext` to `@alga-psa/core` so remaining document UI imports can be replaced without introducing new vertical-to-vertical dependencies.
+- `DocumentsCrossFeatureContext` must stay off the root `@alga-psa/core` barrel because exporting a client-only React context there causes server imports of `@alga-psa/core` to fail Next.js builds.
 
 ## Gotchas
 
