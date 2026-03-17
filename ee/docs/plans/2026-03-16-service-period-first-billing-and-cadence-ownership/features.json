@@ -656,7 +656,7 @@
   {
     "id": "F110",
     "description": "Update recurring billing selection and run logic to handle mixed cadence owners deterministically",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {

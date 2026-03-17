@@ -182,6 +182,82 @@ describe("BillingEngine billing timing", () => {
     expect(result?.coverageRatio).toBeCloseTo(22 / 31, 8);
   });
 
+  it("T146: recurring selection stays deterministic when client-cadence and contract-cadence lines coexist on one client", () => {
+    const engine = new BillingEngine();
+
+    const billingPeriod = {
+      startDate: "2025-02-01",
+      endDate: "2025-03-01",
+    };
+
+    const clientAdvanceLine = {
+      client_contract_line_id: "client-line",
+      billing_timing: "advance",
+      billing_frequency: "monthly",
+      cadence_owner: "client",
+      start_date: "2025-01-01",
+      end_date: null,
+    } as any;
+
+    const contractArrearsSameWindowLine = {
+      client_contract_line_id: "contract-line-match",
+      billing_timing: "arrears",
+      billing_frequency: "monthly",
+      cadence_owner: "contract",
+      start_date: "2025-01-01",
+      end_date: null,
+    } as any;
+
+    const contractAdvanceDifferentWindowLine = {
+      client_contract_line_id: "contract-line-different-window",
+      billing_timing: "advance",
+      billing_frequency: "monthly",
+      cadence_owner: "contract",
+      start_date: "2025-02-08",
+      end_date: null,
+    } as any;
+
+    const mixedOrderSelection = (engine as any).buildRecurringTimingSelections(
+      billingPeriod,
+      [
+        contractAdvanceDifferentWindowLine,
+        contractArrearsSameWindowLine,
+        clientAdvanceLine,
+      ],
+      "monthly",
+    );
+    const reversedOrderSelection = (engine as any).buildRecurringTimingSelections(
+      billingPeriod,
+      [
+        clientAdvanceLine,
+        contractArrearsSameWindowLine,
+        contractAdvanceDifferentWindowLine,
+      ],
+      "monthly",
+    );
+
+    expect(mixedOrderSelection).toEqual(reversedOrderSelection);
+    expect(Object.keys(mixedOrderSelection)).toEqual([
+      "client-line",
+      "contract-line-match",
+    ]);
+    expect(mixedOrderSelection).toMatchObject({
+      "client-line": {
+        duePosition: "advance",
+        servicePeriodStart: "2025-02-01",
+        servicePeriodEnd: "2025-02-28",
+      },
+      "contract-line-match": {
+        duePosition: "arrears",
+        servicePeriodStart: "2025-01-01",
+        servicePeriodEnd: "2025-01-31",
+      },
+    });
+    expect(
+      mixedOrderSelection["contract-line-different-window"],
+    ).toBeUndefined();
+  });
+
   it("T041: fixed recurring charge calculation no longer depends on resolveServicePeriod", async () => {
     const engine = new BillingEngine();
     (engine as any).tenant = "test_tenant";

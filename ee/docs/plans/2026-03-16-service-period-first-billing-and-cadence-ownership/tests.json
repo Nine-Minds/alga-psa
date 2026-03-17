@@ -158,7 +158,7 @@
   {"id":"T143","description":"Unsupported mixed-cadence combinations fail fast in the action layer with clear validation errors","implemented":false,"featureIds":["F088","F136"]},
   {"id":"T144","description":"Unsupported mixed-cadence combinations fail fast in API schemas with clear validation errors","implemented":false,"featureIds":["F085","F136"]},
   {"id":"T145","description":"Unsupported mixed-cadence combinations surface clear validation in UI configuration flows","implemented":false,"featureIds":["F091","F136"]},
-  {"id":"T146","description":"Recurring run selection remains deterministic when both cadence owners are present on one client","implemented":false,"featureIds":["F110"]},
+  {"id":"T146","description":"Recurring run selection remains deterministic when both cadence owners are present on one client","implemented":true,"featureIds":["F110"]},
   {"id":"T147","description":"Portal and export consumers remain stable when invoices contain mixed cadence-owner recurring lines","implemented":false,"featureIds":["F097","F099","F110"]},
   {"id":"T148","description":"Mixed cadence-owner disputes can be traced using the documented runbook and persisted metadata","implemented":false,"featureIds":["F149"]},
   {"id":"T149","description":"End-exclusive overlap semantics remain correct when mixed cadence owners coexist","implemented":false,"featureIds":["F145"]},

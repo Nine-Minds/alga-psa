@@ -346,6 +346,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Mixed-cadence live execution remains blocked on the current billing-cycle run identity:
   - `packages/billing/src/actions/invoiceGeneration.ts` and `packages/billing/src/actions/recurringBillingRunActions.ts` still model one recurring run input as one `billingCycleId` / one client invoice window
   - `packages/billing/src/lib/billing/billingEngine.ts` still builds live recurring timing selections around the current billing window, so mixed cadence that lands on different windows cannot be executed coherently until the later execution-identity work (`F110`, `F151+`)
+- (2026-03-17) Mixed-cadence selection is now deterministic on the current billing-cycle run path, which closes `F110` without claiming the later scheduler rewrite:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now branches recurring timing selection by `cadence_owner`, using client-cadence periods for `client` lines and the shared contract-cadence generator plus contract-owned invoice-window matching for `contract` lines
+  - on the current `billingCycleId`-driven run path, contract-owned lines are billed only when their contract-owned due window exactly matches the active invoice window; differing contract windows are skipped instead of being pulled into the enclosing client billing cycle
+  - recurring timing selections are now built in stable `client_contract_line_id` order, and `server/src/test/unit/billing/billingEngine.timing.test.ts` closes `T146` by proving the same mixed-cadence result is produced regardless of input order
+  - broader execution identity, background job payloads, and truly schedulable contract-cadence windows are still deferred to `F151+`; this checkpoint only makes the existing run path deterministic when mixed cadence data is present
 - (2026-03-17) Invoice reread stability now has an explicit regression guard, which closes `T080`:
   - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now proves that `Invoice.getById(...)`, `Invoice.getFullInvoiceById(...)`, and a second `Invoice.getById(...)` reread all preserve the same aggregated canonical service-period metadata for a multi-detail recurring charge
   - this keeps invoice reload paths from drifting even when one recurring parent charge spans multiple canonical detail periods
@@ -565,6 +570,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/manualInvoiceActions.recurringIsolation.test.ts --coverage.enabled false`
 - (2026-03-17) Manual-invoice edit/view validation:
   - `npx vitest run src/test/unit/billing/manualInvoiceActions.viewing.test.ts --coverage.enabled false`
+- (2026-03-17) Mixed-cadence deterministic selection validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 ## Links / References
 

@@ -20,6 +20,7 @@ import {
   IProductCharge,
   ILicenseCharge,
   IClientContractLineCycle,
+  IRecurringServicePeriod,
   BillingCycleType,
   RECURRING_RANGE_SEMANTICS,
 } from "@alga-psa/types";
@@ -34,12 +35,20 @@ import {
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from "@js-temporal/polyfill";
 import type { ISO8601String, IClient } from "@alga-psa/types";
-import { toPlainDate, toISODate, getCurrencySymbol } from "@alga-psa/core";
+import { toPlainDate, toISODate, toISOTimestamp, getCurrencySymbol } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
 import {
   resolveCadenceOwner,
   resolveRecurringSettlementsForInvoiceWindow,
 } from "@alga-psa/shared/billingClients/recurringTiming";
+import {
+  generateAnnualContractCadenceServicePeriods,
+  generateMonthlyContractCadenceServicePeriods,
+  generateQuarterlyContractCadenceServicePeriods,
+  generateSemiAnnualContractCadenceServicePeriods,
+  resolveContractCadenceAnchorDate,
+  resolveContractCadenceInvoiceWindowForServicePeriod,
+} from "@alga-psa/shared/billingClients/contractCadenceServicePeriods";
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService
 import {
@@ -78,6 +87,8 @@ type RecurringChargeTimingSelections = Record<
 type CalculateBillingOptions = {
   recurringTimingSelections?: RecurringChargeTimingSelections;
 };
+
+type ContractCadenceGenerator = typeof generateMonthlyContractCadenceServicePeriods;
 
 export class BillingEngine {
   private knex: Knex;
@@ -1792,7 +1803,9 @@ export class BillingEngine {
   ): RecurringChargeTimingSelections {
     const recurringTimingSelections: RecurringChargeTimingSelections = {};
 
-    for (const clientContractLine of clientContractLines) {
+    for (const clientContractLine of [...clientContractLines].sort((left, right) =>
+      left.client_contract_line_id.localeCompare(right.client_contract_line_id),
+    )) {
       const timingSelection = this.buildRecurringChargeTimingSelection(
         billingPeriod,
         clientContractLine,
@@ -1818,87 +1831,76 @@ export class BillingEngine {
       | "advance";
     const currentStart = toISODate(toPlainDate(billingPeriod.startDate));
     const currentEndExclusive = toISODate(toPlainDate(billingPeriod.endDate));
-    const previousStart = toISODate(
-      (() => {
-        const currentStartDate = toPlainDate(currentStart);
-        switch (billingCycle) {
-          case "weekly":
-            return currentStartDate.subtract({ days: 7 });
-          case "bi-weekly":
-            return currentStartDate.subtract({ days: 14 });
-          case "monthly":
-            return currentStartDate.subtract({ months: 1 });
-          case "quarterly":
-            return currentStartDate.subtract({ months: 3 });
-          case "semi-annually":
-            return currentStartDate.subtract({ months: 6 });
-          case "annually":
-            return currentStartDate.subtract({ years: 1 });
-          default:
-            return currentStartDate.subtract({
-              days: Math.max(
-                toPlainDate(currentStart).until(
-                  toPlainDate(currentEndExclusive),
-                  { largestUnit: "days" },
-                ).days,
-                1,
-              ),
-            });
-        }
-      })(),
-    );
-
     const cadenceOwner = resolveCadenceOwner(clientContractLine.cadence_owner);
-    const settlements = resolveRecurringSettlementsForInvoiceWindow({
-      servicePeriods: [
-        {
-          kind: "service_period",
-          cadenceOwner,
-          duePosition,
-          sourceObligation: {
-            obligationId: clientContractLine.client_contract_line_id,
-            obligationType: "client_contract_line",
-            chargeFamily: "fixed",
-            tenant: this.tenant ?? undefined,
-          },
-          start: previousStart,
-          end: currentStart,
-          semantics: RECURRING_RANGE_SEMANTICS,
-        },
-        {
-          kind: "service_period",
-          cadenceOwner,
-          duePosition,
-          sourceObligation: {
-            obligationId: clientContractLine.client_contract_line_id,
-            obligationType: "client_contract_line",
-            chargeFamily: "fixed",
-            tenant: this.tenant ?? undefined,
-          },
-          start: currentStart,
-          end: currentEndExclusive,
-          semantics: RECURRING_RANGE_SEMANTICS,
-        },
-      ],
-      invoiceWindow: {
-        kind: "invoice_window",
-        cadenceOwner,
-        duePosition,
-        start: currentStart,
-        end: currentEndExclusive,
-        semantics: RECURRING_RANGE_SEMANTICS,
-      },
-      activityWindow: {
-        start: clientContractLine.start_date
-          ? toISODate(toPlainDate(clientContractLine.start_date))
-          : undefined,
-        end: clientContractLine.end_date
-          ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
-          : undefined,
-        semantics: RECURRING_RANGE_SEMANTICS,
-      },
-      duePosition,
-    });
+    const sourceObligation = {
+      obligationId: clientContractLine.client_contract_line_id,
+      obligationType: "client_contract_line" as const,
+      chargeFamily: "fixed" as const,
+      tenant: this.tenant ?? undefined,
+    };
+    const activityWindow = {
+      start: clientContractLine.start_date
+        ? toISODate(toPlainDate(clientContractLine.start_date))
+        : undefined,
+      end: clientContractLine.end_date
+        ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
+        : undefined,
+      semantics: RECURRING_RANGE_SEMANTICS,
+    };
+
+    const settlements =
+      cadenceOwner === "contract"
+        ? this.resolveContractCadenceSettlementsForInvoiceWindow({
+            billingPeriod,
+            clientContractLine,
+            duePosition,
+            sourceObligation,
+            activityWindow,
+            invoiceWindow: {
+              kind: "invoice_window",
+              cadenceOwner: "contract",
+              duePosition,
+              start: currentStart,
+              end: currentEndExclusive,
+              semantics: RECURRING_RANGE_SEMANTICS,
+            },
+          })
+        : resolveRecurringSettlementsForInvoiceWindow({
+            servicePeriods: [
+              {
+                kind: "service_period",
+                cadenceOwner,
+                duePosition,
+                sourceObligation,
+                start: this.getPreviousRecurringBoundaryStart(
+                  currentStart,
+                  currentEndExclusive,
+                  billingCycle,
+                ),
+                end: currentStart,
+                semantics: RECURRING_RANGE_SEMANTICS,
+              },
+              {
+                kind: "service_period",
+                cadenceOwner,
+                duePosition,
+                sourceObligation,
+                start: currentStart,
+                end: currentEndExclusive,
+                semantics: RECURRING_RANGE_SEMANTICS,
+              },
+            ],
+            invoiceWindow: {
+              kind: "invoice_window",
+              cadenceOwner,
+              duePosition,
+              start: currentStart,
+              end: currentEndExclusive,
+              semantics: RECURRING_RANGE_SEMANTICS,
+            },
+            activityWindow,
+            duePosition,
+          });
 
     const settlement = settlements[0];
     if (!settlement) {
@@ -1907,14 +1909,169 @@ export class BillingEngine {
 
     return {
       duePosition,
-      servicePeriodStart: settlement.coveredServicePeriod.start,
+      servicePeriodStart: toISODate(
+        toPlainDate(settlement.coveredServicePeriod.start),
+      ),
       servicePeriodEnd: toISODate(
         toPlainDate(settlement.coveredServicePeriod.end).subtract({ days: 1 }),
       ),
-      servicePeriodStartExclusive: settlement.coveredServicePeriod.start,
-      servicePeriodEndExclusive: settlement.coveredServicePeriod.end,
+      servicePeriodStartExclusive: toISODate(
+        toPlainDate(settlement.coveredServicePeriod.start),
+      ),
+      servicePeriodEndExclusive: toISODate(
+        toPlainDate(settlement.coveredServicePeriod.end),
+      ),
       coverageRatio: settlement.coverage.coverageRatio,
     };
+  }
+
+  private getPreviousRecurringBoundaryStart(
+    currentStart: ISO8601String,
+    currentEndExclusive: ISO8601String,
+    billingCycle: string,
+  ): ISO8601String {
+    const currentStartDate = toPlainDate(currentStart);
+
+    switch (billingCycle) {
+      case "weekly":
+        return toISODate(currentStartDate.subtract({ days: 7 }));
+      case "bi-weekly":
+        return toISODate(currentStartDate.subtract({ days: 14 }));
+      case "monthly":
+        return toISODate(currentStartDate.subtract({ months: 1 }));
+      case "quarterly":
+        return toISODate(currentStartDate.subtract({ months: 3 }));
+      case "semi-annually":
+        return toISODate(currentStartDate.subtract({ months: 6 }));
+      case "annually":
+        return toISODate(currentStartDate.subtract({ years: 1 }));
+      default:
+        return toISODate(
+          currentStartDate.subtract({
+            days: Math.max(
+              toPlainDate(currentStart).until(
+                toPlainDate(currentEndExclusive),
+                { largestUnit: "days" },
+              ).days,
+              1,
+            ),
+          }),
+        );
+    }
+  }
+
+  private resolveContractCadenceSettlementsForInvoiceWindow(input: {
+    billingPeriod: IBillingPeriod;
+    clientContractLine: IClientContractLine;
+    duePosition: "arrears" | "advance";
+    sourceObligation: {
+      obligationId: string;
+      obligationType: "client_contract_line";
+      chargeFamily: "fixed";
+      tenant?: string;
+    };
+    activityWindow: {
+      start?: ISO8601String;
+      end?: ISO8601String;
+      semantics: typeof RECURRING_RANGE_SEMANTICS;
+    };
+    invoiceWindow: {
+      kind: "invoice_window";
+      cadenceOwner: "contract";
+      duePosition: "arrears" | "advance";
+      start: ISO8601String;
+      end: ISO8601String;
+      semantics: typeof RECURRING_RANGE_SEMANTICS;
+    };
+  }) {
+    const contractCadence = this.getContractCadenceDefinition(
+      input.clientContractLine.billing_frequency,
+    );
+
+    if (!contractCadence) {
+      throw new Error(
+        `Unsupported contract cadence frequency "${input.clientContractLine.billing_frequency ?? "unknown"}" for contract line ${input.clientContractLine.client_contract_line_id}`,
+      );
+    }
+
+    const anchorDate = resolveContractCadenceAnchorDate({
+      assignmentStartDate: toISOTimestamp(
+        toPlainDate(input.clientContractLine.start_date),
+      ),
+    });
+    const rangeStart = toISOTimestamp(
+      toPlainDate(input.billingPeriod.startDate).subtract({
+        months: contractCadence.monthsPerPeriod,
+      }),
+    );
+    const rangeEnd = toISOTimestamp(
+      toPlainDate(input.billingPeriod.endDate).add({
+        months: contractCadence.monthsPerPeriod,
+      }),
+    );
+    const servicePeriods = contractCadence.generator({
+      rangeStart,
+      rangeEnd,
+      sourceObligation: input.sourceObligation,
+      duePosition: input.duePosition,
+      anchorDate,
+    }).filter((servicePeriod: IRecurringServicePeriod) => {
+      const contractInvoiceWindow =
+        resolveContractCadenceInvoiceWindowForServicePeriod({
+          servicePeriod,
+          anchorDate,
+          monthsPerPeriod: contractCadence.monthsPerPeriod,
+        });
+
+      return (
+        toISODate(toPlainDate(contractInvoiceWindow.start)) ===
+          input.invoiceWindow.start &&
+        toISODate(toPlainDate(contractInvoiceWindow.end)) ===
+          input.invoiceWindow.end
+      );
+    });
+
+    if (servicePeriods.length > 1) {
+      throw new Error(
+        `Contract cadence produced multiple due service periods for one invoice window on contract line ${input.clientContractLine.client_contract_line_id}`,
+      );
+    }
+
+    return resolveRecurringSettlementsForInvoiceWindow({
+      servicePeriods,
+      invoiceWindow: input.invoiceWindow,
+      activityWindow: input.activityWindow,
+      duePosition: input.duePosition,
+    });
+  }
+
+  private getContractCadenceDefinition(
+    billingFrequency?: string | null,
+  ): { monthsPerPeriod: number; generator: ContractCadenceGenerator } | null {
+    switch (billingFrequency) {
+      case "monthly":
+        return {
+          monthsPerPeriod: 1,
+          generator: generateMonthlyContractCadenceServicePeriods,
+        };
+      case "quarterly":
+        return {
+          monthsPerPeriod: 3,
+          generator: generateQuarterlyContractCadenceServicePeriods,
+        };
+      case "semi-annually":
+        return {
+          monthsPerPeriod: 6,
+          generator: generateSemiAnnualContractCadenceServicePeriods,
+        };
+      case "annually":
+        return {
+          monthsPerPeriod: 12,
+          generator: generateAnnualContractCadenceServicePeriods,
+        };
+      default:
+        return null;
+    }
   }
 
   private async calculateTimeBasedCharges(
