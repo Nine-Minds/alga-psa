@@ -764,7 +764,7 @@
   {
     "id": "F128",
     "description": "Update event schemas and billing workflow events that carry recurring invoice or billing detail so service-period-first semantics remain explicit and stable",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

@@ -1,8 +1,13 @@
+export type RecurringBillingRunSelectionMode = 'due_service_periods';
+export type RecurringBillingRunWindowIdentity = 'billing_cycle_window';
+
 export type RecurringBillingRunStartedPayloadInput = {
   runId: string;
   scheduleId?: string;
   startedAt?: string;
   initiatedByUserId?: string;
+  selectionMode?: RecurringBillingRunSelectionMode;
+  windowIdentity?: RecurringBillingRunWindowIdentity;
 };
 
 export function buildRecurringBillingRunStartedPayload(input: RecurringBillingRunStartedPayloadInput) {
@@ -11,6 +16,8 @@ export function buildRecurringBillingRunStartedPayload(input: RecurringBillingRu
     scheduleId: input.scheduleId ?? undefined,
     startedAt: input.startedAt,
     initiatedByUserId: input.initiatedByUserId,
+    selectionMode: input.selectionMode ?? 'due_service_periods',
+    windowIdentity: input.windowIdentity ?? 'billing_cycle_window',
   };
 }
 
@@ -20,6 +27,8 @@ export type RecurringBillingRunCompletedPayloadInput = {
   invoicesCreated: number;
   failedCount: number;
   warnings?: string[];
+  selectionMode?: RecurringBillingRunSelectionMode;
+  windowIdentity?: RecurringBillingRunWindowIdentity;
 };
 
 export function buildRecurringBillingRunCompletedPayload(input: RecurringBillingRunCompletedPayloadInput) {
@@ -29,6 +38,8 @@ export function buildRecurringBillingRunCompletedPayload(input: RecurringBilling
     invoicesCreated: input.invoicesCreated,
     failedCount: input.failedCount,
     warnings: input.warnings?.length ? input.warnings : undefined,
+    selectionMode: input.selectionMode ?? 'due_service_periods',
+    windowIdentity: input.windowIdentity ?? 'billing_cycle_window',
   };
 }
 
@@ -38,6 +49,8 @@ export type RecurringBillingRunFailedPayloadInput = {
   errorCode?: string;
   errorMessage: string;
   retryable?: boolean;
+  selectionMode?: RecurringBillingRunSelectionMode;
+  windowIdentity?: RecurringBillingRunWindowIdentity;
 };
 
 export function buildRecurringBillingRunFailedPayload(input: RecurringBillingRunFailedPayloadInput) {
@@ -47,6 +60,7 @@ export function buildRecurringBillingRunFailedPayload(input: RecurringBillingRun
     errorCode: input.errorCode,
     errorMessage: input.errorMessage,
     retryable: input.retryable,
+    selectionMode: input.selectionMode ?? 'due_service_periods',
+    windowIdentity: input.windowIdentity ?? 'billing_cycle_window',
   };
 }
-

@@ -56,6 +56,8 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
       runId,
       startedAt,
       initiatedByUserId: actorUserId,
+      selectionMode: 'due_service_periods',
+      windowIdentity: 'billing_cycle_window',
     }),
     ctx: {
       tenantId,
@@ -96,6 +98,8 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
         completedAt,
         invoicesCreated,
         failedCount: failures.length,
+        selectionMode: 'due_service_periods',
+        windowIdentity: 'billing_cycle_window',
       }),
       ctx: {
         tenantId,
@@ -124,6 +128,8 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
         failedAt,
         errorMessage,
         retryable: true,
+        selectionMode: 'due_service_periods',
+        windowIdentity: 'billing_cycle_window',
       }),
       ctx: {
         tenantId,

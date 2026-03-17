@@ -421,6 +421,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/services/accountingExportInvoiceSelector.ts` now selects `invoice_charge_details.billing_timing` alongside canonical start/end dates, emits sorted `recurringDetailPeriods` on preview rows, and persists those exact periods into export-line payloads during batch creation
   - `server/src/lib/api/controllers/ApiCSVAccountingController.ts` now forwards the same canonical recurring detail payload when CSV export creates batch lines through the shared export service, keeping manual CSV-triggered batches on the same detail-aware contract as the dashboard export flow
   - `server/src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts` now proves both seams: preview selection exposes canonical recurring detail periods, and `createBatchFromFilters(...)` persists them into the export-line payload that downstream adapters and rereads consume
+- (2026-03-17) Recurring billing workflow events now state their service-period-first selection basis explicitly instead of leaving it implicit in builder defaults, which closes `F128`:
+  - `shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders.ts` now defaults recurring billing run payloads to `selectionMode = 'due_service_periods'` and `windowIdentity = 'billing_cycle_window'`, making the current run contract explicit about how service-period-first billing still selects work during the billing-cycle-identity phase
+  - `shared/workflow/runtime/schemas/billingEventSchemas.ts` now requires those fields on recurring billing run started/completed/failed payloads, so schema consumers and future automation logic cannot treat the selection basis as an unstated convention
+  - `packages/billing/src/actions/recurringBillingRunActions.ts` now passes the same explicit fields at every publish site instead of relying on implicit builder defaults, keeping the emitted workflow events stable if the builders evolve later
+  - `server/src/test/unit/billing/recurringBillingRunWorkflowEvents.test.ts` and `server/src/test/unit/billing/recurringBillingRunActions.test.ts` now lock both sides: schema validation and action-layer publish inputs
 - (2026-03-17) Comparison-mode rollout control now closes `F113` and `T154` without changing live invoice persistence:
   - `packages/billing/src/actions/invoiceGeneration.ts` now treats `RECURRING_BILLING_COMPARISON_MODE=legacy-vs-canonical` as an additive action-layer gate on `calculateBillingForInvoiceWindow(...)`
   - when enabled, the action runs the canonical preselected recurring path first, then executes one legacy-style billing calculation without `recurringTimingSelections` and logs a structured drift warning if the comparison snapshot differs
@@ -665,6 +670,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
     - still blocked by the unrelated pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not by the accounting-export payload changes
+- (2026-03-17) Recurring billing workflow-event schema validation:
+  - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/recurringBillingRunWorkflowEvents.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the unrelated pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error
 - (2026-03-17) Client billing schedule cadence-owner copy validation:
   - `npx vitest run src/test/unit/billing/ClientBillingSchedule.ui.test.tsx ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest picks up the existing workspace alias config for both server and package tests

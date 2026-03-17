@@ -9,6 +9,8 @@ const clientIdSchema = uuidSchema('Client ID');
 const userIdSchema = uuidSchema('User ID');
 
 const deliveryMethodSchema = z.enum(['email', 'portal', 'print']).describe('Invoice delivery method');
+const recurringBillingRunSelectionModeSchema = z.enum(['due_service_periods']).describe('How recurring billing selected charge timing for the run');
+const recurringBillingRunWindowIdentitySchema = z.enum(['billing_cycle_window']).describe('How the current recurring run identified invoice windows');
 
 export const invoiceGeneratedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   invoiceId: invoiceIdSchema,
@@ -220,6 +222,8 @@ export const recurringBillingRunStartedEventPayloadSchema = BaseDomainEventPaylo
   scheduleId: z.string().uuid().optional(),
   startedAt: z.string().datetime().optional(),
   initiatedByUserId: userIdSchema.optional(),
+  selectionMode: recurringBillingRunSelectionModeSchema,
+  windowIdentity: recurringBillingRunWindowIdentitySchema,
 }).describe('Payload for RECURRING_BILLING_RUN_STARTED');
 
 export type RecurringBillingRunStartedEventPayload = z.infer<typeof recurringBillingRunStartedEventPayloadSchema>;
@@ -230,6 +234,8 @@ export const recurringBillingRunCompletedEventPayloadSchema = BaseDomainEventPay
   invoicesCreated: z.number().int().nonnegative(),
   failedCount: z.number().int().nonnegative(),
   warnings: z.array(z.string()).optional(),
+  selectionMode: recurringBillingRunSelectionModeSchema,
+  windowIdentity: recurringBillingRunWindowIdentitySchema,
 }).describe('Payload for RECURRING_BILLING_RUN_COMPLETED');
 
 export type RecurringBillingRunCompletedEventPayload = z.infer<typeof recurringBillingRunCompletedEventPayloadSchema>;
@@ -240,6 +246,8 @@ export const recurringBillingRunFailedEventPayloadSchema = BaseDomainEventPayloa
   errorCode: z.string().optional(),
   errorMessage: z.string().min(1),
   retryable: z.boolean().optional(),
+  selectionMode: recurringBillingRunSelectionModeSchema,
+  windowIdentity: recurringBillingRunWindowIdentitySchema,
 }).describe('Payload for RECURRING_BILLING_RUN_FAILED');
 
 export type RecurringBillingRunFailedEventPayload = z.infer<typeof recurringBillingRunFailedEventPayloadSchema>;
