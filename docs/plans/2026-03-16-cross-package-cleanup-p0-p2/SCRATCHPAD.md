@@ -132,6 +132,7 @@ By target package
 - Added `export * from './clients'` to `packages/msp-composition/src/index.ts`; the root barrel now exposes assets, billing, clients, tickets, projects, and scheduling.
 - `npm run build` passes with the expanded `@alga-psa/msp-composition` barrel; no new build regressions surfaced.
 - The `msp-composition` export wiring is now fully committed via the `F013`-`F016` change series.
+- P2-5a inventory: `packages/projects/src/actions/projectActions.ts` is the active `projects -> clients` direct import (`getContactByContactNameId`); `packages/scheduling/src` currently has no direct `@alga-psa/clients` imports.
 
 ## Gotchas
 
