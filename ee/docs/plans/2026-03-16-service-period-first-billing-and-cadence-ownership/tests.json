@@ -1747,7 +1747,7 @@
   {
     "id": "T201",
     "description": "Billed-through readers derive recurring enforcement from canonical detail periods instead of invoice header periods",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F171"
     ]

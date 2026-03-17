@@ -39,6 +39,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Billed-through enforcement is now explicitly locked to canonical detail periods instead of invoice-header period fields, which closes `F171` and `T201`:
+  - `packages/billing/src/lib/billing/billingEngine.ts` was already reading duplicate-prevention state from `invoice_charge_details.service_period_start`, `invoice_charge_details.service_period_end`, and `invoice_charge_details.billing_timing` via `hasExistingServicePeriodCharge(...)`; this checkpoint made that lifecycle-enforcement contract explicit rather than leaving it implicit in the helper
+  - `server/src/test/unit/billing/billingEngine.billedThroughReader.test.ts` now proves the reader targets `invoice_charge_details as iid` plus detail-period fields and does not query `billing_period_end` from invoice headers, while the existing `T087` runtime regression in `server/src/test/unit/billing/billingEngine.timing.test.ts` remains the behavior-level guard that an already-persisted advance service period is skipped even when the enclosing invoice window metadata is later
+  - no production code changed in this checkpoint; the work was to convert the already-migrated billed-through reader into an executable contract before broader recurring lifecycle guards (`F172+`) build on it
+
 - (2026-03-17) Invoice workflow events and audit logs now carry recurring-detail provenance instead of relying implicitly on invoice headers alone, which closes `F170` and `T199`:
   - `server/src/lib/api/services/invoiceWorkflowEvents.ts` now defines `summarizeInvoiceRecurringProvenance(...)`, which reduces hydrated invoice charges into one additive provenance summary: whether recurring timing is authoritative from canonical detail rows or only parent charge fields, how many detail-backed charges/periods exist, the recurring summary range, and whether timing is uniform or mixed
   - `shared/workflow/runtime/schemas/billingEventSchemas.ts` now allows that `recurringProvenance` object on invoice workflow payloads such as sent, status-changed, due-date-changed, overdue, and written-off events, so workflow consumers can distinguish canonical recurring provenance from header-grouping dates without a schema fork
@@ -1018,6 +1023,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
     - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not on the `F170` workflow/audit provenance changes
+- (2026-03-17) Billed-through detail-reader validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.billedThroughReader.test.ts src/test/unit/billing/billingEngine.timing.test.ts -t "T201|T087" --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not on the `F171` billed-through reader contract
 
 ## Links / References
 

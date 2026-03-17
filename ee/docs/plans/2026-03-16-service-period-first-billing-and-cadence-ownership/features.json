@@ -1532,7 +1532,7 @@
   {
     "id": "F171",
     "description": "Replace header-period billed-through readers with detail-period billed-through readers for recurring invoice lifecycle enforcement",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "Read-model and post-persist lifecycle requirements"
