@@ -447,6 +447,11 @@ export interface ITransaction extends TenantEntity {
   expiration_date?: ISO8601String;
   related_transaction_id?: string;
   currency_code: string;
+  invoice_number?: string;
+  invoice_status?: string;
+  invoice_service_period_start?: ISO8601String | null;
+  invoice_service_period_end?: ISO8601String | null;
+  invoice_date_basis?: 'financial_document_date' | 'canonical_recurring_service_period';
 }
 
 export interface ICreditTracking extends TenantEntity {
@@ -461,6 +466,15 @@ export interface ICreditTracking extends TenantEntity {
   is_expired: boolean;
   updated_at?: ISO8601String;
   currency_code: string;
+  transaction_description?: string;
+  transaction_type?: TransactionType;
+  invoice_id?: string;
+  transaction_date?: ISO8601String;
+  invoice_number?: string;
+  invoice_status?: string;
+  invoice_service_period_start?: ISO8601String | null;
+  invoice_service_period_end?: ISO8601String | null;
+  invoice_date_basis?: 'financial_document_date' | 'canonical_recurring_service_period';
 }
 
 export interface ICreditExpirationSettings {

@@ -1868,7 +1868,7 @@
   {
     "id": "T216",
     "description": "Credit memo issuance preserves lineage and date semantics when source invoices are detail-period-backed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F185"
     ]
@@ -1876,7 +1876,7 @@
   {
     "id": "T217",
     "description": "Credit application behaves correctly when applying credits to invoices backed by canonical recurring detail periods",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F186"
     ]
@@ -1884,7 +1884,7 @@
   {
     "id": "T218",
     "description": "Credit expiration and reconciliation flows use the documented date basis after recurring timing cutover",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187"
     ]

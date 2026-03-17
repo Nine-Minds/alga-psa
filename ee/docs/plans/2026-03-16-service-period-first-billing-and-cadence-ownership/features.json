@@ -1658,7 +1658,7 @@
   {
     "id": "F185",
     "description": "Define credit memo issuance metadata and date basis when source recurring invoices are detail-period-backed",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "UI and downstream-consumer requirements"
@@ -1667,7 +1667,7 @@
   {
     "id": "F186",
     "description": "Define credit application behavior and invariants when applied-to invoices or source invoices use canonical recurring detail periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "Read-model and post-persist lifecycle requirements"
@@ -1676,7 +1676,7 @@
   {
     "id": "F187",
     "description": "Define credit expiration and credit reconciliation date-basis rules after recurring timing no longer relies on invoice header periods alone",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "UI and downstream-consumer requirements"

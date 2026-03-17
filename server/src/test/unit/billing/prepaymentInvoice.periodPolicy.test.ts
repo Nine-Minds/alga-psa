@@ -78,6 +78,7 @@ const mocks = vi.hoisted(() => {
     ),
     publishWorkflowEvent: vi.fn(async () => undefined),
     generateInvoiceNumber: vi.fn(async () => 'INV-1001'),
+    buildCreditNoteCreatedPayload: vi.fn((payload) => payload),
   };
 });
 
@@ -112,7 +113,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 vi.mock('@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders', () => ({
-  buildCreditNoteCreatedPayload: vi.fn((payload) => payload),
+  buildCreditNoteCreatedPayload: mocks.buildCreditNoteCreatedPayload,
   buildCreditNoteVoidedPayload: vi.fn((payload) => payload),
 }));
 
@@ -159,5 +160,25 @@ describe('prepayment invoice service-period policy', () => {
       remaining_amount: 5000,
     });
     expect(mocks.db.accessedTables).not.toContain('invoice_charge_details');
+    expect(mocks.buildCreditNoteCreatedPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceDocumentKind: 'prepayment_invoice',
+        sourceInvoiceId: 'prepayment-invoice-1',
+        sourceInvoiceNumber: 'INV-1001',
+        sourceInvoiceStatus: 'draft',
+        sourceInvoiceDateBasis: 'financial_document_date',
+        sourceServicePeriodStart: null,
+        sourceServicePeriodEnd: null,
+      }),
+    );
+    expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'CREDIT_NOTE_CREATED',
+        payload: expect.objectContaining({
+          sourceDocumentKind: 'prepayment_invoice',
+          sourceInvoiceDateBasis: 'financial_document_date',
+        }),
+      }),
+    );
   });
 });

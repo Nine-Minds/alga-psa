@@ -10,6 +10,7 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
 import { createTestDate, createTestDateISO, dateHelpers } from '../../../../../test-utils/dateUtils';
 import { ClientContractLine } from '@alga-psa/billing/models';
+import Invoice from '@alga-psa/billing/models/invoice';
 import { BillingEngine } from '@alga-psa/billing/services';
 import {
   createTestService,
@@ -23,13 +24,25 @@ import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billi
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT || '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
+let activeKnex: any;
 
 vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: (...args: any[]) => Promise<unknown>) =>
+    (...args: any[]) =>
+      action(
+        {
+          user_id: mockedUserId,
+          id: mockedUserId,
+          tenant: mockedTenantId
+        },
+        { tenant: mockedTenantId },
+        ...args,
+      ),
   getSession: vi.fn(async () => ({
     user: {
       id: mockedUserId,
@@ -48,6 +61,8 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(async () => ({ knex: activeKnex })),
+  runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   withTransaction: vi.fn(async (knex, callback) => {
     try {
       return await callback(knex);
@@ -66,6 +81,10 @@ vi.mock('@alga-psa/db', () => ({
   })
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(() => true),
+}));
+
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: vi.fn(),
@@ -82,6 +101,7 @@ vi.mock('server/src/lib/eventBus', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: async () => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -92,6 +112,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@alga-psa/core', () => ({
+  getSecret: async () => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -315,6 +336,8 @@ describe('Prepayment Invoice System', () => {
 
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
+    activeKnex = context.db;
+    activeKnex = context.db;
 
     await configureDefaultTax();
     await ensureDefaultBillingSettings(context);
@@ -335,6 +358,8 @@ describe('Prepayment Invoice System', () => {
     });
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
+    activeKnex = context.db;
+    activeKnex = context.db;
 
     // Configure default tax for the test client
     await configureDefaultTax();
@@ -571,15 +596,19 @@ describe('Prepayment Invoice System', () => {
         effective_date: startDate.toInstant().toString()
       });
 
-      // Link plan to client
-      await context.db('client_contract_lines').insert({
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        tenant: context.tenantId,
-        start_date: startDate.toInstant().toString(),
-        is_active: true
-      });
+      if (await context.db.schema.hasTable('client_contract_lines')) {
+        // Older invoice infrastructure tests still wire the legacy client-line
+        // table directly when it exists; newer schema snapshots rely on the
+        // helper-created contract assignment instead.
+        await context.db('client_contract_lines').insert({
+          client_contract_line_id: uuidv4(),
+          client_id: context.clientId,
+          contract_line_id: planId,
+          tenant: context.tenantId,
+          start_date: startDate.toInstant().toString(),
+          is_active: true
+        });
+      }
     });
 
     it('automatically applies available credit when generating an invoice', async () => {
@@ -665,6 +694,82 @@ describe('Prepayment Invoice System', () => {
 
       expect(creditTransaction).toBeTruthy();
       expect(parseFloat(creditTransaction.amount)).toBe(-totals.creditApplied);
+    });
+
+    it('T100: prepayment-applied invoices keep canonical recurring detail periods after credit application', async () => {
+      const prepaymentInvoice = await createPrepaymentInvoice(context.clientId, 100000);
+      await finalizeInvoice(prepaymentInvoice.invoice_id);
+
+      const cycleRecord = await context.db('client_billing_cycles')
+        .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
+        .first();
+
+      const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
+      const cycleEnd = cycleRecord.period_end_date ?? cycleRecord.effective_date;
+
+      const createdInvoice = await createInvoiceFromBillingResult(
+        {
+          tenant: context.tenantId,
+          charges: [
+            {
+              tenant: context.tenantId,
+              type: 'usage',
+              serviceId,
+              serviceName: 'Test Service',
+              quantity: 1,
+              rate: 1000,
+              total: 1000,
+              tax_amount: 0,
+              tax_rate: 0,
+              tax_region: 'US-NY',
+              is_taxable: true,
+              usageId: uuidv4(),
+              servicePeriodStart: cycleStart,
+              servicePeriodEnd: cycleEnd,
+              billingTiming: 'arrears',
+            },
+          ],
+          discounts: [],
+          adjustments: [],
+          totalAmount: 1000,
+          finalAmount: 1000,
+        },
+        context.clientId,
+        cycleStart,
+        cycleEnd,
+        billingCycleId,
+        context.userId
+      );
+
+      await finalizeInvoice(createdInvoice.invoice_id);
+
+      const detailRows = await context.db('invoice_charge_details as iid')
+        .join('invoice_charges as ic', function () {
+          this.on('iid.item_id', '=', 'ic.item_id').andOn('iid.tenant', '=', 'ic.tenant');
+        })
+        .where('ic.invoice_id', createdInvoice.invoice_id)
+        .andWhere('iid.tenant', context.tenantId)
+        .select('iid.service_period_start', 'iid.service_period_end', 'iid.billing_timing');
+
+      expect(detailRows).toHaveLength(1);
+      expect(detailRows[0]).toMatchObject({
+        service_period_start: cycleStart,
+        service_period_end: cycleEnd,
+        billing_timing: 'arrears',
+      });
+
+      const rereadInvoice = await Invoice.getById(context.db, context.tenantId, createdInvoice.invoice_id);
+
+      expect(Number(rereadInvoice?.credit_applied ?? 0)).toBeGreaterThan(0);
+      expect(rereadInvoice?.invoice_charges).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            service_period_start: cycleStart,
+            service_period_end: cycleEnd,
+            billing_timing: 'arrears',
+          }),
+        ])
+      );
     });
   });
 });

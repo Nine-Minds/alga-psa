@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
     report_id: 'report-1',
     ...input,
   })),
+  getInvoiceById: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -25,6 +26,12 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('../../../../../packages/billing/src/models/creditReconciliationReport', () => ({
   default: {
     create: mocks.createReport,
+  },
+}));
+
+vi.mock('../../../../../packages/billing/src/models/invoice', () => ({
+  default: {
+    getById: mocks.getInvoiceById,
   },
 }));
 
@@ -154,6 +161,7 @@ describe('credit reconciliation remains stable with canonical recurring detail p
     mocks.getTenantContext.mockReturnValue('tenant-1');
     mocks.auditLog.mockClear();
     mocks.createReport.mockClear();
+    mocks.getInvoiceById.mockReset();
   });
 
   it('T092: negative-invoice credits still reconcile correctly after recurring invoices carry canonical detail periods', async () => {
@@ -279,6 +287,97 @@ describe('credit reconciliation remains stable with canonical recurring detail p
         actual_balance: 0,
         difference: -11000,
         status: 'open',
+        metadata: expect.objectContaining({
+          reconciliation_date_basis: 'financial_document_date',
+        }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it('T218: credit expiration and reconciliation reports use financial date basis while preserving canonical recurring invoice lineage as metadata', async () => {
+    const state: TableState = {
+      credit_tracking: [
+        {
+          credit_id: 'credit-1',
+          client_id: 'client-1',
+          tenant: 'tenant-1',
+          transaction_id: 'credit-tx-1',
+          remaining_amount: 2000,
+          is_expired: false,
+          expiration_date: null,
+        },
+      ],
+      transactions: [
+        {
+          transaction_id: 'credit-tx-1',
+          client_id: 'client-1',
+          tenant: 'tenant-1',
+          invoice_id: 'invoice-1',
+          amount: 5000,
+          type: 'credit_issuance_from_negative_invoice',
+          created_at: '2025-01-15T00:00:00.000Z',
+          related_transaction_id: null,
+        },
+        {
+          transaction_id: 'application-tx-1',
+          client_id: 'client-1',
+          tenant: 'tenant-1',
+          invoice_id: 'invoice-2',
+          amount: -1000,
+          type: 'credit_application',
+          created_at: '2025-02-15T00:00:00.000Z',
+          related_transaction_id: 'credit-tx-1',
+        },
+      ],
+    };
+
+    mocks.getInvoiceById.mockImplementation(async (_trx: unknown, _tenant: string, invoiceId: string) => {
+      if (invoiceId === 'invoice-1') {
+        return {
+          invoice_id: 'invoice-1',
+          invoice_charges: [
+            {
+              service_period_start: '2025-01-01T00:00:00.000Z',
+              service_period_end: '2025-02-01T00:00:00.000Z',
+            },
+          ],
+        };
+      }
+
+      return {
+        invoice_id: 'invoice-2',
+        invoice_charges: [],
+      };
+    });
+
+    const result = await validateCreditTrackingRemainingAmounts(
+      'client-1',
+      createMockTransaction(state) as any,
+    );
+
+    expect(result).toEqual({
+      isValid: false,
+      inconsistentEntries: 1,
+      reportIds: ['report-1'],
+    });
+    expect(mocks.createReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          issue_type: 'inconsistent_credit_remaining_amount',
+          reconciliation_date_basis: 'financial_document_date',
+          source_invoice_date_basis: 'canonical_recurring_service_period',
+          source_invoice_service_period_start: '2025-01-01T00:00:00.000Z',
+          source_invoice_service_period_end: '2025-02-01T00:00:00.000Z',
+          applications: [
+            expect.objectContaining({
+              transaction_id: 'application-tx-1',
+              invoice_date_basis: 'financial_document_date',
+              invoice_service_period_start: null,
+              invoice_service_period_end: null,
+            }),
+          ],
+        }),
       }),
       expect.anything(),
     );

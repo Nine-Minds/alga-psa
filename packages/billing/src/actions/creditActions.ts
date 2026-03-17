@@ -23,6 +23,7 @@ import {
 type CreditInvoicePeriodSummary = {
     service_period_start: string | null;
     service_period_end: string | null;
+    invoice_date_basis: 'financial_document_date' | 'canonical_recurring_service_period';
 };
 
 function summarizeCanonicalInvoiceServicePeriods(
@@ -40,22 +41,54 @@ function summarizeCanonicalInvoiceServicePeriods(
     return {
         service_period_start: starts[0] ?? null,
         service_period_end: ends[ends.length - 1] ?? null,
+        invoice_date_basis:
+            starts.length > 0 || ends.length > 0
+                ? 'canonical_recurring_service_period'
+                : 'financial_document_date',
     };
 }
 
 async function loadCreditSourceInvoice(
-    trx: Knex.Transaction,
+    knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     invoiceId: string
 ): Promise<{ invoice: IInvoice | null; summary: CreditInvoicePeriodSummary }> {
     // Negative-invoice and prepayment credits keep their recurring timing
     // context on the source invoice. Later credit-application transactions are
     // financial offsets only; they do not redefine the source recurring period.
-    const invoice = await Invoice.getById(trx, tenant, invoiceId);
+    const invoice = await Invoice.getById(knexOrTrx, tenant, invoiceId);
 
     return {
         invoice,
         summary: summarizeCanonicalInvoiceServicePeriods(invoice?.invoice_charges),
+    };
+}
+
+async function attachInvoiceContextToTransaction(
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    transaction: ITransaction,
+    invoiceCache: Map<string, Promise<{ invoice: IInvoice | null; summary: CreditInvoicePeriodSummary }>>
+): Promise<ITransaction> {
+    if (!transaction.invoice_id) {
+        return transaction;
+    }
+
+    let invoiceLoad = invoiceCache.get(transaction.invoice_id);
+    if (!invoiceLoad) {
+        invoiceLoad = loadCreditSourceInvoice(knexOrTrx, tenant, transaction.invoice_id);
+        invoiceCache.set(transaction.invoice_id, invoiceLoad);
+    }
+
+    const { invoice, summary } = await invoiceLoad;
+
+    return {
+        ...transaction,
+        invoice_number: invoice?.invoice_number,
+        invoice_status: invoice?.status,
+        invoice_service_period_start: summary.service_period_start,
+        invoice_service_period_end: summary.service_period_end,
+        invoice_date_basis: summary.invoice_date_basis,
     };
 }
 
@@ -497,6 +530,13 @@ export const createPrepaymentInvoice = withAuth(async (
                 amount: wfData.amount,
                 currency: wfData.currency,
                 status: 'issued',
+                sourceDocumentKind: 'prepayment_invoice',
+                sourceInvoiceId: createdInvoice.invoice_id,
+                sourceInvoiceNumber: createdInvoice.invoice_number ?? null,
+                sourceInvoiceStatus: createdInvoice.status ?? null,
+                sourceInvoiceDateBasis: 'financial_document_date',
+                sourceServicePeriodStart: null,
+                sourceServicePeriodEnd: null,
             }),
             ctx: {
                 tenantId: tenant,
@@ -532,6 +572,11 @@ export const applyCreditToInvoice = withAuth(async (
         appliedAt: string;
         appliedByUserId: string;
         idempotencyKey: string;
+        appliedInvoiceNumber: string | null;
+        appliedInvoiceStatus: string | null;
+        appliedInvoiceDateBasis: CreditInvoicePeriodSummary['invoice_date_basis'];
+        appliedServicePeriodStart: string | null;
+        appliedServicePeriodEnd: string | null;
     }> = [];
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -754,6 +799,8 @@ export const applyCreditToInvoice = withAuth(async (
         console.log(`Applied ${totalAppliedAmount} credit to invoice ${invoiceId} for client ${clientId}. Remaining credit: ${newBalance}`);
         console.log(`Applied from ${appliedCredits.length} different credit sources, prioritized by expiration date.`);
 
+        const appliedInvoice = await loadCreditSourceInvoice(trx, tenant, invoiceId);
+
         creditNoteAppliedEvents = appliedCredits.map((appliedCredit) => ({
             creditNoteId: appliedCredit.creditId,
             invoiceId,
@@ -762,6 +809,11 @@ export const applyCreditToInvoice = withAuth(async (
             appliedAt: now,
             appliedByUserId: user.user_id,
             idempotencyKey: `credit_note_applied:${creditTransaction.transaction_id}:${appliedCredit.creditId}`,
+            appliedInvoiceNumber: appliedInvoice.invoice?.invoice_number ?? null,
+            appliedInvoiceStatus: appliedInvoice.invoice?.status ?? null,
+            appliedInvoiceDateBasis: appliedInvoice.summary.invoice_date_basis,
+            appliedServicePeriodStart: appliedInvoice.summary.service_period_start,
+            appliedServicePeriodEnd: appliedInvoice.summary.service_period_end,
         }));
     });
 
@@ -775,6 +827,11 @@ export const applyCreditToInvoice = withAuth(async (
                 appliedAt: event.appliedAt,
                 amountApplied: event.amountApplied,
                 currency: event.currency,
+                appliedInvoiceNumber: event.appliedInvoiceNumber,
+                appliedInvoiceStatus: event.appliedInvoiceStatus,
+                appliedInvoiceDateBasis: event.appliedInvoiceDateBasis,
+                appliedServicePeriodStart: event.appliedServicePeriodStart,
+                appliedServicePeriodEnd: event.appliedServicePeriodEnd,
             }),
             ctx: {
                 tenantId: tenant,
@@ -910,6 +967,7 @@ export const listClientCredits = withAuth(async (
                         invoice_status: invoice?.status,
                         invoice_service_period_start: summary.service_period_start,
                         invoice_service_period_end: summary.service_period_end,
+                        invoice_date_basis: summary.invoice_date_basis,
                     };
                 }
                 return credit;
@@ -938,7 +996,10 @@ export const getCreditDetails = withAuth(async (
 ): Promise<{
     credit: ICreditTracking,
     transactions: ITransaction[],
-    invoice?: any
+    invoice?: any,
+    invoice_date_basis?: CreditInvoicePeriodSummary['invoice_date_basis'],
+    invoice_service_period_start?: string | null,
+    invoice_service_period_end?: string | null,
 }> => {
     // Check permission for credit reading
     if (!hasPermission(user, 'credit', 'read')) {
@@ -976,19 +1037,33 @@ export const getCreditDetails = withAuth(async (
             })
             .orderBy('created_at', 'desc');
 
-        // Combine all transactions
-        const transactions = [originalTransaction, ...relatedTransactions].filter(Boolean);
+        const invoiceCache = new Map<string, Promise<{ invoice: IInvoice | null; summary: CreditInvoicePeriodSummary }>>();
+
+        // The credit keeps its own source-invoice timing context at the top level.
+        // Related credit-application transactions separately carry the target
+        // invoice's recurring period summary when that invoice is detail-backed.
+        const transactions = await Promise.all(
+            [originalTransaction, ...relatedTransactions]
+                .filter((transaction): transaction is ITransaction => Boolean(transaction))
+                .map((transaction) => attachInvoiceContextToTransaction(trx, tenant, transaction, invoiceCache))
+        );
 
         // Get invoice details if available
         let invoice = null;
-        if (originalTransaction.invoice_id) {
-            invoice = (await loadCreditSourceInvoice(trx, tenant, originalTransaction.invoice_id)).invoice;
+        let invoiceSummary: CreditInvoicePeriodSummary | null = null;
+        if (originalTransaction?.invoice_id) {
+            const loadedInvoice = await loadCreditSourceInvoice(trx, tenant, originalTransaction.invoice_id);
+            invoice = loadedInvoice.invoice;
+            invoiceSummary = loadedInvoice.summary;
         }
 
         return {
             credit,
             transactions,
-            invoice
+            invoice,
+            invoice_date_basis: invoiceSummary?.invoice_date_basis,
+            invoice_service_period_start: invoiceSummary?.service_period_start ?? null,
+            invoice_service_period_end: invoiceSummary?.service_period_end ?? null,
         };
     });
 });

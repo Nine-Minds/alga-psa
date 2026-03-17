@@ -39,6 +39,26 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Credit expiration and reconciliation now make their date basis explicit, which closes `F187` and `T218`:
+  - `packages/billing/src/actions/creditReconciliationActions.ts` now stamps reconciliation-report metadata with `reconciliation_date_basis: financial_document_date`, making the control rule explicit: expiration and remaining-amount reconciliation are driven by transaction/credit metadata such as `created_at` and `expiration_date`, not by invoice-header or recurring service-period dates
+  - the same metadata now preserves recurring lineage additively when available: inconsistent-remaining-amount reports carry the source credit invoice’s canonical recurring summary plus each application transaction’s target-invoice date basis and recurring summary fields
+  - `server/src/test/unit/billing/creditReconciliation.servicePeriods.test.ts` now proves both halves of that policy: expired negative-invoice credits reconcile on financial dates, and reconciliation reports for detail-backed credits preserve canonical recurring invoice lineage only as explanatory metadata
+
+- (2026-03-17) Credit application now distinguishes source-invoice versus applied-to-invoice recurring context, which closes `F186` and `T217`:
+  - `packages/billing/src/actions/creditActions.ts` now preserves the top-level credit summary on the source invoice while separately attaching invoice-number, status, date-basis, and canonical recurring service-period summary fields to each transaction entry returned by `getCreditDetails(...)`
+  - the same action now carries target-invoice context onto `CREDIT_NOTE_APPLIED` workflow payloads, so credit-application audit streams can tell whether the invoice receiving the credit is a canonical recurring-detail-backed invoice or a purely financial-date artifact
+  - `shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders.ts`, `shared/workflow/runtime/schemas/billingEventSchemas.ts`, `packages/event-schemas/src/schemas/domain/billingEventSchemas.ts`, and the shared/server `ITransaction` interfaces were expanded additively for that target-invoice context
+  - focused executable coverage now lives in `server/src/test/unit/billing/creditActions.servicePeriods.test.ts`, which proves the source credit keeps its original recurring summary while the later `credit_application` transaction carries the target invoice’s canonical recurring period metadata
+
+- (2026-03-17) Credit-note issuance metadata now makes source date basis explicit, which closes `F185` and `T216`:
+  - `shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders.ts`, `shared/workflow/runtime/schemas/billingEventSchemas.ts`, and `packages/event-schemas/src/schemas/domain/billingEventSchemas.ts` now carry additive credit-note source metadata: `sourceDocumentKind`, `sourceInvoiceId`, `sourceInvoiceNumber`, `sourceInvoiceStatus`, `sourceInvoiceDateBasis`, and optional source recurring service-period summary fields
+  - `packages/billing/src/actions/creditActions.ts` now tags prepayment-issued credits as `financial_document_date` artifacts and exposes `invoice_date_basis` alongside source recurring service-period summaries in `listClientCredits(...)` and `getCreditDetails(...)`
+  - `packages/billing/src/actions/invoiceModification.ts` now recalculates source invoice summary metadata before publishing `CREDIT_NOTE_CREATED` for negative invoices, so detail-backed recurring source invoices emit `canonical_recurring_service_period` while flat or non-service sources fall back to `financial_document_date`
+  - focused executable coverage now lives in `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` and `server/src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts`; `packages/billing/src/actions/creditActions.ts` type narrowing at the transaction reread seam was also tightened, which unblocked `npx tsc --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) `T100` remains open after this checkpoint even though the underlying integration harness moved forward:
+  - `server/src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts` and `server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts` now stop hardcoding `DB_PORT=5432` and include the auth/secret/db mock exports the current runtime imports require
+  - focused integration assertions for canonical recurring detail preservation (`T100`) and negative-invoice source date-basis lineage (`T216`) were added to those suites, but local execution is still blocked by older migration-heavy infrastructure harness drift in `prepaymentInvoice.test.ts` and by migration/test-context instability in `negativeInvoiceCredit.test.ts`
+
 - (2026-03-17) Negative-invoice offsets now have an explicit source-period policy, which closes `F184` and `T215`:
   - `packages/billing/src/actions/creditActions.ts` now documents the offset rule at the source-invoice reader seam: a negative-invoice or prepayment credit keeps its recurring timing context on the source invoice, and later credit-application transactions are financial offsets rather than new service-period definitions
   - `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` now proves that behavior explicitly for a negative-invoice credit later applied to `invoice-2`: the credit reader still reports the source invoice’s canonical recurring period while the transaction history separately records the later financial application
@@ -651,6 +671,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Commands / Runbooks
 
+- (2026-03-17) Credit-note source-date-basis validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts -t "T100" --coverage.enabled false`
+    - run from `server/`; currently still blocked by migration-heavy harness drift in that infrastructure suite after setup reaches the targeted test
+  - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts -t "T216" --coverage.enabled false`
+    - run from `server/`; current local run is still unstable because the older negative-invoice infrastructure suite tears down during migration/test-context setup
+
 - (2026-03-17) Billing dashboard invoice-generation copy validation:
   - `npx vitest run ../packages/billing/tests/invoicingGenerateTab.recurringCopy.wiring.test.ts ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
@@ -1112,6 +1141,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Negative-invoice offset validation:
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Credit application recurring-context validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Credit reconciliation date-basis validation:
+  - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 

@@ -91,6 +91,13 @@ export async function finalizeInvoiceWithKnex(
     createdByUserId: string;
     amount: number;
     currency: string;
+    sourceDocumentKind: 'prepayment_invoice' | 'negative_invoice';
+    sourceInvoiceId: string;
+    sourceInvoiceNumber: string | null;
+    sourceInvoiceStatus: string | null;
+    sourceInvoiceDateBasis: 'financial_document_date' | 'canonical_recurring_service_period';
+    sourceServicePeriodStart: string | null;
+    sourceServicePeriodEnd: string | null;
   } | null = null;
 
   // Validate tax source before finalization
@@ -248,6 +255,13 @@ export async function finalizeInvoiceWithKnex(
         createdByUserId: userId,
         amount: creditAmount,
         currency: String(invoice.currency_code ?? 'USD'),
+        sourceDocumentKind: 'negative_invoice',
+        sourceInvoiceId: invoiceId,
+        sourceInvoiceNumber: invoice.invoice_number ?? null,
+        sourceInvoiceStatus: invoice.status ?? null,
+        sourceInvoiceDateBasis: 'financial_document_date',
+        sourceServicePeriodStart: null,
+        sourceServicePeriodEnd: null,
       };
 
       // Log audit
@@ -300,6 +314,33 @@ export async function finalizeInvoiceWithKnex(
   }
 
   if (createdCreditNote) {
+    if (createdCreditNote.sourceDocumentKind === 'negative_invoice') {
+      // Negative-invoice credit notes inherit date meaning from the source
+      // invoice when canonical recurring detail rows exist; otherwise they
+      // fall back to the source document date as a financial artifact.
+      const sourceInvoice = await Invoice.getById(knex as any, tenant, createdCreditNote.sourceInvoiceId);
+      const servicePeriodStarts = (sourceInvoice?.invoice_charges ?? [])
+        .map((charge) => charge.service_period_start)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+      const servicePeriodEnds = (sourceInvoice?.invoice_charges ?? [])
+        .map((charge) => charge.service_period_end)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+
+      createdCreditNote = {
+        ...createdCreditNote,
+        sourceInvoiceNumber: sourceInvoice?.invoice_number ?? createdCreditNote.sourceInvoiceNumber,
+        sourceInvoiceStatus: sourceInvoice?.status ?? createdCreditNote.sourceInvoiceStatus,
+        sourceInvoiceDateBasis:
+          servicePeriodStarts.length > 0 || servicePeriodEnds.length > 0
+            ? 'canonical_recurring_service_period'
+            : 'financial_document_date',
+        sourceServicePeriodStart: servicePeriodStarts[0] ?? null,
+        sourceServicePeriodEnd: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null,
+      };
+    }
+
     await publishWorkflowEvent({
       eventType: 'CREDIT_NOTE_CREATED',
       payload: buildCreditNoteCreatedPayload({
@@ -310,6 +351,13 @@ export async function finalizeInvoiceWithKnex(
         amount: createdCreditNote.amount,
         currency: createdCreditNote.currency,
         status: 'issued',
+        sourceDocumentKind: createdCreditNote.sourceDocumentKind,
+        sourceInvoiceId: createdCreditNote.sourceInvoiceId,
+        sourceInvoiceNumber: createdCreditNote.sourceInvoiceNumber,
+        sourceInvoiceStatus: createdCreditNote.sourceInvoiceStatus,
+        sourceInvoiceDateBasis: createdCreditNote.sourceInvoiceDateBasis,
+        sourceServicePeriodStart: createdCreditNote.sourceServicePeriodStart,
+        sourceServicePeriodEnd: createdCreditNote.sourceServicePeriodEnd,
       }),
       ctx: {
         tenantId: tenant,
