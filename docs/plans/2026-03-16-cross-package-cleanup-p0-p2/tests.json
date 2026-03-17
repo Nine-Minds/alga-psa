@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "P2-5b: npm run build succeeds after document violation fixes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F028"]
   },
   {
