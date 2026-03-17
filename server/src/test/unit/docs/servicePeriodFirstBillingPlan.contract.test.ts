@@ -141,34 +141,34 @@ describe('service-period-first billing plan artifacts', () => {
     expect(appendix).toContain('still out of scope: generic bucket reporting, remaining-unit readers, and other bucket metrics that are not tied to recurring contract-backed billing selection');
   });
 
-  it('T061: recurring product charge paths that still rely on late-stage proration are source-backed before migration', () => {
+  it('T061: recurring product timing sources remain source-backed after migration', () => {
     expect(inventory.timingControls.productLateStageProrationRefs.slice().sort()).toEqual(
       rgList(
-        'calculateProductCharges\\(|proratedProductCharges|Error calculating initial tax for product service|Missing pricing for product|type: "product"',
+        'calculateProductCharges\\(|Error calculating initial tax for product service|Missing pricing for product',
         'packages',
         'server',
         'shared'
       )
     );
     expect(appendix).toContain('### Recurring product migration seam inventory');
-    expect(appendix).toContain('only later conditionally applies `applyProrationToPlan(...)` to `productCharges`');
-    expect(appendix).toContain('still stamps `servicePeriodStart` and `servicePeriodEnd` directly from the enclosing invoice window');
-    expect(appendix).toContain('Product tax currently evaluates against `billingPeriod.endDate`');
+    expect(appendix).toContain('now resolves due product periods through the shared recurring timing helper');
+    expect(appendix).toContain('now excludes license-tagged catalog rows so product and license recurring families do not double-bill the same catalog item');
+    expect(appendix).toContain('Product tax now evaluates against the canonical due service-period end date');
   });
 
-  it('T065: recurring license charge paths that still rely on late-stage proration are source-backed before migration', () => {
+  it('T065: recurring license timing sources remain source-backed after migration', () => {
     expect(inventory.timingControls.licenseLateStageProrationRefs.slice().sort()).toEqual(
       rgList(
-        `calculateLicenseCharges\\(|Error calculating initial tax for license service|TODO: The service_catalog table doesn't have a service_type column|type: "license"`,
+        `calculateLicenseCharges\\(|Error calculating initial tax for license service|Missing pricing for license`,
         'packages',
         'server',
         'shared'
       )
     );
     expect(appendix).toContain('### Recurring license migration seam inventory');
-    expect(appendix).toContain('still defers license coverage settlement to the generic late-stage `applyProrationToPlan(...)` branch');
-    expect(appendix).toContain('still carries a placeholder TODO because the current source query does not yet have a resolved license-selection path');
-    expect(appendix).toContain('license tax and period metadata would still evaluate from the enclosing invoice window');
+    expect(appendix).toContain('now resolves due license periods through the same shared recurring timing helper used by fixed and product recurring charges');
+    expect(appendix).toContain('now uses explicit `service_catalog.item_kind = product` plus `is_license = true` selection so the placeholder license query is gone');
+    expect(appendix).toContain('License tax and period metadata now evaluate from the canonical due service period');
   });
 
   it('T010: fixture builder contract stays cadence-owner-aware and independent from invoice side effects', () => {

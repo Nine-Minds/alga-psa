@@ -47,17 +47,17 @@ Source-backed file lists live in `pass-0-source-inventory.json`.
 
 ### Recurring product migration seam inventory
 
-- `BillingEngine.calculateBilling(...)` still builds product charges first and only later conditionally applies `applyProrationToPlan(...)` to `productCharges` when `client_contract_lines.enable_proration` is true.
-- `calculateProductCharges(...)` still stamps `servicePeriodStart` and `servicePeriodEnd` directly from the enclosing invoice window (`billingPeriod.startDate` / `billingPeriod.endDate`) instead of from a canonical service-period selection step.
-- Product tax currently evaluates against `billingPeriod.endDate`, which means service-date semantics are still coupled to the invoice window rather than the due recurring period.
-- This seam is intentionally inventoried before `F062+` so the product migration can remove late-stage proration, invoice-window service-period stamping, and invoice-window tax-date evaluation together instead of treating them as separate accidental behaviors.
+- `BillingEngine.calculateBilling(...)` no longer applies a late-stage product-only `applyProrationToPlan(...)` branch; product coverage settlement now happens inside `calculateProductCharges(...)` after canonical due-period selection.
+- `calculateProductCharges(...)` now resolves due product periods through the shared recurring timing helper, so `servicePeriodStart` and `servicePeriodEnd` come from canonical service-period selection rather than the enclosing invoice window.
+- Product selection now excludes license-tagged catalog rows so product and license recurring families do not double-bill the same catalog item once the dedicated license path is live.
+- Product tax now evaluates against the canonical due service-period end date, which keeps service-date semantics attached to the recurring work being billed instead of the enclosing invoice window.
 
 ### Recurring license migration seam inventory
 
-- `BillingEngine.calculateBilling(...)` still defers license coverage settlement to the generic late-stage `applyProrationToPlan(...)` branch, which means license timing is still coupled to post-charge invoice-window adjustment rather than canonical due-period selection.
-- `calculateLicenseCharges(...)` still carries a placeholder TODO because the current source query does not yet have a resolved license-selection path (`service_catalog` filtering is incomplete), so the runtime migration cannot safely proceed until the authoring/storage read path is made explicit.
-- If the placeholder were populated today, license tax and period metadata would still evaluate from the enclosing invoice window (`billingPeriod.startDate` / `billingPeriod.endDate`), including `period_start`, `period_end`, `servicePeriodStart`, and `servicePeriodEnd`.
-- This seam is intentionally inventoried before `F066+` so the license migration can solve source selection, canonical service-period timing, and partial-coverage settlement as one change instead of hiding the placeholder behind superficial parity tests.
+- `BillingEngine.calculateBilling(...)` no longer defers license coverage settlement to the generic late-stage `applyProrationToPlan(...)` branch; license coverage settlement now happens inside the shared recurring quantity-charge helper after canonical due-period selection.
+- `calculateLicenseCharges(...)` now resolves due license periods through the same shared recurring timing helper used by fixed and product recurring charges, so `period_start`, `period_end`, `servicePeriodStart`, and `servicePeriodEnd` follow the canonical due service period.
+- License selection now uses explicit `service_catalog.item_kind = product` plus `is_license = true` selection so the placeholder license query is gone, without changing the catalog/storage surface used by contract-line authoring.
+- License tax and period metadata now evaluate from the canonical due service period, which keeps tax-date semantics aligned with the billed license period rather than the enclosing invoice window.
 
 ## Persisted Date and Period Fields
 

@@ -698,6 +698,24 @@ export async function persistInvoiceCharges(
       tenant
     };
     await tx('invoice_charges').insert(invoiceItem);
+
+    if (charge.type === 'product' || charge.type === 'license') {
+      await tx('invoice_charge_details').insert({
+        item_detail_id: uuidv4(),
+        item_id: invoiceItem.item_id,
+        service_id: charge.serviceId,
+        config_id: null,
+        quantity: charge.quantity ?? 1,
+        rate: charge.rate ?? 0,
+        service_period_start: charge.servicePeriodStart ?? null,
+        service_period_end: charge.servicePeriodEnd ?? null,
+        billing_timing: charge.billingTiming ?? null,
+        created_at: now,
+        updated_at: now,
+        tenant
+      });
+    }
+
     otherSubtotal += netAmount;
   }
 
@@ -785,15 +803,18 @@ export async function calculateAndDistributeTax(
     .select('*');
   console.log(`[calculateAndDistributeTax] Fetched ${invoiceItems.length} invoice items:`, JSON.stringify(invoiceItems.map(i => ({id: i.item_id, desc: i.description, net: i.net_amount, tax: i.tax_amount, taxable: i.is_taxable, region: i.tax_region, is_discount: i.is_discount})), null, 2));
 
-  // Correctly identify consolidated items by checking for existence in invoice_charge_details
-  // Fetch item_id and invoice_id from invoice_charge_details to link back correctly
+  // Only fixed-plan parents should be treated as consolidated tax carriers.
   const detailParentIdsResult = await tx('invoice_charge_details')
-    .where('invoice_charge_details.tenant', tenant)
+    .join('invoice_charge_fixed_details as iifd', function() {
+      this.on('iifd.item_detail_id', '=', 'invoice_charge_details.item_detail_id')
+        .andOn('iifd.tenant', '=', 'invoice_charge_details.tenant');
+    })
     .join('invoice_charges', function() {
       this.on('invoice_charges.item_id', '=', 'invoice_charge_details.item_id')
         .andOn('invoice_charges.tenant', '=', 'invoice_charge_details.tenant');
     })
-    .where('invoice_charges.invoice_id', invoiceId) // Filter by the main invoice ID
+    .where('invoice_charge_details.tenant', tenant)
+    .where('invoice_charges.invoice_id', invoiceId)
     .andWhere('invoice_charges.tenant', tenant)
     .distinct('invoice_charge_details.item_id');
   const detailParentIds = new Set(detailParentIdsResult.map((row: { item_id: string }) => row.item_id));

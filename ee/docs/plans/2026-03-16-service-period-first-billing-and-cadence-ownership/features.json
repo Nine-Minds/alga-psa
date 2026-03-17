@@ -392,31 +392,31 @@
   {
     "id": "F066",
     "description": "Refactor recurring license charges to derive timing entirely from canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F067",
     "description": "Preserve recurring license quantity, price, and renewal-related behavior while timing semantics change",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {
     "id": "F068",
     "description": "Preserve recurring license tax behavior while moving licenses onto canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {
     "id": "F069",
     "description": "Persist product invoice detail rows with canonical service-period metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {
     "id": "F070",
     "description": "Persist license invoice detail rows with canonical service-period metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {

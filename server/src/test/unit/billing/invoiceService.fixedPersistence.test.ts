@@ -20,6 +20,108 @@ function createMockTx() {
 }
 
 describe("invoiceService fixed recurring persistence", () => {
+  it("T069: recurring product invoice detail rows persist canonical service-period metadata correctly", async () => {
+    const { tx, inserts } = createMockTx();
+
+    const subtotal = await persistInvoiceCharges(
+      tx,
+      "invoice-1",
+      [
+        {
+          type: "product",
+          serviceId: "service-1",
+          serviceName: "Managed Router",
+          quantity: 2,
+          rate: 4500,
+          total: 9000,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: "US-NY",
+          is_taxable: false,
+          servicePeriodStart: "2025-01-10",
+          servicePeriodEnd: "2025-01-31",
+          billingTiming: "arrears",
+          tenant: "tenant-1",
+        },
+      ],
+      {
+        client_id: "client-1",
+        tax_region: "US-NY",
+      },
+      {
+        user: {
+          id: "user-1",
+        },
+      } as any,
+      "tenant-1",
+    );
+
+    expect(subtotal).toBe(9000);
+    expect(inserts.invoice_charges).toHaveLength(1);
+    expect(inserts.invoice_charge_details).toEqual([
+      expect.objectContaining({
+        item_id: inserts.invoice_charges[0].item_id,
+        service_id: "service-1",
+        quantity: 2,
+        rate: 4500,
+        service_period_start: "2025-01-10",
+        service_period_end: "2025-01-31",
+        billing_timing: "arrears",
+      }),
+    ]);
+  });
+
+  it("T070: recurring license invoice detail rows persist canonical service-period metadata correctly", async () => {
+    const { tx, inserts } = createMockTx();
+
+    const subtotal = await persistInvoiceCharges(
+      tx,
+      "invoice-1",
+      [
+        {
+          type: "license",
+          serviceId: "service-2",
+          serviceName: "Microsoft 365 Business Premium",
+          quantity: 3,
+          rate: 3200,
+          total: 9600,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: "US-NY",
+          is_taxable: false,
+          servicePeriodStart: "2025-02-01",
+          servicePeriodEnd: "2025-02-28",
+          billingTiming: "advance",
+          tenant: "tenant-1",
+        },
+      ],
+      {
+        client_id: "client-1",
+        tax_region: "US-NY",
+      },
+      {
+        user: {
+          id: "user-1",
+        },
+      } as any,
+      "tenant-1",
+    );
+
+    expect(subtotal).toBe(9600);
+    expect(inserts.invoice_charges).toHaveLength(1);
+    expect(inserts.invoice_charge_details).toEqual([
+      expect.objectContaining({
+        item_id: inserts.invoice_charges[0].item_id,
+        service_id: "service-2",
+        quantity: 3,
+        rate: 3200,
+        service_period_start: "2025-02-01",
+        service_period_end: "2025-02-28",
+        billing_timing: "advance",
+      }),
+    ]);
+  });
+
   it("T053: fixed recurring parent invoice lines preserve client contract linkage for PO-scoped invoice association", async () => {
     const { tx, inserts } = createMockTx();
 

@@ -168,6 +168,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/lib/billing/billingEngine.ts` still leaves licenses on the late-stage `applyProrationToPlan(...)` branch in `calculateBilling`
   - `calculateLicenseCharges(...)` still contains the unresolved license-source TODO and, if populated, would still stamp `period_start`, `period_end`, `servicePeriodStart`, and `servicePeriodEnd` from the enclosing invoice window while evaluating tax from `billingPeriod.endDate`
   - `PASS0_RECURRING_TIMING_APPENDIX.md`, `pass-0-source-inventory.json`, and `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now treat that as the explicit `F065/T065` seam to remove before `F066+`
+- (2026-03-17) Recurring license timing now follows canonical service-period timing under client cadence:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now routes both product and license recurring charges through one shared quantity-charge helper that starts from `resolveRecurringChargeTiming(...)`, so licenses no longer depend on the late-stage `applyProrationToPlan(...)` branch in `calculateBilling`
+  - license selection is now explicit and source-backed: recurring products exclude `service_catalog.is_license = true`, while recurring licenses require `service_catalog.item_kind = 'product'` plus `is_license = true`, which closes the earlier placeholder TODO without changing contract-line authoring storage
+  - license coverage settlement now uses `applyQuantityChargeCoverageSettlement(...)` inside the canonical timing path, and license tax now evaluates from the canonical due service-period end date instead of the enclosing invoice window
+  - `server/src/test/unit/billing/billingEngine.licenseTiming.test.ts` now locks `T066`, `T067`, and `T068`, and the pass-0 appendix/inventory contract test was refreshed so the plan artifacts describe the migrated product/license timing status instead of the old placeholder seam
+- (2026-03-17) Product and license persistence now keep canonical detail metadata without forcing fixed-detail tax semantics onto non-fixed charges:
+  - `packages/billing/src/services/invoiceService.ts` now inserts one `invoice_charge_details` row for each recurring product or license parent charge, preserving `service_period_start`, `service_period_end`, and `billing_timing` for non-fixed recurring lines
+  - `calculateAndDistributeTax(...)` now treats only parents with matching `invoice_charge_fixed_details` rows as consolidated tax carriers, so product/license detail metadata can exist without making tax distribution skip their parent invoice rows
+  - `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` now locks `T069` and `T070` alongside the existing fixed-detail regression coverage
 - (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
   - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
   - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
@@ -241,6 +250,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.discountPricingTiming.test.ts --coverage.enabled false`
 - (2026-03-17) License-path inventory validation:
   - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) License recurring timing validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.licenseTiming.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Product/license detail persistence validation:
+  - `npx vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
 - (2026-03-17) Explicit out-of-scope boundary validation:
   - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
 - (2026-03-17) Blocked prepayment follow-up:

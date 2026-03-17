@@ -529,6 +529,7 @@ export class BillingEngine {
             clientId,
             billingPeriod,
             clientContractLine,
+            cycle,
           ),
         ]);
 
@@ -564,16 +565,6 @@ export class BillingEngine {
           `Total fixed charges after proration: ${getCurrencySymbol(billingCurrency)}${(totalAfterProration / 100).toFixed(2)} (${totalAfterProration} cents)`,
         );
 
-        const proratedLicenseCharges = clientContractLine.enable_proration
-          ? (this.applyProrationToPlan(
-              licenseCharges,
-              billingPeriod,
-              clientContractLine.start_date,
-              clientContractLine.end_date,
-              cycle,
-            ) as ILicenseCharge[])
-          : licenseCharges;
-
         // Combine all charges (time/usage are not prorated here)
         totalCharges = totalCharges.concat(
           proratedFixedCharges,
@@ -581,7 +572,7 @@ export class BillingEngine {
           usageBasedCharges,
           bucketPlanCharges,
           productCharges,
-          proratedLicenseCharges,
+          licenseCharges,
         );
 
         console.log("Total charges breakdown:");
@@ -2376,22 +2367,25 @@ export class BillingEngine {
     return usageBasedCharges;
   }
 
-  private async calculateProductCharges(
+  private async calculateRecurringQuantityCharges(
     clientId: string,
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
     billingCycle: string,
-  ): Promise<IProductCharge[]> {
+    chargeType: "product" | "license",
+  ): Promise<Array<IProductCharge | ILicenseCharge>> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
+    const isLicenseCharge = chargeType === "license";
+
     const timingResolution = this.resolveRecurringChargeTiming(
       billingPeriod,
       clientContractLine,
       billingCycle,
-      "product",
+      chargeType,
     );
     if (!timingResolution) {
       return [];
@@ -2417,7 +2411,7 @@ export class BillingEngine {
     const tenant = this.tenant; // Capture tenant value for joins
     const db = this.knex;
 
-    const planServices = await db("contract_line_services as cls")
+    let planServicesQuery = db("contract_line_services as cls")
       .join("contract_line_service_configuration as clsc", function () {
         this.on("clsc.contract_line_id", "=", "cls.contract_line_id")
           .andOn("clsc.service_id", "=", "cls.service_id")
@@ -2443,7 +2437,17 @@ export class BillingEngine {
         "cls.contract_line_id": clientContractLine.client_contract_line_id,
         "cls.tenant": tenant,
       })
-      .andWhere("sc.item_kind", "=", "product")
+      .andWhere("sc.item_kind", "=", "product");
+
+    if (isLicenseCharge) {
+      planServicesQuery = planServicesQuery.andWhere("sc.is_license", true);
+    } else {
+      planServicesQuery = planServicesQuery.andWhere(function () {
+        this.where("sc.is_license", false).orWhereNull("sc.is_license");
+      });
+    }
+
+    const planServices = await planServicesQuery
       .select(
         "sc.service_id",
         "sc.service_name",
@@ -2461,7 +2465,7 @@ export class BillingEngine {
     }
 
     const productChargesPromises = planServices.map(
-      async (service: any): Promise<IProductCharge> => {
+      async (service: any): Promise<IProductCharge | ILicenseCharge> => {
         // Determine tax info using the helper function
         const { taxRegion: serviceTaxRegion, isTaxable } =
           await this.getTaxInfoFromService({
@@ -2476,7 +2480,7 @@ export class BillingEngine {
         if (!hasOverride && !hasCatalogPrice) {
           const currency = clientContractLine.currency_code || "USD";
           throw new Error(
-            `Missing pricing for product "${service.service_name}" (${service.service_id}) in ${currency}. ` +
+            `Missing pricing for ${chargeType} "${service.service_name}" (${service.service_id}) in ${currency}. ` +
               `Add a ${currency} price in the product catalog or set a custom rate on the contract line.`,
           );
         }
@@ -2521,14 +2525,14 @@ export class BillingEngine {
             taxAmount = taxResult.taxAmount;
           } catch (error) {
             console.error(
-              `Error calculating initial tax for product service ${service.service_id}:`,
+              `Error calculating initial tax for ${chargeType} service ${service.service_id}:`,
               error,
             );
           }
         }
 
-        const charge: IProductCharge = {
-          type: "product",
+        const charge: IProductCharge | ILicenseCharge = {
+          type: chargeType,
           serviceId: service.service_id,
           serviceName: service.service_name,
           quantity: quantity,
@@ -2547,117 +2551,54 @@ export class BillingEngine {
           client_contract_id:
             clientContractLine.client_contract_id || undefined,
           contract_name: clientContractLine.contract_name || undefined,
+          ...(isLicenseCharge
+            ? {
+                period_start: servicePeriodStart,
+                period_end: servicePeriodEnd,
+              }
+            : {}),
         };
         return charge;
       },
     );
-    const productCharges = await Promise.all(productChargesPromises);
+    const quantityCharges = await Promise.all(productChargesPromises);
 
     return clientContractLine.enable_proration
       ? this.applyQuantityChargeCoverageSettlement(
-          productCharges,
+          quantityCharges,
           coverageRatio,
         )
-      : productCharges;
+      : quantityCharges;
+  }
+
+  private async calculateProductCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    clientContractLine: IClientContractLine,
+    billingCycle: string,
+  ): Promise<IProductCharge[]> {
+    return (await this.calculateRecurringQuantityCharges(
+      clientId,
+      billingPeriod,
+      clientContractLine,
+      billingCycle,
+      "product",
+    )) as IProductCharge[];
   }
 
   private async calculateLicenseCharges(
     clientId: string,
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
+    billingCycle: string,
   ): Promise<ILicenseCharge[]> {
-    await this.initKnex();
-    if (!this.tenant) {
-      throw new Error("tenant context not found");
-    }
-
-    const client = (await this.knex("clients")
-      .where({
-        client_id: clientId,
-        tenant: this.tenant,
-      })
-      .first()) as IClient;
-
-    if (!client) {
-      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
-    }
-
-    const tenant = this.tenant; // Capture tenant value for joins
-
-    // TODO: The service_catalog table doesn't have a service_type column.
-    // This requires further investigation to determine the correct way to filter for software licenses.
-    // For now, return an empty array to prevent errors.
-    const planServices: any[] = []; // Placeholder
-
-    const licenseChargesPromises = planServices.map(
-      async (service: any): Promise<ILicenseCharge> => {
-        // Determine tax info using the helper function
-        const { taxRegion: serviceTaxRegion, isTaxable } =
-          await this.getTaxInfoFromService({
-            service_id: service.service_id,
-            tax_rate_id: service.tax_rate_id, // Assuming tax_rate_id is fetched
-          });
-
-        const rate = service.custom_rate || service.default_rate;
-        const quantity = service.quantity || 1;
-        const total = rate * quantity;
-
-        // Calculate tax amount (will be recalculated later)
-        let taxAmount = 0;
-        let taxRate = 0;
-        const effectiveTaxRegion =
-          serviceTaxRegion ??
-          (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
-          undefined;
-
-        if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
-          try {
-            const taxServiceInstance = new TaxService();
-            const taxResult = await taxServiceInstance.calculateTax(
-              client.client_id,
-              total,
-              billingPeriod.endDate,
-              effectiveTaxRegion,
-              true,
-              clientContractLine.currency_code || "USD",
-            );
-            taxRate = taxResult.taxRate;
-            taxAmount = taxResult.taxAmount;
-          } catch (error) {
-            console.error(
-              `Error calculating initial tax for license service ${service.service_id}:`,
-              error,
-            );
-          }
-        }
-
-        const charge: ILicenseCharge = {
-          type: "license",
-          serviceId: service.service_id,
-          serviceName: service.service_name,
-          quantity: quantity,
-          rate: rate,
-          total: total,
-          tax_amount: taxAmount,
-          tax_rate: taxRate,
-          tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
-          period_start: billingPeriod.startDate,
-          period_end: billingPeriod.endDate,
-          servicePeriodStart: billingPeriod.startDate,
-          servicePeriodEnd: billingPeriod.endDate,
-          billingTiming: "arrears",
-          is_taxable: isTaxable,
-          // Add contract association information when the plan is covered by a contract assignment
-          client_contract_id:
-            clientContractLine.client_contract_id || undefined,
-          contract_name: clientContractLine.contract_name || undefined,
-        };
-        return charge;
-      },
-    );
-    const licenseCharges = await Promise.all(licenseChargesPromises);
-
-    return licenseCharges;
+    return (await this.calculateRecurringQuantityCharges(
+      clientId,
+      billingPeriod,
+      clientContractLine,
+      billingCycle,
+      "license",
+    )) as ILicenseCharge[];
   }
 
   private async calculateMaterialCharges(
