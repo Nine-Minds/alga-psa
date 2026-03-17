@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "P1-4: packages/msp-composition/src/index.ts contains 'export * from ./billing'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {

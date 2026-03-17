@@ -156,6 +156,7 @@ By target package
 - T012 confirmed `server/src/lib/auth-compat.ts` no longer exists on disk.
 - T013 reuses the latest repo-root green build to validate the auth-compat removal end-to-end.
 - T014 verified `packages/msp-composition/src/index.ts` exports `./assets` from the root barrel.
+- T015 verified `packages/msp-composition/src/index.ts` exports `./billing` from the root barrel.
 
 ## Gotchas
 
