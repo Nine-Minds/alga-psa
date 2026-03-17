@@ -188,6 +188,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx` now imports `PurchaseOrderSummaryBanner` directly so the banner contract stays executable without pulling unrelated package-entry dependencies into the test graph
   - no runtime code change was needed for `F059`; the recurring PO behavior and PO banner rendering were already correct, but the stale tests were no longer proving it after the recurring-run action cutover
   - `T099` remains open because the broader credits-plus-PO interaction still depends on DB-backed coverage outside this UI regression seam
+- (2026-03-17) Purchase-order consumption and selection now stay stable when recurring invoices carry applied credits, which closes `F131`:
+  - `packages/billing/src/services/purchaseOrderService.ts#getPurchaseOrderConsumedCents(...)` now sums finalized PO consumption as `total_amount - credit_applied` instead of raw `total_amount`, so recurring invoices that are partially or fully settled by credits no longer overstate PO usage during overage checks
+  - aggregate PO consumption now floors at zero after summing net invoice amounts, which preserves the existing behavior that negative-credit corrections can reduce prior PO consumption but cannot drive the contract below zero consumed cents overall
+  - `packages/billing/tests/purchaseOrderService.creditConsumption.test.ts` now proves both sides of that contract: credit-applied recurring invoices reduce consumed PO cents before overage checks, and aggregate consumption cannot go negative when credits outweigh prior billed totals
+  - the existing recurring-run PO UI regressions in `server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx` and `server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx` remain green on top of the new service behavior, which is the executable closure for `T099`
 - (2026-03-17) Recurring product timing now has an explicit migration target:
   - `packages/billing/src/lib/billing/billingEngine.ts` still constructs product charges against the enclosing invoice window, stamps `servicePeriodStart/servicePeriodEnd` from `billingPeriod.startDate` / `billingPeriod.endDate`, and calculates initial tax from `billingPeriod.endDate`
   - `BillingEngine.calculateBilling` still runs `applyProrationToPlan(...)` on `productCharges` after the charges are built when `enable_proration` is true
@@ -566,6 +571,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - blocked locally by an existing Vitest module mock error: `@alga-psa/auth` is mocked without `withAuth`, so the suite fails during module evaluation before the targeted tests run
 - (2026-03-17) Purchase-order UI safeguard validation:
   - `npx vitest run src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx --coverage.enabled false`
+- (2026-03-17) Purchase-order credit-consumption validation:
+  - `npx vitest run tests/purchaseOrderService.creditConsumption.test.ts --coverage.enabled false`
+    - run from `packages/billing/`
+  - `npx vitest run src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Invoice-generation recurring preselection validation:
   - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts --coverage.enabled false`

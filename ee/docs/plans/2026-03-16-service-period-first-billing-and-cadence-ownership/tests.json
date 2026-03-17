@@ -106,7 +106,7 @@
   {"id":"T096","description":"Prepayment invoice generation still produces correct recurring prepayment behavior under canonical service periods","implemented":true,"featureIds":["F058"]},
   {"id":"T097","description":"Prepayment invoice updates across multiple cycles remain consistent after recurring timing cutover","implemented":true,"featureIds":["F058"]},
   {"id":"T098","description":"Credit-related invoice detail readers and summaries remain stable after canonical recurring periods are introduced","implemented":true,"featureIds":["F078","F125"]},
-  {"id":"T099","description":"PO-related invoice flows continue to operate when credits and recurring service periods intersect","implemented":false,"featureIds":["F059","F131"]},
+  {"id":"T099","description":"PO-related invoice flows continue to operate when credits and recurring service periods intersect","implemented":true,"featureIds":["F059","F131"]},
   {"id":"T100","description":"Recurring timing changes do not break credit or prepayment integration tests that previously depended on client billing cycles alone","implemented":false,"featureIds":["F077","F078","F058"]},
 
   {"id":"T101","description":"Cadence-owner persistence location is explicit and covered by schema, type, and repository tests","implemented":true,"featureIds":["F081","F082","F083"]},

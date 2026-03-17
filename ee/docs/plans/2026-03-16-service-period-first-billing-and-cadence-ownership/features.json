@@ -782,7 +782,7 @@
   {
     "id": "F131",
     "description": "Update purchase-order service and PO-related invoice selection behavior if recurring service-period changes affect PO-scoped invoice validation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
