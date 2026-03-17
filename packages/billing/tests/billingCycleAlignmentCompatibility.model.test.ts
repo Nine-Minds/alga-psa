@@ -46,7 +46,7 @@ function createFakeKnex(rows: QueryState['rows']) {
 }
 
 describe('billing_cycle_alignment compatibility model behavior', () => {
-  it('T109: fixed config reads and writes keep billing_cycle_alignment readable while no longer requiring it for new writes', async () => {
+  it('T109 and T161: fixed config reads, writes, and resets keep billing_cycle_alignment readable while no longer requiring it for new writes', async () => {
     const { knex, updates } = createFakeKnex({
       contract_lines: [
         {
@@ -74,6 +74,16 @@ describe('billing_cycle_alignment compatibility model behavior', () => {
       payload: expect.objectContaining({
         enable_proration: true,
         billing_cycle_alignment: 'prorated',
+      }),
+    });
+
+    await model.delete('line-1');
+
+    expect(updates.at(-1)).toEqual({
+      table: 'contract_lines',
+      payload: expect.objectContaining({
+        enable_proration: false,
+        billing_cycle_alignment: 'start',
       }),
     });
   });

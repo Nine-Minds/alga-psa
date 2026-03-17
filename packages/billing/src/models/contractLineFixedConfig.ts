@@ -157,7 +157,9 @@ export default class ContractLineFixedConfig {
       .update({
         custom_rate: null,
         enable_proration: false,
-        billing_cycle_alignment: 'start',
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          enableProration: false,
+        }),
         updated_at: new Date(),
       });
 

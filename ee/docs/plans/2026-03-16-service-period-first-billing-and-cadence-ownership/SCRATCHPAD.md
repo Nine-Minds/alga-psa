@@ -372,6 +372,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/actions/contractLineAction.ts`, `packages/billing/src/actions/contractLinePresetActions.ts`, and `packages/billing/src/actions/contractWizardActions.ts` now all call `assertSupportedCadenceOwnerDuringRollout(...)` before persisting live, preset-backed, or wizard-authored contract cadence writes
   - `server/src/test/unit/api/contractLineCadenceOwner.schema.test.ts` now proves both create and update client-line schema writes reject contract cadence during rollout, while `server/src/test/unit/api/contractLineService.cadenceOwner.test.ts` continues to guard the API service layer
   - `packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts` and `packages/billing/tests/cadenceOwnerRollout.actions.wiring.test.ts` now lock the package action layer, and `packages/billing/tests/fixedContractLineConfiguration.cadenceOwner.ui.test.tsx` now proves the UI explains the staged mixed-cadence block instead of only disabling the option silently
+- (2026-03-17) Fixed-config model/service compatibility now closes the remaining staged-deprecation seam for `billing_cycle_alignment`, which closes `F137` and `T161`:
+  - `packages/billing/src/models/contractLineFixedConfig.ts` now routes delete/reset behavior through `resolveBillingCycleAlignmentForCompatibility(...)` instead of hard-coding a raw alignment value, so every fixed-config write path uses the same compatibility resolver
+  - `server/src/lib/api/services/ContractLineService.ts` now resolves legacy alignment through the compatibility helper when creating fixed-plan configs and when copying fixed config between plans, which removes the last direct `?? 'start'` fallback from the service layer
+  - `packages/billing/tests/billingCycleAlignmentCompatibility.model.test.ts` and `server/src/test/unit/api/contractLineService.billingCycleAlignmentCompatibility.wiring.test.ts` now prove fixed-config writes and copies can omit `billing_cycle_alignment` while still keeping a readable compatibility value
 - (2026-03-17) Internal recurring-timing docs now describe the live service-period-first model and rollout defaults, which closes `F100`:
   - `shared/billingClients/recurringTiming.ts` now carries a module-level architecture reference that spells out the current runtime truth chain: cadence owner -> service periods -> invoice windows -> invoice detail persistence, plus the staged default of `client` cadence
   - `packages/reporting/src/actions/report-actions/README.md` now documents the reporting date-basis policy for the current rollout: recurring report actions should prefer canonical service-period detail fields when present, while historical/manual rows may still fall back to invoice dates
@@ -816,6 +820,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/api/contractLineCadenceOwner.schema.test.ts src/test/unit/api/contractLineService.cadenceOwner.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx vitest run ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/cadenceOwnerRollout.actions.wiring.test.ts ../packages/billing/tests/fixedContractLineConfiguration.cadenceOwner.ui.test.tsx --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Fixed-config alignment compatibility validation:
+  - `npx vitest run src/test/unit/api/contractLineService.billingCycleAlignmentCompatibility.wiring.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/billing/tests/billingCycleAlignmentCompatibility.model.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package tests
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 

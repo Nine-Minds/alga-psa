@@ -1753,7 +1753,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       contract_line_id: planId,
       base_rate: data.base_rate,
       enable_proration: data.enable_proration,
-      billing_cycle_alignment: data.billing_cycle_alignment,
+      billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+        billingCycleAlignment: data.billing_cycle_alignment,
+        enableProration: data.enable_proration,
+      }),
       tenant: context.tenant,
     });
 
@@ -1906,7 +1909,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       await this.createFixedPlanConfig(targetPlanId, {
         base_rate: fixedConfig.base_rate ?? undefined,
         enable_proration: fixedConfig.enable_proration ?? false,
-        billing_cycle_alignment: fixedConfig.billing_cycle_alignment ?? 'start'
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: fixedConfig.billing_cycle_alignment,
+          enableProration: fixedConfig.enable_proration,
+        }),
       }, context, trx);
     }
   }

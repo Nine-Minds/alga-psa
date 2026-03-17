@@ -175,7 +175,7 @@
   {"id":"T159","description":"End-exclusive query behavior remains correct in billing-engine selection logic after helper removal","implemented":false,"featureIds":["F145"]},
   {"id":"T160","description":"Operational runbook covers parity checks, mixed-cadence troubleshooting, and rollback posture clearly enough for execution handoff","implemented":true,"featureIds":["F119","F149"]},
 
-  {"id":"T161","description":"billing_cycle_alignment is no longer required for new recurring writes after cutover staging lands","implemented":false,"featureIds":["F090","F137"]},
+  {"id":"T161","description":"billing_cycle_alignment is no longer required for new recurring writes after cutover staging lands","implemented":true,"featureIds":["F090","F137"]},
   {"id":"T162","description":"billing_cycle_alignment no longer changes live recurring execution for migrated paths","implemented":true,"featureIds":["F116","F137"]},
   {"id":"T163","description":"Source grep shows resolveServicePeriod is absent from migrated recurring charge execution paths","implemented":true,"featureIds":["F117","F146"]},
   {"id":"T164","description":"Source grep shows duplicated proration implementations are absent from migrated recurring fixed, product, and license paths","implemented":true,"featureIds":["F117","F146"]},

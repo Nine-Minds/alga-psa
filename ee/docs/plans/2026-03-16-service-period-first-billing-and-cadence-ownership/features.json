@@ -818,7 +818,7 @@
   {
     "id": "F137",
     "description": "Update contract line fixed-config models and services to stage billing_cycle_alignment deprecation in favor of cadence-owner and partial-period semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
