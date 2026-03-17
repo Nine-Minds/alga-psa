@@ -239,6 +239,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/lib/api/schemas/contractLineSchemas.ts` and `server/src/lib/api/schemas/financialSchemas.ts` now accept `cadence_owner` only as `client|contract` on contract-line and client-contract-line request surfaces and require a valid cadence owner on line response schemas
   - `server/src/lib/api/services/ContractLineService.ts` now defaults create/get/update responses to `'client'` when legacy rows lack the field, while still persisting explicit `cadence_owner` values on live contract-line writes
   - template/billing-settings API surfaces were intentionally not widened in this checkpoint because v1 persistence is still line-scoped on `contract_lines`; later authoring/default surfaces stay queued behind `F086+` and `F121+`
+- (2026-03-17) Billing-package authoring actions now keep live cadence-owner semantics on the remaining contract-line creation paths:
+  - `packages/billing/src/actions/contractWizardActions.ts` now threads `submission.cadence_owner ?? 'client'` into all four live recurring line creates inside `createClientContractFromWizard(...)`, and `getDraftContractForResume(...)` / `getContractTemplateSnapshotForClientWizard(...)` now surface the fixed-line cadence owner back to the UI while defaulting missing legacy values to `'client'`
+  - `packages/billing/src/actions/contractLinePresetActions.ts` now accepts `cadence_owner` on `CreateCustomContractLineInput` and preset-copy overrides, so custom recurring lines and preset-instantiated live lines no longer drop cadence ownership at the action layer
+  - template authoring storage remains intentionally out of scope for this checkpoint; template snapshot reads expose cadence owner for compatibility, but no template write path claims persistence until the later template-default features land (`F093+`, `F138+`, `F212+`)
+  - `packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts`, `packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts`, and `packages/billing/tests/draftContractForResumeActions.test.ts` now close `T106` with a mix of action execution and focused wiring/readback coverage
+  - the existing draft-resume permission test was also corrected to assert the action's real `permissionError(...)` return shape instead of expecting a thrown exception; that was harness drift, not a product behavior change
 - (2026-03-17) Credit-reader invoice context now stays on canonical recurring detail metadata, which closes `F078` without pretending the blocked DB integration is done:
   - `packages/billing/src/actions/creditActions.ts` now loads source invoices through `Invoice.getById(...)` for both `getCreditDetails(...)` and the invoice-summary enrichment inside `listClientCredits(...)`, instead of rereading raw `invoices` rows that dropped recurring `invoice_charge_details`
   - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
@@ -369,6 +375,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/api/contractLineCadenceOwner.schema.test.ts src/test/unit/api/contractLineService.cadenceOwner.test.ts src/test/unit/api/contractCreateOwnerClientSchema.test.ts --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
     - blocked by an unrelated existing type error in `packages/billing/src/actions/creditActions.ts` (`IInvoice | null` narrowing), not by the cadence-owner API changes
+- (2026-03-17) Cadence-owner package authoring validation:
+  - `npx vitest run ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts ../packages/billing/tests/draftContractForResumeActions.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Credit-reader canonical invoice-context validation:
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`

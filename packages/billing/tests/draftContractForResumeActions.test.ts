@@ -186,6 +186,79 @@ describe('getDraftContractForResume action', () => {
     ]);
   });
 
+  it('returns cadence_owner from recurring draft lines and defaults missing values to client', async () => {
+    const knex = makeKnex({
+      contracts: {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        contract_description: null,
+        status: 'draft',
+        billing_frequency: 'monthly',
+        currency_code: 'USD',
+      },
+      client_contracts: {
+        contract_id: 'contract-1',
+        client_id: 'client-1',
+        start_date: '2026-01-01T00:00:00.000Z',
+        end_date: null,
+        po_required: false,
+        po_number: null,
+        po_amount: null,
+        template_contract_id: null,
+      },
+    });
+    createTenantKnex.mockResolvedValue({ knex });
+    fetchDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'fixed-1',
+        contract_line_type: 'Fixed',
+        rate: 1000,
+        enable_proration: false,
+        billing_frequency: 'monthly',
+        cadence_owner: 'contract',
+      },
+      {
+        contract_line_id: 'hourly-1',
+        contract_line_type: 'Hourly',
+        billing_frequency: 'monthly',
+      },
+    ]);
+
+    getContractLineServicesWithConfigurations.mockImplementation(async (lineId: string) => {
+      if (lineId === 'fixed-1') {
+        return [
+          {
+            service: { service_id: 'svc-fixed', service_name: 'Fixed Service', item_kind: 'service' },
+            configuration: { quantity: 1 },
+            bucketConfig: null,
+          },
+        ];
+      }
+
+      if (lineId === 'hourly-1') {
+        return [
+          {
+            service: { service_id: 'svc-hourly', service_name: 'Hourly Service', item_kind: 'service' },
+            configuration: {},
+            typeConfig: {
+              hourly_rate: 12500,
+              minimum_billable_time: 15,
+              round_up_to_nearest: 5,
+            },
+            bucketConfig: null,
+          },
+        ];
+      }
+
+      return [];
+    });
+
+    const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
+    const result = await getDraftContractForResume('contract-1');
+
+    expect(result.cadence_owner).toBe('contract');
+  });
+
   it('includes service configurations (T029)', async () => {
     const knex = makeKnex({
       contracts: {
@@ -586,6 +659,73 @@ describe('getDraftContractForResume action', () => {
     });
   });
 
+  it('returns cadence_owner from template fixed lines and defaults missing values to client', async () => {
+    const knex = makeKnex({
+      contract_templates: {
+        template_id: 'template-1',
+        template_name: 'Template Alpha',
+        template_description: 'Test',
+        default_billing_frequency: 'monthly',
+      },
+    });
+    createTenantKnex.mockResolvedValue({ knex });
+    fetchDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'fixed-template-line',
+        contract_line_type: 'Fixed',
+        cadence_owner: 'contract',
+      },
+      {
+        contract_line_id: 'hourly-template-line',
+        contract_line_type: 'Hourly',
+      },
+    ]);
+
+    getTemplateLineServicesWithConfigurations.mockImplementation(async (lineId: string) => {
+      if (lineId === 'fixed-template-line') {
+        return [
+          {
+            service: {
+              service_id: 'svc-fixed',
+              service_name: 'Fixed Service',
+              item_kind: 'service',
+            },
+            configuration: { quantity: 1 },
+            typeConfig: null,
+            bucketConfig: null,
+          },
+        ];
+      }
+
+      if (lineId === 'hourly-template-line') {
+        return [
+          {
+            service: {
+              service_id: 'svc-hourly',
+              service_name: 'Hourly Service',
+              item_kind: 'service',
+              default_rate: 11300,
+            },
+            configuration: { custom_rate: 0 },
+            typeConfig: {
+              hourly_rate: 0,
+              minimum_billable_time: 20,
+              round_up_to_nearest: 10,
+            },
+            bucketConfig: null,
+          },
+        ];
+      }
+
+      return [];
+    });
+
+    const { getContractTemplateSnapshotForClientWizard } = await import('../src/actions/contractWizardActions');
+    const snapshot = await getContractTemplateSnapshotForClientWizard('template-1');
+
+    expect(snapshot.cadence_owner).toBe('contract');
+  });
+
   it('throws error if contract is not a draft (T030)', async () => {
     const knex = makeKnex({
       contracts: {
@@ -606,6 +746,8 @@ describe('getDraftContractForResume action', () => {
     createTenantKnex.mockResolvedValue({ knex: makeKnex({ contracts: null, client_contracts: null }) });
 
     const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
-    await expect(getDraftContractForResume('contract-1')).rejects.toThrow('Permission denied: Cannot resume billing contracts');
+    await expect(getDraftContractForResume('contract-1')).resolves.toMatchObject({
+      permissionError: 'Permission denied: Cannot resume billing contracts',
+    });
   });
 });

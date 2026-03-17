@@ -27,6 +27,7 @@ import {
 
 import { ensureTemplateLineSnapshot, fetchDetailedContractLines } from '../repositories/contractLineRepository';
 import {
+  CadenceOwner,
   IContractLineServiceBucketConfig,
   IContractLineServiceFixedConfig,
   IContractLineServiceHourlyConfig,
@@ -135,6 +136,7 @@ export type ClientContractWizardSubmission = {
   notice_period_days?: number;
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
+  cadence_owner?: CadenceOwner;
   billing_frequency?: string;
   currency_code: string;
   end_date?: string;
@@ -159,6 +161,7 @@ export type ClientTemplateSnapshot = {
   contract_name?: string;
   description?: string | null;
   billing_frequency?: string | null;
+  cadence_owner?: CadenceOwner;
   // currency_code removed - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from this template
   fixed_services?: ClientFixedServiceInput[];
@@ -1018,6 +1021,7 @@ export const createClientContractFromWizard = withAuth(async (
         display_order: nextDisplayOrder,
         custom_rate: null,
         billing_timing: 'arrears',
+        cadence_owner: submission.cadence_owner ?? 'client',
         is_template: false,
       } as any);
       const planId = createdFixedLine.contract_line_id!;
@@ -1086,6 +1090,7 @@ export const createClientContractFromWizard = withAuth(async (
         display_order: nextDisplayOrder,
         custom_rate: null,
         billing_timing: 'arrears',
+        cadence_owner: submission.cadence_owner ?? 'client',
         is_template: false,
       } as any);
       const productsLineId = createdProductsLine.contract_line_id!;
@@ -1142,6 +1147,7 @@ export const createClientContractFromWizard = withAuth(async (
         display_order: nextDisplayOrder,
         custom_rate: null,
         billing_timing: 'arrears',
+        cadence_owner: submission.cadence_owner ?? 'client',
         is_template: false,
       } as any);
       const hourlyPlanId = createdHourlyLine.contract_line_id!;
@@ -1195,6 +1201,7 @@ export const createClientContractFromWizard = withAuth(async (
         display_order: nextDisplayOrder,
         custom_rate: null,
         billing_timing: 'arrears',
+        cadence_owner: submission.cadence_owner ?? 'client',
         is_template: false,
       } as any);
       const usagePlanId = createdUsageLine.contract_line_id!;
@@ -1474,6 +1481,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
   let minimumBillableTime: number | undefined;
   let roundUpToNearest: number | undefined;
   let enableProration: boolean | undefined;
+  let cadenceOwner: CadenceOwner = 'client';
   let fixedBaseRateCents: number | undefined;
 
   for (const line of detailedLines) {
@@ -1520,6 +1528,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
         // Rates are stored in cents in the database already.
         fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue) : undefined;
         enableProration = line.enable_proration ?? false;
+        cadenceOwner = line.cadence_owner ?? cadenceOwner;
       }
     } else if (line.contract_line_type === 'Hourly') {
       servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
@@ -1593,6 +1602,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
     contract_name: template.template_name,
     description: template.template_description,
     billing_frequency: template.default_billing_frequency,
+    cadence_owner: cadenceOwner,
     // currency_code removed - templates are now currency-neutral
     fixed_services: fixedServices,
     product_services: productServices,
@@ -1614,6 +1624,7 @@ export type DraftContractWizardData = {
   notice_period_days?: number;
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
+  cadence_owner?: CadenceOwner;
   description?: string;
   billing_frequency: string;
   currency_code: string;
@@ -1708,6 +1719,7 @@ export const getDraftContractForResume = withAuth(async (
   let fixedBillingFrequency: string | undefined;
   let hourlyBillingFrequency: string | undefined;
   let usageBillingFrequency: string | undefined;
+  let cadenceOwner: CadenceOwner = 'client';
 
   for (const line of detailedLines) {
     const servicesWithConfig = await getContractLineServicesWithConfigurations(line.contract_line_id);
@@ -1754,6 +1766,7 @@ export const getDraftContractForResume = withAuth(async (
         fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue) : undefined;
         enableProration = Boolean(line.enable_proration);
         fixedBillingFrequency = line.billing_frequency ?? fixedBillingFrequency;
+        cadenceOwner = line.cadence_owner ?? cadenceOwner;
       }
     } else if (line.contract_line_type === 'Hourly') {
       hourlyBillingFrequency = line.billing_frequency ?? hourlyBillingFrequency;
@@ -1863,6 +1876,7 @@ export const getDraftContractForResume = withAuth(async (
       typeof clientContract.use_tenant_renewal_defaults === 'boolean'
         ? clientContract.use_tenant_renewal_defaults
         : undefined,
+    cadence_owner: cadenceOwner,
     description: contract.contract_description ?? undefined,
     billing_frequency: contract.billing_frequency ?? 'monthly',
     currency_code: contract.currency_code ?? 'USD',

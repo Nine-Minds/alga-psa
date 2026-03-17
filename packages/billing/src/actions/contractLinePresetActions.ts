@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ContractLinePreset from '../models/contractLinePreset';
 import ContractLinePresetService from '../models/contractLinePresetService';
 import ContractLinePresetFixedConfig from '../models/contractLinePresetFixedConfig';
-import { IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig, IContractLine, IContractLineService, IContractLineFixedConfig } from '@alga-psa/types';
+import { CadenceOwner, IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig, IContractLine, IContractLineService, IContractLineFixedConfig } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
@@ -287,6 +287,7 @@ export const copyPresetToContractLine = withAuth(async (
         services?: Record<string, { quantity?: number; custom_rate?: number }>;
         minimum_billable_time?: number;
         round_up_to_nearest?: number;
+        cadence_owner?: CadenceOwner;
     }
 ): Promise<string> => {
     try {
@@ -331,6 +332,7 @@ export const copyPresetToContractLine = withAuth(async (
                 contract_line_name: preset.preset_name,
                 contract_line_type: preset.contract_line_type,
                 billing_frequency: preset.billing_frequency,
+                cadence_owner: overrides?.cadence_owner ?? 'client',
                 service_category: undefined, // Presets don't have service_category
                 is_custom: false, // Contract lines created from presets are not custom
                 // Add hourly-specific fields if this is an hourly contract line
@@ -536,6 +538,7 @@ export interface CreateCustomContractLineInput {
     contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
     billing_frequency: string;
     billing_timing?: 'arrears' | 'advance';
+    cadence_owner?: CadenceOwner;
     services: CustomContractLineServiceConfig[];
     // Fixed-specific config
     base_rate?: number | null;  // For Fixed type, overall base rate
@@ -588,6 +591,7 @@ export const createCustomContractLine = withAuth(async (
                 contract_line_type: input.contract_line_type,
                 billing_frequency: input.billing_frequency,
                 billing_timing: input.billing_timing ?? 'advance',
+                cadence_owner: input.cadence_owner ?? 'client',
                 service_category: undefined,
                 is_custom: true,  // Mark as custom since it's not from a preset
                 ...(input.contract_line_type === 'Hourly' ? {

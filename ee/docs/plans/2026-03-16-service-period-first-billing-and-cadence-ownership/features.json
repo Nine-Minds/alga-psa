@@ -512,7 +512,7 @@
   {
     "id": "F086",
     "description": "Update package actions that create or update recurring contract lines, presets, templates, and wizards to persist cadence_owner",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
