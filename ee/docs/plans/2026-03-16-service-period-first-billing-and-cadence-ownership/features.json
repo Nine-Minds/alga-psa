@@ -590,7 +590,7 @@
   {
     "id": "F099",
     "description": "Update accounting export repositories and adapters to continue mapping stable service-period fields after cutover",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

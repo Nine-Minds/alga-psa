@@ -41,6 +41,7 @@ describe('Accounting export invoice selection integration', () => {
         'accounting_export_lines',
         'accounting_export_batches',
         'transactions',
+        'invoice_charge_details',
         'invoice_charges',
         'invoices',
         'companies'
@@ -59,6 +60,7 @@ describe('Accounting export invoice selection integration', () => {
     await ctx.db('accounting_export_lines').where({ tenant: ctx.tenantId }).del();
     await ctx.db('accounting_export_batches').where({ tenant: ctx.tenantId }).del();
     await ctx.db('transactions').where({ tenant: ctx.tenantId }).del();
+    await ctx.db('invoice_charge_details').where({ tenant: ctx.tenantId }).del();
     await ctx.db('invoice_charges').where({ tenant: ctx.tenantId }).del();
     await ctx.db('invoices').where({ tenant: ctx.tenantId }).del();
     if (await ctx.db.schema.hasTable('companies')) {
@@ -128,6 +130,8 @@ describe('Accounting export invoice selection integration', () => {
       chargeIsManual?: boolean;
       billingPeriodStart?: string | null;
       billingPeriodEnd?: string | null;
+      detailServicePeriodStart?: string | null;
+      detailServicePeriodEnd?: string | null;
     }) {
       const invoiceId = uuidv4();
       const invoiceNumber = `INV-${invoiceId.slice(0, 6)}`;
@@ -169,6 +173,23 @@ describe('Accounting export invoice selection integration', () => {
         updated_at: invoiceDate
       });
 
+      if (params.detailServicePeriodStart || params.detailServicePeriodEnd) {
+        await ctx.db('invoice_charge_details').insert({
+          item_detail_id: uuidv4(),
+          item_id: chargeId,
+          tenant: ctx.tenantId,
+          service_id: serviceId,
+          config_id: null,
+          quantity: 1,
+          rate: params.chargeAmount,
+          service_period_start: params.detailServicePeriodStart ?? null,
+          service_period_end: params.detailServicePeriodEnd ?? null,
+          billing_timing: 'arrears',
+          created_at: invoiceDate,
+          updated_at: invoiceDate
+        });
+      }
+
       const transactionId = uuidv4();
       await ctx.db('transactions').insert({
         transaction_id: transactionId,
@@ -204,8 +225,10 @@ describe('Accounting export invoice selection integration', () => {
     await insertInvoice({
       key: 'multiPeriod',
       invoiceDate: '2025-01-10',
-      billingPeriodStart: '2025-01-01T00:00:00.000Z',
-      billingPeriodEnd: '2025-02-01T00:00:00.000Z',
+      billingPeriodStart: null,
+      billingPeriodEnd: null,
+      detailServicePeriodStart: '2025-01-01T00:00:00.000Z',
+      detailServicePeriodEnd: '2025-02-01T00:00:00.000Z',
       totalCents: 15000,
       chargeAmount: 15000
     });
@@ -270,8 +293,8 @@ describe('Accounting export invoice selection integration', () => {
 
     const multiPeriodLine = preview.find((line) => line.chargeId === seeded.multiPeriod.chargeId)!;
     expect(multiPeriodLine.isMultiPeriod).toBe(true);
-    expect(multiPeriodLine.servicePeriodStart).toBeDefined();
-    expect(multiPeriodLine.servicePeriodEnd).toBeDefined();
+    expect(multiPeriodLine.servicePeriodStart).toBe('2025-01-01T00:00:00.000Z');
+    expect(multiPeriodLine.servicePeriodEnd).toBe('2025-02-01T00:00:00.000Z');
 
     const creditLine = preview.find((line) => line.chargeId === seeded.credit.chargeId)!;
     expect(creditLine.isCredit).toBe(true);
@@ -319,8 +342,8 @@ describe('Accounting export invoice selection integration', () => {
       expect(payload?.transaction_ids).toContain(expected.transactionId);
 
       if (line.invoice_charge_id === seeded.multiPeriod.chargeId) {
-        expect(line.service_period_start).toBeTruthy();
-        expect(line.service_period_end).toBeTruthy();
+        expect(line.service_period_start).toBe('2025-01-01T00:00:00.000Z');
+        expect(line.service_period_end).toBe('2025-02-01T00:00:00.000Z');
       }
     }
   }, HOOK_TIMEOUT);

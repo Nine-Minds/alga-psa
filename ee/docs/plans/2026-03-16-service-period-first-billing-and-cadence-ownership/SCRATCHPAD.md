@@ -313,6 +313,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/reporting/src/lib/reports/definitions/contracts/revenue.ts` now matches that runtime behavior with a raw-SQL metric that uses canonical recurring service-period dates instead of invoice headers when detail rows exist
   - `packages/reporting/src/lib/reports/definitions/contracts/expiration.ts` and `packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx` now clarify the reporting date basis in business language so contract-expiration reporting stays assignment-based while revenue reporting is explicitly service-period-based
   - focused regression coverage now lives in `server/src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts`, `packages/reporting/src/lib/reports/definitions/contracts/revenue.servicePeriods.test.ts`, and `packages/billing/tests/ContractReports.revenueCopy.wiring.test.ts`
+- (2026-03-17) Accounting export line selection now preserves canonical recurring service periods instead of falling back to invoice header windows, which closes `F099`:
+  - `packages/billing/src/services/accountingExportInvoiceSelector.ts` now joins `invoice_charge_details`, collapses multiple detail rows back to one export preview line per charge, and prefers canonical detail-level `service_period_start` / `service_period_end` over `invoices.billing_period_start` / `billing_period_end`
+  - export preview and batch creation still preserve a safe fallback for historical/manual charges that do not have canonical detail rows yet, so export lines remain perioded without forcing detail backfills
+  - this makes the downstream adapter contract explicit instead of accidental: QuickBooks Online service dates and Xero payload service-period metadata now continue to consume the selector's canonical line periods rather than invoice headers
+  - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` now seeds `invoice_charge_details` for the multi-period export scenario so the intended DB-backed regression is in place, but local execution remains blocked by `ECONNREFUSED` to Postgres on `127.0.0.1:5438`
+  - executable local coverage for the same behavior now lives in `server/src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts`, `packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts`, and `packages/billing/tests/accountingExportAdapters.servicePeriods.wiring.test.ts`
 
 ## Commands / Runbooks
 
@@ -487,6 +493,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - run from `packages/reporting/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p packages/reporting/tsconfig.json`
+- (2026-03-17) Accounting export service-period validation:
+  - `npx vitest run src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts ../packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts ../packages/billing/tests/accountingExportAdapters.servicePeriods.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest picks up the existing workspace alias config for package billing tests
+  - `npx vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts --coverage.enabled false`
+    - blocked locally by `ECONNREFUSED` to Postgres on `127.0.0.1:5438`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 ## Links / References
 

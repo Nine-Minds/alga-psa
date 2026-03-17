@@ -38,6 +38,26 @@ export interface InvoicePreviewLine {
   transactionIds: string[];
 }
 
+type InvoicePreviewSelectionRow = {
+  invoice_id: string;
+  invoice_number: string;
+  invoice_date: string | Date;
+  invoice_status: string;
+  tax_source?: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
+  currency_code?: string | null;
+  invoice_is_manual?: boolean | null;
+  billing_period_start?: string | Date | null;
+  billing_period_end?: string | Date | null;
+  total_amount?: number | string | null;
+  item_id: string;
+  total_price: number | string;
+  charge_is_manual?: boolean | null;
+  detail_service_period_start?: string | Date | null;
+  detail_service_period_end?: string | Date | null;
+};
+
 interface CreateBatchOptions {
   adapterType: string;
   targetRealm?: Nullable<string>;
@@ -76,6 +96,9 @@ export class AccountingExportInvoiceSelector {
       .join('invoice_charges as ch', function joinCharges() {
         this.on('inv.invoice_id', '=', 'ch.invoice_id').andOn('inv.tenant', '=', 'ch.tenant');
       })
+      .leftJoin('invoice_charge_details as iid', function joinChargeDetails() {
+        this.on('ch.item_id', '=', 'iid.item_id').andOn('ch.tenant', '=', 'iid.tenant');
+      })
       .leftJoin('clients as cli', function joinClients() {
         this.on('inv.client_id', '=', 'cli.client_id').andOn('inv.tenant', '=', 'cli.tenant');
       })
@@ -94,7 +117,9 @@ export class AccountingExportInvoiceSelector {
         'inv.total_amount',
         'ch.item_id',
         'ch.total_price',
-        'ch.is_manual as charge_is_manual'
+        'ch.is_manual as charge_is_manual',
+        'iid.service_period_start as detail_service_period_start',
+        'iid.service_period_end as detail_service_period_end'
       ])
       .where('inv.tenant', this.tenantId)
       .andWhere('ch.tenant', this.tenantId);
@@ -149,7 +174,7 @@ export class AccountingExportInvoiceSelector {
       });
     }
 
-    const rows = await query.orderBy('inv.invoice_date', 'asc').orderBy('inv.invoice_number', 'asc');
+    const rows = (await query.orderBy('inv.invoice_date', 'asc').orderBy('inv.invoice_number', 'asc')) as InvoicePreviewSelectionRow[];
 
     if (rows.length === 0) {
       return [];
@@ -158,12 +183,48 @@ export class AccountingExportInvoiceSelector {
     const invoiceIds = Array.from(new Set(rows.map((row) => row.invoice_id))).filter(Boolean);
     const transactionMap = await this.fetchTransactions(invoiceIds);
 
-    return rows.map((row) => {
+    const rowsByChargeId = new Map<string, InvoicePreviewSelectionRow[]>();
+    for (const row of rows) {
+      const existing = rowsByChargeId.get(row.item_id) ?? [];
+      existing.push(row);
+      rowsByChargeId.set(row.item_id, existing);
+    }
+
+    return Array.from(rowsByChargeId.values()).map((chargeRows) => {
+      const row = chargeRows[0];
       const amountCents = toInteger(row.total_price);
       const totalAmountCents = toInteger(row.total_amount);
-      const servicePeriodStart = row.billing_period_start ? new Date(row.billing_period_start).toISOString() : null;
-      const servicePeriodEnd = row.billing_period_end ? new Date(row.billing_period_end).toISOString() : null;
-      const isMultiPeriod = Boolean(servicePeriodStart && servicePeriodEnd && servicePeriodStart !== servicePeriodEnd);
+      const detailServicePeriodStarts = chargeRows
+        .map((detailRow) => detailRow.detail_service_period_start)
+        .filter((value): value is string | Date => value !== null && value !== undefined)
+        .map(toIsoString)
+        .filter((value): value is string => value !== null)
+        .sort();
+      const detailServicePeriodEnds = chargeRows
+        .map((detailRow) => detailRow.detail_service_period_end)
+        .filter((value): value is string | Date => value !== null && value !== undefined)
+        .map(toIsoString)
+        .filter((value): value is string => value !== null)
+        .sort();
+      const hasCanonicalDetailPeriods = detailServicePeriodStarts.length > 0 || detailServicePeriodEnds.length > 0;
+      const servicePeriodStart = hasCanonicalDetailPeriods
+        ? detailServicePeriodStarts[0] ?? null
+        : toIsoString(row.billing_period_start);
+      const servicePeriodEnd = hasCanonicalDetailPeriods
+        ? detailServicePeriodEnds[detailServicePeriodEnds.length - 1] ?? null
+        : toIsoString(row.billing_period_end);
+      const distinctDetailPeriods = new Set(
+        chargeRows
+          .map((detailRow) => {
+            const start = toIsoString(detailRow.detail_service_period_start);
+            const end = toIsoString(detailRow.detail_service_period_end);
+            return start || end ? `${start ?? ''}|${end ?? ''}` : null;
+          })
+          .filter((value): value is string => value !== null)
+      );
+      const isMultiPeriod =
+        distinctDetailPeriods.size > 1 ||
+        Boolean(servicePeriodStart && servicePeriodEnd && servicePeriodStart !== servicePeriodEnd);
 
       return {
         invoiceId: row.invoice_id,
@@ -311,6 +372,19 @@ function toInteger(value: unknown): number {
     }
   }
   return 0;
+}
+
+function toIsoString(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value as string);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
 }
 
 function expandInvoiceStatuses(input?: string[]): string[] | undefined {
