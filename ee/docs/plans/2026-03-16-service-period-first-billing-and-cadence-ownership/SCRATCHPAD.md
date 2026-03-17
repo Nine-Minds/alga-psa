@@ -140,6 +140,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Fixed recurring PO association now has an executable unit guard in addition to the blocked DB integration:
   - `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` now proves that detail-backed fixed recurring persistence keeps `client_contract_id` on the consolidated parent invoice line, which is the assignment linkage PO-scoped readers and invoice selection rely on
   - the existing DB-backed regression in `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts` remains valuable, but local execution is still blocked by current Postgres permissions
+- (2026-03-17) Fixed recurring tax-date evaluation now follows the canonical service period instead of the enclosing invoice window:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now passes `servicePeriodEnd` into fixed recurring tax calculations for both the main FMV-allocation path and the legacy fixed-service edge path
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now asserts the tax service sees `2025-01-20` for a partial advance final period instead of the enclosing invoice window end, which closes `F056`
+- (2026-03-17) Negative recurring fixed totals and credit-generating allocations are now explicit, not implied by an inline comment:
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now proves a net-negative fixed recurring charge keeps its canonical service period metadata and that a mixed positive/negative FMV allocation can emit one negative detailed charge without breaking the settled period boundaries
+  - no runtime code change was needed for `F057`; the checkpoint was to turn previously implicit support into an executable contract before product/license migration reuses the same settlement model
 
 ## Commands / Runbooks
 
@@ -201,6 +207,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/billingEngine.discountPricingTiming.test.ts --coverage.enabled false`
 - (2026-03-17) Discount applicability and PO-association validation:
   - `npx vitest run src/test/unit/billing/billingEngine.discountPricingTiming.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
+- (2026-03-17) Fixed tax-date and negative-recurring validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
 
 ## Links / References
 

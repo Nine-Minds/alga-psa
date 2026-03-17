@@ -62,7 +62,7 @@
   {"id":"T056","description":"Bucket or allowance recurring lines map their included units to the correct canonical service period","implemented":true,"featureIds":["F051"]},
   {"id":"T057","description":"Bucket rollover behavior remains correct when recurring period boundaries become canonical and explicit","implemented":true,"featureIds":["F052"]},
   {"id":"T058","description":"Bucket overage charges still attach to the correct invoice window after recurring timing cutover","implemented":true,"featureIds":["F053"]},
-  {"id":"T059","description":"Negative recurring totals and credit-generating allocations behave predictably under canonical service periods","implemented":false,"featureIds":["F057"]},
+  {"id":"T059","description":"Negative recurring totals and credit-generating allocations behave predictably under canonical service periods","implemented":true,"featureIds":["F057"]},
   {"id":"T060","description":"Out-of-scope bucket, time, and usage behaviors are documented explicitly rather than left implicit in the plan","implemented":false,"featureIds":["F060"]},
 
   {"id":"T061","description":"Recurring product charge paths that currently depend on late-stage proration are fully inventoried before migration","implemented":false,"featureIds":["F061"]},

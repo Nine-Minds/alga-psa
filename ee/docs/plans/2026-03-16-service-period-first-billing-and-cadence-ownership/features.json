@@ -332,13 +332,13 @@
   {
     "id": "F056",
     "description": "Preserve tax date-selection semantics when recurring charges are produced from canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {
     "id": "F057",
     "description": "Define behavior for negative recurring totals and credit-generating service allocations under canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {

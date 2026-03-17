@@ -654,7 +654,7 @@ describe("BillingEngine billing timing", () => {
     ).toBe(200);
   });
 
-  it("T052: tax-region selection for fixed recurring charges remains stable when timing source changes to canonical settlement", async () => {
+  it("T052/T056: fixed recurring tax-region and tax-date selection follow the canonical settled service period", async () => {
     const engine = new BillingEngine();
     const billingPeriod = installFixedChargeMocks(engine, {
       contractLineCustomRate: 3100,
@@ -712,7 +712,7 @@ describe("BillingEngine billing timing", () => {
     expect(calculateTaxSpy).toHaveBeenCalledWith(
       "client-1",
       2000,
-      billingPeriod.endDate,
+      "2025-01-20",
       "US-NY",
       true,
       "USD",
@@ -720,10 +720,111 @@ describe("BillingEngine billing timing", () => {
     expect(calculateTaxSpy).toHaveBeenCalledWith(
       "client-1",
       1100,
-      billingPeriod.endDate,
+      "2025-01-20",
       "US-WA",
       true,
       "USD",
     );
+  });
+
+  it("T059: negative recurring totals and credit-generating fixed allocations preserve canonical service periods", async () => {
+    const engine = new BillingEngine();
+
+    const negativeBillingPeriod = installFixedChargeMocks(engine, {
+      contractLineCustomRate: -1000,
+      assignmentCustomRate: null,
+      serviceRates: [-1000],
+      enableProration: false,
+    });
+
+    const negativeCharges = await (engine as any).calculateFixedPriceCharges(
+      "client-1",
+      negativeBillingPeriod,
+      {
+        client_contract_line_id: "contract-line-1",
+        client_id: "client-1",
+        contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_id: "contract-1",
+        contract_line_name: "Managed Support Credit",
+        contract_name: "Acme Corp",
+        billing_timing: "arrears",
+        start_date: "2024-12-01",
+        end_date: null,
+        custom_rate: null,
+      },
+    );
+
+    expect(negativeCharges).toEqual([
+      expect.objectContaining({
+        serviceId: "service-1",
+        total: -1000,
+        allocated_amount: -1000,
+        fmv: -1000,
+        proportion: 1,
+        servicePeriodStart: "2024-12-01",
+        servicePeriodEnd: "2024-12-31",
+        billingTiming: "arrears",
+      }),
+    ]);
+
+    const mixedAllocationEngine = new BillingEngine();
+    const mixedAllocationBillingPeriod = installFixedChargeMocks(
+      mixedAllocationEngine,
+      {
+        contractLineCustomRate: 1000,
+        assignmentCustomRate: null,
+        serviceRates: [2000, -1000],
+        enableProration: false,
+      },
+    );
+
+    const mixedAllocationCharges =
+      await (mixedAllocationEngine as any).calculateFixedPriceCharges(
+        "client-1",
+        mixedAllocationBillingPeriod,
+        {
+          client_contract_line_id: "contract-line-1",
+          client_id: "client-1",
+          contract_line_id: "contract-line-1",
+          client_contract_id: "assignment-1",
+          contract_id: "contract-1",
+          contract_line_name: "Managed Support Credit Mix",
+          contract_name: "Acme Corp",
+          billing_timing: "arrears",
+          start_date: "2024-12-01",
+          end_date: null,
+          custom_rate: null,
+        },
+      );
+
+    expect(mixedAllocationCharges).toEqual([
+      expect.objectContaining({
+        serviceId: "service-1",
+        total: 2000,
+        allocated_amount: 2000,
+        fmv: 2000,
+        proportion: 2,
+        servicePeriodStart: "2024-12-01",
+        servicePeriodEnd: "2024-12-31",
+        billingTiming: "arrears",
+      }),
+      expect.objectContaining({
+        serviceId: "service-2",
+        total: -1000,
+        allocated_amount: -1000,
+        fmv: -1000,
+        proportion: -1,
+        servicePeriodStart: "2024-12-01",
+        servicePeriodEnd: "2024-12-31",
+        billingTiming: "arrears",
+      }),
+    ]);
+    expect(
+      mixedAllocationCharges.reduce(
+        (sum: number, charge: any) => sum + (charge.total ?? 0),
+        0,
+      ),
+    ).toBe(1000);
   });
 });

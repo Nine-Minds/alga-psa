@@ -1412,7 +1412,7 @@ export class BillingEngine {
                 const taxResult = await taxServiceInstance.calculateTax(
                   client.client_id,
                   allocatedAmount,
-                  billingPeriod.endDate,
+                  servicePeriodEnd,
                   effectiveTaxRegion,
                   true,
                   clientContractLine.currency_code || "USD",
@@ -1611,7 +1611,7 @@ export class BillingEngine {
                   const taxResult = await taxServiceInstance.calculateTax(
                     client.client_id,
                     charge.total,
-                    billingPeriod.endDate,
+                    servicePeriodEnd,
                     effectiveTaxRegion,
                     true,
                     clientContractLine.currency_code || "USD",
