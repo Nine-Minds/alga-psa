@@ -284,7 +284,7 @@
   {
     "id": "F048",
     "description": "Preserve tax allocation and tax-region behavior for fixed recurring charges while timing semantics change",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {

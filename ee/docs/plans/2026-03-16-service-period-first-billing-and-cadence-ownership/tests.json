@@ -54,8 +54,8 @@
   {"id":"T049","description":"Contract-level custom-rate overrides still apply correctly under fixed recurring cutover","implemented":true,"featureIds":["F047"]},
   {"id":"T050","description":"Fixed recurring invoice detail rows persist canonical service-period metadata without subtotal drift","implemented":false,"featureIds":["F049","F050"]},
 
-  {"id":"T051","description":"Tax allocation for fixed recurring charges remains stable when timing source changes to canonical service periods","implemented":false,"featureIds":["F048"]},
-  {"id":"T052","description":"Tax-region selection for fixed recurring charges remains stable when timing source changes to canonical service periods","implemented":false,"featureIds":["F048"]},
+  {"id":"T051","description":"Tax allocation for fixed recurring charges remains stable when timing source changes to canonical service periods","implemented":true,"featureIds":["F048"]},
+  {"id":"T052","description":"Tax-region selection for fixed recurring charges remains stable when timing source changes to canonical service periods","implemented":true,"featureIds":["F048"]},
   {"id":"T053","description":"PO-required recurring charges remain associated to the correct invoice lines after fixed recurring cutover","implemented":false,"featureIds":["F049","F059"]},
   {"id":"T054","description":"Pricing schedule effective-date boundaries are evaluated correctly against canonical recurring periods","implemented":false,"featureIds":["F046","F055"]},
   {"id":"T055","description":"Discount start and end applicability still produces the same recurring discount coverage under canonical timing","implemented":false,"featureIds":["F054"]},

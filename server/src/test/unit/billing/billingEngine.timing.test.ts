@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { BillingEngine } from "@alga-psa/billing/services";
+import { TaxService } from "@alga-psa/billing/services/taxService";
 
 vi.mock("@alga-psa/billing/actions/billingAndTax", () => ({
   getNextBillingDate: vi.fn(
@@ -425,5 +426,127 @@ describe("BillingEngine billing timing", () => {
         billingTiming: "arrears",
       }),
     ]);
+  });
+
+  it("T051: tax allocation for fixed recurring charges remains stable when timing settles a partial advance final period canonically", async () => {
+    const engine = new BillingEngine();
+    const billingPeriod = installFixedChargeMocks(engine, {
+      contractLineCustomRate: 3100,
+      assignmentCustomRate: null,
+      serviceRates: [2000, 1100],
+      enableProration: false,
+    });
+
+    vi.spyOn(engine as any, "getTaxInfoFromService").mockImplementation(
+      async () => ({
+        taxRegion: "US-NY",
+        isTaxable: true,
+      }),
+    );
+    vi.spyOn(engine as any, "getClientDefaultTaxRegionCode").mockResolvedValue(
+      "US-NY",
+    );
+    vi.spyOn(TaxService.prototype, "calculateTax").mockImplementation(
+      async (_clientId: string, amount: number) => ({
+        taxRate: 10,
+        taxAmount: Math.round(amount * 0.1),
+      }),
+    );
+
+    const charges = await (engine as any).calculateFixedPriceCharges(
+      "client-1",
+      billingPeriod,
+      {
+        client_contract_line_id: "contract-line-1",
+        client_id: "client-1",
+        contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_id: "contract-1",
+        contract_line_name: "Managed Support",
+        contract_name: "Acme Corp",
+        billing_timing: "advance",
+        start_date: "2024-12-01",
+        end_date: "2025-01-20",
+        custom_rate: null,
+      },
+    );
+
+    expect(charges.map((charge) => charge.tax_amount)).toEqual([129, 71]);
+    expect(
+      charges.reduce((sum, charge) => sum + (charge.tax_amount ?? 0), 0),
+    ).toBe(200);
+  });
+
+  it("T052: tax-region selection for fixed recurring charges remains stable when timing source changes to canonical settlement", async () => {
+    const engine = new BillingEngine();
+    const billingPeriod = installFixedChargeMocks(engine, {
+      contractLineCustomRate: 3100,
+      assignmentCustomRate: null,
+      serviceRates: [2000, 1100],
+      enableProration: false,
+    });
+
+    vi.spyOn(engine as any, "getTaxInfoFromService").mockImplementation(
+      async (service: any) => ({
+        taxRegion: service.service_id === "service-1" ? "US-NY" : undefined,
+        isTaxable: true,
+      }),
+    );
+    vi.spyOn(engine as any, "getClientDefaultTaxRegionCode").mockResolvedValue(
+      "US-WA",
+    );
+
+    const calculateTaxSpy = vi
+      .spyOn(TaxService.prototype, "calculateTax")
+      .mockImplementation(
+        async (
+          _clientId: string,
+          amount: number,
+          _taxDate: string,
+          region: string,
+        ) => ({
+          taxRate: region === "US-NY" ? 10 : 5,
+          taxAmount: Math.round(amount * (region === "US-NY" ? 0.1 : 0.05)),
+        }),
+      );
+
+    const charges = await (engine as any).calculateFixedPriceCharges(
+      "client-1",
+      billingPeriod,
+      {
+        client_contract_line_id: "contract-line-1",
+        client_id: "client-1",
+        contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_id: "contract-1",
+        contract_line_name: "Managed Support",
+        contract_name: "Acme Corp",
+        billing_timing: "advance",
+        start_date: "2024-12-01",
+        end_date: "2025-01-20",
+        custom_rate: null,
+      },
+    );
+
+    expect(charges.map((charge) => charge.tax_region)).toEqual([
+      "US-NY",
+      "US-WA",
+    ]);
+    expect(calculateTaxSpy).toHaveBeenCalledWith(
+      "client-1",
+      2000,
+      billingPeriod.endDate,
+      "US-NY",
+      true,
+      "USD",
+    );
+    expect(calculateTaxSpy).toHaveBeenCalledWith(
+      "client-1",
+      1100,
+      billingPeriod.endDate,
+      "US-WA",
+      true,
+      "USD",
+    );
   });
 });
