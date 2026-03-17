@@ -276,4 +276,193 @@ describe('invoice model recurring service-period projection', () => {
       billing_timing: 'arrears',
     });
   });
+
+  it('T091: partially credit-applied recurring invoices keep canonical detail periods on reread', async () => {
+    const knex = createMockKnex({
+      invoices: [
+        {
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          credit_applied: 1500,
+          total_amount: 3500,
+        },
+      ],
+      invoice_charges: [
+        {
+          item_id: 'item-1',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          service_id: 'service-1',
+          description: 'Managed Firewall',
+          quantity: 1,
+          unit_price: 5000,
+          total_price: 5000,
+          tax_amount: 0,
+          net_amount: 5000,
+          is_manual: false,
+        },
+      ],
+      invoice_charge_details: [
+        {
+          item_id: 'item-1',
+          tenant: 'tenant-1',
+          service_period_start: '2025-03-01T00:00:00.000Z',
+          service_period_end: '2025-04-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+    });
+
+    const invoice = await Invoice.getById(knex, 'tenant-1', 'invoice-1');
+
+    expect(invoice?.credit_applied).toBe(1500);
+    expect(invoice?.total_amount).toBe(3500);
+    expect(invoice?.invoice_charges).toEqual([
+      expect.objectContaining({
+        item_id: 'item-1',
+        service_period_start: '2025-03-01T00:00:00.000Z',
+        service_period_end: '2025-04-01T00:00:00.000Z',
+        billing_timing: 'arrears',
+      }),
+    ]);
+  });
+
+  it('T094: negative recurring invoices keep canonical service periods on reread', async () => {
+    const knex = createMockKnex({
+      invoices: [
+        {
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          credit_applied: 0,
+          total_amount: -2500,
+        },
+      ],
+      invoice_charges: [
+        {
+          item_id: 'item-1',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          service_id: 'service-1',
+          description: 'Service credit true-up',
+          quantity: 1,
+          unit_price: -2500,
+          total_price: -2500,
+          tax_amount: 0,
+          net_amount: -2500,
+          is_manual: false,
+        },
+      ],
+      invoice_charge_details: [
+        {
+          item_id: 'item-1',
+          tenant: 'tenant-1',
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+    });
+
+    const invoice = await Invoice.getById(knex, 'tenant-1', 'invoice-1');
+
+    expect(invoice?.total_amount).toBe(-2500);
+    expect(invoice?.invoice_charges).toEqual([
+      expect.objectContaining({
+        item_id: 'item-1',
+        total_price: -2500,
+        net_amount: -2500,
+        service_period_start: '2025-01-01T00:00:00.000Z',
+        service_period_end: '2025-02-01T00:00:00.000Z',
+        billing_timing: 'arrears',
+      }),
+    ]);
+  });
+
+  it('T095: negative recurring credit sources and follow-on credit-applied invoices both preserve canonical periods', async () => {
+    const knex = createMockKnex({
+      invoices: [
+        {
+          invoice_id: 'invoice-negative',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          credit_applied: 0,
+          total_amount: -11000,
+        },
+        {
+          invoice_id: 'invoice-positive',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          credit_applied: 11000,
+          total_amount: 0,
+        },
+      ],
+      invoice_charges: [
+        {
+          item_id: 'item-negative',
+          invoice_id: 'invoice-negative',
+          tenant: 'tenant-1',
+          service_id: 'service-credit',
+          description: 'January service credit',
+          quantity: 1,
+          unit_price: -11000,
+          total_price: -11000,
+          tax_amount: 0,
+          net_amount: -11000,
+          is_manual: false,
+        },
+        {
+          item_id: 'item-positive',
+          invoice_id: 'invoice-positive',
+          tenant: 'tenant-1',
+          service_id: 'service-regular',
+          description: 'February managed service',
+          quantity: 1,
+          unit_price: 11000,
+          total_price: 11000,
+          tax_amount: 0,
+          net_amount: 11000,
+          is_manual: false,
+        },
+      ],
+      invoice_charge_details: [
+        {
+          item_id: 'item-negative',
+          tenant: 'tenant-1',
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+        {
+          item_id: 'item-positive',
+          tenant: 'tenant-1',
+          service_period_start: '2025-02-01T00:00:00.000Z',
+          service_period_end: '2025-03-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+    });
+
+    const negativeInvoice = await Invoice.getById(knex, 'tenant-1', 'invoice-negative');
+    const positiveInvoice = await Invoice.getById(knex, 'tenant-1', 'invoice-positive');
+
+    expect(negativeInvoice?.invoice_charges).toEqual([
+      expect.objectContaining({
+        item_id: 'item-negative',
+        service_period_start: '2025-01-01T00:00:00.000Z',
+        service_period_end: '2025-02-01T00:00:00.000Z',
+        billing_timing: 'arrears',
+      }),
+    ]);
+    expect(positiveInvoice?.credit_applied).toBe(11000);
+    expect(positiveInvoice?.invoice_charges).toEqual([
+      expect.objectContaining({
+        item_id: 'item-positive',
+        service_period_start: '2025-02-01T00:00:00.000Z',
+        service_period_end: '2025-03-01T00:00:00.000Z',
+        billing_timing: 'arrears',
+      }),
+    ]);
+  });
 });

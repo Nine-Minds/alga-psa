@@ -458,7 +458,7 @@
   {
     "id": "F077",
     "description": "Preserve negative-invoice and credit-application flows when recurring charge timing changes underneath invoice generation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Risks"]
   },
   {

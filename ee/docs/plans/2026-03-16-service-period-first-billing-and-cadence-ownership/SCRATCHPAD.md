@@ -218,6 +218,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
   - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
   - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
+- (2026-03-17) Negative-invoice and credit-application recurring safeguards are now locked as executable contracts without needing another runtime patch:
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now closes `T091`, `T094`, and `T095` by proving partial credit-applied recurring invoices, negative recurring invoices, and negative-source-plus-positive-target rereads all keep canonical `invoice_charge_details` service periods attached to recurring lines
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now closes `T078` by proving advance duplicate-prevention checks use the canonical service-period end date (`2025-01-31`) instead of the enclosing invoice-window end (`2025-02-01`), which is the billed-through seam `F080` depends on
+  - no production code changed for `F077`; the existing runtime behavior already preserved these paths, but the plan had no focused regression contract proving it after the service-period-first cutover
+  - a targeted DB-backed run of `negativeInvoiceCredit.test.ts` is still blocked locally because its suite-level `@alga-psa/core/secrets` mock no longer exports `getSecret`, so this checkpoint uses focused unit coverage instead of widening that unrelated harness repair
 
 ## Commands / Runbooks
 
@@ -319,6 +324,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts --coverage.enabled false`
 - (2026-03-17) Empty recurring-selection validation:
   - `npx vitest run src/test/unit/billing/invoiceGeneration.emptyResult.test.ts --coverage.enabled false`
+- (2026-03-17) Credit-flow and billed-through regression validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
 
 ## Links / References
 
