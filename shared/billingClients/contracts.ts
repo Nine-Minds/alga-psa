@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { deriveClientContractStatus } from './clientContractStatus';
 
 export async function hasActiveContractForClient(
   knexOrTrx: Knex | Knex.Transaction,
@@ -13,7 +14,7 @@ export async function hasActiveContractForClient(
     .where({
       'cc.client_id': clientId,
       'cc.tenant': tenant,
-      'c.status': 'active',
+      'cc.is_active': true,
     });
 
   query = query.andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false));
@@ -22,8 +23,14 @@ export async function hasActiveContractForClient(
     query = query.andWhere('c.contract_id', '!=', excludeContractId);
   }
 
-  const result = (await query.count('cc.client_contract_id as count').first()) as { count?: string };
-  return Number(result?.count ?? 0) > 0;
+  const rows = await query.select('cc.start_date', 'cc.end_date');
+  return rows.some((row: { start_date: string; end_date: string | null }) =>
+    deriveClientContractStatus({
+      isActive: true,
+      startDate: row.start_date,
+      endDate: row.end_date,
+    }) === 'active'
+  );
 }
 
 export async function getClientIdsWithActiveContracts(
@@ -37,7 +44,7 @@ export async function getClientIdsWithActiveContracts(
     })
     .where({
       'cc.tenant': tenant,
-      'c.status': 'active',
+      'cc.is_active': true,
     })
     .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false));
 
@@ -45,8 +52,20 @@ export async function getClientIdsWithActiveContracts(
     query = query.andWhere('c.contract_id', '!=', excludeContractId);
   }
 
-  const rows = await query.distinct('cc.client_id');
-  return rows.map((r: { client_id: string }) => r.client_id);
+  const rows = await query.select('cc.client_id', 'cc.start_date', 'cc.end_date');
+  return Array.from(
+    new Set(
+      rows
+        .filter((row: { start_date: string; end_date: string | null }) =>
+          deriveClientContractStatus({
+            isActive: true,
+            startDate: row.start_date,
+            endDate: row.end_date,
+          }) === 'active'
+        )
+        .map((row: { client_id: string }) => row.client_id)
+    )
+  );
 }
 
 export async function checkAndReactivateExpiredContract(
@@ -87,4 +106,3 @@ export async function checkAndReactivateExpiredContract(
     .where({ contract_id: contractId, tenant })
     .update({ status: 'active', updated_at: new Date().toISOString() });
 }
-

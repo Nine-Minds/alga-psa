@@ -28,7 +28,6 @@ import {
   getDraftContracts,
   getContractTemplates,
   getContractsWithClients,
-  updateContract,
 } from '@alga-psa/billing/actions/contractActions';
 import {
   getDraftContractForResume,
@@ -37,6 +36,7 @@ import {
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { ContractDialog } from './ContractDialog';
+import { updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import {
   getDraftTabBadgeCount,
   normalizeContractSubtab,
@@ -183,9 +183,12 @@ const Contracts: React.FC = () => {
     }
   };
 
-  const handleTerminateContract = async (contractId: string) => {
+  const handleTerminateContract = async (clientContractId?: string) => {
     try {
-      await updateContract(contractId, { status: 'terminated' });
+      if (!clientContractId) {
+        throw new Error('Missing client contract identifier');
+      }
+      await updateClientContractForBilling(clientContractId, { is_active: false });
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to terminate contract';
@@ -193,8 +196,11 @@ const Contracts: React.FC = () => {
     }
   };
 
-  const handleRestoreContract = async (contractId: string, clientId?: string) => {
+  const handleRestoreContract = async (clientContractId?: string, clientId?: string, contractId?: string) => {
     try {
+      if (!clientContractId) {
+        throw new Error('Missing client contract identifier');
+      }
       if (clientId) {
         const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
         if (hasActiveContract) {
@@ -202,7 +208,7 @@ const Contracts: React.FC = () => {
           return;
         }
       }
-      await updateContract(contractId, { status: 'active' });
+      await updateClientContractForBilling(clientContractId, { is_active: true });
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to restore contract';
@@ -210,8 +216,11 @@ const Contracts: React.FC = () => {
     }
   };
 
-  const handleSetToActive = async (contractId: string, clientId?: string) => {
+  const handleSetToActive = async (clientContractId?: string, clientId?: string, contractId?: string) => {
     try {
+      if (!clientContractId) {
+        throw new Error('Missing client contract identifier');
+      }
       if (clientId) {
         const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
         if (hasActiveContract) {
@@ -219,7 +228,7 @@ const Contracts: React.FC = () => {
           return;
         }
       }
-      await updateContract(contractId, { status: 'active' });
+      await updateClientContractForBilling(clientContractId, { is_active: true });
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to activate contract';
@@ -271,8 +280,8 @@ const renderStatusBadge = (status: string) => {
     },
     {
       title: 'Status',
-      dataIndex: 'status',
-      render: renderStatusBadge,
+      dataIndex: 'assignment_status',
+      render: (value: string | null, record) => renderStatusBadge(value ?? record.status),
     },
     {
       title: 'Actions',
@@ -328,7 +337,7 @@ const renderStatusBadge = (status: string) => {
         typeof value === 'string' && value.trim().length > 0 ? value : '—',
     },
     {
-      title: 'Contract Template',
+      title: 'Source Template',
       dataIndex: 'template_contract_name',
       render: (value: string | null) =>
         value && value.trim().length > 0 ? value : '—',
@@ -374,7 +383,8 @@ const renderStatusBadge = (status: string) => {
       title: 'Actions',
       dataIndex: 'contract_id',
       render: (value, record) => {
-        const isDraft = record.status === 'draft';
+        const liveStatus = record.assignment_status ?? record.status;
+        const isDraft = liveStatus === 'draft';
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -403,43 +413,37 @@ const renderStatusBadge = (status: string) => {
               >
                 {isDraft ? 'Resume' : 'Edit'}
               </DropdownMenuItem>
-            {record.status === 'active' && (
+            {liveStatus === 'active' && (
               <DropdownMenuItem
                 id="terminate-contract-menu-item"
                 className="text-orange-600 focus:text-orange-600"
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (record.contract_id) {
-                    void handleTerminateContract(record.contract_id);
-                  }
+                  void handleTerminateContract(record.client_contract_id);
                 }}
               >
                 Terminate
               </DropdownMenuItem>
             )}
-            {record.status === 'terminated' && (
+            {liveStatus === 'terminated' && (
               <DropdownMenuItem
                 id="restore-contract-menu-item"
                 className="text-green-600 focus:text-green-600"
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (record.contract_id) {
-                    void handleRestoreContract(record.contract_id, record.client_id);
-                  }
+                  void handleRestoreContract(record.client_contract_id, record.client_id, record.contract_id);
                 }}
               >
                 Restore
               </DropdownMenuItem>
             )}
-            {record.status === 'draft' && (
+            {liveStatus === 'draft' && (
               <DropdownMenuItem
                 id="set-to-active-menu-item"
                 className="text-green-600 focus:text-green-600"
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (record.contract_id) {
-                    void handleSetToActive(record.contract_id, record.client_id);
-                  }
+                  void handleSetToActive(record.client_contract_id, record.client_id, record.contract_id);
                 }}
               >
                 Set to Active
@@ -742,9 +746,14 @@ const renderStatusBadge = (status: string) => {
       <Card size="2">
         <Box p="4">
           <div className="flex justify-between items-center mb-4">
-            <Heading as="h3" size="4">
-              Contracts
-            </Heading>
+            <div className="space-y-1">
+              <Heading as="h3" size="4">
+                Contracts
+              </Heading>
+              <p className="text-sm text-muted-foreground">
+                Templates are reusable definitions. Client contracts are client-owned instances.
+              </p>
+            </div>
           </div>
 
           {error && (

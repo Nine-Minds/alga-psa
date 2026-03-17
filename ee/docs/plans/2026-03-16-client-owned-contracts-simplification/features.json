@@ -92,67 +92,67 @@
   {
     "id": "F016",
     "description": "Contract model/actions: stop deriving live contract ownership semantics from shared contract assumptions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Requirements"]
   },
   {
     "id": "F017",
     "description": "Contract model/actions: stop using aggregate multi-assignment logic to derive live `contracts.status` for client-owned contracts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {
     "id": "F018",
     "description": "Billing: keep `client_contracts -> contracts -> contract_lines` resolution but rely on owner-client invariant for unambiguous reads",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
     "id": "F019",
     "description": "Live contract status: standardize contract-facing status logic around assignment-derived lifecycle",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "UX / UI Notes"]
   },
   {
     "id": "F020",
     "description": "Billing dashboard: reframe contracts hub so templates are reusable and non-template contracts are client-owned instances",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F021",
     "description": "ClientContractsTab: load rows from assignment-first data instead of contract-first list semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F022",
     "description": "ClientContractsTab: render live status from `client_contracts` lifecycle, not `contracts.status`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements"]
   },
   {
     "id": "F023",
     "description": "Client contract list/actions: mutate assignment lifecycle for live contracts instead of contract-header status",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements"]
   },
   {
     "id": "F024",
     "description": "Contract detail routing: use `clientContractId` as the primary live-contract context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F025",
     "description": "Contract detail: show owner/assignment-derived live semantics instead of implying cross-client shared ownership",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F026",
     "description": "Templates UI: preserve template workflows as the only reusable contract-definition path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "UX / UI Notes"]
   },
   {

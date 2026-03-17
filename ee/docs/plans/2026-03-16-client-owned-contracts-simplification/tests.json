@@ -110,13 +110,13 @@
   {
     "id": "T019",
     "description": "Contract model/list actions no longer treat contracts without client ownership as normal live client contracts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T020",
     "description": "Contract lifecycle helpers no longer derive live multi-client status by aggregating unrelated client assignments",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
@@ -134,43 +134,43 @@
   {
     "id": "T023",
     "description": "Client contract lifecycle helper remains the source of truth for active/terminated/expired display state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
     "id": "T024",
     "description": "ClientContractsTab loads assignment-first rows and does not rely on `getContractsWithClients()` shared-contract semantics",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020", "F021"]
   },
   {
     "id": "T025",
     "description": "ClientContractsTab status badge reflects assignment lifecycle when contract-header status differs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T026",
     "description": "ClientContractsTab live actions mutate assignment lifecycle instead of contract-header active/terminated state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T027",
     "description": "Client contract detail route can open the correct live contract using `clientContractId` as the primary context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T028",
     "description": "Contract detail view shows owner/assignment-derived semantics and no longer implies a non-template contract can span unrelated clients",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
     "id": "T029",
     "description": "Templates UI still lists and edits reusable templates independently of client-owned contract instances",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {

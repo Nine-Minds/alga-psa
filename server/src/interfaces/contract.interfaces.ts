@@ -32,7 +32,10 @@ export interface IContract extends TenantEntity {
 export interface IContractWithClient extends IContract {
   client_id?: string;
   client_name?: string;
+  owner_client_name?: string | null;
   client_contract_id?: string;
+  assignment_status?: ContractStatus;
+  contract_header_status?: ContractStatus;
   start_date?: ISO8601String;
   end_date?: ISO8601String | null;
   template_contract_id?: string | null;
@@ -117,6 +120,7 @@ export interface IContractAssignmentSummary extends TenantEntity {
   client_contract_id: string;
   client_id: string;
   client_name?: string | null;
+  assignment_status?: ContractStatus;
   start_date: ISO8601String | null;
   end_date: ISO8601String | null;
   is_active: boolean;

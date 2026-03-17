@@ -190,7 +190,7 @@ describe('client contract effective renewal settings normalization', () => {
     expect(autoMode.decision_due_date).toBe('2026-12-01');
   });
 
-  it('skips decision_due_date generation for inactive/terminated assignments', () => {
+  it('skips decision_due_date generation only when the assignment itself is inactive', () => {
     const inactiveAssignment = normalizeClientContract({
       contract_id: 'contract-4f',
       client_contract_id: 'cc-4f',
@@ -219,7 +219,7 @@ describe('client contract effective renewal settings normalization', () => {
 
     expect(inactiveAssignment.decision_due_date).toBeUndefined();
     expect(inactiveAssignment.evergreen_review_anchor_date).toBeUndefined();
-    expect(terminatedContract.decision_due_date).toBeUndefined();
+    expect(terminatedContract.decision_due_date).toBe('2026-12-01');
     expect(terminatedContract.evergreen_review_anchor_date).toBeUndefined();
   });
 

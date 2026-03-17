@@ -14,3 +14,4 @@ export * from './invoiceTemplates';
 export * from './templateClone';
 export * from './taxSettings';
 export * from './billingSchedule';
+export * from './clientContractStatus';

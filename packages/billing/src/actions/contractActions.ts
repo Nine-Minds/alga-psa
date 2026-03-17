@@ -14,6 +14,7 @@ import {
   IContractTemplateWithLines,
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
+import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
@@ -489,7 +490,13 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
     }));
 
     const totalAssignments = assignments.length;
-    const activeAssignments = assignments.filter((assignment) => assignment.is_active).length;
+    const activeAssignments = assignments.filter((assignment) =>
+      deriveClientContractStatus({
+        isActive: Boolean(assignment.is_active),
+        startDate: assignment.start_date,
+        endDate: assignment.end_date,
+      }) === 'active'
+    ).length;
     const poRequiredAssignments = assignments.filter((assignment) => assignment.po_required).length;
 
     const poNumbers = Array.from(
@@ -640,6 +647,11 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
         client_contract_id: row.client_contract_id,
         client_id: row.client_id,
         client_name: row.client_name ?? null,
+        assignment_status: deriveClientContractStatus({
+          isActive: Boolean(row.is_active),
+          startDate: row.start_date,
+          endDate: row.end_date,
+        }),
         start_date: row.start_date ?? null,
         end_date: row.end_date ?? null,
         renewal_mode: renewalMode,

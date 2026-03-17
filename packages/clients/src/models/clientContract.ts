@@ -269,10 +269,8 @@ export const normalizeClientContract = (row: any): IClientContract => {
   const normalizedStartDate = normalizeDateOnly(normalized.start_date);
   const effectiveNoticePeriodDays = normalizeNonNegativeInteger(normalized.effective_notice_period_days);
   const effectiveRenewalMode = normalizeRenewalMode(normalized.effective_renewal_mode);
-  const contractStatus = typeof normalized.contract_status === 'string' ? normalized.contract_status : undefined;
-  const isInactiveByStatus = contractStatus === 'terminated' || contractStatus === 'expired';
   const isInactiveAssignment = normalized.is_active !== true;
-  const shouldSkipForLifecycleState = isInactiveAssignment || isInactiveByStatus;
+  const shouldSkipForLifecycleState = isInactiveAssignment;
   normalized.evergreen_review_anchor_date =
     !shouldSkipForLifecycleState && !normalizedEndDate && normalizedStartDate
       ? computeNextEvergreenReviewAnchorDate({ startDate: normalizedStartDate })

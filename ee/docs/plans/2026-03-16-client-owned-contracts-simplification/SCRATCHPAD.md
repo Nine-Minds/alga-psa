@@ -21,6 +21,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-16) Safety boundary: clone-target invoice history is allowed and handled by preserved-assignment selection plus `client_contracts` repointing; only contract-scoped docs, pricing schedules, and contract-line history (`time_entries` / `usage_tracking`) are treated as unsupported retargeting for this migration helper pass.
 - (2026-03-16) First implementation batch landed the owner-client invariant in creation/assignment code before the shared-contract split migration: nullable schema column first, code guardrails now, stricter DB not-null/backfill later once migrated data is safe.
 - (2026-03-16) Legacy `/contracts` API create path should fail at validation/service time when `owner_client_id` is absent, not silently create another shareable non-template header.
+- (2026-03-16) Live-status choice: treat `client_contracts` lifecycle as the contract-facing truth and surface assignment-derived status explicitly in billing loaders/UI instead of recalculating or mutating `contracts.status` on read.
+- (2026-03-16) Detail-routing choice: resolve client-contract detail from `clientContractId` first and backfill `contractId` into the URL only for header/line/document lookups, keeping live detail assignment-first without rewriting all existing contract loaders at once.
 
 ## Discoveries / Constraints
 
@@ -56,6 +58,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-16) `ContractDialog`, `createClientContractFromWizard`, and `createRenewalDraftForQueueItem` were all writing raw `contracts` rows without `owner_client_id`; those paths now stamp the client owner explicitly.
 - (2026-03-16) `ClientContract.assignContractToClient` and `createClientContract` needed separate ownership checks because they do not share a single repository helper today.
 - (2026-03-16) `updateClientContract` already ignored `contract_id` changes; guardrail now rejects cross-client repoint attempts explicitly instead of silently dropping them.
+- (2026-03-16) `Contract.getAllWithClients` was still contract-first and still called `checkAndUpdateExpiredStatus`, so the live client-contract list was mutating header state and rendering `contracts.status` instead of assignment lifecycle.
+- (2026-03-16) `ContractDetail` already fetched assignment summaries, but the header/overview panels and list actions still treated `contracts.status` as the visible live status and `updateContract(...status...)` as the lifecycle mutation path.
+- (2026-03-16) Renewal/default-date normalization in both `shared/billingClients/clientContracts.ts` and `packages/clients/src/models/clientContract.ts` also needed to stop suppressing renewal dates based on `contract_status`; inactive assignment state is the correct lifecycle gate for those computed fields.
 
 ## Commands / Runbooks
 
@@ -82,6 +87,13 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `npx tsc -p packages/billing/tsconfig.json --noEmit`
   - `npx tsc -p packages/clients/tsconfig.json --noEmit`
   - `npx tsc -p server/tsconfig.json --noEmit`
+- (2026-03-16) Live-status/UI verification:
+  - `npx vitest run tests/contractsHub.templateSeparation.wiring.test.ts tests/clientContractWorkflowEvents.wiring.test.ts tests/contract.assignmentFirst.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/ContractDetail.clientOwnedSemantics.wiring.test.ts tests/clientContractStatus.shared.test.ts tests/clientContractEffectiveRenewalSettings.test.ts` (workdir `packages/billing`)
+  - `npx vitest run src/models/clientContract.ownerGuardrails.test.ts` (workdir `packages/clients`)
+  - `cd server && npx vitest run ../packages/types/src/interfaces/contractOwnerClient.typecheck.test.ts src/test/unit/api/contractCreateOwnerClientSchema.test.ts src/test/unit/migrations/clientOwnedContractOwnerMigration.test.ts src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts`
+  - `npm run typecheck` (workdir `packages/billing`)
+  - `npm run typecheck` (workdir `packages/clients`)
+  - `npm run typecheck` (workdir `shared`)
 
 ## Progress Log
 
@@ -92,6 +104,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-16) Completed `F014`/`T017`: renewal draft creation now copies the source assignment client onto the draft contract header as `owner_client_id`.
 - (2026-03-16) Completed `F015`/`T018`: legacy API/service contract creation now requires `owner_client_id` via Zod validation plus a service-level runtime check.
 - (2026-03-16) Completed `F003-F011` and `T003-T012`: added `server/migrations/20260316121000_client_owned_contracts_simplification.cjs` plus `server/migrations/utils/client_owned_contracts_simplification.cjs` to detect shared non-template contracts, pick the preserved assignment by invoice/earliest-start rules, clone contract headers/lines/configuration rows for clone targets, repoint assignments, backfill `owner_client_id`, and fail closed on invoice/document/pricing/time/usage references that would need explicit historical retargeting.
+- (2026-03-16) Completed `F016`/`F017`/`F019-F026` and `T019`/`T020`/`T023-T029`: billing live-contract loaders now read assignment-first rows from `client_contracts`, require `owner_client_id` for normal live rows, derive explicit `assignment_status` through a shared helper, route detail from `clientContractId`, render assignment-first status in list/detail/header UI, mutate lifecycle via `updateClientContractForBilling`, and keep templates visibly separate as the only reusable contract-definition path.
 
 ## Links / References
 
@@ -100,6 +113,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - Contract wizard: `/Users/roberisaacs/alga-psa/packages/billing/src/actions/contractWizardActions.ts`
 - Billing engine: `/Users/roberisaacs/alga-psa/packages/billing/src/lib/billing/billingEngine.ts`
 - Client contract lifecycle helper: `/Users/roberisaacs/alga-psa/packages/clients/src/lib/clientContractWorkflowEvents.ts`
+- Shared assignment status helper: `/Users/roberisaacs/alga-psa/shared/billingClients/clientContractStatus.ts`
 - Client contracts UI: `/Users/roberisaacs/alga-psa/packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
 - Contracts hub UI: `/Users/roberisaacs/alga-psa/packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx`
 - Contract detail routing: `/Users/roberisaacs/alga-psa/packages/billing/src/components/billing-dashboard/contracts/ContractDetailSwitcher.tsx`
