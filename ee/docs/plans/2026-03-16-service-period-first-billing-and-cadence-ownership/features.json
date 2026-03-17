@@ -428,13 +428,13 @@
   {
     "id": "F072",
     "description": "Preserve invoice header billing_period_start and billing_period_end semantics while recurring line details adopt canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {
     "id": "F073",
     "description": "Preserve createInvoiceFromBillingResult and downstream invoice finalization behavior when recurring charges are service-period-first",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Risks"]
   },
   {

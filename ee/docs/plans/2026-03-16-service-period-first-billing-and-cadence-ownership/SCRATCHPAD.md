@@ -195,6 +195,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `calculateBillingInternal(...)` now builds those selections once per invoice window and threads them into the recurring charge families, so invoice generation no longer relies on each family rediscovering due periods independently inside its own path
   - `packages/billing/src/actions/invoiceGeneration.ts` now routes preview, PO-overage inspection, and invoice generation through `calculateBillingForInvoiceWindow(...)`, making the action-layer contract explicit: select due recurring service periods first, then calculate billing with those selections
   - direct unit tests that call private recurring helpers still work because the migrated fixed/product/license helpers now fall back to `getBillingCycle(...)` when no preselected billing cycle is provided; that preserves old test harness signatures while keeping live execution on the new preselection seam
+- (2026-03-17) Invoice headers and downstream invoice-generation hooks remain anchored to the invoice window after recurring details move onto canonical service periods:
+  - `packages/billing/src/actions/invoiceGeneration.ts` already persisted `billing_period_start` / `billing_period_end` from `cycleStart` / `cycleEnd`; `server/src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts` now turns that into an executable contract against a recurring charge whose canonical `servicePeriodStart` / `servicePeriodEnd` are different
+  - the same unit contract now proves `createInvoiceFromBillingResult(...)` still drives the existing downstream draft/finalization path: persisted-charge subtotal calculation, tax distribution, invoice total update, and invoice-generated analytics all continue to run on the service-period-first path without reinterpreting the invoice header dates from recurring detail periods
+  - the test harness surfaced one subtle implementation detail that is now explicit in the regression: invoice header billing-period fields are stored as `Temporal.PlainDate` values before insert, not raw strings, but they still stringify back to the invoice-window dates exactly
 - (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
   - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
   - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
@@ -286,6 +290,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Invoice-generation recurring preselection validation:
   - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts --coverage.enabled false`
+- (2026-03-17) Invoice header/finalization validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts --coverage.enabled false`
 
 ## Links / References
 
