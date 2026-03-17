@@ -168,6 +168,10 @@ By target package
 - F028 conditions are met in the current tree: repo-root build passes and the `documents` target is down to `34` warnings from the earlier `39` baseline.
 - The current document-cleanup series is committed through `F025`, `F026`, and the follow-up barrel fix, so the implemented P2-5b work is fully checked in.
 
+## Remaining Open Work
+
+- **F027:** still open. The remaining `@alga-psa/documents` imports are concentrated in `projects`, `tickets`, `clients`, `assets`, `billing`, and `client-portal`, and they mix UI components (`Documents`, `DocumentUpload`, `DocumentSelector`, `FolderSelectorModal`) with document actions/utilities (`getDocumentsByEntity`, `getDocumentByTicketId`, `getDocumentCountsForEntities`, `downloadDocument`, `getDocumentDownloadUrl`, KB article types). The next step needs a composition-provider rollout plus a decision on which of those action helpers should become horizontal exports versus context callbacks.
+
 ## Gotchas
 
 - `npm run lint` is the correct command (not `npx nx run-many --target=lint` which misses ~50% of violations)
