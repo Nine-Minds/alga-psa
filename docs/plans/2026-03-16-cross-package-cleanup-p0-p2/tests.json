@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "P0-2: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | sed 's/.*feature package \"\\([^\"]*\\)\".*/\\1/' | sort | uniq -c | sort -rn produces per-target breakdown",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
