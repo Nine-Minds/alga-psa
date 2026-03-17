@@ -136,6 +136,29 @@ These are the persisted fields that currently participate in recurring timing or
   - still out of scope: generic bucket reporting, remaining-unit readers, and other bucket metrics that are not tied to recurring contract-backed billing selection
   - bucket usage period tables remain the source of truth for those out-of-scope readers until a follow-on plan deliberately unifies them
 
+## Follow-On Boundary — Full Time And Usage Unification
+
+Recurring v1 does not silently expand into a general time-and-usage service-period ledger.
+
+The explicit follow-on trigger is:
+
+- recurring materialized service periods must already exist as stable future billing objects
+- regeneration, override preservation, locking, and invoice linkage must already be proven on recurring contract-backed charges
+- operator and finance workflows must already be able to explain canonical recurring periods without relying on invoice headers as the real timing source
+
+Until that trigger is met:
+
+- time-entry billing keeps `time_entries.start_time` / `time_entries.end_time` and current invoice-window overlap semantics as its authoritative selection model
+- usage-record billing keeps usage-event timestamps and current billed-through semantics as its authoritative selection model
+- credits, exports, and reconciliation continue to treat time and usage as event-driven financial artifacts instead of inferred service-period-ledger rows
+
+The future follow-on plan must define, not assume:
+
+- whether time and usage adopt their own persisted period ledger, a projection onto the recurring ledger model, or a different canonical period abstraction entirely
+- how event timestamps map onto any canonical period without losing source-event truth
+- how mixed event-driven and period-driven invoice readers, exports, and analytics stay explainable during coexistence
+- what migration and rollback posture applies once time or usage stop being purely event-driven
+
 ## Parity Matrix
 
 The minimum comparison matrix for client-cadence parity must cover the cross-product below before contract cadence is enabled:

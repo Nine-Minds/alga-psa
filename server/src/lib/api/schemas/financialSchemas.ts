@@ -14,7 +14,10 @@
  */
 
 import { z } from 'zod';
-import { getCadenceOwnerRolloutValidationMessage } from '@shared/billingClients/cadenceOwnerRollout';
+import {
+  CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
+  getCadenceOwnerRolloutValidationMessage
+} from '@shared/billingClients/cadenceOwnerRollout';
 import { 
   uuidSchema, 
   dateSchema, 
@@ -673,7 +676,10 @@ export const defaultBillingSettingsSchema = z.object({
   suppress_zero_dollar_invoices: z.boolean(),
   enable_credit_expiration: z.boolean(),
   credit_expiration_days: z.number().int().min(1),
-  credit_expiration_notification_days: z.array(z.number().int().min(1))
+  credit_expiration_notification_days: z.array(z.number().int().min(1)),
+  default_recurring_cadence_owner: z.literal('client').default('client'),
+  recurring_cadence_rollout_state: z.literal('client_only').default('client_only'),
+  recurring_cadence_rollout_message: z.string().default(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE)
 }).merge(baseEntitySchema);
 
 export const clientContractLineSettingsSchema = z.object({
@@ -682,7 +688,10 @@ export const clientContractLineSettingsSchema = z.object({
   suppress_zero_dollar_invoices: z.boolean(),
   enable_credit_expiration: z.boolean().optional(),
   credit_expiration_days: z.number().int().min(1).optional(),
-  credit_expiration_notification_days: z.array(z.number().int().min(1)).optional()
+  credit_expiration_notification_days: z.array(z.number().int().min(1)).optional(),
+  default_recurring_cadence_owner: z.literal('client').optional(),
+  recurring_cadence_rollout_state: z.literal('client_only').optional(),
+  recurring_cadence_rollout_message: z.string().optional()
 }).merge(baseEntitySchema);
 
 export const updateBillingSettingsSchema = z.object({
@@ -690,7 +699,8 @@ export const updateBillingSettingsSchema = z.object({
   suppress_zero_dollar_invoices: z.boolean().optional(),
   enable_credit_expiration: z.boolean().optional(),
   credit_expiration_days: z.number().int().min(1).optional(),
-  credit_expiration_notification_days: z.array(z.number().int().min(1)).optional()
+  credit_expiration_notification_days: z.array(z.number().int().min(1)).optional(),
+  default_recurring_cadence_owner: z.literal('client').optional()
 });
 
 // ============================================================================

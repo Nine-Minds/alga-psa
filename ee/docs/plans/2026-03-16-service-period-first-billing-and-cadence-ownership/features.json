@@ -716,13 +716,13 @@
   {
     "id": "F120",
     "description": "Capture follow-on plan boundaries for full time-and-usage unification once materialized recurring service periods are established in v1",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions", "Acceptance Criteria"]
   },
   {
     "id": "F121",
     "description": "Update billing settings actions and types to surface cadence-owner defaults, rollout semantics, and compatibility boundaries where recurring defaults are configured",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

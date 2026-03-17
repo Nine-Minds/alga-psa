@@ -390,6 +390,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RUNBOOK.md` now provides concrete parity-check commands, DB-backed sanity validation, comparison-mode guidance, mixed-cadence troubleshooting steps, inspection SQL, and rollback posture
   - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now enforces that the runbook keeps those exact sections and command examples instead of drifting into non-actionable prose
   - refreshing the runbook contract also forced a pass-0 inventory refresh in `pass-0-source-inventory.json`, which now matches the live grep-backed source after the recent cleanup and preview-reader checkpoints
+- (2026-03-17) The time-and-usage follow-on boundary is now explicit instead of remaining an unresolved v1 blur, which closes `F120`:
+  - `PRD.md` now states that time-entry billing and usage-record billing remain event-driven even after recurring materialized service periods land, and that any unification requires a separate follow-on plan
+  - `PASS0_RECURRING_TIMING_APPENDIX.md` now adds a dedicated `Follow-On Boundary — Full Time And Usage Unification` section that spells out the trigger conditions for such a follow-on and the implementation questions it must answer before those domains can adopt canonical service periods
+- (2026-03-17) Billing-settings defaults now expose recurring cadence rollout metadata without pretending contract cadence is configurable yet, which closes `F121`:
+  - `packages/billing/src/actions/billingSettingsActions.ts` now returns additive recurring cadence defaults on both tenant and client billing-settings readers: `defaultRecurringCadenceOwner = 'client'`, rollout state `client_only`, and the shared contract-cadence rollout-block message
+  - the same action now rejects any attempted `defaultRecurringCadenceOwner = 'contract'` write on update paths, so billing-settings surfaces cannot silently bypass the staged contract-cadence guard even though the settings shape now exposes the rollout posture explicitly
+  - `packages/types/src/interfaces/billing.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `server/src/lib/api/schemas/financialSchemas.ts` now carry the same additive default/rollout metadata on billing-settings read models and API schemas, keeping the contract consistent wherever billing defaults are read
 - (2026-03-17) Comparison-mode rollout control now closes `F113` and `T154` without changing live invoice persistence:
   - `packages/billing/src/actions/invoiceGeneration.ts` now treats `RECURRING_BILLING_COMPARISON_MODE=legacy-vs-canonical` as an additive action-layer gate on `calculateBillingForInvoiceWindow(...)`
   - when enabled, the action runs the canonical preselected recurring path first, then executes one legacy-style billing calculation without `recurringTimingSelections` and logs a structured drift warning if the comparison snapshot differs
@@ -594,6 +601,16 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json && npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Runbook and docs-inventory validation:
   - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Time/usage follow-on boundary validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Billing-settings cadence-default validation:
+  - `npx vitest run ../packages/billing/src/actions/billingSettingsActions.cadenceOwnerDefaultsWiring.test.ts ../packages/billing/src/actions/billingSettingsActions.renewalDefaultsWiring.test.ts --coverage.enabled false`
+    - run from `server/` so the workspace Vitest config can execute the source-level billing action wiring tests
+  - `npx vitest run src/test/unit/api/defaultBillingSettings.cadenceOwner.schema.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked by the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error, not by the billing-settings cadence-default changes
 - (2026-03-17) Client billing schedule cadence-owner copy validation:
   - `npx vitest run src/test/unit/billing/ClientBillingSchedule.ui.test.tsx ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest picks up the existing workspace alias config for both server and package tests

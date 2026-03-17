@@ -446,6 +446,28 @@ This implies:
 - What exact bucket/allowance behaviors should join the first cut versus a follow-on?
 - Should time and usage remain explicitly frozen out of scope after the recurring cutover, or should they become a separate follow-on plan immediately?
 
+## Follow-on Boundary — Time And Usage Unification
+
+This plan makes the boundary explicit:
+
+- time-entry billing and usage-record billing stay on their event-driven truth sources for recurring v1
+- they do not inherit materialized recurring service periods implicitly just because recurring contract-backed billing does
+- a separate follow-on plan is required before time or usage can adopt canonical service-period or ledger semantics
+
+That follow-on plan should not start until recurring v1 has already proven:
+
+- persisted recurring service-period generation is stable
+- regeneration and override-preservation rules are coherent
+- due selection and invoice linkage work without falling back to invoice-header timing
+- support and finance workflows can explain canonical recurring periods confidently
+
+When that follow-on plan begins, it must define at implementation depth:
+
+- whether time and usage get their own materialized period ledger or a projection onto the recurring ledger model
+- how event timestamps map to service periods without corrupting event truth
+- how billed-through, duplicate prevention, credits, and exports behave when event-driven and period-driven domains coexist
+- which metrics, dashboards, and reconciliation readers pivot to canonical periods versus staying on financial or event dates
+
 ## Acceptance Criteria (Definition of Done)
 
 - The plan fully specifies recurring-billing changes across runtime, invoice generation, downstream consumers, data model, UI, reporting, exports, migration, and cleanup.
