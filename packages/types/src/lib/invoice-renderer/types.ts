@@ -27,6 +27,9 @@ export interface WasmInvoiceViewModel {
     quantity: number;
     unitPrice: number;
     total: number; // Keep pre-calculated total for now, AS can recalculate/validate
+    servicePeriodStart?: string | null;
+    servicePeriodEnd?: string | null;
+    billingTiming?: 'arrears' | 'advance' | null;
     category?: string; // Optional: For grouping items
     itemType?: 'service' | 'project' | 'product'; // Optional: For conditional rendering
   }>;

@@ -383,7 +383,10 @@ async function adaptToWasmViewModel(
     description: item.description,
     quantity: item.quantity,
     unitPrice: item.unit_price,
-    total: item.total_price
+    total: item.total_price,
+    servicePeriodStart: item.service_period_start ?? null,
+    servicePeriodEnd: item.service_period_end ?? null,
+    billingTiming: item.billing_timing ?? null,
   }));
 
   return {
@@ -517,6 +520,9 @@ export const previewInvoice = withAuth(async (
         net_amount: charge.total - (charge.tax_amount || 0),
         is_manual: false,
         rate: charge.rate,
+        service_period_start: charge.servicePeriodStart ?? null,
+        service_period_end: charge.servicePeriodEnd ?? null,
+        billing_timing: charge.billingTiming ?? null,
       });
     });
 
@@ -576,6 +582,9 @@ export const previewInvoice = withAuth(async (
           contract_name: contractGroupName,
           parent_item_id: contractGroupHeaderId,
           rate: charge.rate,
+          service_period_start: charge.servicePeriodStart ?? null,
+          service_period_end: charge.servicePeriodEnd ?? null,
+          billing_timing: charge.billingTiming ?? null,
         });
       });
     }
@@ -590,7 +599,10 @@ export const previewInvoice = withAuth(async (
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unit_price, // Assuming unit_price is correct here
-      total: item.total_price // Assuming total_price is correct here (net + tax?) - might need adjustment based on ViewModel definition
+      total: item.total_price, // Assuming total_price is correct here (net + tax?) - might need adjustment based on ViewModel definition
+      servicePeriodStart: item.service_period_start ?? null,
+      servicePeriodEnd: item.service_period_end ?? null,
+      billingTiming: item.billing_timing ?? null,
     }));
 
     // Use the adapter function to create the WasmInvoiceViewModel

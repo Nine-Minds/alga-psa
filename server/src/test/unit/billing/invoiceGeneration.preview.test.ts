@@ -110,6 +110,7 @@ const mocks = vi.hoisted(() => {
         is_taxable: true,
         servicePeriodStart: '2025-01-01',
         servicePeriodEnd: '2025-02-01',
+        billingTiming: 'arrears',
       },
     ],
     discounts: [],
@@ -250,6 +251,24 @@ describe('invoice preview recurring timing', () => {
             quantity: 1,
             unitPrice: 4000,
             total: 4000,
+          }),
+        ],
+      }),
+    });
+  });
+
+  it('T083: recurring invoice preview surfaces canonical service periods in preview state', async () => {
+    const result = await previewInvoice('cycle-1');
+
+    expect(result).toEqual({
+      success: true,
+      data: expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            description: 'Managed Router',
+            servicePeriodStart: '2025-01-01',
+            servicePeriodEnd: '2025-02-01',
+            billingTiming: 'arrears',
           }),
         ],
       }),

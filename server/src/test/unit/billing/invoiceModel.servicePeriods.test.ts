@@ -16,6 +16,7 @@ function createQueryBuilder(rows: Row[]) {
   let resultRows = [...rows];
 
   const builder: any = {
+    join: vi.fn().mockReturnThis(),
     leftJoin: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     where: vi.fn((columnOrCriteria: string | Record<string, any>, value?: any) => {
@@ -27,6 +28,10 @@ function createQueryBuilder(rows: Row[]) {
       resultRows = resultRows.filter((row) =>
         Object.entries(columnOrCriteria).every(([key, expected]) => row[normalizeColumn(key)] === expected)
       );
+      return builder;
+    }),
+    whereNull: vi.fn((column: string) => {
+      resultRows = resultRows.filter((row) => row[normalizeColumn(column)] == null);
       return builder;
     }),
     whereIn: vi.fn((column: string, values: any[]) => {
@@ -53,6 +58,7 @@ function createQueryBuilder(rows: Row[]) {
       });
       return builder;
     }),
+    orderByRaw: vi.fn().mockReturnThis(),
     first: vi.fn(async () => resultRows[0]),
     then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(resultRows).then(resolve, reject),
@@ -275,6 +281,101 @@ describe('invoice model recurring service-period projection', () => {
       service_period_end: '2025-03-01T00:00:00.000Z',
       billing_timing: 'arrears',
     });
+  });
+
+  it('T080: canonical recurring service-period metadata remains stable through invoice reload and reread paths', async () => {
+    const knex = createMockKnex({
+      invoices: [
+        {
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          credit_applied: 0,
+          subtotal: 7000,
+          tax: 0,
+          total_amount: 7000,
+          invoice_number: 'INV-001',
+          invoice_date: '2025-03-01T00:00:00.000Z',
+          due_date: '2025-03-15T00:00:00.000Z',
+          status: 'draft',
+          currency_code: 'USD',
+          is_manual: false,
+          tax_source: 'internal',
+          finalized_at: null,
+          billing_cycle_id: 'cycle-1',
+        },
+      ],
+      invoice_charges: [
+        {
+          item_id: 'recurring-1',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          service_id: 'service-1',
+          description: 'Managed Router',
+          quantity: 1,
+          unit_price: 7000,
+          total_price: 7000,
+          tax_amount: 0,
+          net_amount: 7000,
+          is_manual: false,
+        },
+      ],
+      invoice_charge_details: [
+        {
+          item_id: 'recurring-1',
+          tenant: 'tenant-1',
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+        {
+          item_id: 'recurring-1',
+          tenant: 'tenant-1',
+          service_period_start: '2025-02-01T00:00:00.000Z',
+          service_period_end: '2025-03-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+      clients: [
+        {
+          client_id: 'client-1',
+          tenant: 'tenant-1',
+          client_name: 'Client One',
+          properties: '{}',
+        },
+      ],
+      contacts: [
+        {
+          client_id: 'client-1',
+          tenant: 'tenant-1',
+          full_name: 'Billing Contact',
+        },
+      ],
+      tenant_companies: [],
+      tenants: [
+        {
+          tenant: 'tenant-1',
+          client_name: 'Tenant Co',
+        },
+      ],
+    });
+
+    const firstRead = await Invoice.getById(knex, 'tenant-1', 'invoice-1');
+    const fullRead = await Invoice.getFullInvoiceById(knex, 'tenant-1', 'invoice-1');
+    const secondRead = await Invoice.getById(knex, 'tenant-1', 'invoice-1');
+
+    for (const charge of [
+      firstRead?.invoice_charges?.[0],
+      fullRead?.invoice_charges?.[0],
+      secondRead?.invoice_charges?.[0],
+    ]) {
+      expect(charge).toMatchObject({
+        item_id: 'recurring-1',
+        service_period_start: '2025-01-01T00:00:00.000Z',
+        service_period_end: '2025-03-01T00:00:00.000Z',
+        billing_timing: 'arrears',
+      });
+    }
   });
 
   it('T091: partially credit-applied recurring invoices keep canonical detail periods on reread', async () => {

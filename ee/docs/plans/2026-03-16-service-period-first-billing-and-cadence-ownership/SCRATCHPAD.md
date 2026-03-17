@@ -343,6 +343,22 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - the rule is now explicit: cadence owner alone does not force a split when client-owned and contract-owned due work lands on the same invoice window, but differing invoice windows always produce separate invoice candidates
   - this checkpoint intentionally stops before `F110`: live recurring runs still iterate raw `billingCycleId`s, but later scheduler work can now build on a stable grouping contract instead of re-deciding the product rule
   - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now closes `T141` and `T142`
+- (2026-03-17) Mixed-cadence live execution remains blocked on the current billing-cycle run identity:
+  - `packages/billing/src/actions/invoiceGeneration.ts` and `packages/billing/src/actions/recurringBillingRunActions.ts` still model one recurring run input as one `billingCycleId` / one client invoice window
+  - `packages/billing/src/lib/billing/billingEngine.ts` still builds live recurring timing selections around the current billing window, so mixed cadence that lands on different windows cannot be executed coherently until the later execution-identity work (`F110`, `F151+`)
+- (2026-03-17) Invoice reread stability now has an explicit regression guard, which closes `T080`:
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now proves that `Invoice.getById(...)`, `Invoice.getFullInvoiceById(...)`, and a second `Invoice.getById(...)` reread all preserve the same aggregated canonical service-period metadata for a multi-detail recurring charge
+  - this keeps invoice reload paths from drifting even when one recurring parent charge spans multiple canonical detail periods
+- (2026-03-17) Preview payloads now surface canonical recurring period metadata instead of hiding it behind totals-only preview rows, which closes `T083`:
+  - `packages/billing/src/actions/invoiceGeneration.ts` now threads `service_period_start`, `service_period_end`, and `billing_timing` from billing charges into preview invoice items and the `WasmInvoiceViewModel.items` payload
+  - `packages/types/src/lib/invoice-renderer/types.ts` now exposes those preview-item fields as optional renderer inputs, keeping the preview contract additive for existing consumers
+  - `server/src/test/unit/billing/invoiceGeneration.preview.test.ts` now proves preview state carries the canonical recurring period range and timing badge data alongside the existing totals
+- (2026-03-17) Manual invoice creation now has an executable isolation guard, which closes `T084`:
+  - `server/src/test/unit/billing/manualInvoiceActions.recurringIsolation.test.ts` executes `generateManualInvoice(...)` with focused mocks and proves the path persists manual items, returns the hydrated invoice, and never instantiates the recurring `BillingEngine` or calls due-service-period selection
+  - this keeps the service-period-first recurring rollout from silently leaking into manual invoice creation while invoice readers and preview payloads grow more detail-aware
+- (2026-03-17) Manual invoice edit/view paths now have a focused canonical-period compatibility contract, which closes `T085`:
+  - `server/src/test/unit/billing/manualInvoiceActions.viewing.test.ts` executes `updateManualInvoice(...)`, proves the action still deletes/replaces manual items and triggers recalculation, and confirms the returned reread invoice can still carry canonical recurring detail fields on its charge rows
+  - this gives the current manual invoice edit/view seam executable coverage without waiting on the blocked DB-backed manual-invoice suite
 
 ## Commands / Runbooks
 
@@ -540,6 +556,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts --coverage.enabled false`
 - (2026-03-17) Mixed-cadence grouping validation:
   - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+- (2026-03-17) Invoice reread stability validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+- (2026-03-17) Preview service-period validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Manual-invoice isolation validation:
+  - `npx vitest run src/test/unit/billing/manualInvoiceActions.recurringIsolation.test.ts --coverage.enabled false`
+- (2026-03-17) Manual-invoice edit/view validation:
+  - `npx vitest run src/test/unit/billing/manualInvoiceActions.viewing.test.ts --coverage.enabled false`
 
 ## Links / References
 
