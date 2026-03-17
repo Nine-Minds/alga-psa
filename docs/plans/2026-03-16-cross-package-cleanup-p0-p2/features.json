@@ -206,7 +206,7 @@
   {
     "id": "F035",
     "description": "P2-6: Identify type-only cross-vertical imports eligible for @alga-psa/types",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-6"]
   },
   {
