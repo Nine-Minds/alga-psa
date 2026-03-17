@@ -245,6 +245,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - template authoring storage remains intentionally out of scope for this checkpoint; template snapshot reads expose cadence owner for compatibility, but no template write path claims persistence until the later template-default features land (`F093+`, `F138+`, `F212+`)
   - `packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts`, `packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts`, and `packages/billing/tests/draftContractForResumeActions.test.ts` now close `T106` with a mix of action execution and focused wiring/readback coverage
   - the existing draft-resume permission test was also corrected to assert the action's real `permissionError(...)` return shape instead of expecting a thrown exception; that was harness drift, not a product behavior change
+- (2026-03-17) Recurring timing fixtures now have one shared cadence-owner-aware test seam, which closes `F087`:
+  - `server/src/test/test-utils/recurringTimingFixtures.ts` now exports shared recurring obligation, service-period, invoice-window, and monthly recurring fixture builders with stable defaults for `cadenceOwner`, `duePosition`, and charge family
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now consumes those shared builders and closes `T107` with an explicit client-vs-contract cadence fixture contract instead of inline one-off setup
+  - `server/test-utils/billingTestHelpers.ts` now accepts `cadenceOwner` on `createFixedPlanAssignment(...)` and persists it to `contract_lines.cadence_owner`, so DB-backed invoice and credit fixtures can opt into contract-owned cadence later without rewriting helper internals
+  - `server/src/test/unit/billing/billingTestHelpers.recurringFixtures.test.ts` locks that DB-helper seam with a focused source contract so cadence owner cannot silently fall back out of shared fixture setup
 - (2026-03-17) Credit-reader invoice context now stays on canonical recurring detail metadata, which closes `F078` without pretending the blocked DB integration is done:
   - `packages/billing/src/actions/creditActions.ts` now loads source invoices through `Invoice.getById(...)` for both `getCreditDetails(...)` and the invoice-summary enrichment inside `listClientCredits(...)`, instead of rereading raw `invoices` rows that dropped recurring `invoice_charge_details`
   - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
@@ -379,6 +384,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts ../packages/billing/tests/draftContractForResumeActions.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package tests
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Recurring fixture-builder validation:
+  - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/billing/billingTestHelpers.recurringFixtures.test.ts --coverage.enabled false`
 - (2026-03-17) Credit-reader canonical invoice-context validation:
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`

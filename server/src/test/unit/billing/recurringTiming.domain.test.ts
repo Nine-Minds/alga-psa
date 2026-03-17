@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type {
   CadenceOwner,
   ICadenceBoundaryGenerator,
-  IRecurringInvoiceWindow,
   IRecurringObligationRef,
-  IRecurringServicePeriod,
 } from '@alga-psa/types';
 import {
   buildRecurringInvoiceDetailTiming,
@@ -21,71 +19,15 @@ import {
 } from '@alga-psa/billing/lib/billing/recurringTiming';
 import { DEFAULT_CADENCE_OWNER as sharedDefaultCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { RECURRING_RANGE_SEMANTICS } from '@alga-psa/types';
+import {
+  buildMonthlyRecurringFixture,
+  buildMonthlyServicePeriods,
+  buildRecurringInvoiceWindow as buildInvoiceWindow,
+  buildRecurringObligationRef,
+  buildRecurringServicePeriod as buildServicePeriod,
+} from '../../test-utils/recurringTimingFixtures';
 
-const sourceObligation: IRecurringObligationRef = {
-  obligationId: 'line-1',
-  obligationType: 'contract_line',
-  chargeFamily: 'fixed',
-};
-
-const buildServicePeriod = (
-  overrides: Partial<IRecurringServicePeriod> = {},
-): IRecurringServicePeriod => ({
-  kind: 'service_period',
-  cadenceOwner: 'client',
-  duePosition: 'advance',
-  sourceObligation,
-  start: '2025-01-01',
-  end: '2025-01-11',
-  semantics: RECURRING_RANGE_SEMANTICS,
-  ...overrides,
-});
-
-const buildInvoiceWindow = (
-  overrides: Partial<IRecurringInvoiceWindow> = {},
-): IRecurringInvoiceWindow => ({
-  kind: 'invoice_window',
-  cadenceOwner: 'client',
-  duePosition: 'advance',
-  start: '2025-01-01',
-  end: '2025-01-11',
-  semantics: RECURRING_RANGE_SEMANTICS,
-  windowId: 'window-1',
-  ...overrides,
-});
-
-const buildMonthlyServicePeriods = (overrides: {
-  duePosition?: 'advance' | 'arrears';
-  chargeFamily?: 'fixed' | 'product' | 'license';
-} = {}): IRecurringServicePeriod[] => [
-  buildServicePeriod({
-    duePosition: overrides.duePosition ?? 'advance',
-    sourceObligation: {
-      ...sourceObligation,
-      chargeFamily: overrides.chargeFamily ?? 'fixed',
-    },
-    start: '2024-12-01',
-    end: '2025-01-01',
-  }),
-  buildServicePeriod({
-    duePosition: overrides.duePosition ?? 'advance',
-    sourceObligation: {
-      ...sourceObligation,
-      chargeFamily: overrides.chargeFamily ?? 'fixed',
-    },
-    start: '2025-01-01',
-    end: '2025-02-01',
-  }),
-  buildServicePeriod({
-    duePosition: overrides.duePosition ?? 'advance',
-    sourceObligation: {
-      ...sourceObligation,
-      chargeFamily: overrides.chargeFamily ?? 'fixed',
-    },
-    start: '2025-02-01',
-    end: '2025-03-01',
-  }),
-];
+const sourceObligation: IRecurringObligationRef = buildRecurringObligationRef();
 
 describe('recurring timing shared domain', () => {
   it('T011: canonical service-period types preserve cadence owner, source obligation, and explicit boundaries', () => {
@@ -169,6 +111,39 @@ describe('recurring timing shared domain', () => {
     expect(contractResult[0].kind).toBe('service_period');
     expect(clientResult[0].cadenceOwner).toBe('client');
     expect(contractResult[0].cadenceOwner).toBe('contract');
+  });
+
+  it('T107: fixture builders create valid client-cadence and contract-cadence recurring scenarios with stable defaults', () => {
+    const clientFixture = buildMonthlyRecurringFixture();
+    const contractFixture = buildMonthlyRecurringFixture({
+      cadenceOwner: 'contract',
+      duePosition: 'arrears',
+      chargeFamily: 'license',
+    });
+
+    expect(clientFixture.currentInvoiceWindow).toMatchObject({
+      cadenceOwner: 'client',
+      duePosition: 'advance',
+      start: '2025-01-01',
+      end: '2025-02-01',
+    });
+    expect(clientFixture.servicePeriods).toHaveLength(3);
+
+    expect(contractFixture.sourceObligation.chargeFamily).toBe('license');
+    expect(contractFixture.currentInvoiceWindow).toMatchObject({
+      cadenceOwner: 'contract',
+      duePosition: 'arrears',
+      start: '2025-02-01',
+      end: '2025-03-01',
+    });
+    expect(
+      contractFixture.servicePeriods.every(
+        (period) =>
+          period.cadenceOwner === 'contract' &&
+          period.duePosition === 'arrears' &&
+          period.sourceObligation.chargeFamily === 'license',
+      ),
+    ).toBe(true);
   });
 
   it('T015: activity-window intersection trims start boundaries under half-open semantics', () => {

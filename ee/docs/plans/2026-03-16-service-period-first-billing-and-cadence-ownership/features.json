@@ -518,7 +518,7 @@
   {
     "id": "F087",
     "description": "Update test utilities and fixture builders to generate service-period-first recurring scenarios across timing modes and cadence owners",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {

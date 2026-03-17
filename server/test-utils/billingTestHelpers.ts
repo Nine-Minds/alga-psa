@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import type { CadenceOwner } from '@alga-psa/types';
 import type { TestContext } from './testContext';
 
 interface SetupTaxOptions {
@@ -272,6 +273,7 @@ interface CreateFixedPlanOptions {
   startDate?: string;
   endDate?: string | null;
   billingTiming?: 'arrears' | 'advance';
+  cadenceOwner?: CadenceOwner;
   enableProration?: boolean;
   billingCycleAlignment?: 'start' | 'end' | 'prorated';
   clientId?: string;
@@ -491,6 +493,7 @@ export async function createFixedPlanAssignment(
   const billingFrequency = options.billingFrequency ?? 'monthly';
   const targetClientId = options.clientId ?? context.clientId;
   const billingTiming: 'arrears' | 'advance' = options.billingTiming ?? 'arrears';
+  const cadenceOwner: CadenceOwner = options.cadenceOwner ?? 'client';
 
   // Primary contract line tables
   await context.db('contract_lines')
@@ -504,7 +507,8 @@ export async function createFixedPlanAssignment(
       custom_rate: baseRateDollars,
       enable_proration: enableProration,
       billing_cycle_alignment: billingCycleAlignment,
-      billing_timing: billingTiming
+      billing_timing: billingTiming,
+      cadence_owner: cadenceOwner,
     })
     .onConflict(['tenant', 'contract_line_id'])
     .merge({
@@ -514,7 +518,8 @@ export async function createFixedPlanAssignment(
       custom_rate: baseRateDollars,
       enable_proration: enableProration,
       billing_cycle_alignment: billingCycleAlignment,
-      billing_timing: billingTiming
+      billing_timing: billingTiming,
+      cadence_owner: cadenceOwner,
     });
 
   await context.db('contract_line_service_configuration')
