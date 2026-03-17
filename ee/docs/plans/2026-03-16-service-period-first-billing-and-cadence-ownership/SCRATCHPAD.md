@@ -405,6 +405,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/migrations/20260317193000_add_cadence_owner_to_contract_line_presets.cjs` adds `contract_line_presets.cadence_owner` with safe backfill to `'client'` plus a `client|contract` check constraint, giving preset-backed recurring defaults their own storage surface instead of piggybacking on `billing_cycle_alignment`
   - `packages/types/src/interfaces/billing.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `packages/billing/src/models/contractLinePreset.ts` now expose and normalize preset `cadence_owner`, defaulting missing legacy rows to `'client'` on reads and preserving an existing stored cadence owner on updates when callers omit the field
   - `packages/billing/src/actions/contractLinePresetActions.ts` now copies preset-backed recurring lines using `preset.cadence_owner ?? 'client'` when no override is provided, so preset reuse reads an explicit cadence-owner default instead of inferring anything from fixed-config `billing_cycle_alignment`
+- (2026-03-17) Contract-line mapping/disambiguation helpers now have an executable audit showing they no longer infer recurring timing from legacy fixed-config flags after the cadence-owner cutover, which closes `F124` and adds `T331`:
+  - `packages/billing/tests/contractLineMappingRecurringTiming.wiring.test.ts` now locks the intended boundary explicitly: after the template-snapshot seam, the mapping and disambiguation helpers must operate on explicit `cadence_owner` fields and may not branch on `billing_cycle_alignment` or `enable_proration`
+  - this checkpoint did not require a runtime patch because the mapping model/action code was already using explicit cadence-owner defaults; the missing work was the focused audit contract proving that the legacy fixed-config flags no longer participate in live mapping/disambiguation decisions
 - (2026-03-17) Comparison-mode rollout control now closes `F113` and `T154` without changing live invoice persistence:
   - `packages/billing/src/actions/invoiceGeneration.ts` now treats `RECURRING_BILLING_COMPARISON_MODE=legacy-vs-canonical` as an additive action-layer gate on `calculateBillingForInvoiceWindow(...)`
   - when enabled, the action runs the canonical preselected recurring path first, then executes one legacy-style billing calculation without `recurringTimingSelections` and logs a structured drift warning if the comparison snapshot differs
@@ -628,6 +631,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+- (2026-03-17) Contract-line mapping recurring-timing audit validation:
+  - `npx vitest run ../packages/billing/tests/contractLineMappingRecurringTiming.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
 - (2026-03-17) Client billing schedule cadence-owner copy validation:
   - `npx vitest run src/test/unit/billing/ClientBillingSchedule.ui.test.tsx ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest picks up the existing workspace alias config for both server and package tests

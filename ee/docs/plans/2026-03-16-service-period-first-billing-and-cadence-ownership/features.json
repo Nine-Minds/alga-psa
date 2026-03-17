@@ -740,7 +740,7 @@
   {
     "id": "F124",
     "description": "Audit contract line mapping and disambiguation helpers so no recurring timing assumptions are inferred from legacy config flags after cutover",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
