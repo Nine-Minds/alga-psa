@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "P1-3: grep -r 'auth-compat' --include='*.ts' --include='*.tsx' | grep -v node_modules returns 0 results after deletion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {

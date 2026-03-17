@@ -150,6 +150,7 @@ By target package
 - T006 reconfirmed that the direct lint command remains the authoritative measurement path; after the later document cleanup it reports `98` current violations.
 - T007 reconfirmed the per-source lint breakdown pipeline; the latest run is led by `client-portal`, `workflows`, `tickets`, `clients`, and `projects`.
 - T008 reconfirmed the per-target lint breakdown pipeline; `documents` remains the top target even after the entity-image move, followed by `tickets`, `billing`, and `sla`.
+- T009 verified there are no remaining `auth-compat` source references anywhere in the repo.
 
 ## Gotchas
 
