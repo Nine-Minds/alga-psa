@@ -146,6 +146,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Negative recurring fixed totals and credit-generating allocations are now explicit, not implied by an inline comment:
   - `server/src/test/unit/billing/billingEngine.timing.test.ts` now proves a net-negative fixed recurring charge keeps its canonical service period metadata and that a mixed positive/negative FMV allocation can emit one negative detailed charge without breaking the settled period boundaries
   - no runtime code change was needed for `F057`; the checkpoint was to turn previously implicit support into an executable contract before product/license migration reuses the same settlement model
+- (2026-03-17) The out-of-scope boundary for time, usage, and non-recurring bucket readers is now explicit in the plan artifacts:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PASS0_RECURRING_TIMING_APPENDIX.md` now spells out exactly which time-entry and usage-record behaviors stay event-driven in v1, and which bucket behaviors are in scope versus still deferred
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now enforces those explicit phrases so `T060` fails if the appendix drifts back toward vague scope language
+- (2026-03-17) A follow-up attempt to close `F058` uncovered a local-environment blocker rather than a product behavior decision:
+  - a targeted `prepaymentInvoice.test.ts` regression was drafted to prove prepayment credit application does not strip canonical recurring detail rows, but local execution is blocked by `ECONNREFUSED` to Postgres on `127.0.0.1:5432`
+  - that regression was intentionally not left in the tree or marked complete; `F058` remains open until the DB-backed path can be executed and verified
+- (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
+  - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
+  - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
 
 ## Commands / Runbooks
 
@@ -209,6 +218,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/billingEngine.discountPricingTiming.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
 - (2026-03-17) Fixed tax-date and negative-recurring validation:
   - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+- (2026-03-17) Explicit out-of-scope boundary validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Blocked prepayment follow-up:
+  - `npx vitest run src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts -t "T096" --coverage.enabled false`
+    - blocked locally by `ECONNREFUSED` to Postgres on `127.0.0.1:5432`
 
 ## Links / References
 

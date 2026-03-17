@@ -129,6 +129,16 @@ describe('service-period-first billing plan artifacts', () => {
     ]);
   });
 
+  it('T060: appendix explicitly freezes bucket, time, and usage behaviors outside the first recurring cut', () => {
+    expect(appendix).toContain('Time entry billing stays event-driven in v1:');
+    expect(appendix).toContain('selection continues to use `time_entries.start_time` / `time_entries.end_time` against the invoice window');
+    expect(appendix).toContain('Usage-record billing stays event-driven in v1:');
+    expect(appendix).toContain('selection continues to use usage-event dates and current end-exclusive overlap rules');
+    expect(appendix).toContain('Bucket behavior is split explicitly:');
+    expect(appendix).toContain('in scope now: recurring bucket contract lines where allowance periods, rollover, overage charging, and tax-date evaluation already depend on recurring timing semantics');
+    expect(appendix).toContain('still out of scope: generic bucket reporting, remaining-unit readers, and other bucket metrics that are not tied to recurring contract-backed billing selection');
+  });
+
   it('T010: fixture builder contract stays cadence-owner-aware and independent from invoice side effects', () => {
     expect(appendix).toContain('cadence owner');
     expect(appendix).toContain('without requiring invoice persistence as a side effect');

@@ -107,6 +107,21 @@ These are the persisted fields that currently participate in recurring timing or
 | Manual-only invoice flows | Out of first hard cut for canonical schedule generation | Manual invoices must coexist with recurring detail periods but must not begin generating service periods on their own during v1. |
 | Bucket usage metrics outside recurring bucket contract lines | Explicit follow-on / partial scope only | Bucket readers that rely on usage period tables stay on current semantics unless the line is part of recurring contract-backed billing in scope for this plan. |
 
+### Explicit v1 exclusions by behavior
+
+- Time entry billing stays event-driven in v1:
+  - selection continues to use `time_entries.start_time` / `time_entries.end_time` against the invoice window
+  - no persisted recurring service-period ledger is generated for time entries during this cut
+  - billed-through, duplicate prevention, and credit behavior for time entry billing must remain on the current invoice-window/date-query model until a separate follow-on plan says otherwise
+- Usage-record billing stays event-driven in v1:
+  - selection continues to use usage-event dates and current end-exclusive overlap rules
+  - no canonical recurring service periods are generated for ad hoc usage records during this cut
+  - recurring service-period-first work must not silently change how usage events are grouped, billed-through, or credited outside explicit recurring bucket overlays already in scope
+- Bucket behavior is split explicitly:
+  - in scope now: recurring bucket contract lines where allowance periods, rollover, overage charging, and tax-date evaluation already depend on recurring timing semantics
+  - still out of scope: generic bucket reporting, remaining-unit readers, and other bucket metrics that are not tied to recurring contract-backed billing selection
+  - bucket usage period tables remain the source of truth for those out-of-scope readers until a follow-on plan deliberately unifies them
+
 ## Parity Matrix
 
 The minimum comparison matrix for client-cadence parity must cover the cross-product below before contract cadence is enabled:

@@ -356,7 +356,7 @@
   {
     "id": "F060",
     "description": "Explicitly document which bucket, time, and usage behaviors remain outside the first recurring service-period implementation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Scope", "Detailed Requirements"]
   },
   {
