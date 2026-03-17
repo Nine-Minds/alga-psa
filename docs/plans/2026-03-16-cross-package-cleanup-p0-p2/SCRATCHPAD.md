@@ -162,6 +162,7 @@ By target package
 - T018 verified the current lint output has `0` active `projects -> clients` violations, which is below the historical non-zero starting point for P2-5a.
 - T019 verified `packages/clients/src/context/ClientCrossFeatureContext.tsx` exists and exports the expected provider/hook pair.
 - T020 reuses the latest repo-root green build to validate the current client-composition setup.
+- T021 verified the latest lint run has `34` `documents`-target violations, which is below the `<36` target in the plan.
 
 ## Gotchas
 

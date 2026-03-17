@@ -122,7 +122,7 @@
   {
     "id": "T021",
     "description": "P2-5b: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | grep 'documents' | wc -l shows fewer than 36 documents-target violations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {
