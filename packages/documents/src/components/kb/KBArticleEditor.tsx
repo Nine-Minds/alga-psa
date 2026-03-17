@@ -81,6 +81,7 @@ interface KBArticleEditorProps {
   userId: string;
   userName?: string;
   tenantId?: string;
+  aiAssistantEnabled?: boolean;
   onBack?: () => void;
   onSave?: () => void;
   categories?: Array<{ id: string; name: string }>;
@@ -91,6 +92,7 @@ export default function KBArticleEditor({
   userId,
   userName,
   tenantId,
+  aiAssistantEnabled = false,
   onBack,
   onSave,
   categories = [],
@@ -372,6 +374,7 @@ export default function KBArticleEditor({
             userId={userId}
             userName={userName || userId}
             searchMentions={searchUsersForMentions}
+            aiAssistantEnabled={aiAssistantEnabled}
             initialContent={article.block_data ?? undefined}
             onConnectionStatusChange={(status) => {
               if (status === 'connected') collabConnectedRef.current = true;

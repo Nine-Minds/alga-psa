@@ -300,11 +300,13 @@ services:
       APP_ENV: ${APP_ENV:-development}
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
-      REDIS_HOST: ${REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: postgres
-      DB_PORT: ${DB_PORT:-5432}
+      DB_PORT: 5432
+      AI_DOCUMENT_API_URL: ${AI_DOCUMENT_API_URL:-http://host.docker.internal:3000/api/v1/ai/document-assist}
+      AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
     secrets:
       - postgres_password
       - db_password_hocuspocus
