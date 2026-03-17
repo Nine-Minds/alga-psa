@@ -250,4 +250,60 @@ describe('mapDbInvoiceToWasmViewModel', () => {
       ],
     });
   });
+
+  it('T195: invoice rendering adapters flatten recurring summary ranges while preserving canonical detail periods for mixed timing detail rows', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-604',
+      invoice_date: '2026-02-06',
+      due_date: '2026-02-20',
+      currency_code: 'USD',
+      client: {
+        name: 'Blue Harbor Dental',
+        address: '901 Harbor Ave',
+      },
+      invoice_charges: [
+        {
+          item_id: 'svc-bundle-mixed',
+          description: 'Managed Services Bundle',
+          quantity: 1,
+          unit_price: 10000,
+          total_price: 10000,
+          recurring_detail_periods: [
+            {
+              service_period_start: '2026-01-01',
+              service_period_end: '2026-02-01',
+              billing_timing: 'arrears',
+            },
+            {
+              service_period_start: '2026-02-01',
+              service_period_end: '2026-03-01',
+              billing_timing: 'advance',
+            },
+          ],
+        },
+      ],
+      subtotal: 10000,
+      tax: 0,
+      total: 10000,
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped?.items[0]).toMatchObject({
+      servicePeriodStart: '2026-01-01',
+      servicePeriodEnd: '2026-03-01',
+      billingTiming: null,
+      recurringDetailPeriods: [
+        {
+          servicePeriodStart: '2026-01-01',
+          servicePeriodEnd: '2026-02-01',
+          billingTiming: 'arrears',
+        },
+        {
+          servicePeriodStart: '2026-02-01',
+          servicePeriodEnd: '2026-03-01',
+          billingTiming: 'advance',
+        },
+      ],
+    });
+  });
 });

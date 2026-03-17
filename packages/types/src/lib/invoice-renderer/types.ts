@@ -27,8 +27,12 @@ export interface WasmInvoiceViewModel {
     quantity: number;
     unitPrice: number;
     total: number; // Keep pre-calculated total for now, AS can recalculate/validate
+    // Compatibility summary range for the row. When recurringDetailPeriods is present,
+    // these fields span the earliest start and latest end across the canonical periods.
     servicePeriodStart?: string | null;
     servicePeriodEnd?: string | null;
+    // Compatibility summary timing. When recurringDetailPeriods is present,
+    // this stays populated only when every canonical period shares the same timing.
     billingTiming?: 'arrears' | 'advance' | null;
     recurringDetailPeriods?: Array<{
       servicePeriodStart?: string | null;

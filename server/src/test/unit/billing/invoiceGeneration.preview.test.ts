@@ -274,4 +274,68 @@ describe('invoice preview recurring timing', () => {
       }),
     });
   });
+
+  it('T194: preview rows keep canonical recurring detail periods when one preview charge spans multiple periods', async () => {
+    mocks.calculateBilling.mockResolvedValueOnce({
+      charges: [
+        {
+          type: 'product',
+          serviceId: 'service-1',
+          serviceName: 'Managed Router',
+          quantity: 1,
+          rate: 4000,
+          total: 4000,
+          tax_amount: 200,
+          tax_rate: 5,
+          tax_region: 'US-NY',
+          is_taxable: true,
+          recurringDetailPeriods: [
+            {
+              servicePeriodStart: '2025-01-01',
+              servicePeriodEnd: '2025-02-01',
+              billingTiming: 'arrears',
+            },
+            {
+              servicePeriodStart: '2025-02-01',
+              servicePeriodEnd: '2025-03-01',
+              billingTiming: 'advance',
+            },
+          ],
+        },
+      ],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 4000,
+      finalAmount: 4000,
+      currency_code: 'USD',
+    });
+
+    const result = await previewInvoice('cycle-1');
+
+    expect(result).toEqual({
+      success: true,
+      data: expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            description: 'Managed Router',
+            servicePeriodStart: '2025-01-01',
+            servicePeriodEnd: '2025-03-01',
+            billingTiming: null,
+            recurringDetailPeriods: [
+              {
+                servicePeriodStart: '2025-01-01',
+                servicePeriodEnd: '2025-02-01',
+                billingTiming: 'arrears',
+              },
+              {
+                servicePeriodStart: '2025-02-01',
+                servicePeriodEnd: '2025-03-01',
+                billingTiming: 'advance',
+              },
+            ],
+          }),
+        ],
+      }),
+    });
+  });
 });

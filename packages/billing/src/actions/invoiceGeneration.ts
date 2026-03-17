@@ -126,6 +126,87 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
   return charge.rate;
 }
 
+function normalizePreviewRecurringDetailPeriods(
+  item: Pick<IBillingCharge, 'recurringDetailPeriods' | 'servicePeriodStart' | 'servicePeriodEnd' | 'billingTiming'> |
+    Pick<IInvoiceCharge, 'recurring_detail_periods' | 'service_period_start' | 'service_period_end' | 'billing_timing'>
+) {
+  const camelCaseCandidate = 'recurringDetailPeriods' in item ? item.recurringDetailPeriods : undefined;
+  const snakeCaseCandidate = 'recurring_detail_periods' in item ? item.recurring_detail_periods : undefined;
+  const candidate = Array.isArray(camelCaseCandidate)
+    ? camelCaseCandidate
+    : Array.isArray(snakeCaseCandidate)
+      ? snakeCaseCandidate.map((detail) => ({
+          servicePeriodStart: detail.service_period_start ?? null,
+          servicePeriodEnd: detail.service_period_end ?? null,
+          billingTiming: detail.billing_timing ?? null,
+        }))
+      : [];
+
+  const normalized = candidate
+    .map((detail) => ({
+      servicePeriodStart: detail.servicePeriodStart ?? null,
+      servicePeriodEnd: detail.servicePeriodEnd ?? null,
+      billingTiming: detail.billingTiming ?? null,
+    }))
+    .filter((detail) => detail.servicePeriodStart || detail.servicePeriodEnd || detail.billingTiming)
+    .sort((left, right) => {
+      if (left.servicePeriodStart !== right.servicePeriodStart) {
+        return String(left.servicePeriodStart ?? '').localeCompare(String(right.servicePeriodStart ?? ''));
+      }
+      return String(left.servicePeriodEnd ?? '').localeCompare(String(right.servicePeriodEnd ?? ''));
+    });
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function resolvePreviewRecurringSummary(
+  item: Pick<IBillingCharge, 'recurringDetailPeriods' | 'servicePeriodStart' | 'servicePeriodEnd' | 'billingTiming'> |
+    Pick<IInvoiceCharge, 'recurring_detail_periods' | 'service_period_start' | 'service_period_end' | 'billing_timing'>
+) {
+  const recurringDetailPeriods = normalizePreviewRecurringDetailPeriods(item);
+  const explicitStart =
+    'servicePeriodStart' in item ? item.servicePeriodStart : item.service_period_start;
+  const explicitEnd =
+    'servicePeriodEnd' in item ? item.servicePeriodEnd : item.service_period_end;
+  const explicitBillingTiming =
+    'billingTiming' in item ? item.billingTiming : item.billing_timing;
+
+  const servicePeriodStart =
+    explicitStart ?? recurringDetailPeriods?.[0]?.servicePeriodStart ?? null;
+  const servicePeriodEnd =
+    explicitEnd ?? recurringDetailPeriods?.[recurringDetailPeriods.length - 1]?.servicePeriodEnd ?? null;
+  const billingTiming = explicitBillingTiming ?? (() => {
+    if (!recurringDetailPeriods || recurringDetailPeriods.length === 0) {
+      return null;
+    }
+
+    const timings = [...new Set(recurringDetailPeriods.map((detail) => detail.billingTiming).filter(Boolean))];
+    return timings.length === 1 ? timings[0] ?? null : null;
+  })();
+
+  return {
+    recurringDetailPeriods,
+    servicePeriodStart,
+    servicePeriodEnd,
+    billingTiming,
+  };
+}
+
+function buildPreviewViewModelItem(item: IInvoiceCharge) {
+  const recurringSummary = resolvePreviewRecurringSummary(item);
+  return {
+    id: item.item_id,
+    description: item.description,
+    quantity: item.quantity,
+    unitPrice: item.unit_price,
+    total: item.total_price,
+    servicePeriodStart: recurringSummary.servicePeriodStart,
+    servicePeriodEnd: recurringSummary.servicePeriodEnd,
+    billingTiming: recurringSummary.billingTiming,
+    recurringDetailPeriods: recurringSummary.recurringDetailPeriods,
+  };
+}
+
 // TODO: Move to billingAndTax.ts
 async function calculatePreviewTax(
   charges: IBillingCharge[],
@@ -522,17 +603,7 @@ async function adaptToWasmViewModel(
     }
   }
 
-
-  const previewViewModelItems = invoiceItems.map(item => ({
-    id: item.item_id,
-    description: item.description,
-    quantity: item.quantity,
-    unitPrice: item.unit_price,
-    total: item.total_price,
-    servicePeriodStart: item.service_period_start ?? null,
-    servicePeriodEnd: item.service_period_end ?? null,
-    billingTiming: item.billing_timing ?? null,
-  }));
+  const previewViewModelItems = invoiceItems.map(buildPreviewViewModelItem);
 
   return {
     invoiceNumber: 'PREVIEW',
@@ -651,6 +722,7 @@ export const previewInvoice = withAuth(async (
 
     // Add non-contract-associated charges
     nonContractAssociatedCharges.forEach(charge => {
+      const recurringSummary = resolvePreviewRecurringSummary(charge);
       invoiceItems.push({
         item_id: 'preview-' + uuidv4(),
         invoice_id: 'preview-' + billing_cycle_id,
@@ -665,9 +737,14 @@ export const previewInvoice = withAuth(async (
         net_amount: charge.total - (charge.tax_amount || 0),
         is_manual: false,
         rate: charge.rate,
-        service_period_start: charge.servicePeriodStart ?? null,
-        service_period_end: charge.servicePeriodEnd ?? null,
-        billing_timing: charge.billingTiming ?? null,
+        service_period_start: recurringSummary.servicePeriodStart,
+        service_period_end: recurringSummary.servicePeriodEnd,
+        billing_timing: recurringSummary.billingTiming,
+        recurring_detail_periods: recurringSummary.recurringDetailPeriods?.map((period) => ({
+          service_period_start: period.servicePeriodStart ?? null,
+          service_period_end: period.servicePeriodEnd ?? null,
+          billing_timing: period.billingTiming ?? null,
+        })),
       });
     });
 
@@ -698,6 +775,7 @@ export const previewInvoice = withAuth(async (
 
       // Add each charge in the contract group as a child item
       charges.forEach(charge => {
+        const recurringSummary = resolvePreviewRecurringSummary(charge);
         // Enhanced description for bucket charges
         let description = charge.serviceName;
         if (isBucketCharge(charge)) {
@@ -727,9 +805,14 @@ export const previewInvoice = withAuth(async (
           contract_name: contractGroupName,
           parent_item_id: contractGroupHeaderId,
           rate: charge.rate,
-          service_period_start: charge.servicePeriodStart ?? null,
-          service_period_end: charge.servicePeriodEnd ?? null,
-          billing_timing: charge.billingTiming ?? null,
+          service_period_start: recurringSummary.servicePeriodStart,
+          service_period_end: recurringSummary.servicePeriodEnd,
+          billing_timing: recurringSummary.billingTiming,
+          recurring_detail_periods: recurringSummary.recurringDetailPeriods?.map((period) => ({
+            service_period_start: period.servicePeriodStart ?? null,
+            service_period_end: period.servicePeriodEnd ?? null,
+            billing_timing: period.billingTiming ?? null,
+          })),
         });
       });
     }
@@ -739,16 +822,7 @@ export const previewInvoice = withAuth(async (
     const previewTotal = billingResult.totalAmount + previewTax;
 
     // Map IInvoiceCharge[] to the structure expected by InvoiceViewModel.items
-    const previewViewModelItems = invoiceItems.map(item => ({
-      id: item.item_id,
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unit_price, // Assuming unit_price is correct here
-      total: item.total_price, // Assuming total_price is correct here (net + tax?) - might need adjustment based on ViewModel definition
-      servicePeriodStart: item.service_period_start ?? null,
-      servicePeriodEnd: item.service_period_end ?? null,
-      billingTiming: item.billing_timing ?? null,
-    }));
+    const previewViewModelItems = invoiceItems.map(buildPreviewViewModelItem);
 
     // Use the adapter function to create the WasmInvoiceViewModel
     const previewData = await adaptToWasmViewModel(

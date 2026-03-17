@@ -73,6 +73,7 @@ function attachCanonicalRecurringDetailPeriods(
   return charges.map((charge) => {
     const chargeDetailRows = detailRowsByItemId.get(charge.item_id);
     if (!chargeDetailRows || chargeDetailRows.length === 0) {
+      // Historical flat invoices stay parent-only when canonical detail rows do not exist.
       return charge;
     }
 

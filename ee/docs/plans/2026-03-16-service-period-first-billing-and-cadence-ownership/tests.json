@@ -1668,7 +1668,7 @@
   {
     "id": "T192",
     "description": "Historical invoices with no canonical detail rows still hydrate correctly through the same invoice readers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F164",
       "F169"
@@ -1686,7 +1686,7 @@
   {
     "id": "T194",
     "description": "Preview rows reflect multi-detail recurring charges according to the documented projection contract",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F165",
       "F168"
@@ -1695,7 +1695,7 @@
   {
     "id": "T195",
     "description": "Invoice rendering adapters flatten or expand canonical recurring detail periods according to the documented policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F166",
       "F168"

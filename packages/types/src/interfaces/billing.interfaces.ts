@@ -47,6 +47,11 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
 }
 
 type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
+export interface IRecurringChargeDetailPeriod {
+  servicePeriodStart?: ISO8601String | null;
+  servicePeriodEnd?: ISO8601String | null;
+  billingTiming?: 'arrears' | 'advance' | null;
+}
 export interface IBillingCharge extends TenantEntity {
   type: ChargeType;
   serviceId?: string;
@@ -67,6 +72,7 @@ export interface IBillingCharge extends TenantEntity {
   servicePeriodStart?: ISO8601String;
   servicePeriodEnd?: ISO8601String;
   billingTiming?: 'arrears' | 'advance';
+  recurringDetailPeriods?: IRecurringChargeDetailPeriod[];
 }
 
 export interface IDiscount extends TenantEntity {

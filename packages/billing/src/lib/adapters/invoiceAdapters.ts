@@ -161,6 +161,10 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         return Math.round(numeric * 100);
       };
 
+      // Rendering keeps the canonical recurring detail list when it exists, but it still
+      // provides one compatibility summary range for templates that can only show one row.
+      // Mixed timing stays explicit on the detail rows and is flattened to `null` at the
+      // summary level rather than inventing one winning timing value.
       const normalizedItems = (dbData.invoice_charges ?? []).map((item: IInvoiceCharge) => {
         const normalizedDetailPeriods = normalizeRecurringDetailPeriods(item as unknown as Record<string, unknown>);
         const summaryStart =

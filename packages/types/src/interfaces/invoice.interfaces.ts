@@ -86,7 +86,12 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   service_period_start?: ISO8601String | null;
   service_period_end?: ISO8601String | null;
   billing_timing?: 'arrears' | 'advance' | null;
+  /** Absent on historical flat invoices or non-recurring rows that have no canonical detail-period backing. */
   recurring_detail_periods?: IInvoiceChargeRecurringDetailPeriod[];
+  /**
+   * Present only when canonical recurring detail rows were hydrated.
+   * When absent, readers must preserve any parent-level period fields as legacy fallback and must not invent detail rows.
+   */
   recurring_projection?: IInvoiceChargeRecurringProjection | null;
   service_item_kind?: 'service' | 'product';
   service_sku?: string | null;

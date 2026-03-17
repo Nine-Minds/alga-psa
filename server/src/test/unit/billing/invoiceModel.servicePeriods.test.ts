@@ -309,6 +309,51 @@ describe('invoice model recurring service-period projection', () => {
     });
   });
 
+  it('T192: historical flat invoices without canonical detail rows still hydrate without synthesized recurring detail metadata', async () => {
+    const knex = createMockKnex({
+      invoices: [
+        {
+          invoice_id: 'invoice-legacy',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          credit_applied: 0,
+          total_amount: 5000,
+        },
+      ],
+      invoice_charges: [
+        {
+          item_id: 'legacy-1',
+          invoice_id: 'invoice-legacy',
+          tenant: 'tenant-1',
+          service_id: 'service-legacy',
+          description: 'Legacy Managed Service',
+          quantity: 1,
+          unit_price: 5000,
+          total_price: 5000,
+          tax_amount: 0,
+          net_amount: 5000,
+          is_manual: false,
+        },
+      ],
+      invoice_charge_details: [],
+    });
+
+    const invoice = await Invoice.getById(knex, 'tenant-1', 'invoice-legacy');
+    const legacyCharge = invoice?.invoice_charges?.[0];
+
+    expect(legacyCharge).toMatchObject({
+      item_id: 'legacy-1',
+      description: 'Legacy Managed Service',
+      quantity: 1,
+      total_price: 5000,
+    });
+    expect(legacyCharge).not.toHaveProperty('recurring_detail_periods');
+    expect(legacyCharge).not.toHaveProperty('recurring_projection');
+    expect(legacyCharge).not.toHaveProperty('service_period_start');
+    expect(legacyCharge).not.toHaveProperty('service_period_end');
+    expect(legacyCharge).not.toHaveProperty('billing_timing');
+  });
+
   it('T096: prepayment-applied recurring invoice rereads canonical detail service periods', async () => {
     const knex = createMockKnex({
       invoices: [

@@ -1469,7 +1469,7 @@
   {
     "id": "F164",
     "description": "Define fallback hydration behavior for historical invoices that lack canonical recurring detail rows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Read-model and post-persist lifecycle requirements",
       "Risks"
@@ -1478,7 +1478,7 @@
   {
     "id": "F165",
     "description": "Define preview-row contracts for one charge mapping to one or many canonical recurring detail periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 5",
       "Read-model and post-persist lifecycle requirements"
@@ -1487,7 +1487,7 @@
   {
     "id": "F166",
     "description": "Define invoice rendering-adapter flattening or expansion rules when canonical recurring detail periods cannot be shown one-to-one in the rendered output",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Read-model and post-persist lifecycle requirements"

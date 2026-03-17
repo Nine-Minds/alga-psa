@@ -44,6 +44,18 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/models/invoice.ts` now hydrates that projection metadata whenever canonical `invoice_charge_details` rows exist, so `Invoice.getById(...)`, `Invoice.getFullInvoiceById(...)`, and `getInvoiceLineItems(...)` all expose the same typed parent/detail semantics instead of an implicit summary-only shape
   - `server/src/lib/api/services/InvoiceService.ts` now delegates invoice-item reads to the same detail-aware invoice model instead of the legacy `invoice_line_items` table reader, which keeps API `invoice_charges` payloads aligned with the canonical recurring read-model contract without changing the outer response shape
   - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now closes `T191` with a multi-detail recurring parent charge contract, and `server/src/test/unit/api/invoiceService.recurringDetailProjection.test.ts` closes `T193` by proving the API service reuses the same hydrated projection
+- (2026-03-17) Historical flat invoice hydration now has an explicit fallback rule instead of an accidental omission, which closes `F164` and `T192`:
+  - `packages/types/src/interfaces/invoice.interfaces.ts` and `server/src/interfaces/invoice.interfaces.ts` now state the fallback plainly: when `recurring_projection` and `recurring_detail_periods` are absent, readers must preserve any parent-level period fields they already have and must not synthesize canonical detail rows for old flat invoices
+  - `packages/billing/src/models/invoice.ts` now carries an inline guard comment on the no-detail branch so the intended behavior is visible at the exact hydration seam: historical flat invoices remain parent-only when no canonical `invoice_charge_details` rows exist
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now closes `T192` by proving a historical invoice with no detail rows still hydrates cleanly and intentionally omits synthesized recurring detail metadata
+- (2026-03-17) Preview rows now have an explicit multi-period projection contract instead of only a flattened summary range, which closes `F165` and `T194`:
+  - `packages/types/src/interfaces/billing.interfaces.ts` and `server/src/interfaces/billing.interfaces.ts` now allow runtime billing charges to carry additive `recurringDetailPeriods`, giving preview generation one shared shape for charges that summarize one or many canonical recurring periods
+  - `packages/types/src/lib/invoice-renderer/types.ts` now documents the preview-row rule explicitly: `servicePeriodStart` / `servicePeriodEnd` is the compatibility summary range, while `recurringDetailPeriods` is authoritative when present and `billingTiming` only survives there uniformly
+  - `packages/billing/src/actions/invoiceGeneration.ts` now normalizes preview recurring detail periods from either billing-charge or invoice-charge payloads, derives summary fields from that detail list when needed, and carries `recurringDetailPeriods` through the preview payload instead of flattening multi-period charges away
+  - `server/src/test/unit/billing/invoiceGeneration.preview.test.ts` now closes `T194` by proving one preview charge can summarize two canonical recurring periods while keeping both detail periods visible to renderer-facing consumers
+- (2026-03-17) Rendering adapters now have an explicit flatten-or-expand rule for canonical recurring detail periods, which closes `F166` and `T195`:
+  - `packages/billing/src/lib/adapters/invoiceAdapters.ts` now documents the adapter rule directly in code: rendered rows keep `recurringDetailPeriods` verbatim when available, flatten `servicePeriodStart` / `servicePeriodEnd` to a summary range for one-row template consumers, and flatten mixed timing to `null` instead of inventing a winner
+  - `packages/billing/src/lib/adapters/invoiceAdapters.test.ts` now closes `T195` with a mixed-timing case proving the adapter preserves the canonical detail-period list while exposing a compatibility summary range and a null summary timing
 - (2026-03-17) Shared invoice-candidate grouping now carries explicit split reasons for PO and financial/export constraints, which closes `F158`, `F159`, `F160`, `T189`, and `T190`:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now lets scoped due selections carry PO scope, currency, tax source, and export-shape keys, while scoped candidate groups now expose `splitReasons` with `single_contract`, `purchase_order_scope`, and `financial_constraint`
   - `shared/billingClients/recurringTiming.ts` now exports `groupDueServicePeriodsForInvoiceCandidates(...)`, which applies those split constraints within each due window and annotates the resulting candidate groups with the operator-visible reasons they were split
@@ -955,6 +967,20 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
     - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error, not by the recurring projection changes
+- (2026-03-17) Historical flat invoice fallback validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types --coverage.enabled false`
+- (2026-03-17) Preview multi-period projection validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Rendering-adapter multi-period projection validation:
+  - `npx vitest run ../packages/billing/src/lib/adapters/invoiceAdapters.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package source tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 ## Links / References
 
