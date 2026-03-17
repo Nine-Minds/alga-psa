@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "P1-3: ee/server/src/app/api/extensions/_auth.ts imports getSession from @alga-psa/auth (not auth-compat)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {

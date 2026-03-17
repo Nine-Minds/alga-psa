@@ -151,6 +151,7 @@ By target package
 - T007 reconfirmed the per-source lint breakdown pipeline; the latest run is led by `client-portal`, `workflows`, `tickets`, `clients`, and `projects`.
 - T008 reconfirmed the per-target lint breakdown pipeline; `documents` remains the top target even after the entity-image move, followed by `tickets`, `billing`, and `sla`.
 - T009 verified there are no remaining `auth-compat` source references anywhere in the repo.
+- T010 verified `ee/server/src/app/api/extensions/_auth.ts` now imports `getSession` directly from `@alga-psa/auth`.
 
 ## Gotchas
 
