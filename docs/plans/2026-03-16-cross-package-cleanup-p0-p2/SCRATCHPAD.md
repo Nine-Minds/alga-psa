@@ -181,10 +181,11 @@ By target package
 - F035 inventory: the meaningful remaining P2-6 candidates are the KB types `IKBArticleWithDocument` and `ArticleType`, imported type-only from `@alga-psa/documents/actions` in `packages/client-portal/src/actions/client-portal-actions/client-kb.ts`, `packages/client-portal/src/components/kb/ClientKBArticleView.tsx`, and `packages/client-portal/src/components/kb/ClientKBPage.tsx`. The broader grep also finds many same-package or horizontal-package type imports, but those are not cross-vertical cleanup targets.
 - Moved the KB domain types into `packages/types/src/lib/knowledgeBase.ts` and exported them from `@alga-psa/types`; `packages/documents/src/actions/kbArticleActions.ts` now consumes those shared definitions instead of owning them locally.
 - Validation after F036: `cd packages/types && npx tsc --noEmit`, `cd packages/client-portal && npx tsc --noEmit`, and `cd packages/documents && npx tsc --noEmit` all pass.
+- Updated the three client-portal KB callers (`client-kb.ts`, `ClientKBArticleView.tsx`, `ClientKBPage.tsx`) to import the extracted KB types from `@alga-psa/types`; `npm run lint` now reports `0` remaining `client-portal` feature-import warnings and `57` total violations repo-wide.
 
 ## Remaining Open Work
 
-- **F037:** next up. Update the three client-portal KB callers to import the moved types from `@alga-psa/types` directly.
+- **F038:** next up. Re-run the full build and lock in the new lower lint baseline for the type-extraction pass.
 
 ## Gotchas
 
