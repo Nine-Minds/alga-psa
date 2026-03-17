@@ -96,6 +96,7 @@ export interface ContractWizardData {
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
   description?: string;
+  cadence_owner?: 'client' | 'contract';
   billing_frequency: string;
   currency_code: string;
   po_number?: string;
@@ -149,6 +150,7 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   renewal_term_months: undefined,
   use_tenant_renewal_defaults: true,
   description: '',
+  cadence_owner: 'client',
   billing_frequency: 'monthly',
   currency_code: 'USD',
   fixed_services: [],
@@ -316,6 +318,7 @@ export function ContractWizard({
       contract_name: snapshot.contract_name ?? prev.contract_name,
       description: snapshot.description ?? prev.description,
       billing_frequency: snapshot.billing_frequency ?? prev.billing_frequency,
+      cadence_owner: snapshot.cadence_owner ?? prev.cadence_owner,
       // currency_code is inherited from client, not from template (templates are currency-neutral)
       fixed_services: snapshot.fixed_services ?? [],
       product_services: snapshot.product_services ?? [],
@@ -384,6 +387,7 @@ export function ContractWizard({
       notice_period_days: resolvedNoticePeriodDays,
       renewal_term_months: wizardData.renewal_term_months,
       use_tenant_renewal_defaults: useTenantDefaults,
+      cadence_owner: wizardData.cadence_owner ?? 'client',
       end_date: wizardData.end_date,
       po_required: wizardData.po_required,
       po_number: wizardData.po_number,

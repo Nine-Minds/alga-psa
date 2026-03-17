@@ -121,8 +121,8 @@
   {"id":"T110","description":"Schema and defaulting migrations do not mutate existing invoice outputs for untouched tenants","implemented":false,"featureIds":["F082","F114","F135"]},
 
   {"id":"T111","description":"Recurring contract line configuration UI presents cadence owner in business language without exposing internal engine jargon","implemented":true,"featureIds":["F091"]},
-  {"id":"T112","description":"Contract wizard captures cadence_owner for new recurring lines and preserves it across step transitions","implemented":false,"featureIds":["F092"]},
-  {"id":"T113","description":"Contract wizard resume and draft flows preserve cadence_owner and recurring timing defaults","implemented":false,"featureIds":["F092","F144"]},
+  {"id":"T112","description":"Contract wizard captures cadence_owner for new recurring lines and preserves it across step transitions","implemented":true,"featureIds":["F092"]},
+  {"id":"T113","description":"Contract wizard resume and draft flows preserve cadence_owner and recurring timing defaults","implemented":true,"featureIds":["F092","F144"]},
   {"id":"T114","description":"Template wizard and template detail configuration capture cadence-owner defaults for recurring lines","implemented":false,"featureIds":["F093"]},
   {"id":"T115","description":"Fixed recurring configuration panels explain partial-period coverage rather than proration-as-workaround","implemented":false,"featureIds":["F094"]},
   {"id":"T116","description":"Billing dashboard quick-start and overview copy no longer teaches users to infer timing primarily via proration","implemented":false,"featureIds":["F095"]},

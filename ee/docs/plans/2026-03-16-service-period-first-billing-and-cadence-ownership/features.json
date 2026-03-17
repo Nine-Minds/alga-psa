@@ -548,7 +548,7 @@
   {
     "id": "F092",
     "description": "Update contract wizard and resume flows to capture cadence owner for newly created recurring lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

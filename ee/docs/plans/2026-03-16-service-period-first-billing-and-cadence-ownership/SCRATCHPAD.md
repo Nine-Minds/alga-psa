@@ -230,6 +230,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - a negative-invoice credit that is fully consumed by a later credit application still reconciles to `remaining_amount = 0` without any dependency on invoice-header timing
     - an expired negative-invoice credit still expires from `transactions.expiration_date` / `credit_tracking.expiration_date`, marks the tracking row expired, and creates the same reconciliation-report signal when the client balance has not yet been corrected
   - this checkpoint intentionally stops short of flipping `F078` because the broader credit-reader (`T098`) and DB-backed integration (`T100`) seams are still open
+- (2026-03-17) Contract wizard cadence-owner capture now reaches the live recurring create/resume UI instead of stopping in action-layer types:
+  - `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx` now carries `cadence_owner` in `ContractWizardData`, defaults new wizards to `'client'`, preserves the value when template snapshots are applied, and includes it in `buildSubmissionData()`
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx` now renders the same business-language cadence-owner chooser used by the fixed contract-line editor, with the contract-anniversary option visibly staged but disabled during rollout
+  - `packages/billing/tests/contractWizardResume.test.tsx` now proves both sides of the wizard contract: new recurring lines submit `cadence_owner: 'client'`, and resumed draft flows keep a stored `cadence_owner` value across step transitions
+  - `packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts` now locks the source-level seams so future edits cannot silently drop cadence owner from wizard defaults, template snapshot application, or fixed-fee UI copy
 - (2026-03-17) Cadence-owner persistence is now explicit in live code, not only in domain types:
   - `server/migrations/20260317170000_add_cadence_owner_to_contract_lines.cjs` adds `contract_lines.cadence_owner` with default/backfill to `'client'` plus a check constraint for `client|contract`
   - `packages/types/src/interfaces/billing.interfaces.ts`, `packages/types/src/interfaces/contract.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `server/src/interfaces/contract.interfaces.ts` now expose `cadence_owner` on live contract-line and mapping interfaces
@@ -388,6 +393,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
 - (2026-03-17) Credit reconciliation / expiration validation:
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts --coverage.enabled false`
+- (2026-03-17) Contract wizard cadence-owner validation:
+  - `npx vitest run ../packages/billing/tests/contractWizardResume.test.tsx ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Cadence-owner persistence validation:
   - `npx vitest run src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`

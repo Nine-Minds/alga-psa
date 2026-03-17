@@ -9,6 +9,10 @@ import userEvent from '@testing-library/user-event';
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
     isOpen ? <div data-testid="dialog">{children}</div> : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/onboarding/WizardProgress', () => ({
@@ -47,20 +51,47 @@ vi.mock('@alga-psa/ui/components/onboarding/WizardNavigation', () => ({
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep', () => ({
-  ContractBasicsStep: ({ data }: { data: any }) => (
+  ContractBasicsStep: ({
+    data,
+    updateData,
+  }: {
+    data: any;
+    updateData: (next: Record<string, unknown>) => void;
+  }) => (
     <div
       data-testid="step-contract-basics"
       data-client-id={data.client_id ?? ''}
       data-contract-name={data.contract_name ?? ''}
       data-start-date={data.start_date ?? ''}
       data-end-date={data.end_date ?? ''}
-    />
+    >
+      <button
+        type="button"
+        onClick={() =>
+          updateData({
+            client_id: 'client-1',
+            contract_name: 'Seeded Contract',
+            start_date: '2026-01-01',
+            billing_frequency: 'monthly',
+            currency_code: 'USD',
+            fixed_base_rate: 10000,
+            fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          })
+        }
+      >
+        Seed valid basics
+      </button>
+    </div>
   ),
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep', () => ({
   FixedFeeServicesStep: ({ data }: { data: any }) => (
-    <div data-testid="step-fixed-fee" data-fixed-services-count={String((data.fixed_services ?? []).length)} />
+    <div
+      data-testid="step-fixed-fee"
+      data-fixed-services-count={String((data.fixed_services ?? []).length)}
+      data-cadence-owner={data.cadence_owner ?? 'client'}
+    />
   ),
 }));
 
@@ -91,6 +122,7 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ReviewContra
       data-product-services-count={String((data.product_services ?? []).length)}
       data-hourly-services-count={String((data.hourly_services ?? []).length)}
       data-usage-services-count={String((data.usage_services ?? []).length)}
+      data-cadence-owner={data.cadence_owner ?? 'client'}
     />
   ),
 }));
@@ -99,6 +131,13 @@ vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
   createClientContractFromWizard: vi.fn(),
   listContractTemplatesForWizard: vi.fn(async () => []),
   getContractTemplateSnapshotForClientWizard: vi.fn(),
+}));
+
+vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
+  getDefaultBillingSettings: vi.fn(async () => ({
+    defaultRenewalMode: 'manual',
+    defaultNoticePeriodDays: 30,
+  })),
 }));
 
 describe('ContractWizard resume behavior', () => {
@@ -256,6 +295,50 @@ describe('ContractWizard resume behavior', () => {
 
     const step = await screen.findByTestId('step-fixed-fee');
     expect(step).toHaveAttribute('data-fixed-services-count', '2');
+  });
+
+  it('preserves cadence_owner from resumed drafts across fixed-fee step transitions (T113)', async () => {
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          cadence_owner: 'contract',
+          enable_proration: false,
+          fixed_base_rate: 10000,
+          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Next'));
+    });
+
+    const fixedStep = await screen.findByTestId('step-fixed-fee');
+    expect(fixedStep).toHaveAttribute('data-cadence-owner', 'contract');
+
+    await act(async () => {
+      await user.click(screen.getByText('Next'));
+    });
+    await act(async () => {
+      await user.click(screen.getByText('Back'));
+    });
+
+    expect(await screen.findByTestId('step-fixed-fee')).toHaveAttribute('data-cadence-owner', 'contract');
   });
 
   it('step 3 (Products) shows pre-populated products from draft (T038)', async () => {
@@ -636,5 +719,38 @@ describe('ContractWizard resume behavior', () => {
 
     const [_submission, options] = (createClientContractFromWizard as any).mock.calls[0];
     expect(options).toBeUndefined();
+  });
+
+  it('submits the client cadence default for newly created recurring lines (T112)', async () => {
+    const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
+    (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-new' });
+
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(<ContractWizard open={true} onOpenChange={vi.fn()} />);
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Seed valid basics'));
+    });
+
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await user.click(screen.getByText('Next'));
+      });
+    }
+
+    expect(await screen.findByTestId('step-review')).toHaveAttribute('data-cadence-owner', 'client');
+
+    await act(async () => {
+      await user.click(screen.getByText('Finish'));
+    });
+
+    await waitFor(() => {
+      expect(createClientContractFromWizard).toHaveBeenCalledTimes(1);
+    });
+
+    const [submission] = (createClientContractFromWizard as any).mock.calls[0];
+    expect(submission.cadence_owner).toBe('client');
   });
 });
