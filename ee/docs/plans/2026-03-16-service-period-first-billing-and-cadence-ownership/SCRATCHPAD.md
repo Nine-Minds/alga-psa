@@ -233,6 +233,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
   - `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` closes `T098` with one focused contract covering both the summary list path and the detailed credit reader against a recurring negative-invoice source
   - `T100` remains open because the broader DB-backed credit/prepayment integration seam is still blocked locally and is shared with `F058`/`F077`
+- (2026-03-17) Recurring billing workflow-event metadata is now explicitly locked on the service-period-first path, which closes `F079`:
+  - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` now closes `T079` by proving the started/completed recurring billing run events keep stable `runId`, actor metadata, tenant correlation metadata, and completion counts even after recurring invoice generation moved to due-service-period preselection
+  - no production code change was needed for this checkpoint; the value was converting an already-correct event contract into an executable guard before broader scheduler-identity work (`F151+`)
 
 ## Commands / Runbooks
 
@@ -342,6 +345,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Recurring workflow-event metadata validation:
+  - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts --coverage.enabled false`
 
 ## Links / References
 

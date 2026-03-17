@@ -77,4 +77,49 @@ describe('recurring billing run actions', () => {
     expect(result.failedCount).toBe(0);
     expect(result.failures).toEqual([]);
   });
+
+  it('T079: recurring billing workflow events keep run identity, actor metadata, and completion counts stable on the service-period-first path', async () => {
+    mocks.generateInvoice
+      .mockResolvedValueOnce({ invoice_id: 'invoice-1' })
+      .mockResolvedValueOnce(null);
+
+    const result = await generateInvoicesAsRecurringBillingRun({
+      billingCycleIds: ['cycle-1', 'cycle-2'],
+      allowPoOverage: false,
+    });
+
+    expect(mocks.buildRecurringBillingRunStartedPayload).toHaveBeenCalledWith({
+      runId: result.runId,
+      startedAt: expect.any(String),
+      initiatedByUserId: 'user-1',
+    });
+    expect(mocks.buildRecurringBillingRunCompletedPayload).toHaveBeenCalledWith({
+      runId: result.runId,
+      completedAt: expect.any(String),
+      invoicesCreated: 1,
+      failedCount: 0,
+    });
+    expect(mocks.publishWorkflowEvent).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        eventType: 'RECURRING_BILLING_RUN_STARTED',
+        ctx: expect.objectContaining({
+          tenantId: 'tenant-1',
+          actor: { actorType: 'USER', actorUserId: 'user-1' },
+          correlationId: result.runId,
+        }),
+      }),
+    );
+    expect(mocks.publishWorkflowEvent).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        eventType: 'RECURRING_BILLING_RUN_COMPLETED',
+        ctx: expect.objectContaining({
+          tenantId: 'tenant-1',
+          actor: { actorType: 'USER', actorUserId: 'user-1' },
+          correlationId: result.runId,
+        }),
+      }),
+    );
+  });
 });

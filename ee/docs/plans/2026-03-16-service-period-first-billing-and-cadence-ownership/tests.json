@@ -84,7 +84,7 @@
   {"id":"T076","description":"One-cycle invoice preview uses canonical service periods and still matches expected recurring totals","implemented":true,"featureIds":["F075"]},
   {"id":"T077","description":"Recurring invoice generation for a cycle containing no eligible recurring service periods produces the expected empty-result behavior","implemented":true,"featureIds":["F071","F080"]},
   {"id":"T078","description":"Billing-period end dates used for billed-through calculations remain correct after canonical service-period selection","implemented":true,"featureIds":["F080"]},
-  {"id":"T079","description":"Invoice workflow events continue to describe recurring invoice creation and updates correctly after cutover","implemented":false,"featureIds":["F079","F128"]},
+  {"id":"T079","description":"Invoice workflow events continue to describe recurring invoice creation and updates correctly after cutover","implemented":true,"featureIds":["F079","F128"]},
   {"id":"T080","description":"Canonical recurring service-period metadata remains stable through invoice reload and reread paths","implemented":false,"featureIds":["F073","F125"]},
 
   {"id":"T081","description":"Automatic recurring billing runs select the correct due recurring service periods under client cadence","implemented":true,"featureIds":["F074"]},

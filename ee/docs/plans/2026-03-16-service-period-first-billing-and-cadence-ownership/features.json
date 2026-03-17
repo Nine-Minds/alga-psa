@@ -470,7 +470,7 @@
   {
     "id": "F079",
     "description": "Ensure invoice workflow events and audit metadata remain correct when recurring charges derive from canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
