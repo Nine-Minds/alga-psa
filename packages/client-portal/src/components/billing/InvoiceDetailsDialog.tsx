@@ -105,6 +105,27 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     );
   };
 
+  const renderFinancialArtifactNote = (item: InvoiceViewModel['invoice_charges'][number]) => {
+    const hasSummaryRange = Boolean(
+      formatServicePeriodRange(item.service_period_start, item.service_period_end)
+    );
+    const hasRecurringDetails = Boolean(item.recurring_detail_periods?.length);
+
+    if (hasSummaryRange || hasRecurringDetails) {
+      return null;
+    }
+
+    if (item.is_manual) {
+      return (
+        <div className="text-xs text-muted-foreground">
+          {t('invoice.financialOnlyLine', 'Financial-only line. No recurring service period.')}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   // Fetch invoice details when dialog opens
   useEffect(() => {
     const fetchInvoiceDetails = async () => {
@@ -257,7 +278,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                                 <div className="text-xs text-muted-foreground">
                                   {t('invoice.servicePeriod', 'Service Period')}: {formatServicePeriodRange(item.service_period_start, item.service_period_end)}
                                 </div>
-                              ) : null}
+                              ) : renderFinancialArtifactNote(item)}
                         </div>
                       </td>
                       <td className="px-3 py-2">{item.quantity}</td>

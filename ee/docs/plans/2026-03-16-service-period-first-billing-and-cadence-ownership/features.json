@@ -1694,7 +1694,7 @@
   {
     "id": "F189",
     "description": "Define dashboard and portal display policy for non-service financial artifacts so they remain understandable alongside canonical recurring service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Invoice and billing-flow requirements"

@@ -90,4 +90,50 @@ describe('BillingOverviewTab recurring service periods', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Service Period: 2026-01-01 - 2026-02-01')).toBeInTheDocument();
   });
+
+  it('surfaces financial-only invoice guidance when the next invoice has no recurring service-period summary', () => {
+    render(
+      <BillingOverviewTab
+        contractLine={{
+          contract_line_id: 'line-1',
+          contract_line_name: 'Manual Retainer',
+          billing_frequency: 'Monthly',
+          billing_timing: 'advance',
+          cadence_owner: 'client',
+          start_date: '2026-01-01',
+          end_date: null,
+          is_active: true,
+        } as any}
+        invoices={[
+          {
+            invoice_id: 'inv-2',
+            invoice_number: 'INV-002',
+            client_id: 'client-1',
+            client: { name: 'Acme Corp', logo: '', address: '' },
+            contact: { name: '', address: '' },
+            invoice_date: '2026-02-01' as any,
+            due_date: '2026-02-15' as any,
+            status: 'sent',
+            subtotal: 2500,
+            tax: 0,
+            total: 2500,
+            total_amount: 2500,
+            credit_applied: 500,
+            is_manual: true,
+            invoice_charges: [],
+            currencyCode: 'USD',
+          },
+        ] as any}
+        bucketUsage={[]}
+        isBucketUsageLoading={false}
+        isLoading={false}
+        formatCurrency={(amount) => `$${(amount / 100).toFixed(2)}`}
+        formatDate={(date) => String(date)}
+      />
+    );
+
+    expect(
+      screen.getByText('Financial-only invoice. Recurring service periods appear only on recurring detail lines.')
+    ).toBeInTheDocument();
+  });
 });

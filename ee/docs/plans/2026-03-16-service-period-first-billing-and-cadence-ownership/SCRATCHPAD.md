@@ -39,6 +39,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Dashboard and portal invoice views now label financial-only artifacts explicitly instead of silently omitting recurring context, which closes `F189` and `T339`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now renders `Financial-only line. No recurring service period.` for manual or adjustment rows that intentionally lack canonical recurring timing metadata
+  - `packages/client-portal/src/components/billing/BillingOverviewTab.tsx` now surfaces `Financial-only invoice...` guidance on the next-invoice card when the invoice is manual or credit-affected and no recurring service-period summary is available
+  - `packages/billing/src/components/billing-dashboard/CreditManagement.tsx` now shows a `Context` column and descriptive copy that distinguish recurring-source credits, transferred recurring credits, and financial-only credits, so dashboard readers can interpret non-service financial artifacts alongside preserved recurring lineage
+  - focused coverage now lives in `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx`, `packages/client-portal/src/components/billing/BillingOverviewTab.servicePeriods.test.tsx`, and `packages/billing/tests/creditManagement.financialArtifactContext.wiring.test.ts`
+
 - (2026-03-17) Credit transfer readers and audit metadata now preserve recurring lineage instead of dropping it on the target credit, which closes `F188` and `T219`:
   - `packages/billing/src/actions/creditActions.ts` now resolves direct-or-inherited credit invoice lineage, so `listClientCredits(...)` and `getCreditDetails(...)` can keep showing canonical recurring source-invoice context even when a transferred credit’s own transaction has no direct `invoice_id`
   - `transferCredit(...)` now stamps transfer transaction metadata and audit details with the source credit id plus source-invoice date basis and recurring service-period summary, which makes downstream reporting and audit trails explicit for transferred credits that originated from detail-backed recurring invoices
@@ -1161,6 +1167,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Financial-artifact display policy validation:
+  - `npx vitest run src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx src/components/billing/BillingOverviewTab.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `packages/client-portal/`
+  - `npx vitest run tests/creditManagement.financialArtifactContext.wiring.test.ts --coverage.enabled false`
+    - run from `packages/billing/`
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
 
 - (2026-03-17) Client contract assignment-date validation now distinguishes canonical recurring coverage from historical invoice-window fallback, which closes `F174` and `T204`:
   - `packages/clients/src/actions/clientContractActions.ts` now queries canonical `invoice_charge_details` coverage for the current `client_contract_id` before using legacy `client_billing_cycles` overlap logic, so end-date shortening and mid-cycle termination are enforced against billed recurring service periods rather than against the entire enclosing invoice window whenever authoritative detail rows exist

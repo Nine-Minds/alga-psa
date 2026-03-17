@@ -27,6 +27,17 @@ import {
   Legend
 } from 'recharts';
 
+function formatCreditServicePeriod(
+  start?: string | null,
+  end?: string | null
+): string | null {
+  if (!start || !end) {
+    return null;
+  }
+
+  return `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`;
+}
+
 // Define columns for the credits table
 const columns: ColumnDefinition<ICreditTracking & { transaction_description?: string, invoice_number?: string }>[] = [
   {
@@ -47,6 +58,36 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
     title: 'Description',
     dataIndex: 'transaction_description',
     render: (value: string | undefined) => value || 'N/A'
+  },
+  {
+    title: 'Context',
+    dataIndex: 'invoice_date_basis',
+    render: (_value: string | undefined, record) => {
+      const periodLabel = formatCreditServicePeriod(
+        record.invoice_service_period_start,
+        record.invoice_service_period_end
+      );
+
+      if (record.invoice_date_basis === 'canonical_recurring_service_period') {
+        return (
+          <div className="text-sm">
+            <div className="font-medium">
+              {record.lineage_origin === 'transferred_credit' ? 'Transferred Recurring Credit' : 'Recurring Source'}
+            </div>
+            <div className="text-muted-foreground">
+              {periodLabel ? `Service Period: ${periodLabel}` : 'Recurring source lineage preserved'}
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="text-sm">
+          <div className="font-medium">Financial Only</div>
+          <div className="text-muted-foreground">No recurring service period</div>
+        </div>
+      );
+    }
   },
   {
     title: 'Original Amount',
@@ -475,7 +516,7 @@ const CreditManagement: React.FC = () => {
         <CardHeader>
           <CardTitle>Recent Credits</CardTitle>
           <CardDescription>
-            View and manage your client credits
+            View and manage your client credits. Credits stay financial artifacts, and recurring service periods appear only when the source invoice carried canonical coverage.
           </CardDescription>
         </CardHeader>
         <CardContent>

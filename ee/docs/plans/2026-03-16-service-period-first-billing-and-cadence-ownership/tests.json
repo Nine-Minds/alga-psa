@@ -1898,6 +1898,14 @@
     ]
   },
   {
+    "id": "T339",
+    "description": "Dashboard and portal views make non-service financial artifacts explicit when recurring service-period metadata is absent",
+    "implemented": true,
+    "featureIds": [
+      "F189"
+    ]
+  },
+  {
     "id": "T220",
     "description": "Financial artifacts with missing canonical period metadata follow the documented fallback and failure-handling behavior",
     "implemented": false,

@@ -108,6 +108,20 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
 
     return getRecurringServicePeriodSummary(nextInvoice, formatDate);
   }, [formatDate, nextInvoice]);
+  const nextInvoiceFinancialArtifactSummary = useMemo(() => {
+    if (!nextInvoice || nextInvoiceServicePeriodSummary) {
+      return null;
+    }
+
+    if (nextInvoice.is_manual || Number(nextInvoice.credit_applied ?? 0) > 0) {
+      return t(
+        'invoice.financialArtifactSummary',
+        'Financial-only invoice. Recurring service periods appear only on recurring detail lines.'
+      );
+    }
+
+    return null;
+  }, [nextInvoice, nextInvoiceServicePeriodSummary, t]);
 
   // Memoize the invoice card to prevent unnecessary re-renders
   const invoiceCard = useMemo(() => (
@@ -127,6 +141,8 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
                 <p className="mt-2 text-sm text-gray-500">
                   {t('invoice.servicePeriod', 'Service Period')}: {nextInvoiceServicePeriodSummary}
                 </p>
+              ) : nextInvoiceFinancialArtifactSummary ? (
+                <p className="mt-2 text-sm text-gray-500">{nextInvoiceFinancialArtifactSummary}</p>
               ) : null}
             </>
           ) : invoices.length > 0 ? (
@@ -154,7 +170,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         {t('viewAllInvoices')}
       </Button>
     </Card>
-  ), [nextInvoice, nextInvoiceServicePeriodSummary, invoices.length, formatCurrency, formatDate, onViewAllInvoices, t]);
+  ), [nextInvoice, nextInvoiceFinancialArtifactSummary, nextInvoiceServicePeriodSummary, invoices.length, formatCurrency, formatDate, onViewAllInvoices, t]);
 
   return (
     <>

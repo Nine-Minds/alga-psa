@@ -161,5 +161,6 @@ describe('InvoiceDetailsDialog recurring service periods', () => {
     const manualRow = screen.getByText('Manual Credit').closest('tr');
     expect(manualRow).not.toBeNull();
     expect(within(manualRow as HTMLElement).queryByText(/Service Period/)).not.toBeInTheDocument();
+    expect(within(manualRow as HTMLElement).getByText('Financial-only line. No recurring service period.')).toBeInTheDocument();
   });
 });
