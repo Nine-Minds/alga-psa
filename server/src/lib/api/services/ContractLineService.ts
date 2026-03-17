@@ -719,6 +719,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         'c.contract_description',
         'c.owner_client_id',
         'c.billing_frequency',
+        'c.status',
         'c.is_active',
         'c.created_at',
         'c.updated_at',
@@ -792,6 +793,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           ...rest,
           contract_description,
           owner_client_id: data.owner_client_id.trim(),
+          status: data.status ?? 'draft',
         },
         context
       );

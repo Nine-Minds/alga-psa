@@ -277,17 +277,28 @@ export const getClientDocumentFolders = withAuth(
         [tenant, clientId, clientId, clientId, clientId]
       );
 
-      // Also get explicitly client-visible folders scoped to this client
+      // Also get explicitly client-visible folders scoped to this client or one of the
+      // client's owned contracts so portal navigation matches document visibility rules.
       const explicitFolders = await trx.raw(
         `
         SELECT DISTINCT folder_path
         FROM document_folders
         WHERE tenant = ?
           AND is_client_visible = true
-          AND entity_id = ?
-          AND entity_type = 'client'
+          AND (
+            (entity_id = ? AND entity_type = 'client')
+            OR EXISTS (
+              SELECT 1
+              FROM contracts c
+              WHERE c.tenant = document_folders.tenant
+                AND c.contract_id = document_folders.entity_id
+                AND document_folders.entity_type = 'contract'
+                AND (c.is_template IS NULL OR c.is_template = false)
+                AND c.owner_client_id = ?
+            )
+          )
         `,
-        [tenant, clientId]
+        [tenant, clientId, clientId]
       );
 
       const docPaths = (docFolderPaths.rows || []).map((r: { folder_path: string }) => r.folder_path);

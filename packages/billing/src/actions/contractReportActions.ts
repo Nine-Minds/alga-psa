@@ -16,6 +16,7 @@ export interface ContractRevenue {
 }
 
 export interface ContractExpiration {
+  client_contract_id?: string;
   contract_name: string;
   client_name: string;
   end_date: string;
@@ -197,6 +198,8 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         'c.contract_id',
         'c.contract_name',
         'cl.client_name',
+        'cc.is_active',
+        'cc.start_date',
         'cc.end_date',
         'cc.decision_due_date',
         'cc.renewal_mode',
@@ -207,7 +210,19 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
       )
       .orderBy('cc.end_date', 'asc');
 
-    const expirations: ContractExpiration[] = data.map((row: any) => {
+    const expirationMap = new Map<string, ContractExpiration>();
+
+    for (const row of data) {
+      const assignmentStatus = deriveClientContractStatus({
+        isActive: Boolean(row.is_active),
+        startDate: row.start_date,
+        endDate: row.end_date,
+        now: today,
+      });
+      if (assignmentStatus !== 'active') {
+        continue;
+      }
+
       const endDate = new Date(row.end_date);
       const daysUntilExpiration = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       const contractRenewalMode = row.renewal_mode === 'none' || row.renewal_mode === 'manual' || row.renewal_mode === 'auto'
@@ -226,7 +241,15 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
           : (contractRenewalMode ?? tenantDefaultRenewalMode))
         ?? 'manual';
 
-      return {
+      const key = row.client_contract_id;
+      const existing = expirationMap.get(key);
+      if (existing) {
+        existing.monthly_value += row.monthly_value || 0;
+        continue;
+      }
+
+      expirationMap.set(key, {
+        client_contract_id: row.client_contract_id,
         contract_name: row.contract_name,
         client_name: row.client_name || 'Unknown Client',
         end_date: endDate.toISOString().split('T')[0],
@@ -236,19 +259,10 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         days_until_expiration: Math.max(0, daysUntilExpiration),
         monthly_value: row.monthly_value || 0,
         auto_renew: effectiveRenewalMode === 'auto'
-      };
-    });
+      });
+    }
 
-    // Remove duplicates and aggregate by contract-client pair
-    const seen = new Set<string>();
-    const unique = expirations.filter(item => {
-      const key = `${item.contract_name}-${item.client_name}-${item.end_date}-${item.decision_due_date ?? 'none'}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    return unique;
+    return Array.from(expirationMap.values()).map(({ client_contract_id: _ignored, ...item }) => item);
   } catch (error) {
     console.error('Error fetching contract expiration report:', error);
     if (error instanceof Error) {

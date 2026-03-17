@@ -31,6 +31,15 @@ describe('contractReportActions expiration report wiring', () => {
     expect(source).toContain('queue_status: row.queue_status ?? null,');
   });
 
+  it('derives expiration rows from assignment lifecycle and groups them by client assignment id', () => {
+    expect(source).toContain("'cc.is_active',");
+    expect(source).toContain('const assignmentStatus = deriveClientContractStatus({');
+    expect(source).toContain("if (assignmentStatus !== 'active') {");
+    expect(source).toContain('const key = row.client_contract_id;');
+    expect(source).toContain('const expirationMap = new Map<string, ContractExpiration>();');
+    expect(source).toContain('existing.monthly_value += row.monthly_value || 0;');
+  });
+
   it('keeps fixed-term expiration rows even when renewal fields are unset', () => {
     expect(source).toContain(".whereNotNull('cc.end_date')");
     expect(source).not.toContain(".whereNotNull('cc.renewal_mode')");
@@ -40,7 +49,7 @@ describe('contractReportActions expiration report wiring', () => {
 
   it('keeps expiration-report sort semantics compatible with existing consumers', () => {
     expect(source).toContain(".orderBy('cc.end_date', 'asc');");
-    expect(source).toContain("const key = `${item.contract_name}-${item.client_name}-${item.end_date}-${item.decision_due_date ?? 'none'}`;");
+    expect(source).toContain('const key = row.client_contract_id;');
   });
 
   it('derives legacy auto_renew from effective renewal mode values', () => {

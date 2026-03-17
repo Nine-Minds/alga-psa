@@ -26,7 +26,9 @@ export const contractRevenueReport: ReportDefinition = {
         aggregation: 'count',
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'is_active', operator: 'eq', value: true }
+          { field: 'is_active', operator: 'eq', value: true },
+          { field: "raw:COALESCE(start_date, CURRENT_DATE)", operator: 'lte', value: '{{today}}' },
+          { field: "raw:COALESCE(end_date, DATE '9999-12-31')", operator: 'gte', value: '{{today}}' }
         ]
       },
       formatting: {
@@ -56,7 +58,9 @@ export const contractRevenueReport: ReportDefinition = {
         aggregation: 'sum',
         filters: [
           { field: 'client_contracts.tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'client_contracts.is_active', operator: 'eq', value: true }
+          { field: 'client_contracts.is_active', operator: 'eq', value: true },
+          { field: "raw:COALESCE(client_contracts.start_date, CURRENT_DATE)", operator: 'lte', value: '{{today}}' },
+          { field: "raw:COALESCE(client_contracts.end_date, DATE '9999-12-31')", operator: 'gte', value: '{{today}}' }
         ]
       },
       formatting: {
@@ -99,7 +103,9 @@ export const contractRevenueReport: ReportDefinition = {
         aggregation: 'count',
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'is_active', operator: 'eq', value: true }
+          { field: 'is_active', operator: 'eq', value: true },
+          { field: "raw:COALESCE(start_date, CURRENT_DATE)", operator: 'lte', value: '{{today}}' },
+          { field: "raw:COALESCE(end_date, DATE '9999-12-31')", operator: 'gte', value: '{{today}}' }
         ]
       },
       formatting: {

@@ -64,6 +64,7 @@ export interface IClientContract extends TenantEntity {
   client_contract_id: string;
   client_id: string;
   contract_id: string;
+  assignment_status?: ContractStatus;
   contract_status?: ContractStatus;
   template_contract_id?: string | null;
   billing_frequency?: string;

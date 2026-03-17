@@ -53,6 +53,7 @@ type CreatedIds = {
   userIds: string[];
   contactIds: string[];
   documentIds: string[];
+  folderIds: string[];
   ticketIds: string[];
   contractIds: string[];
   clientContractIds: string[];
@@ -63,6 +64,7 @@ let createdIds: CreatedIds = {
   userIds: [],
   contactIds: [],
   documentIds: [],
+  folderIds: [],
   ticketIds: [],
   contractIds: [],
   clientContractIds: []
@@ -82,6 +84,8 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
     await safeDelete('document_associations', { tenant: tenantId, document_id: docId });
     await safeDelete('documents', { tenant: tenantId, document_id: docId });
   }
+
+  await safeDelete('document_folders', { tenant: tenantId });
 
   for (const ticketId of ids.ticketIds) {
     await safeDelete('tickets', { tenant: tenantId, ticket_id: ticketId });
@@ -200,6 +204,31 @@ async function createDocumentAssociation(
   });
 }
 
+async function createEntityFolder(
+  db: Knex,
+  tenantId: string,
+  entityId: string,
+  entityType: 'client' | 'contract',
+  folderPath: string,
+  isClientVisible: boolean
+): Promise<string> {
+  const folderId = uuidv4();
+
+  await db('document_folders').insert({
+    tenant: tenantId,
+    folder_id: folderId,
+    folder_path: folderPath,
+    folder_name: folderPath.split('/').filter(Boolean).at(-1) ?? folderPath,
+    entity_id: entityId,
+    entity_type: entityType,
+    is_client_visible: isClientVisible,
+    parent_folder_id: null,
+    created_by: mspUserId
+  });
+
+  return folderId;
+}
+
 async function createOwnedContract(
   db: Knex,
   tenantId: string,
@@ -288,6 +317,7 @@ describe('Client Portal Documents Integration Tests', () => {
       userIds: [],
       contactIds: [],
       documentIds: [],
+      folderIds: [],
       ticketIds: [],
       contractIds: [],
       clientContractIds: []
@@ -707,6 +737,16 @@ describe('Client Portal Documents Integration Tests', () => {
       createdIds.documentIds.push(documentId);
       await createDocumentAssociation(db, tenantId, documentId, contractId, 'contract');
 
+      const explicitFolderId = await createEntityFolder(
+        db,
+        tenantId,
+        contractId,
+        'contract',
+        '/contracts/explicit-owner-folder',
+        true
+      );
+      createdIds.folderIds.push(explicitFolderId);
+
       const clientUser = createMockUser('client', {
         user_id: clientUserId,
         tenant: tenantId,
@@ -726,6 +766,7 @@ describe('Client Portal Documents Integration Tests', () => {
 
       expect(listed.documents.map((doc) => doc.document_id)).toContain(documentId);
       expect(collectFolderPaths(folders)).toContain('/contracts/owned-client');
+      expect(collectFolderPaths(folders)).toContain('/contracts/explicit-owner-folder');
       expect(downloaded.document_id).toBe(documentId);
     });
 

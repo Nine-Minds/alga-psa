@@ -22,9 +22,12 @@ describe('client-owned contracts resource semantics', () => {
     expect(serviceSource).toContain(".andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))");
     expect(serviceSource).toContain(".whereNotNull('c.owner_client_id')");
     expect(serviceSource).toContain("'oc.client_name as owner_client_name'");
+    expect(serviceSource).toContain("'c.status'");
+    expect(serviceSource).toContain("status: data.status ?? 'draft'");
     expect(serviceSource).toContain("from(baseQuery.clone().as('client_owned_contracts'))");
 
     expect(schemaSource).toContain('owner_client_name: z.string().nullable().optional(),');
+    expect(schemaSource).toContain('status: contractStatusSchema,');
   });
 
   it('T034: billing docs describe templates as the only reusable contract layer', () => {

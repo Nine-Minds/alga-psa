@@ -25,6 +25,7 @@ export const billingFrequencySchema = z.enum(['weekly', 'bi-weekly', 'monthly', 
 export const configurationTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
 export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
 export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage', 'per_unit']);
+export const contractStatusSchema = z.enum(['active', 'draft', 'terminated', 'expired', 'published', 'archived']);
 
 // ============================================================================
 // CORE CONTRACT LINE SCHEMAS
@@ -322,6 +323,7 @@ export const createContractSchema = z.object({
   contract_description: z.string().optional(),
   owner_client_id: uuidSchema,
   billing_frequency: billingFrequencySchema,
+  status: contractStatusSchema.optional(),
   is_active: z.boolean().optional().default(true)
 });
 
@@ -334,6 +336,7 @@ export const contractResponseSchema = z.object({
   owner_client_id: uuidSchema,
   owner_client_name: z.string().nullable().optional(),
   billing_frequency: billingFrequencySchema,
+  status: contractStatusSchema,
   is_active: z.boolean(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),

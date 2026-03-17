@@ -28,6 +28,7 @@ describe('client contract effective renewal settings normalization', () => {
     expect(normalized.use_tenant_renewal_defaults).toBe(true);
     expect(normalized.effective_renewal_mode).toBe('manual');
     expect(normalized.effective_notice_period_days).toBe(45);
+    expect(normalized.assignment_status).toBe('active');
   });
 
   it('uses explicit values when tenant defaults are disabled', () => {

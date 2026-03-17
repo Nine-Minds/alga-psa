@@ -23,6 +23,15 @@ describe('deriveClientContractStatus', () => {
 
     expect(
       deriveClientContractStatus({
+        isActive: true,
+        startDate: '2026-04-01',
+        endDate: null,
+        now: '2026-03-16',
+      })
+    ).toBe('draft');
+
+    expect(
+      deriveClientContractStatus({
         isActive: false,
         startDate: '2026-04-01',
         endDate: null,

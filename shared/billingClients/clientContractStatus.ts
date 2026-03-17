@@ -49,11 +49,11 @@ export function deriveClientContractStatus(
   const endDate = normalizeDateOnly(params.endDate);
   const nowDate = normalizeNowDateOnly(params.now);
 
-  if (!params.isActive) {
-    if (startDate && startDate > nowDate) {
-      return 'draft';
-    }
+  if (startDate && startDate > nowDate) {
+    return 'draft';
+  }
 
+  if (!params.isActive) {
     return 'terminated';
   }
 

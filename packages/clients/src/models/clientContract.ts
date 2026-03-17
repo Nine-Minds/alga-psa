@@ -2,6 +2,7 @@ import type { IClientContract } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 
 type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
 
@@ -311,6 +312,11 @@ export const normalizeClientContract = (row: any): IClientContract => {
   normalized.days_until_due = normalized.decision_due_date
     ? computeDaysUntilDate({ targetDate: normalized.decision_due_date as string })
     : undefined;
+  normalized.assignment_status = deriveClientContractStatus({
+    isActive: normalized.is_active === true,
+    startDate: normalizedStartDate ?? null,
+    endDate: normalizedEndDate ?? null,
+  });
 
   delete normalized.tenant_default_renewal_mode;
   delete normalized.tenant_default_notice_period_days;
