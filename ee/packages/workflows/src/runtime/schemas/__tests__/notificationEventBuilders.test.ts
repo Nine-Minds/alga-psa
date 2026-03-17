@@ -4,14 +4,14 @@ import {
   notificationFailedEventPayloadSchema,
   notificationReadEventPayloadSchema,
   notificationSentEventPayloadSchema,
-} from '@alga-psa/workflows/runtime/schemas/communicationsEventSchemas';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers.js';
+} from '../communicationsEventSchemas';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   buildNotificationDeliveredPayload,
   buildNotificationFailedPayload,
   buildNotificationReadPayload,
   buildNotificationSentPayload,
-} from '../notificationEventBuilders';
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/notificationEventBuilders';
 
 describe('notification domain event payload builders', () => {
   const tenantId = 'c6da0f3a-d8d7-4b34-85c8-7f75e0b4f9ce';

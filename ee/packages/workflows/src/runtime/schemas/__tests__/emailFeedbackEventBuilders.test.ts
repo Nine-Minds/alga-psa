@@ -4,14 +4,14 @@ import {
   emailComplaintReceivedEventPayloadSchema,
   emailDeliveredEventPayloadSchema,
   emailUnsubscribedEventPayloadSchema,
-} from '@alga-psa/workflows/runtime/schemas/communicationsEventSchemas';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers.js';
+} from '../communicationsEventSchemas';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   buildEmailBouncedPayload,
   buildEmailComplaintReceivedPayload,
   buildEmailDeliveredPayload,
   buildEmailUnsubscribedPayload,
-} from '../emailFeedbackEventBuilders';
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailFeedbackEventBuilders';
 
 describe('email feedback domain event payload builders', () => {
   it('builds schema-valid EMAIL_DELIVERED payload when enriched', () => {

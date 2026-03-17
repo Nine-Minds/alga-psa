@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermissionAsync } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTag } from '@alga-psa/tags/actions';

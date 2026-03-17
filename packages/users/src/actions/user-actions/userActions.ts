@@ -11,7 +11,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import { hashPassword } from '@alga-psa/core/encryption';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/lib/permissions';
 import { getUserRoles } from '@alga-psa/user-composition/actions';
 import logger from '@alga-psa/core/logger';

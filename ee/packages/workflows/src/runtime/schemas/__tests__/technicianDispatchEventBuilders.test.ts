@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers.js';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   technicianArrivedEventPayloadSchema,
   technicianCheckedOutEventPayloadSchema,
   technicianDispatchedEventPayloadSchema,
   technicianEnRouteEventPayloadSchema,
-} from '@alga-psa/workflows/runtime/schemas/schedulingEventSchemas';
+} from '../schedulingEventSchemas';
 import {
   buildTechnicianArrivedPayload,
   buildTechnicianCheckedOutPayload,
@@ -16,7 +16,7 @@ import {
   isTechnicianCheckedOutStatus,
   isTechnicianEnRouteStatus,
   shouldEmitTechnicianDispatchEvents,
-} from '../technicianDispatchEventBuilders';
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/technicianDispatchEventBuilders';
 
 describe('technicianDispatchEventBuilders', () => {
   it('builds schema-valid TECHNICIAN_DISPATCHED payloads', () => {

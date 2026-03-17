@@ -95,6 +95,10 @@ vi.mock('@alga-psa/msp-composition/assets', () => ({
   MspAssetCrossFeatureProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@alga-psa/msp-composition/documents', () => ({
+  MspDocumentsCrossFeatureProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('@alga-psa/ui', () => ({
   DrawerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   DrawerOutlet: () => null,
