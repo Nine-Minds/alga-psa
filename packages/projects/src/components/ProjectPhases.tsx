@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useRef } from 'react';
+import { Fragment } from 'react';
 import type { IProjectPhase } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
@@ -73,33 +73,6 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onDragEnd,
   onImport,
 }) => {
-  const phasesScrollRef = useRef<HTMLUListElement>(null);
-
-  useEffect(() => {
-    const el = phasesScrollRef.current;
-    if (!el) return;
-
-    const handleWheel = (event: WheelEvent) => {
-      const { deltaY } = event;
-      if (deltaY === 0) return;
-
-      const atTop = el.scrollTop <= 0;
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-      const scrollingDown = deltaY > 0;
-      const canScroll = (scrollingDown && !atBottom) || (!scrollingDown && !atTop);
-
-      if (canScroll) {
-        event.preventDefault();
-        event.stopPropagation();
-        el.scrollTop += deltaY;
-      }
-    };
-
-    // Non-passive to reliably prevent board/page scroll while list can still scroll.
-    el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
-  }, []);
-
   const handleContainerDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     
@@ -207,7 +180,6 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
       </div>
       {/* Scrollable phases list */}
       <ul
-        ref={phasesScrollRef}
         data-phase-scroll-area="true"
         className={styles.phasesScrollArea}
         onDragOver={handleContainerDragOver}

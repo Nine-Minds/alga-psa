@@ -72,43 +72,12 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   useEffect(() => {
     if (isEditing && itemRef.current) {
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const scrollBehavior = prefersReducedMotion ? 'auto' : 'smooth';
       requestAnimationFrame(() => {
-        const item = itemRef.current;
-        if (!item) return;
-        const target = actionsRef.current ?? item;
+        const target = actionsRef.current ?? itemRef.current;
+        target?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion ? 'auto' : 'smooth' });
 
-        const scrollArea = item.closest('[data-phase-scroll-area="true"]') as HTMLElement | null;
-        if (scrollArea) {
-          const margin = 8;
-          const scrollRect = scrollArea.getBoundingClientRect();
-          const targetRect = target.getBoundingClientRect();
-          const itemTop = targetRect.top - scrollRect.top + scrollArea.scrollTop;
-          const itemBottom = targetRect.bottom - scrollRect.top + scrollArea.scrollTop;
-          const viewTop = scrollArea.scrollTop;
-          const visibleHeight = scrollArea.clientHeight;
-          const viewBottom = viewTop + visibleHeight;
-
-          let nextScrollTop = viewTop;
-          if (itemTop < viewTop + margin) {
-            nextScrollTop = Math.max(itemTop - margin, 0);
-          } else if (itemBottom > viewBottom - margin) {
-            nextScrollTop = Math.max(itemBottom - visibleHeight + margin, 0);
-          }
-
-          if (nextScrollTop !== viewTop) {
-            scrollArea.scrollTo({ top: nextScrollTop, behavior: scrollBehavior });
-          }
-        }
-
-        const nameInput = nameInputRef.current;
-        if (nameInput) {
-          try {
-            nameInput.focus({ preventScroll: true });
-          } catch {
-            nameInput.focus();
-          }
-        }
+        try { nameInputRef.current?.focus({ preventScroll: true }); }
+        catch { nameInputRef.current?.focus(); }
       });
     }
   }, [isEditing]);

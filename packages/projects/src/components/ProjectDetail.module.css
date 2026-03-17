@@ -145,19 +145,12 @@
   overflow-x: hidden;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 0.5rem 1rem 5rem 1rem;
+  padding: 0.5rem 1rem 1rem 1rem;
   margin: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-
-.phasesScrollArea::after {
-  content: '';
-  display: block;
-  height: 2.5rem;
-  flex-shrink: 0;
 }
 
 /* Scrollbar styling for phases scroll area */
