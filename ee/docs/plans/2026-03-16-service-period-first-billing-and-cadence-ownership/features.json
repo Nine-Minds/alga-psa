@@ -746,7 +746,7 @@
   {
     "id": "F125",
     "description": "Update invoice models, services, and repository readers so full invoice detail APIs expose canonical service-period data consistently",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

@@ -14,6 +14,7 @@ import type { Knex } from 'knex';
 import type {
   IInvoice,
   IInvoiceCharge,
+  IInvoiceChargeRecurringDetailPeriod,
   IInvoiceTemplate,
   ICustomField,
   IConditionalRule,
@@ -28,6 +29,33 @@ type InvoiceChargeDetailPeriodRow = {
   service_period_end?: string | null;
   billing_timing?: 'arrears' | 'advance' | null;
 };
+
+function sortInvoiceChargesForDisplay(charges: IInvoiceCharge[]): IInvoiceCharge[] {
+  return charges
+    .map((charge, index) => ({ charge, index }))
+    .sort((left, right) => {
+      const leftStart = left.charge.service_period_start;
+      const rightStart = right.charge.service_period_start;
+      const leftEnd = left.charge.service_period_end;
+      const rightEnd = right.charge.service_period_end;
+      const leftHasPeriod = typeof leftStart === 'string' && leftStart.length > 0;
+      const rightHasPeriod = typeof rightStart === 'string' && rightStart.length > 0;
+
+      if (leftHasPeriod && rightHasPeriod) {
+        if (leftStart !== rightStart) {
+          return String(leftStart).localeCompare(String(rightStart));
+        }
+        if (leftEnd !== rightEnd) {
+          return String(leftEnd ?? '').localeCompare(String(rightEnd ?? ''));
+        }
+      } else if (leftHasPeriod !== rightHasPeriod) {
+        return leftHasPeriod ? -1 : 1;
+      }
+
+      return left.index - right.index;
+    })
+    .map(({ charge }) => charge);
+}
 
 function attachCanonicalRecurringDetailPeriods(
   charges: IInvoiceCharge[],
@@ -46,6 +74,19 @@ function attachCanonicalRecurringDetailPeriods(
     if (!chargeDetailRows || chargeDetailRows.length === 0) {
       return charge;
     }
+
+    const recurringDetailPeriods: IInvoiceChargeRecurringDetailPeriod[] = chargeDetailRows
+      .map((detailRow) => ({
+        service_period_start: detailRow.service_period_start ?? null,
+        service_period_end: detailRow.service_period_end ?? null,
+        billing_timing: detailRow.billing_timing ?? null,
+      }))
+      .sort((left, right) => {
+        if (left.service_period_start !== right.service_period_start) {
+          return String(left.service_period_start ?? '').localeCompare(String(right.service_period_start ?? ''));
+        }
+        return String(left.service_period_end ?? '').localeCompare(String(right.service_period_end ?? ''));
+      });
 
     const servicePeriodStarts = chargeDetailRows
       .map((detailRow) => detailRow.service_period_start)
@@ -68,6 +109,7 @@ function attachCanonicalRecurringDetailPeriods(
       service_period_start: servicePeriodStarts[0] ?? null,
       service_period_end: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null,
       billing_timing: billingTimings.length === 1 ? billingTimings[0] : null,
+      recurring_detail_periods: recurringDetailPeriods,
     };
   });
 }
@@ -532,7 +574,7 @@ const Invoice = {
             .whereIn('item_id', itemIds)
             .orderBy('service_period_start', 'asc');
 
-      return attachCanonicalRecurringDetailPeriods(items, detailRows);
+      return sortInvoiceChargesForDisplay(attachCanonicalRecurringDetailPeriods(items, detailRows));
     } catch (error) {
       console.error(`Error getting invoice items for invoice ${invoiceId} in tenant ${tenant}:`, error);
       throw new Error(`Failed to get invoice items: ${error instanceof Error ? error.message : 'Unknown error'}`);

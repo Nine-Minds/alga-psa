@@ -96,7 +96,7 @@
   {"id":"T087","description":"Billed-through detection for recurring lines remains correct after service-period-first cutover","implemented":true,"featureIds":["F080"]},
   {"id":"T088","description":"Client invoice preview used by portal or pay flows remains stable when recurring detail periods are canonical","implemented":true,"featureIds":["F126","F140"]},
   {"id":"T089","description":"Recurring invoice selection remains stable when non-recurring charges are present on the same invoice","implemented":true,"featureIds":["F071","F076"]},
-  {"id":"T090","description":"Invoice detail queries used by dashboard dialogs still return expected recurring line ordering and metadata","implemented":false,"featureIds":["F125","F126"]},
+  {"id":"T090","description":"Invoice detail queries used by dashboard dialogs still return expected recurring line ordering and metadata","implemented":true,"featureIds":["F125","F126"]},
 
   {"id":"T091","description":"Credit application still applies against invoices generated from canonical recurring service periods","implemented":true,"featureIds":["F077"]},
   {"id":"T092","description":"Credit reconciliation still works when recurring invoice detail rows carry more explicit service periods","implemented":true,"featureIds":["F078"]},

@@ -152,6 +152,89 @@ describe('invoice model recurring service-period projection', () => {
     expect(manualCharge).not.toHaveProperty('billing_timing');
   });
 
+  it('T090: invoice detail readers used by dashboard dialogs keep recurring ordering and canonical metadata stable', async () => {
+    const knex = createMockKnex({
+      invoice_charges: [
+        {
+          item_id: 'manual-1',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          service_id: null,
+          description: 'Manual adjustment',
+          quantity: 1,
+          unit_price: -1000,
+          total_price: -1000,
+          tax_amount: 0,
+          net_amount: -1000,
+          is_manual: true,
+        },
+        {
+          item_id: 'recurring-feb',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          service_id: 'service-2',
+          description: 'Managed Firewall',
+          quantity: 1,
+          unit_price: 5000,
+          total_price: 5000,
+          tax_amount: 0,
+          net_amount: 5000,
+          is_manual: false,
+        },
+        {
+          item_id: 'recurring-jan',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          service_id: 'service-1',
+          description: 'Managed Router',
+          quantity: 1,
+          unit_price: 5000,
+          total_price: 5000,
+          tax_amount: 0,
+          net_amount: 5000,
+          is_manual: false,
+        },
+      ],
+      invoice_charge_details: [
+        {
+          item_id: 'recurring-feb',
+          tenant: 'tenant-1',
+          service_period_start: '2025-02-01T00:00:00.000Z',
+          service_period_end: '2025-03-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+        {
+          item_id: 'recurring-jan',
+          tenant: 'tenant-1',
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+    });
+
+    const items = await Invoice.getInvoiceItems(knex, 'tenant-1', 'invoice-1');
+
+    expect(items.map((item) => item.item_id)).toEqual([
+      'recurring-jan',
+      'recurring-feb',
+      'manual-1',
+    ]);
+    expect(items[0]).toMatchObject({
+      service_period_start: '2025-01-01T00:00:00.000Z',
+      service_period_end: '2025-02-01T00:00:00.000Z',
+      billing_timing: 'arrears',
+      recurring_detail_periods: [
+        {
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+    });
+    expect(items[2]).not.toHaveProperty('recurring_detail_periods');
+  });
+
   it('T096: prepayment-applied recurring invoice rereads canonical detail service periods', async () => {
     const knex = createMockKnex({
       invoices: [

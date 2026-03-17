@@ -408,6 +408,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Contract-line mapping/disambiguation helpers now have an executable audit showing they no longer infer recurring timing from legacy fixed-config flags after the cadence-owner cutover, which closes `F124` and adds `T331`:
   - `packages/billing/tests/contractLineMappingRecurringTiming.wiring.test.ts` now locks the intended boundary explicitly: after the template-snapshot seam, the mapping and disambiguation helpers must operate on explicit `cadence_owner` fields and may not branch on `billing_cycle_alignment` or `enable_proration`
   - this checkpoint did not require a runtime patch because the mapping model/action code was already using explicit cadence-owner defaults; the missing work was the focused audit contract proving that the legacy fixed-config flags no longer participate in live mapping/disambiguation decisions
+- (2026-03-17) Full invoice-detail readers now expose canonical recurring period metadata more consistently instead of flattening everything down to one parent-level summary, which closes `F125` and `T090`:
+  - `packages/types/src/interfaces/invoice.interfaces.ts` and `server/src/interfaces/invoice.interfaces.ts` now expose additive `recurring_detail_periods` on `IInvoiceCharge`, preserving the canonical detail rows behind a recurring parent charge without breaking existing summary fields
+  - `packages/billing/src/models/invoice.ts` now attaches sorted `recurring_detail_periods` arrays to recurring invoice charges, keeps the existing aggregated `service_period_start` / `service_period_end` / `billing_timing` summary for compatibility, and orders invoice-charge reads chronologically by recurring service period before falling back to original charge order for manual or non-perioded rows
+  - that makes both `Invoice.getById(...)` and the dashboard-facing `getInvoiceLineItems(...)` path more stable: recurring invoice-detail queries can keep their canonical metadata while still presenting predictable line ordering to dialogs and editors
 - (2026-03-17) Comparison-mode rollout control now closes `F113` and `T154` without changing live invoice persistence:
   - `packages/billing/src/actions/invoiceGeneration.ts` now treats `RECURRING_BILLING_COMPARISON_MODE=legacy-vs-canonical` as an additive action-layer gate on `calculateBillingForInvoiceWindow(...)`
   - when enabled, the action runs the canonical preselected recurring path first, then executes one legacy-style billing calculation without `recurringTimingSelections` and logs a structured drift warning if the comparison snapshot differs
@@ -634,6 +638,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Contract-line mapping recurring-timing audit validation:
   - `npx vitest run ../packages/billing/tests/contractLineMappingRecurringTiming.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+- (2026-03-17) Invoice-detail recurring-period reader validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
 - (2026-03-17) Client billing schedule cadence-owner copy validation:
   - `npx vitest run src/test/unit/billing/ClientBillingSchedule.ui.test.tsx ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest picks up the existing workspace alias config for both server and package tests

@@ -57,6 +57,12 @@ export interface NetAmountItem {
   applies_to_service_id?: string; // Reference a service instead of an item
 }
 
+export interface IInvoiceChargeRecurringDetailPeriod {
+  service_period_start?: ISO8601String | null;
+  service_period_end?: ISO8601String | null;
+  billing_timing?: 'arrears' | 'advance' | null;
+}
+
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
@@ -64,6 +70,7 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   service_period_start?: ISO8601String | null;
   service_period_end?: ISO8601String | null;
   billing_timing?: 'arrears' | 'advance' | null;
+  recurring_detail_periods?: IInvoiceChargeRecurringDetailPeriod[];
   service_item_kind?: 'service' | 'product';
   service_sku?: string | null;
   service_name?: string | null;
