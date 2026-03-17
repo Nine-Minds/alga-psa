@@ -741,7 +741,8 @@ export async function calculateAndDistributeTax(
 
   // Handle external tax sources
   if (taxSource === 'external') {
-    // For external tax source, use external_tax_amount values
+    // External tax remains amount-authoritative: recurring detail periods preserve service timing
+    // elsewhere, but imported tax amounts are applied exactly as received here.
     console.log(`[calculateAndDistributeTax] Using external tax amounts for invoice ${invoiceId}`);
 
     // Copy external_tax_amount to tax_amount and update total_price
@@ -767,7 +768,7 @@ export async function calculateAndDistributeTax(
   }
 
   if (taxSource === 'pending_external') {
-    // For pending external tax, use zero tax (external tax not yet imported)
+    // Pending external tax is likewise import-state driven rather than service-period driven.
     console.log(`[calculateAndDistributeTax] Invoice ${invoiceId} has pending external tax - using zero tax`);
 
     const items = await tx('invoice_charges')

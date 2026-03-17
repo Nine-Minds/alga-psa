@@ -193,6 +193,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - aggregate PO consumption now floors at zero after summing net invoice amounts, which preserves the existing behavior that negative-credit corrections can reduce prior PO consumption but cannot drive the contract below zero consumed cents overall
   - `packages/billing/tests/purchaseOrderService.creditConsumption.test.ts` now proves both sides of that contract: credit-applied recurring invoices reduce consumed PO cents before overage checks, and aggregate consumption cannot go negative when credits outweigh prior billed totals
   - the existing recurring-run PO UI regressions in `server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx` and `server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx` remain green on top of the new service behavior, which is the executable closure for `T099`
+- (2026-03-17) Tax-source and external-tax consumers are now explicitly guarded against recurring service-period drift, which closes `F132`:
+  - `packages/billing/src/services/invoiceService.ts` now carries explicit comments on the `external` and `pending_external` tax branches stating that imported tax remains amount-authoritative even when recurring detail periods are present elsewhere on the invoice
+  - `packages/billing/src/actions/taxSourceActions.ts` now makes the complementary rule explicit for finalization: tax gating follows import state (`tax_source`) rather than recurring service-period metadata
+  - focused regression coverage now lives in `packages/billing/tests/invoiceService.externalTax.servicePeriods.wiring.test.ts` and `packages/billing/tests/taxSourceActions.servicePeriods.wiring.test.ts`, which lock those tax/import/reconciliation seams away from accidental service-period coupling
 - (2026-03-17) Recurring product timing now has an explicit migration target:
   - `packages/billing/src/lib/billing/billingEngine.ts` still constructs product charges against the enclosing invoice window, stamps `servicePeriodStart/servicePeriodEnd` from `billingPeriod.startDate` / `billingPeriod.endDate`, and calculates initial tax from `billingPeriod.endDate`
   - `BillingEngine.calculateBilling` still runs `applyProrationToPlan(...)` on `productCharges` after the charges are built when `enable_proration` is true
@@ -576,6 +580,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - run from `packages/billing/`
   - `npx vitest run src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx --coverage.enabled false`
     - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Tax-source and external-tax service-period validation:
+  - `npx vitest run tests/invoiceService.externalTax.servicePeriods.wiring.test.ts tests/taxSourceActions.servicePeriods.wiring.test.ts --coverage.enabled false`
+    - run from `packages/billing/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Invoice-generation recurring preselection validation:
   - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`

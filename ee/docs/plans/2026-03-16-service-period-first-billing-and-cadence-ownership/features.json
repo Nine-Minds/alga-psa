@@ -788,7 +788,7 @@
   {
     "id": "F132",
     "description": "Update tax, external tax import, and tax reconciliation consumers if they rely on recurring service-period fields or charge timing assumptions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
