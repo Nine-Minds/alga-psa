@@ -48,6 +48,9 @@ async function loadCreditSourceInvoice(
     tenant: string,
     invoiceId: string
 ): Promise<{ invoice: IInvoice | null; summary: CreditInvoicePeriodSummary }> {
+    // Negative-invoice and prepayment credits keep their recurring timing
+    // context on the source invoice. Later credit-application transactions are
+    // financial offsets only; they do not redefine the source recurring period.
     const invoice = await Invoice.getById(trx, tenant, invoiceId);
 
     return {

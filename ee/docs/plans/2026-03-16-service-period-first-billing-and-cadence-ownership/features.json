@@ -1649,7 +1649,7 @@
   {
     "id": "F184",
     "description": "Define negative-invoice offset semantics relative to canonical recurring service periods when reversals affect future or prior recurring work",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "Dependent recurring behavior requirements"

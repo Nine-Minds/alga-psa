@@ -39,6 +39,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Negative-invoice offsets now have an explicit source-period policy, which closes `F184` and `T215`:
+  - `packages/billing/src/actions/creditActions.ts` now documents the offset rule at the source-invoice reader seam: a negative-invoice or prepayment credit keeps its recurring timing context on the source invoice, and later credit-application transactions are financial offsets rather than new service-period definitions
+  - `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` now proves that behavior explicitly for a negative-invoice credit later applied to `invoice-2`: the credit reader still reports the source invoice’s canonical recurring period while the transaction history separately records the later financial application
 - (2026-03-17) Prepayment invoices now have an explicit non-service period policy, which closes `F183` and `T214`:
   - `packages/billing/src/actions/creditActions.ts` now states the intended boundary where prepayment invoices are created: they remain non-service financial artifacts, `billing_period_*` on the header tracks the immediate financial issuance window, and canonical recurring service periods stay absent
   - `server/src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts` now proves the live prepayment creation path creates the financial invoice, transaction, and credit-tracking rows without touching `invoice_charge_details`, which locks the prepayment path away from accidental recurring-period coupling
@@ -1105,6 +1108,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Prepayment financial-artifact validation:
   - `npx vitest run src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Negative-invoice offset validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 

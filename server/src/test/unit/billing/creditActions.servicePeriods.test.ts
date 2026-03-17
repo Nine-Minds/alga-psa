@@ -273,4 +273,120 @@ describe('credit actions preserve canonical recurring invoice detail context', (
     expect(creditDetails.transactions).toHaveLength(2);
     expect(mocks.getById).toHaveBeenCalledWith(expect.any(Function), 'tenant-1', 'invoice-1');
   });
+
+  it('T215: negative-invoice credits keep source recurring period context even after the credit is applied to a later invoice', async () => {
+    const state: TableState = {
+      credit_tracking: [
+        {
+          credit_id: 'credit-1',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          transaction_id: 'tx-credit-1',
+          amount: 5000,
+          remaining_amount: 0,
+          created_at: '2025-02-05T00:00:00.000Z',
+          expiration_date: null,
+          is_expired: false,
+          updated_at: '2025-03-05T00:00:00.000Z',
+          currency_code: 'USD',
+          transaction_description: 'Credit issued from negative invoice',
+          transaction_type: 'credit_issuance_from_negative_invoice',
+          invoice_id: 'invoice-1',
+          transaction_date: '2025-02-05T00:00:00.000Z',
+        },
+      ],
+      transactions: [
+        {
+          transaction_id: 'tx-credit-1',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          invoice_id: 'invoice-1',
+          type: 'credit_issuance_from_negative_invoice',
+          description: 'Credit issued from negative invoice INV-1001',
+          created_at: '2025-02-05T00:00:00.000Z',
+          currency_code: 'USD',
+        },
+        {
+          transaction_id: 'tx-apply-1',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          invoice_id: 'invoice-2',
+          type: 'credit_application',
+          description: 'Applied credit to invoice invoice-2',
+          related_transaction_id: 'tx-credit-1',
+          created_at: '2025-03-05T00:00:00.000Z',
+          currency_code: 'USD',
+        },
+      ],
+    };
+
+    const knex = createMockKnex(state);
+    mocks.createTenantKnex.mockResolvedValue({ knex });
+    mocks.withTransaction.mockImplementation(async (knexOrTrx: unknown, callback: (trx: unknown) => unknown) =>
+      callback(knexOrTrx),
+    );
+    mocks.getById.mockResolvedValue({
+      invoice_id: 'invoice-1',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      invoice_number: 'INV-1001',
+      status: 'sent',
+      credit_applied: 0,
+      subtotal: -5000,
+      tax: 0,
+      total_amount: -5000,
+      currency_code: 'USD',
+      invoice_date: '2025-02-05',
+      due_date: '2025-02-05',
+      is_manual: false,
+      invoice_charges: [
+        {
+          item_id: 'charge-1',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          description: 'Managed Router credit reversal',
+          quantity: 1,
+          rate: -5000,
+          unit_price: -5000,
+          total_price: -5000,
+          tax_amount: 0,
+          net_amount: -5000,
+          is_manual: false,
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+    });
+
+    const user = { user_id: 'user-1' } as any;
+    const context = { tenant: 'tenant-1' } as any;
+
+    const credits = await listClientCredits(user, context, 'client-1', false, 1, 20);
+    const creditDetails = await getCreditDetails(user, context, 'credit-1');
+
+    expect(credits.credits[0]).toMatchObject({
+      invoice_id: 'invoice-1',
+      invoice_service_period_start: '2025-01-01T00:00:00.000Z',
+      invoice_service_period_end: '2025-02-01T00:00:00.000Z',
+    });
+    expect(creditDetails.invoice).toMatchObject({
+      invoice_id: 'invoice-1',
+      invoice_charges: [
+        expect.objectContaining({
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+        }),
+      ],
+    });
+    expect(creditDetails.transactions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'credit_application',
+          invoice_id: 'invoice-2',
+          related_transaction_id: 'tx-credit-1',
+        }),
+      ]),
+    );
+  });
 });

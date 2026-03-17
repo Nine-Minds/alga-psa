@@ -1860,7 +1860,7 @@
   {
     "id": "T215",
     "description": "Negative invoices offset recurring work according to the documented canonical service-period semantics",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F184"
     ]
