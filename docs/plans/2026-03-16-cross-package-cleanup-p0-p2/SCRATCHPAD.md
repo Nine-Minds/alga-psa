@@ -188,6 +188,7 @@ By target package
 - T025 verified the client-portal cleanup end-to-end: `npm run lint` now reports `0` remaining `Feature package "client-portal"` violations, which means every prior client-portal edge was either removed via composition/type extraction or intentionally suppressed with a justification comment.
 - T026 reuses the latest repo-root green `npm run build` after the client-portal composition package and KB type-extraction changes, confirming the client-portal cleanup series remains build-safe.
 - T027 verified `grep -rn "import type.*@alga-psa/documents" packages/client-portal/ --include='*.ts' --include='*.tsx'` now returns `0` matches.
+- T028 verified the new shared KB definitions live in `packages/types/src/lib/knowledgeBase.ts` and are exported through `packages/types/src/index.ts`.
 
 ## Remaining Open Work
 
