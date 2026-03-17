@@ -176,10 +176,11 @@ By target package
 - Added file-level `custom-rules/no-feature-to-feature-imports` disables with explicit justification comments to the acceptable/inherent client-portal composition files; a fresh `npm run lint` now reports `63` total violations and only `6` remaining `client-portal` warnings, all in the previously identified fixable KB/project files.
 - Created a new horizontal `@alga-psa/client-portal-composition` package and moved the project metrics card composition there via `ClientPortalProjectMetrics`; `packages/client-portal/src/components/projects/ProjectDetailView.tsx` no longer imports from `@alga-psa/projects` directly.
 - Validation after F032: `cd packages/client-portal && npx tsc --noEmit`, `cd server && npx tsc --noEmit`, and `npm run lint` all pass; only `3` `client-portal` violations remain, all from the KB type-only imports targeted by P2-6.
+- Re-ran the full repo-root `npm run build` after the new `@alga-psa/client-portal-composition` package landed; the build is green, so the client-portal cleanup track is now blocked only on the planned P2-6 type extraction.
 
 ## Remaining Open Work
 
-- **F033:** next up. After the client-portal composition/package work, rerun the full build and close out the client-portal feature set.
+- **F034:** next up. Client-portal cleanup is implemented and built; this last bookkeeping item is just the commit checkpoint for the feature series.
 
 ## Gotchas
 

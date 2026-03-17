@@ -194,7 +194,7 @@
   {
     "id": "F033",
     "description": "P2-5c: Build passes, client-portal violations handled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5c"]
   },
   {
