@@ -145,6 +145,7 @@ By target package
 - T001 verified that `shared/` only mentions `@alga-psa/workflows` in the comment inside `shared/types/product-email-domains.d.ts`; there are no actual code imports left.
 - T002 verified `cd ee/packages/workflows && npx tsc --noEmit` succeeds after the ten test-file moves.
 - T003 verified a fresh repo-root `npm run build` succeeds after the workflow moves, auth cleanup, and storage entity-image extraction work.
+- T004 hit the documented local skip condition: `npx nx graph --file=/tmp/graph.json` still fails with `brace_expansion_1.default is not a function`, so cycle verification continues to rely on the pruned baseline and removed import edge.
 
 ## Gotchas
 

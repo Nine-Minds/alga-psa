@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "P0-1: npx nx graph --file=/tmp/graph.json && node scripts/check-circular-deps.mjs /tmp/graph.json --baseline .github/known-cycles.json shows resolved cycles (or skip if nx graph broken)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
