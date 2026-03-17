@@ -154,6 +154,7 @@ By target package
 - T010 verified `ee/server/src/app/api/extensions/_auth.ts` now imports `getSession` directly from `@alga-psa/auth`.
 - T011 verified `ee/server/src/app/api/provisioning/tenants/route.ts` now imports `getSession` directly from `@alga-psa/auth`.
 - T012 confirmed `server/src/lib/auth-compat.ts` no longer exists on disk.
+- T013 reuses the latest repo-root green build to validate the auth-compat removal end-to-end.
 
 ## Gotchas
 
