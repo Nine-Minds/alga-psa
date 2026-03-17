@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "P2-5b: Commit document violation fixes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5b"]
   },
   {

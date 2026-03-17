@@ -166,6 +166,7 @@ By target package
 - T022 verified no vertical package now imports `uploadEntityImage` or `deleteEntityImage` from `@alga-psa/documents`; those callers now resolve through `@alga-psa/storage`.
 - T023 reuses the latest repo-root green build to validate the current document-cleanup changes.
 - F028 conditions are met in the current tree: repo-root build passes and the `documents` target is down to `34` warnings from the earlier `39` baseline.
+- The current document-cleanup series is committed through `F025`, `F026`, and the follow-up barrel fix, so the implemented P2-5b work is fully checked in.
 
 ## Gotchas
 
