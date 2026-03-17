@@ -204,6 +204,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/actions/invoiceGeneration.ts` already persisted `billing_period_start` / `billing_period_end` from `cycleStart` / `cycleEnd`; `server/src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts` now turns that into an executable contract against a recurring charge whose canonical `servicePeriodStart` / `servicePeriodEnd` are different
   - the same unit contract now proves `createInvoiceFromBillingResult(...)` still drives the existing downstream draft/finalization path: persisted-charge subtotal calculation, tax distribution, invoice total update, and invoice-generated analytics all continue to run on the service-period-first path without reinterpreting the invoice header dates from recurring detail periods
   - the test harness surfaced one subtle implementation detail that is now explicit in the regression: invoice header billing-period fields are stored as `Temporal.PlainDate` values before insert, not raw strings, but they still stringify back to the invoice-window dates exactly
+- (2026-03-17) Empty recurring due-work selection now has an explicit action-layer contract:
+  - `server/src/test/unit/billing/invoiceGeneration.emptyResult.test.ts` closes `T077` by proving `generateInvoice(...)` returns `null` when `selectDueRecurringServicePeriodsForBillingWindow(...)` yields no due recurring work, `calculateBilling(...)` returns zero charges / zero final amount, and zero-dollar suppression is enabled
+  - the regression also proves the new due-period preselection seam still receives the expected invoice window bounds before the action exits on the empty-result path, which keeps `F071` and the future duplicate/billed-through work (`F080`) grounded in one explicit contract
 - (2026-03-17) Automatic recurring runs now have an executable delegation contract for the service-period-first path:
   - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` proves `generateInvoicesAsRecurringBillingRun(...)` still fans out each selected `billingCycleId` through `generateInvoice(...)`, which is now the action path that performs due-service-period preselection before billing calculation
   - the test also keeps the recurring-run workflow events stable on that migrated path, so automatic invoice generation remains wired through the same started/completed event contract while recurring timing semantics move underneath `generateInvoice(...)`
@@ -314,6 +317,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts --coverage.enabled false`
 - (2026-03-17) Preview recurring-timing validation:
   - `npx vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts --coverage.enabled false`
+- (2026-03-17) Empty recurring-selection validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.emptyResult.test.ts --coverage.enabled false`
 
 ## Links / References
 
