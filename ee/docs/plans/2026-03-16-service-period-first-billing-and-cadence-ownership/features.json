@@ -464,7 +464,7 @@
   {
     "id": "F078",
     "description": "Preserve credit expiration and reconciliation behavior when recurring invoice detail periods become canonical and more explicit",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Risks"]
   },
   {

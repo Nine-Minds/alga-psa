@@ -4,7 +4,7 @@ import { withTransaction } from '@alga-psa/db';
 import { auditLog } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import ClientContractLine from '../models/clientContractLine';
-import { IInvoice } from '@alga-psa/types';
+import { IInvoice, IInvoiceCharge } from '@alga-psa/types';
 import { ITransaction, ICreditTracking } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
@@ -14,10 +14,47 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import Invoice from '../models/invoice';
 import {
     buildCreditNoteAppliedPayload,
     buildCreditNoteCreatedPayload,
 } from '@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';
+
+type CreditInvoicePeriodSummary = {
+    service_period_start: string | null;
+    service_period_end: string | null;
+};
+
+function summarizeCanonicalInvoiceServicePeriods(
+    invoiceCharges: IInvoiceCharge[] | undefined
+): CreditInvoicePeriodSummary {
+    const starts = (invoiceCharges ?? [])
+        .map((charge) => charge.service_period_start)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+    const ends = (invoiceCharges ?? [])
+        .map((charge) => charge.service_period_end)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .sort();
+
+    return {
+        service_period_start: starts[0] ?? null,
+        service_period_end: ends[ends.length - 1] ?? null,
+    };
+}
+
+async function loadCreditSourceInvoice(
+    trx: Knex.Transaction,
+    tenant: string,
+    invoiceId: string
+): Promise<{ invoice: IInvoice | null; summary: CreditInvoicePeriodSummary }> {
+    const invoice = await Invoice.getById(trx, tenant, invoiceId);
+
+    return {
+        invoice,
+        summary: summarizeCanonicalInvoiceServicePeriods(invoice?.invoice_charges),
+    };
+}
 
 
 
@@ -849,21 +886,24 @@ export const listClientCredits = withAuth(async (
             .offset(offset);
 
         // Add invoice details if available
+        const invoiceCache = new Map<string, Promise<{ invoice: IInvoice | null; summary: CreditInvoicePeriodSummary }>>();
         const creditsWithInvoices = await Promise.all(
             credits.map(async (credit) => {
                 if (credit.invoice_id) {
-                    const invoice = await trx('invoices')
-                        .where({
-                            invoice_id: credit.invoice_id,
-                            tenant
-                        })
-                        .select('invoice_number', 'status')
-                        .first();
+                    let invoiceLoad = invoiceCache.get(credit.invoice_id);
+                    if (!invoiceLoad) {
+                        invoiceLoad = loadCreditSourceInvoice(trx, tenant, credit.invoice_id);
+                        invoiceCache.set(credit.invoice_id, invoiceLoad);
+                    }
+
+                    const { invoice, summary } = await invoiceLoad;
                     
                     return {
                         ...credit,
                         invoice_number: invoice?.invoice_number,
-                        invoice_status: invoice?.status
+                        invoice_status: invoice?.status,
+                        invoice_service_period_start: summary.service_period_start,
+                        invoice_service_period_end: summary.service_period_end,
                     };
                 }
                 return credit;
@@ -936,12 +976,7 @@ export const getCreditDetails = withAuth(async (
         // Get invoice details if available
         let invoice = null;
         if (originalTransaction.invoice_id) {
-            invoice = await trx('invoices')
-                .where({
-                    invoice_id: originalTransaction.invoice_id,
-                    tenant
-                })
-                .first();
+            invoice = (await loadCreditSourceInvoice(trx, tenant, originalTransaction.invoice_id)).invoice;
         }
 
         return {

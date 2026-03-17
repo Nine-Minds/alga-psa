@@ -228,6 +228,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - a negative-invoice credit that is fully consumed by a later credit application still reconciles to `remaining_amount = 0` without any dependency on invoice-header timing
     - an expired negative-invoice credit still expires from `transactions.expiration_date` / `credit_tracking.expiration_date`, marks the tracking row expired, and creates the same reconciliation-report signal when the client balance has not yet been corrected
   - this checkpoint intentionally stops short of flipping `F078` because the broader credit-reader (`T098`) and DB-backed integration (`T100`) seams are still open
+- (2026-03-17) Credit-reader invoice context now stays on canonical recurring detail metadata, which closes `F078` without pretending the blocked DB integration is done:
+  - `packages/billing/src/actions/creditActions.ts` now loads source invoices through `Invoice.getById(...)` for both `getCreditDetails(...)` and the invoice-summary enrichment inside `listClientCredits(...)`, instead of rereading raw `invoices` rows that dropped recurring `invoice_charge_details`
+  - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
+  - `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` closes `T098` with one focused contract covering both the summary list path and the detailed credit reader against a recurring negative-invoice source
+  - `T100` remains open because the broader DB-backed credit/prepayment integration seam is still blocked locally and is shared with `F058`/`F077`
 
 ## Commands / Runbooks
 
@@ -333,6 +338,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
 - (2026-03-17) Credit reconciliation / expiration validation:
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts --coverage.enabled false`
+- (2026-03-17) Credit-reader canonical invoice-context validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 ## Links / References
 
