@@ -72,6 +72,16 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
     tax: Number(invoice.tax),
     total: totalAmount, // Ensure it's a number
     total_amount: totalAmount, // Ensure it's a number
+    service_period_start: invoice.service_period_start
+      ? (typeof invoice.service_period_start === 'string'
+        ? toPlainDate(invoice.service_period_start)
+        : invoice.service_period_start)
+      : null,
+    service_period_end: invoice.service_period_end
+      ? (typeof invoice.service_period_end === 'string'
+        ? toPlainDate(invoice.service_period_end)
+        : invoice.service_period_end)
+      : null,
     credit_applied: Number(invoice.credit_applied || 0),
     is_manual: invoice.is_manual,
     finalized_at: invoice.finalized_at ? (typeof invoice.finalized_at === 'string' ? toPlainDate(invoice.finalized_at) : invoice.finalized_at) : undefined,
@@ -243,6 +253,18 @@ export const fetchInvoicesPaginated = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
+          trx.raw(`(
+            SELECT MIN(iid.service_period_start)
+            FROM invoice_charge_details iid
+            WHERE iid.invoice_id = invoices.invoice_id
+              AND iid.tenant = invoices.tenant
+          ) as service_period_start`),
+          trx.raw(`(
+            SELECT MAX(iid.service_period_end)
+            FROM invoice_charge_details iid
+            WHERE iid.invoice_id = invoices.invoice_id
+              AND iid.tenant = invoices.tenant
+          ) as service_period_end`),
           'clients.client_name',
           'clients.properties',
           'client_locations.address_line1',
@@ -364,6 +386,18 @@ export const fetchInvoicesByClient = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
+          trx.raw(`(
+            SELECT MIN(iid.service_period_start)
+            FROM invoice_charge_details iid
+            WHERE iid.invoice_id = invoices.invoice_id
+              AND iid.tenant = invoices.tenant
+          ) as service_period_start`),
+          trx.raw(`(
+            SELECT MAX(iid.service_period_end)
+            FROM invoice_charge_details iid
+            WHERE iid.invoice_id = invoices.invoice_id
+              AND iid.tenant = invoices.tenant
+          ) as service_period_end`),
           'clients.client_name',
           'clients.properties',
           // Location fields

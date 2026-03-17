@@ -836,7 +836,7 @@
   {
     "id": "F140",
     "description": "Update client-portal payment and billing overview dialogs to render canonical service periods independently of old proration assumptions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

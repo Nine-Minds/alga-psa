@@ -13,6 +13,7 @@ import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import PlanDetailsDialog from './PlanDetailsDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getRecurringServicePeriodSummary } from './recurringServicePeriodSummary';
 
 // Flag to control visibility of bucket usage metrics
 const SHOW_USAGE_FEATURES = true;
@@ -41,6 +42,15 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
   const { t } = useTranslation('features/billing');
   // State for plan details dialog
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const cadenceOwnerDescription = contractLine?.cadence_owner === 'contract'
+    ? t(
+      'contractLine.cadenceOwnerContractDescription',
+      'Recurring service periods follow the contract anniversary cadence for this line.'
+    )
+    : t(
+      'contractLine.cadenceOwnerClientDescription',
+      'Recurring service periods follow the client billing schedule for this line.'
+    );
   
   // Memoize the plan card to prevent unnecessary re-renders
   const planCard = useMemo(() => (
@@ -52,6 +62,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
             <>
               <p className="mt-2 text-3xl font-semibold">{contractLine.contract_line_name}</p>
               <p className="mt-1 text-sm text-gray-500">{t(`frequency.${contractLine.billing_frequency?.toLowerCase() || 'monthly'}`)}</p>
+              <p className="mt-2 text-sm text-gray-500">{cadenceOwnerDescription}</p>
             </>
           ) : (
             <>
@@ -71,7 +82,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         {t('viewContractLineDetails')}
       </Button>
     </Card>
-  ), [contractLine]);
+  ), [cadenceOwnerDescription, contractLine, t]);
 
   // Find the most recent unpaid invoice for the "Next Invoice" card
   const nextInvoice = useMemo(() => {
@@ -90,6 +101,13 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
       return dateA - dateB;
     })[0];
   }, [invoices]);
+  const nextInvoiceServicePeriodSummary = useMemo(() => {
+    if (!nextInvoice) {
+      return null;
+    }
+
+    return getRecurringServicePeriodSummary(nextInvoice, formatDate);
+  }, [formatDate, nextInvoice]);
 
   // Memoize the invoice card to prevent unnecessary re-renders
   const invoiceCard = useMemo(() => (
@@ -105,6 +123,11 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
               <p className="mt-1 text-sm text-gray-500">
                 {nextInvoice.due_date ? t('invoice.dueDateText', { date: formatDate(nextInvoice.due_date) }) : t('invoice.noDueDate')}
               </p>
+              {nextInvoiceServicePeriodSummary ? (
+                <p className="mt-2 text-sm text-gray-500">
+                  {t('invoice.servicePeriod', 'Service Period')}: {nextInvoiceServicePeriodSummary}
+                </p>
+              ) : null}
             </>
           ) : invoices.length > 0 ? (
             // All invoices are paid/cancelled
@@ -131,7 +154,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         {t('viewAllInvoices')}
       </Button>
     </Card>
-  ), [nextInvoice, invoices.length, formatCurrency, formatDate, onViewAllInvoices, t]);
+  ), [nextInvoice, nextInvoiceServicePeriodSummary, invoices.length, formatCurrency, formatDate, onViewAllInvoices, t]);
 
   return (
     <>

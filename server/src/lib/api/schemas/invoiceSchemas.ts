@@ -185,6 +185,8 @@ const invoiceViewModelSchema = z.object({
   total: z.number(),
   total_amount: z.number(),
   invoice_charges: z.array(invoiceItemResponseSchema),
+  service_period_start: z.string().nullable().optional(),
+  service_period_end: z.string().nullable().optional(),
   custom_fields: z.record(z.any()).optional(),
   finalized_at: z.string().optional(),
   credit_applied: z.number().default(0),

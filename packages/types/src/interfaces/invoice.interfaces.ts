@@ -412,6 +412,8 @@ export interface InvoiceViewModel {
   total: number;
   total_amount: number;
   invoice_charges: IInvoiceCharge[];
+  service_period_start?: DateValue | null;
+  service_period_end?: DateValue | null;
   custom_fields?: Record<string, any>;
   finalized_at?: DateValue;
   credit_applied: number;

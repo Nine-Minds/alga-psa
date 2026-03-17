@@ -24,6 +24,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getRecurringServicePeriodSummary } from './recurringServicePeriodSummary';
 
 interface InvoicesTabProps {
   formatCurrency: (amount: number, currencyCode?: string) => string;
@@ -48,6 +49,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   const [sendingEmails, setSendingEmails] = useState<Set<string>>(new Set());
 
   const selectedInvoiceId = searchParams?.get('invoiceId');
+  const selectedInvoiceServicePeriodSummary = useMemo(() => {
+    if (!selectedInvoice) {
+      return null;
+    }
+
+    return getRecurringServicePeriodSummary(selectedInvoice, formatDate);
+  }, [formatDate, selectedInvoice]);
 
   // Function to update URL parameters
   const updateUrlParams = (params: { [key: string]: string | null }) => {
@@ -332,6 +340,20 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
                 </p>
               </div>
             )}
+
+            {selectedInvoiceServicePeriodSummary ? (
+              <div className="mx-4 mb-4 rounded-md bg-slate-50 p-4">
+                <p className="text-sm font-medium text-slate-900">
+                  {t('invoice.servicePeriod', 'Service Period')}: {selectedInvoiceServicePeriodSummary}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {t(
+                    'invoice.paymentSummaryServicePeriods',
+                    'Payment settles the invoice balance for these recurring service periods. Open the invoice details below for the full line-by-line breakdown.'
+                  )}
+                </p>
+              </div>
+            ) : null}
 
             {/* Action buttons */}
             <div className="p-4 border-t bg-gray-50 flex justify-end space-x-3">

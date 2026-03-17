@@ -134,6 +134,8 @@
   {"id":"T121","description":"Client portal invoice detail dialogs render canonical recurring service-period metadata correctly","implemented":true,"featureIds":["F097","F140"]},
   {"id":"T122","description":"Client portal plan or contract-line detail dialogs render canonical recurring service periods correctly","implemented":true,"featureIds":["F097","F130"]},
   {"id":"T123","description":"Recent-client-invoice and billing-overview actions preserve correct recurring period interpretation after cutover","implemented":true,"featureIds":["F126","F130"]},
+  {"id":"T333","description":"Client-portal billing overview cards surface canonical recurring service-period summaries instead of invoice-header-only timing copy","implemented":true,"featureIds":["F140"]},
+  {"id":"T334","description":"Client-portal payment-success views surface canonical recurring service-period summaries for the paid invoice","implemented":true,"featureIds":["F140"]},
   {"id":"T124","description":"Remaining bucket unit reporting aligns to the intended canonical recurring period semantics","implemented":true,"featureIds":["F130"]},
   {"id":"T125","description":"Revenue report behavior remains correct when recurring invoices are interpreted through canonical service periods","implemented":true,"featureIds":["F098","F129"]},
   {"id":"T126","description":"Expiration or reconciliation reports do not regress when recurring period semantics are clarified","implemented":true,"featureIds":["F098","F129"]},

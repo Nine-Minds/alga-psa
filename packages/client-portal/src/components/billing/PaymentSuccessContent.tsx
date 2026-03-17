@@ -20,6 +20,7 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
   const [amount, setAmount] = useState<number>(0);
   const [currencyCode, setCurrencyCode] = useState<string>('USD');
   const [error, setError] = useState<string>('');
+  const [servicePeriodSummary, setServicePeriodSummary] = useState<string | null>(null);
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -35,6 +36,11 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
           setInvoiceNumber(result.data.invoiceNumber || '');
           setAmount(result.data.amount || 0);
           setCurrencyCode(result.data.currencyCode || 'USD');
+          setServicePeriodSummary(
+            result.data.servicePeriodStart || result.data.servicePeriodEnd
+              ? `${result.data.servicePeriodStart ?? 'Unknown start'} - ${result.data.servicePeriodEnd ?? 'Unknown end'}`
+              : null
+          );
 
           if (result.data.status === 'succeeded') {
             setStatus('success');
@@ -97,6 +103,15 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
               <p className="text-sm text-gray-500 mb-6">
                 A confirmation email will be sent to your registered email address.
               </p>
+              {servicePeriodSummary ? (
+                <div className="mb-6 rounded-md bg-slate-50 p-4 text-left">
+                  <p className="text-sm font-medium text-slate-900">Service Period Summary</p>
+                  <p className="mt-1 text-sm text-slate-600">{servicePeriodSummary}</p>
+                  <p className="mt-2 text-sm text-slate-600">
+                    This summary comes from the invoice&apos;s recurring detail periods, not from invoice-header billing dates or proration-only copy.
+                  </p>
+                </div>
+              ) : null}
             </>
           )}
 

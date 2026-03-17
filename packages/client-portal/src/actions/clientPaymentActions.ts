@@ -135,6 +135,8 @@ export const verifyClientPortalPayment = withAuth(async (
     invoiceNumber?: string;
     amount?: number;
     currencyCode?: string;
+    servicePeriodStart?: string | null;
+    servicePeriodEnd?: string | null;
     message?: string;
   }>
 > => {
@@ -148,7 +150,7 @@ export const verifyClientPortalPayment = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Get the user's client_id from their contact and verify invoice access
-    const { contact, invoice } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const { contact, invoice, recurringSummary } = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const contactResult = await trx('contacts')
         .where({
           tenant: tenantId,
@@ -164,7 +166,20 @@ export const verifyClientPortalPayment = withAuth(async (
         })
         .first();
 
-      return { contact: contactResult, invoice: invoiceResult };
+      const recurringSummaryResult = invoiceResult
+        ? await trx('invoice_charge_details')
+            .where({
+              tenant: tenantId,
+              invoice_id: invoiceId,
+            })
+            .select(
+              trx.raw('MIN(service_period_start) as service_period_start'),
+              trx.raw('MAX(service_period_end) as service_period_end')
+            )
+            .first()
+        : null;
+
+      return { contact: contactResult, invoice: invoiceResult, recurringSummary: recurringSummaryResult };
     });
 
     if (!contact?.client_id) {
@@ -189,6 +204,8 @@ export const verifyClientPortalPayment = withAuth(async (
           invoiceNumber: invoice.invoice_number,
           amount: invoice.total_amount,
           currencyCode: invoice.currency_code || 'USD',
+          servicePeriodStart: recurringSummary?.service_period_start ?? null,
+          servicePeriodEnd: recurringSummary?.service_period_end ?? null,
         },
       };
     }
@@ -230,6 +247,8 @@ export const verifyClientPortalPayment = withAuth(async (
           invoiceNumber: invoice.invoice_number,
           amount: invoice.total_amount,
           currencyCode: invoice.currency_code || 'USD',
+          servicePeriodStart: recurringSummary?.service_period_start ?? null,
+          servicePeriodEnd: recurringSummary?.service_period_end ?? null,
           message: paymentUrl ? 'pending' : 'payment_not_configured',
         },
       };
@@ -244,6 +263,8 @@ export const verifyClientPortalPayment = withAuth(async (
           invoiceNumber: invoice.invoice_number,
           amount: invoice.total_amount,
           currencyCode: invoice.currency_code || 'USD',
+          servicePeriodStart: recurringSummary?.service_period_start ?? null,
+          servicePeriodEnd: recurringSummary?.service_period_end ?? null,
         },
       };
     }
@@ -256,6 +277,8 @@ export const verifyClientPortalPayment = withAuth(async (
           invoiceNumber: invoice.invoice_number,
           amount: invoice.total_amount,
           currencyCode: invoice.currency_code || 'USD',
+          servicePeriodStart: recurringSummary?.service_period_start ?? null,
+          servicePeriodEnd: recurringSummary?.service_period_end ?? null,
           message: 'processing',
         },
       };
@@ -269,6 +292,8 @@ export const verifyClientPortalPayment = withAuth(async (
           invoiceNumber: invoice.invoice_number,
           amount: invoice.total_amount,
           currencyCode: invoice.currency_code || 'USD',
+          servicePeriodStart: recurringSummary?.service_period_start ?? null,
+          servicePeriodEnd: recurringSummary?.service_period_end ?? null,
           message: paymentStatus.status,
         },
       };
@@ -281,6 +306,8 @@ export const verifyClientPortalPayment = withAuth(async (
         invoiceNumber: invoice.invoice_number,
         amount: invoice.total_amount,
         currencyCode: invoice.currency_code || 'USD',
+        servicePeriodStart: recurringSummary?.service_period_start ?? null,
+        servicePeriodEnd: recurringSummary?.service_period_end ?? null,
         message: paymentUrl ? paymentStatus.status : 'payment_not_configured',
       },
     };

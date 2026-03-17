@@ -501,6 +501,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Manual invoice edit/view paths now have a focused canonical-period compatibility contract, which closes `T085`:
   - `server/src/test/unit/billing/manualInvoiceActions.viewing.test.ts` executes `updateManualInvoice(...)`, proves the action still deletes/replaces manual items and triggers recalculation, and confirms the returned reread invoice can still carry canonical recurring detail fields on its charge rows
   - this gives the current manual invoice edit/view seam executable coverage without waiting on the blocked DB-backed manual-invoice suite
+- (2026-03-17) Client-portal overview and payment surfaces now carry canonical recurring service-period summaries, which closes `F140`, `T333`, and `T334`:
+  - `packages/billing/src/actions/invoiceQueries.ts` now projects invoice-level `service_period_start` / `service_period_end` summaries from `invoice_charge_details` into client-facing `InvoiceViewModel` reads, so portal overview/payment surfaces no longer have to infer recurring timing from invoice headers alone
+  - `packages/client-portal/src/actions/clientPaymentActions.ts` now returns the same canonical summary fields during payment verification, which lets the payment-success flow explain what recurring coverage was settled without rereading invoice headers or relying on proration-style copy
+  - `packages/client-portal/src/components/billing/BillingOverviewTab.tsx`, `packages/client-portal/src/components/billing/InvoicesTab.tsx`, and `packages/client-portal/src/components/billing/PaymentSuccessContent.tsx` now surface those canonical summaries in the overview, invoice-payment, and payment-success surfaces with explicit service-period-first wording
+  - `packages/client-portal/src/components/billing/BillingOverviewTab.servicePeriods.test.tsx` and `packages/client-portal/src/components/billing/PaymentSuccessContent.servicePeriods.test.tsx` lock the two new portal UI seams, while the existing invoice detail/preview portal tests remain green on top of the new summary surfaces
 
 ## Commands / Runbooks
 
@@ -854,6 +859,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run ../packages/billing/tests/billingCycleAlignmentCompatibility.model.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package tests
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Client-portal overview/payment service-period summary validation:
+  - `npx vitest run ../packages/client-portal/src/components/billing/BillingOverviewTab.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/PaymentSuccessContent.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package client-portal tests
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - currently still fails on the pre-existing `packages/billing/src/actions/creditActions.ts(979,13)` type mismatch unrelated to `F140`
 
 ## Links / References
 
