@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "P2-5a: Update violating files to use context instead of direct imports",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5a"]
   },
   {
