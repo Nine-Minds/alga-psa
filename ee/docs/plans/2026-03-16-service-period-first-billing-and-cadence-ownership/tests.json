@@ -140,7 +140,7 @@
   {"id":"T127","description":"Accounting export repository outputs stable service-period fields after cutover","implemented":false,"featureIds":["F099","F127"]},
   {"id":"T128","description":"QuickBooks export adapters still map the intended recurring service date semantics after cutover","implemented":false,"featureIds":["F099"]},
   {"id":"T129","description":"Xero and CSV export adapters still map the intended recurring service date semantics after cutover","implemented":false,"featureIds":["F099"]},
-  {"id":"T130","description":"Invoice template preview and sample invoice data render canonical recurring service periods correctly in previews and designer flows","implemented":false,"featureIds":["F133"]},
+  {"id":"T130","description":"Invoice template preview and sample invoice data render canonical recurring service periods correctly in previews and designer flows","implemented":true,"featureIds":["F133"]},
 
   {"id":"T131","description":"Monthly contract-cadence generation emits assignment-anniversary service periods for a start date on the 8th","implemented":true,"featureIds":["F101"]},
   {"id":"T132","description":"Quarterly contract-cadence generation emits assignment-anniversary service periods across quarter boundaries","implemented":true,"featureIds":["F102"]},

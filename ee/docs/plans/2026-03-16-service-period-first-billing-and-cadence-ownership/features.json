@@ -794,7 +794,7 @@
   {
     "id": "F133",
     "description": "Update invoice template preview, sample invoice data, and related demo data generation so canonical service-period fields render correctly during previews",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
