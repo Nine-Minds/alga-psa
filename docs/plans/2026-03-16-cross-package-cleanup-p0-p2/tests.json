@@ -104,7 +104,7 @@
   {
     "id": "T018",
     "description": "P2-5a: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | grep 'projects.*clients' returns fewer violations than before",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
