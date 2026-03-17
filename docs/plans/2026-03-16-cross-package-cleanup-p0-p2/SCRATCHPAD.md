@@ -137,6 +137,7 @@ By target package
 - Verified `packages/msp-composition/src/clients/MspClientCrossFeatureProvider.tsx` already bridges tickets/surveys/assets callbacks into the clients context.
 - Current lint baseline has `0` active `projects -> clients` and `0` active `scheduling -> clients` warnings; the lone remaining direct import in `packages/projects/src/actions/projectActions.ts` is an intentionally justified server-action exception.
 - P2-5a is effectively green in the current tree: the most recent root `npm run build` passed, and the client-related pair counts are already reduced to zero warnings.
+- P2-5a now closes as verification/bookkeeping only because the context/provider migration had already landed before this plan pass.
 
 ## Gotchas
 

@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "P2-5a: Commit client composition layer changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5a"]
   },
   {
