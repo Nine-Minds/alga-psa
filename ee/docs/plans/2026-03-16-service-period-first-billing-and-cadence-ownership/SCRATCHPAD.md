@@ -39,6 +39,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Credit transfer readers and audit metadata now preserve recurring lineage instead of dropping it on the target credit, which closes `F188` and `T219`:
+  - `packages/billing/src/actions/creditActions.ts` now resolves direct-or-inherited credit invoice lineage, so `listClientCredits(...)` and `getCreditDetails(...)` can keep showing canonical recurring source-invoice context even when a transferred credit’s own transaction has no direct `invoice_id`
+  - `transferCredit(...)` now stamps transfer transaction metadata and audit details with the source credit id plus source-invoice date basis and recurring service-period summary, which makes downstream reporting and audit trails explicit for transferred credits that originated from detail-backed recurring invoices
+  - the shared/server billing interfaces now expose additive lineage fields (`source_credit_id`, `source_invoice_id`, `lineage_origin`) on both transactions and credit rows
+  - `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` now proves a transferred credit keeps canonical recurring source lineage in both list and detail readers
+
 - (2026-03-17) Credit expiration and reconciliation now make their date basis explicit, which closes `F187` and `T218`:
   - `packages/billing/src/actions/creditReconciliationActions.ts` now stamps reconciliation-report metadata with `reconciliation_date_basis: financial_document_date`, making the control rule explicit: expiration and remaining-amount reconciliation are driven by transaction/credit metadata such as `created_at` and `expiration_date`, not by invoice-header or recurring service-period dates
   - the same metadata now preserves recurring lineage additively when available: inconsistent-remaining-amount reports carry the source credit invoice’s canonical recurring summary plus each application transaction’s target-invoice date basis and recurring summary fields
@@ -1149,6 +1155,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Credit reconciliation date-basis validation:
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Credit transfer lineage validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 

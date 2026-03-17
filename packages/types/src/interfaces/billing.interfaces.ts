@@ -452,6 +452,9 @@ export interface ITransaction extends TenantEntity {
   invoice_service_period_start?: ISO8601String | null;
   invoice_service_period_end?: ISO8601String | null;
   invoice_date_basis?: 'financial_document_date' | 'canonical_recurring_service_period';
+  source_credit_id?: string;
+  source_invoice_id?: string;
+  lineage_origin?: 'source_invoice' | 'transferred_credit';
 }
 
 export interface ICreditTracking extends TenantEntity {
@@ -475,6 +478,9 @@ export interface ICreditTracking extends TenantEntity {
   invoice_service_period_start?: ISO8601String | null;
   invoice_service_period_end?: ISO8601String | null;
   invoice_date_basis?: 'financial_document_date' | 'canonical_recurring_service_period';
+  source_credit_id?: string;
+  source_invoice_id?: string;
+  lineage_origin?: 'source_invoice' | 'transferred_credit';
 }
 
 export interface ICreditExpirationSettings {

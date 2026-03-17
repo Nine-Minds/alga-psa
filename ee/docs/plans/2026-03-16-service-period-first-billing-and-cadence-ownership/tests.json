@@ -1892,7 +1892,7 @@
   {
     "id": "T219",
     "description": "Credit transfer and reporting maintain correct lineage when credits originate from detail-period-backed recurring invoices",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F188"
     ]

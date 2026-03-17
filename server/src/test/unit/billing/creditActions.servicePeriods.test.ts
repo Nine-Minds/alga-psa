@@ -558,4 +558,140 @@ describe('credit actions preserve canonical recurring invoice detail context', (
     expect(mocks.getById).toHaveBeenCalledWith(expect.any(Function), 'tenant-1', 'invoice-1');
     expect(mocks.getById).toHaveBeenCalledWith(expect.any(Function), 'tenant-1', 'invoice-2');
   });
+
+  it('T219: transferred credits preserve recurring source lineage in credit readers even when the transfer transaction has no direct invoice id', async () => {
+    const state: TableState = {
+      credit_tracking: [
+        {
+          credit_id: 'credit-2',
+          tenant: 'tenant-1',
+          client_id: 'client-2',
+          transaction_id: 'tx-transfer-in-1',
+          amount: 3000,
+          remaining_amount: 3000,
+          created_at: '2025-03-10T00:00:00.000Z',
+          expiration_date: null,
+          is_expired: false,
+          updated_at: '2025-03-10T00:00:00.000Z',
+          currency_code: 'USD',
+          transaction_description: 'Administrative transfer from client-1',
+          transaction_type: 'credit_transfer',
+          invoice_id: undefined,
+          transaction_date: '2025-03-10T00:00:00.000Z',
+          transaction_metadata: {
+            source_credit_id: 'credit-1',
+            source_invoice_id: 'invoice-1',
+            source_invoice_date_basis: 'canonical_recurring_service_period',
+            source_invoice_service_period_start: '2025-01-01T00:00:00.000Z',
+            source_invoice_service_period_end: '2025-02-01T00:00:00.000Z',
+          },
+        },
+      ],
+      transactions: [
+        {
+          transaction_id: 'tx-transfer-in-1',
+          tenant: 'tenant-1',
+          client_id: 'client-2',
+          invoice_id: undefined,
+          type: 'credit_transfer',
+          description: 'Administrative transfer from client-1',
+          created_at: '2025-03-10T00:00:00.000Z',
+          currency_code: 'USD',
+          metadata: {
+            source_credit_id: 'credit-1',
+            source_invoice_id: 'invoice-1',
+            source_invoice_date_basis: 'canonical_recurring_service_period',
+            source_invoice_service_period_start: '2025-01-01T00:00:00.000Z',
+            source_invoice_service_period_end: '2025-02-01T00:00:00.000Z',
+          },
+        },
+      ],
+    };
+
+    const knex = createMockKnex(state);
+    mocks.createTenantKnex.mockResolvedValue({ knex });
+    mocks.withTransaction.mockImplementation(async (knexOrTrx: unknown, callback: (trx: unknown) => unknown) =>
+      callback(knexOrTrx),
+    );
+    mocks.getById.mockResolvedValue({
+      invoice_id: 'invoice-1',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      invoice_number: 'INV-1001',
+      status: 'sent',
+      credit_applied: 0,
+      subtotal: -5000,
+      tax: 0,
+      total_amount: -5000,
+      currency_code: 'USD',
+      invoice_date: '2025-02-05',
+      due_date: '2025-02-05',
+      is_manual: false,
+      invoice_charges: [
+        {
+          item_id: 'charge-1',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          description: 'Managed Router credit reversal',
+          quantity: 1,
+          rate: -5000,
+          unit_price: -5000,
+          total_price: -5000,
+          tax_amount: 0,
+          net_amount: -5000,
+          is_manual: false,
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+    });
+
+    const user = { user_id: 'user-1' } as any;
+    const context = { tenant: 'tenant-1' } as any;
+
+    const credits = await listClientCredits(user, context, 'client-2', false, 1, 20);
+    const creditDetails = await getCreditDetails(user, context, 'credit-2');
+
+    expect(credits.credits).toEqual([
+      expect.objectContaining({
+        credit_id: 'credit-2',
+        source_credit_id: 'credit-1',
+        source_invoice_id: 'invoice-1',
+        lineage_origin: 'transferred_credit',
+        invoice_number: 'INV-1001',
+        invoice_status: 'sent',
+        invoice_date_basis: 'canonical_recurring_service_period',
+        invoice_service_period_start: '2025-01-01T00:00:00.000Z',
+        invoice_service_period_end: '2025-02-01T00:00:00.000Z',
+      }),
+    ]);
+    expect(creditDetails.credit).toMatchObject({
+      credit_id: 'credit-2',
+      source_credit_id: 'credit-1',
+      source_invoice_id: 'invoice-1',
+      lineage_origin: 'transferred_credit',
+    });
+    expect(creditDetails.invoice).toMatchObject({
+      invoice_id: 'invoice-1',
+      invoice_number: 'INV-1001',
+    });
+    expect(creditDetails).toMatchObject({
+      invoice_date_basis: 'canonical_recurring_service_period',
+      invoice_service_period_start: '2025-01-01T00:00:00.000Z',
+      invoice_service_period_end: '2025-02-01T00:00:00.000Z',
+    });
+    expect(creditDetails.transactions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          transaction_id: 'tx-transfer-in-1',
+          source_credit_id: 'credit-1',
+          source_invoice_id: 'invoice-1',
+          lineage_origin: 'transferred_credit',
+          invoice_number: 'INV-1001',
+          invoice_date_basis: 'canonical_recurring_service_period',
+        }),
+      ]),
+    );
+  });
 });

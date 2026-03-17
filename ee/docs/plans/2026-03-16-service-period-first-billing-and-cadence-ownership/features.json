@@ -1685,7 +1685,7 @@
   {
     "id": "F188",
     "description": "Define credit transfer, reporting, and audit behavior when credit lineage originates from canonical recurring detail periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Read-model and post-persist lifecycle requirements"
