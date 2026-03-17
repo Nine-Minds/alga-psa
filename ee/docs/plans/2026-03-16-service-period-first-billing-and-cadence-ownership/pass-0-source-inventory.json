@@ -33,6 +33,7 @@
       "packages/billing/src/actions/contractLineAction.ts",
       "server/migrations/20250318200000_create_plan_service_configuration_tables.cjs",
       "server/migrations/20250413032701_remove_proration_alignment_from_plan_service_fixed_config.cjs",
+      "server/src/test/unit/billing/billingEngine.timing.test.ts",
       "server/src/test/unit/billingEngine.test.ts",
       "server/migrations/20251020090000_contract_templates_phase1.cjs",
       "server/migrations/20250318200100_migrate_plan_services_data.cjs",

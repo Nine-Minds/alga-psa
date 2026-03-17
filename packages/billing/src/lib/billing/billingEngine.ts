@@ -15,7 +15,8 @@ import {
   IProductCharge,
   ILicenseCharge,
   IClientContractLineCycle,
-  BillingCycleType
+  BillingCycleType,
+  RECURRING_RANGE_SEMANTICS
 } from '@alga-psa/types';
 import {
   IContractLineServiceConfiguration,
@@ -30,6 +31,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClient } from '@alga-psa/types';
 import { toPlainDate, toISODate, getCurrencySymbol } from '@alga-psa/core';
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from '@alga-psa/shared/billingClients';
+import { resolveRecurringSettlementsForInvoiceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService
 import { calculateAndDistributeTax, updateInvoiceTotalsAndRecordTransaction, getClientDetails } from '../../services/invoiceService';
@@ -742,30 +744,22 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const lineBillingTiming = (clientContractLine.billing_timing ?? 'arrears') as 'arrears' | 'advance';
-    const servicePeriod = await this.resolveServicePeriod(
-      clientId,
+    const timingResolution = this.resolveFixedRecurringChargeTiming(
       billingPeriod,
       clientContractLine,
-      lineBillingTiming
+      await this.getBillingCycle(clientId, billingPeriod.startDate)
     );
-    let { servicePeriodStart, servicePeriodEnd } = servicePeriod;
-    if (lineBillingTiming === 'arrears' && clientContractLine.start_date) {
-      const serviceEndDate = toPlainDate(servicePeriodEnd);
-      const lineStartDate = toPlainDate(clientContractLine.start_date);
-
-      if (Temporal.PlainDate.compare(serviceEndDate, lineStartDate) < 0) {
-        console.log(
-          `[ARREARS] Skipping fixed charge for ${clientContractLine.contract_line_name} (line ${clientContractLine.contract_line_id}) – service period ${servicePeriodStart} to ${servicePeriodEnd} ends before contract start ${clientContractLine.start_date}.`
-        );
-        return [];
-      }
-
-      const serviceStartDate = toPlainDate(servicePeriodStart);
-      if (Temporal.PlainDate.compare(serviceStartDate, lineStartDate) < 0) {
-        servicePeriodStart = toISODate(lineStartDate);
-      }
+    if (!timingResolution) {
+      return [];
     }
+
+    const {
+      duePosition: lineBillingTiming,
+      servicePeriodStart,
+      servicePeriodEnd,
+      coverageRatio,
+    } = timingResolution;
+    let fixedProrationEnabled = false;
 
     // --- Custom Rate Check (Contracts & Pricing Schedules) ---
     // Check if a custom rate is defined for this plan assignment (provided via contract association)
@@ -851,6 +845,7 @@ export class BillingEngine {
         if (contractLineDetails.enable_proration !== undefined && contractLineDetails.enable_proration !== null) {
           planLevelEnableProration = Boolean(contractLineDetails.enable_proration);
         }
+        fixedProrationEnabled = planLevelEnableProration;
 
         const alignmentCandidate = contractLineDetails.billing_cycle_alignment;
         if (
@@ -931,6 +926,7 @@ export class BillingEngine {
           planLevelEnableProration = Boolean(prorationFromService.enable_proration);
         }
       }
+      fixedProrationEnabled = planLevelEnableProration;
 
       if (planLevelBillingCycleAlignment === 'start') {
         const alignmentFromService = planServices.find(
@@ -1061,11 +1057,6 @@ export class BillingEngine {
 
       // Instantiate TaxService
       const taxServiceInstance = new TaxService(); // Corrected instantiation
-      // Fetch billing cycle once for proration calculation if needed
-      const billingCycle = await this.getBillingCycle(clientId, billingPeriod.startDate);
-      const effectiveProrationPeriod = lineBillingTiming === 'advance'
-        ? { startDate: servicePeriodStart, endDate: servicePeriodEnd }
-        : billingPeriod;
 
       const serviceAllocations = await Promise.all(normalizedPlanServices.map(async (service) => {
         // Calculate the FMV for this service in CENTS
@@ -1087,12 +1078,7 @@ export class BillingEngine {
 
         // Use the plan-level proration setting fetched earlier for fixed plans
         if (planLevelEnableProration) {
-          prorationFactor = this._calculateProrationFactor(
-            effectiveProrationPeriod,
-            clientContractLine.start_date,
-            clientContractLine.end_date,
-            billingCycle
-          );
+          prorationFactor = coverageRatio;
           effectiveBaseRateInCents = Math.round(effectiveBaseRateInCents * prorationFactor);
           console.log(`[DEBUG] Service ${service.service_id} - Proration Enabled. Factor: ${prorationFactor.toFixed(4)}, Prorated Base (cents): ${effectiveBaseRateInCents}`);
         } else {
@@ -1339,7 +1325,7 @@ export class BillingEngine {
       }
     }
 
-    const creditCharges = lineBillingTiming === 'advance'
+    const creditCharges = lineBillingTiming === 'advance' && !fixedProrationEnabled
       ? this.buildAdvanceTerminationCredits(
           clientContractLine,
           billingPeriod,
@@ -1348,6 +1334,112 @@ export class BillingEngine {
       : [];
 
     return [...positiveCharges, ...creditCharges];
+  }
+
+  private resolveFixedRecurringChargeTiming(
+    billingPeriod: IBillingPeriod,
+    clientContractLine: IClientContractLine,
+    billingCycle: string
+  ): {
+    duePosition: 'arrears' | 'advance';
+    servicePeriodStart: ISO8601String;
+    servicePeriodEnd: ISO8601String;
+    servicePeriodStartExclusive: ISO8601String;
+    servicePeriodEndExclusive: ISO8601String;
+    coverageRatio: number;
+  } | null {
+    const duePosition = (clientContractLine.billing_timing ?? 'arrears') as 'arrears' | 'advance';
+    const currentStart = toISODate(toPlainDate(billingPeriod.startDate));
+    const currentEndExclusive = toISODate(toPlainDate(billingPeriod.endDate));
+    const previousStart = toISODate((() => {
+      const currentStartDate = toPlainDate(currentStart);
+      switch (billingCycle) {
+        case 'weekly':
+          return currentStartDate.subtract({ days: 7 });
+        case 'bi-weekly':
+          return currentStartDate.subtract({ days: 14 });
+        case 'monthly':
+          return currentStartDate.subtract({ months: 1 });
+        case 'quarterly':
+          return currentStartDate.subtract({ months: 3 });
+        case 'semi-annually':
+          return currentStartDate.subtract({ months: 6 });
+        case 'annually':
+          return currentStartDate.subtract({ years: 1 });
+        default:
+          return currentStartDate.subtract({
+            days: Math.max(
+              toPlainDate(currentStart).until(toPlainDate(currentEndExclusive), { largestUnit: 'days' }).days,
+              1
+            ),
+          });
+      }
+    })());
+
+    const settlements = resolveRecurringSettlementsForInvoiceWindow({
+      servicePeriods: [
+        {
+          kind: 'service_period',
+          cadenceOwner: 'client',
+          duePosition,
+          sourceObligation: {
+            obligationId: clientContractLine.client_contract_line_id,
+            obligationType: 'client_contract_line',
+            chargeFamily: 'fixed',
+            tenant: this.tenant ?? undefined,
+          },
+          start: previousStart,
+          end: currentStart,
+          semantics: RECURRING_RANGE_SEMANTICS,
+        },
+        {
+          kind: 'service_period',
+          cadenceOwner: 'client',
+          duePosition,
+          sourceObligation: {
+            obligationId: clientContractLine.client_contract_line_id,
+            obligationType: 'client_contract_line',
+            chargeFamily: 'fixed',
+            tenant: this.tenant ?? undefined,
+          },
+          start: currentStart,
+          end: currentEndExclusive,
+          semantics: RECURRING_RANGE_SEMANTICS,
+        },
+      ],
+      invoiceWindow: {
+        kind: 'invoice_window',
+        cadenceOwner: 'client',
+        duePosition,
+        start: currentStart,
+        end: currentEndExclusive,
+        semantics: RECURRING_RANGE_SEMANTICS,
+      },
+      activityWindow: {
+        start: clientContractLine.start_date ? toISODate(toPlainDate(clientContractLine.start_date)) : undefined,
+        end: clientContractLine.end_date
+          ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
+          : undefined,
+        semantics: RECURRING_RANGE_SEMANTICS,
+      },
+      duePosition,
+    });
+
+    const settlement = settlements[0];
+    if (!settlement) {
+      return null;
+    }
+
+    return {
+      duePosition,
+      servicePeriodStart: settlement.coveredServicePeriod.start,
+      servicePeriodEnd: toISODate(
+        toPlainDate(settlement.coveredServicePeriod.end).subtract({ days: 1 })
+      ),
+      servicePeriodStartExclusive: settlement.coveredServicePeriod.start,
+      servicePeriodEndExclusive: settlement.coveredServicePeriod.end,
+      coverageRatio: settlement.coverage.coverageRatio,
+    };
   }
 
   private async calculateTimeBasedCharges(clientId: string, billingPeriod: IBillingPeriod, clientContractLine: IClientContractLine): Promise<ITimeBasedCharge[]> {

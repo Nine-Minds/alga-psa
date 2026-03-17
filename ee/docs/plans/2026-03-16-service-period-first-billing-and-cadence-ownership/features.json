@@ -242,19 +242,19 @@
   {
     "id": "F041",
     "description": "Refactor fixed recurring charge entry points in BillingEngine to consume canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "System Surfaces In Scope"]
   },
   {
     "id": "F042",
     "description": "Remove direct dependency on resolveServicePeriod for fixed recurring charges",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F043",
     "description": "Remove arrears-specific skip branches in fixed recurring billing once service-period eligibility exists",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {

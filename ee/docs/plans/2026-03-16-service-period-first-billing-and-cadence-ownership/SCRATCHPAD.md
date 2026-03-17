@@ -65,6 +65,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `selectDueServicePeriodsForInvoiceWindow` chooses due service periods from a current invoice window without rebuilding separate advance vs arrears period definitions
   - `resolveRecurringSettlementsForInvoiceWindow` intersects those due periods with line activity dates, returns covered periods, and computes one coverage ratio for fixed, product, and license families
   - zero-coverage periods are filtered before any family-specific charge math runs, which is the intended bridge away from bespoke proration and skip branches
+- (2026-03-17) The first fixed-recurring runtime cutover now consumes a shared timing helper instead of calling `resolveServicePeriod` directly:
+  - `BillingEngine.calculateFixedPriceCharges` now resolves due periods via `resolveFixedRecurringChargeTiming`, which builds canonical current/previous service periods and intersects them with the line activity window
+  - an initial bug surfaced immediately in unit tests: subtracting raw day counts broke monthly arrears across month-length changes (`2025-02-01` had incorrectly mapped back to `2025-01-04`); the helper now subtracts billing-cycle calendar units instead
+  - the old arrears-specific skip/clamp branch is gone from the fixed path because empty coverage now returns `null` before charge generation
+  - the advance termination credit branch is still live when fixed-proration remains disabled; that is the next incomplete seam (`F044+`), not part of this checkpoint
 - (2026-03-16) `packages/billing/src/lib/billing/billingEngine.ts` currently mixes several timing models:
   - `resolveServicePeriod`
   - advance vs arrears branching
@@ -124,6 +129,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Shared due-period/coverage validation:
   - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
   - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Fixed timing seam validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts --coverage.enabled false`
+    - blocked locally by `ECONNREFUSED` to Postgres on `127.0.0.1:5438`
 
 ## Links / References
 
