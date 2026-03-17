@@ -523,6 +523,7 @@ export class BillingEngine {
             clientId,
             billingPeriod,
             clientContractLine,
+            cycle,
           ),
           this.calculateLicenseCharges(
             clientId,
@@ -563,16 +564,6 @@ export class BillingEngine {
           `Total fixed charges after proration: ${getCurrencySymbol(billingCurrency)}${(totalAfterProration / 100).toFixed(2)} (${totalAfterProration} cents)`,
         );
 
-        const proratedProductCharges = clientContractLine.enable_proration
-          ? (this.applyProrationToPlan(
-              productCharges,
-              billingPeriod,
-              clientContractLine.start_date,
-              clientContractLine.end_date,
-              cycle,
-            ) as IProductCharge[])
-          : productCharges;
-
         const proratedLicenseCharges = clientContractLine.enable_proration
           ? (this.applyProrationToPlan(
               licenseCharges,
@@ -589,7 +580,7 @@ export class BillingEngine {
           timeBasedCharges,
           usageBasedCharges,
           bucketPlanCharges,
-          proratedProductCharges,
+          productCharges,
           proratedLicenseCharges,
         );
 
@@ -1719,6 +1710,27 @@ export class BillingEngine {
     servicePeriodEndExclusive: ISO8601String;
     coverageRatio: number;
   } | null {
+    return this.resolveRecurringChargeTiming(
+      billingPeriod,
+      clientContractLine,
+      billingCycle,
+      "fixed",
+    );
+  }
+
+  private resolveRecurringChargeTiming(
+    billingPeriod: IBillingPeriod,
+    clientContractLine: IClientContractLine,
+    billingCycle: string,
+    chargeFamily: "fixed" | "product" | "license",
+  ): {
+    duePosition: "arrears" | "advance";
+    servicePeriodStart: ISO8601String;
+    servicePeriodEnd: ISO8601String;
+    servicePeriodStartExclusive: ISO8601String;
+    servicePeriodEndExclusive: ISO8601String;
+    coverageRatio: number;
+  } | null {
     const duePosition = (clientContractLine.billing_timing ?? "arrears") as
       | "arrears"
       | "advance";
@@ -1763,7 +1775,7 @@ export class BillingEngine {
           sourceObligation: {
             obligationId: clientContractLine.client_contract_line_id,
             obligationType: "client_contract_line",
-            chargeFamily: "fixed",
+            chargeFamily,
             tenant: this.tenant ?? undefined,
           },
           start: previousStart,
@@ -1777,7 +1789,7 @@ export class BillingEngine {
           sourceObligation: {
             obligationId: clientContractLine.client_contract_line_id,
             obligationType: "client_contract_line",
-            chargeFamily: "fixed",
+            chargeFamily,
             tenant: this.tenant ?? undefined,
           },
           start: currentStart,
@@ -2368,11 +2380,28 @@ export class BillingEngine {
     clientId: string,
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
+    billingCycle: string,
   ): Promise<IProductCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
+
+    const timingResolution = this.resolveRecurringChargeTiming(
+      billingPeriod,
+      clientContractLine,
+      billingCycle,
+      "product",
+    );
+    if (!timingResolution) {
+      return [];
+    }
+
+    const {
+      servicePeriodStart,
+      servicePeriodEnd,
+      coverageRatio,
+    } = timingResolution;
 
     const client = (await this.knex("clients")
       .where({
@@ -2483,7 +2512,7 @@ export class BillingEngine {
             const taxResult = await taxServiceInstance.calculateTax(
               client.client_id,
               total,
-              billingPeriod.endDate,
+              servicePeriodEnd,
               effectiveTaxRegion,
               true,
               clientContractLine.currency_code || "USD",
@@ -2509,8 +2538,8 @@ export class BillingEngine {
           tax_rate: taxRate,
           tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
           is_taxable: isTaxable,
-          servicePeriodStart: billingPeriod.startDate,
-          servicePeriodEnd: billingPeriod.endDate,
+          servicePeriodStart,
+          servicePeriodEnd,
           billingTiming: (clientContractLine.billing_timing ?? "arrears") as
             | "arrears"
             | "advance",
@@ -2523,7 +2552,13 @@ export class BillingEngine {
       },
     );
     const productCharges = await Promise.all(productChargesPromises);
-    return productCharges;
+
+    return clientContractLine.enable_proration
+      ? this.applyQuantityChargeCoverageSettlement(
+          productCharges,
+          coverageRatio,
+        )
+      : productCharges;
   }
 
   private async calculateLicenseCharges(
@@ -3135,6 +3170,29 @@ export class BillingEngine {
         };
       })
       .filter((charge): charge is IFixedPriceCharge => charge !== null);
+  }
+
+  private applyQuantityChargeCoverageSettlement<
+    TCharge extends IProductCharge | ILicenseCharge,
+  >(charges: TCharge[], coverageRatio: number): TCharge[] {
+    const boundedCoverageRatio = Math.max(0, Math.min(coverageRatio, 1));
+
+    return charges.map((charge) => {
+      const originalTotal = Math.ceil(charge.total ?? 0);
+      const originalTax = Math.ceil(charge.tax_amount ?? 0);
+      const proratedTotal = Math.ceil(originalTotal * boundedCoverageRatio);
+      const proratedTax = Math.ceil(originalTax * boundedCoverageRatio);
+      const quantity = Math.max(1, Math.round(charge.quantity ?? 1));
+      const derivedRate =
+        quantity > 0 ? Math.ceil(proratedTotal / quantity) : 0;
+
+      return {
+        ...charge,
+        rate: derivedRate,
+        total: derivedRate * quantity,
+        tax_amount: proratedTax,
+      };
+    });
   }
 
   private settleFixedChargeAmount(

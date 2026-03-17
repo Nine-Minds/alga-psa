@@ -5,13 +5,17 @@
     "commands": [
       "rg -l 'resolveServicePeriod' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'",
       "rg -l 'billing_cycle_alignment' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'",
-      "rg -l 'service_period_start|service_period_end|servicePeriodStart|servicePeriodEnd' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'"
+      "rg -l 'service_period_start|service_period_end|servicePeriodStart|servicePeriodEnd' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'",
+      "rg -l 'calculateProductCharges\\(|proratedProductCharges|Error calculating initial tax for product service|Missing pricing for product|type: \"product\"' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'"
     ]
   },
   "timingControls": {
     "resolveServicePeriodRefs": [
       "packages/billing/src/lib/billing/billingEngine.ts",
       "server/src/test/unit/billing/billingEngine.timing.test.ts"
+    ],
+    "productLateStageProrationRefs": [
+      "packages/billing/src/lib/billing/billingEngine.ts"
     ],
     "billingCycleAlignmentRefs": [
       "server/src/interfaces/billing.interfaces.ts",

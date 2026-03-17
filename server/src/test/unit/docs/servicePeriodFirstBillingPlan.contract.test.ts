@@ -18,6 +18,7 @@ const prd = read('PRD.md');
 const inventory = JSON.parse(read('pass-0-source-inventory.json')) as {
   timingControls: {
     resolveServicePeriodRefs: string[];
+    productLateStageProrationRefs: string[];
     billingCycleAlignmentRefs: string[];
   };
   periodFieldInventory: {
@@ -137,6 +138,21 @@ describe('service-period-first billing plan artifacts', () => {
     expect(appendix).toContain('Bucket behavior is split explicitly:');
     expect(appendix).toContain('in scope now: recurring bucket contract lines where allowance periods, rollover, overage charging, and tax-date evaluation already depend on recurring timing semantics');
     expect(appendix).toContain('still out of scope: generic bucket reporting, remaining-unit readers, and other bucket metrics that are not tied to recurring contract-backed billing selection');
+  });
+
+  it('T061: recurring product charge paths that still rely on late-stage proration are source-backed before migration', () => {
+    expect(inventory.timingControls.productLateStageProrationRefs.slice().sort()).toEqual(
+      rgList(
+        'calculateProductCharges\\(|proratedProductCharges|Error calculating initial tax for product service|Missing pricing for product|type: "product"',
+        'packages',
+        'server',
+        'shared'
+      )
+    );
+    expect(appendix).toContain('### Recurring product migration seam inventory');
+    expect(appendix).toContain('only later conditionally applies `applyProrationToPlan(...)` to `productCharges`');
+    expect(appendix).toContain('still stamps `servicePeriodStart` and `servicePeriodEnd` directly from the enclosing invoice window');
+    expect(appendix).toContain('Product tax currently evaluates against `billingPeriod.endDate`');
   });
 
   it('T010: fixture builder contract stays cadence-owner-aware and independent from invoice side effects', () => {

@@ -45,6 +45,13 @@ Source-backed file lists live in `pass-0-source-inventory.json`.
 | Client anchor settings | Monthly / quarterly / semi-annual / annual anchor behavior that must be preserved under client cadence. | `shared/billingClients/billingCycleAnchors.ts`, `packages/billing/src/lib/billing/billingCycleAnchors.ts`, `packages/billing/src/actions/billingCycleAnchorActions.ts`, `server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts`. |
 | Assignment start / end dates | Current overlay used to trim or skip recurring work and to explain portal contract periods. | `shared/billingClients/contractLines.ts`, `packages/client-portal/src/actions/account.ts`, `packages/billing/src/lib/billing/billingEngine.ts`. |
 
+### Recurring product migration seam inventory
+
+- `BillingEngine.calculateBilling(...)` still builds product charges first and only later conditionally applies `applyProrationToPlan(...)` to `productCharges` when `client_contract_lines.enable_proration` is true.
+- `calculateProductCharges(...)` still stamps `servicePeriodStart` and `servicePeriodEnd` directly from the enclosing invoice window (`billingPeriod.startDate` / `billingPeriod.endDate`) instead of from a canonical service-period selection step.
+- Product tax currently evaluates against `billingPeriod.endDate`, which means service-date semantics are still coupled to the invoice window rather than the due recurring period.
+- This seam is intentionally inventoried before `F062+` so the product migration can remove late-stage proration, invoice-window service-period stamping, and invoice-window tax-date evaluation together instead of treating them as separate accidental behaviors.
+
 ## Persisted Date and Period Fields
 
 These are the persisted fields that currently participate in recurring timing or billed-through semantics.

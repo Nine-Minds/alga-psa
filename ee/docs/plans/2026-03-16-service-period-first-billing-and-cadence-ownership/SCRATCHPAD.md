@@ -152,6 +152,18 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) A follow-up attempt to close `F058` uncovered a local-environment blocker rather than a product behavior decision:
   - a targeted `prepaymentInvoice.test.ts` regression was drafted to prove prepayment credit application does not strip canonical recurring detail rows, but local execution is blocked by `ECONNREFUSED` to Postgres on `127.0.0.1:5432`
   - that regression was intentionally not left in the tree or marked complete; `F058` remains open until the DB-backed path can be executed and verified
+- (2026-03-17) Purchase-order follow-up is still open after recon:
+  - `server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx` is stale against `AutomaticInvoices`, which now calls `generateInvoicesAsRecurringBillingRun` instead of the older `generateInvoice` action the test spies on
+  - integration coverage for PO + recurring detail persistence already exists in `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, but local execution is still blocked by unavailable Postgres
+  - that leaves `F059` implementable, but not as the next low-risk checkpoint; product-path inventory (`F061`) is cleaner to land first
+- (2026-03-17) Recurring product timing now has an explicit migration target:
+  - `packages/billing/src/lib/billing/billingEngine.ts` still constructs product charges against the enclosing invoice window, stamps `servicePeriodStart/servicePeriodEnd` from `billingPeriod.startDate` / `billingPeriod.endDate`, and calculates initial tax from `billingPeriod.endDate`
+  - `BillingEngine.calculateBilling` still runs `applyProrationToPlan(...)` on `productCharges` after the charges are built when `enable_proration` is true
+  - `PASS0_RECURRING_TIMING_APPENDIX.md`, `pass-0-source-inventory.json`, and `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now treat that combination as the source-backed `F061/T061` seam to remove during `F062+`
+- (2026-03-17) Recurring product charges now follow canonical service-period timing under client cadence:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now resolves product due periods through the same shared recurring timing helper used by fixed recurring charges, so product `servicePeriodStart` / `servicePeriodEnd` now reflect the canonical due service period instead of the enclosing invoice window
+  - product coverage settlement now happens inside `calculateProductCharges(...)`, which removes the late-stage `applyProrationToPlan(...)` branch for products from `calculateBilling` while preserving the existing `enable_proration` gate and rounding behavior
+  - product tax evaluation now uses the canonical due service-period end date, and product charge tests now explicitly cover client-cadence timing (`T062`), override precedence (`T063`), and tax-date behavior (`T064`)
 - (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
   - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
   - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
@@ -218,6 +230,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/billingEngine.discountPricingTiming.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
 - (2026-03-17) Fixed tax-date and negative-recurring validation:
   - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+- (2026-03-17) Product-path inventory validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Product recurring timing validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.productTiming.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.discountPricingTiming.test.ts --coverage.enabled false`
 - (2026-03-17) Explicit out-of-scope boundary validation:
   - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
 - (2026-03-17) Blocked prepayment follow-up:
