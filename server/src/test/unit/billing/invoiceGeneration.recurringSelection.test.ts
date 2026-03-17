@@ -277,4 +277,85 @@ describe('invoice generation recurring selection', () => {
     expect(warnSpy).not.toHaveBeenCalled();
     expect(result).toBe(canonicalBillingResult);
   });
+
+  it('T089: recurring invoice selection stays stable when non-recurring charges share the invoice result', async () => {
+    const recurringTimingSelections = {
+      'contract-line-1': {
+        duePosition: 'arrears',
+        servicePeriodStart: '2025-01-01',
+        servicePeriodEnd: '2025-01-31',
+        servicePeriodStartExclusive: '2025-01-01',
+        servicePeriodEndExclusive: '2025-02-01',
+        coverageRatio: 1,
+      },
+    };
+    const billingResult = {
+      charges: [
+        {
+          type: 'fixed',
+          client_contract_line_id: 'contract-line-1',
+          serviceId: 'service-1',
+          total: 100,
+          servicePeriodStart: '2025-01-01',
+          servicePeriodEnd: '2025-01-31',
+          billingTiming: 'arrears',
+        },
+        {
+          type: 'time',
+          client_contract_line_id: 'hourly-line-1',
+          serviceId: 'hourly-service',
+          total: 250,
+          servicePeriodStart: '2025-02-01',
+          servicePeriodEnd: '2025-02-28',
+          billingTiming: 'arrears',
+        },
+        {
+          type: 'usage',
+          client_contract_line_id: 'usage-line-1',
+          serviceId: 'usage-service',
+          total: 75,
+          servicePeriodStart: '2025-02-01',
+          servicePeriodEnd: '2025-02-28',
+          billingTiming: 'arrears',
+        },
+      ],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 425,
+      finalAmount: 425,
+      currency_code: 'USD',
+    };
+
+    const billingEngine = {
+      selectDueRecurringServicePeriodsForBillingWindow: vi
+        .fn()
+        .mockResolvedValue(recurringTimingSelections),
+      calculateBilling: vi.fn().mockResolvedValue(billingResult),
+    } as any;
+
+    const result = await calculateBillingForInvoiceWindow({
+      billingEngine,
+      clientId: 'client-1',
+      cycleStart: '2025-02-01',
+      cycleEnd: '2025-03-01',
+      billingCycleId: 'cycle-1',
+    });
+
+    expect(
+      billingEngine.selectDueRecurringServicePeriodsForBillingWindow,
+    ).toHaveBeenCalledWith('client-1', '2025-02-01', '2025-03-01', 'cycle-1');
+    expect(billingEngine.calculateBilling).toHaveBeenCalledWith(
+      'client-1',
+      '2025-02-01',
+      '2025-03-01',
+      'cycle-1',
+      { recurringTimingSelections },
+    );
+    expect(result.charges.map((charge: any) => charge.type)).toEqual([
+      'fixed',
+      'time',
+      'usage',
+    ]);
+    expect(result).toBe(billingResult);
+  });
 });

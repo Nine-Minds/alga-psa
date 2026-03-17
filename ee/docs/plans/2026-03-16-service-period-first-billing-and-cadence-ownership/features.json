@@ -698,7 +698,7 @@
   {
     "id": "F117",
     "description": "Remove obsolete recurring timing helpers, dead branches, and duplicated proration code after cutover",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Acceptance Criteria"]
   },
   {

@@ -94,12 +94,7 @@ describe("BillingEngine recurring license timing", () => {
   it("T066: recurring license charges derive timing from canonical service periods under client cadence", async () => {
     const engine = new BillingEngine();
     installLicenseChargeMocks(engine);
-
-    const resolveServicePeriodSpy = vi
-      .spyOn(engine as any, "resolveServicePeriod")
-      .mockRejectedValue(
-        new Error("resolveServicePeriod should not be called for licenses"),
-      );
+    expect((engine as any).resolveServicePeriod).toBeUndefined();
 
     const charges = await (engine as any).calculateLicenseCharges(
       "client-1",
@@ -122,7 +117,6 @@ describe("BillingEngine recurring license timing", () => {
       "monthly",
     );
 
-    expect(resolveServicePeriodSpy).not.toHaveBeenCalled();
     expect(charges).toEqual([
       expect.objectContaining({
         type: "license",

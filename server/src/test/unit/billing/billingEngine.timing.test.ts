@@ -126,36 +126,6 @@ const installFixedChargeMocks = (
 };
 
 describe("BillingEngine billing timing", () => {
-  it("maps arrears contract lines to the previous billing period", async () => {
-    const engine = new BillingEngine();
-
-    const billingPeriod = {
-      startDate: "2025-01-01",
-      endDate: "2025-02-01",
-    };
-
-    const clientContractLine = {
-      client_contract_line_id: "ccd-1",
-      client_id: "client-1",
-      contract_line_id: "contract-line-1",
-      start_date: "2024-12-01",
-      end_date: null,
-      is_active: true,
-    } as any;
-
-    const result = await (engine as any).resolveServicePeriod(
-      "client-1",
-      billingPeriod,
-      clientContractLine,
-      "arrears",
-    );
-
-    expect(result).toEqual({
-      servicePeriodStart: "2024-12-01",
-      servicePeriodEnd: "2024-12-31",
-    });
-  });
-
   it("T045: fixed recurring arrears timing resolves partial first periods through shared coverage instead of a special skip branch", () => {
     const engine = new BillingEngine();
 
@@ -318,12 +288,7 @@ describe("BillingEngine billing timing", () => {
     const engine = new BillingEngine();
     (engine as any).tenant = "test_tenant";
     vi.spyOn(engine as any, "getBillingCycle").mockResolvedValue("monthly");
-
-    const resolveServicePeriodSpy = vi
-      .spyOn(engine as any, "resolveServicePeriod")
-      .mockRejectedValue(
-        new Error("resolveServicePeriod should not be called"),
-      );
+    expect((engine as any).resolveServicePeriod).toBeUndefined();
 
     (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
       if (tableName === "contract_pricing_schedules") {
@@ -388,7 +353,6 @@ describe("BillingEngine billing timing", () => {
       },
     );
 
-    expect(resolveServicePeriodSpy).not.toHaveBeenCalled();
     expect(charges).toEqual([
       expect.objectContaining({
         type: "fixed",

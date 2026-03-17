@@ -94,12 +94,7 @@ describe("BillingEngine recurring product timing", () => {
   it("T062: recurring product charges derive service-period timing from canonical client-cadence periods", async () => {
     const engine = new BillingEngine();
     installProductChargeMocks(engine);
-
-    const resolveServicePeriodSpy = vi
-      .spyOn(engine as any, "resolveServicePeriod")
-      .mockRejectedValue(
-        new Error("resolveServicePeriod should not be called for products"),
-      );
+    expect((engine as any).resolveServicePeriod).toBeUndefined();
 
     const charges = await (engine as any).calculateProductCharges(
       "client-1",
@@ -122,7 +117,6 @@ describe("BillingEngine recurring product timing", () => {
       "monthly",
     );
 
-    expect(resolveServicePeriodSpy).not.toHaveBeenCalled();
     expect(charges).toEqual([
       expect.objectContaining({
         type: "product",

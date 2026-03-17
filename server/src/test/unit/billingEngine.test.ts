@@ -472,8 +472,6 @@ describe('BillingEngine', () => {
         .mockResolvedValueOnce(mockTimeCharges1)
         .mockResolvedValueOnce(mockTimeCharges2);
       vi.spyOn(billingEngine as any, 'calculateUsageBasedCharges').mockResolvedValue([]);
-      vi.spyOn(billingEngine as any, 'applyProrationToPlan').mockImplementation((charges) => charges);
-
       const result = await billingEngine.calculateBilling(mockClientId, mockStartDate, mockEndDate, mockBillingCycleId);
 
       expect(result.charges).toEqual([
@@ -1441,39 +1439,6 @@ describe('BillingEngine', () => {
       });
     });
 
-    describe('applyProration', () => {
-      it('should leave charges unchanged when no proration rules apply', () => {
-        const charges: IBillingCharge[] = [
-          {
-            type: 'usage',
-            serviceId: 'service1',
-            serviceName: 'Service 1',
-            quantity: 1,
-            rate: 100,
-            total: 100,
-            tax_amount: 0,
-            tax_rate: 0
-          },
-        ];
-        const billingPeriod: IBillingPeriod = {
-          startDate: '2023-01-01T00:00:00Z',
-          endDate: '2023-02-01T00:00:00Z',
-        };
-        const mockStartDate = '2023-01-17T00:00:00Z';
-        const mockEndDate = '2023-01-31T00:00:00Z';
-        const mockBillingCycle = 'monthly';
-
-        const proratedCharges = (billingEngine as any).applyProrationToPlan(
-          charges,
-          billingPeriod,
-          mockStartDate,
-          mockEndDate,
-          mockBillingCycle
-        );
-
-        expect(proratedCharges[0].total).toBe(100);
-      });
-    });
   });
 
   describe('Pricing Schedule Integration', () => {

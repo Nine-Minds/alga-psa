@@ -609,34 +609,17 @@ export class BillingEngine {
         console.log(`Product charges: ${productCharges.length}`);
         console.log(`License charges: ${licenseCharges.length}`);
 
-        const totalBeforeProration = fixedPriceCharges.reduce(
+        const totalFixedCharges = fixedPriceCharges.reduce(
           (sum: number, charge: IFixedPriceCharge) => sum + charge.total,
           0,
         );
         console.log(
-          `Total fixed charges before proration: ${getCurrencySymbol(billingCurrency)}${(totalBeforeProration / 100).toFixed(2)} (${totalBeforeProration} cents)`,
-        );
-
-        // Only prorate fixed price charges
-        const proratedFixedCharges = this.applyProrationToPlan(
-          fixedPriceCharges,
-          billingPeriod,
-          clientContractLine.start_date,
-          clientContractLine.end_date,
-          cycle,
-        );
-
-        const totalAfterProration = proratedFixedCharges.reduce(
-          (sum: number, charge: IBillingCharge) => sum + charge.total,
-          0,
-        );
-        console.log(
-          `Total fixed charges after proration: ${getCurrencySymbol(billingCurrency)}${(totalAfterProration / 100).toFixed(2)} (${totalAfterProration} cents)`,
+          `Total fixed charges: ${getCurrencySymbol(billingCurrency)}${(totalFixedCharges / 100).toFixed(2)} (${totalFixedCharges} cents)`,
         );
 
         // Combine all charges (time/usage are not prorated here)
         totalCharges = totalCharges.concat(
-          proratedFixedCharges,
+          fixedPriceCharges,
           timeBasedCharges,
           usageBasedCharges,
           bucketPlanCharges,
@@ -646,7 +629,7 @@ export class BillingEngine {
 
         console.log("Total charges breakdown:");
         const currencySymbol = getCurrencySymbol(billingCurrency);
-        proratedFixedCharges.forEach((charge: IBillingCharge) => {
+        fixedPriceCharges.forEach((charge: IBillingCharge) => {
           console.log(
             `fixed - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
           );
@@ -3211,41 +3194,6 @@ export class BillingEngine {
     return bucketCharges;
   }
 
-  private async resolveServicePeriod(
-    clientId: string,
-    billingPeriod: IBillingPeriod,
-    _clientContractLine: IClientContractLine,
-    billingTiming: "arrears" | "advance",
-  ): Promise<{
-    servicePeriodStart: ISO8601String;
-    servicePeriodEnd: ISO8601String;
-  }> {
-    const currentStart = toPlainDate(billingPeriod.startDate);
-    const currentEndExclusive = toPlainDate(billingPeriod.endDate);
-
-    if (billingTiming === "advance") {
-      const currentPeriodEnd = toISODate(
-        currentEndExclusive.subtract({ days: 1 }),
-      );
-      return {
-        servicePeriodStart: toISODate(currentStart),
-        servicePeriodEnd: currentPeriodEnd,
-      };
-    }
-
-    const cycleDays = Math.max(
-      currentStart.until(currentEndExclusive, { largestUnit: "days" }).days,
-      1,
-    );
-    const previousStart = toISODate(currentStart.subtract({ days: cycleDays }));
-    const previousEnd = toISODate(currentStart.subtract({ days: 1 }));
-
-    return {
-      servicePeriodStart: previousStart,
-      servicePeriodEnd: previousEnd,
-    };
-  }
-
   private async hasExistingServicePeriodCharge(
     clientContractLineId: string,
     servicePeriodStart: ISO8601String,
@@ -3402,173 +3350,6 @@ export class BillingEngine {
       return 0;
     }
     return startPlain.until(endPlain, { largestUnit: "days" }).days;
-  }
-
-  /**
-   * Calculates the proration factor based on the plan's active dates within the billing period.
-   * @returns Proration factor (0.0 to 1.0)
-   */
-  private _calculateProrationFactor(
-    billingPeriod: IBillingPeriod,
-    planStartDate: ISO8601String,
-    planEndDate: ISO8601String | null,
-    billingCycle: string,
-  ): number {
-    // Use our date utilities to handle the conversion
-    const planStart = toPlainDate(planStartDate);
-    const periodStart = toPlainDate(billingPeriod.startDate);
-    const effectiveStartDate =
-      Temporal.PlainDate.compare(planStart, periodStart) > 0
-        ? planStart
-        : periodStart;
-
-    // Billing periods are treated as [start, end) (end exclusive).
-    // Proration is computed against a *canonical* cycle length so transition periods prorate fixed charges.
-    const periodStartExclusive = periodStart;
-    const periodEndExclusive = toPlainDate(billingPeriod.endDate);
-
-    const expectedEndFromStart = (() => {
-      switch (billingCycle) {
-        case "weekly":
-          return periodStartExclusive.add({ days: 7 });
-        case "bi-weekly":
-          return periodStartExclusive.add({ days: 14 });
-        case "monthly":
-          return periodStartExclusive.add({ months: 1 });
-        case "quarterly":
-          return periodStartExclusive.add({ months: 3 });
-        case "semi-annually":
-          return periodStartExclusive.add({ months: 6 });
-        case "annually":
-          return periodStartExclusive.add({ years: 1 });
-        default:
-          return periodStartExclusive.add({ months: 1 });
-      }
-    })();
-
-    // A transition period is any period where end != (start + cycle length in calendar units).
-    // For transition periods, the canonical cycle is anchored at the transition end boundary.
-    const isTransitionPeriod =
-      Temporal.PlainDate.compare(expectedEndFromStart, periodEndExclusive) !==
-      0;
-    const canonicalStart = isTransitionPeriod
-      ? periodEndExclusive
-      : periodStartExclusive;
-    const canonicalEnd = (() => {
-      switch (billingCycle) {
-        case "weekly":
-          return canonicalStart.add({ days: 7 });
-        case "bi-weekly":
-          return canonicalStart.add({ days: 14 });
-        case "monthly":
-          return canonicalStart.add({ months: 1 });
-        case "quarterly":
-          return canonicalStart.add({ months: 3 });
-        case "semi-annually":
-          return canonicalStart.add({ months: 6 });
-        case "annually":
-          return canonicalStart.add({ years: 1 });
-        default:
-          return canonicalStart.add({ months: 1 });
-      }
-    })();
-
-    const canonicalCycleDays = this.calculatePeriodDaysExclusive(
-      toISODate(canonicalStart),
-      toISODate(canonicalEnd),
-    );
-
-    // Determine the effective end boundary for plan activity (plan end_date is stored as an inclusive date).
-    const planEndInclusive = planEndDate ? toPlainDate(planEndDate) : null;
-    const planEndExclusive = planEndInclusive
-      ? planEndInclusive.add({ days: 1 })
-      : null;
-    const effectiveEndExclusive =
-      planEndExclusive &&
-      Temporal.PlainDate.compare(planEndExclusive, periodEndExclusive) < 0
-        ? planEndExclusive
-        : periodEndExclusive;
-
-    const actualDaysRaw = effectiveStartDate.until(effectiveEndExclusive, {
-      largestUnit: "days",
-    }).days;
-    const actualDays = Math.max(0, actualDaysRaw);
-
-    if (canonicalCycleDays === 0) {
-      console.error(
-        "Error: Cycle length is zero. Cannot calculate proration factor.",
-      );
-      return 1.0;
-    }
-
-    const prorationFactor = actualDays / canonicalCycleDays;
-    return prorationFactor;
-  }
-
-  /**
-   * Applies proration to applicable charges.
-   * NOTE: Proration for 'fixed' charges is now handled within calculateFixedPriceCharges.
-   * This function primarily handles proration for other potential future charge types if needed,
-   * or acts as a fallback/consistency check.
-   */
-  private applyProrationToPlan(
-    charges: IBillingCharge[],
-    billingPeriod: IBillingPeriod,
-    planStartDate: ISO8601String,
-    planEndDate: ISO8601String | null,
-    billingCycle: string,
-  ): IBillingCharge[] {
-    // Calculate the proration factor once
-    const prorationFactor = this._calculateProrationFactor(
-      billingPeriod,
-      planStartDate,
-      planEndDate,
-      billingCycle,
-    );
-
-    return charges.map((charge: IBillingCharge): IBillingCharge => {
-      // Proration for 'fixed' type is now handled earlier in calculateFixedPriceCharges
-      if (charge.type === "fixed") {
-        return charge; // Return charge as is
-      }
-
-      // Prorate products/licenses when enabled at the contract line level.
-      if (charge.type === "product" || charge.type === "license") {
-        const originalTotal = Math.ceil(charge.total ?? 0);
-        const originalTax = Math.ceil((charge as any).tax_amount ?? 0);
-        const proratedTotal = Math.ceil(originalTotal * prorationFactor);
-        const proratedTax = Math.ceil(originalTax * prorationFactor);
-
-        const quantity = Math.max(1, Math.round((charge as any).quantity ?? 1));
-        const derivedRate =
-          quantity > 0 ? Math.ceil(proratedTotal / quantity) : 0;
-
-        return {
-          ...charge,
-          rate: derivedRate,
-          total: derivedRate * quantity,
-          tax_amount: proratedTax,
-        } as IBillingCharge;
-      }
-
-      // --- Example: Proration logic for other types (if needed in future) ---
-      // if (charge.type === 'some_other_proratable_type') {
-      //   // Check specific proration flag for this type if it exists
-      //   if ((charge as any).enable_proration === false) {
-      //      console.log(`Skipping proration for charge: ${charge.serviceName} (proration disabled)`);
-      //      return charge;
-      //   }
-      //   const proratedTotal = Math.ceil(Math.ceil(charge.total) * prorationFactor);
-      //   console.log(`Prorating charge: ${charge.serviceName}`);
-      //   console.log(`  Original total: $${(charge.total / 100).toFixed(2)}`);
-      //   console.log(`  Prorated total: $${(proratedTotal / 100).toFixed(2)}`);
-      //   return { ...charge, total: proratedTotal };
-      // }
-      // --- End Example ---
-
-      // If not a type that needs proration here, return as is
-      return charge;
-    });
   }
 
   private async applyDiscountsAndAdjustments(

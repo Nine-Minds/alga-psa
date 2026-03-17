@@ -47,6 +47,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/lib/adapters/invoiceAdapters.ts` now carries `service_period_start`, `service_period_end`, and `billing_timing` from DB invoice-charge payloads into `WasmInvoiceViewModel.items`
   - `packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx` proves the portal preview path receives those canonical recurring fields through the real adapter, so preview/pay-style rendering no longer strips them before template rendering
   - this is a preview/read-model seam only; broader dashboard/portal invoice-query cleanup still belongs to `F126` and `F140`
+- (2026-03-17) Recurring invoice preselection now has an explicit mixed-invoice regression guard, which closes `T089`:
+  - `server/src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts` now proves `calculateBillingForInvoiceWindow(...)` still returns non-recurring hourly/usage charges untouched while applying canonical `recurringTimingSelections` only to the recurring timing seam
+  - this keeps the service-period-first preselection contract narrow: it chooses due recurring service periods first, but it does not narrow the eventual invoice payload to recurring charges only
+- (2026-03-17) Obsolete recurring timing helpers are now deleted from the live billing engine, which closes `F117`, `T163`, and `T164`:
+  - `packages/billing/src/lib/billing/billingEngine.ts` no longer carries the dead `resolveServicePeriod`, `_calculateProrationFactor`, or `applyProrationToPlan` helpers, and `calculateBillingInternal(...)` no longer runs a no-op fixed-charge proration pass before combining invoice charges
+  - focused timing/product/license tests now assert the old helper is absent rather than spying on it, and `server/src/test/unit/billing/billingEngine.cleanupSource.test.ts` adds a direct source contract proving the late-stage helper strings are gone from the runtime file
+  - the old helper-only regression file `server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts` was removed because its only purpose was to test a private implementation seam that no longer exists
 - (2026-03-17) Pass-0 implementation artifacts now live in:
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PASS0_RECURRING_TIMING_APPENDIX.md`
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/pass-0-source-inventory.json`
@@ -400,7 +407,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 ## Commands / Runbooks
 
 - (2026-03-17) `billing_cycle_alignment` runtime cleanup and portal preview validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
+    - run from `server/`
   - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts -t "T162|T041|T042|T043|T044|T078|T087" --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/test/unit/billing/billingEngine.cleanupSource.test.ts src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx vitest run src/test/unit/billingEngine.test.ts -t "T021" --coverage.enabled false`
     - run from `server/`
