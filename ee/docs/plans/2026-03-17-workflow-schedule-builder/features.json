@@ -1,0 +1,62 @@
+[
+  {
+    "id": "F001",
+    "description": "Replace the recurring schedule cron text input with a recurrence builder UI in the workflow schedule dialog.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Functional Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Support daily recurrence selection with a time-of-day input.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Support weekly recurrence selection with weekday controls and time-of-day input.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Support monthly recurrence selection with day-of-month and time-of-day input.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F005",
+    "description": "Convert supported GUI recurrence settings into cron strings before create and update saves.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "Hydrate supported saved cron expressions back into the recurrence builder when editing schedules.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F007",
+    "description": "Provide an advanced cron disclosure that exposes the raw cron input as an escape hatch.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Default unsupported recurring cron expressions to advanced mode without losing the saved cron value.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F009",
+    "description": "Show a human-readable schedule summary for supported recurrence builder selections.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F010",
+    "description": "Keep one-time schedule behavior unchanged while applying the new UX only to recurring schedules.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  }
+]
