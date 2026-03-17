@@ -391,7 +391,7 @@ exports.up = async function up(knex) {
       .select([
         'cc.tenant',
         'cc.contract_id',
-        trx.raw('MIN(cc.client_id) as owner_client_id'),
+        trx.raw('MIN(cc.client_id::text) as owner_client_id'),
       ]);
 
     for (const row of singleClientContracts) {
