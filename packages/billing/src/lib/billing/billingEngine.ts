@@ -3864,6 +3864,9 @@ export class BillingEngine {
       },
     });
 
+    // Recalculation is intentionally financial-only. Canonical recurring
+    // invoice_charge_details rows remain the persisted source of service-period
+    // truth after invoice creation; this path should only update tax and totals.
     await this.knex.transaction(async (trx) => {
       // Step 1: Recalculate and distribute tax across all items using the service function
       console.log(

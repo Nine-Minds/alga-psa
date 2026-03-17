@@ -1055,6 +1055,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Invoice recalculation/detail-period preservation validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.recalculateInvoice.detailPeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 - (2026-03-17) Client contract assignment-date validation now distinguishes canonical recurring coverage from historical invoice-window fallback, which closes `F174` and `T204`:
   - `packages/clients/src/actions/clientContractActions.ts` now queries canonical `invoice_charge_details` coverage for the current `client_contract_id` before using legacy `client_billing_cycles` overlap logic, so end-date shortening and mid-cycle termination are enforced against billed recurring service periods rather than against the entire enclosing invoice window whenever authoritative detail rows exist
@@ -1066,6 +1070,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/lib/api/services/InvoiceService.ts` now computes recurring provenance before delete-path branching and treats canonical-detail-backed invoices as soft-cancel candidates even when they have no payments yet, so the API delete path preserves the invoice plus its authoritative recurring detail history
   - the safeguard intentionally distinguishes detail-backed recurring invoices from historical/manual invoices: invoices without canonical recurring detail periods still follow the existing delete behavior, while draft or finalized recurring invoices with canonical periods are preserved through cancellation semantics
   - focused executable coverage now lives in `packages/billing/tests/invoiceModification.recurringDeletionGuard.test.ts` for the explicit hard-delete action and `server/src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts` for the API soft-cancel branch
+- (2026-03-17) Invoice recalculation is now explicitly defined as a financial-only pass that preserves canonical recurring detail periods, which closes `F176` and `T206`:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now documents the intended contract inline at the recalculation seam: once an invoice exists, `invoice_charge_details` remains the authoritative recurring timing record and recalculation should only recompute tax distribution and invoice totals
+  - `server/src/test/unit/billing/billingEngine.recalculateInvoice.detailPeriods.test.ts` proves that contract directly by exercising `BillingEngine.recalculateInvoice(...)` with a fake invoice/client store, asserting it delegates only to `calculateAndDistributeTax(...)` and `updateInvoiceTotalsAndRecordTransaction(...)`, and failing if the recalculation path starts querying `invoice_charge_details`
 
 ## Links / References
 

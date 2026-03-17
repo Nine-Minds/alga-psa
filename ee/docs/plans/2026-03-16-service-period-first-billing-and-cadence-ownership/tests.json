@@ -1787,7 +1787,7 @@
   {
     "id": "T206",
     "description": "Invoice recalculation preserves canonical recurring detail periods rather than rebuilding timing from invoice headers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F176"
     ]

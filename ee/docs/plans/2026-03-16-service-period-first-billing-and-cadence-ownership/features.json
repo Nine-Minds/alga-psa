@@ -1577,7 +1577,7 @@
   {
     "id": "F176",
     "description": "Define how invoice recalculation preserves canonical recurring detail periods instead of treating them as derivable from invoice headers after persistence",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Read-model and post-persist lifecycle requirements",
       "Invoice and billing-flow requirements"
