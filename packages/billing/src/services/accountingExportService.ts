@@ -250,12 +250,15 @@ export class AccountingExportService {
       transformResult = await adapter.transform(context);
       const deliveryResult = await adapter.deliver(transformResult, context);
 
-      for (const delivered of deliveryResult.deliveredLines) {
-        await this.repository.updateLine(delivered.lineId, {
-          status: 'delivered',
-          external_document_ref: delivered.externalDocumentRef ?? null
-        });
-      }
+    for (const delivered of deliveryResult.deliveredLines) {
+      // Delivery/retry transitions may change transport state, but the stored line-level
+      // service-period projection stays immutable so replay, reread, and dashboard inspection
+      // keep the original canonical-vs-fallback provenance for each exported line.
+      await this.repository.updateLine(delivered.lineId, {
+        status: 'delivered',
+        external_document_ref: delivered.externalDocumentRef ?? null
+      });
+    }
 
       const transactionIds = collectTransactionIds(context.lines);
       if (transactionIds.length > 0) {

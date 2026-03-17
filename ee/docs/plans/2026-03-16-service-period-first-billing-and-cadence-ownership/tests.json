@@ -1958,7 +1958,7 @@
   {
     "id": "T226",
     "description": "Export batch replay and retry remain stable after service-period-first cutover",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F197"
     ]

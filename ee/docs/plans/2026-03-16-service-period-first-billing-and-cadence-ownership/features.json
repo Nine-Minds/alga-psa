@@ -1766,7 +1766,7 @@
   {
     "id": "F197",
     "description": "Define export-batch replay, retry, reread, and dashboard-inspection behavior after canonical recurring detail periods become authoritative",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Pass 8"
