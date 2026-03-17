@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "P2-5c: All client-portal violations either fixed via composition or have eslint-disable with justification comment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031", "F032"]
   },
   {

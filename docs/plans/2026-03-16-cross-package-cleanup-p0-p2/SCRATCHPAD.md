@@ -184,6 +184,8 @@ By target package
 - Updated the three client-portal KB callers (`client-kb.ts`, `ClientKBArticleView.tsx`, `ClientKBPage.tsx`) to import the extracted KB types from `@alga-psa/types`; `npm run lint` now reports `0` remaining `client-portal` feature-import warnings and `57` total violations repo-wide.
 - Re-ran the full repo-root `npm run build` after the KB type import swap; build stays green, and the lint baseline remains at `57`, down from the original authoritative `103` count.
 - The P2-6 type extraction series is now fully checkpointed through `F035`-`F039`: candidates identified, KB types moved into `@alga-psa/types`, callers updated, build re-verified, and the feature checklist is complete.
+- T024 remains blocked locally: even after `npx nx reset`, `npx nx graph --file=/tmp/graph.json` still fails with `brace_expansion_1.default is not a function`, so circular-dependency verification cannot be completed via Nx on this machine.
+- T025 verified the client-portal cleanup end-to-end: `npm run lint` now reports `0` remaining `Feature package "client-portal"` violations, which means every prior client-portal edge was either removed via composition/type extraction or intentionally suppressed with a justification comment.
 
 ## Remaining Open Work
 
