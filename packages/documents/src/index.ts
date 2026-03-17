@@ -7,5 +7,6 @@
 
 export * from './components';
 
-// Entity image upload/delete service (avatarUtils now lives in @alga-psa/formatting)
-export * from './lib/entityImageService';
+export { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
+export type { EntityType } from '@alga-psa/storage';
+export { linkExistingDocumentAsEntityImage } from './lib/entityImageService';

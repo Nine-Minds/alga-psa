@@ -1,5 +1,7 @@
 'use server';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal payment actions intentionally orchestrate billing feature operations for customer payments. */
+
 /**
  * Client Portal Payment Actions
  *

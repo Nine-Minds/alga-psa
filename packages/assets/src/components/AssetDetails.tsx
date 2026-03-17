@@ -8,7 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Documents from '@alga-psa/documents/components/Documents';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import {
@@ -54,6 +54,7 @@ interface AssetDetailsProps {
 }
 
 export default function AssetDetails({ asset, maintenanceReport: initialMaintenanceReport }: AssetDetailsProps) {
+  const { renderDocuments } = useDocumentsCrossFeature();
   const updateDetails = useRegisterUIComponent({
     id: 'asset-details',
     type: 'container',
@@ -585,15 +586,15 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
       label: "Documents",
       content: (
         <Card {...withDataAutomationId({ id: 'documents-card' })} className="p-6">
-          <Documents
-            id='documents'
-            documents={[]} // Initial empty array
-            gridColumns={3}
-            userId={asset.tenant}
-            entityId={asset.asset_id}
-            entityType="asset"
-            isLoading={false}
-          />
+          {renderDocuments({
+            id: 'documents',
+            documents: [],
+            gridColumns: 3,
+            userId: asset.tenant,
+            entityId: asset.asset_id,
+            entityType: 'asset',
+            isLoading: false,
+          })}
         </Card>
       )
     }

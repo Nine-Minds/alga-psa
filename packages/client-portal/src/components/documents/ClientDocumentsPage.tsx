@@ -10,7 +10,7 @@ import { Search, ChevronRight, ChevronDown, Download, FileText, Image, File, Vid
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
 import { getClientDocuments, getClientDocumentFolders, downloadClientDocument, ClientDocumentFilters, PaginatedClientDocuments } from '@alga-psa/client-portal/actions/client-portal-actions/client-documents';
-import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 
 function getDocumentIcon(mimeType: string | undefined): React.ReactNode {
   if (!mimeType) return <File className="w-5 h-5" />;
@@ -157,6 +157,7 @@ function DocumentCard({ document, onDownload, isDownloading }: DocumentCardProps
 }
 
 export default function ClientDocumentsPage() {
+  const { downloadDocument, getDocumentDownloadUrl } = useDocumentsCrossFeature();
   const { t } = useTranslation('features/documents');
 
   const [documents, setDocuments] = useState<IDocument[]>([]);
@@ -230,7 +231,7 @@ export default function ClientDocumentsPage() {
       // Verify access before downloading
       await downloadClientDocument(doc.document_id);
       // Use the standard download utility
-      await downloadDocument(getDocumentDownloadUrl(doc.file_id || ''), doc.document_name);
+      await downloadDocument(await getDocumentDownloadUrl(doc.file_id || ''), doc.document_name);
     } catch (error) {
       console.error('Failed to download document:', error);
     } finally {

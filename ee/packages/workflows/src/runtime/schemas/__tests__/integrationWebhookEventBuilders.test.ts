@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { integrationWebhookReceivedEventPayloadSchema } from '@alga-psa/workflows/runtime/schemas/integrationEventSchemas';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers.js';
+import { integrationWebhookReceivedEventPayloadSchema } from '../integrationEventSchemas';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   buildIntegrationWebhookReceivedPayload,
   sanitizeIntegrationWebhookRawPayload,
-} from '../integrationWebhookEventBuilders';
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/integrationWebhookEventBuilders';
 
 describe('integration webhook domain event payload builders', () => {
   it('builds schema-valid INTEGRATION_WEBHOOK_RECEIVED payload when enriched', () => {

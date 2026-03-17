@@ -1,3 +1,5 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- This contract test intentionally verifies client-portal wiring against the canonical ticket origin helper. */
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';

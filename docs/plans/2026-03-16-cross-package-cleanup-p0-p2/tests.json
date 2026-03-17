@@ -1,0 +1,182 @@
+[
+  {
+    "id": "T001",
+    "description": "P0-1: grep -r '@alga-psa/workflows' shared/ --include='*.ts' --include='*.tsx' returns no actual imports (only comments/type declarations)",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T002",
+    "description": "P0-1: npx tsc --noEmit succeeds in ee/packages/workflows/ (moved tests compile)",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "P0-1: npm run build succeeds from repo root",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T004",
+    "description": "P0-1: npx nx graph --file=/tmp/graph.json && node scripts/check-circular-deps.mjs /tmp/graph.json --baseline .github/known-cycles.json shows resolved cycles (or skip if nx graph broken)",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T005",
+    "description": "P0-1: Cycle count in .github/known-cycles.json decreased (was 30, expect ~12 after removing shared->workflows edge)",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T006",
+    "description": "P0-2: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | wc -l produces a number (authoritative count)",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T007",
+    "description": "P0-2: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | sed 's/.*Feature package \"\\([^\"]*\\)\".*/\\1/' | sort | uniq -c | sort -rn produces per-source breakdown",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T008",
+    "description": "P0-2: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | sed 's/.*feature package \"\\([^\"]*\\)\".*/\\1/' | sort | uniq -c | sort -rn produces per-target breakdown",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T009",
+    "description": "P1-3: grep -r 'auth-compat' --include='*.ts' --include='*.tsx' | grep -v node_modules returns 0 results after deletion",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T010",
+    "description": "P1-3: ee/server/src/app/api/extensions/_auth.ts imports getSession from @alga-psa/auth (not auth-compat)",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T011",
+    "description": "P1-3: ee/server/src/app/api/provisioning/tenants/route.ts imports getSession from @alga-psa/auth (not getServerSession from auth-compat)",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T012",
+    "description": "P1-3: server/src/lib/auth-compat.ts does not exist",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T013",
+    "description": "P1-3: npm run build succeeds",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T014",
+    "description": "P1-4: packages/msp-composition/src/index.ts contains 'export * from ./assets'",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T015",
+    "description": "P1-4: packages/msp-composition/src/index.ts contains 'export * from ./billing'",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T016",
+    "description": "P1-4: packages/msp-composition/src/index.ts contains 'export * from ./clients'",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T017",
+    "description": "P1-4: npm run build succeeds after adding re-exports",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T018",
+    "description": "P2-5a: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | grep 'projects.*clients' returns fewer violations than before",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T019",
+    "description": "P2-5a: packages/clients/src/context/ClientCrossFeatureContext.tsx exists with exported context + hook",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T020",
+    "description": "P2-5a: npm run build succeeds after composition layer changes",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T021",
+    "description": "P2-5b: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | grep 'documents' | wc -l shows fewer than 36 documents-target violations",
+    "implemented": true,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T022",
+    "description": "P2-5b: No vertical package imports uploadEntityImage/deleteEntityImage from @alga-psa/documents (moved to horizontal)",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T023",
+    "description": "P2-5b: npm run build succeeds after document violation fixes",
+    "implemented": true,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T024",
+    "description": "P2-5b: npx nx graph --file=/tmp/graph.json && node scripts/check-circular-deps.mjs /tmp/graph.json --baseline .github/known-cycles.json passes (no new cycles)",
+    "implemented": true,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T025",
+    "description": "P2-5c: All client-portal violations either fixed via composition or have eslint-disable with justification comment",
+    "implemented": true,
+    "featureIds": ["F031", "F032"]
+  },
+  {
+    "id": "T026",
+    "description": "P2-5c: npm run build succeeds",
+    "implemented": true,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T027",
+    "description": "P2-6: grep -rn 'import type.*@alga-psa/documents' packages/client-portal/ returns no results for moved types",
+    "implemented": true,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T028",
+    "description": "P2-6: packages/types/src/ contains newly extracted type definitions",
+    "implemented": true,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T029",
+    "description": "P2-6: npm run build succeeds after type extraction",
+    "implemented": true,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T030",
+    "description": "P2-6: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | wc -l shows fewer violations than P0-2 baseline",
+    "implemented": true,
+    "featureIds": ["F038"]
+  }
+]

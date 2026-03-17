@@ -98,6 +98,12 @@ import { buildWorkflowReferenceFieldOptions } from './workflowReferenceOptions';
 import { shouldRenderWorkflowAiSchemaSection } from './workflowAiStepUtils';
 import { applyWorkflowActionPresentationHintsToList } from './workflowActionPresentation';
 import {
+  buildWorkflowTriggerEventCategoryOptions,
+  buildWorkflowTriggerEventOptions,
+  getWorkflowTriggerEventCategoryKey,
+  WORKFLOW_TRIGGER_EVENT_CATEGORY_KEY_UNKNOWN,
+} from './workflowTriggerEventOptions';
+import {
   DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH,
   getWorkflowDesignerSidebarWidthFromDrag,
 } from './workflowDesignerSidebarSizing';
@@ -117,6 +123,7 @@ import type {
   InputMapping
 } from '@alga-psa/workflows/runtime/client';
 import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@alga-psa/workflows/authoring';
+import { EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from '@alga-psa/shared/workflow/runtime/schemas/emptyWorkflowPayloadSchema';
 import {
   isWorkflowAiInferAction,
   isWorkflowComposeTextAction,
@@ -275,8 +282,6 @@ const LEGACY_WORKFLOW_NODE_IDS = new Set<string>([
   'email.renderCommentBlocks'
 ]);
 
-const DEFAULT_PAYLOAD_SCHEMA = 'payload.EmailWorkflowPayload.v1';
-
 const isTimeTrigger = (trigger?: WorkflowTrigger | null): boolean =>
   trigger?.type === 'schedule' || trigger?.type === 'recurring';
 
@@ -317,7 +322,7 @@ const createDefaultDefinition = (): WorkflowDefinition => ({
   version: 1,
   name: 'New Workflow',
   description: '',
-  payloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA,
+  payloadSchemaRef: EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
   steps: []
 });
 
@@ -1187,6 +1192,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const [payloadSchemaModeDraft, setPayloadSchemaModeDraft] = useState<'inferred' | 'pinned'>('pinned');
   const [pinnedPayloadSchemaRefDraft, setPinnedPayloadSchemaRefDraft] = useState<string>('');
   const [triggerTypeSelection, setTriggerTypeSelection] = useState<TriggerTypeSelection>('manual');
+  const [selectedTriggerEventCategory, setSelectedTriggerEventCategory] = useState<string>('');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
   const [designerSidebarWidth, setDesignerSidebarWidth] = useState(DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH);
@@ -1439,14 +1445,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       version: 1,
       name: 'New Workflow',
       description: '',
-      payloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA,
+      payloadSchemaRef: EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
       steps: []
     };
 
     return (
       !areStructurallyEqual(activeDefinition, pristineUnsavedDraft) ||
-      payloadSchemaModeDraft !== 'inferred' ||
-      pinnedPayloadSchemaRefDraft !== DEFAULT_PAYLOAD_SCHEMA
+      payloadSchemaModeDraft !== 'pinned' ||
+      pinnedPayloadSchemaRefDraft !== EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF
     );
   }, [
     activeDefinition,
@@ -1783,7 +1789,20 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setTriggerTypeSelection(nextType);
 
     if (nextType === 'manual') {
-      setActiveDefinition((current) => (current ? { ...current, trigger: undefined } : current));
+      setSelectedTriggerEventCategory('');
+      setPayloadSchemaModeDraft('pinned');
+      setSchemaInferenceEnabled(false);
+      setPinnedPayloadSchemaRefDraft(EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF);
+      setSchemaRefAdvanced(false);
+      setActiveDefinition((current) => (
+        current
+          ? {
+              ...current,
+              trigger: undefined,
+              payloadSchemaRef: EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
+            }
+          : current
+      ));
       return;
     }
 
@@ -2255,6 +2274,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setActiveDefinition(normalizedDefinition);
     setActiveWorkflowId(record.workflow_id);
     setTriggerTypeSelection(normalizedDefinition.trigger?.type === 'event' ? 'event' : 'manual');
+    setSelectedTriggerEventCategory('');
     
     // Always reset these when selecting a workflow
     setPublishErrors([]);
@@ -2298,9 +2318,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const draft = createDefaultDefinition();
     setActiveDefinition(draft);
     setActiveWorkflowId(null);
-    setPayloadSchemaModeDraft('inferred');
+    setPayloadSchemaModeDraft('pinned');
     setTriggerTypeSelection('manual');
-    setSchemaInferenceEnabled(true);
+    setSelectedTriggerEventCategory('');
+    setSchemaInferenceEnabled(false);
     setContractSettingsExpanded(false);
     setSchemaRefAdvanced(false);
     setPinnedPayloadSchemaRefDraft(draft.payloadSchemaRef ?? '');
@@ -2309,6 +2330,25 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setPublishErrors([]);
     setPublishWarnings([]);
   }, []);
+
+  useEffect(() => {
+    if (currentTriggerSelection !== 'event') {
+      setSelectedTriggerEventCategory('');
+      return;
+    }
+
+    const selectedEventName = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : '';
+    if (!selectedEventName) {
+      return;
+    }
+
+    const selectedOption = eventCatalogOptions.find((entry) => entry.event_type === selectedEventName) ?? null;
+    setSelectedTriggerEventCategory(
+      selectedOption
+        ? getWorkflowTriggerEventCategoryKey(selectedOption.category)
+        : WORKFLOW_TRIGGER_EVENT_CATEGORY_KEY_UNKNOWN
+    );
+  }, [activeDefinition?.trigger, currentTriggerSelection, eventCatalogOptions]);
 
   useEffect(() => {
     if (mode !== 'editor-designer') {
@@ -3318,31 +3358,22 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     const selectedOption = selectedEventName
                       ? eventCatalogOptions.find((e) => e.event_type === selectedEventName) ?? null
                       : null;
-                    const schemaBadgeClass = (status: WorkflowEventCatalogOptionV2['payload_schema_ref_status']) => {
-                      if (status === 'missing') return 'bg-gray-500/15 text-gray-600 border-gray-500/30';
-                      if (status === 'unknown') return 'bg-destructive/15 text-destructive border-destructive/30';
-                      return 'bg-sky-500/15 text-sky-600 border-sky-500/30';
-                    };
-                    const schemaBadgeLabel = (status: WorkflowEventCatalogOptionV2['payload_schema_ref_status']) => {
-                      if (status === 'missing') return 'No schema';
-                      if (status === 'unknown') return 'Unknown schema';
-                      return 'Schema';
-                    };
                     const showTriggerSchemaDetails = contractSettingsExpanded;
                     const triggerTypeOptions: Array<{ value: TriggerTypeSelection; label: string }> = [
                       { value: 'manual', label: 'No trigger' },
                       { value: 'event', label: 'Event' }
                     ];
-                    const eventOptions: Array<{ value: string; label: string }> = eventCatalogOptions.map((e) => ({
-                      value: e.event_type,
-                      label: e.category ? `${e.name} · ${e.category} (${e.event_type})` : `${e.name} (${e.event_type})`
-                    }));
-
-                    if (selectedEventName && !selectedOption) {
-                      eventOptions.unshift({ value: selectedEventName, label: `Unknown event (${selectedEventName})` });
-                    }
-
                     const showEventConfiguration = currentTriggerSelection === 'event';
+                    const eventCategoryOptions = buildWorkflowTriggerEventCategoryOptions(eventCatalogOptions, selectedEventName);
+                    const eventOptions = buildWorkflowTriggerEventOptions(
+                      eventCatalogOptions,
+                      selectedTriggerEventCategory,
+                      selectedEventName
+                    );
+                    const eventPickerDisabled =
+                      !canManage ||
+                      eventCatalogStatus === 'loading' ||
+                      (!selectedTriggerEventCategory && !(selectedEventName && !selectedOption));
 
                     return (
                       <div className="space-y-3">
@@ -3374,41 +3405,82 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                             {showEventConfiguration && (
                               <div className="space-y-2">
-                                <label htmlFor="workflow-designer-trigger-event" className="block text-sm font-medium text-gray-700 mb-1">
-                                  Event trigger
-                                </label>
-                                {eventCatalogStatus === 'loading' ? (
-                                  <Skeleton className="h-10 w-full" />
-                                ) : (
-                                  <SearchableSelect
-                                    id="workflow-designer-trigger-event"
-                                    value={selectedEventName}
-                                    onChange={(value) => {
-                                      const next = value.trim();
-                                      if (!next) {
-                                        setTriggerTypeSelection('manual');
+                                <div>
+                                  <label htmlFor="workflow-designer-trigger-event-category" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Event category
+                                  </label>
+                                  {eventCatalogStatus === 'loading' ? (
+                                    <Skeleton className="h-10 w-full" />
+                                  ) : (
+                                    <CustomSelect
+                                      id="workflow-designer-trigger-event-category"
+                                      value={selectedTriggerEventCategory}
+                                      onValueChange={(value) => {
+                                        const nextCategory = value.trim();
+                                        setSelectedTriggerEventCategory(nextCategory);
+
+                                        if (!selectedEventName) {
+                                          return;
+                                        }
+
+                                        const currentCategory = selectedOption
+                                          ? getWorkflowTriggerEventCategoryKey(selectedOption.category)
+                                          : WORKFLOW_TRIGGER_EVENT_CATEGORY_KEY_UNKNOWN;
+
+                                        if (nextCategory && currentCategory === nextCategory) {
+                                          return;
+                                        }
+
                                         handleDefinitionChange({ trigger: undefined });
-                                        return;
-                                      }
-                                      const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
-                                      if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
-                                        toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
-                                        return;
-                                      }
-                                      setTriggerTypeSelection('event');
-                                      const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
-                                      handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
-                                    }}
-                                    placeholder="Select trigger event"
-                                    dropdownMode="overlay"
-                                    options={eventOptions}
-                                    disabled={!canManage}
-                                  />
-                                )}
+                                      }}
+                                      options={eventCategoryOptions}
+                                      placeholder="Select event category"
+                                      disabled={!canManage}
+                                    />
+                                  )}
+                                </div>
+
+                                <div>
+                                  <label htmlFor="workflow-designer-trigger-event" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Event
+                                  </label>
+                                  {eventCatalogStatus === 'loading' ? (
+                                    <Skeleton className="h-10 w-full" />
+                                  ) : (
+                                    <SearchableSelect
+                                      id="workflow-designer-trigger-event"
+                                      value={selectedEventName}
+                                      onChange={(value) => {
+                                        const next = value.trim();
+                                        if (!next) {
+                                          handleDefinitionChange({ trigger: undefined });
+                                          return;
+                                        }
+                                        const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
+                                        if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
+                                          toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
+                                          return;
+                                        }
+                                        setTriggerTypeSelection('event');
+                                        if (chosen) {
+                                          setSelectedTriggerEventCategory(getWorkflowTriggerEventCategoryKey(chosen.category));
+                                        }
+                                        const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
+                                        handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
+                                      }}
+                                      placeholder={selectedTriggerEventCategory ? 'Select event' : 'Select category first'}
+                                      dropdownMode="overlay"
+                                      options={eventOptions}
+                                      disabled={eventPickerDisabled}
+                                    />
+                                  )}
+                                </div>
 
                                 {!selectedEventName && eventCatalogStatus !== 'loading' && (
                                   <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                                    Select an event to finish configuring this trigger.
+                                    {selectedTriggerEventCategory
+                                      ? 'Select an event to finish configuring this trigger.'
+                                      : 'Select a category, then choose an event to finish configuring this trigger.'}
                                   </div>
                                 )}
 
@@ -3689,7 +3761,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                             </>
                           ) : (
                             <>
-                              Choose a trigger to define available data. Manual workflows need a locked schema before publishing or running.
+                              No trigger uses <span className="font-mono">{EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF}</span> by default. Change it in Advanced schema settings if this workflow needs a different manual contract.
                             </>
                           )}
                         </div>

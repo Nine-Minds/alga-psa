@@ -1,1 +1,1 @@
-export * from '@alga-psa/shared/workflow/streams/workflowEventPublishHelpers.js';
+export * from '@alga-psa/shared/workflow/streams/workflowEventPublishHelpers';

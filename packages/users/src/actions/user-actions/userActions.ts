@@ -11,7 +11,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import { hashPassword } from '@alga-psa/core/encryption';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/lib/permissions';
 import { getUserRoles } from '@alga-psa/user-composition/actions';
 import logger from '@alga-psa/core/logger';
@@ -22,6 +22,22 @@ interface ActionResult {
   message?: string;
   error?: string;
 }
+
+type AddUserResult =
+  | { success: true; user: IUser }
+  | { success: false; error: string };
+
+const ADD_USER_VALIDATION_ERRORS = new Set([
+  'Role is required',
+  'Invalid role',
+  'Cannot assign MSP role to client portal user',
+  'Cannot assign client portal role to MSP user',
+  'A user with this email address already exists',
+  "You've reached your MSP user licence limit.",
+]);
+
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : '';
 
 /**
  * Check if an email exists globally across all tenants
@@ -66,7 +82,7 @@ export const addUser = withAuth(async (
     contactId?: string;
     reportsTo?: string;
   }
-): Promise<IUser> => {
+): Promise<AddUserResult> => {
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -76,7 +92,7 @@ export const addUser = withAuth(async (
       }
 
       if (!userData.roleId) {
-        throw new Error("Role is required");
+        return { success: false, error: 'Role is required' };
       }
 
       // Validate that the role exists
@@ -85,22 +101,22 @@ export const addUser = withAuth(async (
         .first();
 
       if (!role) {
-        throw new Error("Invalid role");
+        return { success: false, error: 'Invalid role' };
       }
 
       // Validate role matches user type
       const isClientUser = userData.userType === 'client';
       if (isClientUser && !role.client) {
-        throw new Error("Cannot assign MSP role to client portal user");
+        return { success: false, error: 'Cannot assign MSP role to client portal user' };
       }
       if (!isClientUser && !role.msp) {
-        throw new Error("Cannot assign client portal role to MSP user");
+        return { success: false, error: 'Cannot assign client portal role to MSP user' };
       }
 
       // Check if email already exists globally
       const emailExists = await checkEmailExistsGlobally(userData.email);
       if (emailExists) {
-        throw new Error("A user with this email address already exists");
+        return { success: false, error: 'A user with this email address already exists' };
       }
 
       // Check license limits for  MSP (internal) users
@@ -125,7 +141,7 @@ export const addUser = withAuth(async (
         const limit = tenantRow.licensed_user_count as number | null;
 
         if (limit !== null && used >= limit) {
-          throw new Error("You've reached your MSP user licence limit.");
+          return { success: false, error: "You've reached your MSP user licence limit." };
         }
 
       }
@@ -159,20 +175,15 @@ export const addUser = withAuth(async (
       });
 
       revalidatePath('/settings');
-      return newUser;
+      return { success: true, user: newUser };
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error adding user:', error);
-    // Pass through the specific error message if it's about duplicate email
-    if (error.message === "A user with this email address already exists") {
-      throw error;
+    const message = getErrorMessage(error);
+    if (ADD_USER_VALIDATION_ERRORS.has(message)) {
+      return { success: false, error: message };
     }
-    // Pass through permission denied errors
-    if (error.message === "Permission denied: Cannot create user") {
-      throw error;
-    }
-    // Pass through license limit errors
-    if (error.message === "You've reached your internal user licence limit.") {
+    if (message === 'Permission denied: Cannot create user') {
       throw error;
     }
     throw new Error('Failed to add user');
