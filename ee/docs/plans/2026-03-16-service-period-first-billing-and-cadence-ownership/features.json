@@ -758,7 +758,7 @@
   {
     "id": "F127",
     "description": "Update accounting export repositories and mapping schemas to consume canonical service-period metadata directly rather than legacy recurring timing assumptions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

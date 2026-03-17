@@ -5,6 +5,7 @@ import {
   AccountingExportError,
   AccountingExportErrorResolutionState,
   AccountingExportLine,
+  AccountingExportLinePayload,
   AccountingExportLineStatus,
   AccountingExportStatus
 } from '@alga-psa/types';
@@ -40,7 +41,7 @@ export interface CreateExportLineInput {
   service_period_start?: Nullable<string>;
   service_period_end?: Nullable<string>;
   mapping_resolution?: Record<string, unknown> | null;
-  payload?: Record<string, unknown> | null;
+  payload?: AccountingExportLinePayload | null;
   status?: AccountingExportLineStatus;
   external_document_ref?: Nullable<string>;
   notes?: Nullable<string>;

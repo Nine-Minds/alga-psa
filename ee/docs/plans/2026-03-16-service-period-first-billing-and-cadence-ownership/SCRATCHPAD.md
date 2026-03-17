@@ -416,6 +416,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/types/src/lib/invoice-renderer/types.ts` and `packages/billing/src/lib/adapters/invoiceAdapters.ts` now carry additive `recurringDetailPeriods` on rendered invoice items, deriving compatibility summary fields from those details only when needed so dashboard preview, client portal preview, PDF generation, and designer preview all keep the canonical detail structure available
   - `packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx` and `packages/billing/src/lib/adapters/invoiceAdapters.test.ts` now lock that projection contract explicitly, including the case where a recurring parent line has more than one canonical detail period
   - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now renders multiple recurring detail periods as an explicit list when present instead of always flattening back to one service-period badge, which keeps client-facing invoice reads aligned with the canonical detail hydration added in `F125`
+- (2026-03-17) Accounting export persistence now carries canonical recurring detail periods directly instead of reducing every export line to one legacy summary window, which closes `F127`:
+  - `packages/types/src/interfaces/accountingExport.interfaces.ts`, `packages/billing/src/repositories/accountingExportRepository.ts`, and `packages/billing/src/actions/accountingExportActions.ts` now expose additive `recurring_detail_periods` metadata on export preview lines and persisted `AccountingExportLine.payload`, giving repository and controller code one typed place to carry canonical recurring export detail without changing the existing summary `service_period_start` / `service_period_end` columns
+  - `packages/billing/src/services/accountingExportInvoiceSelector.ts` now selects `invoice_charge_details.billing_timing` alongside canonical start/end dates, emits sorted `recurringDetailPeriods` on preview rows, and persists those exact periods into export-line payloads during batch creation
+  - `server/src/lib/api/controllers/ApiCSVAccountingController.ts` now forwards the same canonical recurring detail payload when CSV export creates batch lines through the shared export service, keeping manual CSV-triggered batches on the same detail-aware contract as the dashboard export flow
+  - `server/src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts` now proves both seams: preview selection exposes canonical recurring detail periods, and `createBatchFromFilters(...)` persists them into the export-line payload that downstream adapters and rereads consume
 - (2026-03-17) Comparison-mode rollout control now closes `F113` and `T154` without changing live invoice persistence:
   - `packages/billing/src/actions/invoiceGeneration.ts` now treats `RECURRING_BILLING_COMPARISON_MODE=legacy-vs-canonical` as an additive action-layer gate on `calculateBillingForInvoiceWindow(...)`
   - when enabled, the action runs the canonical preselected recurring path first, then executes one legacy-style billing calculation without `recurringTimingSelections` and logs a structured drift warning if the comparison snapshot differs
@@ -654,6 +659,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Accounting export canonical-detail payload validation:
+  - `npx vitest run src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked by the unrelated pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not by the accounting-export payload changes
 - (2026-03-17) Client billing schedule cadence-owner copy validation:
   - `npx vitest run src/test/unit/billing/ClientBillingSchedule.ui.test.tsx ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest picks up the existing workspace alias config for both server and package tests

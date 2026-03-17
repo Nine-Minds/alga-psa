@@ -30,6 +30,11 @@ export interface InvoicePreviewLine {
   currencyCode: string;
   servicePeriodStart?: string | null;
   servicePeriodEnd?: string | null;
+  recurringDetailPeriods?: Array<{
+    service_period_start?: string | null;
+    service_period_end?: string | null;
+    billing_timing?: 'arrears' | 'advance' | null;
+  }>;
   isManualInvoice: boolean;
   isManualCharge: boolean;
   isMultiPeriod: boolean;
@@ -56,6 +61,7 @@ type InvoicePreviewSelectionRow = {
   charge_is_manual?: boolean | null;
   detail_service_period_start?: string | Date | null;
   detail_service_period_end?: string | Date | null;
+  detail_billing_timing?: 'arrears' | 'advance' | null;
 };
 
 interface CreateBatchOptions {
@@ -119,7 +125,8 @@ export class AccountingExportInvoiceSelector {
         'ch.total_price',
         'ch.is_manual as charge_is_manual',
         'iid.service_period_start as detail_service_period_start',
-        'iid.service_period_end as detail_service_period_end'
+        'iid.service_period_end as detail_service_period_end',
+        'iid.billing_timing as detail_billing_timing'
       ])
       .where('inv.tenant', this.tenantId)
       .andWhere('ch.tenant', this.tenantId);
@@ -206,21 +213,47 @@ export class AccountingExportInvoiceSelector {
         .map(toIsoString)
         .filter((value): value is string => value !== null)
         .sort();
-      const hasCanonicalDetailPeriods = detailServicePeriodStarts.length > 0 || detailServicePeriodEnds.length > 0;
+      const recurringDetailPeriodsByKey = new Map<
+        string,
+        {
+          service_period_start: string | null;
+          service_period_end: string | null;
+          billing_timing: 'arrears' | 'advance' | null;
+        }
+      >();
+      for (const detailRow of chargeRows) {
+        const start = toIsoString(detailRow.detail_service_period_start);
+        const end = toIsoString(detailRow.detail_service_period_end);
+        const billingTiming =
+          detailRow.detail_billing_timing === 'advance' || detailRow.detail_billing_timing === 'arrears'
+            ? detailRow.detail_billing_timing
+            : null;
+        if (!start && !end) {
+          continue;
+        }
+        recurringDetailPeriodsByKey.set(`${start ?? ''}|${end ?? ''}|${billingTiming ?? ''}`, {
+          service_period_start: start,
+          service_period_end: end,
+          billing_timing: billingTiming,
+        });
+      }
+      const recurringDetailPeriods = Array.from(recurringDetailPeriodsByKey.values()).sort((left, right) => {
+        if (left.service_period_start !== right.service_period_start) {
+          return String(left.service_period_start ?? '').localeCompare(String(right.service_period_start ?? ''));
+        }
+        return String(left.service_period_end ?? '').localeCompare(String(right.service_period_end ?? ''));
+      });
+      const hasCanonicalDetailPeriods = recurringDetailPeriods.length > 0;
       const servicePeriodStart = hasCanonicalDetailPeriods
-        ? detailServicePeriodStarts[0] ?? null
+        ? recurringDetailPeriods[0]?.service_period_start ?? detailServicePeriodStarts[0] ?? null
         : toIsoString(row.billing_period_start);
       const servicePeriodEnd = hasCanonicalDetailPeriods
-        ? detailServicePeriodEnds[detailServicePeriodEnds.length - 1] ?? null
+        ? recurringDetailPeriods[recurringDetailPeriods.length - 1]?.service_period_end ??
+          detailServicePeriodEnds[detailServicePeriodEnds.length - 1] ??
+          null
         : toIsoString(row.billing_period_end);
       const distinctDetailPeriods = new Set(
-        chargeRows
-          .map((detailRow) => {
-            const start = toIsoString(detailRow.detail_service_period_start);
-            const end = toIsoString(detailRow.detail_service_period_end);
-            return start || end ? `${start ?? ''}|${end ?? ''}` : null;
-          })
-          .filter((value): value is string => value !== null)
+        recurringDetailPeriods.map((period) => `${period.service_period_start ?? ''}|${period.service_period_end ?? ''}`)
       );
       const isMultiPeriod =
         distinctDetailPeriods.size > 1 ||
@@ -238,6 +271,7 @@ export class AccountingExportInvoiceSelector {
         currencyCode: row.currency_code ?? 'USD',
         servicePeriodStart,
         servicePeriodEnd,
+        recurringDetailPeriods: recurringDetailPeriods.length > 0 ? recurringDetailPeriods : undefined,
         isManualInvoice: Boolean(row.invoice_is_manual),
         isManualCharge: Boolean(row.charge_is_manual),
         isMultiPeriod,
@@ -287,6 +321,7 @@ export class AccountingExportInvoiceSelector {
         invoice_number: line.invoiceNumber,
         invoice_status: line.invoiceStatus,
         client_name: line.clientName,
+        recurring_detail_periods: line.recurringDetailPeriods ?? null,
         metadata: {
           manual_invoice: line.isManualInvoice,
           manual_charge: line.isManualCharge,

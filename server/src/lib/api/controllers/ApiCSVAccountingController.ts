@@ -167,6 +167,9 @@ export class ApiCSVAccountingController extends ApiBaseController {
               currency_code: line.currencyCode || 'USD',
               service_period_start: line.servicePeriodStart ?? null,
               service_period_end: line.servicePeriodEnd ?? null,
+              payload: {
+                recurring_detail_periods: line.recurringDetailPeriods ?? null
+              },
               status: 'pending'
             }))
           });
