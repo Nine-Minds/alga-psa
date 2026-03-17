@@ -6,6 +6,7 @@ import { Knex } from 'knex';
 import type { IClientContractLine } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
+import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { withAuth } from '@alga-psa/auth';
 
@@ -62,6 +63,21 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
 
   // If no invoices found or no usable dates, return null
   return null;
+}
+
+async function getExistingCadenceOwner(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientContractLineId: string,
+): Promise<IClientContractLine['cadence_owner']> {
+  const existingLine = await trx('contract_lines')
+    .where({
+      contract_line_id: clientContractLineId,
+      tenant,
+    })
+    .first('cadence_owner');
+
+  return resolveCadenceOwner(existingLine?.cadence_owner);
 }
 
 
@@ -128,6 +144,8 @@ export const updateClientContractLine = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const cadenceOwner = updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, clientContractLineId);
+
       // Filter updates to include only columns that exist on contract_lines
       const {
         client_contract_line_id,
@@ -140,6 +158,8 @@ export const updateClientContractLine = withAuth(async (
         service_category_name,
         ...validUpdates
       } = updates as any;
+
+      validUpdates.cadence_owner = cadenceOwner;
 
       return await trx('contract_lines')
         .where({
@@ -359,6 +379,9 @@ export const editClientContractLine = withAuth(async (
     // --- Validation End ---
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      updateData.cadence_owner =
+        updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, clientContractLineId);
+
       // Filter updates to include only columns that exist on contract_lines
       const {
         client_contract_line_id,

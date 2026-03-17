@@ -255,6 +255,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/lib/api/schemas/contractLineSchemas.ts` and `server/src/lib/api/schemas/financialSchemas.ts` now reject authoring payloads that set `cadence_owner: 'contract'`, while still allowing stored/read-model response payloads to expose `cadence_owner: 'contract'`
   - `server/src/lib/api/services/ContractLineService.ts` now enforces the same staged-rollout guard on create/update paths, so API callers cannot bypass schema validation and persist contract cadence early
   - this keeps the persistence/model plumbing from `F081-F087` intact for later rollout phases while making the current rollout posture explicit: client cadence is the only supported live write path until contract-cadence execution exists
+- (2026-03-17) Legacy cadence-owner compatibility is now explicit across package, client-action, and server-service read/write seams, which closes `F089`:
+  - `packages/billing/src/repositories/contractLineRepository.ts` now defaults missing live-line `cadence_owner` reads to `'client'`, persists `'client'` when cloning template lines into live contract lines, and backfills `'client'` on touched legacy updates instead of leaving `contract_lines.cadence_owner` unset
+  - `packages/billing/src/actions/contractLineMappingActions.ts` and `packages/billing/src/models/contractLineMapping.ts` now normalize legacy mapping payloads so template and live contract-line association flows return `cadence_owner: 'client'` when older rows do not yet carry the column, and touched live association writes preserve/backfill that default
+  - `server/src/lib/api/services/ContractLineService.ts` now normalizes `list`, `listWithOptions`, `getById`, and `setPlanActivation` responses through one cadence-owner compatibility helper and persists `'client'` on touched legacy update paths when callers omit cadence owner
+  - `packages/clients/src/actions/clientContractLineActions.ts` now preserves the existing cadence owner when editing client contract lines and backfills `'client'` when legacy rows are edited without an explicit cadence owner, instead of letting writes keep the column null
 - (2026-03-17) Credit-reader invoice context now stays on canonical recurring detail metadata, which closes `F078` without pretending the blocked DB integration is done:
   - `packages/billing/src/actions/creditActions.ts` now loads source invoices through `Invoice.getById(...)` for both `getCreditDetails(...)` and the invoice-summary enrichment inside `listClientCredits(...)`, instead of rereading raw `invoices` rows that dropped recurring `invoice_charge_details`
   - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
@@ -393,6 +398,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/billing/billingTestHelpers.recurringFixtures.test.ts --coverage.enabled false`
 - (2026-03-17) Cadence-owner rollout validation:
   - `npx vitest run src/test/unit/api/contractLineCadenceOwner.schema.test.ts src/test/unit/api/contractLineService.cadenceOwner.test.ts src/test/unit/api/contractCreateOwnerClientSchema.test.ts --coverage.enabled false`
+- (2026-03-17) Cadence-owner compatibility validation:
+  - `npx vitest run src/test/unit/api/contractLineService.cadenceOwner.test.ts src/test/unit/api/contractLineService.cadenceOwnerCompatibility.wiring.test.ts --coverage.enabled false`
+  - `npx vitest run ../packages/billing/tests/contractLineCadenceOwnerCompatibility.repository.test.ts ../packages/billing/tests/contractLineCadenceOwnerCompatibility.wiring.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json && npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
 - (2026-03-17) Credit-reader canonical invoice-context validation:
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`

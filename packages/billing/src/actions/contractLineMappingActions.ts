@@ -7,6 +7,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
+import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -16,6 +17,22 @@ async function isTemplateContract(knex: Knex, tenant: string, contractId: string
     .where({ tenant, template_id: contractId })
     .first();
   return Boolean(record);
+}
+
+function normalizeContractLineMapping<T extends Partial<IContractLineMapping>>(line: T): T & Pick<IContractLineMapping, 'cadence_owner'> {
+  return {
+    ...line,
+    cadence_owner: resolveCadenceOwner(line.cadence_owner),
+  };
+}
+
+function normalizeDetailedContractLine<T extends { cadence_owner?: IContractLineMapping['cadence_owner'] | null }>(
+  line: T,
+): T & Pick<IContractLineMapping, 'cadence_owner'> {
+  return {
+    ...line,
+    cadence_owner: resolveCadenceOwner(line.cadence_owner),
+  };
 }
 
 export async function ensureTemplateLineSnapshot(
@@ -301,10 +318,11 @@ export const getContractLineMappings = withAuth(async (user, { tenant }, contrac
             created_at: 'created_at',
           });
 
-        return rows as unknown as IContractLineMapping[];
+        return rows.map((row) => normalizeContractLineMapping(row as IContractLineMapping));
       }
 
-      return await ContractLineMapping.getByContractId(contractId);
+      const rows = await ContractLineMapping.getByContractId(contractId);
+      return rows.map((row) => normalizeContractLineMapping(row));
     });
   } catch (error) {
     console.error(`Error fetching contract line mappings for contract ${contractId}:`, error);
@@ -357,10 +375,11 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
           ])
           .orderBy('lines.display_order', 'asc');
 
-        return rows;
+        return rows.map((row) => normalizeDetailedContractLine(row));
       }
 
-      return await ContractLineMapping.getDetailedContractLines(contractId);
+      const rows = await ContractLineMapping.getDetailedContractLines(contractId);
+      return rows.map((row) => normalizeDetailedContractLine(row));
     });
   } catch (error) {
     console.error(`Error fetching detailed contract line mappings for contract ${contractId}:`, error);
@@ -436,10 +455,13 @@ export const addContractLine = withAuth(async (
           display_order: row.display_order,
           custom_rate: row.custom_rate,
           created_at: row.created_at,
+          cadence_owner: 'client',
         };
       }
 
-      return await ContractLineMapping.addContractLine(contractId, contractLineId, customRate);
+      return normalizeContractLineMapping(
+        await ContractLineMapping.addContractLine(contractId, contractLineId, customRate),
+      );
     });
   } catch (error) {
     console.error(`Error adding contract line ${contractLineId} to contract ${contractId}:`, error);
@@ -550,10 +572,13 @@ export const updateContractLineAssociation = withAuth(async (
           display_order: row.display_order,
           custom_rate: row.custom_rate,
           created_at: row.created_at,
+          cadence_owner: 'client',
         };
       }
 
-      return await ContractLineMapping.updateContractLineAssociation(contractId, contractLineId, dbUpdateData);
+      return normalizeContractLineMapping(
+        await ContractLineMapping.updateContractLineAssociation(contractId, contractLineId, dbUpdateData),
+      );
     });
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);

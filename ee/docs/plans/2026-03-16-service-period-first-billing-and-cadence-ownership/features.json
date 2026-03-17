@@ -530,7 +530,7 @@
   {
     "id": "F089",
     "description": "Add compatibility readers and writers so existing records lacking cadence_owner continue to behave as client cadence until migrated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Risks"]
   },
   {

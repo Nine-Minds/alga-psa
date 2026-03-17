@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { IContractLine, IContractLineMapping } from '@alga-psa/types';
+import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 
 export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
@@ -30,6 +31,7 @@ function mapContractLineRow(row: any): IContractLineMapping {
     display_order: row.display_order ?? 0,
     custom_rate: row.custom_rate ?? null,
     billing_timing: row.billing_timing ?? 'arrears',
+    cadence_owner: resolveCadenceOwner(row.cadence_owner),
     created_at: row.created_at,
   };
 }
@@ -67,6 +69,7 @@ export async function fetchContractLineMappings(
       'display_order',
       'custom_rate',
       'billing_timing',
+      'cadence_owner',
       'created_at',
     ]);
   return rows.map(mapContractLineRow);
@@ -139,6 +142,7 @@ export async function fetchDetailedContractLines(
       'cl.display_order',
       'cl.custom_rate',
       'cl.billing_timing',
+      'cl.cadence_owner',
       'cl.created_at',
       'cl.contract_line_name',
       'cl.contract_line_type',
@@ -303,6 +307,7 @@ async function cloneTemplateLineToContract(
     custom_rate: effectiveRate,
     display_order: templateLine.display_order ?? 0,
     billing_timing: templateTerms?.billing_timing ?? templateLine.billing_timing ?? 'arrears',
+    cadence_owner: 'client',
     enable_proration: templateFixedConfig?.enable_proration ?? false,
     billing_cycle_alignment: templateFixedConfig?.billing_cycle_alignment ?? 'start',
   });
@@ -438,6 +443,7 @@ export async function addContractLine(
         'display_order',
         'custom_rate',
         'billing_timing',
+        'cadence_owner',
         'created_at',
       ]);
 
@@ -455,6 +461,7 @@ export async function addContractLine(
       'display_order',
       'custom_rate',
       'billing_timing',
+      'cadence_owner',
       'created_at',
     ]);
 
@@ -519,12 +526,17 @@ export async function updateContractLine(
     return mapContractLineRow(row);
   }
 
+  const existingLine = await knex('contract_lines')
+    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+    .first(['cadence_owner']);
+
   await knex('contract_lines')
     .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
     .update({
       custom_rate: payload.custom_rate ?? null,
       display_order: payload.display_order ?? undefined,
       billing_timing: payload.billing_timing ?? undefined,
+      cadence_owner: resolveCadenceOwner(payload.cadence_owner ?? existingLine?.cadence_owner),
       updated_at: knex.fn.now(),
     });
 
@@ -537,6 +549,7 @@ export async function updateContractLine(
       'display_order',
       'custom_rate',
       'billing_timing',
+      'cadence_owner',
       'created_at',
     ]);
   return mapContractLineRow(row);
@@ -547,7 +560,17 @@ export async function fetchContractLineById(
   tenant: string,
   contractLineId: string
 ): Promise<IContractLine | undefined> {
-  return knex('contract_lines').where({ tenant, contract_line_id: contractLineId }).first();
+  const row = await knex('contract_lines').where({ tenant, contract_line_id: contractLineId }).first();
+
+  if (!row) {
+    return undefined;
+  }
+
+  return {
+    ...row,
+    billing_timing: row.billing_timing ?? 'arrears',
+    cadence_owner: resolveCadenceOwner(row.cadence_owner),
+  };
 }
 
 export async function updateContractLineRate(

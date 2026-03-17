@@ -116,7 +116,7 @@
   {"id":"T105","description":"Server API schemas accept cadence_owner and reject unsupported values or combinations","implemented":true,"featureIds":["F085","F088"]},
   {"id":"T106","description":"Action-layer writes for recurring lines, presets, templates, and wizards persist cadence_owner correctly","implemented":true,"featureIds":["F086"]},
   {"id":"T107","description":"Fixture builders and test helpers create valid client-cadence and contract-cadence recurring scenarios with stable defaults","implemented":true,"featureIds":["F087","F134"]},
-  {"id":"T108","description":"Compatibility readers preserve client-cadence behavior when cadence_owner is absent on legacy records","implemented":false,"featureIds":["F089"]},
+  {"id":"T108","description":"Compatibility readers preserve client-cadence behavior when cadence_owner is absent on legacy records","implemented":true,"featureIds":["F089"]},
   {"id":"T109","description":"billing_cycle_alignment remains readable for staged rollout while no longer being required for new writes","implemented":false,"featureIds":["F090","F137"]},
   {"id":"T110","description":"Schema and defaulting migrations do not mutate existing invoice outputs for untouched tenants","implemented":false,"featureIds":["F082","F114","F135"]},
 

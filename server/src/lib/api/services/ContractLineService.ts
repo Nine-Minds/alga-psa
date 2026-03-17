@@ -23,6 +23,7 @@ import {
   removeContractLine as repositoryRemoveContractLine,
 } from 'server/src/lib/repositories/contractLineRepository';
 import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
+import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
 
 // Import schema types for validation
 import {
@@ -65,6 +66,16 @@ export interface ContractLineServiceOptions {
   includeServices?: boolean;
   includeUsage?: boolean;
   includeClients?: boolean;
+}
+
+function normalizeContractLineCompatibility<T extends { service_category?: unknown; cadence_owner?: IContractLine['cadence_owner'] | null }>(
+  plan: T,
+): T & Pick<IContractLine, 'cadence_owner'> {
+  return {
+    ...plan,
+    service_category: plan.service_category || undefined,
+    cadence_owner: resolveCadenceOwner(plan.cadence_owner),
+  };
 }
 
 export interface PlanTemplate {
@@ -142,10 +153,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       ]);
   
       // Transform null to undefined for compatibility
-      const transformedPlans = plans.map((plan: any) => ({
-        ...plan,
-        service_category: plan.service_category || undefined
-      }));
+      const transformedPlans = plans.map((plan: any) => normalizeContractLineCompatibility(plan));
   
       return {
         data: transformedPlans as IContractLine[],
@@ -186,10 +194,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       ]);
   
       // Transform null to undefined for compatibility
-      const transformedPlans = plans.map((plan: any) => ({
-        ...plan,
-        service_category: plan.service_category || undefined
-      }));
+      const transformedPlans = plans.map((plan: any) => normalizeContractLineCompatibility(plan));
   
       // Add HATEOAS links
       const plansWithLinks = transformedPlans.map((plan: any) => 
@@ -221,10 +226,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
   
       // Transform null to undefined for compatibility
-      return {
-        ...plan,
-        service_category: plan.service_category || undefined
-      } as IContractLine;
+      return normalizeContractLineCompatibility(plan) as IContractLine;
     }
   
     /**
@@ -248,11 +250,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
     
         // Transform null to undefined for compatibility
-        const transformedPlan = {
-          ...plan,
-          service_category: plan.service_category || undefined,
-          cadence_owner: plan.cadence_owner ?? 'client',
-        };
+        const transformedPlan = normalizeContractLineCompatibility(plan);
     
         // Add HATEOAS links
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
@@ -320,6 +318,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
+        updateData.cadence_owner = data.cadence_owner ?? resolveCadenceOwner(existingPlan.cadence_owner);
         assertSupportedCadenceOwnerDuringRollout({
           cadenceOwner: updateData.cadence_owner,
           billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
@@ -345,11 +344,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Transform null to undefined for compatibility
-        return {
-          ...updatedPlan,
-          service_category: updatedPlan.service_category || undefined,
-          cadence_owner: updatedPlan.cadence_owner ?? 'client',
-        } as IContractLine;
+        return normalizeContractLineCompatibility(updatedPlan) as IContractLine;
       });
     }
   
@@ -372,6 +367,11 @@ export class ContractLineService extends BaseService<IContractLine> {
         
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
+        updateData.cadence_owner = data.cadence_owner ?? resolveCadenceOwner(existingPlan.cadence_owner);
+        assertSupportedCadenceOwnerDuringRollout({
+          cadenceOwner: updateData.cadence_owner,
+          billingTiming: data.billing_timing,
+        });
         
         // Handle plan type specific logic
         if (existingPlan.contract_line_type === 'Hourly') {
@@ -393,11 +393,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Transform null to undefined for compatibility
-        const transformedPlan = {
-          ...updatedPlan,
-          service_category: updatedPlan.service_category || undefined,
-          cadence_owner: updatedPlan.cadence_owner ?? 'client',
-        };
+        const transformedPlan = normalizeContractLineCompatibility(updatedPlan);
         
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
       });
@@ -1038,6 +1034,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       const updateData = this.addUpdateAuditFields({
         is_active: data.is_active
       }, context);
+      updateData.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
       
       const [updatedPlan] = await trx('contract_lines')
         .where('contract_line_id', planId)
@@ -1059,7 +1056,10 @@ export class ContractLineService extends BaseService<IContractLine> {
           });
       }
       
-      return addHateoasLinks(updatedPlan, this.generatePlanLinks(planId, context)) as ContractLineResponse;
+      return addHateoasLinks(
+        normalizeContractLineCompatibility(updatedPlan),
+        this.generatePlanLinks(planId, context),
+      ) as ContractLineResponse;
     });
   }
 

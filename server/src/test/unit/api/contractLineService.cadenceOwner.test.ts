@@ -163,4 +163,55 @@ describe('ContractLineService cadence owner handling', () => {
 
     expect(updatePayload).toBeUndefined();
   });
+
+  it('backfills missing cadence_owner to client when updating a legacy row', async () => {
+    let updatePayload: Record<string, unknown> | undefined;
+    const knex = { scope: 'root-knex' };
+    const trx = ((table: string) => {
+      expect(table).toBe('contract_lines');
+      const builder = {
+        where() {
+          return builder;
+        },
+        update(payload: Record<string, unknown>) {
+          updatePayload = payload;
+          return {
+            returning: async () => [{
+              contract_line_id: 'line-1',
+              contract_line_name: 'Managed Support',
+              billing_frequency: 'monthly',
+              contract_line_type: 'Fixed',
+              service_category: null,
+              cadence_owner: null,
+            }],
+          };
+        },
+      };
+      return builder;
+    }) as any;
+
+    withTransaction.mockImplementation(async (_receivedKnex, callback) => callback(trx));
+
+    const { ContractLineService } = await import('server/src/lib/api/services/ContractLineService');
+    const service = new ContractLineService();
+    const context = { tenant: 'tenant-1', userId: 'user-1' } as any;
+
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
+    vi.spyOn(service as any, 'getExistingPlan').mockResolvedValue({
+      contract_line_id: 'line-1',
+      contract_line_type: 'Fixed',
+      cadence_owner: undefined,
+    });
+
+    const updated = await service.update(
+      'line-1',
+      {
+        contract_line_name: 'Managed Support',
+      } as any,
+      context,
+    );
+
+    expect(updatePayload?.cadence_owner).toBe('client');
+    expect(updated.cadence_owner).toBe('client');
+  });
 });
