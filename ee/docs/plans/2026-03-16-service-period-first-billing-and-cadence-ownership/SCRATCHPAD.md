@@ -152,6 +152,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) A follow-up attempt to close `F058` uncovered a local-environment blocker rather than a product behavior decision:
   - a targeted `prepaymentInvoice.test.ts` regression was drafted to prove prepayment credit application does not strip canonical recurring detail rows, but local execution is blocked by `ECONNREFUSED` to Postgres on `127.0.0.1:5432`
   - that regression was intentionally not left in the tree or marked complete; `F058` remains open until the DB-backed path can be executed and verified
+- (2026-03-17) Prepayment-applied recurring invoice rereads now preserve canonical service-period metadata without waiting on the blocked DB path:
+  - `packages/billing/src/models/invoice.ts` now reattaches `service_period_start`, `service_period_end`, and `billing_timing` from `invoice_charge_details` when invoice charges are reread, so applying prepayment credit no longer collapses migrated recurring timing back to parent-only invoice rows
+  - `packages/types/src/interfaces/invoice.interfaces.ts` and `server/src/interfaces/invoice.interfaces.ts` now expose those recurring detail fields on `IInvoiceCharge`, which is the minimum shared contract needed for prepayment-applied invoice readers
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` closes `T096` and `T097` with source-level reread coverage for one and multiple prepayment-applied recurring cycles
+  - the DB-backed end-to-end prepayment flow is still unavailable locally because Postgres is not listening on `127.0.0.1:5432`; `T100` remains open for the broader integration seam
 - (2026-03-17) Purchase-order follow-up is still open after recon:
   - `server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx` is stale against `AutomaticInvoices`, which now calls `generateInvoicesAsRecurringBillingRun` instead of the older `generateInvoice` action the test spies on
   - integration coverage for PO + recurring detail persistence already exists in `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, but local execution is still blocked by unavailable Postgres
@@ -177,6 +182,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/services/invoiceService.ts` now inserts one `invoice_charge_details` row for each recurring product or license parent charge, preserving `service_period_start`, `service_period_end`, and `billing_timing` for non-fixed recurring lines
   - `calculateAndDistributeTax(...)` now treats only parents with matching `invoice_charge_fixed_details` rows as consolidated tax carriers, so product/license detail metadata can exist without making tax distribution skip their parent invoice rows
   - `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` now locks `T069` and `T070` alongside the existing fixed-detail regression coverage
+- (2026-03-17) The next boundary after `F070` is no longer a local billing-engine seam:
+  - `packages/billing/src/actions/invoiceGeneration.ts` still derives work from `billing_cycle_id`, reads one billing cycle window, and calls `BillingEngine.calculateBilling(client_id, cycleStart, cycleEnd, billing_cycle_id)` directly
+  - `packages/billing/src/actions/recurringBillingRunActions.ts` still treats a recurring run as a list of raw billing-cycle IDs, so `F071+` will need broader action/scheduler identity changes rather than another contained engine-only patch
 - (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
   - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
   - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
@@ -260,6 +268,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Blocked prepayment follow-up:
   - `npx vitest run src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts -t "T096" --coverage.enabled false`
     - blocked locally by `ECONNREFUSED` to Postgres on `127.0.0.1:5432`
+- (2026-03-17) Prepayment recurring-detail reread validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
 
 ## Links / References
 

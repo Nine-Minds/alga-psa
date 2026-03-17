@@ -344,7 +344,7 @@
   {
     "id": "F058",
     "description": "Ensure prepayment and prepaid-invoice flows consume canonical recurring service-period metadata where they currently depend on recurring timing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

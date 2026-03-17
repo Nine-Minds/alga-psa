@@ -22,6 +22,56 @@ import type {
 } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 
+type InvoiceChargeDetailPeriodRow = {
+  item_id: string;
+  service_period_start?: string | null;
+  service_period_end?: string | null;
+  billing_timing?: 'arrears' | 'advance' | null;
+};
+
+function attachCanonicalRecurringDetailPeriods(
+  charges: IInvoiceCharge[],
+  detailRows: InvoiceChargeDetailPeriodRow[]
+): IInvoiceCharge[] {
+  const detailRowsByItemId = new Map<string, InvoiceChargeDetailPeriodRow[]>();
+
+  for (const detailRow of detailRows) {
+    const existing = detailRowsByItemId.get(detailRow.item_id) ?? [];
+    existing.push(detailRow);
+    detailRowsByItemId.set(detailRow.item_id, existing);
+  }
+
+  return charges.map((charge) => {
+    const chargeDetailRows = detailRowsByItemId.get(charge.item_id);
+    if (!chargeDetailRows || chargeDetailRows.length === 0) {
+      return charge;
+    }
+
+    const servicePeriodStarts = chargeDetailRows
+      .map((detailRow) => detailRow.service_period_start)
+      .filter((value): value is string => typeof value === 'string' && value.length > 0)
+      .sort();
+    const servicePeriodEnds = chargeDetailRows
+      .map((detailRow) => detailRow.service_period_end)
+      .filter((value): value is string => typeof value === 'string' && value.length > 0)
+      .sort();
+    const billingTimings = Array.from(
+      new Set(
+        chargeDetailRows
+          .map((detailRow) => detailRow.billing_timing)
+          .filter((value): value is 'arrears' | 'advance' => value === 'arrears' || value === 'advance')
+      )
+    );
+
+    return {
+      ...charge,
+      service_period_start: servicePeriodStarts[0] ?? null,
+      service_period_end: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null,
+      billing_timing: billingTimings.length === 1 ? billingTimings[0] : null,
+    };
+  });
+}
+
 /**
  * Invoice model with tenant-explicit methods.
  * All methods require an explicit tenant parameter for multi-tenant safety.
@@ -469,8 +519,20 @@ const Invoice = {
         });
 
       const items = await query;
+      if (items.length === 0) {
+        return items;
+      }
 
-      return items;
+      const itemIds = items.map((item) => item.item_id).filter(Boolean);
+      const detailRows: InvoiceChargeDetailPeriodRow[] = itemIds.length === 0
+        ? []
+        : await knexOrTrx('invoice_charge_details')
+            .select('item_id', 'service_period_start', 'service_period_end', 'billing_timing')
+            .where({ tenant })
+            .whereIn('item_id', itemIds)
+            .orderBy('service_period_start', 'asc');
+
+      return attachCanonicalRecurringDetailPeriods(items, detailRows);
     } catch (error) {
       console.error(`Error getting invoice items for invoice ${invoiceId} in tenant ${tenant}:`, error);
       throw new Error(`Failed to get invoice items: ${error instanceof Error ? error.message : 'Unknown error'}`);
