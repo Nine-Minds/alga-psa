@@ -1496,7 +1496,7 @@
   {
     "id": "F167",
     "description": "Define client-portal invoice detail projection rules for canonical recurring periods, including omission and flattening behavior where appropriate",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Read-model and post-persist lifecycle requirements"

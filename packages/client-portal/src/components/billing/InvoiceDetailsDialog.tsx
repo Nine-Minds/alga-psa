@@ -68,6 +68,10 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
       return null;
     }
 
+    // Portal policy:
+    // - multi-detail recurring rows render the canonical detail list
+    // - single-detail recurring rows render one "Service Period" line
+    // - rows with no canonical detail list fall back to parent summary fields elsewhere below
     if (renderedPeriods.length === 1) {
       return (
         <div className="text-xs text-muted-foreground">
@@ -235,6 +239,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                           </div>
                           {item.recurring_detail_periods && item.recurring_detail_periods.length > 0
                             ? renderRecurringDetailPeriods(item.recurring_detail_periods)
+                            // Historical or flattened rows keep a single compatibility summary range.
                             : formatServicePeriodRange(item.service_period_start, item.service_period_end) ? (
                                 <div className="text-xs text-muted-foreground">
                                   {t('invoice.servicePeriod', 'Service Period')}: {formatServicePeriodRange(item.service_period_start, item.service_period_end)}

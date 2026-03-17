@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import InvoiceDetailsDialog from './InvoiceDetailsDialog';
 
@@ -63,6 +63,30 @@ vi.mock('@alga-psa/client-portal/actions', () => ({
           },
         ],
       },
+      {
+        item_id: 'charge-2',
+        invoice_id: 'inv-1',
+        description: 'Legacy Summary Service',
+        quantity: 1,
+        unit_price: 5000,
+        total_price: 5000,
+        tax_amount: 0,
+        net_amount: 5000,
+        is_manual: false,
+        service_period_start: '2025-12-01',
+        service_period_end: '2026-01-01',
+      },
+      {
+        item_id: 'charge-3',
+        invoice_id: 'inv-1',
+        description: 'Manual Credit',
+        quantity: 1,
+        unit_price: -500,
+        total_price: -500,
+        tax_amount: 0,
+        net_amount: -500,
+        is_manual: true,
+      },
     ],
   })),
   downloadClientInvoicePdf: vi.fn(async () => ({ success: true, fileId: 'file-1' })),
@@ -107,5 +131,31 @@ describe('InvoiceDetailsDialog recurring service periods', () => {
     expect(screen.getByText('2026-01-01 - 2026-02-01')).toBeInTheDocument();
     expect(screen.getByText('2026-02-01 - 2026-03-01')).toBeInTheDocument();
     expect(screen.getByText('Advance')).toBeInTheDocument();
+  });
+
+  it('T196: client-portal invoice detail dialogs flatten or omit recurring period copy according to the documented projection policy', async () => {
+    render(
+      <InvoiceDetailsDialog
+        invoiceId="inv-1"
+        isOpen={true}
+        onClose={() => {}}
+        formatCurrency={(amount) => `$${(amount / 100).toFixed(2)}`}
+        formatDate={(date) => String(date)}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Legacy Summary Service')).toBeInTheDocument();
+      expect(screen.getByText('Manual Credit')).toBeInTheDocument();
+    });
+
+    const legacySummaryRow = screen.getByText('Legacy Summary Service').closest('tr');
+    expect(legacySummaryRow).not.toBeNull();
+    expect(within(legacySummaryRow as HTMLElement).getByText('Service Period: 2025-12-01 - 2026-01-01')).toBeInTheDocument();
+    expect(within(legacySummaryRow as HTMLElement).queryByText('Service Periods:')).not.toBeInTheDocument();
+
+    const manualRow = screen.getByText('Manual Credit').closest('tr');
+    expect(manualRow).not.toBeNull();
+    expect(within(manualRow as HTMLElement).queryByText(/Service Period/)).not.toBeInTheDocument();
   });
 });

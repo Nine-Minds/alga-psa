@@ -1704,7 +1704,7 @@
   {
     "id": "T196",
     "description": "Client-portal invoice detail readers project canonical recurring periods according to the documented omission and flattening rules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F167",
       "F168"

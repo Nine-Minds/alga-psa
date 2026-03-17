@@ -56,6 +56,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Rendering adapters now have an explicit flatten-or-expand rule for canonical recurring detail periods, which closes `F166` and `T195`:
   - `packages/billing/src/lib/adapters/invoiceAdapters.ts` now documents the adapter rule directly in code: rendered rows keep `recurringDetailPeriods` verbatim when available, flatten `servicePeriodStart` / `servicePeriodEnd` to a summary range for one-row template consumers, and flatten mixed timing to `null` instead of inventing a winner
   - `packages/billing/src/lib/adapters/invoiceAdapters.test.ts` now closes `T195` with a mixed-timing case proving the adapter preserves the canonical detail-period list while exposing a compatibility summary range and a null summary timing
+- (2026-03-17) Client-portal invoice detail projection rules are now explicit for detail-backed, flattened, and omitted recurring period states, which closes `F167` and `T196`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now documents the portal policy inline: render the canonical detail-period list when multiple recurring periods exist, flatten to one `Service Period` line when only one detail or a parent summary range exists, and omit service-period copy entirely when no recurring period metadata is available
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` now closes `T196` by proving the two fallback branches explicitly: a legacy summary-only recurring row renders one flattened service-period label, while a manual adjustment row with no period metadata renders none
 - (2026-03-17) Shared invoice-candidate grouping now carries explicit split reasons for PO and financial/export constraints, which closes `F158`, `F159`, `F160`, `T189`, and `T190`:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now lets scoped due selections carry PO scope, currency, tax source, and export-shape keys, while scoped candidate groups now expose `splitReasons` with `single_contract`, `purchase_order_scope`, and `financial_constraint`
   - `shared/billingClients/recurringTiming.ts` now exports `groupDueServicePeriodsForInvoiceCandidates(...)`, which applies those split constraints within each due window and annotates the resulting candidate groups with the operator-visible reasons they were split
@@ -981,6 +984,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run ../packages/billing/src/lib/adapters/invoiceAdapters.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package source tests
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Client-portal projection policy validation:
+  - `npx vitest run ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package client-portal tests
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
 
 ## Links / References
 
