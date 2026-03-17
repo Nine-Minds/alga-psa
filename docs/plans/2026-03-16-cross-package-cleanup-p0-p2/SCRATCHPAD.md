@@ -161,6 +161,7 @@ By target package
 - T017 reuses the latest repo-root green build to validate the expanded `msp-composition` barrel.
 - T018 verified the current lint output has `0` active `projects -> clients` violations, which is below the historical non-zero starting point for P2-5a.
 - T019 verified `packages/clients/src/context/ClientCrossFeatureContext.tsx` exists and exports the expected provider/hook pair.
+- T020 reuses the latest repo-root green build to validate the current client-composition setup.
 
 ## Gotchas
 

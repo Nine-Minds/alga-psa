@@ -116,7 +116,7 @@
   {
     "id": "T020",
     "description": "P2-5a: npm run build succeeds after composition layer changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
