@@ -322,6 +322,9 @@ export const createPrepaymentInvoice = withAuth(async (
                 total_amount: amount,
                 status: 'draft',
                 invoice_number: await generateInvoiceNumber(),
+                // Prepayments remain non-service financial artifacts. These
+                // header dates track the immediate financial issuance window;
+                // canonical recurring service periods stay null/absent.
                 billing_period_start: new Date().toISOString(),
                 billing_period_end: new Date().toISOString(),
                 credit_applied: 0,

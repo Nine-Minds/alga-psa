@@ -1844,7 +1844,7 @@
   {
     "id": "T213",
     "description": "Manual lines tied to recurring contract-line provenance preserve that linkage according to policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F182"
     ]
@@ -1852,7 +1852,7 @@
   {
     "id": "T214",
     "description": "Prepayment invoices follow the documented non-service service-period policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F183"
     ]

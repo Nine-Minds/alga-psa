@@ -318,6 +318,9 @@ export async function persistManualInvoiceCharges(
     let applicableItemId = requestItem.applies_to_item_id;
     let applicableAmount;
 
+    // Manual discount/adjusment provenance may point at an existing invoice
+    // charge (including a recurring parent charge), but that linkage remains an
+    // advisory manual-row reference rather than canonical recurring timing data.
     // Resolve service ID reference if needed
     if (requestItem.applies_to_service_id && !applicableItemId) {
       applicableItemId = serviceToItemMap.get(requestItem.applies_to_service_id);

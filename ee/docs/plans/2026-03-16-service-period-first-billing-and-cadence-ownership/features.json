@@ -1631,7 +1631,7 @@
   {
     "id": "F182",
     "description": "Define optional provenance rules when a manual invoice line is tied to a recurring contract line or service-period-backed obligation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "Read-model and post-persist lifecycle requirements"
@@ -1640,7 +1640,7 @@
   {
     "id": "F183",
     "description": "Define prepayment invoice service-period semantics and whether prepayment artifacts carry null periods, financial-date periods, or explicit non-service markers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "Open Questions"

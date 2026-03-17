@@ -39,6 +39,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Prepayment invoices now have an explicit non-service period policy, which closes `F183` and `T214`:
+  - `packages/billing/src/actions/creditActions.ts` now states the intended boundary where prepayment invoices are created: they remain non-service financial artifacts, `billing_period_*` on the header tracks the immediate financial issuance window, and canonical recurring service periods stay absent
+  - `server/src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts` now proves the live prepayment creation path creates the financial invoice, transaction, and credit-tracking rows without touching `invoice_charge_details`, which locks the prepayment path away from accidental recurring-period coupling
+- (2026-03-17) Manual-to-recurring provenance is now explicit and advisory-only, which closes `F182` and `T213`:
+  - `packages/billing/src/services/invoiceService.ts` now states the intended provenance rule inline: a manual adjustment or manual percentage discount may point at an existing invoice charge, including a recurring parent charge, but that `applies_to_item_id` link is advisory manual provenance rather than canonical recurring timing data
+  - `server/src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts` now proves a manual discount targeted at an existing recurring parent charge keeps that linkage and recomputes from the recurring row amount, while still remaining periodless itself
 - (2026-03-17) Manual invoice lines now have an explicit periodless policy contract, which closes `F181` and `T211`:
   - `packages/billing/src/services/invoiceService.ts` now documents the intended boundary at the persistence seam: manually entered invoice rows remain periodless financial rows and do not create canonical `invoice_charge_details` or claim recurring service-period truth
   - `server/src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts` now proves both a manual line and a manual percentage discount persist without `service_period_*` or `billing_timing` fields while still calculating their net amounts correctly
@@ -1091,6 +1097,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Manual invoice period-policy validation:
   - `npx vitest run src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts src/test/unit/billing/invoiceService.percentageDiscountRecalculation.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Manual-to-recurring provenance validation:
+  - `npx vitest run src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Prepayment financial-artifact validation:
+  - `npx vitest run src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
