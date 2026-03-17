@@ -182,13 +182,13 @@
   {
     "id": "F031",
     "description": "Client portal/document visibility: keep contract-linked document lookups correct for client-owned contracts after migration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F032",
     "description": "Client contract line helpers: keep contract-backed overlap/listing queries correct under the owner-client invariant so contract-derived lines cannot bleed across clients",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Requirements"]
   }
 ]

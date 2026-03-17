@@ -266,25 +266,25 @@
   {
     "id": "T045",
     "description": "Client portal contract-linked document queries still return the correct documents for the owning client after a shared contract is split",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031"]
   },
   {
     "id": "T046",
     "description": "Client portal contract-linked document queries do not leak a migrated cloned contract's documents to the other client that used to share the original contract",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031"]
   },
   {
     "id": "T047",
     "description": "Client contract line overlap checks do not surface another client's contract-derived lines after a shared contract is split",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {
     "id": "T048",
     "description": "Client contract line listing returns only the requesting client's contract-derived lines for preserved and cloned contracts after migration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   }
 ]

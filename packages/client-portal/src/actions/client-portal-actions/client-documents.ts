@@ -127,11 +127,11 @@ export const getClientDocuments = withAuth(
           EXISTS (
             SELECT 1 FROM document_associations da
             JOIN contracts c ON c.contract_id = da.entity_id AND c.tenant = da.tenant
-            JOIN client_contracts cc ON cc.contract_id = c.contract_id AND cc.tenant = c.tenant
             WHERE da.document_id = d.document_id
               AND da.tenant = d.tenant
               AND da.entity_type = 'contract'
-              AND cc.client_id = ?
+              AND (c.is_template IS NULL OR c.is_template = false)
+              AND c.owner_client_id = ?
           )
         `);
         sourceParams.push(clientId);
@@ -266,11 +266,11 @@ export const getClientDocumentFolders = withAuth(
             OR EXISTS (
               SELECT 1 FROM document_associations da
               JOIN contracts c ON c.contract_id = da.entity_id AND c.tenant = da.tenant
-              JOIN client_contracts cc ON cc.contract_id = c.contract_id AND cc.tenant = c.tenant
               WHERE da.document_id = d.document_id
                 AND da.tenant = d.tenant
                 AND da.entity_type = 'contract'
-                AND cc.client_id = ?
+                AND (c.is_template IS NULL OR c.is_template = false)
+                AND c.owner_client_id = ?
             )
           )
         `,
@@ -380,13 +380,13 @@ export const downloadClientDocument = withAuth(
                 .join('contracts as c', function () {
                   this.on('c.contract_id', '=', 'da.entity_id').andOn('c.tenant', '=', 'da.tenant');
                 })
-                .join('client_contracts as cc', function () {
-                  this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
-                })
                 .whereRaw('da.document_id = d.document_id')
                 .andWhereRaw('da.tenant = d.tenant')
                 .andWhere('da.entity_type', 'contract')
-                .andWhere('cc.client_id', clientId)
+                .andWhere(function (this: Knex.QueryBuilder) {
+                  this.whereNull('c.is_template').orWhere('c.is_template', false);
+                })
+                .andWhere('c.owner_client_id', clientId)
             );
         })
         .first();

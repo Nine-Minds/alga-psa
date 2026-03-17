@@ -7,6 +7,8 @@
  * - T017: Client A cannot see client B's documents (security)
  * - T018: downloadClientDocument() returns 403 for non-visible and other client's docs
  * - T019: File view API route respects is_client_visible for client users
+ * - T045: Contract-linked documents resolve for the owning client
+ * - T046: Contract-linked documents do not leak through stale shared assignments
  */
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
@@ -52,6 +54,8 @@ type CreatedIds = {
   contactIds: string[];
   documentIds: string[];
   ticketIds: string[];
+  contractIds: string[];
+  clientContractIds: string[];
 };
 
 let createdIds: CreatedIds = {
@@ -59,7 +63,9 @@ let createdIds: CreatedIds = {
   userIds: [],
   contactIds: [],
   documentIds: [],
-  ticketIds: []
+  ticketIds: [],
+  contractIds: [],
+  clientContractIds: []
 };
 
 async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds): Promise<void> {
@@ -79,6 +85,14 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
 
   for (const ticketId of ids.ticketIds) {
     await safeDelete('tickets', { tenant: tenantId, ticket_id: ticketId });
+  }
+
+  for (const clientContractId of ids.clientContractIds) {
+    await safeDelete('client_contracts', { tenant: tenantId, client_contract_id: clientContractId });
+  }
+
+  for (const contractId of ids.contractIds) {
+    await safeDelete('contracts', { tenant: tenantId, contract_id: contractId });
   }
 
   for (const contactId of ids.contactIds) {
@@ -186,6 +200,57 @@ async function createDocumentAssociation(
   });
 }
 
+async function createOwnedContract(
+  db: Knex,
+  tenantId: string,
+  clientId: string,
+  contractName: string
+): Promise<{ contractId: string; clientContractId: string }> {
+  const contractId = uuidv4();
+  const clientContractId = uuidv4();
+  const now = new Date();
+
+  await db('contracts').insert({
+    tenant: tenantId,
+    contract_id: contractId,
+    contract_name: contractName,
+    contract_description: `${contractName} description`,
+    owner_client_id: clientId,
+    billing_frequency: 'monthly',
+    currency_code: 'USD',
+    status: 'active',
+    is_active: true,
+    is_template: false,
+    created_at: now,
+    updated_at: now
+  });
+
+  await db('client_contracts').insert({
+    tenant: tenantId,
+    client_contract_id: clientContractId,
+    client_id: clientId,
+    contract_id: contractId,
+    start_date: new Date('2026-01-01'),
+    end_date: null,
+    is_active: true,
+    created_at: now,
+    updated_at: now
+  });
+
+  return { contractId, clientContractId };
+}
+
+function collectFolderPaths(nodes: Array<{ path: string; children: any[] }>): string[] {
+  const paths: string[] = [];
+
+  for (const node of nodes) {
+    paths.push(node.path);
+    paths.push(...collectFolderPaths(node.children || []));
+  }
+
+  return paths;
+}
+
 describe('Client Portal Documents Integration Tests', () => {
   beforeAll(async () => {
     // Set environment
@@ -223,7 +288,9 @@ describe('Client Portal Documents Integration Tests', () => {
       userIds: [],
       contactIds: [],
       documentIds: [],
-      ticketIds: []
+      ticketIds: [],
+      contractIds: [],
+      clientContractIds: []
     };
     vi.clearAllMocks();
   });
@@ -606,6 +673,128 @@ describe('Client Portal Documents Integration Tests', () => {
 
       const doc = await downloadClientDocument(contractDocId);
       expect(doc).toBeDefined();
+    });
+  });
+
+  describe('Contract-linked document ownership invariants', () => {
+    it('T045: returns contract-linked documents, folders, and downloads for the owning client', async () => {
+      const clientId = await createClient(db, tenantId, 'Owning Contract Client');
+      createdIds.clientIds.push(clientId);
+
+      const contactId = await createContact(db, tenantId, clientId, 'owned-contract@test.com');
+      createdIds.contactIds.push(contactId);
+
+      const clientUserId = await createClientUser(db, tenantId, contactId);
+      createdIds.userIds.push(clientUserId);
+
+      const { contractId, clientContractId } = await createOwnedContract(
+        db,
+        tenantId,
+        clientId,
+        'Owned Contract'
+      );
+      createdIds.contractIds.push(contractId);
+      createdIds.clientContractIds.push(clientContractId);
+
+      const documentId = await createDocument(
+        db,
+        tenantId,
+        mspUserId,
+        'Owned Contract Doc',
+        true,
+        '/contracts/owned-client'
+      );
+      createdIds.documentIds.push(documentId);
+      await createDocumentAssociation(db, tenantId, documentId, contractId, 'contract');
+
+      const clientUser = createMockUser('client', {
+        user_id: clientUserId,
+        tenant: tenantId,
+        contact_id: contactId
+      });
+      setMockUser(clientUser, ['document:read']);
+      setupCommonMocks({
+        tenantId,
+        userId: clientUserId,
+        user: clientUser,
+        permissionCheck: () => true
+      });
+
+      const listed = await getClientDocuments(1, 20, { sourceType: 'contract' });
+      const folders = await getClientDocumentFolders();
+      const downloaded = await downloadClientDocument(documentId);
+
+      expect(listed.documents.map((doc) => doc.document_id)).toContain(documentId);
+      expect(collectFolderPaths(folders)).toContain('/contracts/owned-client');
+      expect(downloaded.document_id).toBe(documentId);
+    });
+
+    it('T046: blocks stale shared-assignment leaks for contract-linked documents', async () => {
+      const ownerClientId = await createClient(db, tenantId, 'Owner Client');
+      const staleClientId = await createClient(db, tenantId, 'Stale Shared Client');
+      createdIds.clientIds.push(ownerClientId, staleClientId);
+
+      const ownerContactId = await createContact(db, tenantId, ownerClientId, 'owner-contract@test.com');
+      const staleContactId = await createContact(db, tenantId, staleClientId, 'stale-contract@test.com');
+      createdIds.contactIds.push(ownerContactId, staleContactId);
+
+      const ownerUserId = await createClientUser(db, tenantId, ownerContactId);
+      const staleUserId = await createClientUser(db, tenantId, staleContactId);
+      createdIds.userIds.push(ownerUserId, staleUserId);
+
+      const { contractId, clientContractId } = await createOwnedContract(
+        db,
+        tenantId,
+        ownerClientId,
+        'Owner Protected Contract'
+      );
+      createdIds.contractIds.push(contractId);
+      createdIds.clientContractIds.push(clientContractId);
+
+      const staleClientContractId = uuidv4();
+      createdIds.clientContractIds.push(staleClientContractId);
+      await db('client_contracts').insert({
+        tenant: tenantId,
+        client_contract_id: staleClientContractId,
+        client_id: staleClientId,
+        contract_id: contractId,
+        start_date: new Date('2026-02-01'),
+        end_date: null,
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+
+      const leakedDocumentId = await createDocument(
+        db,
+        tenantId,
+        mspUserId,
+        'Should Not Leak',
+        true,
+        '/contracts/owner-only'
+      );
+      createdIds.documentIds.push(leakedDocumentId);
+      await createDocumentAssociation(db, tenantId, leakedDocumentId, contractId, 'contract');
+
+      const staleClientUser = createMockUser('client', {
+        user_id: staleUserId,
+        tenant: tenantId,
+        contact_id: staleContactId
+      });
+      setMockUser(staleClientUser, ['document:read']);
+      setupCommonMocks({
+        tenantId,
+        userId: staleUserId,
+        user: staleClientUser,
+        permissionCheck: () => true
+      });
+
+      const listed = await getClientDocuments(1, 20, { sourceType: 'contract' });
+      const folders = await getClientDocumentFolders();
+
+      expect(listed.documents.map((doc) => doc.document_id)).not.toContain(leakedDocumentId);
+      expect(collectFolderPaths(folders)).not.toContain('/contracts/owner-only');
+      await expect(downloadClientDocument(leakedDocumentId)).rejects.toThrow(/not found|access denied/i);
     });
   });
 });
