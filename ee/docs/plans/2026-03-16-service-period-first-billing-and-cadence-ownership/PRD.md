@@ -468,6 +468,30 @@ When that follow-on plan begins, it must define at implementation depth:
 - how billed-through, duplicate prevention, credits, and exports behave when event-driven and period-driven domains coexist
 - which metrics, dashboards, and reconciliation readers pivot to canonical periods versus staying on financial or event dates
 
+## Follow-on Boundary — Advanced Service-Period Ledger Extensions
+
+Recurring v1 includes persisted future service periods, explicit editability, regeneration, and invoice linkage. It does not automatically include every ledger optimization or retention strategy that a larger-scale service-period system might eventually need.
+
+The following remain explicit follow-on work unless v1 proves insufficient in production:
+
+- long-range materialization horizons beyond the v1 operational window
+- archival or cold-storage strategies for billed or superseded service-period records
+- performance-oriented denormalization, read-side caches, or projection tables built specifically for large service-period ledgers
+- bulk backfill, mass repair, or historical rehydration workflows beyond the v1 rollout and correction flows
+
+That follow-on should not start unless recurring v1 demonstrates a concrete limit such as:
+
+- generation or regeneration cost that cannot be kept within the v1 horizon policy
+- read performance that materially harms billing operations, support workflows, or downstream consumers
+- storage growth or retention requirements that make the first-cut ledger shape operationally unsafe
+
+When that follow-on begins, it must define at implementation depth:
+
+- the authoritative boundary between canonical service-period truth and any denormalized or archived projections
+- retention, replay, and restore behavior for archived or compacted service-period records
+- reconciliation guarantees so invoice linkage, provenance, and auditability survive any denormalization or archival step
+- migration and rollback posture when tenants may temporarily have both canonical live records and derived ledger extensions
+
 ## Acceptance Criteria (Definition of Done)
 
 - The plan fully specifies recurring-billing changes across runtime, invoice generation, downstream consumers, data model, UI, reporting, exports, migration, and cleanup.

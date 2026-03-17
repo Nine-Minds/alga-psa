@@ -1460,7 +1460,7 @@
   {
     "id": "T168",
     "description": "Follow-on boundaries for advanced service-period ledger extensions are captured explicitly instead of leaking into v1 implementation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F147"
     ]
@@ -1468,7 +1468,7 @@
   {
     "id": "T169",
     "description": "Follow-on boundaries for time and usage unification are captured explicitly instead of leaking into v1 implementation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F148"
     ]

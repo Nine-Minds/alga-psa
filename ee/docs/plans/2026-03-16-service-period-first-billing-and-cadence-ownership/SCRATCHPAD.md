@@ -39,6 +39,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Time-and-usage unification now has its own executable follow-on boundary contract, which closes `F148` and `T169`:
+  - the time/usage follow-on text was already present in `PRD.md` and `PASS0_RECURRING_TIMING_APPENDIX.md`, but `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks that scope boundary explicitly instead of leaving it as prose that could drift
+  - this checkpoint did not widen recurring v1 scope; it made the existing rule enforceable: time entries and usage records remain event-driven until a separate follow-on plan deliberately reopens canonical period or ledger semantics for those domains
+- (2026-03-17) Advanced service-period ledger extensions are now explicitly fenced off as follow-on work, which closes `F147` and `T168`:
+  - `PRD.md` and `PASS0_RECURRING_TIMING_APPENDIX.md` now both carry a dedicated `Advanced Service-Period Ledger Extensions` boundary that keeps long-range materialization, archival/cold-storage, performance denormalization, and bulk ledger reshaping out of recurring v1 unless the first-cut ledger proves insufficient
+  - the new boundary also names the trigger conditions for reopening that scope later: concrete horizon/regeneration cost, read-performance, or retention/storage failures, plus a requirement to define canonical-versus-derived truth, replay/repair, and rollback posture before any ledger extensions land
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks those phrases as `T168`, and `pass-0-source-inventory.json` was refreshed at the same time so the existing docs inventory contracts continue to match live `rg` output
 - (2026-03-17) Post-cutover source-plus-DB validation now proves the migrated live recurring path no longer depends on `billing_cycle_alignment` or `resolveServicePeriod`, which closes `F146`, `T166`, and `T167`:
   - `server/src/test/unit/billing/billingEngine.cleanupSource.test.ts` remains the direct source contract: the billing engine file still does not contain the removed `resolveServicePeriod`, `_calculateProrationFactor`, or `applyProrationToPlan` seams
   - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now adds one DB-backed invariance test proving three otherwise-identical partial advance lines with `billing_cycle_alignment = start|end|prorated` all persist the same canonical `service_period_start`, `service_period_end`, and subtotal on the real invoice-generation path

@@ -1316,7 +1316,7 @@
   {
     "id": "F147",
     "description": "Capture explicit follow-on work for advanced service-period ledger extensions such as long-range materialization, archival, or performance-oriented denormalization if v1 materialization proves insufficient",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Open Questions",
       "Risks"
@@ -1325,7 +1325,7 @@
   {
     "id": "F148",
     "description": "Capture explicit follow-on work for time and usage unification if future product direction requires canonical service periods beyond recurring contract-backed charges",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Open Questions",
       "Scope"

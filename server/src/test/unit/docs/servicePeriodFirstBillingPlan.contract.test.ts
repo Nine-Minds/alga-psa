@@ -155,6 +155,27 @@ describe('service-period-first billing plan artifacts', () => {
     expect(appendix).toContain('still out of scope: generic bucket reporting, remaining-unit readers, and other bucket metrics that are not tied to recurring contract-backed billing selection');
   });
 
+  it('T168: advanced service-period ledger extensions remain an explicit follow-on boundary instead of leaking into recurring v1', () => {
+    expect(prd).toContain('## Follow-on Boundary — Advanced Service-Period Ledger Extensions');
+    expect(prd).toContain('long-range materialization horizons beyond the v1 operational window');
+    expect(prd).toContain('archival or cold-storage strategies for billed or superseded service-period records');
+    expect(prd).toContain('performance-oriented denormalization, read-side caches, or projection tables');
+    expect(appendix).toContain('## Follow-On Boundary — Advanced Service-Period Ledger Extensions');
+    expect(appendix).toContain('Recurring v1 must stop at the first authoritative persisted service-period ledger');
+    expect(appendix).toContain('Trigger this follow-on only when there is source-backed evidence that v1 cannot stay operationally safe without it');
+    expect(appendix).toContain('rollback posture if tenants temporarily carry both the canonical ledger and performance-oriented derivatives');
+  });
+
+  it('T169: time and usage unification remains an explicit follow-on boundary instead of leaking into recurring v1', () => {
+    expect(prd).toContain('## Follow-on Boundary — Time And Usage Unification');
+    expect(prd).toContain('time-entry billing and usage-record billing stay on their event-driven truth sources for recurring v1');
+    expect(prd).toContain('a separate follow-on plan is required before time or usage can adopt canonical service-period or ledger semantics');
+    expect(appendix).toContain('## Follow-On Boundary — Full Time And Usage Unification');
+    expect(appendix).toContain('Recurring v1 does not silently expand into a general time-and-usage service-period ledger.');
+    expect(appendix).toContain('time-entry billing keeps `time_entries.start_time` / `time_entries.end_time` and current invoice-window overlap semantics as its authoritative selection model');
+    expect(appendix).toContain('usage-record billing keeps usage-event timestamps and current billed-through semantics as its authoritative selection model');
+  });
+
   it('T061: recurring product timing sources remain source-backed after migration', () => {
     expect(inventory.timingControls.productLateStageProrationRefs.slice().sort()).toEqual(
       rgList(

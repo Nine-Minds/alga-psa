@@ -159,6 +159,35 @@ The future follow-on plan must define, not assume:
 - how mixed event-driven and period-driven invoice readers, exports, and analytics stay explainable during coexistence
 - what migration and rollback posture applies once time or usage stop being purely event-driven
 
+## Follow-On Boundary — Advanced Service-Period Ledger Extensions
+
+Recurring v1 must stop at the first authoritative persisted service-period ledger that supports:
+
+- generation within the v1 horizon
+- explicit future-period edits
+- regeneration with override preservation
+- invoice linkage and billed-period locking
+
+The following are not implicit v1 requirements and must stay follow-on work unless the first-cut ledger proves insufficient:
+
+- long-range materialization horizons intended for years of future schedule projection
+- archival or cold-storage pipelines for billed, superseded, or otherwise inactive service-period records
+- performance-oriented denormalization such as ledger summary tables, read-side caches, or bulk projection views
+- mass-repair or bulk backfill tooling aimed at reshaping the ledger beyond the rollout-safe correction flows defined for v1
+
+Trigger this follow-on only when there is source-backed evidence that v1 cannot stay operationally safe without it, for example:
+
+- regeneration or due-selection cost that cannot be contained within the v1 horizon policy
+- support, dashboard, or export reads that remain too slow when pointed at the canonical ledger shape
+- storage or retention requirements that force archival semantics beyond the initial billed-history retention model
+
+When that follow-on starts, it must define:
+
+- which record remains the canonical source of truth versus which projections are derivative
+- how archival, compaction, or denormalization preserves invoice linkage, provenance, and auditability
+- replay and repair behavior when derived ledger structures drift from canonical persisted periods
+- rollback posture if tenants temporarily carry both the canonical ledger and performance-oriented derivatives
+
 ## Parity Matrix
 
 The minimum comparison matrix for client-cadence parity must cover the cross-product below before contract cadence is enabled:
