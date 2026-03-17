@@ -122,13 +122,13 @@
   {
     "id": "T021",
     "description": "Billing engine still resolves billable lines correctly for preserved and cloned assignments after migration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
     "id": "T022",
     "description": "DB-backed integration: invoice generation succeeds for a migrated cloned assignment with the same cloned contract lines",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F009", "F018"]
   },
   {
@@ -188,7 +188,7 @@
   {
     "id": "T032",
     "description": "Report results for the two known shared contracts no longer appear as one shared contract spanning two clients after migration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027", "F028"]
   },
   {
@@ -206,61 +206,61 @@
   {
     "id": "T035",
     "description": "DB-backed post-migration sanity: no non-template contract is linked to more than one distinct client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F005", "F009"]
   },
   {
     "id": "T036",
     "description": "DB-backed post-migration sanity: the preserved `Managed IT Services` assignment for The Green Thumb still has its invoice history intact",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F010"]
   },
   {
     "id": "T037",
     "description": "DB-backed post-migration sanity: `Managed IT Services` for BTM Machinery points at a new cloned contract ID",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F009"]
   },
   {
     "id": "T038",
     "description": "DB-backed post-migration sanity: `Worry-Free Essentials` for The Benjamin Wolf Group points at a new cloned contract ID",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F009"]
   },
   {
     "id": "T039",
     "description": "DB-backed post-migration sanity: preserved `Worry-Free Essentials` contract remains on WorryNot Works IT Services as the earliest-start assignment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F009"]
   },
   {
     "id": "T040",
     "description": "DB-backed post-migration sanity: cloned contracts have the same contract-line counts as their source contracts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F008"]
   },
   {
     "id": "T041",
     "description": "No current production clone-target assignments require invoice/doc/time/usage retargeting, matching the migration preflight assumptions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T042",
     "description": "Resuming a draft contract still works when the draft contract is client-owned and its live status is not inferred from shared contract semantics",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F017", "F024"]
   },
   {
     "id": "T043",
     "description": "Renewals queue still creates and links draft contracts correctly after owner-client enforcement",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F019"]
   },
   {
     "id": "T044",
     "description": "API/service contract-line mutation paths continue to work for client-owned non-template contracts after cloning and owner enforcement",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F018", "F029"]
   },
   {

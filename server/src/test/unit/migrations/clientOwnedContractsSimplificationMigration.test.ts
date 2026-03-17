@@ -15,6 +15,168 @@ const {
   buildSharedContractClonePlan,
 } = helperModule;
 
+function buildKnownSharedContractPlans() {
+  let counter = 0;
+  const createId = (prefix: string) => `${prefix}-known-${++counter}`;
+
+  const managedItAssignments = [
+    {
+      tenant: 'cross-industries',
+      contract_id: 'contract-managed-it-services',
+      client_contract_id: 'cc-green-thumb',
+      client_id: 'client-green-thumb',
+      client_name: 'The Green Thumb',
+      is_template: false,
+      start_date: '2025-01-01',
+      invoice_count: 4,
+    },
+    {
+      tenant: 'cross-industries',
+      contract_id: 'contract-managed-it-services',
+      client_contract_id: 'cc-btm-machinery',
+      client_id: 'client-btm-machinery',
+      client_name: 'BTM Machinery',
+      is_template: false,
+      start_date: '2025-02-01',
+      invoice_count: 0,
+    },
+  ];
+
+  const managedItPlan = buildSharedContractClonePlan(
+    {
+      sourceContract: {
+        tenant: 'cross-industries',
+        contract_id: 'contract-managed-it-services',
+        contract_name: 'Managed IT Services',
+        billing_frequency: 'monthly',
+        currency_code: 'USD',
+        is_active: true,
+        status: 'active',
+        is_template: false,
+        owner_client_id: null,
+      },
+      assignments: managedItAssignments,
+      contractLines: [
+        {
+          tenant: 'cross-industries',
+          contract_line_id: 'managed-line-1',
+          contract_id: 'contract-managed-it-services',
+          contract_line_name: 'Managed IT Base',
+        },
+        {
+          tenant: 'cross-industries',
+          contract_line_id: 'managed-line-2',
+          contract_id: 'contract-managed-it-services',
+          contract_line_name: 'Managed IT Add-on',
+        },
+      ],
+      contractLineServices: [
+        { tenant: 'cross-industries', contract_line_id: 'managed-line-1', service_id: 'svc-managed-base', quantity: 1 },
+        { tenant: 'cross-industries', contract_line_id: 'managed-line-2', service_id: 'svc-managed-addon', quantity: 1 },
+      ],
+      contractLineServiceConfigurations: [
+        {
+          tenant: 'cross-industries',
+          config_id: 'managed-config-1',
+          contract_line_id: 'managed-line-1',
+          service_id: 'svc-managed-base',
+          configuration_type: 'Fixed',
+        },
+      ],
+      contractLineServiceFixedConfigs: [
+        {
+          tenant: 'cross-industries',
+          config_id: 'managed-config-1',
+          base_rate: 20000,
+        },
+      ],
+    },
+    { createId }
+  );
+
+  const worryFreeAssignments = [
+    {
+      tenant: 'worrynot-works',
+      contract_id: 'contract-worry-free-essentials',
+      client_contract_id: 'cc-worrynot-works',
+      client_id: 'client-worrynot-works',
+      client_name: 'WorryNot Works IT Services',
+      is_template: false,
+      start_date: '2025-01-15',
+      invoice_count: 0,
+    },
+    {
+      tenant: 'worrynot-works',
+      contract_id: 'contract-worry-free-essentials',
+      client_contract_id: 'cc-benjamin-wolf-group',
+      client_id: 'client-benjamin-wolf-group',
+      client_name: 'The Benjamin Wolf Group',
+      is_template: false,
+      start_date: '2025-02-15',
+      invoice_count: 0,
+    },
+  ];
+
+  const worryFreePlan = buildSharedContractClonePlan(
+    {
+      sourceContract: {
+        tenant: 'worrynot-works',
+        contract_id: 'contract-worry-free-essentials',
+        contract_name: 'Worry-Free Essentials',
+        billing_frequency: 'monthly',
+        currency_code: 'USD',
+        is_active: true,
+        status: 'active',
+        is_template: false,
+        owner_client_id: null,
+      },
+      assignments: worryFreeAssignments,
+      contractLines: [
+        {
+          tenant: 'worrynot-works',
+          contract_line_id: 'worry-line-1',
+          contract_id: 'contract-worry-free-essentials',
+          contract_line_name: 'Essentials Base',
+        },
+        {
+          tenant: 'worrynot-works',
+          contract_line_id: 'worry-line-2',
+          contract_id: 'contract-worry-free-essentials',
+          contract_line_name: 'Essentials Support',
+        },
+      ],
+      contractLineServices: [
+        { tenant: 'worrynot-works', contract_line_id: 'worry-line-1', service_id: 'svc-essentials-base', quantity: 1 },
+        { tenant: 'worrynot-works', contract_line_id: 'worry-line-2', service_id: 'svc-essentials-support', quantity: 1 },
+      ],
+      contractLineServiceConfigurations: [
+        {
+          tenant: 'worrynot-works',
+          config_id: 'worry-config-1',
+          contract_line_id: 'worry-line-1',
+          service_id: 'svc-essentials-base',
+          configuration_type: 'Fixed',
+        },
+      ],
+      contractLineServiceFixedConfigs: [
+        {
+          tenant: 'worrynot-works',
+          config_id: 'worry-config-1',
+          base_rate: 15000,
+        },
+      ],
+    },
+    { createId }
+  );
+
+  return {
+    managedItAssignments,
+    managedItPlan,
+    worryFreeAssignments,
+    worryFreePlan,
+  };
+}
+
 describe('client-owned contracts simplification migration', () => {
   it('T001: adds contracts.owner_client_id while only planning shared non-template contract splits', () => {
     expect(migrationSource).toContain("table.uuid('owner_client_id').nullable()");
@@ -249,5 +411,86 @@ describe('client-owned contracts simplification migration', () => {
         usageTrackingCount: 0,
       })
     ).toThrow(/pricing schedules/i);
+  });
+
+  it('T035/T036/T037: preserves Managed IT Services on The Green Thumb, clones BTM Machinery, and removes multi-client sharing from the post-migration assignments', () => {
+    const { managedItAssignments, managedItPlan } = buildKnownSharedContractPlans();
+    const [managedClone] = managedItPlan.clones;
+
+    expect(managedItPlan.reason).toBe('single_invoiced_assignment');
+    expect(managedItPlan.preservedAssignment.client_contract_id).toBe('cc-green-thumb');
+    expect(managedItPlan.preservedContractUpdate).toEqual({
+      contract_id: 'contract-managed-it-services',
+      owner_client_id: 'client-green-thumb',
+    });
+    expect(managedClone.clientContractUpdate).toEqual({
+      client_contract_id: 'cc-btm-machinery',
+      contract_id: managedClone.contract.contract_id,
+    });
+    expect(managedClone.contract.contract_id).not.toBe('contract-managed-it-services');
+
+    const postMigrationAssignments = managedItAssignments.map((assignment) =>
+      assignment.client_contract_id === managedClone.clientContractUpdate.client_contract_id
+        ? { ...assignment, contract_id: managedClone.clientContractUpdate.contract_id }
+        : assignment
+    );
+
+    expect(
+      detectSharedNonTemplateContractGroups(postMigrationAssignments.map((assignment) => ({
+        ...assignment,
+        is_template: false,
+      })))
+    ).toEqual([]);
+  });
+
+  it('T038/T039/T040: preserves Worry-Free Essentials on the earliest assignment, clones The Benjamin Wolf Group, and keeps cloned line counts aligned', () => {
+    const { worryFreePlan } = buildKnownSharedContractPlans();
+    const [worryClone] = worryFreePlan.clones;
+
+    expect(worryFreePlan.reason).toBe('earliest_start_date');
+    expect(worryFreePlan.preservedAssignment.client_contract_id).toBe('cc-worrynot-works');
+    expect(worryFreePlan.preservedContractUpdate).toEqual({
+      contract_id: 'contract-worry-free-essentials',
+      owner_client_id: 'client-worrynot-works',
+    });
+    expect(worryClone.clientContractUpdate).toEqual({
+      client_contract_id: 'cc-benjamin-wolf-group',
+      contract_id: worryClone.contract.contract_id,
+    });
+    expect(worryClone.contract.contract_id).not.toBe('contract-worry-free-essentials');
+    expect(worryClone.contractLines).toHaveLength(2);
+    expect(worryClone.contractLines.map((line: any) => line.contract_line_name)).toEqual([
+      'Essentials Base',
+      'Essentials Support',
+    ]);
+    expect(worryClone.contractLines.every((line: any) => line.contract_id === worryClone.contract.contract_id)).toBe(true);
+  });
+
+  it('T041: known production clone-target assignments match the validated preflight assumption of no unsupported historical references', () => {
+    const { managedItPlan, worryFreePlan } = buildKnownSharedContractPlans();
+
+    expect(() =>
+      assertCloneTargetsSupported({
+        tenant: managedItPlan.tenant,
+        contractId: managedItPlan.contractId,
+        cloneTargets: managedItPlan.clones.map((clone: any) => clone.sourceAssignment),
+        contractDocumentAssociationsCount: 0,
+        pricingScheduleCount: 0,
+        timeEntryCount: 0,
+        usageTrackingCount: 0,
+      })
+    ).not.toThrow();
+
+    expect(() =>
+      assertCloneTargetsSupported({
+        tenant: worryFreePlan.tenant,
+        contractId: worryFreePlan.contractId,
+        cloneTargets: worryFreePlan.clones.map((clone: any) => clone.sourceAssignment),
+        contractDocumentAssociationsCount: 0,
+        pricingScheduleCount: 0,
+        timeEntryCount: 0,
+        usageTrackingCount: 0,
+      })
+    ).not.toThrow();
   });
 });

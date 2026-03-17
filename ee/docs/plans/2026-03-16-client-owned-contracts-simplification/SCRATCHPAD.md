@@ -53,6 +53,15 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-16) Contract revenue reporting had one more legacy seam after the live-status UI work: `packages/billing` action code was already mostly assignment-aware, but both report-definition copies (`server` and `packages/reporting`) still counted live contracts from `contracts.is_active`.
 - (2026-03-16) The `/api/v1/contracts` and `/api/v2/contracts` surface had drifted behind the new ownership model: the controller still advertised a generic contract list and the list implementation was stubbed. The fix was to return real non-template headers filtered to `owner_client_id` and exclude templates from that resource entirely.
 - (2026-03-16) `docs/billing/billing.md` still described `contracts` as a reusable sellable library. Updated it to make templates the only reusable layer, `contracts` the client-owned header table, and `client_contracts` the live lifecycle table.
+- (2026-03-16) `BillingEngine#getClientContractLinesAndCycle` remains the core post-migration resolution path for invoiceable contract lines; `T021` now covers preserved-vs-cloned assignments by asserting the same client can only resolve the contract-line set attached to its current `client_contracts.contract_id`.
+- (2026-03-16) `server/src/test/unit/billingEngine.test.ts` has broader stale harness failures around the newer `calculateMaterialCharges()` query shape, so the reliable validation for `T021` is a targeted Vitest run of the new assignment-resolution regression instead of the whole legacy file.
+- (2026-03-16) The reliable harness for contract-wizard draft resume coverage is a server-side action test with mocked `createTenantKnex`/auth/repository seams; package-local `packages/billing` Vitest still misses the shared `@alga-psa/db` export wiring for this branch.
+- (2026-03-16) The renewals queue draft-link regression is likewise best covered from `server` by mocking the transactional knex insert/update path directly; it verifies the owner-client invariant without depending on the package-local alias setup.
+- (2026-03-16) `ContractLineService.addContractLine()` is the highest-signal API mutation seam for post-migration contract-line safety: it validates the target contract and source line inside `withTransaction()` before writing the contract-owned mapping, so a focused service unit test covers the legacy `/contracts/:id/lines` path without needing the full controller stack.
+- (2026-03-16) Server Vitest coverage output in this worktree can fail on targeted one-file runs when `coverage/.tmp` is missing, even if assertions pass; rerunning the narrow check with `--coverage.enabled false` is the reliable workaround for checklist validation.
+- (2026-03-16) `server/src/test/infrastructure/billing/invoices/contractInvoiceManualCredit.test.ts` is the right DB-backed harness for cloned-contract invoice validation, but this workspace does not currently have the test Postgres on `127.0.0.1:5432`, so `T022` could only be implemented and smoke-loaded, not executed end-to-end here.
+- (2026-03-16) The migration helper file is strong enough to model the two known production shared-contract scenarios directly. `server/src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts` now uses named fixtures for `Managed IT Services` and `Worry-Free Essentials` to cover preserved assignment choice, clone-target repointing, and clone-line count preservation without needing a live database.
+- (2026-03-16) `T032` is covered at the action layer in `server/src/test/unit/contractReportActions.sharedContractResults.test.ts`, which mocks `getContractRevenueReport()` inputs as the two known post-migration shared-contract splits and asserts four client-owned rows come back instead of two shared-contract rows.
 - (2026-03-16) Client portal contract-linked document visibility still inferred ownership through `client_contracts`. Updated all 3 portal contract-document branches to resolve through `contracts.owner_client_id` and explicitly exclude templates, so stale shared assignment rows cannot leak documents.
 - (2026-03-16) The duplicated `ClientContractLine` helper models in `packages/billing` and `packages/clients` still trusted `client_contracts -> contract_lines` by `contract_id` alone. Added `contracts` joins plus `owner_client_id` and non-template guards on overlap and listing queries so contract-derived helper rows cannot bleed across clients.
 - (2026-03-16) The branch already had `F001/F002/F012-F015` runtime wiring in place: `IContract.owner_client_id`, billing dialog/wizard ownership writes, renewal draft ownership propagation, client-assignment ownership checks, and API schema/service ownership validation were already committed before the migration/helper batch.
@@ -90,6 +99,14 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-16) Verify client-owned portal/helper invariants:
   - `cd packages/billing && npx vitest run tests/clientContractLine.ownerInvariant.wiring.test.ts`
   - `cd server && npx vitest run src/test/integration/clientPortalDocuments.integration.test.ts`
+- (2026-03-16) Verify billing-engine preserved vs cloned assignment resolution:
+  - `cd server && npx vitest run src/test/unit/billingEngine.test.ts -t "T021: resolves preserved and cloned assignment lines from each assignment contract after migration"`
+- (2026-03-16) Verify cloned-assignment invoice generation:
+  - `cd server && npx vitest run src/test/infrastructure/billing/invoices/contractInvoiceManualCredit.test.ts -t "T022: invoice generation succeeds for a cloned assignment with duplicated contract-line configuration after migration"`
+- (2026-03-16) Verify known shared-contract migration sanity cases:
+  - `cd server && npx vitest run src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts`
+- (2026-03-16) Verify report results keep known split contracts separated:
+  - `cd server && npx vitest run src/test/unit/contractReportActions.sharedContractResults.test.ts`
   - `npx tsc --noEmit -p packages/client-portal/tsconfig.json`
   - `npx tsc --noEmit -p packages/clients/tsconfig.json`
   - `npx tsc --noEmit -p packages/billing/tsconfig.json`
@@ -112,6 +129,13 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `npm run typecheck` (workdir `packages/billing`)
   - `npm run typecheck` (workdir `packages/clients`)
   - `npm run typecheck` (workdir `shared`)
+- (2026-03-16) Assignment-resolution/report follow-up verification:
+  - `cd server && npx vitest run src/test/unit/billingEngine.test.ts -t "T021: resolves preserved and cloned assignment lines from each assignment contract after migration"`
+  - `cd server && npx vitest run src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts`
+  - `cd server && npx vitest run src/test/unit/contractReportActions.sharedContractResults.test.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/unit/contractWizardResume.clientOwnedDraft.test.ts`
+  - `cd server && npx vitest run src/test/unit/renewalsQueueActions.createDraftBehavior.test.ts`
+  - `cd server && npx vitest run src/test/unit/api/contractLineService.clientOwnedMutation.test.ts`
 
 ## Progress Log
 
@@ -120,6 +144,13 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-16) Completed `F012`/`T013`/`T014`: `Contract.create` now rejects non-template contracts without an owner, while supported billing UI/wizard flows pass the selected client through as `owner_client_id`.
 - (2026-03-16) Completed `F013`/`T015`/`T016`: client-contract assignment create/update now reject non-template contracts whose `owner_client_id` is missing or belongs to a different client.
 - (2026-03-16) Completed `F014`/`T017`: renewal draft creation now copies the source assignment client onto the draft contract header as `owner_client_id`.
+- (2026-03-16) Completed `T021`: added a billing-engine regression that exercises the real `client_contracts -> contracts -> contract_lines` resolution path and proves preserved and cloned assignments resolve different contract IDs and contract-line IDs after the migration split.
+- (2026-03-16) Completed `T022`: added a DB-backed invoice-generation regression that seeds preserved and cloned contract headers with duplicated line configuration and asserts the cloned assignment invoices against fresh cloned contract-line IDs with the same billable totals as the preserved assignment.
+- (2026-03-16) Completed `T035-T041`: added production-like migration helper coverage for the two known shared contracts, proving the invoiced `Managed IT Services` assignment stays preserved, both clone targets move to fresh contract IDs, clone line counts stay aligned, and the preflight assumption of zero unsupported downstream references still holds for those clone targets.
+- (2026-03-16) Completed `T032`: added a report-action runtime test showing the known `Managed IT Services` and `Worry-Free Essentials` splits now appear as four assignment-owned revenue rows, not as two tenant-shared contract rows.
+- (2026-03-16) Completed `T042`: added a server-side draft-resume regression showing `getDraftContractForResume()` still returns a client-owned draft contract when the related assignment lifecycle is `renewing`, without inferring that live assignment state back onto the draft header.
+- (2026-03-16) Completed `T043`: added a renewals-queue regression showing `createRenewalDraftForQueueItem()` still creates the linked draft contract/client-contract pair after owner-client enforcement and persists `owner_client_id` on the draft header.
+- (2026-03-16) Completed `T044`: added a focused `ContractLineService.addContractLine()` regression proving the API/service mutation path still validates the client-owned contract and source line inside the transaction and writes the expected contract-line mapping for cloned non-template contracts.
 - (2026-03-16) Completed `F015`/`T018`: legacy API/service contract creation now requires `owner_client_id` via Zod validation plus a service-level runtime check.
 - (2026-03-16) Completed `F003-F011` and `T003-T012`: added `server/migrations/20260316121000_client_owned_contracts_simplification.cjs` plus `server/migrations/utils/client_owned_contracts_simplification.cjs` to detect shared non-template contracts, pick the preserved assignment by invoice/earliest-start rules, clone contract headers/lines/configuration rows for clone targets, repoint assignments, backfill `owner_client_id`, and fail closed on invoice/document/pricing/time/usage references that would need explicit historical retargeting.
 - (2026-03-16) Completed `F016`/`F017`/`F019-F026` and `T019`/`T020`/`T023-T029`: billing live-contract loaders now read assignment-first rows from `client_contracts`, require `owner_client_id` for normal live rows, derive explicit `assignment_status` through a shared helper, route detail from `clientContractId`, render assignment-first status in list/detail/header UI, mutate lifecycle via `updateClientContractForBilling`, and keep templates visibly separate as the only reusable contract-definition path.

@@ -7,18 +7,27 @@ import { TaxService } from '@alga-psa/billing/services/taxService';
 import * as clientActions from '@alga-psa/clients/actions';
 
 
-vi.mock('@/lib/db/db');
+vi.mock('server/src/lib/db/db', () => ({
+  getConnection: vi.fn(),
+}));
 vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (_knex, callback) => callback(_knex)),
   withAdminTransaction: vi.fn(async (_callback, existing) => _callback(existing)),
 }));
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(() => Promise.resolve({
-    user: {
-      id: 'mock-user-id',
-    },
-  })),
-}));
+vi.mock('@alga-psa/auth', async (importOriginal) => {
+  const actual = await importOriginal<any>();
+
+  return {
+    ...actual,
+    getSession: vi.fn(() => Promise.resolve({
+      user: {
+        id: 'mock-user-id',
+      },
+    })),
+    withAuth: (fn: unknown) => fn,
+    withAuthCheck: (fn: unknown) => fn,
+  };
+});
 
 
 vi.mock('openid-client', () => ({
@@ -32,20 +41,17 @@ vi.mock('jose', () => ({
   // Add any jose methods you're using
 }));
 
-vi.mock('@alga-psa/clients/actions', async () => {
-  const actual = await vi.importActual<any>('@alga-psa/clients/actions');
-  return {
-    ...actual,
-    getClientById: vi.fn(() =>
-      Promise.resolve({
-        client_id: 'mock-client-id',
-        client_name: 'Mock Client',
-        tenant: 'test_tenant',
-        is_tax_exempt: false,
-      })
-    ),
-  };
-});
+vi.mock('@alga-psa/clients/actions', () => ({
+  getClientById: vi.fn(() =>
+    Promise.resolve({
+      client_id: 'mock-client-id',
+      client_name: 'Mock Client',
+      tenant: 'test_tenant',
+      is_tax_exempt: false,
+    })
+  ),
+  getClientDefaultTaxRegionCode: vi.fn(() => Promise.resolve('US-NY')),
+}));
 
 
 describe('BillingEngine', () => {
@@ -690,6 +696,196 @@ describe('BillingEngine', () => {
         adjustments: [],
         finalAmount: 350,
       });
+    });
+
+    it('T021: resolves preserved and cloned assignment lines from each assignment contract after migration', async () => {
+      const preservedClientId = 'client-preserved';
+      const clonedClientId = 'client-cloned';
+      const billingPeriod: IBillingPeriod = {
+        startDate: '2026-03-01',
+        endDate: '2026-04-01',
+      };
+
+      const linesByClient: Record<string, any[]> = {
+        [preservedClientId]: [
+          {
+            client_id: preservedClientId,
+            contract_line_id: 'preserved-line-1',
+            service_category: 'managed-services',
+            start_date: '2026-01-01T00:00:00Z',
+            end_date: null,
+            is_active: true,
+            client_contract_id: 'cc-preserved',
+            template_contract_id: null,
+            contract_id: 'contract-managed-it-services',
+            contract_name: 'Managed IT Services',
+            currency_code: 'USD',
+            contract_line_name: 'Managed IT Base',
+            contract_line_type: 'Fixed',
+            billing_frequency: 'monthly',
+            billing_timing: null,
+            custom_rate: '10000',
+            enable_proration: null,
+            billing_cycle_alignment: null,
+            tenant: mockTenant,
+          },
+        ],
+        [clonedClientId]: [
+          {
+            client_id: clonedClientId,
+            contract_line_id: 'clone-line-1',
+            service_category: 'managed-services',
+            start_date: '2026-02-01T00:00:00Z',
+            end_date: null,
+            is_active: true,
+            client_contract_id: 'cc-clone',
+            template_contract_id: null,
+            contract_id: 'contract-managed-it-services-clone',
+            contract_name: 'Managed IT Services',
+            currency_code: 'USD',
+            contract_line_name: 'Managed IT Base',
+            contract_line_type: 'Fixed',
+            billing_frequency: 'monthly',
+            billing_timing: 'advance',
+            custom_rate: '12500',
+            enable_proration: true,
+            billing_cycle_alignment: 'prorated',
+            tenant: mockTenant,
+          },
+          {
+            client_id: clonedClientId,
+            contract_line_id: 'clone-line-2',
+            service_category: 'managed-services',
+            start_date: '2026-02-01T00:00:00Z',
+            end_date: null,
+            is_active: true,
+            client_contract_id: 'cc-clone',
+            template_contract_id: null,
+            contract_id: 'contract-managed-it-services-clone',
+            contract_name: 'Managed IT Services',
+            currency_code: 'USD',
+            contract_line_name: 'Managed IT Add-on',
+            contract_line_type: 'Usage',
+            billing_frequency: 'monthly',
+            billing_timing: null,
+            custom_rate: '2500',
+            enable_proration: null,
+            billing_cycle_alignment: null,
+            tenant: mockTenant,
+          },
+        ],
+      };
+
+      const baseKnex = (billingEngine as any).knex;
+      let activeClientId: string | null = null;
+      const clientContractsBuilder = buildChainableQuery();
+      clientContractsBuilder.orWhereNull = vi.fn().mockImplementation(() => clientContractsBuilder);
+      clientContractsBuilder.where = vi.fn().mockImplementation((condition: any, operator?: any, value?: any) => {
+        if (typeof condition === 'function') {
+          condition.call(clientContractsBuilder, clientContractsBuilder);
+          return clientContractsBuilder;
+        }
+
+        if (condition && typeof condition === 'object' && 'cc.client_id' in condition) {
+          activeClientId = condition['cc.client_id'];
+        }
+
+        return clientContractsBuilder;
+      });
+      clientContractsBuilder.select = vi.fn().mockImplementation(() => {
+        clientContractsBuilder.__setResolveValue(
+          (linesByClient[activeClientId ?? ''] ?? []).map((row) => ({ ...row }))
+        );
+        return clientContractsBuilder;
+      });
+
+      (billingEngine as any).knex = vi.fn((table: string) => {
+        if (table === 'client_contracts as cc') {
+          return clientContractsBuilder;
+        }
+
+        if (table === 'clients') {
+          return buildChainableQuery({
+            selectResult: [],
+            firstResult: {
+              client_id: activeClientId ?? preservedClientId,
+              tenant: mockTenant,
+              client_name: 'Migrated Client',
+              is_tax_exempt: false,
+            },
+            thenResult: [],
+          });
+        }
+
+        return baseKnex(table);
+      });
+      (billingEngine as any).knex.raw = baseKnex.raw;
+      vi.spyOn(billingEngine as any, 'getBillingCycle').mockResolvedValue('monthly');
+
+      const preservedResult = await (billingEngine as any).getClientContractLinesAndCycle(
+        preservedClientId,
+        billingPeriod
+      );
+      const clonedResult = await (billingEngine as any).getClientContractLinesAndCycle(
+        clonedClientId,
+        billingPeriod
+      );
+
+      expect(preservedResult.billingCycle).toBe('monthly');
+      expect(preservedResult.clientContractLines).toHaveLength(1);
+      expect(preservedResult.clientContractLines[0]).toMatchObject({
+        client_id: preservedClientId,
+        client_contract_id: 'cc-preserved',
+        contract_id: 'contract-managed-it-services',
+        contract_line_id: 'preserved-line-1',
+        contract_line_name: 'Managed IT Base',
+        billing_timing: 'arrears',
+        custom_rate: 10000,
+        enable_proration: false,
+        billing_cycle_alignment: 'start',
+      });
+
+      expect(clonedResult.billingCycle).toBe('monthly');
+      expect(clonedResult.clientContractLines).toHaveLength(2);
+      expect(clonedResult.clientContractLines.map((line: any) => line.contract_id)).toEqual([
+        'contract-managed-it-services-clone',
+        'contract-managed-it-services-clone',
+      ]);
+      expect(clonedResult.clientContractLines.map((line: any) => line.contract_line_id)).toEqual([
+        'clone-line-1',
+        'clone-line-2',
+      ]);
+      expect(clonedResult.clientContractLines[0]).toMatchObject({
+        client_id: clonedClientId,
+        client_contract_id: 'cc-clone',
+        billing_timing: 'advance',
+        custom_rate: 12500,
+        enable_proration: true,
+        billing_cycle_alignment: 'prorated',
+      });
+      expect(clonedResult.clientContractLines[1]).toMatchObject({
+        client_id: clonedClientId,
+        client_contract_id: 'cc-clone',
+        billing_timing: 'arrears',
+        custom_rate: 2500,
+        enable_proration: false,
+        billing_cycle_alignment: 'start',
+      });
+
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'cc.client_id': preservedClientId,
+          'cc.is_active': true,
+          'cc.tenant': mockTenant,
+        })
+      );
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'cc.client_id': clonedClientId,
+          'cc.is_active': true,
+          'cc.tenant': mockTenant,
+        })
+      );
     });
   });
 
