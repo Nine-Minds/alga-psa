@@ -320,13 +320,13 @@
   {
     "id": "F054",
     "description": "Preserve discount applicability evaluation when recurring line timing is driven by canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {
     "id": "F055",
     "description": "Preserve pricing schedule effective-date evaluation when service periods, not ad hoc billing windows, drive recurring charges",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {

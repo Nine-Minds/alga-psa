@@ -130,6 +130,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Bucket overage invoice-window attachment is now explicitly covered on the service-period-first path:
   - `packages/billing/src/lib/billing/billingEngine.ts` continues to select `bucket_usage` rows by the active billing window, but the focused regression now proves that the emitted charge keeps the persisted allowance period instead of collapsing back to invoice-window dates
   - `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts` now covers both the explicit service-period mapping and the invoice-window filter that keeps February allowance usage on the February invoice window instead of rebilling it elsewhere
+- (2026-03-17) Fixed recurring discount and pricing-schedule date-basis parity is now explicit:
+  - `packages/billing/src/lib/billing/billingEngine.ts` still evaluates pricing schedule activation against the active invoice window even when an arrears fixed charge now carries the previous service period canonically; the new regression proves a schedule ending exactly at window start is excluded, one starting at window start is included, and one starting at window end is excluded
+  - the discount path in `fetchDiscounts` still uses invoice-window overlap semantics rather than covered service-period overlap during the client-cadence parity phase; the new test locks the current boundary behavior, including the existing inclusive `discounts.start_date <= billingPeriod.endDate` rule and exclusive `discounts.end_date > billingPeriod.startDate` rule
+  - `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts` is the focused contract test for both behaviors so future service-period work can change the date basis deliberately instead of accidentally
 
 ## Commands / Runbooks
 
@@ -187,6 +191,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npm test -- bucketUsageService.periods.test.ts`
 - (2026-03-17) Bucket invoice-window validation:
   - `npx vitest run src/test/unit/billing/billingEngine.bucketTiming.test.ts --coverage.enabled false`
+- (2026-03-17) Fixed discount and pricing-schedule parity validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.discountPricingTiming.test.ts --coverage.enabled false`
 
 ## Links / References
 
