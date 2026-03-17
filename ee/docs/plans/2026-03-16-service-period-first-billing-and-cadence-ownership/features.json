@@ -308,13 +308,13 @@
   {
     "id": "F052",
     "description": "Align remaining-bucket and rollover calculations with canonical service-period boundaries where recurring timing currently matters",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {
     "id": "F053",
     "description": "Preserve bucket overage charging behavior when bucket plans move onto service-period-first timing semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {

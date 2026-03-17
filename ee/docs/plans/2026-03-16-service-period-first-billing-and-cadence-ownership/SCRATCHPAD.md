@@ -123,6 +123,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - bucket charge `servicePeriodStart` and `servicePeriodEnd` now follow the persisted bucket period boundaries, which is the first concrete definition for `F051`
   - tax-date evaluation for bucket overages now uses the allowance period end date instead of the enclosing invoice window end, which keeps the charge aligned with the bucket period it represents
   - `server/src/test/unit/billingEngine.test.ts` now covers multi-period bucket usage inside one invoice window and asserts that the emitted bucket charges preserve the two distinct service periods
+- (2026-03-17) Bucket rollover calculation now follows the same client-cadence boundary source in both writer paths:
+  - `packages/billing/src/services/bucketUsageService.ts` now prefers `client_billing_cycles` for the active allowance period and, when rollover is enabled, uses the previous client billing cycle before falling back to anchor math
+  - `packages/scheduling/src/services/bucketUsageService.ts` now mirrors that same client-cycle-aware rollover logic so time-entry writes and billing writes cannot materialize different `bucket_usage` periods for the same recurring obligation
+  - `server/src/test/unit/billing/bucketUsageService.periods.test.ts` and `packages/scheduling/tests/bucketUsageService.periods.test.ts` now lock the regression with a monthly client-cadence rollover scenario that would previously have reached back to the contract start anchor instead of the prior billing cycle
+- (2026-03-17) Bucket overage invoice-window attachment is now explicitly covered on the service-period-first path:
+  - `packages/billing/src/lib/billing/billingEngine.ts` continues to select `bucket_usage` rows by the active billing window, but the focused regression now proves that the emitted charge keeps the persisted allowance period instead of collapsing back to invoice-window dates
+  - `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts` now covers both the explicit service-period mapping and the invoice-window filter that keeps February allowance usage on the February invoice window instead of rebilling it elsewhere
 
 ## Commands / Runbooks
 
@@ -175,6 +182,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - blocked locally by `EPERM` to Postgres on `127.0.0.1:5438` and `127.0.0.1:5432`
 - (2026-03-17) Bucket period mapping validation:
   - `npx vitest run src/test/unit/billingEngine.test.ts -t "calculate bucket overlay charges correctly|T056" --coverage.enabled false`
+- (2026-03-17) Bucket rollover validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.bucketTiming.test.ts src/test/unit/billing/bucketUsageService.periods.test.ts --coverage.enabled false`
+  - `npm test -- bucketUsageService.periods.test.ts`
+- (2026-03-17) Bucket invoice-window validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.bucketTiming.test.ts --coverage.enabled false`
 
 ## Links / References
 
