@@ -354,7 +354,7 @@ export function FixedPlanConfiguration({
               <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
-                    Enable Proration
+                    Adjust for Partial Periods
                   </Label>
                   <Switch
                     id="enable-proration"
@@ -381,7 +381,7 @@ export function FixedPlanConfiguration({
                       options={[
                         { value: 'start', label: 'Start of Billing Cycle' },
                         { value: 'end', label: 'End of Billing Cycle' },
-                        { value: 'prorated', label: 'Prorated' },
+                        { value: 'prorated', label: 'Proportional Coverage' },
                       ]}
                       placeholder="Select alignment"
                     />

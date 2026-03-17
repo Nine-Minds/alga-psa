@@ -26,11 +26,15 @@ describe('fixed recurring partial-period copy wiring', () => {
     expect(combined).toContain(
       'Controls how partial-period coverage is calculated when the recurring fee needs to scale to less than a full service period.'
     );
+    expect(combined).toContain('Adjust for Partial Periods');
+    expect(combined).toContain('Partial-Period Adjustment:');
     expect(combined).not.toContain(
       'Toggle this on if you want the base rate to be prorated when the contract starts mid-cycle.'
     );
     expect(combined).not.toContain(
       'When enabled, the recurring fee will be prorated for partial billing periods'
     );
+    expect(combined).not.toContain('Enable Proration');
+    expect(combined).not.toContain('<strong>Proration:</strong>');
   });
 });

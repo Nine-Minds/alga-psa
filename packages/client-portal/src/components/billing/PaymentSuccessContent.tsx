@@ -108,7 +108,7 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
                   <p className="text-sm font-medium text-slate-900">Service Period Summary</p>
                   <p className="mt-1 text-sm text-slate-600">{servicePeriodSummary}</p>
                   <p className="mt-2 text-sm text-slate-600">
-                    This summary comes from the invoice&apos;s recurring detail periods, not from invoice-header billing dates or proration-only copy.
+                    This summary comes from the invoice&apos;s recurring detail periods, not from invoice-header billing dates alone.
                   </p>
                 </div>
               ) : null}

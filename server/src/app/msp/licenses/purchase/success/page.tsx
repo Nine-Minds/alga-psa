@@ -141,7 +141,7 @@ export default function LicensePurchaseSuccessPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground">Your next invoice will include the prorated charges</span>
+                  <span className="text-sm text-muted-foreground">Your next invoice will include any partial-period charge adjustments</span>
                 </li>
               </ul>
             )}

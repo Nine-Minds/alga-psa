@@ -961,7 +961,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
-                        Enable Proration
+                        Adjust for Partial Periods
                       </Label>
                       <Switch
                         id="enable-proration"

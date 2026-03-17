@@ -54,7 +54,7 @@ describe('PaymentSuccessContent recurring service periods', () => {
     expect(screen.getByText('2026-01-01 - 2026-02-01')).toBeInTheDocument();
     expect(
       screen.getByText(
-        "This summary comes from the invoice's recurring detail periods, not from invoice-header billing dates or proration-only copy."
+        "This summary comes from the invoice's recurring detail periods, not from invoice-header billing dates alone."
       )
     ).toBeInTheDocument();
   });

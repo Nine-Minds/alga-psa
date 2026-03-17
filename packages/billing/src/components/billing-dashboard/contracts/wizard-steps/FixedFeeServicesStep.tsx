@@ -198,7 +198,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <SwitchWithLabel
-                label="Enable proration"
+                label="Adjust for Partial Periods"
                 checked={data.enable_proration}
                 onCheckedChange={(checked) => updateData({ enable_proration: checked })}
               />
@@ -301,7 +301,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                   <strong>Recurring Rate:</strong> {formatCurrency(data.fixed_base_rate)}
                 </p>
                 <p>
-                  <strong>Proration:</strong> {data.enable_proration ? 'Enabled' : 'Disabled'}
+                  <strong>Partial-Period Adjustment:</strong> {data.enable_proration ? 'Enabled' : 'Disabled'}
                 </p>
               </div>
             </AlertDescription>

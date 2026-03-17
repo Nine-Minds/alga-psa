@@ -374,7 +374,8 @@ export const deleteContractLine = withAuth(async (
 
 /**
  * Gets the combined fixed plan configuration (plan-level and service-level)
- * Fetches proration/alignment from contract_line_fixed_config and base_rate from contract_line_service_fixed_config.
+ * Fetches legacy partial-period compatibility settings from contract_line_fixed_config
+ * and base_rate from contract_line_service_fixed_config.
  */
 export const getCombinedFixedPlanConfiguration = withAuth(async (
     user,
@@ -398,7 +399,7 @@ export const getCombinedFixedPlanConfiguration = withAuth(async (
                 throw new Error('Permission denied: Cannot read contract line configurations');
             }
 
-            // --- Fetch Plan-Level Config (Base Rate, Proration, Alignment) ---
+            // --- Fetch Plan-Level Config (Base Rate, Partial-Period Compatibility) ---
             // Use the existing getContractLineFixedConfig action which should now return base_rate
             const planConfig = await getContractLineFixedConfig(planId);
 
@@ -443,7 +444,7 @@ export const getCombinedFixedPlanConfiguration = withAuth(async (
 });
 
 /**
- * Gets only the plan-level fixed configuration (proration, alignment)
+ * Gets only the plan-level fixed configuration (partial-period compatibility)
  */
 export const getContractLineFixedConfig = withAuth(async (
     user,
@@ -477,7 +478,8 @@ export const getContractLineFixedConfig = withAuth(async (
 });
 
 /**
- * Updates the plan-level fixed configuration (proration, alignment) in contract_line_fixed_config.
+ * Updates the plan-level fixed configuration (partial-period compatibility) in
+ * contract_line_fixed_config.
  * Uses upsert logic: creates if not exists, updates if exists.
  */
 export const updateContractLineFixedConfig = withAuth(async (
@@ -583,7 +585,7 @@ export const updatePlanServiceFixedConfigRate = withAuth(async (
                     { // Type config data (only base_rate now)
                         base_rate: baseRate
                     }
-                    // No proration/alignment data passed here anymore
+                    // No legacy partial-period compatibility data is passed here anymore
                 );
 
                 return !!configId;

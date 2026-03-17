@@ -1376,7 +1376,7 @@ export class BillingEngine {
             let prorationFactor = 1.0;
             let effectiveBaseRateInCents = baseRateInCents; // Start with full rate in cents
 
-            // Use the plan-level proration setting fetched earlier for fixed plans
+            // Use the plan-level partial-period setting fetched earlier for fixed plans
             if (planLevelEnableProration) {
               prorationFactor = coverageRatio;
               effectiveBaseRateInCents = Math.round(
