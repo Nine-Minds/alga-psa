@@ -277,35 +277,42 @@
   justify-content: center;
 }
 
-/* Proxy scrollbar inset at the bottom of the header card */
-.kanbanScrollbarProxy {
-  overflow-x: auto;
-  overflow-y: hidden;
-  margin: -0.75rem -0.75rem 0; /* tight to content, edge-to-edge, flush with bottom */
-  /* Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: rgb(var(--color-border-200)) transparent;
+/* Always-visible custom horizontal scrollbar for the kanban board */
+.kanbanScrollbarShell {
+  margin: -0.1rem -0.75rem 0;
+  padding: 0.2rem 0.75rem 0.05rem;
 }
 
-.kanbanScrollbarProxy::-webkit-scrollbar {
-  height: 6px;
+.kanbanScrollbarTrack {
+  position: relative;
+  height: 4px;
+  border-radius: 9999px;
+  background: rgb(var(--color-border-100) / 0.45);
+  cursor: pointer;
 }
 
-.kanbanScrollbarProxy::-webkit-scrollbar-track {
-  background: transparent;
+.kanbanScrollbarThumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: rgb(var(--color-border-300) / 0.9);
+  cursor: grab;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  touch-action: none;
 }
 
-.kanbanScrollbarProxy::-webkit-scrollbar-thumb {
-  background: rgb(var(--color-border-200));
-  border-radius: 3px;
+.kanbanScrollbarThumb:hover {
+  background: rgb(var(--color-border-400) / 0.95);
 }
 
-.kanbanScrollbarProxy::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--color-border-300));
+.kanbanScrollbarThumb:active {
+  cursor: grabbing;
 }
 
-.kanbanScrollbarProxyInner {
-  height: 1px;
+.kanbanScrollbarThumbStatic {
+  background: rgb(var(--color-border-200) / 0.7);
 }
 
 .kanbanContainer {
@@ -316,7 +323,7 @@
   min-height: 0; /* Allow it to shrink */
   overflow-x: auto; /* Horizontal scrolling only */
   overflow-y: hidden;
-  /* Hide native scrollbar - using proxy scrollbar instead */
+  /* Hide the native scrollbar - using the custom track in the header instead */
   scrollbar-width: none; /* Firefox */
 }
 
