@@ -506,7 +506,7 @@
   {
     "id": "F085",
     "description": "Update server API schemas and services that create or update contract lines, templates, or billing settings to accept cadence_owner safely",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {

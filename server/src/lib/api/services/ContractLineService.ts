@@ -249,7 +249,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         // Transform null to undefined for compatibility
         const transformedPlan = {
           ...plan,
-          service_category: plan.service_category || undefined
+          service_category: plan.service_category || undefined,
+          cadence_owner: plan.cadence_owner ?? 'client',
         };
     
         // Add HATEOAS links
@@ -278,6 +279,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         planData.custom_rate = data.contract_line_type === 'Fixed' ? baseRate : planData.custom_rate ?? null;
         planData.enable_proration = enableProration;
         planData.billing_cycle_alignment = alignment;
+        planData.cadence_owner = data.cadence_owner ?? planData.cadence_owner ?? 'client';
 
         delete (planData as any).base_rate;
 
@@ -336,7 +338,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         // Transform null to undefined for compatibility
         return {
           ...updatedPlan,
-          service_category: updatedPlan.service_category || undefined
+          service_category: updatedPlan.service_category || undefined,
+          cadence_owner: updatedPlan.cadence_owner ?? 'client',
         } as IContractLine;
       });
     }
@@ -383,7 +386,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         // Transform null to undefined for compatibility
         const transformedPlan = {
           ...updatedPlan,
-          service_category: updatedPlan.service_category || undefined
+          service_category: updatedPlan.service_category || undefined,
+          cadence_owner: updatedPlan.cadence_owner ?? 'client',
         };
         
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;

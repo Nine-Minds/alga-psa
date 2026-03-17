@@ -235,6 +235,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/types/src/interfaces/billing.interfaces.ts`, `packages/types/src/interfaces/contract.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `server/src/interfaces/contract.interfaces.ts` now expose `cadence_owner` on live contract-line and mapping interfaces
   - `server/src/lib/repositories/contractLineRepository.ts`, `shared/billingClients/contractLines.ts`, `packages/clients/src/actions/clientContractLineActions.ts`, `packages/billing/src/actions/contractLineAction.ts`, and `packages/billing/src/lib/billing/billingEngine.ts` now read/write `cadence_owner` from `contract_lines` and default missing legacy rows to `'client'`
   - template lines were intentionally left out of the new schema in this checkpoint; repository reads still default template-backed responses to `'client'`, but persistence on template authoring remains follow-on work (`F093+`, `F138+`, `F212+`)
+- (2026-03-17) Server API cadence-owner handling now matches the live contract-line storage decision:
+  - `server/src/lib/api/schemas/contractLineSchemas.ts` and `server/src/lib/api/schemas/financialSchemas.ts` now accept `cadence_owner` only as `client|contract` on contract-line and client-contract-line request surfaces and require a valid cadence owner on line response schemas
+  - `server/src/lib/api/services/ContractLineService.ts` now defaults create/get/update responses to `'client'` when legacy rows lack the field, while still persisting explicit `cadence_owner` values on live contract-line writes
+  - template/billing-settings API surfaces were intentionally not widened in this checkpoint because v1 persistence is still line-scoped on `contract_lines`; later authoring/default surfaces stay queued behind `F086+` and `F121+`
 - (2026-03-17) Credit-reader invoice context now stays on canonical recurring detail metadata, which closes `F078` without pretending the blocked DB integration is done:
   - `packages/billing/src/actions/creditActions.ts` now loads source invoices through `Invoice.getById(...)` for both `getCreditDetails(...)` and the invoice-summary enrichment inside `listClientCredits(...)`, instead of rereading raw `invoices` rows that dropped recurring `invoice_charge_details`
   - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
@@ -361,6 +365,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - run from `packages/types`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Cadence-owner API validation:
+  - `npx vitest run src/test/unit/api/contractLineCadenceOwner.schema.test.ts src/test/unit/api/contractLineService.cadenceOwner.test.ts src/test/unit/api/contractCreateOwnerClientSchema.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - blocked by an unrelated existing type error in `packages/billing/src/actions/creditActions.ts` (`IInvoice | null` narrowing), not by the cadence-owner API changes
 - (2026-03-17) Credit-reader canonical invoice-context validation:
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`

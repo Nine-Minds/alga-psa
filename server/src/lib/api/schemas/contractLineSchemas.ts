@@ -24,6 +24,7 @@ export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage']);
 export const billingFrequencySchema = z.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']);
 export const configurationTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
 export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
+export const cadenceOwnerSchema = z.enum(['client', 'contract']);
 export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage', 'per_unit']);
 export const contractStatusSchema = z.enum(['active', 'draft', 'terminated', 'expired', 'published', 'archived']);
 
@@ -38,6 +39,7 @@ const baseContractLineSchema = z.object({
   is_custom: z.boolean().optional().default(false),
   service_category: z.string().optional(),
   contract_line_type: planTypeSchema,
+  cadence_owner: cadenceOwnerSchema.optional(),
   
   // Hourly plan specific fields (deprecated for Hourly type)
   hourly_rate: z.number().min(0).optional(),
@@ -82,6 +84,7 @@ export const contractLineResponseSchema = z.object({
   is_custom: z.boolean(),
   service_category: z.string().nullable(),
   contract_line_type: planTypeSchema,
+  cadence_owner: cadenceOwnerSchema,
   hourly_rate: z.number().nullable(),
   minimum_billable_time: z.number().nullable(),
   round_up_to_nearest: z.number().nullable(),
