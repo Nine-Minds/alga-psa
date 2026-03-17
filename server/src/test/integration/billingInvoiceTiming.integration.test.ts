@@ -389,6 +389,177 @@ it('T153: DB-backed annual client-cadence recurring invoices preserve longer-fre
   expect(normalizeDateValue(detailByService.get(advanceLine.serviceId)?.service_period_end)).toBe(currentPeriodEnd);
 }, HOOK_TIMEOUT);
 
+it('T171: DB-backed monthly client-cadence recurring fixed invoice generation still succeeds on canonical service periods after cutover', async () => {
+  setupCommonMocks({ tenantId, userId: 'monthly-sanity-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    currentPeriodStart,
+    currentPeriodEnd,
+    nextPeriodStart
+  } = await createClientWithRecurringCycles({
+    clientName: 'Monthly Sanity Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01'
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Monthly Sanity Fixed Service',
+    planName: 'Monthly Sanity Fixed Plan',
+    baseRateCents: 17500,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly'
+  });
+
+  const invoice = await generateInvoice(cycleId);
+  expect(invoice).toBeTruthy();
+  expect(Number(invoice!.subtotal)).toBe(175);
+
+  const persistedInvoice = await getPersistedInvoice(invoice!.invoice_id);
+  expect(normalizeDateValue(persistedInvoice?.billing_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(persistedInvoice?.billing_period_end)).toBe(nextPeriodStart);
+
+  const detailRows = await getInvoiceDetailRows(invoice!.invoice_id);
+  expect(detailRows).toHaveLength(1);
+  expect(detailRows[0]).toMatchObject({
+    service_id: fixedLine.serviceId,
+    billing_timing: 'advance'
+  });
+  expect(normalizeDateValue(detailRows[0]?.service_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(currentPeriodEnd);
+}, HOOK_TIMEOUT);
+
+it('T172: DB-backed quarterly client-cadence recurring fixed invoice generation still succeeds on canonical service periods after cutover', async () => {
+  setupCommonMocks({ tenantId, userId: 'quarterly-sanity-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    previousPeriodStart,
+    previousPeriodEnd,
+    currentPeriodStart,
+    nextPeriodStart
+  } = await createClientWithRecurringCycles({
+    clientName: 'Quarterly Sanity Client',
+    billingCycle: 'quarterly',
+    previousPeriodStart: '2024-10-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-04-01'
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Quarterly Sanity Fixed Service',
+    planName: 'Quarterly Sanity Fixed Plan',
+    baseRateCents: 54000,
+    startDate: previousPeriodStart,
+    billingTiming: 'arrears',
+    billingFrequency: 'quarterly'
+  });
+
+  const invoice = await generateInvoice(cycleId);
+  expect(invoice).toBeTruthy();
+  expect(Number(invoice!.subtotal)).toBe(540);
+
+  const persistedInvoice = await getPersistedInvoice(invoice!.invoice_id);
+  expect(normalizeDateValue(persistedInvoice?.billing_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(persistedInvoice?.billing_period_end)).toBe(nextPeriodStart);
+
+  const detailRows = await getInvoiceDetailRows(invoice!.invoice_id);
+  expect(detailRows).toHaveLength(1);
+  expect(detailRows[0]).toMatchObject({
+    service_id: fixedLine.serviceId,
+    billing_timing: 'arrears'
+  });
+  expect(normalizeDateValue(detailRows[0]?.service_period_start)).toBe(previousPeriodStart);
+  expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(previousPeriodEnd);
+}, HOOK_TIMEOUT);
+
+it('T173: DB-backed recurring product invoices continue to generate correctly under client cadence after cutover', async () => {
+  setupCommonMocks({ tenantId, userId: 'product-sanity-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    currentPeriodStart,
+    currentPeriodEnd
+  } = await createClientWithRecurringCycles({
+    clientName: 'Product Sanity Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01'
+  });
+
+  const productLine = await createRecurringCatalogLine(contextLike, {
+    serviceName: 'Managed Firewall Appliance',
+    planName: 'Managed Firewall Appliance Plan',
+    baseRateCents: 4500,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    quantity: 2,
+    isLicense: false
+  });
+
+  const invoice = await generateInvoice(cycleId);
+  expect(invoice).toBeTruthy();
+  expect(Number(invoice!.subtotal)).toBe(9000);
+
+  const detailRows = await getInvoiceDetailRows(invoice!.invoice_id);
+  expect(detailRows).toHaveLength(1);
+  expect(detailRows[0]).toMatchObject({
+    service_id: productLine.serviceId,
+    billing_timing: 'advance'
+  });
+  expect(normalizeDateValue(detailRows[0]?.service_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(currentPeriodEnd);
+}, HOOK_TIMEOUT);
+
+it('T174: DB-backed recurring license invoices continue to generate correctly under client cadence after cutover', async () => {
+  setupCommonMocks({ tenantId, userId: 'license-sanity-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    previousPeriodStart,
+    previousPeriodEnd
+  } = await createClientWithRecurringCycles({
+    clientName: 'License Sanity Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01'
+  });
+
+  const licenseLine = await createRecurringCatalogLine(contextLike, {
+    serviceName: 'Microsoft 365 Business Premium',
+    planName: 'Microsoft 365 Business Premium Plan',
+    baseRateCents: 3100,
+    startDate: previousPeriodStart,
+    billingTiming: 'arrears',
+    billingFrequency: 'monthly',
+    quantity: 3,
+    isLicense: true
+  });
+
+  const invoice = await generateInvoice(cycleId);
+  expect(invoice).toBeTruthy();
+  expect(Number(invoice!.subtotal)).toBe(9300);
+
+  const detailRows = await getInvoiceDetailRows(invoice!.invoice_id);
+  expect(detailRows).toHaveLength(1);
+  expect(detailRows[0]).toMatchObject({
+    service_id: licenseLine.serviceId,
+    billing_timing: 'arrears'
+  });
+  expect(normalizeDateValue(detailRows[0]?.service_period_start)).toBe(previousPeriodStart);
+  expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(previousPeriodEnd);
+}, HOOK_TIMEOUT);
+
 });
 
 interface ClientSetupResult {
@@ -426,6 +597,11 @@ interface FixedLineOptions {
   customRateCents?: number;
   contractId?: string;
   clientContractId?: string;
+}
+
+interface RecurringCatalogLineOptions extends FixedLineOptions {
+  quantity?: number;
+  isLicense?: boolean;
 }
 
 async function createClientWithCycles(clientName = 'Timing Integration Client'): Promise<ClientSetupResult> {
@@ -552,6 +728,62 @@ async function createFixedContractLine(
     billingTiming: options.billingTiming,
     clientId: contextLike.clientId,
     enableProration: false,
+    contractId: options.contractId,
+    clientContractId: options.clientContractId,
+  });
+
+  return {
+    serviceId,
+    clientContractLineId: result.clientContractLineId,
+    contractId: result.contractId,
+    clientContractId: result.clientContractId
+  };
+}
+
+async function createRecurringCatalogLine(
+  contextLike: { db: Knex; tenantId: string; clientId: string },
+  options: RecurringCatalogLineOptions
+): Promise<{ serviceId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
+  const serviceId = await createTestService(contextLike as any, {
+    service_name: options.serviceName,
+    billing_method: 'fixed',
+    default_rate: options.baseRateCents,
+    unit_of_measure: options.isLicense ? 'seat' : 'item',
+    tax_region: 'US-NY'
+  });
+
+  await contextLike.db('service_catalog')
+    .where({ tenant: contextLike.tenantId, service_id: serviceId })
+    .update({
+      item_kind: 'product',
+      is_license: Boolean(options.isLicense)
+    });
+
+  await contextLike.db('service_prices')
+    .insert({
+      tenant: contextLike.tenantId,
+      service_id: serviceId,
+      currency_code: 'USD',
+      rate: options.baseRateCents,
+      created_at: contextLike.db.fn.now(),
+      updated_at: contextLike.db.fn.now()
+    })
+    .onConflict(['tenant', 'service_id', 'currency_code'])
+    .merge({
+      rate: options.baseRateCents,
+      updated_at: contextLike.db.fn.now()
+    });
+
+  const result = await createFixedPlanAssignment(contextLike as any, serviceId, {
+    planName: options.planName,
+    billingFrequency: options.billingFrequency ?? 'monthly',
+    baseRateCents: options.baseRateCents,
+    startDate: options.startDate,
+    endDate: null,
+    billingTiming: options.billingTiming,
+    clientId: contextLike.clientId,
+    enableProration: false,
+    quantity: options.quantity ?? 1,
     contractId: options.contractId,
     clientContractId: options.clientContractId,
   });

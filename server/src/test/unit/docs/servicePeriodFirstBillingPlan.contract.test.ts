@@ -15,6 +15,7 @@ const planRoot = path.join(
 const read = (file: string) => fs.readFileSync(path.join(planRoot, file), 'utf8');
 const appendix = read('PASS0_RECURRING_TIMING_APPENDIX.md');
 const prd = read('PRD.md');
+const runbook = read('RUNBOOK.md');
 const inventory = JSON.parse(read('pass-0-source-inventory.json')) as {
   timingControls: {
     resolveServicePeriodRefs: string[];
@@ -198,5 +199,19 @@ describe('service-period-first billing plan artifacts', () => {
     expect(appendix).toContain('Accounting exports');
     expect(appendix).toContain('Portal / reporting / downstream readers');
     expect(appendix).toContain('Migration / cleanup');
+  });
+
+  it('T160: runbook covers parity checks, mixed-cadence troubleshooting, and rollback posture with executable commands', () => {
+    expect(runbook).toContain('# Service-Period-First Billing Runbook');
+    expect(runbook).toContain('## Parity Checks');
+    expect(runbook).toContain('npx vitest run src/test/unit/billing/billingEngine.cleanupSource.test.ts --coverage.enabled false');
+    expect(runbook).toContain('DB_PORT=57433 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T171|T172|T173|T174" --coverage.enabled false');
+    expect(runbook).toContain('RECURRING_BILLING_COMPARISON_MODE=legacy-vs-canonical');
+    expect(runbook).toContain('## Mixed-Cadence Troubleshooting');
+    expect(runbook).toContain('contract_lines.cadence_owner');
+    expect(runbook).toContain('invoice_charge_details');
+    expect(runbook).toContain('## Rollback Posture');
+    expect(runbook).toContain('do not delete canonical `invoice_charge_details` rows');
+    expect(runbook).toContain('do not force `billing_cycle_alignment` back into live execution');
   });
 });

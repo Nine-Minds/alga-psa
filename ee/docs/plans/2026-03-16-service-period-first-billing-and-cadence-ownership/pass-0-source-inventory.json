@@ -12,7 +12,7 @@
   },
   "timingControls": {
     "resolveServicePeriodRefs": [
-      "packages/billing/src/lib/billing/billingEngine.ts",
+      "server/src/test/unit/billing/billingEngine.cleanupSource.test.ts",
       "server/src/test/unit/billing/billingEngine.licenseTiming.test.ts",
       "server/src/test/unit/billing/billingEngine.productTiming.test.ts",
       "server/src/test/unit/billing/billingEngine.timing.test.ts"
@@ -35,7 +35,6 @@
       "packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration.tsx",
       "packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLinePresetConfiguration.tsx",
       "packages/billing/src/components/billing-dashboard/service-configurations/FixedServiceConfigPanel.tsx",
-      "packages/billing/src/lib/billing/billingEngine.ts",
       "packages/billing/src/models/contractLineFixedConfig.ts",
       "packages/billing/src/models/contractLineServiceFixedConfig.ts",
       "packages/billing/src/repositories/contractLineRepository.ts",
@@ -82,13 +81,14 @@
       "packages/billing/src/actions/invoiceGeneration.ts",
       "packages/billing/src/adapters/accounting/quickBooksOnlineAdapter.ts",
       "packages/billing/src/adapters/accounting/xeroAdapter.ts",
-      "packages/billing/src/lib/billing/billingEngine.ts",
+      "packages/billing/src/lib/adapters/invoiceAdapters.ts",
       "packages/billing/src/models/invoice.ts",
       "packages/billing/src/repositories/accountingExportRepository.ts",
       "packages/billing/src/services/accountingExportInvoiceSelector.ts",
       "packages/billing/src/services/invoiceService.ts",
       "packages/billing/tests/accountingExportAdapters.servicePeriods.wiring.test.ts",
       "packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts",
+      "packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx",
       "packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx",
       "packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx",
       "packages/integrations/src/lib/xero/xeroClientService.ts",

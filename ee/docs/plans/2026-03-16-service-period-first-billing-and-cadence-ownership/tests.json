@@ -173,7 +173,7 @@
   {"id":"T157","description":"Guardrails keep time, usage, materials, and manual-only paths outside the first hard cutover","implemented":true,"featureIds":["F115"]},
   {"id":"T158","description":"Partial rollout protection prevents fixed recurring from using canonical timing while product or license recurring still use legacy timing on the same execution path","implemented":false,"featureIds":["F143"]},
   {"id":"T159","description":"End-exclusive query behavior remains correct in billing-engine selection logic after helper removal","implemented":false,"featureIds":["F145"]},
-  {"id":"T160","description":"Operational runbook covers parity checks, mixed-cadence troubleshooting, and rollback posture clearly enough for execution handoff","implemented":false,"featureIds":["F119","F149"]},
+  {"id":"T160","description":"Operational runbook covers parity checks, mixed-cadence troubleshooting, and rollback posture clearly enough for execution handoff","implemented":true,"featureIds":["F119","F149"]},
 
   {"id":"T161","description":"billing_cycle_alignment is no longer required for new recurring writes after cutover staging lands","implemented":false,"featureIds":["F090","F137"]},
   {"id":"T162","description":"billing_cycle_alignment no longer changes live recurring execution for migrated paths","implemented":true,"featureIds":["F116","F137"]},
@@ -186,10 +186,10 @@
   {"id":"T169","description":"Follow-on boundaries for time and usage unification are captured explicitly instead of leaking into v1 implementation","implemented":false,"featureIds":["F148"]},
   {"id":"T170","description":"Feature-to-subsystem mapping remains internally consistent so implementation progress can be tracked across all affected surfaces","implemented":false,"featureIds":["F150"]},
 
-  {"id":"T171","description":"DB-backed sanity: existing monthly client-cadence recurring invoice generation succeeds unchanged after service-period-first cutover","implemented":false,"featureIds":["F112","F118"]},
-  {"id":"T172","description":"DB-backed sanity: existing quarterly client-cadence recurring invoice generation succeeds unchanged after service-period-first cutover","implemented":false,"featureIds":["F112","F118"]},
-  {"id":"T173","description":"DB-backed sanity: recurring product invoices continue to generate correctly under client cadence after cutover","implemented":false,"featureIds":["F062","F118"]},
-  {"id":"T174","description":"DB-backed sanity: recurring license invoices continue to generate correctly under client cadence after cutover","implemented":false,"featureIds":["F066","F118"]},
+  {"id":"T171","description":"DB-backed sanity: existing monthly client-cadence recurring invoice generation succeeds unchanged after service-period-first cutover","implemented":true,"featureIds":["F112","F118"]},
+  {"id":"T172","description":"DB-backed sanity: existing quarterly client-cadence recurring invoice generation succeeds unchanged after service-period-first cutover","implemented":true,"featureIds":["F112","F118"]},
+  {"id":"T173","description":"DB-backed sanity: recurring product invoices continue to generate correctly under client cadence after cutover","implemented":true,"featureIds":["F062","F118"]},
+  {"id":"T174","description":"DB-backed sanity: recurring license invoices continue to generate correctly under client cadence after cutover","implemented":true,"featureIds":["F066","F118"]},
   {"id":"T175","description":"DB-backed sanity: contract-cadence monthly recurring billing succeeds for a contract starting mid-month","implemented":false,"featureIds":["F101","F118"]},
   {"id":"T176","description":"DB-backed sanity: mixed cadence-owner client billing follows documented grouping rules in an integration scenario","implemented":false,"featureIds":["F108","F109","F118"]},
   {"id":"T177","description":"DB-backed sanity: credits and negative invoices still reconcile correctly after recurring service-period-first cutover","implemented":false,"featureIds":["F077","F078","F118"]},

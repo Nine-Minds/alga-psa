@@ -704,13 +704,13 @@
   {
     "id": "F118",
     "description": "Add source and DB-backed post-cutover validation proving recurring timing now flows through the canonical service-period model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Acceptance Criteria", "Implementation Sequence"]
   },
   {
     "id": "F119",
     "description": "Add operator and developer runbooks for parity checks, mixed-cadence troubleshooting, and rollback posture",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Acceptance Criteria"]
   },
   {

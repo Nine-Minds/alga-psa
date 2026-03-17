@@ -50,6 +50,7 @@ type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
 export interface IBillingCharge extends TenantEntity {
   type: ChargeType;
   serviceId?: string;
+  config_id?: string;
   client_contract_line_id?: string; // Link back to the specific contract line assignment
   serviceName: string;
   rate: number;

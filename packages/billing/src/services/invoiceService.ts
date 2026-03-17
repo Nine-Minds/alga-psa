@@ -704,7 +704,7 @@ export async function persistInvoiceCharges(
         item_detail_id: uuidv4(),
         item_id: invoiceItem.item_id,
         service_id: charge.serviceId,
-        config_id: null,
+        config_id: charge.config_id ?? null,
         quantity: charge.quantity ?? 1,
         rate: charge.rate ?? 0,
         service_period_start: charge.servicePeriodStart ?? null,

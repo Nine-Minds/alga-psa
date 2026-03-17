@@ -381,6 +381,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - the integration fixture now creates a billing location with an email address and reuses one `client_contract_id` for mixed recurring lines, which keeps the test on the real `generateInvoice(...)` path without tripping unrelated billing-email or multi-contract invoice guards
   - `server/test-utils/billingTestHelpers.ts#createFixedPlanAssignment(...)` now accepts optional existing `contractId` / `clientContractId` so DB-backed recurring tests can model multiple lines on one client contract instead of fabricating invalid multi-contract invoice fixtures
   - local DB validation is now running successfully against the Docker Postgres listener on `127.0.0.1:57433`
+- (2026-03-17) Post-cutover DB-backed sanity coverage now reaches all currently migrated recurring families, which closes `F118` plus `T171`-`T174`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now adds four focused end-to-end sanity cases on the real `generateInvoice(...)` path: monthly fixed, quarterly fixed, recurring product, and recurring license invoice generation all persist canonical recurring service periods under client cadence
+  - the new product/license fixture helper intentionally uses the same contract-line tables as live recurring execution and marks catalog rows with `service_catalog.item_kind = 'product'` plus `is_license`, so the integration tests exercise the migrated quantity-charge paths rather than a test-only shortcut
+  - those DB-backed tests surfaced one real runtime seam instead of a harness issue: recurring product/license charges were not carrying `config_id`, which made `invoice_charge_details.config_id` inserts fail on real persistence even though the unit tests had already proven the timing math
+  - `packages/billing/src/lib/billing/billingEngine.ts`, `packages/billing/src/services/invoiceService.ts`, `packages/types/src/interfaces/billing.interfaces.ts`, and `server/src/interfaces/billing.interfaces.ts` now thread `config_id` through recurring product/license charges and into detail persistence, which keeps canonical recurring detail rows writable for all migrated charge families
+- (2026-03-17) Operator/developer rollout guidance now has an executable runbook contract, which closes `F119` and `T160`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RUNBOOK.md` now provides concrete parity-check commands, DB-backed sanity validation, comparison-mode guidance, mixed-cadence troubleshooting steps, inspection SQL, and rollback posture
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now enforces that the runbook keeps those exact sections and command examples instead of drifting into non-actionable prose
+  - refreshing the runbook contract also forced a pass-0 inventory refresh in `pass-0-source-inventory.json`, which now matches the live grep-backed source after the recent cleanup and preview-reader checkpoints
 - (2026-03-17) Comparison-mode rollout control now closes `F113` and `T154` without changing live invoice persistence:
   - `packages/billing/src/actions/invoiceGeneration.ts` now treats `RECURRING_BILLING_COMPARISON_MODE=legacy-vs-canonical` as an additive action-layer gate on `calculateBillingForInvoiceWindow(...)`
   - when enabled, the action runs the canonical preselected recurring path first, then executes one legacy-style billing calculation without `recurringTimingSelections` and logs a structured drift warning if the comparison snapshot differs
@@ -577,6 +586,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Duplicate-prevention and billed-through validation:
   - `npx vitest run src/test/unit/billing/invoiceGeneration.duplicate.test.ts src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Post-cutover recurring-family sanity validation:
+  - `DB_PORT=57433 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T171|T172|T173|T174" --coverage.enabled false`
+  - `DB_PORT=57433 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T173|T174" --coverage.enabled false`
+    - first pass exposed a real persistence seam: product/license detail inserts were failing because runtime charges carried canonical service periods but not `config_id`
+  - `npx vitest run src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json && npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Runbook and docs-inventory validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
 - (2026-03-17) Client billing schedule cadence-owner copy validation:
   - `npx vitest run src/test/unit/billing/ClientBillingSchedule.ui.test.tsx ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest picks up the existing workspace alias config for both server and package tests

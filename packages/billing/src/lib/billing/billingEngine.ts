@@ -2667,6 +2667,7 @@ export class BillingEngine {
         "sc.service_name",
         "sc.default_rate",
         "sc.tax_rate_id",
+        "clsc.config_id",
         "cls.quantity as service_quantity",
         "cls.custom_rate as service_line_custom_rate",
         "clsc.quantity as configuration_quantity",
@@ -2748,6 +2749,7 @@ export class BillingEngine {
         const charge: IProductCharge | ILicenseCharge = {
           type: chargeType,
           serviceId: service.service_id,
+          config_id: service.config_id,
           serviceName: service.service_name,
           quantity: quantity,
           rate: rate,
