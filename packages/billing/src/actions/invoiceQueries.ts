@@ -253,6 +253,9 @@ export const fetchInvoicesPaginated = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
+          // Invoice list and summary surfaces flatten canonical recurring detail rows to one
+          // compatibility summary range. Full rerender or preview-refresh flows must use the
+          // detail-aware reader below rather than relying on these list projections alone.
           trx.raw(`(
             SELECT MIN(iid.service_period_start)
             FROM invoice_charge_details iid
@@ -519,6 +522,8 @@ export const getInvoiceForRendering = withAuth(async (
 
     const { knex } = await createTenantKnex();
 
+    // Existing-invoice preview refresh and rerender must hydrate through the full
+    // detail-aware reader so canonical recurring periods survive after persistence.
     return Invoice.getFullInvoiceById(knex, tenant, invoiceId);
   } catch (error) {
     console.error('Error fetching invoice for rendering:', error);

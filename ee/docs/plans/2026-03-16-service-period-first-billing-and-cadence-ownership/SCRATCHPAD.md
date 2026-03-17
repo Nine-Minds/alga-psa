@@ -1063,6 +1063,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run ../packages/billing/tests/invoiceModification.manualRecurringGuard.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Persisted-invoice preview refresh validation:
+  - `npx vitest run ../packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx -t "T208" --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing component tests
+  - `npx vitest run ../packages/billing/tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 - (2026-03-17) Client contract assignment-date validation now distinguishes canonical recurring coverage from historical invoice-window fallback, which closes `F174` and `T204`:
   - `packages/clients/src/actions/clientContractActions.ts` now queries canonical `invoice_charge_details` coverage for the current `client_contract_id` before using legacy `client_billing_cycles` overlap logic, so end-date shortening and mid-cycle termination are enforced against billed recurring service periods rather than against the entire enclosing invoice window whenever authoritative detail rows exist
@@ -1081,6 +1087,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/actions/invoiceModification.ts` now checks targeted update/remove item IDs before manual edits proceed and rejects any non-manual invoice charge targets up front
   - the recurring-specific rule is stricter and explicit: if a targeted parent charge already has canonical `invoice_charge_details` rows, the action throws `Cannot manually edit recurring invoice charges once canonical detail periods exist...` and tells the caller to add a manual adjustment or cancel/regenerate instead of mutating the recurring line in place
   - `packages/billing/tests/invoiceModification.manualRecurringGuard.test.ts` proves that recurring-detail-backed invoice charges trip that guard and that the action does not fall through into invoice recalculation after the rejected edit attempt
+- (2026-03-17) Post-persist rerender and preview-refresh flows are now explicitly split between summary-range readers and full detail-aware readers, which closes `F178` and `T208`:
+  - `packages/billing/src/actions/invoiceQueries.ts` now documents the intended split directly in code: paginated/list summary surfaces flatten canonical recurring detail rows to one summary range, while `getInvoiceForRendering(...)` must keep using `Invoice.getFullInvoiceById(...)` so persisted recurring detail periods survive rerender and preview refresh
+  - `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` now proves the persisted existing-invoice preview path forwards `recurring_detail_periods` into `mapDbInvoiceToWasmViewModel(...)` instead of stripping them before preview rendering
+  - `packages/billing/tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts` now locks the reader split at the action layer so future refactors cannot collapse rerender flows back onto the summary-only invoice list projection
 
 ## Links / References
 

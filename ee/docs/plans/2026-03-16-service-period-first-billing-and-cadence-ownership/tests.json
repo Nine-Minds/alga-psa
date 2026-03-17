@@ -1803,7 +1803,7 @@
   {
     "id": "T208",
     "description": "Rerender and preview-refresh flows use canonical recurring detail periods after invoice persistence",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F178"
     ]

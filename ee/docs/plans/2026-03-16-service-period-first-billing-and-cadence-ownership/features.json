@@ -1595,7 +1595,7 @@
   {
     "id": "F178",
     "description": "Define rerender, preview-refresh, and invoice-summary flows that consume canonical recurring detail periods after invoice persistence",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Read-model and post-persist lifecycle requirements",
       "UI and downstream-consumer requirements"
