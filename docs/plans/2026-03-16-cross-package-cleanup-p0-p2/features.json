@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "P1-4: Commit msp-composition export wiring",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P1-4"]
   },
   {
