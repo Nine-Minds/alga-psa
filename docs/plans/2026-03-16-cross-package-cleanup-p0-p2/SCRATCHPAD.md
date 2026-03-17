@@ -126,6 +126,7 @@ By target package
 - Migrated `ee/server/src/app/api/provisioning/tenants/route.ts` to call `getSession()` directly from `@alga-psa/auth`, leaving `server/src/lib/auth-compat.ts` with no remaining callers.
 - Deleted `server/src/lib/auth-compat.ts`; the compatibility wrapper is fully retired in favor of `getSession()` from `@alga-psa/auth`.
 - `npm run build` still passes after deleting `server/src/lib/auth-compat.ts`; only pre-existing webpack warnings were emitted.
+- Auth-compat retirement is now represented by the committed `F008`-`F011` change series, so the P1-3 code path is fully checked in.
 
 ## Gotchas
 

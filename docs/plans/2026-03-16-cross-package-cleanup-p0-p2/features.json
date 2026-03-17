@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "P1-3: Commit auth-compat deletion",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P1-3"]
   },
   {
