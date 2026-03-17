@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "P1-4: packages/msp-composition/src/index.ts contains 'export * from ./assets'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
