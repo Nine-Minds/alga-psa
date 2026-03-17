@@ -686,7 +686,7 @@
   {
     "id": "F115",
     "description": "Add regression guardrails to keep time, usage, materials, and manual-only flows outside the first hard cutover",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Scope", "Risks"]
   },
   {

@@ -1806,6 +1806,9 @@ export class BillingEngine {
     for (const clientContractLine of [...clientContractLines].sort((left, right) =>
       left.client_contract_line_id.localeCompare(right.client_contract_line_id),
     )) {
+      if (!this.isRecurringTimingEligibleContractLine(clientContractLine)) {
+        continue;
+      }
       const timingSelection = this.buildRecurringChargeTimingSelection(
         billingPeriod,
         clientContractLine,
@@ -1819,6 +1822,17 @@ export class BillingEngine {
     }
 
     return recurringTimingSelections;
+  }
+
+  private isRecurringTimingEligibleContractLine(
+    clientContractLine: IClientContractLine & {
+      contract_line_type?: "Fixed" | "Hourly" | "Usage" | string | null;
+    },
+  ): boolean {
+    return (
+      clientContractLine.contract_line_type !== "Hourly" &&
+      clientContractLine.contract_line_type !== "Usage"
+    );
   }
 
   private buildRecurringChargeTimingSelection(

@@ -180,18 +180,38 @@ export async function calculateBillingForInvoiceWindow(input: {
 
 type RecurringBillingComparisonMode = 'off' | 'legacy-vs-canonical';
 
+const RECURRING_COMPARISON_CHARGE_TYPES = new Set<IBillingCharge['type']>([
+  'fixed',
+  'product',
+  'license',
+  'bucket',
+]);
+
 export function getRecurringBillingComparisonMode(): RecurringBillingComparisonMode {
   return process.env.RECURRING_BILLING_COMPARISON_MODE === 'legacy-vs-canonical'
     ? 'legacy-vs-canonical'
     : 'off';
 }
 
+function isRecurringComparisonCharge(charge: IBillingCharge): boolean {
+  return Boolean(
+    charge.client_contract_line_id &&
+      RECURRING_COMPARISON_CHARGE_TYPES.has(charge.type),
+  );
+}
+
 function createRecurringBillingComparisonSnapshot(billingResult: IBillingResult) {
+  const recurringCharges = (billingResult.charges ?? []).filter(
+    isRecurringComparisonCharge,
+  );
+
   return {
-    totalAmount: billingResult.totalAmount ?? 0,
-    finalAmount: billingResult.finalAmount ?? 0,
-    chargeCount: billingResult.charges?.length ?? 0,
-    charges: (billingResult.charges ?? [])
+    recurringChargeTotal: recurringCharges.reduce(
+      (sum, charge) => sum + (charge.total ?? 0),
+      0,
+    ),
+    recurringChargeCount: recurringCharges.length,
+    charges: recurringCharges
       .map((charge) => ({
         type: charge.type,
         clientContractLineId: charge.client_contract_line_id ?? null,

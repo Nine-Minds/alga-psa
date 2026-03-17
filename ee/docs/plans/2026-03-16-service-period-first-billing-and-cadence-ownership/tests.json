@@ -170,7 +170,7 @@
   {"id":"T154","description":"Rollout controls or safety gates allow comparison mode without mutating live invoice outputs","implemented":true,"featureIds":["F113"]},
   {"id":"T155","description":"Cadence-owner backfill writes safe defaults to existing recurring records","implemented":true,"featureIds":["F114","F135"]},
   {"id":"T156","description":"Cadence-owner backfill does not mutate invoice behavior for untouched client-cadence tenants","implemented":true,"featureIds":["F114","F135"]},
-  {"id":"T157","description":"Guardrails keep time, usage, materials, and manual-only paths outside the first hard cutover","implemented":false,"featureIds":["F115"]},
+  {"id":"T157","description":"Guardrails keep time, usage, materials, and manual-only paths outside the first hard cutover","implemented":true,"featureIds":["F115"]},
   {"id":"T158","description":"Partial rollout protection prevents fixed recurring from using canonical timing while product or license recurring still use legacy timing on the same execution path","implemented":false,"featureIds":["F143"]},
   {"id":"T159","description":"End-exclusive query behavior remains correct in billing-engine selection logic after helper removal","implemented":false,"featureIds":["F145"]},
   {"id":"T160","description":"Operational runbook covers parity checks, mixed-cadence troubleshooting, and rollback posture clearly enough for execution handoff","implemented":false,"featureIds":["F119","F149"]},

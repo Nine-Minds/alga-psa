@@ -158,4 +158,123 @@ describe('invoice generation recurring selection', () => {
     );
     expect(result).toBe(canonicalBillingResult);
   });
+
+  it('T157: comparison mode ignores out-of-scope time, usage, and material drift so the first cutover only compares recurring-backed charges', async () => {
+    process.env.RECURRING_BILLING_COMPARISON_MODE = 'legacy-vs-canonical';
+
+    const recurringTimingSelections = {
+      'contract-line-1': {
+        duePosition: 'arrears',
+        servicePeriodStart: '2025-01-01',
+        servicePeriodEnd: '2025-01-31',
+        servicePeriodStartExclusive: '2025-01-01',
+        servicePeriodEndExclusive: '2025-02-01',
+        coverageRatio: 1,
+      },
+    };
+    const recurringCharge = {
+      type: 'fixed',
+      client_contract_line_id: 'contract-line-1',
+      serviceId: 'service-1',
+      total: 100,
+      servicePeriodStart: '2025-01-01',
+      servicePeriodEnd: '2025-01-31',
+      billingTiming: 'arrears',
+    };
+    const canonicalBillingResult = {
+      charges: [
+        recurringCharge,
+        {
+          type: 'time',
+          client_contract_line_id: 'hourly-line-1',
+          serviceId: 'hourly-service',
+          total: 400,
+          servicePeriodStart: '2025-02-01',
+          servicePeriodEnd: '2025-02-28',
+          billingTiming: 'arrears',
+        },
+        {
+          type: 'usage',
+          client_contract_line_id: 'usage-line-1',
+          serviceId: 'usage-service',
+          total: 250,
+          servicePeriodStart: '2025-02-01',
+          servicePeriodEnd: '2025-02-28',
+          billingTiming: 'arrears',
+        },
+        {
+          type: 'product',
+          serviceId: 'material-service',
+          total: 175,
+          servicePeriodStart: null,
+          servicePeriodEnd: null,
+          billingTiming: null,
+        },
+      ],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 925,
+      finalAmount: 925,
+      currency_code: 'USD',
+    };
+    const legacyBillingResult = {
+      charges: [
+        recurringCharge,
+        {
+          type: 'time',
+          client_contract_line_id: 'hourly-line-1',
+          serviceId: 'hourly-service',
+          total: 650,
+          servicePeriodStart: '2025-02-01',
+          servicePeriodEnd: '2025-02-28',
+          billingTiming: 'arrears',
+        },
+        {
+          type: 'usage',
+          client_contract_line_id: 'usage-line-1',
+          serviceId: 'usage-service',
+          total: 100,
+          servicePeriodStart: '2025-02-01',
+          servicePeriodEnd: '2025-02-28',
+          billingTiming: 'arrears',
+        },
+        {
+          type: 'product',
+          serviceId: 'material-service',
+          total: 999,
+          servicePeriodStart: null,
+          servicePeriodEnd: null,
+          billingTiming: null,
+        },
+      ],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 1749,
+      finalAmount: 1749,
+      currency_code: 'USD',
+    };
+
+    const billingEngine = {
+      selectDueRecurringServicePeriodsForBillingWindow: vi
+        .fn()
+        .mockResolvedValue(recurringTimingSelections),
+      calculateBilling: vi
+        .fn()
+        .mockResolvedValueOnce(canonicalBillingResult)
+        .mockResolvedValueOnce(legacyBillingResult),
+    } as any;
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const result = await calculateBillingForInvoiceWindow({
+      billingEngine,
+      clientId: 'client-1',
+      cycleStart: '2025-02-01',
+      cycleEnd: '2025-03-01',
+      billingCycleId: 'cycle-1',
+    });
+
+    expect(billingEngine.calculateBilling).toHaveBeenCalledTimes(2);
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(result).toBe(canonicalBillingResult);
+  });
 });

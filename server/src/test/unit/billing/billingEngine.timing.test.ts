@@ -258,6 +258,61 @@ describe("BillingEngine billing timing", () => {
     ).toBeUndefined();
   });
 
+  it("skips hourly and usage contract lines when precomputing recurring timing selections", () => {
+    const engine = new BillingEngine();
+
+    const billingPeriod = {
+      startDate: "2025-02-01",
+      endDate: "2025-03-01",
+    };
+
+    const fixedLine = {
+      client_contract_line_id: "fixed-line",
+      contract_line_type: "Fixed",
+      billing_timing: "advance",
+      billing_frequency: "monthly",
+      cadence_owner: "client",
+      start_date: "2025-01-01",
+      end_date: null,
+    } as any;
+
+    const hourlyLine = {
+      client_contract_line_id: "hourly-line",
+      contract_line_type: "Hourly",
+      billing_timing: "arrears",
+      billing_frequency: "monthly",
+      cadence_owner: "client",
+      start_date: "2025-01-01",
+      end_date: null,
+    } as any;
+
+    const usageLine = {
+      client_contract_line_id: "usage-line",
+      contract_line_type: "Usage",
+      billing_timing: "arrears",
+      billing_frequency: "monthly",
+      cadence_owner: "client",
+      start_date: "2025-01-01",
+      end_date: null,
+    } as any;
+
+    const recurringTimingSelections = (engine as any).buildRecurringTimingSelections(
+      billingPeriod,
+      [hourlyLine, fixedLine, usageLine],
+      "monthly",
+    );
+
+    expect(recurringTimingSelections).toMatchObject({
+      "fixed-line": {
+        duePosition: "advance",
+        servicePeriodStart: "2025-02-01",
+        servicePeriodEnd: "2025-02-28",
+      },
+    });
+    expect(recurringTimingSelections["hourly-line"]).toBeUndefined();
+    expect(recurringTimingSelections["usage-line"]).toBeUndefined();
+  });
+
   it("T041: fixed recurring charge calculation no longer depends on resolveServicePeriod", async () => {
     const engine = new BillingEngine();
     (engine as any).tenant = "test_tenant";
