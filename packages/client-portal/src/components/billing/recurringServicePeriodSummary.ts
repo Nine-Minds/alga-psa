@@ -22,7 +22,7 @@ function collectChargePeriodLabels(
     return [];
   }
 
-  const labels = new Set<string>();
+  const labels: Array<{ start: string | null; end: string | null; label: string }> = [];
 
   invoiceCharges.forEach((charge) => {
     if (charge.recurring_detail_periods && charge.recurring_detail_periods.length > 0) {
@@ -33,7 +33,11 @@ function collectChargePeriodLabels(
           formatDate
         );
         if (label) {
-          labels.add(label);
+          labels.push({
+            start: typeof period.service_period_start === 'string' ? period.service_period_start : null,
+            end: typeof period.service_period_end === 'string' ? period.service_period_end : null,
+            label,
+          });
         }
       });
       return;
@@ -45,11 +49,22 @@ function collectChargePeriodLabels(
       formatDate
     );
     if (chargeLabel) {
-      labels.add(chargeLabel);
+      labels.push({
+        start: typeof charge.service_period_start === 'string' ? charge.service_period_start : null,
+        end: typeof charge.service_period_end === 'string' ? charge.service_period_end : null,
+        label: chargeLabel,
+      });
     }
   });
 
-  return Array.from(labels);
+  const ordered = labels.sort((left, right) => {
+    if (left.start !== right.start) {
+      return String(left.start ?? '').localeCompare(String(right.start ?? ''));
+    }
+    return String(left.end ?? '').localeCompare(String(right.end ?? ''));
+  });
+
+  return Array.from(new Set(ordered.map((entry) => entry.label)));
 }
 
 export function getRecurringServicePeriodSummary(

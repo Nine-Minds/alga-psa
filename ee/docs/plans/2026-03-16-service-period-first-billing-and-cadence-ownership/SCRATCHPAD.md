@@ -59,6 +59,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Client-portal invoice detail projection rules are now explicit for detail-backed, flattened, and omitted recurring period states, which closes `F167` and `T196`:
   - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now documents the portal policy inline: render the canonical detail-period list when multiple recurring periods exist, flatten to one `Service Period` line when only one detail or a parent summary range exists, and omit service-period copy entirely when no recurring period metadata is available
   - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` now closes `T196` by proving the two fallback branches explicitly: a legacy summary-only recurring row renders one flattened service-period label, while a manual adjustment row with no period metadata renders none
+- (2026-03-17) Multi-period recurring ordering and aggregation rules are now explicit instead of relying on upstream input order, which closes `F168` and `T197`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now sorts rendered recurring detail periods by canonical start/end before showing them, so client-visible multi-period lists stay deterministic even if an upstream reader returns the periods unsorted
+  - `packages/client-portal/src/components/billing/recurringServicePeriodSummary.ts` now sorts and de-duplicates recurring period labels before aggregating them into overview-style summaries, so invoice-level summary copy stays stable across detail-backed and flattened inputs
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` now proves the dialog renders unsorted canonical detail periods in chronological order, and `packages/client-portal/src/components/billing/recurringServicePeriodSummary.test.ts` closes `T197` by proving aggregated invoice summaries remain ordered and de-duplicated across mixed detail-backed and summary-backed rows
 - (2026-03-17) Shared invoice-candidate grouping now carries explicit split reasons for PO and financial/export constraints, which closes `F158`, `F159`, `F160`, `T189`, and `T190`:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now lets scoped due selections carry PO scope, currency, tax source, and export-shape keys, while scoped candidate groups now expose `splitReasons` with `single_contract`, `purchase_order_scope`, and `financial_constraint`
   - `shared/billingClients/recurringTiming.ts` now exports `groupDueServicePeriodsForInvoiceCandidates(...)`, which applies those split constraints within each due window and annotates the resulting candidate groups with the operator-visible reasons they were split
@@ -986,6 +990,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Client-portal projection policy validation:
   - `npx vitest run ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package client-portal tests
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+- (2026-03-17) Multi-period recurring ordering/aggregation validation:
+  - `npx vitest run ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/recurringServicePeriodSummary.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package client-portal tests
   - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
 

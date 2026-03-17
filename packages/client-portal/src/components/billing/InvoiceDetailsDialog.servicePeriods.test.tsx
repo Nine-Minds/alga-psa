@@ -52,13 +52,13 @@ vi.mock('@alga-psa/client-portal/actions', () => ({
         billing_timing: 'advance',
         recurring_detail_periods: [
           {
-            service_period_start: '2026-01-01',
-            service_period_end: '2026-02-01',
+            service_period_start: '2026-02-01',
+            service_period_end: '2026-03-01',
             billing_timing: 'advance',
           },
           {
-            service_period_start: '2026-02-01',
-            service_period_end: '2026-03-01',
+            service_period_start: '2026-01-01',
+            service_period_end: '2026-02-01',
             billing_timing: 'advance',
           },
         ],
@@ -128,8 +128,12 @@ describe('InvoiceDetailsDialog recurring service periods', () => {
     });
 
     expect(screen.getByText('Service Periods:')).toBeInTheDocument();
-    expect(screen.getByText('2026-01-01 - 2026-02-01')).toBeInTheDocument();
-    expect(screen.getByText('2026-02-01 - 2026-03-01')).toBeInTheDocument();
+    const firewallRow = screen.getByText('Managed Firewall').closest('tr');
+    expect(firewallRow).not.toBeNull();
+    expect(within(firewallRow as HTMLElement).getAllByRole('listitem').map((node) => node.textContent)).toEqual([
+      '2026-01-01 - 2026-02-01',
+      '2026-02-01 - 2026-03-01',
+    ]);
     expect(screen.getByText('Advance')).toBeInTheDocument();
   });
 

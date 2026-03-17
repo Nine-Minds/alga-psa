@@ -1713,7 +1713,7 @@
   {
     "id": "T197",
     "description": "Ordering and aggregation of multi-period recurring charges remain stable across invoice reads, previews, and rendering flows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F168"
     ]

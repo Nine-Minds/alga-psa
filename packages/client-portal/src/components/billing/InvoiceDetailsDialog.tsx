@@ -59,10 +59,23 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
 
     const renderedPeriods = periods
       .map((period) => ({
+        start: period.service_period_start ?? null,
+        end: period.service_period_end ?? null,
         label: formatServicePeriodRange(period.service_period_start, period.service_period_end),
         timing: period.billing_timing,
       }))
-      .filter((period): period is { label: string; timing: 'arrears' | 'advance' | null | undefined } => Boolean(period.label));
+      .filter((period): period is {
+        start: string | null;
+        end: string | null;
+        label: string;
+        timing: 'arrears' | 'advance' | null | undefined;
+      } => Boolean(period.label))
+      .sort((left, right) => {
+        if (left.start !== right.start) {
+          return String(left.start ?? '').localeCompare(String(right.start ?? ''));
+        }
+        return String(left.end ?? '').localeCompare(String(right.end ?? ''));
+      });
 
     if (renderedPeriods.length === 0) {
       return null;
@@ -83,10 +96,10 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     return (
       <div className="text-xs text-muted-foreground">
         <div>{t('invoice.servicePeriods', 'Service Periods')}:</div>
-        <ul className="list-disc pl-4">
-          {renderedPeriods.map((period) => (
-            <li key={`${period.label}:${period.timing ?? 'none'}`}>{period.label}</li>
-          ))}
+          <ul className="list-disc pl-4">
+            {renderedPeriods.map((period) => (
+              <li key={`${period.label}:${period.timing ?? 'none'}`}>{period.label}</li>
+            ))}
         </ul>
       </div>
     );
