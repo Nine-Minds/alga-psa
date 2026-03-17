@@ -52,6 +52,12 @@ import { TaxService } from "../../services/taxService";
 import { ClientContractServiceConfigurationService } from "../../services/clientContractServiceConfigurationService";
 // Workflow imports removed as event emission is moved back to the calling action
 
+type DiscountQueryRow = IDiscount & {
+  contract_line_id?: string | null;
+  start_date: ISO8601String;
+  end_date?: ISO8601String | null;
+};
+
 export class BillingEngine {
   private knex: Knex;
   private tenant: string | null;
@@ -3337,7 +3343,11 @@ export class BillingEngine {
     billingPeriod: IBillingPeriod,
   ): Promise<IBillingResult> {
     // Fetch applicable discounts within the billing period
-    const discounts = await this.fetchDiscounts(clientId, billingPeriod);
+    const discounts = await this.fetchDiscounts(
+      clientId,
+      billingPeriod,
+      billingResult.charges,
+    );
 
     let discountTotal = 0;
     for (const discount of discounts) {
@@ -3362,6 +3372,7 @@ export class BillingEngine {
   private async fetchDiscounts(
     clientId: string,
     billingPeriod: IBillingPeriod,
+    charges: IBillingCharge[] = [],
   ): Promise<IDiscount[]> {
     await this.initKnex();
     if (!this.tenant) {
@@ -3378,10 +3389,17 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    const { startDate, endDate } = billingPeriod;
+    const discountWindowsByContractLine =
+      this.buildDiscountEvaluationWindowsByContractLine(charges);
+    const { start: candidateStart, endInclusive: candidateEnd } =
+      this.getDiscountCandidateQueryBounds(
+        billingPeriod,
+        discountWindowsByContractLine,
+      );
+
     // Query discounts via client_contracts -> contracts -> contract_lines
     // instead of the deprecated client_contract_lines table
-    const discounts = await this.knex("discounts")
+    const discountRows = (await this.knex("discounts")
       .join("contract_line_discounts", function () {
         this.on(
           "discounts.discount_id",
@@ -3417,18 +3435,137 @@ export class BillingEngine {
         "cc.tenant": client.tenant,
         "discounts.is_active": true,
       })
-      .andWhere("discounts.start_date", "<=", endDate)
+      .andWhere("discounts.start_date", "<=", candidateEnd)
       .andWhere(function (this: Knex.QueryBuilder) {
         this.whereNull("discounts.end_date").orWhere(
           "discounts.end_date",
           ">",
-          startDate,
+          candidateStart,
         );
       })
-      .select("discounts.*")
-      .distinct();
+      .select(
+        "discounts.*",
+        "contract_line_discounts.contract_line_id",
+      )) as DiscountQueryRow[];
 
-    return discounts;
+    const filteredDiscounts = discountRows.filter((discount) =>
+      this.discountMatchesEvaluationWindow(
+        discount,
+        billingPeriod,
+        discountWindowsByContractLine,
+      ),
+    );
+
+    return Array.from(
+      new Map(
+        filteredDiscounts.map((discount) => [
+          discount.discount_id,
+          {
+            ...discount,
+            contract_line_id: undefined,
+          } as IDiscount,
+        ]),
+      ).values(),
+    );
+  }
+
+  private buildDiscountEvaluationWindowsByContractLine(
+    charges: IBillingCharge[],
+  ): Map<string, Array<{ start: ISO8601String; endInclusive: ISO8601String }>> {
+    const windowsByContractLine = new Map<
+      string,
+      Array<{ start: ISO8601String; endInclusive: ISO8601String }>
+    >();
+
+    for (const charge of charges) {
+      if (
+        !charge.client_contract_line_id ||
+        !charge.servicePeriodStart ||
+        !charge.servicePeriodEnd
+      ) {
+        continue;
+      }
+
+      const contractLineId = charge.client_contract_line_id;
+      const window = {
+        start: toISODate(toPlainDate(charge.servicePeriodStart)),
+        endInclusive: toISODate(toPlainDate(charge.servicePeriodEnd)),
+      };
+      const existingWindows = windowsByContractLine.get(contractLineId) ?? [];
+      const alreadyPresent = existingWindows.some(
+        (existingWindow) =>
+          existingWindow.start === window.start &&
+          existingWindow.endInclusive === window.endInclusive,
+      );
+
+      if (!alreadyPresent) {
+        existingWindows.push(window);
+        windowsByContractLine.set(contractLineId, existingWindows);
+      }
+    }
+
+    return windowsByContractLine;
+  }
+
+  private getDiscountCandidateQueryBounds(
+    billingPeriod: IBillingPeriod,
+    discountWindowsByContractLine: Map<
+      string,
+      Array<{ start: ISO8601String; endInclusive: ISO8601String }>
+    >,
+  ): { start: ISO8601String; endInclusive: ISO8601String } {
+    const invoiceWindow = {
+      start: toISODate(toPlainDate(billingPeriod.startDate)),
+      endInclusive: toISODate(toPlainDate(billingPeriod.endDate)),
+    };
+
+    const candidateWindows = [
+      invoiceWindow,
+      ...Array.from(discountWindowsByContractLine.values()).flat(),
+    ];
+
+    return candidateWindows.reduce(
+      (bounds, window) => ({
+        start: window.start < bounds.start ? window.start : bounds.start,
+        endInclusive:
+          window.endInclusive > bounds.endInclusive
+            ? window.endInclusive
+            : bounds.endInclusive,
+      }),
+      invoiceWindow,
+    );
+  }
+
+  private discountMatchesEvaluationWindow(
+    discount: DiscountQueryRow,
+    billingPeriod: IBillingPeriod,
+    discountWindowsByContractLine: Map<
+      string,
+      Array<{ start: ISO8601String; endInclusive: ISO8601String }>
+    >,
+  ): boolean {
+    const invoiceWindow = {
+      start: toISODate(toPlainDate(billingPeriod.startDate)),
+      endInclusive: toISODate(toPlainDate(billingPeriod.endDate)),
+    };
+    const contractLineWindows = discount.contract_line_id
+      ? discountWindowsByContractLine.get(discount.contract_line_id)
+      : undefined;
+    const evaluationWindows =
+      contractLineWindows && contractLineWindows.length > 0
+        ? contractLineWindows
+        : [invoiceWindow];
+
+    const discountStart = toISODate(toPlainDate(discount.start_date));
+    const discountEndExclusive = discount.end_date
+      ? toISODate(toPlainDate(discount.end_date))
+      : null;
+
+    return evaluationWindows.some(
+      (window) =>
+        discountStart <= window.endInclusive &&
+        (discountEndExclusive == null || discountEndExclusive > window.start),
+    );
   }
 
   private async fetchAdjustments(clientId: string): Promise<IAdjustment[]> {

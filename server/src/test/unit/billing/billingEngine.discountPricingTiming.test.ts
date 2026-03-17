@@ -234,11 +234,12 @@ describe("BillingEngine discount and pricing timing parity", () => {
     ]);
   });
 
-  it("discount applicability remains keyed to invoice-window overlap while fixed recurring timing migrates first", async () => {
+  it("T055: discount applicability follows canonical recurring service periods for fixed arrears charges", async () => {
     const engine = new BillingEngine();
     const discountsBuilder = buildDiscountQuery([
       {
         discount_id: "discount-jan",
+        contract_line_id: "contract-line-1",
         start_date: "2025-01-01",
         end_date: "2025-02-01",
         discount_type: "fixed",
@@ -247,6 +248,7 @@ describe("BillingEngine discount and pricing timing parity", () => {
       },
       {
         discount_id: "discount-feb",
+        contract_line_id: "contract-line-1",
         start_date: "2025-02-01",
         end_date: "2025-03-01",
         discount_type: "fixed",
@@ -255,6 +257,75 @@ describe("BillingEngine discount and pricing timing parity", () => {
       },
       {
         discount_id: "discount-mar",
+        contract_line_id: "contract-line-1",
+        start_date: "2025-03-01",
+        end_date: null,
+        discount_type: "fixed",
+        value: 900,
+        is_active: true,
+      },
+    ]);
+
+    (engine as any).tenant = "test_tenant";
+    (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+      if (tableName === "clients") {
+        return buildStaticQuery({
+          client_id: "client-1",
+          tenant: "test_tenant",
+        });
+      }
+
+      if (tableName === "discounts") {
+        return discountsBuilder;
+      }
+
+      return buildStaticQuery(null);
+    });
+
+    const discounts = await (engine as any).fetchDiscounts("client-1", {
+      startDate: "2025-02-01",
+      endDate: "2025-03-01",
+    }, [
+      {
+        type: "fixed",
+        client_contract_line_id: "contract-line-1",
+        serviceName: "Managed Support",
+        rate: 3100,
+        total: 3100,
+        quantity: 1,
+        tax_amount: 0,
+        tax_rate: 0,
+        servicePeriodStart: "2025-01-01",
+        servicePeriodEnd: "2025-01-31",
+      },
+    ]);
+
+    expect(discountsBuilder.andWhere).toHaveBeenNthCalledWith(
+      1,
+      "discounts.start_date",
+      "<=",
+      "2025-03-01",
+    );
+    expect(discounts.map((discount: any) => discount.discount_id)).toEqual([
+      "discount-jan",
+    ]);
+  });
+
+  it("falls back to invoice-window overlap when no canonical charge service periods are available", async () => {
+    const engine = new BillingEngine();
+    const discountsBuilder = buildDiscountQuery([
+      {
+        discount_id: "discount-feb",
+        contract_line_id: "contract-line-1",
+        start_date: "2025-02-01",
+        end_date: "2025-03-01",
+        discount_type: "fixed",
+        value: 700,
+        is_active: true,
+      },
+      {
+        discount_id: "discount-mar",
+        contract_line_id: "contract-line-1",
         start_date: "2025-03-01",
         end_date: null,
         discount_type: "fixed",
@@ -284,12 +355,6 @@ describe("BillingEngine discount and pricing timing parity", () => {
       endDate: "2025-03-01",
     });
 
-    expect(discountsBuilder.andWhere).toHaveBeenNthCalledWith(
-      1,
-      "discounts.start_date",
-      "<=",
-      "2025-03-01",
-    );
     expect(discounts.map((discount: any) => discount.discount_id)).toEqual([
       "discount-feb",
       "discount-mar",

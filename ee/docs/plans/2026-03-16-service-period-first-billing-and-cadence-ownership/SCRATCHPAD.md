@@ -133,7 +133,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Fixed recurring pricing schedules now evaluate against the canonical due service period, not the enclosing invoice window:
   - `packages/billing/src/lib/billing/billingEngine.ts` now resolves the due service-period `[start, end)` boundaries first and uses those exclusive boundaries when selecting `contract_pricing_schedules` for fixed recurring charges
   - `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts` proves the intended arrears behavior explicitly: a January schedule still wins for a February invoice window when that invoice is billing the January service period, while a schedule starting exactly on February 1 is excluded from that January service period
-  - the discount path in `fetchDiscounts` is still invoice-window-based and remains an open seam (`F054/T055`); the focused query test stays in place to document the current inclusive `discounts.start_date <= billingPeriod.endDate` and exclusive `discounts.end_date > billingPeriod.startDate` behavior until discounts are migrated deliberately
+- (2026-03-17) Discount applicability now follows canonical recurring service periods when charge timing has already migrated:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now builds per-contract-line discount evaluation windows from emitted charge `servicePeriodStart`/`servicePeriodEnd` values and uses those windows to filter discount overlap in-memory after a broader candidate query
+  - the query still falls back to invoice-window overlap when no canonical charge service period exists for a contract line, which keeps non-migrated or non-recurring paths on current behavior
+  - `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts` now proves the intended arrears case explicitly: a January discount applies to the February invoice window when the fixed recurring line is billing the January service period, while February/March discounts do not
+- (2026-03-17) Fixed recurring PO association now has an executable unit guard in addition to the blocked DB integration:
+  - `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` now proves that detail-backed fixed recurring persistence keeps `client_contract_id` on the consolidated parent invoice line, which is the assignment linkage PO-scoped readers and invoice selection rely on
+  - the existing DB-backed regression in `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts` remains valuable, but local execution is still blocked by current Postgres permissions
 
 ## Commands / Runbooks
 
@@ -193,6 +199,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/billingEngine.bucketTiming.test.ts --coverage.enabled false`
 - (2026-03-17) Fixed discount and pricing-schedule parity validation:
   - `npx vitest run src/test/unit/billing/billingEngine.discountPricingTiming.test.ts --coverage.enabled false`
+- (2026-03-17) Discount applicability and PO-association validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.discountPricingTiming.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
 
 ## Links / References
 

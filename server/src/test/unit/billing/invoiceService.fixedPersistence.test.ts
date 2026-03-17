@@ -20,6 +20,67 @@ function createMockTx() {
 }
 
 describe("invoiceService fixed recurring persistence", () => {
+  it("T053: fixed recurring parent invoice lines preserve client contract linkage for PO-scoped invoice association", async () => {
+    const { tx, inserts } = createMockTx();
+
+    await persistInvoiceCharges(
+      tx,
+      "invoice-1",
+      [
+        {
+          type: "fixed",
+          serviceId: "service-1",
+          serviceName: "Managed Support",
+          quantity: 1,
+          rate: 10000,
+          total: 10000,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: "US-NY",
+          is_taxable: false,
+          client_contract_line_id: "contract-line-1",
+          client_contract_id: "assignment-1",
+          contract_name: "Acme Corp",
+          config_id: "config-1",
+          base_rate: 10000,
+          enable_proration: false,
+          fmv: 10000,
+          proportion: 1,
+          allocated_amount: 10000,
+          servicePeriodStart: "2024-12-01",
+          servicePeriodEnd: "2024-12-31",
+          billingTiming: "arrears",
+          tenant: "tenant-1",
+        },
+      ],
+      {
+        client_id: "client-1",
+        tax_region: "US-NY",
+      },
+      {
+        user: {
+          id: "user-1",
+        },
+      } as any,
+      "tenant-1",
+    );
+
+    expect(inserts.invoice_charges).toHaveLength(1);
+    expect(inserts.invoice_charge_details).toHaveLength(1);
+    expect(inserts.invoice_charges[0]).toMatchObject({
+      invoice_id: "invoice-1",
+      client_contract_id: "assignment-1",
+      net_amount: 10000,
+    });
+    expect(inserts.invoice_charge_details[0]).toMatchObject({
+      item_id: inserts.invoice_charges[0].item_id,
+      service_id: "service-1",
+      service_period_start: "2024-12-01",
+      service_period_end: "2024-12-31",
+      billing_timing: "arrears",
+    });
+  });
+
   it("T050: fixed recurring invoice detail rows persist canonical service-period metadata without subtotal drift", async () => {
     const { tx, inserts } = createMockTx();
 
