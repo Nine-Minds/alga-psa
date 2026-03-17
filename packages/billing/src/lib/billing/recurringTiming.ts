@@ -15,11 +15,25 @@ export {
   clientCadenceBoundaryGenerator,
   generateClientCadenceServicePeriods,
 } from '@alga-psa/shared/billingClients/clientCadenceServicePeriods';
+export {
+  generateAnnualContractCadenceServicePeriods,
+  contractCadenceMonthlyBoundaryGenerator,
+  generateMonthlyContractCadenceServicePeriods,
+  generateQuarterlyContractCadenceServicePeriods,
+  resolveContractCadenceAnchorDate,
+  generateSemiAnnualContractCadenceServicePeriods,
+} from '@alga-psa/shared/billingClients/contractCadenceServicePeriods';
 
 export type {
   ClientCadenceServicePeriodGenerationInput,
   HistoricalBillingCycleBoundary,
 } from '@alga-psa/shared/billingClients/clientCadenceServicePeriods';
+
+export type {
+  ContractCadenceLifecycleMode,
+  ContractCadenceServicePeriodGenerationInput,
+  ResolveContractCadenceAnchorDateInput,
+} from '@alga-psa/shared/billingClients/contractCadenceServicePeriods';
 
 export type {
   CadenceOwner,

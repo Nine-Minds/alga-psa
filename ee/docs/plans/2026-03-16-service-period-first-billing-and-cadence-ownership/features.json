@@ -596,37 +596,37 @@
   {
     "id": "F100",
     "description": "Update internal docs, help text, and architecture references to describe the new recurring timing model and rollout defaults",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Acceptance Criteria"]
   },
   {
     "id": "F101",
     "description": "Define monthly contract-cadence semantics anchored to assignment start date",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions", "Detailed Requirements"]
   },
   {
     "id": "F102",
     "description": "Define quarterly contract-cadence semantics anchored to assignment start date",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions", "Detailed Requirements"]
   },
   {
     "id": "F103",
     "description": "Define semi-annual contract-cadence semantics anchored to assignment start date",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions", "Detailed Requirements"]
   },
   {
     "id": "F104",
     "description": "Define annual contract-cadence semantics anchored to assignment start date",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions", "Detailed Requirements"]
   },
   {
     "id": "F105",
     "description": "Define contract-cadence behavior for future-start assignments, renew-in-place, and renewed contracts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {

@@ -91,6 +91,14 @@ export {
   selectDueServicePeriodsForInvoiceWindow,
   selectCadenceBoundaryGenerator,
 } from '@alga-psa/shared/billingClients/recurringTiming';
+export {
+  generateAnnualContractCadenceServicePeriods,
+  contractCadenceMonthlyBoundaryGenerator,
+  generateMonthlyContractCadenceServicePeriods,
+  generateQuarterlyContractCadenceServicePeriods,
+  resolveContractCadenceAnchorDate,
+  generateSemiAnnualContractCadenceServicePeriods,
+} from '@alga-psa/shared/billingClients/contractCadenceServicePeriods';
 export type {
   AccountingAdapterType,
   ExternalCompanyRecord,

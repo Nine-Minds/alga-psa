@@ -1,3 +1,16 @@
+/**
+ * Canonical recurring timing architecture
+ *
+ * Recurring billing now treats cadence ownership as the source of truth:
+ * - cadence owner chooses the service-period boundaries
+ * - service periods are the recurring obligation that runtime logic settles
+ * - invoice windows group due service periods, but do not redefine them
+ * - invoice detail rows persist the canonical service-period metadata used at runtime
+ *
+ * Rollout default:
+ * - existing rows continue to resolve to `client` cadence unless they explicitly opt into a later mode
+ * - client billing schedule previews are therefore invoice-window previews for client-cadence lines, not universal recurring truth
+ */
 import { Temporal } from '@js-temporal/polyfill';
 import type {
   CadenceOwner,

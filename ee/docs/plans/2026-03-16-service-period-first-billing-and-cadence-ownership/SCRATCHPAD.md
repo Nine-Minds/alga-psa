@@ -319,6 +319,20 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - this makes the downstream adapter contract explicit instead of accidental: QuickBooks Online service dates and Xero payload service-period metadata now continue to consume the selector's canonical line periods rather than invoice headers
   - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` now seeds `invoice_charge_details` for the multi-period export scenario so the intended DB-backed regression is in place, but local execution remains blocked by `ECONNREFUSED` to Postgres on `127.0.0.1:5438`
   - executable local coverage for the same behavior now lives in `server/src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts`, `packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts`, and `packages/billing/tests/accountingExportAdapters.servicePeriods.wiring.test.ts`
+- (2026-03-17) Internal recurring-timing docs now describe the live service-period-first model and rollout defaults, which closes `F100`:
+  - `shared/billingClients/recurringTiming.ts` now carries a module-level architecture reference that spells out the current runtime truth chain: cadence owner -> service periods -> invoice windows -> invoice detail persistence, plus the staged default of `client` cadence
+  - `packages/reporting/src/actions/report-actions/README.md` now documents the reporting date-basis policy for the current rollout: recurring report actions should prefer canonical service-period detail fields when present, while historical/manual rows may still fall back to invoice dates
+  - focused docs contract coverage now lives in `packages/billing/tests/recurringTiming.architectureDocs.wiring.test.ts` and `packages/reporting/src/actions/report-actions/README.servicePeriods.test.ts`
+- (2026-03-17) Contract-owned cadence now has executable anniversary-based boundary definitions for monthly, quarterly, semi-annual, and annual recurring lines, which closes `F101` through `F104`:
+  - `shared/billingClients/contractCadenceServicePeriods.ts` now defines calendar-unit contract cadence helpers anchored to `anchorDate`, which is treated as the assignment-start anniversary rather than a client billing schedule anchor
+  - monthly, quarterly, semi-annual, and annual periods all compute each boundary from the original assignment anchor instead of chaining from the prior constrained date, which preserves anniversary intent across short months and longer calendar cycles
+  - this checkpoint remains intentionally domain-only: live writes, mixed-cadence selection, first/final invoice rules, and scheduler identity are still deferred to later contract-cadence features (`F106+`)
+  - the generator records `timingMetadata.anchorDate` plus `boundarySource = assignment_start_date`, which makes the contract-anchor rule explicit without changing invoice selection behavior yet
+  - focused regression coverage now lives in `server/src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts`, including the acceptance-shape `8th`-anchor scenarios for monthly, quarterly, semi-annual, and annual cycles plus the required-anchor guard
+- (2026-03-17) Contract-cadence lifecycle rules are now explicit for future starts and renewals, which closes `F105`:
+  - `shared/billingClients/contractCadenceServicePeriods.ts` now exports `resolveContractCadenceAnchorDate(...)`, which defines the rollout rule plainly: future-start assignments and renewed contracts anchor to the new assignment start, while renew-in-place preserves the prior anniversary anchor when one exists
+  - monthly contract-cadence generation already honored the future-start boundary by not emitting pre-anchor service periods; this checkpoint makes that behavior intentional and names the renewal-policy seam instead of leaving it to caller convention
+  - focused regression coverage for those lifecycle rules now lives in `server/src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts`, which proves both the future-start no-prebilling behavior and the split between renew-in-place versus renewed-contract anchor resolution
 
 ## Commands / Runbooks
 
@@ -499,6 +513,19 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts --coverage.enabled false`
     - blocked locally by `ECONNREFUSED` to Postgres on `127.0.0.1:5438`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Internal recurring-timing docs validation:
+  - `npx vitest run ../packages/billing/tests/recurringTiming.architectureDocs.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest picks up the existing workspace alias config for package billing tests
+  - `npx vitest run src/actions/report-actions/README.servicePeriods.test.ts --coverage.enabled false`
+    - run from `packages/reporting/`
+- (2026-03-17) Contract-cadence boundary validation:
+  - `npx vitest run src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts ../packages/billing/tests/recurringTiming.architectureDocs.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest picks up the existing workspace alias config for package billing tests
+  - `npx vitest run src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts --coverage.enabled false`
+    - run from `server/` for the widened quarterly / semi-annual / annual cadence assertions plus future-start / renewal anchor rules
+  - `npx vitest run src/actions/report-actions/README.servicePeriods.test.ts --coverage.enabled false`
+    - run from `packages/reporting/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 ## Links / References
 
@@ -513,6 +540,7 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/lib/billing/recurringTiming.ts`
   - `shared/billingClients/createBillingCycles.ts`
   - `shared/billingClients/clientCadenceServicePeriods.ts`
+  - `shared/billingClients/contractCadenceServicePeriods.ts`
   - `shared/billingClients/recurringTiming.ts`
   - `packages/billing/src/actions/invoiceGeneration.ts`
   - `packages/billing/src/actions/recurringBillingRunActions.ts`
