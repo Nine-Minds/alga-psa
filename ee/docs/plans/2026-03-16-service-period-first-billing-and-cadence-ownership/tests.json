@@ -58,7 +58,7 @@
   {"id":"T052","description":"Tax-region selection for fixed recurring charges remains stable when timing source changes to canonical service periods","implemented":true,"featureIds":["F048"]},
   {"id":"T053","description":"PO-required recurring charges remain associated to the correct invoice lines after fixed recurring cutover","implemented":false,"featureIds":["F049","F059"]},
   {"id":"T054","description":"Pricing schedule effective-date boundaries are evaluated correctly against canonical recurring periods","implemented":true,"featureIds":["F046","F055"]},
-  {"id":"T055","description":"Discount start and end applicability still produces the same recurring discount coverage under canonical timing","implemented":true,"featureIds":["F054"]},
+  {"id":"T055","description":"Discount start and end applicability still produces the same recurring discount coverage under canonical timing","implemented":false,"featureIds":["F054"]},
   {"id":"T056","description":"Bucket or allowance recurring lines map their included units to the correct canonical service period","implemented":true,"featureIds":["F051"]},
   {"id":"T057","description":"Bucket rollover behavior remains correct when recurring period boundaries become canonical and explicit","implemented":true,"featureIds":["F052"]},
   {"id":"T058","description":"Bucket overage charges still attach to the correct invoice window after recurring timing cutover","implemented":true,"featureIds":["F053"]},

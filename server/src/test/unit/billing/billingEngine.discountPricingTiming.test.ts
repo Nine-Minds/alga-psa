@@ -118,7 +118,7 @@ const buildDiscountQuery = (rows: Array<Record<string, any>>) => {
 };
 
 describe("BillingEngine discount and pricing timing parity", () => {
-  it("T054: pricing schedule effective-date boundaries stay keyed to the billing window on the fixed recurring canonical path", async () => {
+  it("T054: pricing schedule effective-date boundaries follow the canonical due service period for fixed recurring charges", async () => {
     const engine = new BillingEngine();
     const pricingScheduleBuilder = buildPricingScheduleQuery([
       {
@@ -221,12 +221,12 @@ describe("BillingEngine discount and pricing timing parity", () => {
       2,
       "effective_date",
       "<",
-      "2025-03-01",
+      "2025-02-01",
     );
     expect(charges).toEqual([
       expect.objectContaining({
-        total: 6200,
-        rate: 6200,
+        total: 3100,
+        rate: 3100,
         servicePeriodStart: "2025-01-01",
         servicePeriodEnd: "2025-01-31",
         billingTiming: "arrears",
@@ -234,7 +234,7 @@ describe("BillingEngine discount and pricing timing parity", () => {
     ]);
   });
 
-  it("T055: discount start and end applicability remains keyed to invoice-window overlap after fixed recurring timing goes canonical", async () => {
+  it("discount applicability remains keyed to invoice-window overlap while fixed recurring timing migrates first", async () => {
     const engine = new BillingEngine();
     const discountsBuilder = buildDiscountQuery([
       {

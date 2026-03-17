@@ -968,6 +968,8 @@ export class BillingEngine {
       duePosition: lineBillingTiming,
       servicePeriodStart,
       servicePeriodEnd,
+      servicePeriodStartExclusive,
+      servicePeriodEndExclusive,
       coverageRatio,
     } = timingResolution;
     let fixedProrationEnabled = false;
@@ -982,7 +984,7 @@ export class BillingEngine {
     let generatedCharges: IFixedPriceCharge[] | null = null;
     let generatedChargeAmountsUseCoverage = false;
 
-    // Check for active pricing schedule that applies to this billing period
+    // Check for an active pricing schedule that overlaps the due service period.
     if (clientContractLine.contract_id) {
       try {
         const activePricingSchedule = await this.knex(
@@ -992,12 +994,12 @@ export class BillingEngine {
             tenant: this.tenant,
             contract_id: clientContractLine.contract_id,
           })
-          // [start, end) semantics: schedule starting exactly on period end does not apply.
-          .where("effective_date", "<", billingPeriod.endDate)
+          // [start, end) semantics: schedule starting exactly on service-period end does not apply.
+          .where("effective_date", "<", servicePeriodEndExclusive)
           .where(function (builder) {
             builder
               .whereNull("end_date")
-              .orWhere("end_date", ">", billingPeriod.startDate);
+              .orWhere("end_date", ">", servicePeriodStartExclusive);
           })
           .orderBy("effective_date", "desc")
           .first();
@@ -1009,7 +1011,7 @@ export class BillingEngine {
         ) {
           effectiveCustomRate = activePricingSchedule.custom_rate;
           console.log(
-            `[PRICING_SCHEDULE] Using pricing schedule rate ${activePricingSchedule.custom_rate} cents for contract ${clientContractLine.contract_id} during period ${billingPeriod.startDate} to ${billingPeriod.endDate}. Schedule ID: ${activePricingSchedule.schedule_id}`,
+            `[PRICING_SCHEDULE] Using pricing schedule rate ${activePricingSchedule.custom_rate} cents for contract ${clientContractLine.contract_id} during service period ${servicePeriodStart} to ${servicePeriodEnd}. Schedule ID: ${activePricingSchedule.schedule_id}`,
           );
         }
       } catch (error) {

@@ -130,10 +130,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Bucket overage invoice-window attachment is now explicitly covered on the service-period-first path:
   - `packages/billing/src/lib/billing/billingEngine.ts` continues to select `bucket_usage` rows by the active billing window, but the focused regression now proves that the emitted charge keeps the persisted allowance period instead of collapsing back to invoice-window dates
   - `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts` now covers both the explicit service-period mapping and the invoice-window filter that keeps February allowance usage on the February invoice window instead of rebilling it elsewhere
-- (2026-03-17) Fixed recurring discount and pricing-schedule date-basis parity is now explicit:
-  - `packages/billing/src/lib/billing/billingEngine.ts` still evaluates pricing schedule activation against the active invoice window even when an arrears fixed charge now carries the previous service period canonically; the new regression proves a schedule ending exactly at window start is excluded, one starting at window start is included, and one starting at window end is excluded
-  - the discount path in `fetchDiscounts` still uses invoice-window overlap semantics rather than covered service-period overlap during the client-cadence parity phase; the new test locks the current boundary behavior, including the existing inclusive `discounts.start_date <= billingPeriod.endDate` rule and exclusive `discounts.end_date > billingPeriod.startDate` rule
-  - `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts` is the focused contract test for both behaviors so future service-period work can change the date basis deliberately instead of accidentally
+- (2026-03-17) Fixed recurring pricing schedules now evaluate against the canonical due service period, not the enclosing invoice window:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now resolves the due service-period `[start, end)` boundaries first and uses those exclusive boundaries when selecting `contract_pricing_schedules` for fixed recurring charges
+  - `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts` proves the intended arrears behavior explicitly: a January schedule still wins for a February invoice window when that invoice is billing the January service period, while a schedule starting exactly on February 1 is excluded from that January service period
+  - the discount path in `fetchDiscounts` is still invoice-window-based and remains an open seam (`F054/T055`); the focused query test stays in place to document the current inclusive `discounts.start_date <= billingPeriod.endDate` and exclusive `discounts.end_date > billingPeriod.startDate` behavior until discounts are migrated deliberately
 
 ## Commands / Runbooks
 

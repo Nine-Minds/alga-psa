@@ -320,7 +320,7 @@
   {
     "id": "F054",
     "description": "Preserve discount applicability evaluation when recurring line timing is driven by canonical service periods",
-    "implemented": true,
+    "implemented": false,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {
