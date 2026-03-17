@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "P1-3: Build passes after auth-compat deletion (npm run build)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P1-3"]
   },
   {
