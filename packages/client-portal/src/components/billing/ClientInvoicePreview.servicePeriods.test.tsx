@@ -31,6 +31,13 @@ vi.mock('@alga-psa/client-portal/actions', () => ({
         service_period_start: '2026-01-01',
         service_period_end: '2026-02-01',
         billing_timing: 'advance',
+        recurring_detail_periods: [
+          {
+            service_period_start: '2026-01-01',
+            service_period_end: '2026-02-01',
+            billing_timing: 'advance',
+          },
+        ],
       },
     ],
   })),
@@ -52,6 +59,7 @@ vi.mock('@alga-psa/billing/components', () => ({
       <div>preview-item:{invoiceData?.items?.[0]?.description}</div>
       <div>preview-period:{invoiceData?.items?.[0]?.servicePeriodStart}:{invoiceData?.items?.[0]?.servicePeriodEnd}</div>
       <div>preview-timing:{invoiceData?.items?.[0]?.billingTiming}</div>
+      <div>preview-detail-periods:{invoiceData?.items?.[0]?.recurringDetailPeriods?.length ?? 0}</div>
     </div>
   ),
 }));
@@ -85,5 +93,6 @@ describe('ClientInvoicePreview recurring service periods', () => {
     expect(screen.getByText('preview-item:Managed Firewall')).toBeInTheDocument();
     expect(screen.getByText('preview-period:2026-01-01:2026-02-01')).toBeInTheDocument();
     expect(screen.getByText('preview-timing:advance')).toBeInTheDocument();
+    expect(screen.getByText('preview-detail-periods:1')).toBeInTheDocument();
   });
 });

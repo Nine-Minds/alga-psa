@@ -752,7 +752,7 @@
   {
     "id": "F126",
     "description": "Update invoice query and read actions used by dashboard and portal flows to preserve stable rendering semantics for canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

@@ -30,6 +30,11 @@ export interface WasmInvoiceViewModel {
     servicePeriodStart?: string | null;
     servicePeriodEnd?: string | null;
     billingTiming?: 'arrears' | 'advance' | null;
+    recurringDetailPeriods?: Array<{
+      servicePeriodStart?: string | null;
+      servicePeriodEnd?: string | null;
+      billingTiming?: 'arrears' | 'advance' | null;
+    }>;
     category?: string; // Optional: For grouping items
     itemType?: 'service' | 'project' | 'product'; // Optional: For conditional rendering
   }>;

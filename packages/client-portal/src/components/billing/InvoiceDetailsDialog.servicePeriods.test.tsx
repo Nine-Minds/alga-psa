@@ -50,6 +50,18 @@ vi.mock('@alga-psa/client-portal/actions', () => ({
         service_period_start: '2026-01-01',
         service_period_end: '2026-02-01',
         billing_timing: 'advance',
+        recurring_detail_periods: [
+          {
+            service_period_start: '2026-01-01',
+            service_period_end: '2026-02-01',
+            billing_timing: 'advance',
+          },
+          {
+            service_period_start: '2026-02-01',
+            service_period_end: '2026-03-01',
+            billing_timing: 'advance',
+          },
+        ],
       },
     ],
   })),
@@ -91,7 +103,9 @@ describe('InvoiceDetailsDialog recurring service periods', () => {
       expect(screen.getByText('Managed Firewall')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Service Period: 2026-01-01 - 2026-02-01')).toBeInTheDocument();
+    expect(screen.getByText('Service Periods:')).toBeInTheDocument();
+    expect(screen.getByText('2026-01-01 - 2026-02-01')).toBeInTheDocument();
+    expect(screen.getByText('2026-02-01 - 2026-03-01')).toBeInTheDocument();
     expect(screen.getByText('Advance')).toBeInTheDocument();
   });
 });

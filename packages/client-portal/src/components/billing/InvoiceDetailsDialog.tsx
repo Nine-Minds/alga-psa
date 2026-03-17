@@ -46,6 +46,48 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     return `${formatDate(start)} - ${formatDate(end)}`;
   };
 
+  const renderRecurringDetailPeriods = (
+    periods: Array<{
+      service_period_start?: string | null;
+      service_period_end?: string | null;
+      billing_timing?: 'arrears' | 'advance' | null;
+    }> | undefined
+  ) => {
+    if (!periods || periods.length === 0) {
+      return null;
+    }
+
+    const renderedPeriods = periods
+      .map((period) => ({
+        label: formatServicePeriodRange(period.service_period_start, period.service_period_end),
+        timing: period.billing_timing,
+      }))
+      .filter((period): period is { label: string; timing: 'arrears' | 'advance' | null | undefined } => Boolean(period.label));
+
+    if (renderedPeriods.length === 0) {
+      return null;
+    }
+
+    if (renderedPeriods.length === 1) {
+      return (
+        <div className="text-xs text-muted-foreground">
+          {t('invoice.servicePeriod', 'Service Period')}: {renderedPeriods[0].label}
+        </div>
+      );
+    }
+
+    return (
+      <div className="text-xs text-muted-foreground">
+        <div>{t('invoice.servicePeriods', 'Service Periods')}:</div>
+        <ul className="list-disc pl-4">
+          {renderedPeriods.map((period) => (
+            <li key={`${period.label}:${period.timing ?? 'none'}`}>{period.label}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
   // Fetch invoice details when dialog opens
   useEffect(() => {
     const fetchInvoiceDetails = async () => {
@@ -191,11 +233,13 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                               <span className="text-xs text-muted-foreground">{item.service_sku}</span>
                             ) : null}
                           </div>
-                          {formatServicePeriodRange(item.service_period_start, item.service_period_end) ? (
-                            <div className="text-xs text-muted-foreground">
-                              {t('invoice.servicePeriod', 'Service Period')}: {formatServicePeriodRange(item.service_period_start, item.service_period_end)}
-                            </div>
-                          ) : null}
+                          {item.recurring_detail_periods && item.recurring_detail_periods.length > 0
+                            ? renderRecurringDetailPeriods(item.recurring_detail_periods)
+                            : formatServicePeriodRange(item.service_period_start, item.service_period_end) ? (
+                                <div className="text-xs text-muted-foreground">
+                                  {t('invoice.servicePeriod', 'Service Period')}: {formatServicePeriodRange(item.service_period_start, item.service_period_end)}
+                                </div>
+                              ) : null}
                         </div>
                       </td>
                       <td className="px-3 py-2">{item.quantity}</td>
