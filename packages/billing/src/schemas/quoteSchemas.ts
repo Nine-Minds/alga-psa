@@ -110,6 +110,14 @@ export const createQuoteItemSchema = createQuoteItemBaseSchema.superRefine((valu
       path: ['discount_type']
     });
   }
+
+  if (value.discount_type === 'percentage' && (value.discount_percentage === undefined || value.discount_percentage === null)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'discount_percentage is required for percentage discounts',
+      path: ['discount_percentage']
+    });
+  }
 });
 
 export const updateQuoteItemSchema = createQuoteItemBaseSchema.partial().extend({

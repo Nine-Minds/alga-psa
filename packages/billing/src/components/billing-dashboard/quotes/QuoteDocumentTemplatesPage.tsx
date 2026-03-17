@@ -21,8 +21,12 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        const loadedTemplates = await getQuoteDocumentTemplates();
-        setTemplates(loadedTemplates);
+        const result = await getQuoteDocumentTemplates();
+        if (result && typeof result === 'object' && 'permissionError' in result) {
+          setError(result.permissionError);
+          return;
+        }
+        setTemplates(result as IQuoteDocumentTemplate[]);
         setError(null);
       } catch (loadError) {
         console.error('Error loading quote document templates:', loadError);

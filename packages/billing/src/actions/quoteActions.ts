@@ -236,7 +236,7 @@ export const updateQuote = withAuth(async (
   quoteId: string,
   input: Partial<IQuote>
 ): Promise<IQuote | ActionPermissionError> => {
-  const denied = await requireQuoteApprovePermission(user);
+  const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
   }
@@ -501,7 +501,7 @@ export const duplicateQuote = withAuth(async (
         display_order: sourceItem.display_order,
         phase: sourceItem.phase ?? null,
         is_optional: sourceItem.is_optional,
-        is_selected: sourceItem.is_optional ? true : sourceItem.is_selected,
+        is_selected: sourceItem.is_selected,
         is_recurring: sourceItem.is_recurring,
         billing_frequency: sourceItem.billing_frequency ?? null,
         is_discount: sourceItem.is_discount ?? false,

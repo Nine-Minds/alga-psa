@@ -219,6 +219,20 @@ const QuoteItem = {
       throw new Error('Tenant context is required for reordering quote items');
     }
 
+    const actualItemIds = await knexOrTrx('quote_items')
+      .where({ tenant, quote_id: quoteId })
+      .pluck('quote_item_id') as string[];
+
+    if (orderedQuoteItemIds.length !== actualItemIds.length) {
+      throw new Error(`Reorder list length (${orderedQuoteItemIds.length}) does not match actual item count (${actualItemIds.length})`);
+    }
+
+    const actualIdSet = new Set(actualItemIds);
+    const invalidIds = orderedQuoteItemIds.filter((id) => !actualIdSet.has(id));
+    if (invalidIds.length > 0) {
+      throw new Error(`Reorder list contains item IDs not belonging to this quote: ${invalidIds.join(', ')}`);
+    }
+
     for (const [index, quoteItemId] of orderedQuoteItemIds.entries()) {
       await knexOrTrx('quote_items')
         .where({ tenant, quote_id: quoteId, quote_item_id: quoteItemId })

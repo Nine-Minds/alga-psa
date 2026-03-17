@@ -97,7 +97,7 @@ function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 
     return 'Hourly';
   }
 
-  if (item.billing_method === 'usage') {
+  if (item.billing_method === 'usage' || item.billing_method === 'per_unit') {
     return 'Usage';
   }
 
@@ -105,9 +105,14 @@ function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 
 }
 
 function getContractLineBillingTiming(item: IQuoteItem): 'arrears' | 'advance' {
-  return item.billing_method === 'hourly' || item.billing_method === 'usage'
+  return item.billing_method === 'hourly' || item.billing_method === 'usage' || item.billing_method === 'per_unit'
     ? 'arrears'
     : 'advance';
+}
+
+function isItemSelected(item: IQuoteItem): boolean {
+  if (!item.is_optional) return true;
+  return item.is_selected === true;
 }
 
 function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
@@ -116,11 +121,7 @@ function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
       return false;
     }
 
-    if (item.is_optional && item.is_selected === false) {
-      return false;
-    }
-
-    return true;
+    return isItemSelected(item);
   });
 }
 
@@ -130,11 +131,7 @@ function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
       return false;
     }
 
-    if (item.is_optional && item.is_selected === false) {
-      return false;
-    }
-
-    return true;
+    return isItemSelected(item);
   });
 
   const baseItemIds = new Set(
@@ -192,8 +189,8 @@ export function buildQuoteConversionPreview(quote: IQuote): QuoteConversionPrevi
     }
 
     let reason = 'Item is not eligible for conversion';
-    if (item.is_optional && item.is_selected === false) {
-      reason = 'Optional item was deselected by the client';
+    if (item.is_optional && item.is_selected !== true) {
+      reason = 'Optional item was not selected by the client';
     } else if (item.is_discount && item.is_recurring) {
       reason = 'Recurring discount lines are excluded from contract conversion';
     } else if (item.is_recurring && !item.service_id) {

@@ -22,10 +22,9 @@ export interface QuoteListOptions {
   is_template?: boolean;
 }
 
-function getTodayStart(): Date {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
+function getTodayStartUTC(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
 function isExpiredOnAccess(quote: Pick<IQuote, 'status' | 'valid_until'>): boolean {
@@ -33,7 +32,7 @@ function isExpiredOnAccess(quote: Pick<IQuote, 'status' | 'valid_until'>): boole
     return false;
   }
 
-  return new Date(quote.valid_until) < getTodayStart();
+  return new Date(quote.valid_until) < getTodayStartUTC();
 }
 
 async function expireQuoteIfNeeded(
@@ -156,9 +155,10 @@ const Quote = {
     }
 
     const page = options.page ?? 1;
-    const pageSize = options.pageSize ?? 25;
-    const sortBy = options.sortBy ?? 'quote_date';
-    const sortOrder = options.sortOrder ?? 'desc';
+    const pageSize = Math.max(1, Math.min(options.pageSize ?? 25, 200));
+    const allowedSortColumns = ['quote_date', 'total_amount', 'status', 'created_at'] as const;
+    const sortBy = allowedSortColumns.includes(options.sortBy as any) ? options.sortBy! : 'quote_date';
+    const sortOrder = options.sortOrder === 'asc' ? 'asc' : 'desc';
 
     const baseQuery = knexOrTrx('quotes as q')
       .leftJoin('clients as c', function joinClients() {

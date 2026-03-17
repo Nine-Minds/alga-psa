@@ -44,7 +44,8 @@ function toQuoteDate(value?: string | null): string {
 }
 
 function isItemIncluded(item: QuoteItemRow): boolean {
-  return !item.is_optional || item.is_selected !== false;
+  if (!item.is_optional) return true;
+  return item.is_selected === true;
 }
 
 function calculateDiscountAmount(item: QuoteItemRow, baseAmount: number): number {
@@ -52,7 +53,9 @@ function calculateDiscountAmount(item: QuoteItemRow, baseAmount: number): number
     return Math.round(baseAmount * (toNumber(item.discount_percentage) / 100));
   }
 
-  return toNumber(item.quantity || 1) * toNumber(item.unit_price);
+  // Fixed discount: the total_price represents the absolute discount amount.
+  // unit_price is the per-unit discount, quantity multiplies it.
+  return Math.abs(toNumber(item.quantity || 1) * toNumber(item.unit_price));
 }
 
 export async function recalculateQuoteFinancials(

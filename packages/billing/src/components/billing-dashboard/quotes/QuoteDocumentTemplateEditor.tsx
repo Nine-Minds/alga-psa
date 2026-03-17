@@ -35,10 +35,14 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
         setError(null);
 
         if (templateId) {
-          const loadedTemplate = await getQuoteDocumentTemplate(templateId);
-          if (!loadedTemplate) {
+          const loadedResult = await getQuoteDocumentTemplate(templateId);
+          if (loadedResult && typeof loadedResult === 'object' && 'permissionError' in loadedResult) {
+            throw new Error(loadedResult.permissionError);
+          }
+          if (!loadedResult) {
             throw new Error('Quote document template not found.');
           }
+          const loadedTemplate = loadedResult as IQuoteDocumentTemplate;
           setTemplate(loadedTemplate);
           setAstJson(JSON.stringify(loadedTemplate.templateAst ?? {}, null, 2));
           return;
@@ -79,19 +83,33 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     try {
       setIsSaving(true);
       setError(null);
-      const parsedAst = JSON.parse(astJson);
+
+      let parsedAst: unknown;
+      try {
+        parsedAst = JSON.parse(astJson);
+      } catch (parseError) {
+        setError(`Invalid JSON: ${parseError instanceof SyntaxError ? parseError.message : 'Could not parse template AST'}`);
+        setIsSaving(false);
+        return;
+      }
+
       const result = await saveQuoteDocumentTemplate({
         ...template,
         template_id: template.template_id,
-        templateAst: parsedAst,
+        templateAst: parsedAst as any,
       });
 
-      if (!result.success || !result.template) {
-        throw new Error(result.error || 'Failed to save quote template');
+      if (result && typeof result === 'object' && 'permissionError' in result) {
+        throw new Error(result.permissionError);
       }
 
-      setTemplate(result.template);
-      router.push(`/msp/quote-document-templates?templateId=${result.template.template_id}`);
+      const saveResult = result as { success: boolean; template?: IQuoteDocumentTemplate; error?: string };
+      if (!saveResult.success || !saveResult.template) {
+        throw new Error(saveResult.error || 'Failed to save quote template');
+      }
+
+      setTemplate(saveResult.template);
+      router.push(`/msp/quote-document-templates?templateId=${saveResult.template.template_id}`);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to save quote template');
     } finally {
