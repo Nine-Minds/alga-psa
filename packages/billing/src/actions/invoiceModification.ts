@@ -47,6 +47,25 @@ interface ManualItemsUpdate {
   invoice_number?: string; // Added based on usage in updateManualInvoiceItems
 }
 
+async function hasCanonicalRecurringDetailPeriodsForInvoice(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<boolean> {
+  const detailRow = await trx('invoice_charge_details as iid')
+    .join('invoice_charges as ic', function(this: Knex.JoinClause) {
+      this.on('iid.item_id', '=', 'ic.item_id')
+        .andOn('iid.tenant', '=', 'ic.tenant');
+    })
+    .where('iid.tenant', tenant)
+    .andWhere('ic.invoice_id', invoiceId)
+    .whereNotNull('iid.service_period_start')
+    .whereNotNull('iid.service_period_end')
+    .first('iid.item_detail_id');
+
+  return Boolean(detailRow);
+}
+
 
 export const finalizeInvoice = withAuth(async (
   user,
@@ -738,6 +757,14 @@ export const hardDeleteInvoice = withAuth(async (
     if (!invoice) {
         console.warn(`Invoice ${invoiceId} not found for deletion.`);
         return; // Exit if invoice doesn't exist
+    }
+
+    // Canonical recurring detail rows are authoritative historical coverage metadata.
+    // Preserve them by cancelling the invoice through the regular lifecycle instead of hard deletion.
+    if (await hasCanonicalRecurringDetailPeriodsForInvoice(trx, tenant, invoiceId)) {
+      throw new Error(
+        `Cannot delete invoice ${invoiceId}: canonical recurring detail periods already exist. Cancel the invoice instead of deleting it.`
+      );
     }
 
     // 2. Handle payments

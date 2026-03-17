@@ -608,15 +608,24 @@ export class InvoiceService extends BaseService<IInvoice> {
         throw new Error('Invoice not found');
       }
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
+      const hasCanonicalRecurringDetailPeriods =
+        recurringProvenance?.authoritativePeriodSource === 'canonical_detail_rows' &&
+        (recurringProvenance.detailPeriodCount ?? 0) > 0;
+
       // Check if invoice has payments
 	      const hasPayments = await trx('invoice_payments')
 	        .where({ invoice_id: id, tenant: context.tenant })
 	        .first();
 
 	      const occurredAt = new Date().toISOString();
-	      const softCancelled = Boolean(hasPayments || invoice.status === 'paid');
+	      const softCancelled = Boolean(
+          hasPayments ||
+          invoice.status === 'paid' ||
+          hasCanonicalRecurringDetailPeriods
+        );
 
-	      if (hasPayments || invoice.status === 'paid') {
+	      if (softCancelled) {
 	        // Soft delete - mark as cancelled
 	        await trx('invoices')
 	          .where({ invoice_id: id, tenant: context.tenant })
@@ -635,8 +644,6 @@ export class InvoiceService extends BaseService<IInvoice> {
           .where({ invoice_id: id, tenant: context.tenant })
           .del();
       }
-
-      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
 
       // Audit log
 	      await auditLog(trx, {

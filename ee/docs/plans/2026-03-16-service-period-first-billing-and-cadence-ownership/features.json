@@ -1568,7 +1568,7 @@
   {
     "id": "F175",
     "description": "Define deletion and cancellation safeguards when recurring detail periods already exist for not-yet-finalized or finalized invoices",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Read-model and post-persist lifecycle requirements",
       "Risks"

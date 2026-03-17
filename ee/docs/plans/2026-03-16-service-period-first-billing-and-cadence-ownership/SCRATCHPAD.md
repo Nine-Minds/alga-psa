@@ -1049,12 +1049,23 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/clientContractActions.overlapExclusive.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Invoice deletion/detail-period safeguard validation:
+  - `npx vitest run ../packages/billing/tests/invoiceModification.recurringDeletionGuard.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx vitest run src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 - (2026-03-17) Client contract assignment-date validation now distinguishes canonical recurring coverage from historical invoice-window fallback, which closes `F174` and `T204`:
   - `packages/clients/src/actions/clientContractActions.ts` now queries canonical `invoice_charge_details` coverage for the current `client_contract_id` before using legacy `client_billing_cycles` overlap logic, so end-date shortening and mid-cycle termination are enforced against billed recurring service periods rather than against the entire enclosing invoice window whenever authoritative detail rows exist
   - the new rule is explicit and end-exclusive: the earliest billed recurring `service_period_start` still blocks moving the contract start later into already billed coverage, while the latest billed `service_period_end` is treated as exclusive and converted into the last already-billed service day when validating a shorter `end_date`
   - historical flat invoices still keep the old fallback behavior because `updateClientContract(...)` only consults `client_billing_cycles` when no canonical recurring detail periods exist for the contract
   - `server/src/test/unit/clientContractActions.overlapExclusive.test.ts` now proves all three boundary cases together: touching historical invoice-window boundaries still pass under `[start, end)` semantics, canonical partial service periods allow termination exactly on the last billed day, and shortening earlier than that day is rejected with a detail-period-specific error
+- (2026-03-17) Invoice deletion now preserves authoritative recurring detail periods instead of treating detail-backed invoices like disposable draft rows, which closes `F175` and `T205`:
+  - `packages/billing/src/actions/invoiceModification.ts` now blocks `hardDeleteInvoice(...)` as soon as canonical `invoice_charge_details` rows exist for the invoice, with an explicit error instructing callers to cancel instead of deleting
+  - `server/src/lib/api/services/InvoiceService.ts` now computes recurring provenance before delete-path branching and treats canonical-detail-backed invoices as soft-cancel candidates even when they have no payments yet, so the API delete path preserves the invoice plus its authoritative recurring detail history
+  - the safeguard intentionally distinguishes detail-backed recurring invoices from historical/manual invoices: invoices without canonical recurring detail periods still follow the existing delete behavior, while draft or finalized recurring invoices with canonical periods are preserved through cancellation semantics
+  - focused executable coverage now lives in `packages/billing/tests/invoiceModification.recurringDeletionGuard.test.ts` for the explicit hard-delete action and `server/src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts` for the API soft-cancel branch
 
 ## Links / References
 

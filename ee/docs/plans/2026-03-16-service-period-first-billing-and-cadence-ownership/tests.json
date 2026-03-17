@@ -1779,7 +1779,7 @@
   {
     "id": "T205",
     "description": "Deletion and cancellation safeguards behave correctly when recurring detail periods exist on draft and finalized invoices",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F175"
     ]
