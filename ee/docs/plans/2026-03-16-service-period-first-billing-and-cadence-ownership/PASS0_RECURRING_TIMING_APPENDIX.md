@@ -52,6 +52,13 @@ Source-backed file lists live in `pass-0-source-inventory.json`.
 - Product tax currently evaluates against `billingPeriod.endDate`, which means service-date semantics are still coupled to the invoice window rather than the due recurring period.
 - This seam is intentionally inventoried before `F062+` so the product migration can remove late-stage proration, invoice-window service-period stamping, and invoice-window tax-date evaluation together instead of treating them as separate accidental behaviors.
 
+### Recurring license migration seam inventory
+
+- `BillingEngine.calculateBilling(...)` still defers license coverage settlement to the generic late-stage `applyProrationToPlan(...)` branch, which means license timing is still coupled to post-charge invoice-window adjustment rather than canonical due-period selection.
+- `calculateLicenseCharges(...)` still carries a placeholder TODO because the current source query does not yet have a resolved license-selection path (`service_catalog` filtering is incomplete), so the runtime migration cannot safely proceed until the authoring/storage read path is made explicit.
+- If the placeholder were populated today, license tax and period metadata would still evaluate from the enclosing invoice window (`billingPeriod.startDate` / `billingPeriod.endDate`), including `period_start`, `period_end`, `servicePeriodStart`, and `servicePeriodEnd`.
+- This seam is intentionally inventoried before `F066+` so the license migration can solve source selection, canonical service-period timing, and partial-coverage settlement as one change instead of hiding the placeholder behind superficial parity tests.
+
 ## Persisted Date and Period Fields
 
 These are the persisted fields that currently participate in recurring timing or billed-through semantics.

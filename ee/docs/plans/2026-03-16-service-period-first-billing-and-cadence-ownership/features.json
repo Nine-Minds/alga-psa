@@ -386,7 +386,7 @@
   {
     "id": "F065",
     "description": "Identify recurring license charge paths that currently rely on late-stage proration adjustment",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Implementation Sequence"]
   },
   {

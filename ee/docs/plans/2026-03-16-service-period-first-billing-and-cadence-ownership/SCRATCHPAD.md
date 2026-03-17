@@ -164,6 +164,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/lib/billing/billingEngine.ts` now resolves product due periods through the same shared recurring timing helper used by fixed recurring charges, so product `servicePeriodStart` / `servicePeriodEnd` now reflect the canonical due service period instead of the enclosing invoice window
   - product coverage settlement now happens inside `calculateProductCharges(...)`, which removes the late-stage `applyProrationToPlan(...)` branch for products from `calculateBilling` while preserving the existing `enable_proration` gate and rounding behavior
   - product tax evaluation now uses the canonical due service-period end date, and product charge tests now explicitly cover client-cadence timing (`T062`), override precedence (`T063`), and tax-date behavior (`T064`)
+- (2026-03-17) Recurring license timing is still a source-backed inventory seam rather than a real runtime migration:
+  - `packages/billing/src/lib/billing/billingEngine.ts` still leaves licenses on the late-stage `applyProrationToPlan(...)` branch in `calculateBilling`
+  - `calculateLicenseCharges(...)` still contains the unresolved license-source TODO and, if populated, would still stamp `period_start`, `period_end`, `servicePeriodStart`, and `servicePeriodEnd` from the enclosing invoice window while evaluating tax from `billingPeriod.endDate`
+  - `PASS0_RECURRING_TIMING_APPENDIX.md`, `pass-0-source-inventory.json`, and `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now treat that as the explicit `F065/T065` seam to remove before `F066+`
 - (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
   - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
   - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
@@ -235,6 +239,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Product recurring timing validation:
   - `npx vitest run src/test/unit/billing/billingEngine.productTiming.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.discountPricingTiming.test.ts --coverage.enabled false`
+- (2026-03-17) License-path inventory validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
 - (2026-03-17) Explicit out-of-scope boundary validation:
   - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
 - (2026-03-17) Blocked prepayment follow-up:

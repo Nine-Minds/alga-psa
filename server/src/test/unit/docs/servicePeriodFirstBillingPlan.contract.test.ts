@@ -19,6 +19,7 @@ const inventory = JSON.parse(read('pass-0-source-inventory.json')) as {
   timingControls: {
     resolveServicePeriodRefs: string[];
     productLateStageProrationRefs: string[];
+    licenseLateStageProrationRefs: string[];
     billingCycleAlignmentRefs: string[];
   };
   periodFieldInventory: {
@@ -153,6 +154,21 @@ describe('service-period-first billing plan artifacts', () => {
     expect(appendix).toContain('only later conditionally applies `applyProrationToPlan(...)` to `productCharges`');
     expect(appendix).toContain('still stamps `servicePeriodStart` and `servicePeriodEnd` directly from the enclosing invoice window');
     expect(appendix).toContain('Product tax currently evaluates against `billingPeriod.endDate`');
+  });
+
+  it('T065: recurring license charge paths that still rely on late-stage proration are source-backed before migration', () => {
+    expect(inventory.timingControls.licenseLateStageProrationRefs.slice().sort()).toEqual(
+      rgList(
+        `calculateLicenseCharges\\(|Error calculating initial tax for license service|TODO: The service_catalog table doesn't have a service_type column|type: "license"`,
+        'packages',
+        'server',
+        'shared'
+      )
+    );
+    expect(appendix).toContain('### Recurring license migration seam inventory');
+    expect(appendix).toContain('still defers license coverage settlement to the generic late-stage `applyProrationToPlan(...)` branch');
+    expect(appendix).toContain('still carries a placeholder TODO because the current source query does not yet have a resolved license-selection path');
+    expect(appendix).toContain('license tax and period metadata would still evaluate from the enclosing invoice window');
   });
 
   it('T010: fixture builder contract stays cadence-owner-aware and independent from invoice side effects', () => {

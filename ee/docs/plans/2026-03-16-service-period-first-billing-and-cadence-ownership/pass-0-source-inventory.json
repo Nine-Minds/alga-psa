@@ -6,15 +6,21 @@
       "rg -l 'resolveServicePeriod' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'",
       "rg -l 'billing_cycle_alignment' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'",
       "rg -l 'service_period_start|service_period_end|servicePeriodStart|servicePeriodEnd' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'",
-      "rg -l 'calculateProductCharges\\(|proratedProductCharges|Error calculating initial tax for product service|Missing pricing for product|type: \"product\"' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'"
+      "rg -l 'calculateProductCharges\\(|proratedProductCharges|Error calculating initial tax for product service|Missing pricing for product|type: \"product\"' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'",
+      "rg -l 'calculateLicenseCharges\\(|Error calculating initial tax for license service|TODO: The service_catalog table doesn't have a service_type column|type: \"license\"' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'"
     ]
   },
   "timingControls": {
     "resolveServicePeriodRefs": [
       "packages/billing/src/lib/billing/billingEngine.ts",
+      "server/src/test/unit/billing/billingEngine.productTiming.test.ts",
       "server/src/test/unit/billing/billingEngine.timing.test.ts"
     ],
     "productLateStageProrationRefs": [
+      "packages/billing/src/lib/billing/billingEngine.ts",
+      "server/src/test/unit/billing/billingEngine.productTiming.test.ts"
+    ],
+    "licenseLateStageProrationRefs": [
       "packages/billing/src/lib/billing/billingEngine.ts"
     ],
     "billingCycleAlignmentRefs": [
@@ -73,6 +79,7 @@
       "server/src/test/unit/accounting/xeroAdapter.spec.ts",
       "server/src/test/unit/billing/billingEngine.bucketTiming.test.ts",
       "server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts",
+      "server/src/test/unit/billing/billingEngine.productTiming.test.ts",
       "server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts",
       "server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts",
       "server/src/test/integration/accounting/invoiceSelection.integration.test.ts",
