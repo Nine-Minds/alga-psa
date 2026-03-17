@@ -122,61 +122,61 @@
   {
     "id": "F021",
     "description": "Implement monthly client-cadence service-period boundary generation using current client anchor-day behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F022",
     "description": "Implement quarterly client-cadence service-period boundary generation using current anchor month/day behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F023",
     "description": "Implement semi-annual client-cadence service-period boundary generation using current anchor month/day behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F024",
     "description": "Implement annual client-cadence service-period boundary generation using current anchor month/day behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F025",
     "description": "Implement weekly client-cadence service-period boundary generation with explicit [start, end) semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F026",
     "description": "Implement bi-weekly client-cadence service-period boundary generation with explicit [start, end) semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F027",
     "description": "Preserve current transition-period behavior when client billing anchors change on future non-invoiced cycles",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F028",
     "description": "Preserve current [start, end) client billing cycle semantics when translating billing cycles into canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Architecture Thesis"]
   },
   {
     "id": "F029",
     "description": "Define deterministic client-cadence service-period behavior when historical billing cycles exist but client billing settings changed later",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Risks"]
   },
   {
     "id": "F030",
     "description": "Define safe fallback behavior when legacy or partial client billing cycle data is encountered during service-period generation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {

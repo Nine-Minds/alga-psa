@@ -9,6 +9,16 @@ export {
   selectCadenceBoundaryGenerator,
 } from '@alga-psa/shared/billingClients/recurringTiming';
 
+export {
+  clientCadenceBoundaryGenerator,
+  generateClientCadenceServicePeriods,
+} from '@alga-psa/shared/billingClients/clientCadenceServicePeriods';
+
+export type {
+  ClientCadenceServicePeriodGenerationInput,
+  HistoricalBillingCycleBoundary,
+} from '@alga-psa/shared/billingClients/clientCadenceServicePeriods';
+
 export type {
   CadenceOwner,
   DuePosition,

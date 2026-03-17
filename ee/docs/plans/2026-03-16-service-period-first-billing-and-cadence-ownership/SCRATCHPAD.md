@@ -48,6 +48,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `shared/billingClients/recurringTiming.ts`
   - `packages/billing/src/lib/billing/recurringTiming.ts`
   - `server/src/test/unit/billing/recurringTiming.domain.test.ts`
+- (2026-03-17) Client-cadence service-period generation now lives in:
+  - `shared/billingClients/clientCadenceServicePeriods.ts`
+  - `server/src/test/unit/billing/clientCadenceServicePeriods.domain.test.ts`
 - (2026-03-17) The first checkpoint intentionally made the plan executable:
   - source-backed file inventories now cover `resolveServicePeriod`, `billing_cycle_alignment`, persisted service-period readers, and downstream recurring timing consumers
   - a docs contract test now fails if the pass-0 appendix drifts from live grep-backed source references
@@ -55,6 +58,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - canonical service periods and invoice windows are distinct types with explicit `kind` markers and shared `[start, end)` semantics
   - cadence-owner defaults are centralized at `DEFAULT_CADENCE_OWNER = 'client'`
   - activity-window intersection, coverage calculation, due-window mapping, and invoice-detail timing projection are defined without invoice creation side effects
+- (2026-03-17) Client-cadence service-period generation now preserves current anchor behavior while separating two cases explicitly:
+  - when no historical cycle is authoritative, generation returns the anchored period containing the requested date
+  - when a historical cycle ends exactly at the next cursor, generation treats that cursor as an authoritative transition boundary and moves forward without reaching back into pre-cutover periods
 - (2026-03-16) `packages/billing/src/lib/billing/billingEngine.ts` currently mixes several timing models:
   - `resolveServicePeriod`
   - advance vs arrears branching
@@ -109,6 +115,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Shared recurring-timing validation:
   - `npm --prefix server test -- src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts`
   - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Client cadence validation:
+  - `npx vitest run src/test/unit/billing/clientCadenceServicePeriods.domain.test.ts src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
 
 ## Links / References
 
@@ -122,6 +130,7 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/lib/billing/billingEngine.ts`
   - `packages/billing/src/lib/billing/recurringTiming.ts`
   - `shared/billingClients/createBillingCycles.ts`
+  - `shared/billingClients/clientCadenceServicePeriods.ts`
   - `shared/billingClients/recurringTiming.ts`
   - `packages/billing/src/actions/invoiceGeneration.ts`
   - `packages/billing/src/actions/recurringBillingRunActions.ts`

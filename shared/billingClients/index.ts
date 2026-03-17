@@ -16,3 +16,4 @@ export * from './taxSettings';
 export * from './billingSchedule';
 export * from './clientContractStatus';
 export * from './recurringTiming';
+export * from './clientCadenceServicePeriods';
