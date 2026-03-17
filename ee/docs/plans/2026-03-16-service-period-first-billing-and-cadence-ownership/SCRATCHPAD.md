@@ -157,6 +157,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/types/src/interfaces/invoice.interfaces.ts` and `server/src/interfaces/invoice.interfaces.ts` now expose those recurring detail fields on `IInvoiceCharge`, which is the minimum shared contract needed for prepayment-applied invoice readers
   - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` closes `T096` and `T097` with source-level reread coverage for one and multiple prepayment-applied recurring cycles
   - the DB-backed end-to-end prepayment flow is still unavailable locally because Postgres is not listening on `127.0.0.1:5432`; `T100` remains open for the broader integration seam
+- (2026-03-17) Manual invoice create/update flows now reread through the same canonical invoice reader contract used by recurring invoices:
+  - `packages/billing/src/actions/manualInvoiceActions.ts` now returns `Invoice.getFullInvoiceById(...)` after manual invoice creation and update instead of hand-building `invoice_charges` directly from `invoice_charges` rows
+  - this keeps manual flows on the same post-persist projection path as recurring invoices while still leaving manual lines periodless because `persistManualInvoiceCharges(...)` does not create `invoice_charge_details`
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now closes `T075` with a mixed recurring-plus-manual reread contract proving canonical service periods attach only to recurring detail-backed lines and do not leak onto manual adjustments
+  - a targeted `manualInvoice.test.ts` integration slice was attempted for this checkpoint, but the suite currently aborts before execution because its shared `@alga-psa/auth` mock omits `withAuth`; the checkpoint is therefore defended by the focused unit reread test plus a package TypeScript compile
 - (2026-03-17) Purchase-order follow-up is still open after recon:
   - `server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx` is stale against `AutomaticInvoices`, which now calls `generateInvoicesAsRecurringBillingRun` instead of the older `generateInvoice` action the test spies on
   - integration coverage for PO + recurring detail persistence already exists in `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, but local execution is still blocked by unavailable Postgres
@@ -293,6 +298,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Prepayment recurring-detail reread validation:
   - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
   - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Manual/recurring reread validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx vitest run src/test/infrastructure/billing/invoices/manualInvoice.test.ts -t "creates a manual invoice with single line item|correctly updates an invoice when new manual items are added" --coverage.enabled false`
+    - blocked locally by an existing Vitest module mock error: `@alga-psa/auth` is mocked without `withAuth`, so the suite fails during module evaluation before the targeted tests run
 - (2026-03-17) Purchase-order UI safeguard validation:
   - `npx vitest run src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx --coverage.enabled false`
 - (2026-03-17) Invoice-generation recurring preselection validation:

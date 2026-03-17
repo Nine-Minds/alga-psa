@@ -452,7 +452,7 @@
   {
     "id": "F076",
     "description": "Ensure manual invoice creation and editing flows continue to coexist with recurring service-period metadata without accidental coupling",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Scope", "System Surfaces In Scope"]
   },
   {

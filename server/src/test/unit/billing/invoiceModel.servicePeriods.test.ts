@@ -72,6 +72,80 @@ function createMockKnex(tables: Record<string, Row[]>) {
 }
 
 describe('invoice model recurring service-period projection', () => {
+  it('T075: invoice detail readers preserve canonical recurring periods without coupling manual lines to them', async () => {
+    const knex = createMockKnex({
+      invoices: [
+        {
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          credit_applied: 0,
+          total_amount: 7500,
+        },
+      ],
+      invoice_charges: [
+        {
+          item_id: 'recurring-1',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          service_id: 'service-1',
+          description: 'Managed Router',
+          quantity: 1,
+          unit_price: 5000,
+          total_price: 5000,
+          tax_amount: 0,
+          net_amount: 5000,
+          is_manual: false,
+        },
+        {
+          item_id: 'manual-1',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          service_id: null,
+          description: 'Goodwill adjustment',
+          quantity: 1,
+          unit_price: -2500,
+          total_price: -2500,
+          tax_amount: 0,
+          net_amount: -2500,
+          is_manual: true,
+          is_discount: true,
+        },
+      ],
+      invoice_charge_details: [
+        {
+          item_id: 'recurring-1',
+          tenant: 'tenant-1',
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+    });
+
+    const invoice = await Invoice.getById(knex, 'tenant-1', 'invoice-1');
+
+    expect(invoice?.invoice_charges).toHaveLength(2);
+
+    const recurringCharge = invoice?.invoice_charges?.find((charge) => charge.item_id === 'recurring-1');
+    const manualCharge = invoice?.invoice_charges?.find((charge) => charge.item_id === 'manual-1');
+
+    expect(recurringCharge).toMatchObject({
+      item_id: 'recurring-1',
+      is_manual: false,
+      service_period_start: '2025-01-01T00:00:00.000Z',
+      service_period_end: '2025-02-01T00:00:00.000Z',
+      billing_timing: 'arrears',
+    });
+    expect(manualCharge).toMatchObject({
+      item_id: 'manual-1',
+      is_manual: true,
+    });
+    expect(manualCharge).not.toHaveProperty('service_period_start');
+    expect(manualCharge).not.toHaveProperty('service_period_end');
+    expect(manualCharge).not.toHaveProperty('billing_timing');
+  });
+
   it('T096: prepayment-applied recurring invoice rereads canonical detail service periods', async () => {
     const knex = createMockKnex({
       invoices: [
