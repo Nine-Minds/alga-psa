@@ -86,12 +86,26 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ContractBasi
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep', () => ({
-  FixedFeeServicesStep: ({ data }: { data: any }) => (
+  FixedFeeServicesStep: ({
+    data,
+    updateData,
+  }: {
+    data: any;
+    updateData: (next: Record<string, unknown>) => void;
+  }) => (
     <div
       data-testid="step-fixed-fee"
       data-fixed-services-count={String((data.fixed_services ?? []).length)}
       data-cadence-owner={data.cadence_owner ?? 'client'}
-    />
+      data-enable-proration={String(Boolean(data.enable_proration))}
+    >
+      <button
+        type="button"
+        onClick={() => updateData({ enable_proration: !data.enable_proration })}
+      >
+        Toggle Partial-Period Adjustment
+      </button>
+    </div>
   ),
 }));
 
@@ -540,6 +554,64 @@ describe('ContractWizard resume behavior', () => {
     const [submission, options] = (createClientContractFromWizard as any).mock.calls[0];
     expect(submission.contract_id).toBe('contract-1');
     expect(options).toEqual({ isDraft: true });
+  });
+
+  it('resaving a resumed draft preserves cadence_owner and partial-period defaults in the emitted draft payload', async () => {
+    const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
+    (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-1' });
+
+    const onComplete = vi.fn();
+    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
+    render(
+      <ContractWizard
+        open={true}
+        onOpenChange={vi.fn()}
+        onComplete={onComplete}
+        editingContract={{
+          contract_id: 'contract-1',
+          is_draft: true,
+          client_id: 'client-1',
+          contract_name: 'Draft Alpha',
+          start_date: '2026-01-01',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          cadence_owner: 'contract',
+          enable_proration: false,
+          fixed_base_rate: 10000,
+          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          product_services: [],
+          hourly_services: [],
+          usage_services: [],
+        }}
+      />,
+    );
+
+    await screen.findByTestId('step-contract-basics');
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Next'));
+    });
+
+    const fixedStep = await screen.findByTestId('step-fixed-fee');
+    expect(fixedStep).toHaveAttribute('data-cadence-owner', 'contract');
+    expect(fixedStep).toHaveAttribute('data-enable-proration', 'false');
+
+    await act(async () => {
+      await user.click(screen.getByText('Toggle Partial-Period Adjustment'));
+      await user.click(screen.getByText('Save Draft'));
+    });
+
+    await waitFor(() => {
+      expect(onComplete).toHaveBeenCalled();
+    });
+
+    const [draftPayload] = onComplete.mock.calls.at(-1)!;
+    expect(draftPayload).toMatchObject({
+      contract_id: 'contract-1',
+      is_draft: true,
+      cadence_owner: 'contract',
+      enable_proration: true,
+    });
   });
 
   it('save draft does not create a duplicate contract (T043)', async () => {

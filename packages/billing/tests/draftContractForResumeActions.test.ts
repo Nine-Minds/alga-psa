@@ -259,6 +259,57 @@ describe('getDraftContractForResume action', () => {
     expect(result.cadence_owner).toBe('contract');
   });
 
+  it('returns partial-period defaults alongside cadence_owner when resuming a recurring draft', async () => {
+    const knex = makeKnex({
+      contracts: {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Alpha',
+        contract_description: null,
+        status: 'draft',
+        billing_frequency: 'monthly',
+        currency_code: 'USD',
+      },
+      client_contracts: {
+        contract_id: 'contract-1',
+        client_id: 'client-1',
+        start_date: '2026-01-01T00:00:00.000Z',
+        end_date: null,
+        po_required: false,
+        po_number: null,
+        po_amount: null,
+        template_contract_id: null,
+      },
+    });
+    createTenantKnex.mockResolvedValue({ knex });
+    fetchDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'fixed-1',
+        contract_line_type: 'Fixed',
+        rate: 1000,
+        enable_proration: true,
+        billing_frequency: 'monthly',
+        cadence_owner: 'contract',
+      },
+    ]);
+
+    getContractLineServicesWithConfigurations.mockResolvedValue([
+      {
+        service: { service_id: 'svc-fixed', service_name: 'Fixed Service', item_kind: 'service' },
+        configuration: { quantity: 1 },
+        bucketConfig: null,
+      },
+    ]);
+
+    const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
+    const result = await getDraftContractForResume('contract-1');
+
+    expect(result).toMatchObject({
+      cadence_owner: 'contract',
+      enable_proration: true,
+      fixed_base_rate: 1000,
+    });
+  });
+
   it('includes service configurations (T029)', async () => {
     const knex = makeKnex({
       contracts: {

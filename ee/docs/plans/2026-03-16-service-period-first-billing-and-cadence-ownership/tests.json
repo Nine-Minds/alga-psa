@@ -1008,6 +1008,22 @@
     ]
   },
   {
+    "id": "T337",
+    "description": "Resuming a recurring draft returns cadence_owner and partial-period defaults together from the contract wizard reread action",
+    "implemented": true,
+    "featureIds": [
+      "F144"
+    ]
+  },
+  {
+    "id": "T338",
+    "description": "Resaving a resumed recurring draft preserves cadence_owner and partial-period defaults on the emitted draft payload",
+    "implemented": true,
+    "featureIds": [
+      "F144"
+    ]
+  },
+  {
     "id": "T121",
     "description": "Client portal invoice detail dialogs render canonical recurring service-period metadata correctly",
     "implemented": true,

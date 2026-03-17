@@ -1289,7 +1289,7 @@
   {
     "id": "F144",
     "description": "Add regression protection for contract wizard resume and draft flows so cadence-owner and recurring timing defaults survive draft save and resume",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "System Surfaces In Scope",
       "Risks"
