@@ -129,6 +129,7 @@ By target package
 - Auth-compat retirement is now represented by the committed `F008`-`F011` change series, so the P1-3 code path is fully checked in.
 - Added `export * from './assets'` to `packages/msp-composition/src/index.ts` to expose the existing assets composition barrel from the package root.
 - Added `export * from './billing'` to `packages/msp-composition/src/index.ts` so billing composition helpers are reachable from the main barrel.
+- Added `export * from './clients'` to `packages/msp-composition/src/index.ts`; the root barrel now exposes assets, billing, clients, tickets, projects, and scheduling.
 
 ## Gotchas
 
