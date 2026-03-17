@@ -16,7 +16,24 @@ const read = (file: string) => fs.readFileSync(path.join(planRoot, file), 'utf8'
 const appendix = read('PASS0_RECURRING_TIMING_APPENDIX.md');
 const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
 const prd = read('PRD.md');
+const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
 const runbook = read('RUNBOOK.md');
+const contractReportActionsSource = fs.readFileSync(
+  path.join(repoRoot, 'packages', 'billing', 'src', 'actions', 'contractReportActions.ts'),
+  'utf8'
+);
+const portalDashboardSource = fs.readFileSync(
+  path.join(repoRoot, 'packages', 'client-portal', 'src', 'actions', 'client-portal-actions', 'dashboard.ts'),
+  'utf8'
+);
+const reconciliationReportActionsSource = fs.readFileSync(
+  path.join(repoRoot, 'packages', 'reporting', 'src', 'actions', 'reconciliationReportActions.ts'),
+  'utf8'
+);
+const financialServiceSource = fs.readFileSync(
+  path.join(repoRoot, 'server', 'src', 'lib', 'api', 'services', 'FinancialService.ts'),
+  'utf8'
+);
 const inventory = JSON.parse(read('pass-0-source-inventory.json')) as {
   timingControls: {
     resolveServicePeriodRefs: string[];
@@ -259,5 +276,38 @@ describe('service-period-first billing plan artifacts', () => {
     expect(featureSubsystemMap).toContain('Materialized service-period ledger');
     expect(featureSubsystemMap).toContain('runtime billing and timing domain');
     expect(featureSubsystemMap).toContain('credits, prepayment, and negative-invoice flows');
+  });
+
+  it('T221: reporting-date-basis policy distinguishes billing overview and finance-reporting families explicitly', () => {
+    expect(reportingDateBasis).toContain('# Reporting And Analytics Date-Basis Policy');
+    expect(reportingDateBasis).toContain('| Billing overview and invoice summary surfaces |');
+    expect(reportingDateBasis).toContain('invoice-window and invoice-header dates for operational state');
+    expect(reportingDateBasis).toContain('| Financial analytics and collections-style aggregates |');
+    expect(reportingDateBasis).toContain('invoices.created_at');
+    expect(reportingDateBasis).toContain('transactions.created_at');
+  });
+
+  it('T222: contract revenue, expiration, and reconciliation families use the documented date basis', () => {
+    expect(reportingDateBasis).toContain('| Contract revenue reporting |');
+    expect(reportingDateBasis).toContain('`invoice_charge_details.service_period_end` when canonical recurring detail rows exist');
+    expect(reportingDateBasis).toContain('| Contract expiration and renewal-decision reporting |');
+    expect(reportingDateBasis).toContain('`client_contracts.end_date` and renewal `decision_due_date`');
+    expect(reportingDateBasis).toContain('| Credit reconciliation and discrepancy reporting |');
+    expect(reportingDateBasis).toContain('`credit_reconciliation_reports.detection_date`');
+    expect(contractReportActionsSource).toContain('Contract revenue is the report family that intentionally pivots to');
+    expect(reconciliationReportActionsSource).toContain('Reconciliation reporting remains discrepancy-status and financial-date');
+  });
+
+  it('T223: financial analytics remain explicitly invoice-date and transaction-date based when mixed cadence can diverge from coverage dates', () => {
+    expect(reportingDateBasis).toContain('no recurring service-period fallback unless a later analytics plan explicitly redefines that metric');
+    expect(reportingDateBasis).toContain('financial-operational surfaces keep their invoice-header or transaction-date basis');
+    expect(financialServiceSource).toContain('Financial analytics intentionally stay on invoice / transaction document');
+    expect(financialServiceSource).toContain('coverage-based metrics belong in recurring readers');
+  });
+
+  it('T230: portal and dashboard metrics are split by intended date basis instead of silently inheriting invoice-header assumptions', () => {
+    expect(reportingDateBasis).toContain('Recent invoice activity is one of the portal surfaces');
+    expect(portalDashboardSource).toContain('Recent invoice activity is one of the portal surfaces that is allowed to');
+    expect(portalDashboardSource).toContain('Pending invoice counts remain financial-document / invoice-state');
   });
 });

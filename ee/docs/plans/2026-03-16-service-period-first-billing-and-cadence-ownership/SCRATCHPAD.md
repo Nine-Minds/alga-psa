@@ -39,6 +39,25 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Reporting and analytics date-basis policy is now explicit across portal, billing, reporting, and finance service seams, which closes `F191`, `F192`, `F193`, `F194`, `T221`, `T222`, `T223`, and `T230`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/REPORTING_DATE_BASIS.md` now defines one policy matrix for billing overview, contract revenue, expiration, reconciliation, financial analytics, and service-metric families, including the mixed-cadence rule that financial-operational readers keep invoice / transaction dates while coverage readers keep canonical recurring service periods
+  - `packages/client-portal/src/actions/client-portal-actions/dashboard.ts` now makes the metric split explicit in-source: recent invoice activity may carry recurring coverage summaries, but pending-invoice counts remain invoice-state metrics and must not be silently reinterpreted as service-period totals
+  - `packages/billing/src/actions/contractReportActions.ts` now states the intended reporting split directly where revenue and renewal summaries are assembled: revenue pivots to canonical recurring coverage when detail periods exist, while expiration and decision-due summaries stay assignment-date based
+  - `packages/reporting/src/actions/reconciliationReportActions.ts` and `server/src/lib/api/services/FinancialService.ts` now document the complementary control rule that reconciliation and financial analytics remain financial-date readers; recurring service periods remain additive explanatory lineage rather than the basis for aging, collections, or discrepancy totals
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks the policy artifact plus those source comments as executable plan contracts, and `pass-0-source-inventory.json` was refreshed in the same checkpoint so the docs contract continues to match the live persisted-reader inventory
+
+- (2026-03-17) Financial-artifact fallback handling is now explicit instead of collapsing all missing recurring metadata into the same `financial_document_date` shape, which closes `F190` and `T220`:
+  - `packages/billing/src/actions/creditActions.ts` now distinguishes three additive invoice-context states for credit readers and transaction history: `canonical_recurring`, `financial_document_fallback`, and `missing_source_context`
+  - the intended staged-coexistence rule is now explicit at the reader seam: historical/manual financial artifacts with no canonical recurring detail stay `financial_document_fallback`, while broken lineage references (for example a transferred credit whose source invoice can no longer be loaded) surface `missing_source_context` without inventing recurring periods
+  - `packages/types/src/interfaces/billing.interfaces.ts` and `server/src/interfaces/billing.interfaces.ts` now expose that additive `invoice_context_status` field on credit-tracking and transaction payloads so dashboard consumers can distinguish legitimate financial-only fallbacks from repair-needed lineage failures
+  - `packages/billing/src/components/billing-dashboard/CreditManagement.tsx` now renders a dedicated `Lineage Missing` state with repair guidance instead of silently flattening missing-source cases into the same copy used for intentional financial-only artifacts
+  - focused executable coverage now lives in `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` and `packages/billing/tests/creditManagement.financialArtifactContext.wiring.test.ts`
+
+- (2026-03-17) `T100` is still blocked after a fresh recheck against the active local Postgres listener, so it remains open:
+  - `server/src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts` still spends most of its setup budget replaying older migration-heavy infrastructure bootstrap and then falls over on missing workflow-generator files (`scripts/generate-system-email-workflow.cjs` and `services/workflow-worker/src/workflows/system-email-processing-workflow.ts`) before the targeted recurring assertion becomes trustworthy
+  - `server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts` still fails during migration bootstrap on `202409071803_initial_schema.cjs` with `ROLLBACK - Connection terminated unexpectedly`, so the negative-invoice half of the integration guard is still a harness problem rather than an application-behavior regression
+  - keep defending this area with the focused unit suites already added under `creditActions.servicePeriods.test.ts`, `creditReconciliation.servicePeriods.test.ts`, and `prepaymentInvoice.periodPolicy.test.ts` until the older infrastructure harness is repaired enough to run the real `T100` integration seam
+
 - (2026-03-17) Dashboard and portal invoice views now label financial-only artifacts explicitly instead of silently omitting recurring context, which closes `F189` and `T339`:
   - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now renders `Financial-only line. No recurring service period.` for manual or adjustment rows that intentionally lack canonical recurring timing metadata
   - `packages/client-portal/src/components/billing/BillingOverviewTab.tsx` now surfaces `Financial-only invoice...` guidance on the next-invoice card when the invoice is manual or credit-affected and no recurring service-period summary is available
@@ -683,6 +702,22 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Commands / Runbooks
 
+- (2026-03-17) Reporting date-basis policy validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts src/test/unit/contractReportActions.summary.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/actions/reconciliationReportActions.servicePeriods.test.ts --coverage.enabled false`
+    - run from `packages/reporting/`
+
+- (2026-03-17) Financial-artifact fallback validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run tests/creditManagement.financialArtifactContext.wiring.test.ts --coverage.enabled false`
+    - run from `packages/billing/`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-17) Credit-note source-date-basis validation:
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
     - run from `server/`
@@ -691,6 +726,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - run from `server/`; currently still blocked by migration-heavy harness drift in that infrastructure suite after setup reaches the targeted test
   - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts -t "T216" --coverage.enabled false`
     - run from `server/`; current local run is still unstable because the older negative-invoice infrastructure suite tears down during migration/test-context setup
+  - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts -t "T216|T100" --coverage.enabled false`
+    - run from `server/`; still blocked by `202409071803_initial_schema.cjs` migration bootstrap failure (`ROLLBACK - Connection terminated unexpectedly`)
 
 - (2026-03-17) Billing dashboard invoice-generation copy validation:
   - `npx vitest run ../packages/billing/tests/invoicingGenerateTab.recurringCopy.wiring.test.ts ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`

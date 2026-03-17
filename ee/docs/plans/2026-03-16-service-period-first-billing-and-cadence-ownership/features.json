@@ -1703,7 +1703,7 @@
   {
     "id": "F190",
     "description": "Define failure-handling and fallback semantics when financial artifacts lack canonical service-period metadata during staged coexistence",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks",
       "Invoice and billing-flow requirements"
@@ -1712,7 +1712,7 @@
   {
     "id": "F191",
     "description": "Define report-date-basis policy for each billing and finance reporting family, distinguishing invoice-header dates from canonical recurring service-period dates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Acceptance Criteria"
@@ -1721,7 +1721,7 @@
   {
     "id": "F192",
     "description": "Split billing overview, analytics, and dashboard summary surfaces by their intended date basis so service-period-first cutover does not silently change meaning",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Risks"
@@ -1730,7 +1730,7 @@
   {
     "id": "F193",
     "description": "Define contract revenue, expiration, reconciliation, and invoice-summary reporting semantics when recurring periods come from canonical detail rows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Contract-cadence requirements"
@@ -1739,7 +1739,7 @@
   {
     "id": "F194",
     "description": "Define financial analytics and service-metrics semantics when invoice dates and service-period dates diverge more often under mixed cadence ownership",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Risks"

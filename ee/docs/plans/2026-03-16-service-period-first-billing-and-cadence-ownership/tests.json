@@ -1908,7 +1908,7 @@
   {
     "id": "T220",
     "description": "Financial artifacts with missing canonical period metadata follow the documented fallback and failure-handling behavior",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F190"
     ]
@@ -1916,7 +1916,7 @@
   {
     "id": "T221",
     "description": "Billing overview and finance reporting surfaces use the documented invoice-date versus service-period date basis",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F191",
       "F192"
@@ -1925,7 +1925,7 @@
   {
     "id": "T222",
     "description": "Contract revenue, expiration, and reconciliation reporting use the documented canonical recurring date basis where required",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F191",
       "F193"
@@ -1934,7 +1934,7 @@
   {
     "id": "T223",
     "description": "Financial analytics remain semantically stable when invoice dates and recurring service periods diverge under mixed cadence ownership",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F194"
     ]
@@ -1990,7 +1990,7 @@
   {
     "id": "T230",
     "description": "Portal and dashboard metrics use the documented date basis rather than silently inheriting invoice-header assumptions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F192",
       "F194"

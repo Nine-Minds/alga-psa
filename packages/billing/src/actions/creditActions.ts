@@ -24,6 +24,7 @@ type CreditInvoicePeriodSummary = {
     service_period_start: string | null;
     service_period_end: string | null;
     invoice_date_basis: 'financial_document_date' | 'canonical_recurring_service_period';
+    invoice_context_status: 'canonical_recurring' | 'financial_document_fallback' | 'missing_source_context';
 };
 
 type CreditLineageInvoiceContext = {
@@ -53,6 +54,10 @@ function summarizeCanonicalInvoiceServicePeriods(
             starts.length > 0 || ends.length > 0
                 ? 'canonical_recurring_service_period'
                 : 'financial_document_date',
+        invoice_context_status:
+            starts.length > 0 || ends.length > 0
+                ? 'canonical_recurring'
+                : 'financial_document_fallback',
     };
 }
 
@@ -66,19 +71,34 @@ async function loadCreditSourceInvoice(
     // financial offsets only; they do not redefine the source recurring period.
     const invoice = await Invoice.getById(knexOrTrx, tenant, invoiceId);
 
+    if (!invoice) {
+        return {
+            invoice: null,
+            summary: {
+                service_period_start: null,
+                service_period_end: null,
+                invoice_date_basis: 'financial_document_date',
+                invoice_context_status: 'missing_source_context',
+            },
+        };
+    }
+
     return {
         invoice,
-        summary: summarizeCanonicalInvoiceServicePeriods(invoice?.invoice_charges),
+        summary: summarizeCanonicalInvoiceServicePeriods(invoice.invoice_charges),
     };
 }
 
-function emptyCreditLineageInvoiceContext(): CreditLineageInvoiceContext {
+function emptyCreditLineageInvoiceContext(
+    invoiceContextStatus: CreditInvoicePeriodSummary['invoice_context_status'] = 'financial_document_fallback'
+): CreditLineageInvoiceContext {
     return {
         invoice: null,
         summary: {
             service_period_start: null,
             service_period_end: null,
             invoice_date_basis: 'financial_document_date',
+            invoice_context_status: invoiceContextStatus,
         },
         sourceCreditId: null,
         sourceInvoiceId: null,
@@ -156,6 +176,12 @@ async function loadCreditLineageInvoice(
                 };
             }
         }
+
+        return {
+            ...emptyCreditLineageInvoiceContext('missing_source_context'),
+            sourceCreditId: metadataSourceCreditId,
+            lineageOrigin: 'transferred_credit',
+        };
     }
 
     return emptyCreditLineageInvoiceContext();
@@ -192,10 +218,6 @@ async function attachInvoiceContextToTransaction(
 
     const { invoice, summary, sourceCreditId, sourceInvoiceId, lineageOrigin } = await invoiceLoad;
 
-    if (!invoice && !sourceInvoiceId) {
-        return transaction;
-    }
-
     return {
         ...transaction,
         invoice_id: transaction.invoice_id ?? sourceInvoiceId ?? undefined,
@@ -204,6 +226,7 @@ async function attachInvoiceContextToTransaction(
         invoice_service_period_start: summary.service_period_start,
         invoice_service_period_end: summary.service_period_end,
         invoice_date_basis: summary.invoice_date_basis,
+        invoice_context_status: summary.invoice_context_status,
         metadata: transaction.metadata,
         source_credit_id: sourceCreditId ?? undefined,
         source_invoice_id: sourceInvoiceId ?? undefined,
@@ -1079,10 +1102,6 @@ export const listClientCredits = withAuth(async (
                     credit.transaction_metadata,
                 );
 
-                if (!lineage.invoice && !lineage.sourceInvoiceId) {
-                    return credit;
-                }
-
                 return {
                     ...credit,
                     source_credit_id: lineage.sourceCreditId ?? undefined,
@@ -1093,6 +1112,7 @@ export const listClientCredits = withAuth(async (
                     invoice_service_period_start: lineage.summary.service_period_start,
                     invoice_service_period_end: lineage.summary.service_period_end,
                     invoice_date_basis: lineage.summary.invoice_date_basis,
+                    invoice_context_status: lineage.summary.invoice_context_status,
                 };
             })
         );
@@ -1121,6 +1141,7 @@ export const getCreditDetails = withAuth(async (
     transactions: ITransaction[],
     invoice?: any,
     invoice_date_basis?: CreditInvoicePeriodSummary['invoice_date_basis'],
+    invoice_context_status?: CreditInvoicePeriodSummary['invoice_context_status'],
     invoice_service_period_start?: string | null,
     invoice_service_period_end?: string | null,
 }> => {
@@ -1194,6 +1215,10 @@ export const getCreditDetails = withAuth(async (
         return {
             credit: {
                 ...credit,
+                invoice_date_basis: invoiceSummary?.invoice_date_basis,
+                invoice_service_period_start: invoiceSummary?.service_period_start ?? null,
+                invoice_service_period_end: invoiceSummary?.service_period_end ?? null,
+                invoice_context_status: invoiceSummary?.invoice_context_status,
                 source_credit_id: sourceCreditId ?? undefined,
                 source_invoice_id: sourceInvoiceId ?? undefined,
                 lineage_origin: lineageOrigin ?? undefined,
@@ -1201,6 +1226,7 @@ export const getCreditDetails = withAuth(async (
             transactions,
             invoice,
             invoice_date_basis: invoiceSummary?.invoice_date_basis,
+            invoice_context_status: invoiceSummary?.invoice_context_status,
             invoice_service_period_start: invoiceSummary?.service_period_start ?? null,
             invoice_service_period_end: invoiceSummary?.service_period_end ?? null,
         };

@@ -98,6 +98,9 @@ async function getContractRevenueYtdByAssignment(
   yearStartDateOnly: string,
   nextYearStartDateOnly: string
 ): Promise<Map<string, number>> {
+  // Contract revenue is the report family that intentionally pivots to
+  // canonical recurring service periods when detail rows exist. Expiration and
+  // renewal reporting below stay assignment-date based instead.
   const revenueFactRows = await knex('invoice_charges as ic')
     .join('invoices as inv', function joinInvoices() {
       this.on('ic.invoice_id', '=', 'inv.invoice_id').andOn('ic.tenant', '=', 'inv.tenant');

@@ -48,6 +48,9 @@ function formatRecentInvoiceDescription(invoice: RecentInvoiceActivityRow): stri
   const servicePeriodStart = normalizeDateOnly(invoice.service_period_start);
   const servicePeriodEnd = normalizeDateOnly(invoice.service_period_end);
 
+  // Recent invoice activity is one of the portal surfaces that is allowed to
+  // explain canonical recurring coverage when detail rows exist. The metric
+  // cards above stay invoice-state counts rather than service-period metrics.
   if (servicePeriodStart || servicePeriodEnd) {
     return `Service period: ${servicePeriodStart ?? 'Unknown start'} to ${servicePeriodEnd ?? 'Unknown end'} • Total amount: ${totalLabel}`;
   }
@@ -105,7 +108,8 @@ export const getDashboardMetrics = withAuth(async (
           })
           .count('project_id as count'),
 
-        // Get pending invoices count
+        // Pending invoice counts remain financial-document / invoice-state
+        // metrics. They should not silently pivot to recurring coverage dates.
         trx('invoices')
           .where({
             'invoices.tenant': tenant,

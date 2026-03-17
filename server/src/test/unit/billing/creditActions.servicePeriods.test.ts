@@ -694,4 +694,140 @@ describe('credit actions preserve canonical recurring invoice detail context', (
       ]),
     );
   });
+
+  it('T220: financial artifacts distinguish intentional financial-date fallback from missing source lineage when canonical service periods are unavailable', async () => {
+    const state: TableState = {
+      credit_tracking: [
+        {
+          credit_id: 'credit-financial',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          transaction_id: 'tx-financial-1',
+          amount: 1200,
+          remaining_amount: 1200,
+          created_at: '2025-03-01T00:00:00.000Z',
+          expiration_date: null,
+          is_expired: false,
+          updated_at: '2025-03-01T00:00:00.000Z',
+          currency_code: 'USD',
+          transaction_description: 'Manual credit adjustment',
+          transaction_type: 'credit_adjustment',
+          invoice_id: undefined,
+          transaction_date: '2025-03-01T00:00:00.000Z',
+          transaction_metadata: {},
+        },
+        {
+          credit_id: 'credit-broken-lineage',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          transaction_id: 'tx-transfer-in-2',
+          amount: 900,
+          remaining_amount: 900,
+          created_at: '2025-03-02T00:00:00.000Z',
+          expiration_date: null,
+          is_expired: false,
+          updated_at: '2025-03-02T00:00:00.000Z',
+          currency_code: 'USD',
+          transaction_description: 'Transferred credit with missing source invoice',
+          transaction_type: 'credit_transfer',
+          invoice_id: undefined,
+          transaction_date: '2025-03-02T00:00:00.000Z',
+          transaction_metadata: {
+            source_credit_id: 'credit-origin',
+            source_invoice_id: 'invoice-missing',
+          },
+        },
+      ],
+      transactions: [
+        {
+          transaction_id: 'tx-financial-1',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          invoice_id: undefined,
+          type: 'credit_adjustment',
+          description: 'Manual credit adjustment',
+          created_at: '2025-03-01T00:00:00.000Z',
+          currency_code: 'USD',
+          metadata: {},
+        },
+        {
+          transaction_id: 'tx-transfer-in-2',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          invoice_id: undefined,
+          type: 'credit_transfer',
+          description: 'Transferred credit with missing source invoice',
+          created_at: '2025-03-02T00:00:00.000Z',
+          currency_code: 'USD',
+          metadata: {
+            source_credit_id: 'credit-origin',
+            source_invoice_id: 'invoice-missing',
+          },
+        },
+      ],
+    };
+
+    const knex = createMockKnex(state);
+    mocks.createTenantKnex.mockResolvedValue({ knex });
+    mocks.withTransaction.mockImplementation(async (knexOrTrx: unknown, callback: (trx: unknown) => unknown) =>
+      callback(knexOrTrx),
+    );
+    mocks.getById.mockResolvedValue(null);
+
+    const user = { user_id: 'user-1' } as any;
+    const context = { tenant: 'tenant-1' } as any;
+
+    const credits = await listClientCredits(user, context, 'client-1', false, 1, 20);
+    const brokenCreditDetails = await getCreditDetails(user, context, 'credit-broken-lineage');
+    const brokenTransaction = brokenCreditDetails.transactions.find(
+      (transaction) => transaction.transaction_id === 'tx-transfer-in-2',
+    );
+
+    expect(credits.credits).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          credit_id: 'credit-financial',
+          invoice_date_basis: 'financial_document_date',
+          invoice_context_status: 'financial_document_fallback',
+          invoice_service_period_start: null,
+          invoice_service_period_end: null,
+        }),
+        expect.objectContaining({
+          credit_id: 'credit-broken-lineage',
+          source_credit_id: 'credit-origin',
+          source_invoice_id: 'invoice-missing',
+          invoice_date_basis: 'financial_document_date',
+          invoice_context_status: 'missing_source_context',
+          invoice_service_period_start: null,
+          invoice_service_period_end: null,
+        }),
+      ]),
+    );
+
+    expect(brokenCreditDetails.credit).toMatchObject({
+      credit_id: 'credit-broken-lineage',
+      source_credit_id: 'credit-origin',
+      source_invoice_id: 'invoice-missing',
+      invoice_date_basis: 'financial_document_date',
+      invoice_context_status: 'missing_source_context',
+      invoice_service_period_start: null,
+      invoice_service_period_end: null,
+    });
+    expect(brokenCreditDetails.invoice).toBeNull();
+    expect(brokenCreditDetails).toMatchObject({
+      invoice_date_basis: 'financial_document_date',
+      invoice_context_status: 'missing_source_context',
+      invoice_service_period_start: null,
+      invoice_service_period_end: null,
+    });
+    expect(brokenTransaction).toMatchObject({
+      transaction_id: 'tx-transfer-in-2',
+      source_credit_id: 'credit-origin',
+      source_invoice_id: 'invoice-missing',
+      invoice_date_basis: 'financial_document_date',
+      invoice_context_status: 'missing_source_context',
+      invoice_service_period_start: null,
+      invoice_service_period_end: null,
+    });
+  });
 });

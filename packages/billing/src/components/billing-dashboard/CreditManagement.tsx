@@ -38,6 +38,46 @@ function formatCreditServicePeriod(
   return `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`;
 }
 
+function renderCreditContext(
+  record: ICreditTracking & { transaction_description?: string; invoice_number?: string }
+) {
+  const periodLabel = formatCreditServicePeriod(
+    record.invoice_service_period_start,
+    record.invoice_service_period_end
+  );
+
+  if (record.invoice_context_status === 'missing_source_context') {
+    return (
+      <div className="text-sm">
+        <div className="font-medium">Lineage Missing</div>
+        <div className="text-muted-foreground">
+          Source invoice metadata could not be recovered. Treat this as financial-date context until lineage is repaired.
+        </div>
+      </div>
+    );
+  }
+
+  if (record.invoice_date_basis === 'canonical_recurring_service_period') {
+    return (
+      <div className="text-sm">
+        <div className="font-medium">
+          {record.lineage_origin === 'transferred_credit' ? 'Transferred Recurring Credit' : 'Recurring Source'}
+        </div>
+        <div className="text-muted-foreground">
+          {periodLabel ? `Service Period: ${periodLabel}` : 'Recurring source lineage preserved'}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-sm">
+      <div className="font-medium">Financial Only</div>
+      <div className="text-muted-foreground">No recurring service period</div>
+    </div>
+  );
+}
+
 // Define columns for the credits table
 const columns: ColumnDefinition<ICreditTracking & { transaction_description?: string, invoice_number?: string }>[] = [
   {
@@ -61,33 +101,8 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
   },
   {
     title: 'Context',
-    dataIndex: 'invoice_date_basis',
-    render: (_value: string | undefined, record) => {
-      const periodLabel = formatCreditServicePeriod(
-        record.invoice_service_period_start,
-        record.invoice_service_period_end
-      );
-
-      if (record.invoice_date_basis === 'canonical_recurring_service_period') {
-        return (
-          <div className="text-sm">
-            <div className="font-medium">
-              {record.lineage_origin === 'transferred_credit' ? 'Transferred Recurring Credit' : 'Recurring Source'}
-            </div>
-            <div className="text-muted-foreground">
-              {periodLabel ? `Service Period: ${periodLabel}` : 'Recurring source lineage preserved'}
-            </div>
-          </div>
-        );
-      }
-
-      return (
-        <div className="text-sm">
-          <div className="font-medium">Financial Only</div>
-          <div className="text-muted-foreground">No recurring service period</div>
-        </div>
-      );
-    }
+    dataIndex: 'invoice_context_status',
+    render: (_value: string | undefined, record) => renderCreditContext(record)
   },
   {
     title: 'Original Amount',
