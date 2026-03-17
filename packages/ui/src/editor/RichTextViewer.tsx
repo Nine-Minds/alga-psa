@@ -59,6 +59,18 @@ function blocksContainRawMarkdown(blocks: PartialBlock[]): string | null {
   // then the content is already structured — no need to re-parse
   if (blocks.some((b) => b.type && b.type !== 'paragraph')) return null;
 
+  // BlockNote-authored blocks always carry `props` with default values
+  // (textAlignment, backgroundColor, textColor). Raw markdown-in-JSON
+  // stored from imports or legacy data never has these props. If blocks
+  // have BlockNote props, they were created by the editor and should not
+  // be re-parsed as markdown (even if the text happens to contain
+  // markdown-like characters such as `**` or `*`).
+  const hasBlockNoteProps = blocks.some((b) => {
+    const props = b.props as Record<string, unknown> | undefined;
+    return props && ('textAlignment' in props || 'backgroundColor' in props || 'textColor' in props);
+  });
+  if (hasBlockNoteProps) return null;
+
   const lines: string[] = [];
   for (const block of blocks) {
     if (!Array.isArray(block.content) || block.content.length === 0) {
