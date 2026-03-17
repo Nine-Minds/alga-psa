@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "P2-5c: Categorize client-portal violations as fixable vs acceptable (inherent composition)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5c"]
   },
   {
