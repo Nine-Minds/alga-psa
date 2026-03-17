@@ -387,6 +387,74 @@ describe('client-owned contracts simplification migration', () => {
     );
   });
 
+  it('preserves explicit cadence_owner values and backfills legacy null cadence_owner values in clone fixtures', () => {
+    let counter = 0;
+    const createId = (prefix: string) => `${prefix}-cadence-${++counter}`;
+
+    const plan = buildSharedContractClonePlan(
+      {
+        sourceContract: {
+          tenant: 'tenant-1',
+          contract_id: 'contract-cadence',
+          contract_name: 'Cadence Contract',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          is_active: true,
+          status: 'active',
+          is_template: false,
+          owner_client_id: null,
+        },
+        assignments: [
+          {
+            tenant: 'tenant-1',
+            client_contract_id: 'cc-preserved',
+            client_id: 'client-a',
+            start_date: '2026-01-01',
+            invoice_count: 1,
+          },
+          {
+            tenant: 'tenant-1',
+            client_contract_id: 'cc-clone',
+            client_id: 'client-b',
+            start_date: '2026-02-01',
+            invoice_count: 0,
+          },
+        ],
+        contractLines: [
+          {
+            tenant: 'tenant-1',
+            contract_line_id: 'line-contract',
+            contract_id: 'contract-cadence',
+            contract_line_name: 'Contract Anniversary',
+            cadence_owner: 'contract',
+          },
+          {
+            tenant: 'tenant-1',
+            contract_line_id: 'line-legacy',
+            contract_id: 'contract-cadence',
+            contract_line_name: 'Legacy Default',
+            cadence_owner: null,
+          },
+        ],
+      },
+      { createId }
+    );
+
+    expect(plan.clones).toHaveLength(1);
+    expect(plan.clones[0].contractLines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          contract_line_name: 'Contract Anniversary',
+          cadence_owner: 'contract',
+        }),
+        expect.objectContaining({
+          contract_line_name: 'Legacy Default',
+          cadence_owner: 'client',
+        }),
+      ])
+    );
+  });
+
   it('T012: aborts shared-contract groups that require unsupported historical reference retargeting', () => {
     expect(() =>
       assertCloneTargetsSupported({

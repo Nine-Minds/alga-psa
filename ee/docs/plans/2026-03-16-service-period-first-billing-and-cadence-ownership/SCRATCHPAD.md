@@ -360,6 +360,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/components/billing-dashboard/InvoiceTemplateManager.tsx` now initializes its sample preview state with `useEffect` and the shared mapper, which removes the old render-time state setter and keeps recurring sample metadata intact
   - `packages/billing/src/components/invoice-designer/preview/sampleScenarios.ts` now includes canonical `servicePeriodStart`, `servicePeriodEnd`, `billingTiming`, and `recurringDetailPeriods` on preview demo items so designer previews can render the same recurring metadata shape as live invoice previews
   - `packages/billing/tests/sampleInvoicePreview.test.ts` closes `T130` with source-backed coverage for both manager-backed sample invoices and designer preview sample scenarios
+- (2026-03-17) Remaining cadence-owner helper seams are now explicit in test utilities and migration fixtures, which closes `F134`:
+  - `server/src/test/test-utils/pricingScheduleHelpers.ts` now exports `buildRecurringPricingScheduleFixture(...)`, a shared cadence-owner-aware pricing-schedule fixture builder that composes the canonical monthly recurring fixture and exposes the resulting invoice window, service periods, and pricing-schedule dates in one place
+  - `server/migrations/utils/client_owned_contracts_simplification.cjs` now preserves explicit `cadence_owner` values and backfills legacy-null clone fixtures to `'client'`, so migration clone-plan tests no longer depend on incidental object spreads to keep recurring cadence semantics
+  - `server/src/test/unit/billing/pricingScheduleHelpers.recurringFixtures.test.ts` and `server/src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts` now lock those helper seams with client-cadence and contract-cadence fixture coverage
 - (2026-03-17) Internal recurring-timing docs now describe the live service-period-first model and rollout defaults, which closes `F100`:
   - `shared/billingClients/recurringTiming.ts` now carries a module-level architecture reference that spells out the current runtime truth chain: cadence owner -> service periods -> invoice windows -> invoice detail persistence, plus the staged default of `client` cadence
   - `packages/reporting/src/actions/report-actions/README.md` now documents the reporting date-basis policy for the current rollout: recurring report actions should prefer canonical service-period detail fields when present, while historical/manual rows may still fall back to invoice dates
@@ -794,6 +798,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run tests/sampleInvoicePreview.test.ts --coverage.enabled false`
     - run from `packages/billing/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Cadence-owner helper fixture validation:
+  - `npx vitest run src/test/unit/billing/pricingScheduleHelpers.recurringFixtures.test.ts src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts --coverage.enabled false`
+    - run from `server/`
 
 ## Links / References
 

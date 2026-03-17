@@ -800,7 +800,7 @@
   {
     "id": "F134",
     "description": "Update billing test helpers, pricing schedule helpers, and migration helpers to generate cadence-owner-aware recurring scenarios and parity fixtures",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
