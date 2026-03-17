@@ -776,7 +776,7 @@
   {
     "id": "F130",
     "description": "Update client-portal billing metrics, remaining bucket unit actions, recent invoice readers, and line-detail actions to understand canonical service-period semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

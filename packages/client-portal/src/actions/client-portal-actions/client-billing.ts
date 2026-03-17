@@ -493,6 +493,8 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
         throw new Error('Unauthorized');
       }
 
+      const currentDate = new Date().toISOString().slice(0, 10);
+
       // Get current bucket usage if any
       const bucketUsage = await trx('bucket_usage')
         .select('*')
@@ -500,7 +502,9 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
           client_id: clientId,
           tenant
         })
-        .whereRaw('? BETWEEN period_start AND period_end', [new Date()])
+        .andWhere('period_start', '<=', currentDate)
+        .andWhere('period_end', '>', currentDate)
+        .orderBy('period_start', 'desc')
         .first();
 
       // Get all services associated with the client's plan
