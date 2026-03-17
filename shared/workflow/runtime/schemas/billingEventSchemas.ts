@@ -9,6 +9,14 @@ const clientIdSchema = uuidSchema('Client ID');
 const userIdSchema = uuidSchema('User ID');
 
 const deliveryMethodSchema = z.enum(['email', 'portal', 'print']).describe('Invoice delivery method');
+const invoiceRecurringProvenanceSchema = z.object({
+  authoritativePeriodSource: z.enum(['canonical_detail_rows', 'parent_charge_fields']),
+  detailBackedChargeCount: z.number().int().nonnegative(),
+  detailPeriodCount: z.number().int().nonnegative(),
+  summaryServicePeriodStart: z.string().datetime().nullable().optional(),
+  summaryServicePeriodEnd: z.string().datetime().nullable().optional(),
+  billingTimingShape: z.enum(['none', 'uniform', 'mixed']),
+});
 const recurringBillingRunSelectionModeSchema = z.enum(['due_service_periods']).describe('How recurring billing selected charge timing for the run');
 const recurringBillingRunWindowIdentitySchema = z.enum(['billing_cycle_window']).describe('How the current recurring run identified invoice windows');
 const recurringBillingRunExecutionWindowKindSchema = z
@@ -22,6 +30,7 @@ export const invoiceGeneratedEventPayloadSchema = BaseDomainEventPayloadSchema.e
   totalAmount: z.string().optional(),
   status: z.string().optional(),
   invoiceNumber: z.string().optional(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_GENERATED');
 
 export type InvoiceGeneratedEventPayload = z.infer<typeof invoiceGeneratedEventPayloadSchema>;
@@ -33,6 +42,7 @@ export const invoiceFinalizedEventPayloadSchema = BaseDomainEventPayloadSchema.e
   totalAmount: z.string().optional(),
   status: z.string().optional(),
   invoiceNumber: z.string().optional(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_FINALIZED');
 
 export type InvoiceFinalizedEventPayload = z.infer<typeof invoiceFinalizedEventPayloadSchema>;
@@ -43,6 +53,7 @@ export const invoiceSentEventPayloadSchema = BaseDomainEventPayloadSchema.extend
   sentByUserId: userIdSchema.optional(),
   sentAt: z.string().datetime().optional(),
   deliveryMethod: deliveryMethodSchema,
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_SENT');
 
 export type InvoiceSentEventPayload = z.infer<typeof invoiceSentEventPayloadSchema>;
@@ -52,6 +63,7 @@ export const invoiceStatusChangedEventPayloadSchema = BaseDomainEventPayloadSche
   previousStatus: z.string().min(1),
   newStatus: z.string().min(1),
   changedAt: z.string().datetime().optional(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_STATUS_CHANGED');
 
 export type InvoiceStatusChangedEventPayload = z.infer<typeof invoiceStatusChangedEventPayloadSchema>;
@@ -61,6 +73,7 @@ export const invoiceDueDateChangedEventPayloadSchema = BaseDomainEventPayloadSch
   previousDueDate: z.string().min(1),
   newDueDate: z.string().min(1),
   changedAt: z.string().datetime().optional(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_DUE_DATE_CHANGED');
 
 export type InvoiceDueDateChangedEventPayload = z.infer<typeof invoiceDueDateChangedEventPayloadSchema>;
@@ -73,6 +86,7 @@ export const invoiceOverdueEventPayloadSchema = BaseDomainEventPayloadSchema.ext
   amountDue: z.string().min(1),
   currency: currencySchema,
   daysOverdue: z.number().int().nonnegative(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_OVERDUE');
 
 export type InvoiceOverdueEventPayload = z.infer<typeof invoiceOverdueEventPayloadSchema>;
@@ -83,6 +97,7 @@ export const invoiceWrittenOffEventPayloadSchema = BaseDomainEventPayloadSchema.
   amountWrittenOff: z.string().min(1),
   currency: currencySchema,
   reason: z.string().optional(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_WRITTEN_OFF');
 
 export type InvoiceWrittenOffEventPayload = z.infer<typeof invoiceWrittenOffEventPayloadSchema>;

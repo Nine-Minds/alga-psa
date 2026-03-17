@@ -108,8 +108,61 @@ const manualInvoiceItemSchema = z.object({
   tenant: uuidSchema.optional()
 });
 
+const recurringBillingTimingSchema = z.enum(['arrears', 'advance']);
+
+const recurringDetailPeriodResponseSchema = z.object({
+  service_period_start: z.string().datetime().nullable().optional(),
+  service_period_end: z.string().datetime().nullable().optional(),
+  billing_timing: recurringBillingTimingSchema.nullable().optional(),
+});
+
+const recurringProjectionResponseSchema = z.object({
+  source: z.literal('canonical_detail_rows'),
+  detail_period_count: z.number().int().nonnegative(),
+  parent_period_projection: z.literal('summary_range'),
+  parent_billing_timing_projection: z.literal('uniform_detail_value_or_null'),
+  detail_billing_timing_shape: z.enum(['none', 'uniform', 'mixed']),
+});
+
 // Invoice item response schema
-const invoiceItemResponseSchema = baseInvoiceItemSchema.merge(baseEntitySchema);
+const invoiceItemResponseSchema = baseInvoiceItemSchema
+  .merge(baseEntitySchema)
+  .extend({
+    service_period_start: z.string().datetime().nullable().optional(),
+    service_period_end: z.string().datetime().nullable().optional(),
+    billing_timing: recurringBillingTimingSchema.nullable().optional(),
+    recurring_detail_periods: z.array(recurringDetailPeriodResponseSchema).optional(),
+    recurring_projection: recurringProjectionResponseSchema.nullable().optional(),
+  })
+  .superRefine((value, ctx) => {
+    const projection = value.recurring_projection;
+    const hasProjection = projection != null;
+    const detailPeriods = value.recurring_detail_periods;
+
+    if (hasProjection && (!detailPeriods || detailPeriods.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Detail-backed recurring invoice charges must include recurring_detail_periods.',
+        path: ['recurring_detail_periods'],
+      });
+    }
+
+    if (!hasProjection && detailPeriods && detailPeriods.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Legacy flat invoice charges must not expose recurring_detail_periods without recurring_projection.',
+        path: ['recurring_projection'],
+      });
+    }
+
+    if (hasProjection && detailPeriods && projection.detail_period_count !== detailPeriods.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'recurring_projection.detail_period_count must match recurring_detail_periods length.',
+        path: ['recurring_projection', 'detail_period_count'],
+      });
+    }
+  });
 
 // ============================================================================
 // Main Invoice Schemas
@@ -150,7 +203,8 @@ const updateInvoiceSchema = createUpdateSchema(createInvoiceSchema);
 
 // Invoice response schema
 const invoiceResponseSchema = baseInvoiceSchema.merge(baseEntitySchema).extend({
-  invoice_charges: z.array(invoiceItemResponseSchema).optional()
+  invoice_charges: z.array(invoiceItemResponseSchema).optional(),
+  invoice_items: z.array(invoiceItemResponseSchema).optional(),
 });
 
 // ============================================================================

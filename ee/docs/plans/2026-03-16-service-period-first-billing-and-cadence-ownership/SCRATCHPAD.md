@@ -39,6 +39,18 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Invoice workflow events and audit logs now carry recurring-detail provenance instead of relying implicitly on invoice headers alone, which closes `F170` and `T199`:
+  - `server/src/lib/api/services/invoiceWorkflowEvents.ts` now defines `summarizeInvoiceRecurringProvenance(...)`, which reduces hydrated invoice charges into one additive provenance summary: whether recurring timing is authoritative from canonical detail rows or only parent charge fields, how many detail-backed charges/periods exist, the recurring summary range, and whether timing is uniform or mixed
+  - `shared/workflow/runtime/schemas/billingEventSchemas.ts` now allows that `recurringProvenance` object on invoice workflow payloads such as sent, status-changed, due-date-changed, overdue, and written-off events, so workflow consumers can distinguish canonical recurring provenance from header-grouping dates without a schema fork
+  - `server/src/lib/api/services/InvoiceService.ts` now hydrates that same provenance summary from `InvoiceModel.getInvoiceCharges(...)` and attaches it to invoice audit-log details (`recurring_provenance`) plus the invoice workflow payload builders on invoice update, delete/cancel, finalize, send, payment, credit-application, refund, and bulk-status paths
+  - focused executable coverage now lives in `server/src/test/unit/invoiceWorkflowEvents.test.ts` for the builder/schema side and `server/src/test/unit/api/invoiceWorkflowRecurringProvenance.wiring.test.ts` for the service-layer audit/workflow wiring seam
+
+- (2026-03-17) Invoice API schemas now make the legacy-flat versus canonical-detail compatibility contract executable instead of only documenting it, which closes `F169` and `T198`:
+  - `server/src/lib/api/schemas/invoiceSchemas.ts` now accepts both old flat invoice payloads and new detail-backed recurring payloads explicitly: response rows can carry canonical `service_period_*`, `billing_timing`, `recurring_detail_periods`, and `recurring_projection`, while full invoice responses also accept the deprecated `invoice_items` alias alongside `invoice_charges`
+  - the same compatibility rule now exists in `server/src/lib/api/schemas/financialSchemas.ts`, so secondary financial API response validation does not reject canonical recurring detail-backed rows while the main invoice API accepts them
+  - the schema contract is intentionally stricter on half-migrated shapes: canonical `recurring_detail_periods` now require `recurring_projection`, and `detail_period_count` must match the hydrated detail array length
+  - `server/src/test/unit/api/invoiceResponseSchema.compatibility.test.ts` now proves three states explicitly: legacy flat invoice payloads still parse through the deprecated alias path, canonical detail-backed payloads parse through the new path, and half-migrated payloads are rejected instead of silently drifting through validation
+
 - (2026-03-17) Recurring invoice parent/detail projection is now explicit instead of being inferred from whatever summary fields happened to be populated, which closes `F161`, `F162`, `F163`, `T191`, and `T193`:
   - `packages/types/src/interfaces/invoice.interfaces.ts` and `server/src/interfaces/invoice.interfaces.ts` now define additive `recurring_projection` metadata on `IInvoiceCharge`, documenting the stable contract for detail-backed recurring reads: `recurring_detail_periods` is authoritative, parent `service_period_start` / `service_period_end` is the summary range across those rows, and parent `billing_timing` is only populated when every detail row agrees
   - `packages/billing/src/models/invoice.ts` now hydrates that projection metadata whenever canonical `invoice_charge_details` rows exist, so `Invoice.getById(...)`, `Invoice.getFullInvoiceById(...)`, and `getInvoiceLineItems(...)` all expose the same typed parent/detail semantics instead of an implicit summary-only shape
@@ -996,6 +1008,16 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/recurringServicePeriodSummary.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package client-portal tests
   - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+- (2026-03-17) Invoice schema compatibility validation:
+  - `npx vitest run src/test/unit/api/invoiceResponseSchema.compatibility.test.ts src/test/unit/api/invoiceService.recurringDetailProjection.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not on the `F169` schema changes
+- (2026-03-17) Invoice workflow recurring-provenance validation:
+  - `npx vitest run src/test/unit/invoiceWorkflowEvents.test.ts src/test/unit/api/invoiceWorkflowRecurringProvenance.wiring.test.ts src/test/unit/api/invoiceResponseSchema.compatibility.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not on the `F170` workflow/audit provenance changes
 
 ## Links / References
 

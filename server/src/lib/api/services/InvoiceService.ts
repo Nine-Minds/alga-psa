@@ -20,6 +20,7 @@ import {
   buildInvoiceSentPayload,
   buildInvoiceStatusChangedPayload,
   buildInvoiceWrittenOffPayload,
+  summarizeInvoiceRecurringProvenance,
   inferInvoiceDeliveryMethod,
   toIsoDateString,
 } from './invoiceWorkflowEvents';
@@ -166,6 +167,11 @@ export class InvoiceService extends BaseService<IInvoice> {
     const totalPayments = Number(payments[0]?.total_paid || 0);
     const amountDue = params.totalAmount - (params.creditApplied + totalPayments);
     return Math.max(0, amountDue);
+  }
+
+  private async getInvoiceRecurringProvenance(trx: Knex.Transaction, tenant: string, invoiceId: string) {
+    const charges = await InvoiceModel.getInvoiceCharges(trx, tenant, invoiceId);
+    return summarizeInvoiceRecurringProvenance(charges);
   }
 
   // ============================================================================
@@ -465,6 +471,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       await this.createInvoiceLineItems(id, normalizedItems, trx, context);
       }
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
+
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
@@ -472,7 +480,10 @@ export class InvoiceService extends BaseService<IInvoice> {
         tableName: 'invoices',
         recordId: id,
         changedData: data,
-        details: { action: 'invoice.updated' }
+        details: {
+          action: 'invoice.updated',
+          ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+        }
       });
 
       const occurredAt = new Date().toISOString();
@@ -490,6 +501,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             previousStatus,
             newStatus,
             changedAt: occurredAt,
+            recurringProvenance,
           }),
           ctx: {
             tenantId: context.tenant,
@@ -507,6 +519,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             previousDueDate,
             newDueDate: nextDueDate,
             changedAt: occurredAt,
+            recurringProvenance,
           }),
           ctx: {
             tenantId: context.tenant,
@@ -535,6 +548,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             dueDate: nextDueDate || previousDueDate,
             amountDue,
             currency: String(updateData.currency_code ?? existing.currency_code ?? 'USD'),
+            recurringProvenance,
           }),
           ctx: {
             tenantId: context.tenant,
@@ -562,6 +576,7 @@ export class InvoiceService extends BaseService<IInvoice> {
               writtenOffAt: occurredAt,
               amountWrittenOff: amountDue,
               currency: String(updateData.currency_code ?? existing.currency_code ?? 'USD'),
+              recurringProvenance,
             }),
             ctx: {
               tenantId: context.tenant,
@@ -621,6 +636,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           .del();
       }
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
+
       // Audit log
 	      await auditLog(trx, {
 	        userId: context.userId,
@@ -628,7 +645,10 @@ export class InvoiceService extends BaseService<IInvoice> {
 	        tableName: 'invoices',
 	        recordId: id,
 	        changedData: {},
-	        details: { action: 'invoice.deleted' }
+	        details: {
+            action: 'invoice.deleted',
+            ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+          }
 	      });
 
 	      if (softCancelled && String(invoice.status) !== 'cancelled') {
@@ -639,6 +659,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            previousStatus: String(invoice.status),
 	            newStatus: 'cancelled',
 	            changedAt: occurredAt,
+              recurringProvenance,
 	          }),
 	          ctx: {
 	            tenantId: context.tenant,
@@ -712,6 +733,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
@@ -719,7 +742,10 @@ export class InvoiceService extends BaseService<IInvoice> {
         tableName: 'invoices',
         recordId: data.invoice_id,
         changedData: { status: 'finalized', subtotal, tax_amount: taxAmount, total_amount: totalAmount },
-        details: { action: 'invoice.finalized' }
+        details: {
+          action: 'invoice.finalized',
+          ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+        }
       });
 
       // Publish event
@@ -741,6 +767,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           previousStatus: String(invoice.status),
           newStatus: 'sent',
           changedAt: new Date().toISOString(),
+          recurringProvenance,
         }),
         ctx: {
           tenantId: context.tenant,
@@ -801,6 +828,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         );
       }
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
@@ -808,7 +837,11 @@ export class InvoiceService extends BaseService<IInvoice> {
         tableName: 'invoices',
         recordId: data.invoice_id,
         changedData: { status: 'sent', sent_at: new Date() },
-        details: { action: 'invoice.sent', recipients: data.email_addresses }
+        details: {
+          action: 'invoice.sent',
+          recipients: data.email_addresses,
+          ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+        }
       });
 
       // Publish event
@@ -824,6 +857,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             emailRecipientCount: data.email_addresses?.length,
             includePdf: data.include_pdf,
           }),
+          recurringProvenance,
         }),
         ctx: {
           tenantId: context.tenant,
@@ -840,6 +874,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             previousStatus: String(invoice.status),
             newStatus: 'sent',
             changedAt: sentAt,
+            recurringProvenance,
           }),
           ctx: {
             tenantId: context.tenant,
@@ -955,6 +990,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
+        const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+
 	      // Audit log
 	      await auditLog(trx, {
 	        userId: context.userId,
@@ -962,7 +999,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	        tableName: 'invoices',
 	        recordId: data.invoice_id,
 	        changedData: { status: newStatus, total_paid: totalPaid },
-	        details: { action: 'invoice.payment_recorded', payment_amount: data.payment_amount }
+	        details: {
+            action: 'invoice.payment_recorded',
+            payment_amount: data.payment_amount,
+            ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+          }
 	      });
 
 	      if (String(newStatus) !== String(invoice.status)) {
@@ -973,6 +1014,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            previousStatus: String(invoice.status),
 	            newStatus: String(newStatus),
 	            changedAt: occurredAt,
+              recurringProvenance,
 	          }),
 	          ctx: {
 	            tenantId: context.tenant,
@@ -1072,6 +1114,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Calculate remaining balance after credit application
       const remainingBalance = invoice.total_amount - totalPaid;
 
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+
 	      // Audit log
 	      await auditLog(trx, {
 	        userId: context.userId,
@@ -1082,7 +1126,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	          credit_applied: newCreditApplied,
 	          status: newStatus
 	        },
-	        details: { action: 'invoice.credit_applied', credit_amount: data.credit_amount }
+	        details: {
+            action: 'invoice.credit_applied',
+            credit_amount: data.credit_amount,
+            ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+          }
 	      });
 
 	      if (String(newStatus) !== String(invoice.status)) {
@@ -1094,6 +1142,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            previousStatus: String(invoice.status),
 	            newStatus: String(newStatus),
 	            changedAt: occurredAt,
+              recurringProvenance,
 	          }),
 	          ctx: {
 	            tenantId: context.tenant,
@@ -1220,6 +1269,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
+        const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+
 	      // Audit log
 	      await auditLog(trx, {
 	        userId: context.userId,
@@ -1227,7 +1278,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	        tableName: 'invoices',
 	        recordId: data.invoice_id,
 	        changedData: { status: newStatus, refund_amount: data.refund_amount },
-	        details: { action: 'invoice.refund_recorded', reason: data.reason }
+	        details: {
+            action: 'invoice.refund_recorded',
+            reason: data.reason,
+            ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+          }
 	      });
 
 	      if (String(newStatus) !== String(invoice.status)) {
@@ -1238,6 +1293,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            previousStatus: String(invoice.status),
 	            newStatus: String(newStatus),
 	            changedAt: occurredAt,
+              recurringProvenance,
 	          }),
 	          ctx: {
 	            tenantId: context.tenant,
@@ -1298,16 +1354,17 @@ export class InvoiceService extends BaseService<IInvoice> {
             continue;
           }
 
-          await trx('invoices')
-            .where({ invoice_id: invoiceId, tenant: context.tenant })
-            .update({
-              status: data.status,
+	          await trx('invoices')
+	            .where({ invoice_id: invoiceId, tenant: context.tenant })
+	            .update({
+	              status: data.status,
               finalized_at: data.finalized_at,
               updated_by: context.userId,
               updated_at: new Date()
             });
 
-          results.updated_count++;
+	          results.updated_count++;
+            const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, invoiceId);
 
 	          // Audit log
 	          await auditLog(trx, {
@@ -1316,7 +1373,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            tableName: 'invoices',
 	            recordId: invoiceId,
 	            changedData: { status: data.status },
-	            details: { action: 'invoice.bulk_status_update', old_status: invoice.status }
+	            details: {
+                action: 'invoice.bulk_status_update',
+                old_status: invoice.status,
+                ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+              }
 	          });
 
 	          const occurredAt = new Date().toISOString();
@@ -1331,6 +1392,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	                previousStatus,
 	                newStatus,
 	                changedAt: occurredAt,
+                  recurringProvenance,
 	              }),
 	              ctx: {
 	                tenantId: context.tenant,
@@ -1357,6 +1419,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	                dueDate: toIsoDateString(invoice.due_date),
 	                amountDue,
 	                currency: String(invoice.currency_code ?? 'USD'),
+                  recurringProvenance,
 	              }),
 	              ctx: {
 	                tenantId: context.tenant,
@@ -1382,6 +1445,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	                  writtenOffAt: occurredAt,
 	                  amountWrittenOff: amountDue,
 	                  currency: String(invoice.currency_code ?? 'USD'),
+                    recurringProvenance,
 	                }),
 	                ctx: {
 	                  tenantId: context.tenant,
