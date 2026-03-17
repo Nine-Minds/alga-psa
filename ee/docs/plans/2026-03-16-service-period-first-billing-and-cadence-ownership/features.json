@@ -524,7 +524,7 @@
   {
     "id": "F088",
     "description": "Add validation rules preventing unsupported cadence-owner and timing combinations during staged rollout",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {

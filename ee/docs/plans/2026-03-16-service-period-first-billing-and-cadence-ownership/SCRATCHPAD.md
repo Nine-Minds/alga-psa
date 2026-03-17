@@ -250,6 +250,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now consumes those shared builders and closes `T107` with an explicit client-vs-contract cadence fixture contract instead of inline one-off setup
   - `server/test-utils/billingTestHelpers.ts` now accepts `cadenceOwner` on `createFixedPlanAssignment(...)` and persists it to `contract_lines.cadence_owner`, so DB-backed invoice and credit fixtures can opt into contract-owned cadence later without rewriting helper internals
   - `server/src/test/unit/billing/billingTestHelpers.recurringFixtures.test.ts` locks that DB-helper seam with a focused source contract so cadence owner cannot silently fall back out of shared fixture setup
+- (2026-03-17) Staged-rollout validation now blocks contract cadence writes before contract-owned runtime support exists, which closes `F088`:
+  - `shared/billingClients/cadenceOwnerRollout.ts` now defines one shared rollout guard message and helper so schema and service layers reject the same unsupported cadence-owner state consistently
+  - `server/src/lib/api/schemas/contractLineSchemas.ts` and `server/src/lib/api/schemas/financialSchemas.ts` now reject authoring payloads that set `cadence_owner: 'contract'`, while still allowing stored/read-model response payloads to expose `cadence_owner: 'contract'`
+  - `server/src/lib/api/services/ContractLineService.ts` now enforces the same staged-rollout guard on create/update paths, so API callers cannot bypass schema validation and persist contract cadence early
+  - this keeps the persistence/model plumbing from `F081-F087` intact for later rollout phases while making the current rollout posture explicit: client cadence is the only supported live write path until contract-cadence execution exists
 - (2026-03-17) Credit-reader invoice context now stays on canonical recurring detail metadata, which closes `F078` without pretending the blocked DB integration is done:
   - `packages/billing/src/actions/creditActions.ts` now loads source invoices through `Invoice.getById(...)` for both `getCreditDetails(...)` and the invoice-summary enrichment inside `listClientCredits(...)`, instead of rereading raw `invoices` rows that dropped recurring `invoice_charge_details`
   - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
@@ -386,6 +391,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Recurring fixture-builder validation:
   - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/billing/billingTestHelpers.recurringFixtures.test.ts --coverage.enabled false`
+- (2026-03-17) Cadence-owner rollout validation:
+  - `npx vitest run src/test/unit/api/contractLineCadenceOwner.schema.test.ts src/test/unit/api/contractLineService.cadenceOwner.test.ts src/test/unit/api/contractCreateOwnerClientSchema.test.ts --coverage.enabled false`
 - (2026-03-17) Credit-reader canonical invoice-context validation:
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`

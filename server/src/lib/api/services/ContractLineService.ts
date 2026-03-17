@@ -22,6 +22,7 @@ import {
   addContractLine as repositoryAddContractLine,
   removeContractLine as repositoryRemoveContractLine,
 } from 'server/src/lib/repositories/contractLineRepository';
+import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
 
 // Import schema types for validation
 import {
@@ -280,6 +281,10 @@ export class ContractLineService extends BaseService<IContractLine> {
         planData.enable_proration = enableProration;
         planData.billing_cycle_alignment = alignment;
         planData.cadence_owner = data.cadence_owner ?? planData.cadence_owner ?? 'client';
+        assertSupportedCadenceOwnerDuringRollout({
+          cadenceOwner: planData.cadence_owner,
+          billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
+        });
 
         delete (planData as any).base_rate;
 
@@ -315,6 +320,10 @@ export class ContractLineService extends BaseService<IContractLine> {
         
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
+        assertSupportedCadenceOwnerDuringRollout({
+          cadenceOwner: updateData.cadence_owner,
+          billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
+        });
         
         // Handle plan type specific logic
         if (existingPlan.contract_line_type === 'Hourly') {

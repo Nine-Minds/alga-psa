@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE } from '@shared/billingClients/cadenceOwnerRollout';
 
 const withTransaction = vi.fn();
 const publishEvent = vi.fn();
@@ -57,7 +58,7 @@ describe('ContractLineService cadence owner handling', () => {
     vi.clearAllMocks();
   });
 
-  it('persists explicit cadence_owner on create and defaults missing values to client', async () => {
+  it('blocks contract cadence on create during rollout and still defaults missing cadence_owner to client', async () => {
     let insertPayload: Record<string, unknown> | undefined;
     const knex = { scope: 'root-knex' };
     const trx = ((table: string) => {
@@ -87,10 +88,10 @@ describe('ContractLineService cadence owner handling', () => {
       contract_line_name: 'Managed Support',
       billing_frequency: 'monthly',
       contract_line_type: 'Fixed',
-      cadence_owner: 'contract',
+      cadence_owner: 'client',
     } as any);
 
-    await service.create(
+    await expect(service.create(
       {
         contract_line_name: 'Managed Support',
         billing_frequency: 'monthly',
@@ -98,9 +99,9 @@ describe('ContractLineService cadence owner handling', () => {
         cadence_owner: 'contract',
       },
       context,
-    );
+    )).rejects.toThrow(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
 
-    expect(insertPayload?.cadence_owner).toBe('contract');
+    expect(insertPayload).toBeUndefined();
 
     await service.create(
       {
@@ -112,10 +113,10 @@ describe('ContractLineService cadence owner handling', () => {
     );
 
     expect(insertPayload?.cadence_owner).toBe('client');
-    expect(publishEvent).toHaveBeenCalledTimes(2);
+    expect(publishEvent).toHaveBeenCalledTimes(1);
   });
 
-  it('returns client cadence from update paths when legacy rows lack cadence_owner', async () => {
+  it('blocks contract cadence on update during rollout', async () => {
     let updatePayload: Record<string, unknown> | undefined;
     const knex = { scope: 'root-knex' };
     const trx = ((table: string) => {
@@ -152,15 +153,14 @@ describe('ContractLineService cadence owner handling', () => {
       contract_line_type: 'Fixed',
     });
 
-    const updated = await service.update(
+    await expect(service.update(
       'line-1',
       {
         cadence_owner: 'contract',
       },
       context,
-    );
+    )).rejects.toThrow(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
 
-    expect(updatePayload?.cadence_owner).toBe('contract');
-    expect(updated.cadence_owner).toBe('client');
+    expect(updatePayload).toBeUndefined();
   });
 });

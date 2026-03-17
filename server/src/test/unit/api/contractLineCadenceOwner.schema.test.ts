@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE } from '@shared/billingClients/cadenceOwnerRollout';
 
 import {
   createContractLineSchema,
@@ -11,8 +12,8 @@ import {
 } from 'server/src/lib/api/schemas/financialSchemas';
 
 describe('contract line cadence owner API schemas', () => {
-  it('T105: server API schemas accept cadence_owner and reject unsupported values', () => {
-    const validCreate = createContractLineSchema.safeParse({
+  it('T105: server API schemas reject contract cadence during rollout while keeping stored responses compatible', () => {
+    const blockedCreate = createContractLineSchema.safeParse({
       contract_line_name: 'Managed Support',
       billing_frequency: 'monthly',
       contract_line_type: 'Fixed',
@@ -35,6 +36,14 @@ describe('contract line cadence owner API schemas', () => {
       cadence_owner: 'client',
     });
 
+    const blockedClientLine = createClientContractLineSchema.safeParse({
+      tenant: '11111111-1111-4111-8111-111111111111',
+      client_id: '22222222-2222-4222-8222-222222222222',
+      contract_line_id: '33333333-3333-4333-8333-333333333333',
+      start_date: '2026-03-17T00:00:00.000Z',
+      cadence_owner: 'contract',
+    });
+
     const validResponse = contractLineResponseSchema.safeParse({
       contract_line_id: '44444444-4444-4444-8444-444444444444',
       contract_line_name: 'Managed Support',
@@ -42,7 +51,7 @@ describe('contract line cadence owner API schemas', () => {
       is_custom: false,
       service_category: null,
       contract_line_type: 'Fixed',
-      cadence_owner: 'client',
+      cadence_owner: 'contract',
       hourly_rate: null,
       minimum_billable_time: null,
       round_up_to_nearest: null,
@@ -67,11 +76,14 @@ describe('contract line cadence owner API schemas', () => {
       cadence_owner: 'anniversary',
     });
 
-    expect(validCreate.success).toBe(true);
+    expect(blockedCreate.success).toBe(false);
     expect(validFinancialCreate.success).toBe(true);
     expect(validClientLine.success).toBe(true);
+    expect(blockedClientLine.success).toBe(false);
     expect(validResponse.success).toBe(true);
     expect(invalidCreate.success).toBe(false);
     expect(invalidUpdate.success).toBe(false);
+    expect(blockedCreate.error?.issues[0]?.message).toBe(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
+    expect(blockedClientLine.error?.issues[0]?.message).toBe(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
   });
 });
