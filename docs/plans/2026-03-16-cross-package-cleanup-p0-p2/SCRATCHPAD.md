@@ -153,6 +153,7 @@ By target package
 - T009 verified there are no remaining `auth-compat` source references anywhere in the repo.
 - T010 verified `ee/server/src/app/api/extensions/_auth.ts` now imports `getSession` directly from `@alga-psa/auth`.
 - T011 verified `ee/server/src/app/api/provisioning/tenants/route.ts` now imports `getSession` directly from `@alga-psa/auth`.
+- T012 confirmed `server/src/lib/auth-compat.ts` no longer exists on disk.
 
 ## Gotchas
 

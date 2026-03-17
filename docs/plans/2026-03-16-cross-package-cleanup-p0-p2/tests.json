@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "P1-3: server/src/lib/auth-compat.ts does not exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
