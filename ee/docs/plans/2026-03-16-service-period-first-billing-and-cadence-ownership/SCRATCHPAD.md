@@ -199,6 +199,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/actions/invoiceGeneration.ts` already persisted `billing_period_start` / `billing_period_end` from `cycleStart` / `cycleEnd`; `server/src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts` now turns that into an executable contract against a recurring charge whose canonical `servicePeriodStart` / `servicePeriodEnd` are different
   - the same unit contract now proves `createInvoiceFromBillingResult(...)` still drives the existing downstream draft/finalization path: persisted-charge subtotal calculation, tax distribution, invoice total update, and invoice-generated analytics all continue to run on the service-period-first path without reinterpreting the invoice header dates from recurring detail periods
   - the test harness surfaced one subtle implementation detail that is now explicit in the regression: invoice header billing-period fields are stored as `Temporal.PlainDate` values before insert, not raw strings, but they still stringify back to the invoice-window dates exactly
+- (2026-03-17) Automatic recurring runs now have an executable delegation contract for the service-period-first path:
+  - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` proves `generateInvoicesAsRecurringBillingRun(...)` still fans out each selected `billingCycleId` through `generateInvoice(...)`, which is now the action path that performs due-service-period preselection before billing calculation
+  - the test also keeps the recurring-run workflow events stable on that migrated path, so automatic invoice generation remains wired through the same started/completed event contract while recurring timing semantics move underneath `generateInvoice(...)`
+  - no runtime code change was required for `F074`; the new seam landed in `generateInvoice(...)` during `F071`, and this checkpoint locks the automatic-run delegation onto that migrated action path
 - (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
   - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
   - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
@@ -292,6 +296,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts --coverage.enabled false`
 - (2026-03-17) Invoice header/finalization validation:
   - `npx vitest run src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts --coverage.enabled false`
+- (2026-03-17) Recurring-run delegation validation:
+  - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts --coverage.enabled false`
 
 ## Links / References
 

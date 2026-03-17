@@ -440,7 +440,7 @@
   {
     "id": "F074",
     "description": "Update recurring billing run actions and automatic invoice generation flows to use the new recurring period selection model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "System Surfaces In Scope"]
   },
   {
