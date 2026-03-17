@@ -1550,7 +1550,7 @@
   {
     "id": "F173",
     "description": "Define renewal and replacement behavior when historical recurring detail periods exist for the contract line being renewed or superseded",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Read-model and post-persist lifecycle requirements",
       "Contract-cadence requirements"

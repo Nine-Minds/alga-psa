@@ -926,7 +926,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         throw new Error('Client contract not found or missing contract_id');
       }
 
-      // Create new contract_line for the client's contract
+      // Renewed or replacement assignments must create a fresh line identity so
+      // historical recurring detail periods stay attached to the superseded line.
       const newContractLineId = uuidv4();
       const contractLineData = this.addCreateAuditFields({
         contract_line_id: newContractLineId,

@@ -48,6 +48,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - historical flat invoices are still protected during staged coexistence because the new helper falls back to the older invoice-header reader only when no canonical recurring detail periods exist yet
   - mutation policy is now explicit in the client action layer: if canonical recurring detail periods already exist, replacing the assigned contract line (`contract_line_id` swap) is blocked and end-date/deactivation checks compare against the authoritative billed-through service-period end rather than invoice headers
   - focused coverage now lives in `server/src/test/unit/billing/clientContractLineMutationGuards.test.ts`, proving both the deactivation guard and the replace-after-billing guard
+- (2026-03-17) Renewal and replacement identity is now explicit for superseded recurring lines, which closes `F173` and `T203`:
+  - `packages/clients/src/actions/clientContractLineActions.ts` now states the replacement policy directly in code: once a billed recurring line is superseded, the follow-on line must be created as a fresh `contract_lines` row so historical recurring detail periods stay attached to the old line identity
+  - `server/src/lib/api/services/ContractLineService.ts` now carries the same rule in the API assignment path, so renewed or replacement assignments are documented as fresh-line operations instead of in-place mutation of a billed line
+  - executable coverage now lives in `server/src/test/unit/billing/clientContractLineReplacementIdentity.test.ts`, which proves the client add-line flow creates a fresh generated line id before cloning template configuration and separately locks the server assign path to the same fresh-identity rule
 
 - (2026-03-17) Invoice workflow events and audit logs now carry recurring-detail provenance instead of relying implicitly on invoice headers alone, which closes `F170` and `T199`:
   - `server/src/lib/api/services/invoiceWorkflowEvents.ts` now defines `summarizeInvoiceRecurringProvenance(...)`, which reduces hydrated invoice charges into one additive provenance summary: whether recurring timing is authoritative from canonical detail rows or only parent charge fields, how many detail-backed charges/periods exist, the recurring summary range, and whether timing is uniform or mixed
@@ -1035,6 +1039,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not on the `F171` billed-through reader contract
 - (2026-03-17) Client contract-line mutation-guard validation:
   - `npx vitest run src/test/unit/billing/clientContractLineMutationGuards.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Client contract-line renewal/replacement identity validation:
+  - `npx vitest run src/test/unit/billing/clientContractLineReplacementIdentity.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
 

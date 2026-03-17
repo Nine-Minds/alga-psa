@@ -295,7 +295,8 @@ export const addClientContractLine = withAuth(async (
         throw new Error('A contract line with the same details already exists for this client');
       }
 
-      // Create new contract_line for the client's contract
+      // Replacements must create a fresh line identity so historical recurring detail
+      // periods remain attached to the superseded line instead of being mutated in place.
       const newContractLineId = trx.raw('gen_random_uuid()');
       const startDate = newBilling.start_date ? new Date(newBilling.start_date) : new Date();
 

@@ -1763,7 +1763,7 @@
   {
     "id": "T203",
     "description": "Renewal and replacement flows respect previously persisted recurring detail periods on the superseded line",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F173"
     ]
