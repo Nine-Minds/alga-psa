@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "P2-5b: Identify all X -> documents cross-package violations (6+ packages)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5b"]
   },
   {

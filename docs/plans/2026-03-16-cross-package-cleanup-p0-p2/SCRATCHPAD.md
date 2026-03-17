@@ -138,6 +138,7 @@ By target package
 - Current lint baseline has `0` active `projects -> clients` and `0` active `scheduling -> clients` warnings; the lone remaining direct import in `packages/projects/src/actions/projectActions.ts` is an intentionally justified server-action exception.
 - P2-5a is effectively green in the current tree: the most recent root `npm run build` passed, and the client-related pair counts are already reduced to zero warnings.
 - P2-5a now closes as verification/bookkeeping only because the context/provider migration had already landed before this plan pass.
+- P2-5b inventory from the authoritative lint log: `documents` is still the top target with 39 warnings sourced from `projects` (10), `clients` (10), `client-portal` (7), `tickets` (5), `assets` (3), `users` (2), `workflows` (1), and `billing` (1). Common import shapes are entity-image helpers, document utilities, `Documents`/`DocumentUpload` UI, and KB types.
 
 ## Gotchas
 
