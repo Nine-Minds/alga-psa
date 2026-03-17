@@ -144,6 +144,7 @@ By target package
 - `DocumentsCrossFeatureContext` must stay off the root `@alga-psa/core` barrel because exporting a client-only React context there causes server imports of `@alga-psa/core` to fail Next.js builds.
 - T001 verified that `shared/` only mentions `@alga-psa/workflows` in the comment inside `shared/types/product-email-domains.d.ts`; there are no actual code imports left.
 - T002 verified `cd ee/packages/workflows && npx tsc --noEmit` succeeds after the ten test-file moves.
+- T003 verified a fresh repo-root `npm run build` succeeds after the workflow moves, auth cleanup, and storage entity-image extraction work.
 
 ## Gotchas
 
