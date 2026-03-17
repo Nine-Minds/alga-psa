@@ -8,6 +8,7 @@ import { AlertCircle, Package, Clock, Activity } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import Spinner from '@alga-psa/ui/components/Spinner';
@@ -42,6 +43,20 @@ const BILLING_TIMING_OPTIONS = [
   },
 ] as const;
 
+const CADENCE_OWNER_OPTIONS = [
+  {
+    value: 'client',
+    label: 'Invoice on client billing schedule',
+    description: 'Use the client billing calendar so this recurring line stays aligned with the client’s normal invoice cadence.',
+  },
+  {
+    value: 'contract',
+    label: 'Invoice on contract anniversary',
+    description: 'Use this contract line’s own anniversary dates. This option is staged for a later rollout.',
+    disabled: true,
+  },
+];
+
 export function FixedPlanConfiguration({
   contractLineId,
   className = '',
@@ -58,6 +73,7 @@ export function FixedPlanConfiguration({
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [isCustom, setIsCustom] = useState(false);
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
+  const [cadenceOwner, setCadenceOwner] = useState<'client' | 'contract'>('client');
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [baseRateInput, setBaseRateInput] = useState<string>('');
   const [enableProration, setEnableProration] = useState<boolean>(false);
@@ -84,6 +100,7 @@ export function FixedPlanConfiguration({
         setPlanType(fetchedPlan.contract_line_type as PlanType);
         setIsCustom(fetchedPlan.is_custom ?? false);
         setBillingTiming((fetchedPlan.billing_timing ?? 'arrears') as 'arrears' | 'advance');
+        setCadenceOwner((fetchedPlan.cadence_owner ?? 'client') as 'client' | 'contract');
 
         // Fetch fixed config
         if (fetchedPlan.contract_line_id) {
@@ -141,6 +158,7 @@ export function FixedPlanConfiguration({
         billing_frequency: billingFrequency,
         is_custom: isCustom,
         contract_line_type: planType!,
+        cadence_owner: cadenceOwner,
         tenant,
       };
 
@@ -267,6 +285,24 @@ export function FixedPlanConfiguration({
                 <p className="text-xs text-muted-foreground mt-1">
                   Advance billing invoices the upcoming period at the start of each cycle.
                 </p>
+              </div>
+              <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
+                <div>
+                  <Label className="text-sm font-medium text-[rgb(var(--color-text-900))]">Cadence Owner</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Choose which schedule defines this recurring line&apos;s service periods.
+                  </p>
+                </div>
+                <RadioGroup
+                  id="cadence-owner"
+                  name="cadence-owner"
+                  value={cadenceOwner}
+                  onChange={(value) => {
+                    setCadenceOwner(value as 'client' | 'contract');
+                    markDirty();
+                  }}
+                  options={CADENCE_OWNER_OPTIONS}
+                />
               </div>
             </div>
           </section>

@@ -542,7 +542,7 @@
   {
     "id": "F091",
     "description": "Update recurring contract line configuration UI to present cadence owner in business terms",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

@@ -120,7 +120,7 @@
   {"id":"T109","description":"billing_cycle_alignment remains readable for staged rollout while no longer being required for new writes","implemented":true,"featureIds":["F090","F137"]},
   {"id":"T110","description":"Schema and defaulting migrations do not mutate existing invoice outputs for untouched tenants","implemented":false,"featureIds":["F082","F114","F135"]},
 
-  {"id":"T111","description":"Recurring contract line configuration UI presents cadence owner in business language without exposing internal engine jargon","implemented":false,"featureIds":["F091"]},
+  {"id":"T111","description":"Recurring contract line configuration UI presents cadence owner in business language without exposing internal engine jargon","implemented":true,"featureIds":["F091"]},
   {"id":"T112","description":"Contract wizard captures cadence_owner for new recurring lines and preserves it across step transitions","implemented":false,"featureIds":["F092"]},
   {"id":"T113","description":"Contract wizard resume and draft flows preserve cadence_owner and recurring timing defaults","implemented":false,"featureIds":["F092","F144"]},
   {"id":"T114","description":"Template wizard and template detail configuration capture cadence-owner defaults for recurring lines","implemented":false,"featureIds":["F093"]},

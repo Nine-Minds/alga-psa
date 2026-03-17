@@ -265,6 +265,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/lib/api/schemas/contractLineSchemas.ts` now allows fixed-plan config create payloads to omit `billing_cycle_alignment`, which stops new API writes from treating the legacy field as mandatory while leaving response payloads readable
   - `packages/billing/src/models/contractLineFixedConfig.ts` now uses the compatibility resolver on reads and on update/upsert writes, so fixed-config writes can omit the field without losing a readable legacy alignment value
   - `server/src/lib/api/services/ContractLineService.ts` and both server/package contract-line repositories now route fixed-config and template-clone alignment handling through the same compatibility resolver rather than hard-coding `'start'` at each seam
+- (2026-03-17) The first live recurring contract-line configuration surface now presents cadence ownership in business language, which closes `F091`:
+  - `packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration.tsx` now shows a dedicated `Cadence Owner` section with `Invoice on client billing schedule` and `Invoice on contract anniversary` business labels instead of leaking internal field names into the UI
+  - the contract-anniversary option is currently rendered but disabled with rollout copy, which keeps the UI aligned with `F088`'s server-side contract-cadence guard instead of implying that the unsupported path is already available
+  - saves now carry the selected cadence-owner value through `updateContractLine(...)`, so the fixed recurring line editor remains the first coherent live configuration surface for cadence-owner semantics before wizard/template flows are updated
 - (2026-03-17) Credit-reader invoice context now stays on canonical recurring detail metadata, which closes `F078` without pretending the blocked DB integration is done:
   - `packages/billing/src/actions/creditActions.ts` now loads source invoices through `Invoice.getById(...)` for both `getCreditDetails(...)` and the invoice-summary enrichment inside `listClientCredits(...)`, instead of rereading raw `invoices` rows that dropped recurring `invoice_charge_details`
   - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
@@ -413,6 +417,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
     - still blocked by an unrelated pre-existing type error in `packages/billing/src/actions/creditActions.ts:979` (`IInvoice | null` inferred against `null`)
+- (2026-03-17) Fixed recurring cadence-owner UI validation:
+  - `npx vitest run ../packages/billing/tests/fixedContractLineConfiguration.cadenceOwner.ui.test.tsx --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Credit-reader canonical invoice-context validation:
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
