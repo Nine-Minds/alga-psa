@@ -42,6 +42,7 @@ interface FixedChargeMockOptions {
   serviceRates?: number[];
   enableProration?: boolean;
   contractLineType?: string;
+  billingCycleAlignment?: "start" | "end" | "prorated";
 }
 
 const installFixedChargeMocks = (
@@ -98,7 +99,7 @@ const installFixedChargeMocks = (
           contract_line_type: options.contractLineType ?? "Fixed",
           custom_rate: options.contractLineCustomRate ?? null,
           enable_proration: options.enableProration ?? false,
-          billing_cycle_alignment: "start",
+          billing_cycle_alignment: options.billingCycleAlignment ?? "start",
       });
     }
 
@@ -702,6 +703,65 @@ describe("BillingEngine billing timing", () => {
     );
 
     expect(charges).toEqual([]);
+  });
+
+  it("T162: billing_cycle_alignment no longer changes migrated fixed recurring execution", async () => {
+    const billingPeriod = {
+      startDate: "2025-02-01",
+      endDate: "2025-03-01",
+    };
+
+    const runForAlignment = async (
+      alignment: "start" | "end" | "prorated",
+    ) => {
+      const engine = new BillingEngine();
+      installFixedChargeMocks(engine, {
+        serviceRates: [6200],
+        enableProration: true,
+        billingCycleAlignment: alignment,
+        billingPeriod,
+      });
+
+      return (engine as any).calculateFixedPriceCharges(
+        "client-1",
+        billingPeriod,
+        {
+          client_contract_line_id: "ccd-1",
+          client_id: "client-1",
+          contract_line_id: "contract-line-1",
+          client_contract_id: "assignment-1",
+          contract_id: "contract-1",
+          contract_line_name: "Managed Support",
+          contract_name: "Acme Corp",
+          billing_timing: "arrears",
+          start_date: "2025-01-10",
+          end_date: null,
+          custom_rate: null,
+        },
+      );
+    };
+
+    const [startCharges, endCharges, proratedCharges] = await Promise.all([
+      runForAlignment("start"),
+      runForAlignment("end"),
+      runForAlignment("prorated"),
+    ]);
+
+    expect(startCharges).toEqual([
+      expect.objectContaining({
+        type: "fixed",
+        total: 4400,
+        rate: 4400,
+        servicePeriodStart: "2025-01-10",
+        servicePeriodEnd: "2025-01-31",
+        billingTiming: "arrears",
+      }),
+    ]);
+    expect(endCharges).toEqual(startCharges);
+    expect(proratedCharges).toEqual(startCharges);
+    expect(startCharges[0]).not.toHaveProperty("billing_cycle_alignment");
+    expect(endCharges[0]).not.toHaveProperty("billing_cycle_alignment");
+    expect(proratedCharges[0]).not.toHaveProperty("billing_cycle_alignment");
   });
 
   it("T046: advance termination credits settle into one canonical partial fixed charge instead of a separate negative credit branch", async () => {

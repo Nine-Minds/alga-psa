@@ -812,7 +812,6 @@ export class BillingEngine {
         "cl.cadence_owner",
         "cl.custom_rate",
         "cl.enable_proration",
-        "cl.billing_cycle_alignment",
         knex.raw("cc.tenant as tenant"),
       );
 
@@ -845,14 +844,8 @@ export class BillingEngine {
           : null;
       }
 
-      // Set defaults for proration and alignment
+      // Set defaults for recurring coverage settlement.
       plan.enable_proration = plan.enable_proration ?? false;
-      plan.billing_cycle_alignment =
-        (plan.billing_cycle_alignment as
-          | "start"
-          | "end"
-          | "prorated"
-          | undefined) ?? "start";
     });
 
     return { clientContractLines, billingCycle };
@@ -1120,11 +1113,9 @@ export class BillingEngine {
       const isFixedFeePlan =
         contractLineDetails?.contract_line_type === "Fixed";
 
-      // --- Fetch Plan-Level Fixed Config (Base Rate, Proration, Alignment) ---
+      // --- Fetch Plan-Level Fixed Config (Base Rate and coverage settlement) ---
       let planLevelBaseRate: number | null = null; // Store plan base rate in dollars
       let planLevelEnableProration = false;
-      let planLevelBillingCycleAlignment: "start" | "end" | "prorated" =
-        "start";
 
       if (isFixedFeePlan && contractLineDetails) {
         if (
@@ -1153,16 +1144,6 @@ export class BillingEngine {
           );
         }
         fixedProrationEnabled = planLevelEnableProration;
-
-        const alignmentCandidate = contractLineDetails.billing_cycle_alignment;
-        if (
-          typeof alignmentCandidate === "string" &&
-          (alignmentCandidate === "start" ||
-            alignmentCandidate === "end" ||
-            alignmentCandidate === "prorated")
-        ) {
-          planLevelBillingCycleAlignment = alignmentCandidate;
-        }
       }
 
       if (isFixedFeePlan) {
@@ -1222,7 +1203,7 @@ export class BillingEngine {
           "clsc.custom_rate as configuration_custom_rate",
           "clsc.config_id",
           "clsfc.base_rate as service_base_rate",
-          // Note: enable_proration and billing_cycle_alignment are on contract_lines, not service config
+          // Note: enable_proration is on contract_lines, not service config
         );
 
       if (planServices.length === 0) {
@@ -1252,20 +1233,6 @@ export class BillingEngine {
         }
       }
       fixedProrationEnabled = planLevelEnableProration;
-
-      if (planLevelBillingCycleAlignment === "start") {
-        const alignmentFromService = planServices.find(
-          (service: any) =>
-            typeof service.billing_cycle_alignment === "string" &&
-            (service.billing_cycle_alignment === "start" ||
-              service.billing_cycle_alignment === "end" ||
-              service.billing_cycle_alignment === "prorated"),
-        );
-        if (alignmentFromService) {
-          planLevelBillingCycleAlignment =
-            alignmentFromService.billing_cycle_alignment;
-        }
-      }
 
       if (
         isFixedFeePlan &&
@@ -1588,8 +1555,6 @@ export class BillingEngine {
             proportion: allocation.proportion, // Numeric proportion
             allocated_amount: allocation.allocatedAmount, // PRORATED allocated amount in cents
 
-            // Removed comment line
-            billing_cycle_alignment: planLevelBillingCycleAlignment, // Use plan-level setting
             // taxAllocationDetails: undefined, // Remove this property as details are now fields
           };
           detailedCharges.push(detailedCharge);
@@ -1604,7 +1569,7 @@ export class BillingEngine {
       } else {
         // This block handles cases where the plan type isn't 'Fixed', but a service within it
         // is configured as 'Fixed'. This might be legacy or an edge case.
-        // We should still use the plan-level proration/alignment settings if the plan *was* fixed.
+        // We should still use the plan-level coverage settings if the plan *was* fixed.
         // If the plan itself isn't fixed, proration likely doesn't apply anyway.
         // TODO: Review if this logic block is still necessary or correct after the refactor.
         console.warn(
@@ -1655,7 +1620,6 @@ export class BillingEngine {
                 // Use plan-level settings fetched earlier, even if plan type isn't strictly 'Fixed' now
                 // This maintains consistency if a plan type was changed.
                 enable_proration: planLevelEnableProration, // Use plan-level setting
-                billing_cycle_alignment: planLevelBillingCycleAlignment, // Use plan-level setting
                 // Add other relevant fields from IFixedPriceCharge if needed
                 config_id: service.config_id,
                 base_rate: baseRateInCents,

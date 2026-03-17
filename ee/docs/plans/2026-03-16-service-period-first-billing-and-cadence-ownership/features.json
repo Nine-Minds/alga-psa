@@ -692,7 +692,7 @@
   {
     "id": "F116",
     "description": "Remove live execution dependence on billing_cycle_alignment once parity and contract-cadence rollout are complete",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Acceptance Criteria"]
   },
   {

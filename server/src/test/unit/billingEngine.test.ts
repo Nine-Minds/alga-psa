@@ -842,7 +842,6 @@ describe('BillingEngine', () => {
         billing_timing: 'arrears',
         custom_rate: 10000,
         enable_proration: false,
-        billing_cycle_alignment: 'start',
       });
 
       expect(clonedResult.billingCycle).toBe('monthly');
@@ -861,7 +860,6 @@ describe('BillingEngine', () => {
         billing_timing: 'advance',
         custom_rate: 12500,
         enable_proration: true,
-        billing_cycle_alignment: 'prorated',
       });
       expect(clonedResult.clientContractLines[1]).toMatchObject({
         client_id: clonedClientId,
@@ -869,7 +867,6 @@ describe('BillingEngine', () => {
         billing_timing: 'arrears',
         custom_rate: 2500,
         enable_proration: false,
-        billing_cycle_alignment: 'start',
       });
 
       expect(clientContractsBuilder.where).toHaveBeenCalledWith(

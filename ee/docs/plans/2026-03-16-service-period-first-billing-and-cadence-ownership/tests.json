@@ -94,7 +94,7 @@
   {"id":"T085","description":"Manual invoice editing and viewing continue to work when invoice detail rows include canonical recurring periods","implemented":true,"featureIds":["F076","F126"]},
   {"id":"T086","description":"Duplicate-invoice prevention still blocks a second invoice for the same recurring due window","implemented":true,"featureIds":["F080"]},
   {"id":"T087","description":"Billed-through detection for recurring lines remains correct after service-period-first cutover","implemented":true,"featureIds":["F080"]},
-  {"id":"T088","description":"Client invoice preview used by portal or pay flows remains stable when recurring detail periods are canonical","implemented":false,"featureIds":["F126","F140"]},
+  {"id":"T088","description":"Client invoice preview used by portal or pay flows remains stable when recurring detail periods are canonical","implemented":true,"featureIds":["F126","F140"]},
   {"id":"T089","description":"Recurring invoice selection remains stable when non-recurring charges are present on the same invoice","implemented":false,"featureIds":["F071","F076"]},
   {"id":"T090","description":"Invoice detail queries used by dashboard dialogs still return expected recurring line ordering and metadata","implemented":false,"featureIds":["F125","F126"]},
 
@@ -176,7 +176,7 @@
   {"id":"T160","description":"Operational runbook covers parity checks, mixed-cadence troubleshooting, and rollback posture clearly enough for execution handoff","implemented":false,"featureIds":["F119","F149"]},
 
   {"id":"T161","description":"billing_cycle_alignment is no longer required for new recurring writes after cutover staging lands","implemented":false,"featureIds":["F090","F137"]},
-  {"id":"T162","description":"billing_cycle_alignment no longer changes live recurring execution for migrated paths","implemented":false,"featureIds":["F116","F137"]},
+  {"id":"T162","description":"billing_cycle_alignment no longer changes live recurring execution for migrated paths","implemented":true,"featureIds":["F116","F137"]},
   {"id":"T163","description":"Source grep shows resolveServicePeriod is absent from migrated recurring charge execution paths","implemented":false,"featureIds":["F117","F146"]},
   {"id":"T164","description":"Source grep shows duplicated proration implementations are absent from migrated recurring fixed, product, and license paths","implemented":false,"featureIds":["F117","F146"]},
   {"id":"T165","description":"Source grep shows obsolete recurring timing terminology is removed from migrated UI copy and docs where appropriate","implemented":false,"featureIds":["F142"]},

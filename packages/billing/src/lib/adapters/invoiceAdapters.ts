@@ -125,6 +125,18 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         quantity: toFiniteNumber(item.quantity),
         unitPrice: toMinorUnits(item.unit_price),
         total: toMinorUnits(item.total_price),
+        servicePeriodStart:
+          typeof (item as any).servicePeriodStart === 'string'
+            ? (item as any).servicePeriodStart
+            : (item as any).service_period_start ?? null,
+        servicePeriodEnd:
+          typeof (item as any).servicePeriodEnd === 'string'
+            ? (item as any).servicePeriodEnd
+            : (item as any).service_period_end ?? null,
+        billingTiming:
+          (item as any).billingTiming ??
+          (item as any).billing_timing ??
+          null,
       }));
       const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.total, 0);
       const subtotal = toMinorUnits(rawSubtotal);

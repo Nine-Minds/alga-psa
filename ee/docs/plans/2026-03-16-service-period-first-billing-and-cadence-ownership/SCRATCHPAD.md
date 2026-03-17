@@ -39,6 +39,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) `billing_cycle_alignment` is now non-executing on the migrated fixed recurring runtime path, which closes `F116`:
+  - `packages/billing/src/lib/billing/billingEngine.ts` no longer selects, defaults, or propagates `contract_lines.billing_cycle_alignment` during recurring fixed-charge execution; coverage settlement is now driven only by canonical service-period timing plus `enable_proration`
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` closes `T162` with an explicit invariance check showing `start`, `end`, and `prorated` legacy values all emit the same canonical fixed recurring charge and no longer appear on the generated charge payload
+  - compatibility storage and authoring surfaces intentionally remain in place for later staged-deprecation work (`F137+`); this checkpoint only removes live execution dependence, not the legacy column itself
+- (2026-03-17) Client-portal invoice preview now preserves canonical recurring detail metadata end to end, which closes `T088` without pretending broader portal-reader cutover is done:
+  - `packages/billing/src/lib/adapters/invoiceAdapters.ts` now carries `service_period_start`, `service_period_end`, and `billing_timing` from DB invoice-charge payloads into `WasmInvoiceViewModel.items`
+  - `packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx` proves the portal preview path receives those canonical recurring fields through the real adapter, so preview/pay-style rendering no longer strips them before template rendering
+  - this is a preview/read-model seam only; broader dashboard/portal invoice-query cleanup still belongs to `F126` and `F140`
 - (2026-03-17) Pass-0 implementation artifacts now live in:
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PASS0_RECURRING_TIMING_APPENDIX.md`
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/pass-0-source-inventory.json`
@@ -391,6 +399,19 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Commands / Runbooks
 
+- (2026-03-17) `billing_cycle_alignment` runtime cleanup and portal preview validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts -t "T162|T041|T042|T043|T044|T078|T087" --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/test/unit/billingEngine.test.ts -t "T021" --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/billing/src/lib/adapters/invoiceAdapters.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billingEngine.test.ts --coverage.enabled false`
+    - broad run still exposes pre-existing failures in `server/src/test/unit/billingEngine.test.ts` unrelated to this checkpoint (`this.knex.select` harness drift and missing mocked client lookups in older pricing-schedule tests)
 - (2026-03-16) Recon:
   - `rg -n "resolveServicePeriod|applyProrationToPlan|_calculateProrationFactor|billing_cycle_alignment|billing_timing|client_billing_cycles" packages/billing/src/lib/billing server/src/test shared`
   - `sed -n '220,470p' packages/billing/src/lib/billing/billingEngine.ts`
