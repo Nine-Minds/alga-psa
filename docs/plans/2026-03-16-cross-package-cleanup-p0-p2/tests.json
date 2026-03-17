@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "P2-6: npm run lint 2>&1 | grep 'no-feature-to-feature-imports' | wc -l shows fewer violations than P0-2 baseline",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F038"]
   }
 ]

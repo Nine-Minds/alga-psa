@@ -190,6 +190,7 @@ By target package
 - T027 verified `grep -rn "import type.*@alga-psa/documents" packages/client-portal/ --include='*.ts' --include='*.tsx'` now returns `0` matches.
 - T028 verified the new shared KB definitions live in `packages/types/src/lib/knowledgeBase.ts` and are exported through `packages/types/src/index.ts`.
 - T029 reuses the latest repo-root green `npm run build` after the KB type extraction and caller migration.
+- T030 confirmed the authoritative lint count is now `57`, which is substantially below the P0-2 baseline of `103`.
 
 ## Remaining Open Work
 
