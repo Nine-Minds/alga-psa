@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "P2-5c: Apply eslint-disable with justification for acceptable client-portal violations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5c"]
   },
   {

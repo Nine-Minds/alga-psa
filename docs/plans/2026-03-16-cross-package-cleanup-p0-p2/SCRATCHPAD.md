@@ -173,10 +173,11 @@ By target package
 - F030 categorization snapshot from `/tmp/alga-lint-f030.log`: `client-portal` now has `34` remaining warnings. `6` are clearly fixable (`client-kb.ts`, `ClientKBArticleView.tsx`, `ClientKBPage.tsx` via `@alga-psa/types`; `ProjectDetailView.tsx` via a composition facade). The other `28` are inherent composition edges across `tickets`, `billing`, `clients`, and `users`, where client-portal is intentionally orchestrating vertical feature APIs/components and is a reasonable candidate for justified `eslint-disable` comments in F031.
 - Acceptable/inherent client-portal edges: `client-billing.ts`, `client-tickets.ts`, `clientPaymentActions.ts`, `BillingOverview.tsx`, `ClientInvoicePreview.tsx`, `ClientProfile.tsx`, `ClientDetailsSettings.tsx`, `ClientPasswordChangeForm.tsx`, `UserManagementSettings.tsx`, `ClientAddTicket.tsx`, `TicketDetails.tsx`, `TicketDetails.originBadge.contract.test.ts`, and `TicketList.tsx`.
 - Fixable client-portal edges queued for later items: `client-kb.ts`, `ClientKBArticleView.tsx`, `ClientKBPage.tsx` (type-only `documents` imports for P2-6), plus `ProjectDetailView.tsx` (presentation imports from `projects`, a good `client-portal` composition-facade candidate for F032).
+- Added file-level `custom-rules/no-feature-to-feature-imports` disables with explicit justification comments to the acceptable/inherent client-portal composition files; a fresh `npm run lint` now reports `63` total violations and only `6` remaining `client-portal` warnings, all in the previously identified fixable KB/project files.
 
 ## Remaining Open Work
 
-- **F031:** next up. The acceptable/inherent `client-portal` edges above are ready for narrow `eslint-disable` annotations with justification comments, while the fixable KB/project items stay queued behind F032/P2-6.
+- **F032:** next up. Only the fixable `client-portal` edges remain: the three KB type imports from `documents` and the three `ProjectDetailView.tsx` presentation imports from `projects`.
 
 ## Gotchas
 
