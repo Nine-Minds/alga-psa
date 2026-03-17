@@ -674,13 +674,13 @@
   {
     "id": "F113",
     "description": "Add rollout controls or equivalent safety gates if needed to compare old and new recurring outputs before hard cutover",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Risks"]
   },
   {
     "id": "F114",
     "description": "Document and implement migration and backfill for cadence_owner defaults on existing recurring records",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {

@@ -158,13 +158,102 @@ export async function calculateBillingForInvoiceWindow(input: {
       input.billingCycleId,
     );
 
-  return input.billingEngine.calculateBilling(
+  const canonicalBillingResult = await input.billingEngine.calculateBilling(
     input.clientId,
     input.cycleStart,
     input.cycleEnd,
     input.billingCycleId,
     { recurringTimingSelections },
   );
+
+  await runRecurringBillingComparisonMode({
+    billingEngine: input.billingEngine,
+    clientId: input.clientId,
+    cycleStart: input.cycleStart,
+    cycleEnd: input.cycleEnd,
+    billingCycleId: input.billingCycleId,
+    canonicalBillingResult,
+  });
+
+  return canonicalBillingResult;
+}
+
+type RecurringBillingComparisonMode = 'off' | 'legacy-vs-canonical';
+
+export function getRecurringBillingComparisonMode(): RecurringBillingComparisonMode {
+  return process.env.RECURRING_BILLING_COMPARISON_MODE === 'legacy-vs-canonical'
+    ? 'legacy-vs-canonical'
+    : 'off';
+}
+
+function createRecurringBillingComparisonSnapshot(billingResult: IBillingResult) {
+  return {
+    totalAmount: billingResult.totalAmount ?? 0,
+    finalAmount: billingResult.finalAmount ?? 0,
+    chargeCount: billingResult.charges?.length ?? 0,
+    charges: (billingResult.charges ?? [])
+      .map((charge) => ({
+        type: charge.type,
+        clientContractLineId: charge.client_contract_line_id ?? null,
+        serviceId: charge.serviceId ?? charge.service_id ?? null,
+        total: charge.total ?? 0,
+        servicePeriodStart: charge.servicePeriodStart ?? null,
+        servicePeriodEnd: charge.servicePeriodEnd ?? null,
+        billingTiming: charge.billingTiming ?? null,
+      }))
+      .sort((left, right) =>
+        JSON.stringify(left).localeCompare(JSON.stringify(right)),
+      ),
+  };
+}
+
+function recurringBillingComparisonSnapshotsMatch(
+  canonicalBillingResult: IBillingResult,
+  legacyBillingResult: IBillingResult,
+): boolean {
+  return JSON.stringify(createRecurringBillingComparisonSnapshot(canonicalBillingResult)) ===
+    JSON.stringify(createRecurringBillingComparisonSnapshot(legacyBillingResult));
+}
+
+async function runRecurringBillingComparisonMode(input: {
+  billingEngine: BillingEngine;
+  clientId: string;
+  cycleStart: ISO8601String;
+  cycleEnd: ISO8601String;
+  billingCycleId: string;
+  canonicalBillingResult: IBillingResult;
+}) {
+  if (getRecurringBillingComparisonMode() !== 'legacy-vs-canonical') {
+    return;
+  }
+
+  try {
+    const legacyBillingResult = await input.billingEngine.calculateBilling(
+      input.clientId,
+      input.cycleStart,
+      input.cycleEnd,
+      input.billingCycleId,
+    );
+
+    if (!recurringBillingComparisonSnapshotsMatch(input.canonicalBillingResult, legacyBillingResult)) {
+      console.warn(
+        '[recurring-billing-comparison] Drift detected between canonical and legacy-style invoice-window billing results.',
+        {
+          billingCycleId: input.billingCycleId,
+          canonical: createRecurringBillingComparisonSnapshot(input.canonicalBillingResult),
+          legacy: createRecurringBillingComparisonSnapshot(legacyBillingResult),
+        },
+      );
+    }
+  } catch (error) {
+    console.error(
+      '[recurring-billing-comparison] Comparison mode failed; canonical billing result was preserved.',
+      {
+        billingCycleId: input.billingCycleId,
+        error,
+      },
+    );
+  }
 }
 
 export type PurchaseOrderOverageDecision = 'allow' | 'skip';

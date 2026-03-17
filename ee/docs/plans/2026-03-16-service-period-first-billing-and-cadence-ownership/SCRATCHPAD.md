@@ -361,6 +361,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - the integration fixture now creates a billing location with an email address and reuses one `client_contract_id` for mixed recurring lines, which keeps the test on the real `generateInvoice(...)` path without tripping unrelated billing-email or multi-contract invoice guards
   - `server/test-utils/billingTestHelpers.ts#createFixedPlanAssignment(...)` now accepts optional existing `contractId` / `clientContractId` so DB-backed recurring tests can model multiple lines on one client contract instead of fabricating invalid multi-contract invoice fixtures
   - local DB validation is now running successfully against the Docker Postgres listener on `127.0.0.1:57433`
+- (2026-03-17) Comparison-mode rollout control now closes `F113` and `T154` without changing live invoice persistence:
+  - `packages/billing/src/actions/invoiceGeneration.ts` now treats `RECURRING_BILLING_COMPARISON_MODE=legacy-vs-canonical` as an additive action-layer gate on `calculateBillingForInvoiceWindow(...)`
+  - when enabled, the action runs the canonical preselected recurring path first, then executes one legacy-style billing calculation without `recurringTimingSelections` and logs a structured drift warning if the comparison snapshot differs
+  - the canonical billing result is always returned and persisted, so comparison mode can be enabled for rollout validation without mutating live invoice outputs
+  - `server/src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts` now proves the guard calls both billing modes in order, emits drift logging, and still returns the canonical result object unchanged
+- (2026-03-17) Cadence-owner migration backfill is now explicitly validated, which closes `F114`, `T155`, and `T156`:
+  - `server/migrations/20260317170000_add_cadence_owner_to_contract_lines.cjs` was already adding `cadence_owner` with a default of `'client'`, but the migration contract had only been source-inspected before this checkpoint
+  - `server/src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts` now executes the migration against a fake Knex contract and proves the backfill writes `'client'` only to legacy null rows while preserving existing `'client'` and `'contract'` values
+  - together with the DB-backed client-cadence parity validation from `F112`, this makes the rollout claim concrete: untouched client-cadence tenants keep client defaults without invoice-output drift
 - (2026-03-17) Invoice reread stability now has an explicit regression guard, which closes `T080`:
   - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now proves that `Invoice.getById(...)`, `Invoice.getFullInvoiceById(...)`, and a second `Invoice.getById(...)` reread all preserve the same aggregated canonical service-period metadata for a multi-detail recurring charge
   - this keeps invoice reload paths from drifting even when one recurring parent charge spans multiple canonical detail periods
@@ -587,6 +596,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
 - (2026-03-17) DB-backed client-cadence parity validation:
   - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts --coverage.enabled false`
+    - run from `server/`
+- (2026-03-17) Comparison-mode rollout validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
+    - run from `server/`
+- (2026-03-17) Cadence-owner backfill validation:
+  - `npx vitest run src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts --coverage.enabled false`
     - run from `server/`
 
 ## Links / References

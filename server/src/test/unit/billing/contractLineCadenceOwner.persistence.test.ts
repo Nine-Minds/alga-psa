@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   fetchDetailedContractLines,
@@ -64,6 +65,68 @@ function createFakeKnex(rows: QueryState['rows']) {
     knex,
     updates: state.updates,
   };
+}
+
+type MigrationContractLineRow = {
+  contract_line_id: string;
+  cadence_owner?: 'client' | 'contract' | null;
+};
+
+function createMigrationKnex(rows: MigrationContractLineRow[], hasCadenceOwnerColumn = false) {
+  const state = {
+    rows: rows.map((row) => ({ ...row })),
+    addedCadenceOwnerColumn: false,
+    rawCalls: [] as string[],
+  };
+
+  const knex = ((table: string) => {
+    if (table !== 'contract_lines') {
+      throw new Error(`Unexpected table access in migration test: ${table}`);
+    }
+
+    return {
+      whereNull(column: string) {
+        return {
+          async update(payload: Record<string, unknown>) {
+            let updates = 0;
+            for (const row of state.rows) {
+              if ((row as Record<string, unknown>)[column] == null) {
+                Object.assign(row, payload);
+                updates += 1;
+              }
+            }
+            return updates;
+          },
+        };
+      },
+    };
+  }) as any;
+
+  knex.schema = {
+    hasTable: vi.fn(async (table: string) => table === 'contract_lines'),
+    hasColumn: vi.fn(async (table: string, column: string) =>
+      table === 'contract_lines' && column === 'cadence_owner' ? hasCadenceOwnerColumn : false,
+    ),
+    alterTable: vi.fn(async (_table: string, callback: (table: any) => void) => {
+      const tableApi = {
+        string: vi.fn(() => ({
+          notNullable: vi.fn(() => ({
+            defaultTo: vi.fn(() => {
+              state.addedCadenceOwnerColumn = true;
+            }),
+          })),
+        })),
+        dropColumn: vi.fn(),
+      };
+      callback(tableApi);
+    }),
+  };
+
+  knex.raw = vi.fn(async (sql: string) => {
+    state.rawCalls.push(sql);
+  });
+
+  return { knex, state };
 }
 
 describe('contract line cadence owner persistence', () => {
@@ -168,5 +231,34 @@ describe('contract line cadence owner persistence', () => {
       },
     });
     expect(updated.cadence_owner).toBe('contract');
+  });
+
+  it('T155 and T156: cadence_owner migration backfills legacy nulls to client without mutating existing cadence values', async () => {
+    const repoRoot = path.resolve(import.meta.dirname, '../../../../..');
+    const migrationModule = await import(
+      pathToFileURL(
+        path.join(
+          repoRoot,
+          'server/migrations/20260317170000_add_cadence_owner_to_contract_lines.cjs',
+        ),
+      ).href
+    );
+    const { knex, state } = createMigrationKnex([
+      { contract_line_id: 'line-null', cadence_owner: null },
+      { contract_line_id: 'line-client', cadence_owner: 'client' },
+      { contract_line_id: 'line-contract', cadence_owner: 'contract' },
+    ]);
+
+    await migrationModule.up(knex);
+
+    expect(state.addedCadenceOwnerColumn).toBe(true);
+    expect(state.rows).toEqual([
+      { contract_line_id: 'line-null', cadence_owner: 'client' },
+      { contract_line_id: 'line-client', cadence_owner: 'client' },
+      { contract_line_id: 'line-contract', cadence_owner: 'contract' },
+    ]);
+    expect(
+      state.rawCalls.some((sql) => sql.includes('contract_lines_cadence_owner_check')),
+    ).toBe(true);
   });
 });
