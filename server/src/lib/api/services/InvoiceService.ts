@@ -32,6 +32,7 @@ import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '../../../services/pdf-generation.service';
 import { StorageService } from '../../storage/StorageService';
+import InvoiceModel from '@alga-psa/billing/models/invoice';
 
 // Import schemas and interfaces
 import {
@@ -1902,10 +1903,12 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   // Additional helper methods...
-  private async getInvoiceLineItems(invoiceId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any[]> {
-    return trx('invoice_line_items')
-      .where({ invoice_id: invoiceId, tenant: context.tenant })
-      .orderBy('line_number');
+  private async getInvoiceLineItems(
+    invoiceId: string,
+    trx: Knex.Transaction,
+    context: ServiceContext
+  ): Promise<IInvoiceCharge[]> {
+    return InvoiceModel.getInvoiceCharges(trx, context.tenant, invoiceId);
   }
 
   private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {

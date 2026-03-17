@@ -39,6 +39,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Recurring invoice parent/detail projection is now explicit instead of being inferred from whatever summary fields happened to be populated, which closes `F161`, `F162`, `F163`, `T191`, and `T193`:
+  - `packages/types/src/interfaces/invoice.interfaces.ts` and `server/src/interfaces/invoice.interfaces.ts` now define additive `recurring_projection` metadata on `IInvoiceCharge`, documenting the stable contract for detail-backed recurring reads: `recurring_detail_periods` is authoritative, parent `service_period_start` / `service_period_end` is the summary range across those rows, and parent `billing_timing` is only populated when every detail row agrees
+  - `packages/billing/src/models/invoice.ts` now hydrates that projection metadata whenever canonical `invoice_charge_details` rows exist, so `Invoice.getById(...)`, `Invoice.getFullInvoiceById(...)`, and `getInvoiceLineItems(...)` all expose the same typed parent/detail semantics instead of an implicit summary-only shape
+  - `server/src/lib/api/services/InvoiceService.ts` now delegates invoice-item reads to the same detail-aware invoice model instead of the legacy `invoice_line_items` table reader, which keeps API `invoice_charges` payloads aligned with the canonical recurring read-model contract without changing the outer response shape
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now closes `T191` with a multi-detail recurring parent charge contract, and `server/src/test/unit/api/invoiceService.recurringDetailProjection.test.ts` closes `T193` by proving the API service reuses the same hydrated projection
 - (2026-03-17) Shared invoice-candidate grouping now carries explicit split reasons for PO and financial/export constraints, which closes `F158`, `F159`, `F160`, `T189`, and `T190`:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now lets scoped due selections carry PO scope, currency, tax source, and export-shape keys, while scoped candidate groups now expose `splitReasons` with `single_contract`, `purchase_order_scope`, and `financial_constraint`
   - `shared/billingClients/recurringTiming.ts` now exports `groupDueServicePeriodsForInvoiceCandidates(...)`, which applies those split constraints within each due window and annotates the resulting candidate groups with the operator-visible reasons they were split
@@ -942,6 +947,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run ../packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Recurring parent/detail projection validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/api/invoiceService.recurringDetailProjection.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error, not by the recurring projection changes
 
 ## Links / References
 

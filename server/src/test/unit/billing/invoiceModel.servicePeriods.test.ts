@@ -235,6 +235,80 @@ describe('invoice model recurring service-period projection', () => {
     expect(items[2]).not.toHaveProperty('recurring_detail_periods');
   });
 
+  it('T191: a recurring parent charge can summarize multiple canonical detail periods while preserving the authoritative detail rows', async () => {
+    const knex = createMockKnex({
+      invoices: [
+        {
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          credit_applied: 0,
+          total_amount: 10000,
+        },
+      ],
+      invoice_charges: [
+        {
+          item_id: 'recurring-1',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          service_id: 'service-1',
+          description: 'Managed Services Bundle',
+          quantity: 1,
+          unit_price: 10000,
+          total_price: 10000,
+          tax_amount: 0,
+          net_amount: 10000,
+          is_manual: false,
+        },
+      ],
+      invoice_charge_details: [
+        {
+          item_id: 'recurring-1',
+          tenant: 'tenant-1',
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+        {
+          item_id: 'recurring-1',
+          tenant: 'tenant-1',
+          service_period_start: '2025-02-01T00:00:00.000Z',
+          service_period_end: '2025-03-01T00:00:00.000Z',
+          billing_timing: 'advance',
+        },
+      ],
+    });
+
+    const invoice = await Invoice.getById(knex, 'tenant-1', 'invoice-1');
+    const recurringCharge = invoice?.invoice_charges?.[0];
+
+    expect(recurringCharge).toMatchObject({
+      item_id: 'recurring-1',
+      service_period_start: '2025-01-01T00:00:00.000Z',
+      service_period_end: '2025-03-01T00:00:00.000Z',
+      billing_timing: null,
+      recurring_projection: {
+        source: 'canonical_detail_rows',
+        detail_period_count: 2,
+        parent_period_projection: 'summary_range',
+        parent_billing_timing_projection: 'uniform_detail_value_or_null',
+        detail_billing_timing_shape: 'mixed',
+      },
+      recurring_detail_periods: [
+        {
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+        {
+          service_period_start: '2025-02-01T00:00:00.000Z',
+          service_period_end: '2025-03-01T00:00:00.000Z',
+          billing_timing: 'advance',
+        },
+      ],
+    });
+  });
+
   it('T096: prepayment-applied recurring invoice rereads canonical detail service periods', async () => {
     const knex = createMockKnex({
       invoices: [

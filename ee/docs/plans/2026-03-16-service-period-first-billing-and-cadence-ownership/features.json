@@ -1442,7 +1442,7 @@
   {
     "id": "F161",
     "description": "Define a stable projection contract between invoice parent charges and canonical invoice_charge_details for recurring lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "Read-model and post-persist lifecycle requirements"
@@ -1451,7 +1451,7 @@
   {
     "id": "F162",
     "description": "Update invoice model hydration paths to read and preserve canonical recurring detail periods instead of only parent invoice charge rows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Read-model and post-persist lifecycle requirements",
       "System Surfaces In Scope"
@@ -1460,7 +1460,7 @@
   {
     "id": "F163",
     "description": "Update invoice query actions and API readers to expose canonical recurring detail periods without breaking existing invoice consumers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Read-model and post-persist lifecycle requirements",
       "Data model and API requirements"

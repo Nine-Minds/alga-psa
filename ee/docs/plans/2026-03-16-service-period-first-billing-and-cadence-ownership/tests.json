@@ -1659,7 +1659,7 @@
   {
     "id": "T191",
     "description": "A recurring invoice can persist one parent charge with multiple canonical detail periods and readers hydrate both levels correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F161",
       "F162"
@@ -1677,7 +1677,7 @@
   {
     "id": "T193",
     "description": "Invoice APIs expose canonical recurring detail periods for new invoices without breaking existing consumer payloads",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163",
       "F169"
