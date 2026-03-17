@@ -128,7 +128,7 @@
   {
     "id": "T022",
     "description": "P2-5b: No vertical package imports uploadEntityImage/deleteEntityImage from @alga-psa/documents (moved to horizontal)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
