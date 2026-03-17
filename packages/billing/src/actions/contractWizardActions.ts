@@ -71,6 +71,7 @@ export type ContractTemplateWizardSubmission = {
   contract_name: string;
   description?: string;
   billing_frequency?: string;
+  cadence_owner?: CadenceOwner;
   // currency_code removed - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from this template
   fixed_services: TemplateFixedServiceInput[];
@@ -375,6 +376,7 @@ export const createContractTemplateFromWizard = withAuth(async (
       const createdFixedLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Fixed Fee`,
         billing_frequency: submission.billing_frequency ?? 'monthly',
+        cadence_owner: submission.cadence_owner ?? 'client',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Fixed',
@@ -461,6 +463,7 @@ export const createContractTemplateFromWizard = withAuth(async (
       const createdProductsLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Products`,
         billing_frequency: submission.billing_frequency ?? 'monthly',
+        cadence_owner: submission.cadence_owner ?? 'client',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Fixed',
@@ -516,6 +519,7 @@ export const createContractTemplateFromWizard = withAuth(async (
       const createdHourlyLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Hourly`,
         billing_frequency: submission.billing_frequency ?? 'monthly',
+        cadence_owner: submission.cadence_owner ?? 'client',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
@@ -596,6 +600,7 @@ export const createContractTemplateFromWizard = withAuth(async (
       const createdUsageLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Usage`,
         billing_frequency: submission.billing_frequency ?? 'monthly',
+        cadence_owner: submission.cadence_owner ?? 'client',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Usage',

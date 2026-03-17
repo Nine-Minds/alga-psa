@@ -554,7 +554,7 @@
   {
     "id": "F093",
     "description": "Update template detail and template wizard recurring configuration UI to capture cadence-owner defaults for template-authored lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

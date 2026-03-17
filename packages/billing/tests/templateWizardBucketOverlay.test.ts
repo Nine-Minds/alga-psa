@@ -189,6 +189,7 @@ describe('TemplateWizard bucket overlays', () => {
     });
 
     const submitted = createContractTemplateFromWizard.mock.calls[0][0];
+    expect(submitted.cadence_owner).toBe('client');
     expect(submitted.hourly_services?.[0]?.bucket_overlay).toEqual({
       total_minutes: 120,
       overage_rate: 15000,

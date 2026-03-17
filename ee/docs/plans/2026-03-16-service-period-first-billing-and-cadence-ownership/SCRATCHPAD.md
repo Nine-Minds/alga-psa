@@ -235,6 +235,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx` now renders the same business-language cadence-owner chooser used by the fixed contract-line editor, with the contract-anniversary option visibly staged but disabled during rollout
   - `packages/billing/tests/contractWizardResume.test.tsx` now proves both sides of the wizard contract: new recurring lines submit `cadence_owner: 'client'`, and resumed draft flows keep a stored `cadence_owner` value across step transitions
   - `packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts` now locks the source-level seams so future edits cannot silently drop cadence owner from wizard defaults, template snapshot application, or fixed-fee UI copy
+- (2026-03-17) Template-authored recurring defaults now carry cadence owner instead of silently dropping it between wizard state and stored template lines:
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx` now defaults template wizard state to `cadence_owner: 'client'`, keeps that value through reset paths, and submits it in `buildSubmissionData()`
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.tsx` now renders the staged cadence-owner chooser in business language so template authors see the same client-schedule versus contract-anniversary framing as live contract authors
+  - `packages/billing/src/actions/contractWizardActions.ts` now persists `cadence_owner: submission.cadence_owner ?? 'client'` on all template-authored contract lines created by the wizard, which keeps future template snapshot and clone flows from losing the default at write time
+  - `packages/billing/tests/templateWizardBucketOverlay.test.ts` and `packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts` now prove the default submits as `'client'` and that the UI/state/write seams stay source-backed
 - (2026-03-17) Cadence-owner persistence is now explicit in live code, not only in domain types:
   - `server/migrations/20260317170000_add_cadence_owner_to_contract_lines.cjs` adds `contract_lines.cadence_owner` with default/backfill to `'client'` plus a check constraint for `client|contract`
   - `packages/types/src/interfaces/billing.interfaces.ts`, `packages/types/src/interfaces/contract.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `server/src/interfaces/contract.interfaces.ts` now expose `cadence_owner` on live contract-line and mapping interfaces
@@ -395,6 +400,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts --coverage.enabled false`
 - (2026-03-17) Contract wizard cadence-owner validation:
   - `npx vitest run ../packages/billing/tests/contractWizardResume.test.tsx ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Template wizard cadence-owner validation:
+  - `npx vitest run ../packages/billing/tests/templateWizardBucketOverlay.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Cadence-owner persistence validation:
   - `npx vitest run src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts --coverage.enabled false`
