@@ -70,6 +70,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - an initial bug surfaced immediately in unit tests: subtracting raw day counts broke monthly arrears across month-length changes (`2025-02-01` had incorrectly mapped back to `2025-01-04`); the helper now subtracts billing-cycle calendar units instead
   - the old arrears-specific skip/clamp branch is gone from the fixed path because empty coverage now returns `null` before charge generation
   - the advance termination credit branch is still live when fixed-proration remains disabled; that is the next incomplete seam (`F044+`), not part of this checkpoint
+- (2026-03-17) The next fixed-recurring checkpoint removed the remaining advance-only special case:
+  - `BillingEngine.calculateFixedPriceCharges` no longer emits separate negative advance termination credit rows through `buildAdvanceTerminationCredits`
+  - fixed custom-rate, pricing-schedule override, and FMV allocation paths now flow through one post-generation settlement step when canonical coverage must scale amounts
+  - advance final periods without fixed-proration enabled now reuse the canonical coverage ratio with legacy net-of-unused rounding, so the resulting single positive charge matches prior net billing without carrying a synthetic arrears credit row
+  - this checkpoint also closed two previously hidden seams in the fixed path: custom-rate override charges and pricing-schedule override charges had been bypassing all shared post-processing after an early return
 - (2026-03-16) `packages/billing/src/lib/billing/billingEngine.ts` currently mixes several timing models:
   - `resolveServicePeriod`
   - advance vs arrears branching
@@ -134,6 +139,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
   - `npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts --coverage.enabled false`
     - blocked locally by `ECONNREFUSED` to Postgres on `127.0.0.1:5438`
+- (2026-03-17) Fixed settlement follow-up validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+  - `npx vitest run src/test/unit/billingEngine.test.ts --coverage.enabled false`
+    - broad legacy unit file currently fails outside this seam because its harness no longer satisfies unrelated `BillingEngine` query expectations (`this.knex.select` in `calculateMaterialCharges`, missing client lookup mocks in older pricing-schedule tests)
 
 ## Links / References
 

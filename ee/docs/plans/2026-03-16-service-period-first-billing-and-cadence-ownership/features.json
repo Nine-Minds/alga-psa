@@ -260,25 +260,25 @@
   {
     "id": "F044",
     "description": "Replace advance termination credit special casing with canonical partial-period settlement for fixed recurring charges",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F045",
     "description": "Preserve FMV allocation behavior while changing only the timing source for fixed recurring charges",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {
     "id": "F046",
     "description": "Preserve pricing-schedule override precedence for fixed recurring charges under service-period-first timing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {
     "id": "F047",
     "description": "Preserve contract-level custom rate behavior for fixed recurring lines under service-period-first timing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {
