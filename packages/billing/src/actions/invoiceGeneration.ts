@@ -14,6 +14,7 @@ import { Session } from 'next-auth';
 import {
   IInvoiceCharge,
   IInvoice,
+  IRecurringDueSelectionInput,
   PreviewInvoiceResponse,
   InvoiceViewModel
 } from '@alga-psa/types';
@@ -48,6 +49,10 @@ import {
   getClientContractPurchaseOrderContext,
   getPurchaseOrderConsumedCents
 } from '@alga-psa/billing/services/purchaseOrderService';
+import {
+  buildBillingCycleDueSelectionInput,
+  buildRecurringRunSelectionIdentity as buildSelectionIdentity,
+} from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 
@@ -150,28 +155,48 @@ export async function calculateBillingForInvoiceWindow(input: {
   cycleEnd: ISO8601String;
   billingCycleId: string;
 }) {
+  return calculateBillingForSelectionInput({
+    billingEngine: input.billingEngine,
+    selectorInput: buildBillingCycleDueSelectionInput({
+      clientId: input.clientId,
+      billingCycleId: input.billingCycleId,
+      windowStart: input.cycleStart,
+      windowEnd: input.cycleEnd,
+    }),
+  });
+}
+
+export async function calculateBillingForSelectionInput(input: {
+  billingEngine: BillingEngine;
+  selectorInput: IRecurringDueSelectionInput;
+}) {
   const recurringTimingSelections =
     await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
-      input.clientId,
-      input.cycleStart,
-      input.cycleEnd,
-      input.billingCycleId,
+      input.selectorInput.clientId,
+      input.selectorInput.windowStart,
+      input.selectorInput.windowEnd,
+      input.selectorInput.billingCycleId ?? input.selectorInput.executionWindow.identityKey,
     );
 
   const canonicalBillingResult = await input.billingEngine.calculateBilling(
-    input.clientId,
-    input.cycleStart,
-    input.cycleEnd,
-    input.billingCycleId,
+    input.selectorInput.clientId,
+    input.selectorInput.windowStart,
+    input.selectorInput.windowEnd,
+    input.selectorInput.billingCycleId ?? input.selectorInput.executionWindow.identityKey,
     { recurringTimingSelections },
   );
 
   await runRecurringBillingComparisonMode({
     billingEngine: input.billingEngine,
-    clientId: input.clientId,
-    cycleStart: input.cycleStart,
-    cycleEnd: input.cycleEnd,
-    billingCycleId: input.billingCycleId,
+    clientId: input.selectorInput.clientId,
+    cycleStart: input.selectorInput.windowStart,
+    cycleEnd: input.selectorInput.windowEnd,
+    billingCycleId: input.selectorInput.billingCycleId ?? input.selectorInput.executionWindow.identityKey,
+    comparisonTrace: {
+      executionIdentityKeys: [input.selectorInput.executionWindow.identityKey],
+      executionWindowKinds: [input.selectorInput.executionWindow.kind],
+      selectionKey: buildSelectionIdentity([input.selectorInput.executionWindow]).selectionKey,
+    },
     canonicalBillingResult,
   });
 
@@ -241,6 +266,11 @@ async function runRecurringBillingComparisonMode(input: {
   cycleStart: ISO8601String;
   cycleEnd: ISO8601String;
   billingCycleId: string;
+  comparisonTrace?: {
+    executionIdentityKeys: string[];
+    executionWindowKinds: string[];
+    selectionKey: string;
+  };
   canonicalBillingResult: IBillingResult;
 }) {
   if (getRecurringBillingComparisonMode() !== 'legacy-vs-canonical') {
@@ -260,6 +290,9 @@ async function runRecurringBillingComparisonMode(input: {
         '[recurring-billing-comparison] Drift detected between canonical and legacy-style invoice-window billing results.',
         {
           billingCycleId: input.billingCycleId,
+          selectionKey: input.comparisonTrace?.selectionKey,
+          executionIdentityKeys: input.comparisonTrace?.executionIdentityKeys,
+          executionWindowKinds: input.comparisonTrace?.executionWindowKinds,
           canonical: createRecurringBillingComparisonSnapshot(input.canonicalBillingResult),
           legacy: createRecurringBillingComparisonSnapshot(legacyBillingResult),
         },
@@ -270,6 +303,9 @@ async function runRecurringBillingComparisonMode(input: {
       '[recurring-billing-comparison] Comparison mode failed; canonical billing result was preserved.',
       {
         billingCycleId: input.billingCycleId,
+        selectionKey: input.comparisonTrace?.selectionKey,
+        executionIdentityKeys: input.comparisonTrace?.executionIdentityKeys,
+        executionWindowKinds: input.comparisonTrace?.executionWindowKinds,
         error,
       },
     );

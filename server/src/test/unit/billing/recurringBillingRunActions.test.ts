@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  buildClientBillingCycleExecutionWindow,
+  buildContractCadenceExecutionWindow,
+} from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 const mocks = vi.hoisted(() => ({
   getCurrentUserAsync: vi.fn(),
@@ -93,6 +97,8 @@ describe('recurring billing run actions', () => {
       runId: result.runId,
       startedAt: expect.any(String),
       initiatedByUserId: 'user-1',
+      selectionKey: expect.stringContaining('recurring-run-selection:'),
+      retryKey: expect.stringContaining('recurring-run-retry:'),
       selectionMode: 'due_service_periods',
       windowIdentity: 'billing_cycle_window',
       executionWindowKinds: ['billing_cycle_window'],
@@ -100,6 +106,8 @@ describe('recurring billing run actions', () => {
     expect(mocks.buildRecurringBillingRunCompletedPayload).toHaveBeenCalledWith({
       runId: result.runId,
       completedAt: expect.any(String),
+      selectionKey: result.selectionKey,
+      retryKey: result.retryKey,
       invoicesCreated: 1,
       failedCount: 0,
       selectionMode: 'due_service_periods',
@@ -163,11 +171,68 @@ describe('recurring billing run actions', () => {
     expect(mocks.buildRecurringBillingRunCompletedPayload).toHaveBeenCalledWith({
       runId: result.runId,
       completedAt: expect.any(String),
+      selectionKey: result.selectionKey,
+      retryKey: result.retryKey,
       invoicesCreated: 1,
       failedCount: 0,
       selectionMode: 'due_service_periods',
       windowIdentity: 'billing_cycle_window',
       executionWindowKinds: ['billing_cycle_window'],
     });
+  });
+
+  it('T184: recurring run retries keep a deterministic selection and retry key even when execution-window order changes', async () => {
+    const firstResult = await generateInvoicesAsRecurringBillingRun({
+      targets: [
+        {
+          billingCycleId: 'cycle-2',
+          executionWindow: buildContractCadenceExecutionWindow({
+            clientId: 'client-1',
+            contractId: 'contract-1',
+            contractLineId: 'line-1',
+            windowStart: '2025-02-08',
+            windowEnd: '2025-03-08',
+          }),
+        },
+        {
+          billingCycleId: 'cycle-1',
+          executionWindow: buildClientBillingCycleExecutionWindow({
+            billingCycleId: 'cycle-1',
+            clientId: 'client-1',
+            windowStart: '2025-02-01',
+            windowEnd: '2025-03-01',
+          }),
+        },
+      ],
+    });
+    const secondResult = await generateInvoicesAsRecurringBillingRun({
+      targets: [
+        {
+          billingCycleId: 'cycle-1',
+          executionWindow: buildClientBillingCycleExecutionWindow({
+            billingCycleId: 'cycle-1',
+            clientId: 'client-1',
+            windowStart: '2025-02-01',
+            windowEnd: '2025-03-01',
+          }),
+        },
+        {
+          billingCycleId: 'cycle-2',
+          executionWindow: buildContractCadenceExecutionWindow({
+            clientId: 'client-1',
+            contractId: 'contract-1',
+            contractLineId: 'line-1',
+            windowStart: '2025-02-08',
+            windowEnd: '2025-03-08',
+          }),
+        },
+      ],
+    });
+
+    expect(firstResult.runId).not.toBe(secondResult.runId);
+    expect(firstResult.selectionKey).toBe(secondResult.selectionKey);
+    expect(firstResult.retryKey).toBe(secondResult.retryKey);
+    expect(firstResult.selectionKey).toContain('billing_cycle_window:client:client-1:cycle-1:2025-02-01:2025-03-01');
+    expect(firstResult.selectionKey).toContain('contract_cadence_window:contract:client-1:contract-1:line-1:2025-02-08:2025-03-08');
   });
 });

@@ -1594,7 +1594,7 @@
   {
     "id": "T183",
     "description": "Background job payloads can select due recurring service periods without requiring a raw billingCycleId input",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F152"
     ]
@@ -1602,7 +1602,7 @@
   {
     "id": "T184",
     "description": "Recurring run retries remain idempotent when due service periods rather than billingCycleId drive execution",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F153"
     ]
@@ -1610,7 +1610,7 @@
   {
     "id": "T185",
     "description": "Comparison-mode execution records preserve enough identity metadata to compare legacy and canonical recurring outputs safely",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F154"
     ]

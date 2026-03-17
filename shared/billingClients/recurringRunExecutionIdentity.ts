@@ -1,7 +1,14 @@
 import type {
+  IRecurringDueSelectionInput,
   IRecurringRunExecutionWindowIdentity,
   RecurringRunExecutionWindowKind,
 } from '@alga-psa/types';
+
+export interface RecurringRunSelectionIdentity {
+  executionIdentityKeys: string[];
+  selectionKey: string;
+  retryKey: string;
+}
 
 function compactIdentitySegments(segments: Array<string | null | undefined>): string[] {
   return segments
@@ -72,4 +79,60 @@ export function listRecurringRunExecutionWindowKinds(
   windows: Array<Pick<IRecurringRunExecutionWindowIdentity, 'kind'>>,
 ): RecurringRunExecutionWindowKind[] {
   return Array.from(new Set(windows.map((window) => window.kind))).sort() as RecurringRunExecutionWindowKind[];
+}
+
+export function buildRecurringRunSelectionIdentity(
+  windows: Array<Pick<IRecurringRunExecutionWindowIdentity, 'identityKey'>>,
+): RecurringRunSelectionIdentity {
+  const executionIdentityKeys = Array.from(
+    new Set(windows.map((window) => window.identityKey).filter(Boolean)),
+  ).sort();
+  const keyBody = executionIdentityKeys.join('|');
+
+  return {
+    executionIdentityKeys,
+    selectionKey: `recurring-run-selection:${keyBody}`,
+    retryKey: `recurring-run-retry:${keyBody}`,
+  };
+}
+
+export function buildBillingCycleDueSelectionInput(input: {
+  clientId: string;
+  billingCycleId: string;
+  windowStart: string;
+  windowEnd: string;
+}): IRecurringDueSelectionInput {
+  return {
+    clientId: input.clientId,
+    billingCycleId: input.billingCycleId,
+    windowStart: input.windowStart,
+    windowEnd: input.windowEnd,
+    executionWindow: buildClientBillingCycleExecutionWindow({
+      billingCycleId: input.billingCycleId,
+      clientId: input.clientId,
+      windowStart: input.windowStart,
+      windowEnd: input.windowEnd,
+    }),
+  };
+}
+
+export function buildContractCadenceDueSelectionInput(input: {
+  clientId: string;
+  windowStart: string;
+  windowEnd: string;
+  contractId?: string | null;
+  contractLineId?: string | null;
+}): IRecurringDueSelectionInput {
+  return {
+    clientId: input.clientId,
+    windowStart: input.windowStart,
+    windowEnd: input.windowEnd,
+    executionWindow: buildContractCadenceExecutionWindow({
+      clientId: input.clientId,
+      contractId: input.contractId ?? null,
+      contractLineId: input.contractLineId ?? null,
+      windowStart: input.windowStart,
+      windowEnd: input.windowEnd,
+    }),
+  };
 }

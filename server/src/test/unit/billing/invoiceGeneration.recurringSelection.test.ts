@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { calculateBillingForInvoiceWindow } from '@alga-psa/billing/actions/invoiceGeneration';
+import {
+  calculateBillingForInvoiceWindow,
+  calculateBillingForSelectionInput,
+} from '@alga-psa/billing/actions/invoiceGeneration';
+import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 const originalComparisonMode = process.env.RECURRING_BILLING_COMPARISON_MODE;
 
@@ -63,6 +67,62 @@ describe('invoice generation recurring selection', () => {
       billingEngine.selectDueRecurringServicePeriodsForBillingWindow.mock
         .invocationCallOrder[0],
     ).toBeLessThan(billingEngine.calculateBilling.mock.invocationCallOrder[0]);
+    expect(result).toBe(billingResult);
+  });
+
+  it('T183: background invoice-generation selector inputs can choose due recurring service periods without requiring a raw billingCycleId', async () => {
+    const recurringTimingSelections = {
+      'contract-line-1': {
+        duePosition: 'advance',
+        servicePeriodStart: '2025-02-08',
+        servicePeriodEnd: '2025-03-08',
+        servicePeriodStartExclusive: '2025-02-08',
+        servicePeriodEndExclusive: '2025-03-09',
+        coverageRatio: 1,
+      },
+    };
+    const billingResult = {
+      charges: [],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 0,
+      finalAmount: 0,
+      currency_code: 'USD',
+    };
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+    const billingEngine = {
+      selectDueRecurringServicePeriodsForBillingWindow: vi
+        .fn()
+        .mockResolvedValue(recurringTimingSelections),
+      calculateBilling: vi.fn().mockResolvedValue(billingResult),
+    } as any;
+
+    const result = await calculateBillingForSelectionInput({
+      billingEngine,
+      selectorInput,
+    });
+
+    expect(
+      billingEngine.selectDueRecurringServicePeriodsForBillingWindow,
+    ).toHaveBeenCalledWith(
+      'client-1',
+      '2025-02-08',
+      '2025-03-08',
+      selectorInput.executionWindow.identityKey,
+    );
+    expect(billingEngine.calculateBilling).toHaveBeenCalledWith(
+      'client-1',
+      '2025-02-08',
+      '2025-03-08',
+      selectorInput.executionWindow.identityKey,
+      { recurringTimingSelections },
+    );
     expect(result).toBe(billingResult);
   });
 
@@ -157,6 +217,79 @@ describe('invoice generation recurring selection', () => {
       }),
     );
     expect(result).toBe(canonicalBillingResult);
+  });
+
+  it('T185: comparison-mode traces include deterministic execution identity metadata for the compared recurring window', async () => {
+    process.env.RECURRING_BILLING_COMPARISON_MODE = 'legacy-vs-canonical';
+
+    const recurringTimingSelections = {
+      'contract-line-1': {
+        duePosition: 'advance',
+        servicePeriodStart: '2025-02-08',
+        servicePeriodEnd: '2025-03-08',
+        servicePeriodStartExclusive: '2025-02-08',
+        servicePeriodEndExclusive: '2025-03-09',
+        coverageRatio: 1,
+      },
+    };
+    const canonicalBillingResult = {
+      charges: [],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 0,
+      finalAmount: 0,
+      currency_code: 'USD',
+    };
+    const legacyBillingResult = {
+      charges: [
+        {
+          type: 'fixed',
+          client_contract_line_id: 'contract-line-1',
+          serviceId: 'service-1',
+          total: 125,
+          servicePeriodStart: '2025-02-08',
+          servicePeriodEnd: '2025-03-08',
+          billingTiming: 'advance',
+        },
+      ],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 125,
+      finalAmount: 125,
+      currency_code: 'USD',
+    };
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+    const billingEngine = {
+      selectDueRecurringServicePeriodsForBillingWindow: vi
+        .fn()
+        .mockResolvedValue(recurringTimingSelections),
+      calculateBilling: vi
+        .fn()
+        .mockResolvedValueOnce(canonicalBillingResult)
+        .mockResolvedValueOnce(legacyBillingResult),
+    } as any;
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await calculateBillingForSelectionInput({
+      billingEngine,
+      selectorInput,
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[recurring-billing-comparison] Drift detected between canonical and legacy-style invoice-window billing results.',
+      expect.objectContaining({
+        billingCycleId: selectorInput.executionWindow.identityKey,
+        selectionKey: expect.stringContaining('recurring-run-selection:'),
+        executionIdentityKeys: [selectorInput.executionWindow.identityKey],
+        executionWindowKinds: ['contract_cadence_window'],
+      }),
+    );
   });
 
   it('T157: comparison mode ignores out-of-scope time, usage, and material drift so the first cutover only compares recurring-backed charges', async () => {

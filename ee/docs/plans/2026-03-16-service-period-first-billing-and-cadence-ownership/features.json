@@ -1361,7 +1361,7 @@
   {
     "id": "F152",
     "description": "Define the job payload schema and selector inputs for choosing due recurring service periods in background invoice-generation flows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 5",
       "Invoice and billing-flow requirements"
@@ -1370,7 +1370,7 @@
   {
     "id": "F153",
     "description": "Define idempotency keys and retry semantics for recurring runs once due service periods rather than billingCycleId drive execution",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 5",
       "Invoice and billing-flow requirements"
@@ -1379,7 +1379,7 @@
   {
     "id": "F154",
     "description": "Define comparison-mode execution identity and parity-trace metadata so legacy and canonical recurring outputs can be compared safely during rollout",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Implementation Sequence",
       "Inventory and parity requirements"

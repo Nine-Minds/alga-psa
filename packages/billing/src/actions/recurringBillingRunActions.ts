@@ -5,6 +5,7 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getCurrentUserAsync } from '../lib/authHelpers';
 import { DUPLICATE_RECURRING_INVOICE_CODE, generateInvoice } from './invoiceGeneration';
 import {
+  buildRecurringRunSelectionIdentity,
   buildClientBillingCycleExecutionWindow,
   listRecurringRunExecutionWindowKinds,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
@@ -32,6 +33,8 @@ export type RecurringBillingRunTarget = {
 
 export type RecurringBillingRunResult = {
   runId: string;
+  selectionKey: string;
+  retryKey: string;
   invoicesCreated: number;
   failedCount: number;
   failures: RecurringBillingRunInvoiceFailure[];
@@ -85,6 +88,9 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
   const executionWindowKinds = listRecurringRunExecutionWindowKinds(
     targets.map((target) => target.executionWindow),
   );
+  const selectionIdentity = buildRecurringRunSelectionIdentity(
+    targets.map((target) => target.executionWindow),
+  );
 
   const startedAt = new Date().toISOString();
   await publishWorkflowEvent({
@@ -93,6 +99,8 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
       runId,
       startedAt,
       initiatedByUserId: actorUserId,
+      selectionKey: selectionIdentity.selectionKey,
+      retryKey: selectionIdentity.retryKey,
       selectionMode: 'due_service_periods',
       windowIdentity: 'billing_cycle_window',
       executionWindowKinds,
@@ -137,6 +145,8 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
       payload: buildRecurringBillingRunCompletedPayload({
         runId,
         completedAt,
+        selectionKey: selectionIdentity.selectionKey,
+        retryKey: selectionIdentity.retryKey,
         invoicesCreated,
         failedCount: failures.length,
         selectionMode: 'due_service_periods',
@@ -154,6 +164,8 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
 
     return {
       runId,
+      selectionKey: selectionIdentity.selectionKey,
+      retryKey: selectionIdentity.retryKey,
       invoicesCreated,
       failedCount: failures.length,
       failures,
@@ -170,6 +182,8 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
         failedAt,
         errorMessage,
         retryable: true,
+        selectionKey: selectionIdentity.selectionKey,
+        retryKey: selectionIdentity.retryKey,
         selectionMode: 'due_service_periods',
         windowIdentity: 'billing_cycle_window',
         executionWindowKinds,

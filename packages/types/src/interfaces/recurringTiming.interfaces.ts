@@ -102,6 +102,14 @@ export interface IRecurringRunExecutionWindowIdentity {
   windowEnd?: ISO8601String | null;
 }
 
+export interface IRecurringDueSelectionInput {
+  clientId: string;
+  windowStart: ISO8601String;
+  windowEnd: ISO8601String;
+  billingCycleId?: string | null;
+  executionWindow: IRecurringRunExecutionWindowIdentity;
+}
+
 export interface ICadenceBoundaryGeneratorInput {
   cadenceOwner: CadenceOwner;
   duePosition: DuePosition;
