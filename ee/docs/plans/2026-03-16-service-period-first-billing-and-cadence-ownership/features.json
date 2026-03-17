@@ -1604,7 +1604,7 @@
   {
     "id": "F179",
     "description": "Define percentage-discount and net-total recalculation semantics when recurring invoice lines are backed by canonical detail periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Dependent recurring behavior requirements",
       "Read-model and post-persist lifecycle requirements"
@@ -1613,7 +1613,7 @@
   {
     "id": "F180",
     "description": "Define zero-dollar invoice finalization behavior under service-period-first billing so recurring edge cases do not bypass canonical persistence rules",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "Risks"
@@ -1622,7 +1622,7 @@
   {
     "id": "F181",
     "description": "Define the manual-invoice policy for service-period fields, including whether manually entered lines remain intentionally periodless or can carry canonical periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "Open Questions"

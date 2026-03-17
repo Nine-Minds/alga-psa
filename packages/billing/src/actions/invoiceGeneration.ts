@@ -44,6 +44,7 @@ import { applyCreditToInvoice } from './creditActions';
 import { getCurrencySymbol } from '@alga-psa/core';
 import { getInitialInvoiceTaxSource, shouldUseTaxDelegation } from './taxSourceActions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { finalizeInvoiceWithKnex } from './invoiceModification';
 import {
   computePurchaseOrderOverage,
   getClientContractPurchaseOrderContext,
@@ -205,6 +206,14 @@ function buildPreviewViewModelItem(item: IInvoiceCharge) {
     billingTiming: recurringSummary.billingTiming,
     recurringDetailPeriods: recurringSummary.recurringDetailPeriods,
   };
+}
+
+function hasPersistedInvoiceContent(billingResult: IBillingResult): boolean {
+  return (
+    (billingResult.charges?.length ?? 0) > 0 ||
+    (billingResult.discounts?.length ?? 0) > 0 ||
+    (billingResult.adjustments?.length ?? 0) > 0
+  );
 }
 
 // TODO: Move to billingAndTax.ts
@@ -999,9 +1008,14 @@ export const generateInvoice = withAuth(async (
     throw new Error('No billing settings found');
   }
 
-  // Handle zero-dollar invoices
-  if (billingResult.charges.length === 0 && billingResult.finalAmount === 0) {
-    if (settings.zero_dollar_invoice_handling === 'suppress') {
+  const zeroDollarInvoice = billingResult.finalAmount === 0;
+  const zeroDollarHasPersistableContent = hasPersistedInvoiceContent(billingResult);
+
+  // Handle zero-dollar invoices. Empty windows may still be suppressed, but
+  // zero-dollar invoices with real persisted billing content must be created so
+  // canonical recurring detail rows and other financial artifacts are not lost.
+  if (zeroDollarInvoice) {
+    if (settings.zero_dollar_invoice_handling === 'suppress' && !zeroDollarHasPersistableContent) {
       return null;
     }
 
@@ -1015,9 +1029,7 @@ export const generateInvoice = withAuth(async (
     );
 
     if (settings.zero_dollar_invoice_handling === 'finalized') {
-      // TODO: Import finalizeInvoiceWithKnex from invoiceModification.ts once created
-      // await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, user.user_id);
-      console.warn('finalizeInvoiceWithKnex needs to be imported and called here for zero-dollar finalized invoices.');
+      await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, user.user_id);
     }
 
 console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);

@@ -141,10 +141,76 @@ export function calculateNetAmount(
   }
 }
 
+export async function recalculatePercentageDiscountInvoiceCharges(
+  tx: Knex.Transaction,
+  invoiceId: string,
+  tenant: string,
+  existingInvoiceItems?: ManualInvoiceItem[],
+): Promise<ManualInvoiceItem[]> {
+  const invoiceItems: ManualInvoiceItem[] = existingInvoiceItems ??
+    await tx('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant })
+      .select('*');
+
+  const percentageDiscountItems = invoiceItems.filter(
+    (item) =>
+      item.is_discount === true &&
+      item.discount_type === 'percentage' &&
+      item.discount_percentage != null,
+  );
+
+  if (percentageDiscountItems.length === 0) {
+    return invoiceItems;
+  }
+
+  const nonDiscountItems = invoiceItems.filter((item) => item.is_discount !== true);
+  const subtotal = nonDiscountItems.reduce(
+    (sum, item) => sum + Number(item.net_amount || 0),
+    0,
+  );
+  const nonDiscountAmountsById = new Map(
+    nonDiscountItems.map((item) => [item.item_id, Number(item.net_amount || 0)]),
+  );
+  const normalizedInvoiceItems = invoiceItems.map((item) => ({ ...item }));
+
+  for (const discountItem of percentageDiscountItems) {
+    const applicableAmount = discountItem.applies_to_item_id
+      ? (nonDiscountAmountsById.get(discountItem.applies_to_item_id) ?? 0)
+      : subtotal;
+    const recalculatedNetAmount = -Math.round(
+      (applicableAmount * Number(discountItem.discount_percentage || 0)) / 100,
+    );
+
+    if (
+      Number(discountItem.net_amount || 0) !== recalculatedNetAmount ||
+      Number(discountItem.total_price || 0) !== recalculatedNetAmount
+    ) {
+      await tx('invoice_charges')
+        .where({ item_id: discountItem.item_id, tenant })
+        .update({
+          net_amount: recalculatedNetAmount,
+          total_price: recalculatedNetAmount,
+        });
+    }
+
+    const normalizedItem = normalizedInvoiceItems.find(
+      (item) => item.item_id === discountItem.item_id,
+    );
+    if (normalizedItem) {
+      normalizedItem.net_amount = recalculatedNetAmount;
+      normalizedItem.total_price = recalculatedNetAmount;
+    }
+  }
+
+  return normalizedInvoiceItems;
+}
+
 /**
  * Persists manual invoice items to the database.
  * Handles both regular manual items and manual discount items.
  * Resolves service ID references for discounts.
+ * Manual invoice rows remain intentionally periodless: they do not create
+ * canonical invoice_charge_details rows or own recurring service-period truth.
  * @returns The subtotal of the persisted manual items.
  */
 export async function persistManualInvoiceCharges(
@@ -799,9 +865,19 @@ export async function calculateAndDistributeTax(
     .first();
   const currencyCode = invoiceForCurrency?.currency_code || 'USD';
 
-  const invoiceItems: ManualInvoiceItem[] = await tx('invoice_charges') // Use ManualInvoiceItem type for base structure
+  let invoiceItems: ManualInvoiceItem[] = await tx('invoice_charges') // Use ManualInvoiceItem type for base structure
     .where({ invoice_id: invoiceId, tenant })
     .select('*');
+  // Percentage discounts remain financial-only rows even when the invoice also
+  // contains canonical recurring detail-backed charges. Recalculate them from
+  // the current non-discount subtotal or targeted line amount before tax and
+  // total recomputation so recurring detail provenance stays on the source rows.
+  invoiceItems = await recalculatePercentageDiscountInvoiceCharges(
+    tx,
+    invoiceId,
+    tenant,
+    invoiceItems,
+  );
   console.log(`[calculateAndDistributeTax] Fetched ${invoiceItems.length} invoice items:`, JSON.stringify(invoiceItems.map(i => ({id: i.item_id, desc: i.description, net: i.net_amount, tax: i.tax_amount, taxable: i.is_taxable, region: i.tax_region, is_discount: i.is_discount})), null, 2));
 
   // Only fixed-plan parents should be treated as consolidated tax carriers.

@@ -39,6 +39,17 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Manual invoice lines now have an explicit periodless policy contract, which closes `F181` and `T211`:
+  - `packages/billing/src/services/invoiceService.ts` now documents the intended boundary at the persistence seam: manually entered invoice rows remain periodless financial rows and do not create canonical `invoice_charge_details` or claim recurring service-period truth
+  - `server/src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts` now proves both a manual line and a manual percentage discount persist without `service_period_*` or `billing_timing` fields while still calculating their net amounts correctly
+- (2026-03-17) Zero-dollar recurring invoice handling now preserves canonical persistence instead of treating every zero-dollar result like an empty billing window, which closes `F180` and `T210`:
+  - `packages/billing/src/actions/invoiceGeneration.ts` now treats `finalAmount === 0` as a dedicated policy seam: empty no-content windows can still be suppressed, but zero-dollar invoices with real charges/discounts/adjustments are still created so recurring detail-backed invoice content is not silently skipped
+  - the `finalized` zero-dollar setting is now live for that path via `finalizeInvoiceWithKnex(...)`, so a zero-dollar recurring invoice can still end the run in a finalized state after canonical persistence occurs
+  - focused executable coverage now lives in `server/src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts`, while `server/src/test/unit/billing/invoiceGeneration.emptyResult.test.ts` remains the guard that truly empty no-charge windows still respect the suppress setting
+- (2026-03-17) Percentage-discount recalculation now has an explicit service-period-first contract, which closes `F179` and `T209`:
+  - `packages/billing/src/services/invoiceService.ts` now recalculates manual percentage-discount rows from the current non-discount invoice subtotal or targeted line amount before tax and final totals are recomputed, so recurring detail-backed charges can change the discount base without losing their own canonical service-period provenance
+  - the policy is now explicit in code rather than accidental: percentage discount rows stay financial-only rows with no service-period truth of their own, while the recurring lines they discount keep the authoritative service-period metadata
+  - focused executable coverage now lives in `server/src/test/unit/billing/invoiceService.percentageDiscountRecalculation.test.ts`, which proves a recurring line plus manual percentage discount rehydrates to the correct discount amount and final invoice totals
 - (2026-03-17) Billed-through enforcement is now explicitly locked to canonical detail periods instead of invoice-header period fields, which closes `F171` and `T201`:
   - `packages/billing/src/lib/billing/billingEngine.ts` was already reading duplicate-prevention state from `invoice_charge_details.service_period_start`, `invoice_charge_details.service_period_end`, and `invoice_charge_details.billing_timing` via `hasExistingServicePeriodCharge(...)`; this checkpoint made that lifecycle-enforcement contract explicit rather than leaving it implicit in the helper
   - `server/src/test/unit/billing/billingEngine.billedThroughReader.test.ts` now proves the reader targets `invoice_charge_details as iid` plus detail-period fields and does not query `billing_period_end` from invoice headers, while the existing `T087` runtime regression in `server/src/test/unit/billing/billingEngine.timing.test.ts` remains the behavior-level guard that an already-persisted advance service period is skipped even when the enclosing invoice window metadata is later
@@ -1067,6 +1078,19 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run ../packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx -t "T208" --coverage.enabled false`
     - run from `server/` so Vitest uses the existing workspace alias config for package billing component tests
   - `npx vitest run ../packages/billing/tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-17) Percentage-discount recalculation validation:
+  - `npx vitest run src/test/unit/billing/invoiceService.percentageDiscountRecalculation.test.ts src/test/unit/billing/billingEngine.recalculateInvoice.detailPeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Zero-dollar recurring finalization validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.emptyResult.test.ts src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Manual invoice period-policy validation:
+  - `npx vitest run src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts src/test/unit/billing/invoiceService.percentageDiscountRecalculation.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
