@@ -302,7 +302,7 @@
   {
     "id": "F051",
     "description": "Define how bucket or allowance periods map onto canonical recurring service periods for recurring bucket contract lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {

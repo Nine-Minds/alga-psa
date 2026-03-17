@@ -2837,7 +2837,7 @@ export class BillingEngine {
 
     // Process each bucket configuration
     const bucketChargesPromises = bucketConfigs.map(
-      async (bucketConfig): Promise<IBucketCharge | null> => {
+      async (bucketConfig): Promise<IBucketCharge[]> => {
         // Pull usage records captured for bucket plans within this billing period
         const usageRecords = await this.knex("bucket_usage")
           .where({
@@ -2851,14 +2851,40 @@ export class BillingEngine {
           .select("*");
 
         if (usageRecords.length === 0) {
-          return null;
+          return [];
         }
 
-        // Normalize usage aggregates, accommodating legacy hour columns
-        let minutesUsed = 0;
-        let overageMinutes = 0;
+        const usageByPeriod = new Map<
+          string,
+          {
+            periodStart: ISO8601String;
+            periodEnd: ISO8601String;
+            minutesUsed: number;
+            overageMinutes: number;
+          }
+        >();
 
         for (const record of usageRecords) {
+          const periodStart = record.period_start
+            ? toISODate(toPlainDate(record.period_start))
+            : toISODate(toPlainDate(billingPeriod.startDate));
+          const periodEnd = record.period_end
+            ? toISODate(toPlainDate(record.period_end))
+            : toISODate(
+                toPlainDate(billingPeriod.endDate).subtract({ days: 1 }),
+              );
+          const periodKey = `${periodStart}:${periodEnd}`;
+
+          if (!usageByPeriod.has(periodKey)) {
+            usageByPeriod.set(periodKey, {
+              periodStart,
+              periodEnd,
+              minutesUsed: 0,
+              overageMinutes: 0,
+            });
+          }
+
+          const periodUsage = usageByPeriod.get(periodKey)!;
           const recordMinutesUsed =
             Number(record.minutes_used ?? 0) ||
             (record.hours_used !== undefined
@@ -2870,35 +2896,43 @@ export class BillingEngine {
               ? Number(record.overage_hours) * 60
               : 0);
 
-          minutesUsed += recordMinutesUsed;
-          overageMinutes += recordOverageMinutes;
+          periodUsage.minutesUsed += recordMinutesUsed;
+          periodUsage.overageMinutes += recordOverageMinutes;
         }
 
-        // Some datasets rely on inferred overage when explicit values are absent
         const configuredMinutes =
           bucketConfig.total_minutes ??
           (bucketConfig.total_hours !== undefined
             ? Number(bucketConfig.total_hours) * 60
             : 0);
-        if (!overageMinutes && configuredMinutes) {
-          overageMinutes = Math.max(0, minutesUsed - configuredMinutes);
-        }
 
-        const hoursUsed = minutesUsed / 60;
-        const overageHours = overageMinutes / 60;
+        const bucketCharges: IBucketCharge[] = [];
+        for (const usagePeriod of Array.from(usageByPeriod.values()).sort((a, b) =>
+          a.periodStart.localeCompare(b.periodStart),
+        )) {
+          let overageMinutes = usagePeriod.overageMinutes;
+          if (!overageMinutes && configuredMinutes) {
+            overageMinutes = Math.max(
+              0,
+              usagePeriod.minutesUsed - configuredMinutes,
+            );
+          }
 
-        if (overageHours > 0) {
-          // Determine tax info using the helper function
+          const hoursUsed = usagePeriod.minutesUsed / 60;
+          const overageHours = overageMinutes / 60;
+          if (overageHours <= 0) {
+            continue;
+          }
+
           const { taxRegion: serviceTaxRegion, isTaxable } =
             await this.getTaxInfoFromService({
               service_id: bucketConfig.service_id,
-              tax_rate_id: bucketConfig.tax_rate_id, // Pass the fetched tax_rate_id
+              tax_rate_id: bucketConfig.tax_rate_id,
             });
 
           const overageRate = Math.ceil(bucketConfig.overage_rate);
           const total = Math.ceil(overageHours * overageRate);
 
-          // Calculate tax amount (will be recalculated later)
           let taxAmount = 0;
           let taxRate = 0;
           const effectiveTaxRegion =
@@ -2912,7 +2946,7 @@ export class BillingEngine {
               const taxResult = await taxServiceInstance.calculateTax(
                 client.client_id,
                 total,
-                billingPeriod.endDate,
+                usagePeriod.periodEnd,
                 effectiveTaxRegion,
                 true,
                 contractLine.currency_code || "USD",
@@ -2927,37 +2961,33 @@ export class BillingEngine {
             }
           }
 
-          const charge: IBucketCharge = {
+          bucketCharges.push({
             type: "bucket",
-            service_catalog_id: bucketConfig.service_id, // Keep original field name if needed by interface
+            service_catalog_id: bucketConfig.service_id,
             serviceName: bucketConfig.service_name,
-            rate: overageRate, // This seems redundant with overageRate, check interface
+            rate: overageRate,
             total: total,
             hoursUsed: hoursUsed,
             overageHours: overageHours,
             overageRate: overageRate,
             tax_rate: taxRate,
-            tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
-            serviceId: bucketConfig.service_id, // Common field
+            tax_region: effectiveTaxRegion,
+            serviceId: bucketConfig.service_id,
             tax_amount: taxAmount,
             is_taxable: isTaxable,
-            servicePeriodStart: billingPeriod.startDate,
-            servicePeriodEnd: billingPeriod.endDate,
+            servicePeriodStart: usagePeriod.periodStart,
+            servicePeriodEnd: usagePeriod.periodEnd,
             billingTiming: "arrears",
-            // Add contract association information when the plan is covered by a contract assignment
             client_contract_id: contractLine.client_contract_id || undefined,
             contract_name: contractLine.contract_name || undefined,
-          };
-          return charge;
+          });
         }
-        return null; // Return null if no overage
+
+        return bucketCharges;
       },
     );
 
-    // Filter out null results and await all promises
-    const bucketCharges = (await Promise.all(bucketChargesPromises)).filter(
-      (charge): charge is IBucketCharge => charge !== null,
-    );
+    const bucketCharges = (await Promise.all(bucketChargesPromises)).flat();
 
     return bucketCharges;
   }

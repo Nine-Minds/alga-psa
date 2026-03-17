@@ -118,6 +118,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/services/invoiceService.ts` now persists `client_contract_id` on consolidated fixed parent rows, preserving assignment metadata for downstream invoice readers and PO-related invoice flows
   - `server/src/test/unit/billing/billingEngine.timing.test.ts` now adds explicit fixed-recurring parity coverage for full-period, mid-start, and mid-end monthly client-cadence scenarios
   - `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts` now includes a PO + fixed-detail persistence regression test, but local execution remains blocked by the current Postgres socket permissions
+- (2026-03-17) Bucket overage timing now maps onto explicit allowance periods instead of invoice windows:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now groups `bucket_usage` rows by `period_start` + `period_end` and emits one bucket charge per explicit usage period
+  - bucket charge `servicePeriodStart` and `servicePeriodEnd` now follow the persisted bucket period boundaries, which is the first concrete definition for `F051`
+  - tax-date evaluation for bucket overages now uses the allowance period end date instead of the enclosing invoice window end, which keeps the charge aligned with the bucket period it represents
+  - `server/src/test/unit/billingEngine.test.ts` now covers multi-period bucket usage inside one invoice window and asserts that the emitted bucket charges preserve the two distinct service periods
 
 ## Commands / Runbooks
 
@@ -168,6 +173,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
   - `npx vitest run src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts --coverage.enabled false`
     - blocked locally by `EPERM` to Postgres on `127.0.0.1:5438` and `127.0.0.1:5432`
+- (2026-03-17) Bucket period mapping validation:
+  - `npx vitest run src/test/unit/billingEngine.test.ts -t "calculate bucket overlay charges correctly|T056" --coverage.enabled false`
 
 ## Links / References
 

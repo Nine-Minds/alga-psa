@@ -948,7 +948,7 @@ describe('BillingEngine', () => {
       });
 
       const mockKnex = vi.fn((tableName: string) => {
-        if (tableName.startsWith('client_contract_service_configuration')) {
+        if (tableName.startsWith('contract_line_service_configuration as clsc')) {
           return configurationBuilder;
         }
         if (tableName === 'clients') {
@@ -996,12 +996,138 @@ describe('BillingEngine', () => {
         }
       ]);
 
-      expect(mockKnex).toHaveBeenCalledWith('client_contract_service_configuration as ccsc');
+      expect(mockKnex).toHaveBeenCalledWith('contract_line_service_configuration as clsc');
       expect(mockKnex).toHaveBeenCalledWith('clients');
       expect(mockKnex).toHaveBeenCalledWith('bucket_usage');
 
-      expect(calculateTaxSpy).toHaveBeenCalledWith(mockClientId, 250, mockEndDate, 'US-CA');
+      expect(calculateTaxSpy).toHaveBeenCalledWith(
+        mockClientId,
+        250,
+        '2023-01-31',
+        'US-CA',
+        true,
+        'USD'
+      );
       calculateTaxSpy.mockRestore();
+    });
+
+    it('T056: bucket recurring charges map overage to the explicit bucket usage service periods', async () => {
+      const mockClient = {
+        client_id: mockClientId,
+        client_name: 'Test Client',
+        tenant: mockTenant,
+        is_tax_exempt: false,
+      };
+
+      const bucketConfigRow = {
+        config_id: 'bucket-config-1',
+        tenant: mockTenant,
+        service_id: 'service_bucket',
+        contract_line_id: 'test_contract_line_id',
+        configuration_type: 'Bucket',
+        total_minutes: 2400,
+        overage_rate: 50,
+        allow_rollover: false,
+        service_name: 'Emerald City Consulting Hours',
+        tax_rate_id: 'tax-rate-1'
+      };
+
+      const bucketUsageRows = [
+        {
+          tenant: mockTenant,
+          client_id: mockClientId,
+          contract_line_id: 'test_contract_line_id',
+          service_catalog_id: 'service_bucket',
+          period_start: '2025-01-01',
+          period_end: '2025-01-07',
+          minutes_used: 45 * 60,
+          overage_minutes: 5 * 60
+        },
+        {
+          tenant: mockTenant,
+          client_id: mockClientId,
+          contract_line_id: 'test_contract_line_id',
+          service_catalog_id: 'service_bucket',
+          period_start: '2025-01-08',
+          period_end: '2025-01-14',
+          minutes_used: 42 * 60,
+          overage_minutes: 2 * 60
+        }
+      ];
+
+      const baseKnex = (billingEngine as any).knex;
+
+      const configurationBuilder = buildChainableQuery({
+        selectResult: [bucketConfigRow],
+        thenResult: [bucketConfigRow]
+      });
+
+      const clientsBuilder = buildChainableQuery({
+        selectResult: [],
+        firstResult: mockClient,
+        thenResult: []
+      });
+
+      const bucketUsageBuilder = buildChainableQuery({
+        selectResult: bucketUsageRows,
+        thenResult: bucketUsageRows
+      });
+
+      const taxRatesBuilder = buildChainableQuery({
+        selectResult: [],
+        firstResult: { region_code: 'US-CA' },
+        thenResult: []
+      });
+
+      const mockKnex = vi.fn((tableName: string) => {
+        if (tableName.startsWith('contract_line_service_configuration as clsc')) {
+          return configurationBuilder;
+        }
+        if (tableName === 'clients') {
+          return clientsBuilder;
+        }
+        if (tableName === 'bucket_usage') {
+          return bucketUsageBuilder;
+        }
+        if (tableName === 'tax_rates') {
+          return taxRatesBuilder;
+        }
+        return baseKnex(tableName);
+      });
+
+      vi.spyOn(TaxService.prototype, 'calculateTax')
+        .mockResolvedValue({ taxRate: 8.25, taxAmount: 0 });
+      vi.spyOn(billingEngine as any, 'getTaxInfoFromService').mockResolvedValue({
+        taxRegion: 'US-CA',
+        isTaxable: true
+      });
+
+      (billingEngine as any).knex = mockKnex;
+      (billingEngine as any).knex.raw = baseKnex.raw;
+      (billingEngine as any).tenant = mockTenant;
+
+      const result = await (billingEngine as any).calculateBucketPlanCharges(
+        mockClientId,
+        { startDate: mockStartDate, endDate: mockEndDate },
+        { contract_line_id: 'test_contract_line_id' }
+      );
+
+      expect(result).toMatchObject([
+        {
+          type: 'bucket',
+          serviceId: 'service_bucket',
+          overageHours: 5,
+          servicePeriodStart: '2025-01-01',
+          servicePeriodEnd: '2025-01-07'
+        },
+        {
+          type: 'bucket',
+          serviceId: 'service_bucket',
+          overageHours: 2,
+          servicePeriodStart: '2025-01-08',
+          servicePeriodEnd: '2025-01-14'
+        }
+      ]);
     });
 
     describe('calculateTimeBasedCharges with contract line disambiguation', () => {
