@@ -830,7 +830,7 @@
   {
     "id": "F139",
     "description": "Update billing dashboard overview, automatic invoices, prepayment invoices, and manual invoices tabs to explain and surface the new recurring semantics consistently",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

@@ -359,5 +359,6 @@
   {"id":"T328","description":"DB-backed sanity: runtime no longer needs to derive live recurring periods on demand once persisted service-period selection is active","implemented":false,"featureIds":["F242","F256"]},
   {"id":"T329","description":"Plan artifacts now treat materialized service periods as in-scope v1 behavior rather than a deferred follow-on","implemented":false,"featureIds":["F231","F242","F250"]},
   {"id":"T330","description":"The expanded plan preserves implementation-grade detail after adding materialized service periods and editable future billing objects","implemented":false,"featureIds":["F150","F231","F267"]},
-  {"id":"T331","description":"Contract line mapping and disambiguation helpers keep cadence_owner explicit instead of inferring recurring timing from billing_cycle_alignment or enable_proration","implemented":true,"featureIds":["F124"]}
+  {"id":"T331","description":"Contract line mapping and disambiguation helpers keep cadence_owner explicit instead of inferring recurring timing from billing_cycle_alignment or enable_proration","implemented":true,"featureIds":["F124"]},
+  {"id":"T332","description":"Billing dashboard overview and invoice-generation tabs explain automatic, manual, and prepayment flows in service-period-first language","implemented":true,"featureIds":["F139"]}
 ]

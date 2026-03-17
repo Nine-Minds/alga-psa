@@ -238,7 +238,7 @@ const Overview = () => {
         <FeatureCard
           icon={FileText}
           title="Invoice Management"
-          description="Generate, customize, and send professional invoices to clients"
+          description="Generate invoice windows for recurring service periods and create manual or prepayment documents when financial handling differs from recurring coverage"
         />
         <FeatureCard
           icon={AlertCircle}

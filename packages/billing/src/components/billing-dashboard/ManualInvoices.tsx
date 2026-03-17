@@ -658,9 +658,16 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         ) : (
           <>
             <div className="flex items-center gap-4 mb-6">
-              <h2 className="text-lg font-semibold">
-                {(currentInvoiceData || invoice) ? 'Invoice Details' : 'Generate Manual Invoice'}
-              </h2>
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {(currentInvoiceData || invoice) ? 'Invoice Details' : 'Generate Manual Invoice'}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {(currentInvoiceData || invoice)
+                    ? 'Manual edits stay periodless by default, while recurring detail-backed lines keep their canonical service periods.'
+                    : 'Use manual invoices for one-off or adjustment lines. They coexist with recurring invoices without redefining recurring service periods.'}
+                </p>
+              </div>
             </div>
 
             {currentInvoiceData && (
@@ -756,6 +763,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       onChange={(e) => setIsPrepayment((e.target as HTMLInputElement).checked)}
                     />
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    Mark this only when the manual invoice should create credit for future financial application instead of representing recurring service-period coverage.
+                  </p>
                   {isPrepayment && (
                     <div>
                       <label htmlFor="expiration-date-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Credit Expiration Date</label>

@@ -603,7 +603,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       <div className="space-y-8">
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Ready to Invoice</h2>
+            <div>
+              <h2 className="text-lg font-semibold">Ready to Invoice</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Each row is an invoice window. Generated recurring invoices group the due service periods that land in that window.
+              </p>
+            </div>
             <div className="flex gap-2 items-end">
               <Button
                 id='preview-selected-button'

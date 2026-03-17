@@ -39,6 +39,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Billing dashboard invoice-generation surfaces now explain service-period-first recurring semantics consistently, which closes `F139` and adds `T332`:
+  - `packages/billing/src/components/billing-dashboard/Overview.tsx` now frames invoice management as invoice-window generation for recurring service periods plus separate manual/prepayment financial handling
+  - `packages/billing/src/components/billing-dashboard/invoicing/GenerateTab.tsx` now explains the semantic boundary for automatic, manual, and prepayment flows directly under the invoice-type selector
+  - `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`, `ManualInvoices.tsx`, and `PrepaymentInvoices.tsx` now each state whether they create recurring service-period coverage, stay periodless, or create credit-only financial artifacts
+  - `packages/billing/tests/invoicingGenerateTab.recurringCopy.wiring.test.ts` was added because `F139` previously had no explicit regression item in `tests.json`; the new `T332` tracks this copy/UX contract without overloading unrelated recurring-engine tests
 - (2026-03-17) Template-authored cadence-owner defaults now persist and clone through the real template storage layer, which closes `F138`, `T119`, and `T120`:
   - `server/migrations/20260317213000_add_cadence_owner_to_contract_template_lines.cjs` adds `contract_template_lines.cadence_owner`, backfills it from matching `contract_lines` when possible, and defaults remaining legacy rows to `'client'`
   - `packages/billing/src/repositories/contractLineRepository.ts` plus `server/src/lib/repositories/contractLineRepository.ts` now read, snapshot, update, and clone template-line `cadence_owner` instead of dropping it to `'client'` during template-to-contract instantiation
@@ -499,6 +504,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Commands / Runbooks
 
+- (2026-03-17) Billing dashboard invoice-generation copy validation:
+  - `npx vitest run ../packages/billing/tests/invoicingGenerateTab.recurringCopy.wiring.test.ts ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Template cadence-owner storage and clone validation:
   - `npx vitest run src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts --coverage.enabled false`
     - run from `server/`
