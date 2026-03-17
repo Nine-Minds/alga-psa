@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "P2-5b: Create DocumentsCrossFeatureContext for UI component violations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5b"]
   },
   {
