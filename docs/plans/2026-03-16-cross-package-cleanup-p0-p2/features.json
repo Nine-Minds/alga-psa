@@ -200,7 +200,7 @@
   {
     "id": "F034",
     "description": "P2-5c: Commit client-portal violation fixes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5c"]
   },
   {

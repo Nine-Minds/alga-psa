@@ -177,10 +177,11 @@ By target package
 - Created a new horizontal `@alga-psa/client-portal-composition` package and moved the project metrics card composition there via `ClientPortalProjectMetrics`; `packages/client-portal/src/components/projects/ProjectDetailView.tsx` no longer imports from `@alga-psa/projects` directly.
 - Validation after F032: `cd packages/client-portal && npx tsc --noEmit`, `cd server && npx tsc --noEmit`, and `npm run lint` all pass; only `3` `client-portal` violations remain, all from the KB type-only imports targeted by P2-6.
 - Re-ran the full repo-root `npm run build` after the new `@alga-psa/client-portal-composition` package landed; the build is green, so the client-portal cleanup track is now blocked only on the planned P2-6 type extraction.
+- The client-portal cleanup series is now fully checkpointed through `F030`-`F034`: acceptable edges are documented and justified, the project-detail composition moved to a horizontal package, the build is green, and only the KB type-only imports remain for P2-6.
 
 ## Remaining Open Work
 
-- **F034:** next up. Client-portal cleanup is implemented and built; this last bookkeeping item is just the commit checkpoint for the feature series.
+- **F035:** next up. The only remaining `client-portal` lint warnings are type-only `documents` imports, making the P2-6 type extraction pass the natural next step.
 
 ## Gotchas
 
