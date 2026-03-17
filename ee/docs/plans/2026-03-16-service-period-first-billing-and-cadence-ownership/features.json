@@ -1559,7 +1559,7 @@
   {
     "id": "F174",
     "description": "Define end-date shortening and mid-cycle termination behavior against canonical due or partially covered service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Runtime engine requirements",
       "Read-model and post-persist lifecycle requirements"

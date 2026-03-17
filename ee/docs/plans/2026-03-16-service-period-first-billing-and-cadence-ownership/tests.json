@@ -1771,7 +1771,7 @@
   {
     "id": "T204",
     "description": "Mid-cycle termination and end-date shortening honor partial or future canonical service periods correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F174"
     ]

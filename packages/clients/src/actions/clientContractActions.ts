@@ -66,6 +66,25 @@ const assertContractOwnedByClient = (
   }
 };
 
+async function getCanonicalRecurringDetailPeriodsForClientContract(
+  db: any,
+  tenant: string,
+  clientContractId: string,
+): Promise<Array<{ service_period_start: string; service_period_end: string }>> {
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    return trx('invoice_charge_details as iid')
+      .join('invoice_charges as ii', function(this: Knex.JoinClause) {
+        this.on('iid.item_id', '=', 'ii.item_id')
+          .andOn('iid.tenant', '=', 'ii.tenant');
+      })
+      .where('iid.tenant', tenant)
+      .andWhere('ii.client_contract_id', clientContractId)
+      .whereNotNull('iid.service_period_start')
+      .whereNotNull('iid.service_period_end')
+      .select('iid.service_period_start', 'iid.service_period_end');
+  });
+}
+
 /**
  * Get all active contracts for a client.
  */
@@ -390,49 +409,76 @@ export const updateClientContract = withAuth(async (
 
     // --- Start Validation ---
     if (updateData.start_date || updateData.end_date !== undefined) { // Check if dates are being updated (end_date can be null)
-      // 1. Get current client contract details
-      const clientId = beforeContract.client_id;
+      const canonicalDetailPeriods = await getCanonicalRecurringDetailPeriodsForClientContract(
+        db,
+        tenant,
+        clientContractId,
+      );
 
-      // 2. Determine proposed new dates
       const proposedStartDateStr = updateData.start_date ?? beforeContract.start_date;
-      // Handle null explicitly for end_date
       const proposedEndDateStr = updateData.end_date !== undefined ? updateData.end_date : beforeContract.end_date;
 
       const proposedStartDate = toPlainDate(proposedStartDateStr);
       const proposedEndDate = proposedEndDateStr ? toPlainDate(proposedEndDateStr) : null;
 
+      if (canonicalDetailPeriods.length > 0) {
+        const earliestCoveredStart = canonicalDetailPeriods.reduce((earliest, period) => {
+          const periodStart = toPlainDate(period.service_period_start);
+          return !earliest || Temporal.PlainDate.compare(periodStart, earliest) < 0
+            ? periodStart
+            : earliest;
+        }, null as Temporal.PlainDate | null);
 
-      // 3. Fetch invoiced billing cycles for this client
-      const invoicedCycles = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('client_billing_cycles as cbc')
-          .join('invoices as i', function() {
-            this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-                .andOn('i.tenant', '=', 'cbc.tenant');
-          })
-          .where('cbc.client_id', clientId)
-          .andWhere('cbc.tenant', tenant)
-          // Add a check for invoice status if applicable, e.g., .andWhere('i.status', 'finalized')
-          // Assuming any linked invoice means it's "invoiced" for now
-          .select(
-            'cbc.period_start_date',
-            'cbc.period_end_date'
-          );
-      });
+        const latestCoveredEndExclusive = canonicalDetailPeriods.reduce((latest, period) => {
+          const periodEnd = toPlainDate(period.service_period_end);
+          return !latest || Temporal.PlainDate.compare(periodEnd, latest) > 0
+            ? periodEnd
+            : latest;
+        }, null as Temporal.PlainDate | null);
 
-      // 4. Check for overlaps
-      for (const cycle of invoicedCycles) {
-        const cycleStartDate = toPlainDate(cycle.period_start_date);
-        const cycleEndDate = toPlainDate(cycle.period_end_date); // Period end is exclusive: [start, end)
-
-        // Overlap check using [start, end) semantics:
-        // Overlap if: startA < endB && endA > startB (touching boundaries do not overlap).
-        const proposedEndExclusive = proposedEndDate ? proposedEndDate.add({ days: 1 }) : null; // end_date is stored as inclusive date
-        const startsBeforeCycleEnds = Temporal.PlainDate.compare(proposedStartDate, cycleEndDate) < 0;
-        const endsAfterCycleStarts =
-          proposedEndExclusive === null || Temporal.PlainDate.compare(proposedEndExclusive, cycleStartDate) > 0;
-
-        if (startsBeforeCycleEnds && endsAfterCycleStarts) {
+        if (
+          earliestCoveredStart &&
+          Temporal.PlainDate.compare(proposedStartDate, earliestCoveredStart) > 0
+        ) {
           throw new Error("Cannot change assignment dates as they overlap with an already invoiced period.");
+        }
+
+        if (proposedEndDate && latestCoveredEndExclusive) {
+          const latestCoveredDay = latestCoveredEndExclusive.subtract({ days: 1 });
+          if (Temporal.PlainDate.compare(proposedEndDate, latestCoveredDay) < 0) {
+            throw new Error(
+              `Cannot shorten contract end date before ${latestCoveredDay.toString()} because recurring service periods are already billed through that day.`
+            );
+          }
+        }
+      } else {
+        const clientId = beforeContract.client_id;
+        const invoicedCycles = await withTransaction(db, async (trx: Knex.Transaction) => {
+          return await trx('client_billing_cycles as cbc')
+            .join('invoices as i', function() {
+              this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
+                  .andOn('i.tenant', '=', 'cbc.tenant');
+            })
+            .where('cbc.client_id', clientId)
+            .andWhere('cbc.tenant', tenant)
+            .select(
+              'cbc.period_start_date',
+              'cbc.period_end_date'
+            );
+        });
+
+        for (const cycle of invoicedCycles) {
+          const cycleStartDate = toPlainDate(cycle.period_start_date);
+          const cycleEndDate = toPlainDate(cycle.period_end_date); // Period end is exclusive: [start, end)
+
+          const proposedEndExclusive = proposedEndDate ? proposedEndDate.add({ days: 1 }) : null; // end_date is stored as inclusive date
+          const startsBeforeCycleEnds = Temporal.PlainDate.compare(proposedStartDate, cycleEndDate) < 0;
+          const endsAfterCycleStarts =
+            proposedEndExclusive === null || Temporal.PlainDate.compare(proposedEndExclusive, cycleStartDate) > 0;
+
+          if (startsBeforeCycleEnds && endsAfterCycleStarts) {
+            throw new Error("Cannot change assignment dates as they overlap with an already invoiced period.");
+          }
         }
       }
     }
@@ -543,7 +589,10 @@ export const updateClientContract = withAuth(async (
     console.error(`Error updating client contract ${clientContractId}:`, error);
     if (error instanceof Error) {
       // Re-throw specific known errors or validation errors
-      if (error.message === "Cannot change assignment dates as they overlap with an already invoiced period.") {
+      if (
+        error.message === "Cannot change assignment dates as they overlap with an already invoiced period." ||
+        error.message.startsWith('Cannot shorten contract end date before ')
+      ) {
           throw error;
       }
       // Preserve other specific error messages if needed

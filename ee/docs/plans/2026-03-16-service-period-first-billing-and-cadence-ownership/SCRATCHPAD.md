@@ -1045,6 +1045,16 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/clientContractLineReplacementIdentity.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Client-contract termination/detail-period validation:
+  - `npx vitest run src/test/unit/clientContractActions.overlapExclusive.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+
+- (2026-03-17) Client contract assignment-date validation now distinguishes canonical recurring coverage from historical invoice-window fallback, which closes `F174` and `T204`:
+  - `packages/clients/src/actions/clientContractActions.ts` now queries canonical `invoice_charge_details` coverage for the current `client_contract_id` before using legacy `client_billing_cycles` overlap logic, so end-date shortening and mid-cycle termination are enforced against billed recurring service periods rather than against the entire enclosing invoice window whenever authoritative detail rows exist
+  - the new rule is explicit and end-exclusive: the earliest billed recurring `service_period_start` still blocks moving the contract start later into already billed coverage, while the latest billed `service_period_end` is treated as exclusive and converted into the last already-billed service day when validating a shorter `end_date`
+  - historical flat invoices still keep the old fallback behavior because `updateClientContract(...)` only consults `client_billing_cycles` when no canonical recurring detail periods exist for the contract
+  - `server/src/test/unit/clientContractActions.overlapExclusive.test.ts` now proves all three boundary cases together: touching historical invoice-window boundaries still pass under `[start, end)` semantics, canonical partial service periods allow termination exactly on the last billed day, and shortening earlier than that day is rejected with a detail-period-specific error
 
 ## Links / References
 
