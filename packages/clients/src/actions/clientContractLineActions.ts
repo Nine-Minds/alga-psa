@@ -110,7 +110,8 @@ export const getClientContractLine = withAuth(async (
       // Convert dates to ISO8601String as expected by the interface
       // Convert dates to ISO8601String: DB -> PlainDate -> ISOString
       start_date: toISODate(toPlainDate(billing.start_date)),
-      end_date: billing.end_date ? toISODate(toPlainDate(billing.end_date)) : null
+      end_date: billing.end_date ? toISODate(toPlainDate(billing.end_date)) : null,
+      cadence_owner: billing.cadence_owner ?? 'client'
     }));
   } catch (error) {
     console.error('Error fetching client contract line:', error);
@@ -219,6 +220,7 @@ export const addClientContractLine = withAuth(async (
           contract_line_type: templateLine.contract_line_type,
           service_category: newBilling.service_category ?? templateLine.service_category,
           billing_timing: templateLine.billing_timing ?? 'arrears',
+          cadence_owner: newBilling.cadence_owner ?? templateLine.cadence_owner ?? 'client',
           is_active: newBilling.is_active ?? true,
           is_custom: false,
           custom_rate: newBilling.custom_rate ?? templateLine.custom_rate,

@@ -36,7 +36,10 @@ import { Temporal } from "@js-temporal/polyfill";
 import type { ISO8601String, IClient } from "@alga-psa/types";
 import { toPlainDate, toISODate, getCurrencySymbol } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
-import { resolveRecurringSettlementsForInvoiceWindow } from "@alga-psa/shared/billingClients/recurringTiming";
+import {
+  resolveCadenceOwner,
+  resolveRecurringSettlementsForInvoiceWindow,
+} from "@alga-psa/shared/billingClients/recurringTiming";
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService
 import {
@@ -795,6 +798,7 @@ export class BillingEngine {
         "cl.contract_line_type",
         "cl.billing_frequency",
         "cl.billing_timing",
+        "cl.cadence_owner",
         "cl.custom_rate",
         "cl.enable_proration",
         "cl.billing_cycle_alignment",
@@ -817,6 +821,7 @@ export class BillingEngine {
       plan.billing_timing = (plan.billing_timing ?? "arrears") as
         | "arrears"
         | "advance";
+      plan.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
 
       // custom_rate is already stored in cents in the database, just parse it
       if (plan.custom_rate !== null && plan.custom_rate !== undefined) {
@@ -1843,11 +1848,12 @@ export class BillingEngine {
       })(),
     );
 
+    const cadenceOwner = resolveCadenceOwner(clientContractLine.cadence_owner);
     const settlements = resolveRecurringSettlementsForInvoiceWindow({
       servicePeriods: [
         {
           kind: "service_period",
-          cadenceOwner: "client",
+          cadenceOwner,
           duePosition,
           sourceObligation: {
             obligationId: clientContractLine.client_contract_line_id,
@@ -1861,7 +1867,7 @@ export class BillingEngine {
         },
         {
           kind: "service_period",
-          cadenceOwner: "client",
+          cadenceOwner,
           duePosition,
           sourceObligation: {
             obligationId: clientContractLine.client_contract_line_id,
@@ -1876,7 +1882,7 @@ export class BillingEngine {
       ],
       invoiceWindow: {
         kind: "invoice_window",
-        cadenceOwner: "client",
+        cadenceOwner,
         duePosition,
         start: currentStart,
         end: currentEndExclusive,

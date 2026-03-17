@@ -482,25 +482,25 @@
   {
     "id": "F081",
     "description": "Decide and implement the v1 persistence location for cadence_owner",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions", "Detailed Requirements"]
   },
   {
     "id": "F082",
     "description": "Add cadence_owner to database schema with safe defaults and backfill for existing recurring records",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {
     "id": "F083",
     "description": "Update shared, server, and package interfaces to add cadence_owner and service-period-first recurring terminology",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {
     "id": "F084",
     "description": "Update repositories and models that read or write contract line billing config to surface cadence_owner and de-emphasize billing_cycle_alignment",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "System Surfaces In Scope"]
   },
   {

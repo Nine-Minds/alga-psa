@@ -1,5 +1,6 @@
 import { TenantEntity } from './index';
 import { ISO8601String } from '@alga-psa/types';
+import type { CadenceOwner } from '@alga-psa/types';
 
 /**
  * Contract status types
@@ -53,6 +54,7 @@ export interface IContractLineMapping extends TenantEntity {
   display_order?: number;
   custom_rate?: number | null;
   billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: CadenceOwner;
   created_at?: ISO8601String;
 }
 

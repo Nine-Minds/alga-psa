@@ -27,6 +27,7 @@ export async function getContractLines(
   return rows.map((row) => ({
     ...row,
     billing_timing: (row.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+    cadence_owner: row.cadence_owner ?? 'client',
   }));
 }
 
@@ -49,4 +50,3 @@ export async function getContractLineServices(
 
   return services as IContractLineService[];
 }
-

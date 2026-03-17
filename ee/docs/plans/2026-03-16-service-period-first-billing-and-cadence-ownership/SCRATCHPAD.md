@@ -112,6 +112,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - regeneration after contract edits
   - future-period edit operations and conflict handling
 - (2026-03-17) The plan should explicitly avoid silently dragging time/usage into v1, while still specifying their compatibility boundaries and non-goals.
+- (2026-03-17) Resolve the v1 `cadence_owner` persistence question in favor of `contract_lines.cadence_owner`.
+  - Rationale: live recurring timing is already line-scoped on `contract_lines` (`billing_frequency`, `billing_timing`), while `client_contracts` only provides assignment windows and template lines remain a later authoring/defaults surface.
 - (2026-03-17) Fixed recurring metadata preservation now has an explicit persistence regression guard:
   - `packages/billing/src/services/invoiceService.ts` was already carrying `client_contract_id` on grouped detailed fixed charges, but the consolidated parent `invoice_charges` insert dropped that assignment field entirely
   - `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` now reproduces the issue without a database and verifies that canonical `invoice_charge_details` periods and `invoice_charge_fixed_details.allocated_amount` stay aligned with the parent fixed charge subtotal
@@ -228,6 +230,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - a negative-invoice credit that is fully consumed by a later credit application still reconciles to `remaining_amount = 0` without any dependency on invoice-header timing
     - an expired negative-invoice credit still expires from `transactions.expiration_date` / `credit_tracking.expiration_date`, marks the tracking row expired, and creates the same reconciliation-report signal when the client balance has not yet been corrected
   - this checkpoint intentionally stops short of flipping `F078` because the broader credit-reader (`T098`) and DB-backed integration (`T100`) seams are still open
+- (2026-03-17) Cadence-owner persistence is now explicit in live code, not only in domain types:
+  - `server/migrations/20260317170000_add_cadence_owner_to_contract_lines.cjs` adds `contract_lines.cadence_owner` with default/backfill to `'client'` plus a check constraint for `client|contract`
+  - `packages/types/src/interfaces/billing.interfaces.ts`, `packages/types/src/interfaces/contract.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `server/src/interfaces/contract.interfaces.ts` now expose `cadence_owner` on live contract-line and mapping interfaces
+  - `server/src/lib/repositories/contractLineRepository.ts`, `shared/billingClients/contractLines.ts`, `packages/clients/src/actions/clientContractLineActions.ts`, `packages/billing/src/actions/contractLineAction.ts`, and `packages/billing/src/lib/billing/billingEngine.ts` now read/write `cadence_owner` from `contract_lines` and default missing legacy rows to `'client'`
+  - template lines were intentionally left out of the new schema in this checkpoint; repository reads still default template-backed responses to `'client'`, but persistence on template authoring remains follow-on work (`F093+`, `F138+`, `F212+`)
 - (2026-03-17) Credit-reader invoice context now stays on canonical recurring detail metadata, which closes `F078` without pretending the blocked DB integration is done:
   - `packages/billing/src/actions/creditActions.ts` now loads source invoices through `Invoice.getById(...)` for both `getCreditDetails(...)` and the invoice-summary enrichment inside `listClientCredits(...)`, instead of rereading raw `invoices` rows that dropped recurring `invoice_charge_details`
   - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
@@ -347,6 +354,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
 - (2026-03-17) Credit reconciliation / expiration validation:
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts --coverage.enabled false`
+- (2026-03-17) Cadence-owner persistence validation:
+  - `npx vitest run src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx vitest run src/cadence-owner-contract-lines.typecheck.test.ts src/interfaces/barrel.test.ts --coverage.enabled false`
+    - run from `packages/types`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
 - (2026-03-17) Credit-reader canonical invoice-context validation:
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
@@ -389,7 +403,6 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Open Questions
 
-- Where should `cadence_owner` live for v1?
 - Does contract cadence change invoice timing as well as service-period boundaries?
 - Which bucket/allowance behaviors must join v1 versus a follow-on?
 - Which exact service-period edit operations belong in v1 versus a follow-on?

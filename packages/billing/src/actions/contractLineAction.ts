@@ -39,6 +39,7 @@ export const getContractLines = withAuth(async (
             const enrichedPlans = plans.map((plan) => ({
                 ...plan,
                 billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+                cadence_owner: plan.cadence_owner ?? 'client',
             }));
 
             return enrichedPlans;
@@ -92,6 +93,7 @@ export const getContractLineById = withAuth(async (
                     display_order: templateLine.display_order ?? 0,
                     custom_rate: templateLine.custom_rate != null ? Number(templateLine.custom_rate) : null,
                     billing_timing: (templateLine.billing_timing ?? templateTerms?.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+                    cadence_owner: 'client',
                     contract_line_type: templateLine.line_type ?? 'Fixed',
                     service_category: templateLine.service_category ?? null,
                     is_active: templateLine.is_active ?? true,
@@ -112,6 +114,7 @@ export const getContractLineById = withAuth(async (
             return {
                 ...plan,
                 billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+                cadence_owner: plan.cadence_owner ?? 'client',
             };
         });
     } catch (error) {
@@ -150,6 +153,7 @@ export const createContractLine = withAuth(async (
             const enrichedPlan: IContractLine = {
                 ...plan,
                 billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+                cadence_owner: plan.cadence_owner ?? 'client',
             };
 
             // Track analytics
@@ -213,6 +217,7 @@ export const updateContractLine = withAuth(async (
             const enrichedPlan: IContractLine = {
                 ...plan,
                 billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+                cadence_owner: plan.cadence_owner ?? 'client',
             };
 
             // Track analytics

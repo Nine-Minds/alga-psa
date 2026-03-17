@@ -1,5 +1,6 @@
 import { TenantEntity } from './index';
 import type { ISO8601String } from '@alga-psa/types';
+import type { CadenceOwner } from '@alga-psa/types';
 
 export interface IBillingPeriod extends TenantEntity {
   startDate: ISO8601String;
@@ -95,6 +96,7 @@ export interface IClientContractLine extends TenantEntity {
   contract_line_id: string;
   template_contract_line_id?: string;
   billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: CadenceOwner;
   service_category?: string;
   service_category_name?: string; // Added field from join with service_categories
   start_date: ISO8601String;
@@ -231,6 +233,7 @@ export interface IContractLine extends TenantEntity {
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
   billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: CadenceOwner;
   custom_rate?: number | null;
   display_order?: number;
   enable_proration?: boolean;

@@ -376,7 +376,7 @@ This implies:
 
 ### Data model and API requirements
 
-- `cadence_owner` must have a clearly defined persistence location for v1.
+- `cadence_owner` must live on `contract_lines` for v1 because recurring timing is line-scoped in live execution; existing rows default to `client` cadence until broader authoring and template surfaces are migrated.
 - Materialized service-period records must have a clearly defined persistence model and API surface for reads, edits, regeneration, and invoice linkage.
 - Existing recurring records must default safely to client cadence.
 - API/schema/model/repository surfaces must expose cadence owner and deprecate `billing_cycle_alignment` without destabilizing rollout.
@@ -431,10 +431,6 @@ This implies:
 
 ## Open Questions
 
-- Where should `cadence_owner` live for v1:
-  - contract line
-  - client contract assignment
-  - contract header
 - What exact service-period edit operations should v1 support:
   - boundary adjustment only
   - skip/defer
