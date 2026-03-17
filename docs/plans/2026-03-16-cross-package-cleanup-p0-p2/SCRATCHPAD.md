@@ -134,6 +134,7 @@ By target package
 - The `msp-composition` export wiring is now fully committed via the `F013`-`F016` change series.
 - P2-5a inventory: `packages/projects/src/actions/projectActions.ts` is the active `projects -> clients` direct import (`getContactByContactNameId`); `packages/scheduling/src` currently has no direct `@alga-psa/clients` imports.
 - Verified `packages/clients/src/context/ClientCrossFeatureContext.tsx` already exports the client cross-feature provider + hook surface needed for composition-layer injection.
+- Verified `packages/msp-composition/src/clients/MspClientCrossFeatureProvider.tsx` already bridges tickets/surveys/assets callbacks into the clients context.
 
 ## Gotchas
 

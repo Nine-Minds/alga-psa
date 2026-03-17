@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "P2-5a: Create MspClientCrossFeatureProvider in packages/msp-composition/src/clients/ (if not exists)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5a"]
   },
   {
