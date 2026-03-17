@@ -47,6 +47,7 @@ const ContractTemplateModel = {
         'lines.display_order',
         'lines.custom_rate',
         'lines.billing_timing',
+        'lines.cadence_owner',
         'terms.billing_timing as terms_billing_timing',
       ]);
 
@@ -55,6 +56,7 @@ const ContractTemplateModel = {
       custom_rate: line.custom_rate != null ? Number(line.custom_rate) : null,
       display_order: line.display_order ?? 0,
       billing_timing: line.billing_timing ?? line.terms_billing_timing ?? 'arrears',
+      cadence_owner: line.cadence_owner ?? 'client',
     }));
 
     return { ...template, lines: normalizedLines };

@@ -94,7 +94,7 @@ export const getContractLineById = withAuth(async (
                     display_order: templateLine.display_order ?? 0,
                     custom_rate: templateLine.custom_rate != null ? Number(templateLine.custom_rate) : null,
                     billing_timing: (templateLine.billing_timing ?? templateTerms?.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-                    cadence_owner: 'client',
+                    cadence_owner: templateLine.cadence_owner ?? 'client',
                     contract_line_type: templateLine.line_type ?? 'Fixed',
                     service_category: templateLine.service_category ?? null,
                     is_active: templateLine.is_active ?? true,

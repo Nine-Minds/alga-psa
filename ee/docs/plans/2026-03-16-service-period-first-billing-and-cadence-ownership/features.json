@@ -824,7 +824,7 @@
   {
     "id": "F138",
     "description": "Update template-authored recurring defaults and instantiation flows so cadence-owner defaults clone safely into instantiated contract lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

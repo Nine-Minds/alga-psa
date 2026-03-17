@@ -37,6 +37,7 @@ const ContractLineMapping = {
             'template_line_id as contract_line_id',
             'display_order',
             'custom_rate',
+            'cadence_owner',
             'created_at'
           );
 
@@ -305,6 +306,9 @@ const ContractLineMapping = {
       if (dataToUpdate.display_order !== undefined) {
         templateUpdatePayload.display_order = dataToUpdate.display_order;
       }
+      if (dataToUpdate.cadence_owner !== undefined) {
+        templateUpdatePayload.cadence_owner = resolveCadenceOwner(dataToUpdate.cadence_owner);
+      }
 
       const [updatedTemplateLine] = await db('contract_template_lines')
         .where({
@@ -319,6 +323,7 @@ const ContractLineMapping = {
           'template_line_id as contract_line_id',
           'display_order',
           'custom_rate',
+          'cadence_owner',
           'created_at',
         ]);
 
@@ -366,7 +371,7 @@ const ContractLineMapping = {
             'lines.template_line_id as contract_line_id',
             'lines.display_order',
             'lines.custom_rate',
-            db.raw("'client' as cadence_owner"),
+            'lines.cadence_owner',
             'lines.created_at',
             'lines.template_line_name as contract_line_name',
             'lines.billing_frequency',

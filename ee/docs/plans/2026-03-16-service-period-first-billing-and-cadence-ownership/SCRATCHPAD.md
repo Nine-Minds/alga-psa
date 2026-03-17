@@ -39,6 +39,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Template-authored cadence-owner defaults now persist and clone through the real template storage layer, which closes `F138`, `T119`, and `T120`:
+  - `server/migrations/20260317213000_add_cadence_owner_to_contract_template_lines.cjs` adds `contract_template_lines.cadence_owner`, backfills it from matching `contract_lines` when possible, and defaults remaining legacy rows to `'client'`
+  - `packages/billing/src/repositories/contractLineRepository.ts` plus `server/src/lib/repositories/contractLineRepository.ts` now read, snapshot, update, and clone template-line `cadence_owner` instead of dropping it to `'client'` during template-to-contract instantiation
+  - `packages/billing/src/actions/contractWizardActions.ts` now lifts `cadence_owner` from any recurring template/draft line, not only the fixed-fee branch, so hourly-only and usage-only template snapshots and resumed drafts keep their authored cadence defaults
+  - adjacent package/server readers that still hardcoded template cadence to `'client'` were aligned as part of the same checkpoint: `packages/billing/src/actions/contractLineAction.ts`, `packages/billing/src/actions/contractLineMappingActions.ts`, `packages/billing/src/models/contractLineMapping.ts`, `packages/billing/src/models/contractTemplate.ts`, and `server/src/lib/api/services/ContractLineService.ts`
+  - focused coverage now lives in `server/src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts` and `packages/billing/tests/templateCadenceOwnerRoundTrip.actions.test.ts`, while the existing draft/template cadence-owner suites continue to pass on top of the storage change
 - (2026-03-17) `billing_cycle_alignment` is now non-executing on the migrated fixed recurring runtime path, which closes `F116`:
   - `packages/billing/src/lib/billing/billingEngine.ts` no longer selects, defaults, or propagates `contract_lines.billing_cycle_alignment` during recurring fixed-charge execution; coverage settlement is now driven only by canonical service-period timing plus `enable_proration`
   - `server/src/test/unit/billing/billingEngine.timing.test.ts` closes `T162` with an explicit invariance check showing `start`, `end`, and `prorated` legacy values all emit the same canonical fixed recurring charge and no longer appear on the generated charge payload
@@ -493,6 +499,17 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Commands / Runbooks
 
+- (2026-03-17) Template cadence-owner storage and clone validation:
+  - `npx vitest run src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/billing/tests/templateCadenceOwnerRoundTrip.actions.test.ts ../packages/billing/tests/draftContractForResumeActions.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx vitest run src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not by the template cadence-owner changes
 - (2026-03-17) `billing_cycle_alignment` runtime cleanup and portal preview validation:
   - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
     - run from `server/`

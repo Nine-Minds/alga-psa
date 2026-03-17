@@ -1499,6 +1499,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
   let fixedBaseRateCents: number | undefined;
 
   for (const line of detailedLines) {
+    cadenceOwner = line.cadence_owner ?? cadenceOwner;
     const servicesWithConfig = await getTemplateLineServicesWithConfigurations(line.contract_line_id);
 
     if (line.contract_line_type === 'Fixed') {
@@ -1542,7 +1543,6 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
         // Rates are stored in cents in the database already.
         fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue) : undefined;
         enableProration = line.enable_proration ?? false;
-        cadenceOwner = line.cadence_owner ?? cadenceOwner;
       }
     } else if (line.contract_line_type === 'Hourly') {
       servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
@@ -1736,6 +1736,7 @@ export const getDraftContractForResume = withAuth(async (
   let cadenceOwner: CadenceOwner = 'client';
 
   for (const line of detailedLines) {
+    cadenceOwner = line.cadence_owner ?? cadenceOwner;
     const servicesWithConfig = await getContractLineServicesWithConfigurations(line.contract_line_id);
 
     if (line.contract_line_type === 'Fixed') {
@@ -1780,7 +1781,6 @@ export const getDraftContractForResume = withAuth(async (
         fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue) : undefined;
         enableProration = Boolean(line.enable_proration);
         fixedBillingFrequency = line.billing_frequency ?? fixedBillingFrequency;
-        cadenceOwner = line.cadence_owner ?? cadenceOwner;
       }
     } else if (line.contract_line_type === 'Hourly') {
       hourlyBillingFrequency = line.billing_frequency ?? hourlyBillingFrequency;

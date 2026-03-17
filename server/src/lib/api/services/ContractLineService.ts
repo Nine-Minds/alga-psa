@@ -937,6 +937,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         contract_line_type: templateLine.contract_line_type,
         service_category: templateLine.service_category ?? data.service_category,
         billing_timing: templateLine.billing_timing ?? 'arrears',
+        cadence_owner: templateLine.cadence_owner ?? 'client',
         is_active: data.is_active ?? true,
         is_custom: false,
         custom_rate: data.custom_rate ?? templateLine.custom_rate,

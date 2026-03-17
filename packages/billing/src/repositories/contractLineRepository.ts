@@ -55,6 +55,7 @@ export async function fetchContractLineMappings(
         'display_order',
         'custom_rate',
         'billing_timing',
+        'cadence_owner',
         'created_at',
       ]);
     return rows.map(mapContractLineRow);
@@ -99,6 +100,7 @@ export async function fetchDetailedContractLines(
         'lines.display_order',
         'lines.custom_rate',
         'lines.billing_timing',
+        'lines.cadence_owner',
         'lines.created_at',
         'lines.template_line_name as contract_line_name',
         'lines.line_type as contract_line_type',
@@ -247,6 +249,7 @@ export async function ensureTemplateLineSnapshot(
     custom_rate: customRate ?? baseLine.custom_rate ?? null,
     display_order: baseLine.display_order ?? 0,
     billing_timing: baseLine.billing_timing ?? 'arrears',
+    cadence_owner: resolveCadenceOwner(baseLine.cadence_owner),
   });
 
   return targetTemplateLineId;
@@ -312,7 +315,7 @@ async function cloneTemplateLineToContract(
     custom_rate: effectiveRate,
     display_order: templateLine.display_order ?? 0,
     billing_timing: templateTerms?.billing_timing ?? templateLine.billing_timing ?? 'arrears',
-    cadence_owner: 'client',
+    cadence_owner: resolveCadenceOwner(templateLine.cadence_owner),
     enable_proration: templateFixedConfig?.enable_proration ?? false,
     billing_cycle_alignment: templateBillingCycleAlignment,
   });
@@ -508,12 +511,17 @@ export async function updateContractLine(
   }
 
   if (template) {
+    const existingTemplateLine = await knex('contract_template_lines')
+      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+      .first(['cadence_owner']);
+
     await knex('contract_template_lines')
       .where({ tenant, template_id: contractId, template_line_id: contractLineId })
       .update({
         custom_rate: payload.custom_rate ?? null,
         display_order: payload.display_order ?? undefined,
         billing_timing: payload.billing_timing ?? undefined,
+        cadence_owner: resolveCadenceOwner(payload.cadence_owner ?? existingTemplateLine?.cadence_owner),
         updated_at: knex.fn.now(),
       });
 
@@ -526,6 +534,7 @@ export async function updateContractLine(
         'display_order',
         'custom_rate',
         'billing_timing',
+        'cadence_owner',
         'created_at',
       ]);
     return mapContractLineRow(row);

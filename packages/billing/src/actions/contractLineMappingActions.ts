@@ -71,6 +71,7 @@ export async function ensureTemplateLineSnapshot(
       after_hours_multiplier: contractLine.after_hours_multiplier ?? null,
       minimum_billable_time: contractLine.minimum_billable_time ?? null,
       round_up_to_nearest: contractLine.round_up_to_nearest ?? null,
+      cadence_owner: resolveCadenceOwner(contractLine.cadence_owner),
       created_at: contractLine.created_at ?? now,
       updated_at: now,
     })
@@ -90,6 +91,7 @@ export async function ensureTemplateLineSnapshot(
       after_hours_multiplier: contractLine.after_hours_multiplier ?? null,
       minimum_billable_time: contractLine.minimum_billable_time ?? null,
       round_up_to_nearest: contractLine.round_up_to_nearest ?? null,
+      cadence_owner: resolveCadenceOwner(contractLine.cadence_owner),
       updated_at: now,
     });
 
@@ -315,6 +317,7 @@ export const getContractLineMappings = withAuth(async (user, { tenant }, contrac
             contract_line_id: 'template_line_id',
             display_order: 'display_order',
             custom_rate: 'custom_rate',
+            cadence_owner: 'cadence_owner',
             created_at: 'created_at',
           });
 
@@ -364,6 +367,7 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.template_line_id as contract_line_id',
             'lines.display_order',
             'lines.custom_rate',
+            'lines.cadence_owner',
             'lines.created_at',
             'lines.template_line_name as contract_line_name',
             'lines.billing_frequency',
@@ -455,7 +459,7 @@ export const addContractLine = withAuth(async (
           display_order: row.display_order,
           custom_rate: row.custom_rate,
           created_at: row.created_at,
-          cadence_owner: 'client',
+          cadence_owner: resolveCadenceOwner(row.cadence_owner),
         };
       }
 
@@ -545,6 +549,14 @@ export const updateContractLineAssociation = withAuth(async (
 
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
+        const existingTemplateLine = await trx('contract_template_lines')
+          .where({
+            tenant,
+            template_id: contractId,
+            template_line_id: contractLineId,
+          })
+          .first('cadence_owner');
+
         // Update contract_template_lines directly (mapping data now inlined)
         await trx('contract_template_lines')
           .where({
@@ -554,6 +566,7 @@ export const updateContractLineAssociation = withAuth(async (
           })
           .update({
             custom_rate: dbUpdateData.custom_rate ?? null,
+            cadence_owner: resolveCadenceOwner(dbUpdateData.cadence_owner ?? existingTemplateLine?.cadence_owner),
             updated_at: trx.fn.now(),
           });
 
@@ -572,7 +585,7 @@ export const updateContractLineAssociation = withAuth(async (
           display_order: row.display_order,
           custom_rate: row.custom_rate,
           created_at: row.created_at,
-          cadence_owner: 'client',
+          cadence_owner: resolveCadenceOwner(row.cadence_owner),
         };
       }
 
