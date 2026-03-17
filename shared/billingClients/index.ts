@@ -15,3 +15,4 @@ export * from './templateClone';
 export * from './taxSettings';
 export * from './billingSchedule';
 export * from './clientContractStatus';
+export * from './recurringTiming';

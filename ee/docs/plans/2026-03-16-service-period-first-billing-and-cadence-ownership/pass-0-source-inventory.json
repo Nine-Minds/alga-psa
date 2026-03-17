@@ -1,0 +1,182 @@
+{
+  "metadata": {
+    "purpose": "Source-backed pass-0 recurring timing inventory for the service-period-first billing plan.",
+    "generatedOn": "2026-03-17",
+    "commands": [
+      "rg -l 'resolveServicePeriod' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'",
+      "rg -l 'billing_cycle_alignment' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'",
+      "rg -l 'service_period_start|service_period_end|servicePeriodStart|servicePeriodEnd' packages server shared --glob '!**/coverage/**' --glob '!**/dist/**'"
+    ]
+  },
+  "timingControls": {
+    "resolveServicePeriodRefs": [
+      "packages/billing/src/lib/billing/billingEngine.ts",
+      "server/src/test/unit/billing/billingEngine.timing.test.ts"
+    ],
+    "billingCycleAlignmentRefs": [
+      "server/src/interfaces/billing.interfaces.ts",
+      "server/src/interfaces/contractLineServiceConfiguration.interfaces.ts",
+      "server/src/test/infrastructure/billing/credits/creditApplication.test.ts",
+      "server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts",
+      "server/src/lib/repositories/contractLineRepository.ts",
+      "server/src/lib/api/services/ContractLineService.ts",
+      "server/src/lib/api/schemas/contractLineSchemas.ts",
+      "server/src/lib/api/schemas/financialSchemas.ts",
+      "packages/billing/src/services/contractLineServiceConfigurationService.ts",
+      "packages/billing/src/lib/billing/billingEngine.ts",
+      "packages/types/src/interfaces/billing.interfaces.ts",
+      "packages/types/src/interfaces/contractLineServiceConfiguration.interfaces.ts",
+      "server/test-utils/billingTestHelpers.ts",
+      "packages/billing/src/actions/contractLinePresetActions.ts",
+      "packages/billing/src/actions/contractWizardActions.ts",
+      "packages/billing/src/actions/contractLineMappingActions.ts",
+      "packages/billing/src/actions/contractLineAction.ts",
+      "server/migrations/20250318200000_create_plan_service_configuration_tables.cjs",
+      "server/migrations/20250413032701_remove_proration_alignment_from_plan_service_fixed_config.cjs",
+      "server/src/test/unit/billingEngine.test.ts",
+      "server/migrations/20251020090000_contract_templates_phase1.cjs",
+      "server/migrations/20250318200100_migrate_plan_services_data.cjs",
+      "packages/billing/src/components/billing-dashboard/service-configurations/FixedServiceConfigPanel.tsx",
+      "server/migrations/20251008000001_rename_billing_to_contracts.cjs",
+      "packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx",
+      "packages/billing/src/models/contractLineFixedConfig.ts",
+      "packages/billing/src/models/contractLineServiceFixedConfig.ts",
+      "packages/billing/src/repositories/contractLineRepository.ts",
+      "packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLinePresetConfiguration.tsx",
+      "packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration.tsx",
+      "packages/billing/src/components/billing-dashboard/contract-lines/ContractLineServiceForm.tsx",
+      "server/migrations/20251020162000_create_contract_template_tables.cjs",
+      "server/migrations/20251024131616_create_contract_line_preset_relations.cjs",
+      "server/migrations/20251020164500_backfill_contract_template_tables.cjs",
+      "server/migrations/20251028120000_consolidate_contract_line_rates.cjs",
+      "server/migrations/20250413032627_add_billing_plan_fixed_config_table.cjs"
+    ]
+  },
+  "periodFieldInventory": {
+    "servicePeriodFieldRefs": [
+      "server/src/interfaces/billing.interfaces.ts",
+      "server/migrations/20251026121500_create_accounting_export_tables.cjs",
+      "server/src/test/unit/billing/billingEngine.timing.test.ts",
+      "server/src/test/integration/billingInvoiceTiming.integration.test.ts",
+      "server/src/test/infrastructure/billing/credits/creditApplication.test.ts",
+      "server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts",
+      "server/src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts",
+      "server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_consistency.test.ts",
+      "server/src/test/infrastructure/billing/invoices/errorHandling.test.ts",
+      "server/src/test/unit/accounting/xeroAdapter.spec.ts",
+      "server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts",
+      "server/src/test/integration/accounting/invoiceSelection.integration.test.ts",
+      "server/src/test/integration/accounting/batchLifecycle.integration.test.ts",
+      "packages/billing/src/services/accountingExportInvoiceSelector.ts",
+      "packages/billing/src/services/invoiceService.ts",
+      "server/src/test/integration/accounting/xeroLiveExport.integration.test.ts",
+      "server/src/lib/api/controllers/ApiCSVAccountingController.ts",
+      "server/src/lib/api/controllers/ApiAccountingExportController.ts",
+      "server/src/test/unit/billingEngine.test.ts",
+      "packages/billing/src/lib/billing/billingEngine.ts",
+      "server/migrations/20251025120000_add_billing_timing_metadata.cjs",
+      "packages/billing/src/actions/accountingExportActions.ts",
+      "packages/types/src/interfaces/billing.interfaces.ts",
+      "packages/types/src/interfaces/accountingExport.interfaces.ts",
+      "packages/billing/src/repositories/accountingExportRepository.ts",
+      "packages/integrations/src/lib/xero/xeroClientService.ts",
+      "packages/billing/src/adapters/accounting/xeroAdapter.ts",
+      "packages/billing/src/adapters/accounting/quickBooksOnlineAdapter.ts"
+    ],
+    "persistedDateFields": [
+      "client_billing_cycles.start_date",
+      "client_billing_cycles.end_date",
+      "invoices.billing_period_start",
+      "invoices.billing_period_end",
+      "invoice_item_details.service_period_start",
+      "invoice_item_details.service_period_end",
+      "invoice_item_details.billing_timing",
+      "client_contract_lines.start_date",
+      "client_contract_lines.end_date",
+      "accounting_export_batch_lines.service_period_start",
+      "accounting_export_batch_lines.service_period_end"
+    ]
+  },
+  "servicePeriodConsumers": {
+    "creditsRefs": [
+      "packages/billing/src/actions/creditActions.ts",
+      "packages/billing/src/actions/creditReconciliationActions.ts",
+      "server/src/test/infrastructure/billing/credits/creditExpirationPriority.test.ts",
+      "server/src/test/infrastructure/billing/credits/creditExpirationCore.test.ts",
+      "server/src/test/infrastructure/billing/credits/creditReconciliation.test.ts",
+      "server/src/test/infrastructure/billing/credits/creditExpirationEffects.test.ts",
+      "server/src/test/infrastructure/billing/credits/creditCreationAndDates.test.ts",
+      "server/src/test/infrastructure/billing/credits/creditApplication.test.ts",
+      "server/src/test/infrastructure/billing/credits/creditExpirationIntegration.test.ts",
+      "server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_consistency.test.ts",
+      "server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_subtotal.test.ts",
+      "server/src/test/infrastructure/billing/invoices/manualInvoice.test.ts",
+      "server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts",
+      "server/src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts",
+      "server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts",
+      "server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts",
+      "server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_edgeCases.test.ts",
+      "server/src/test/infrastructure/billing/invoices/contractInvoiceManualCredit.test.ts"
+    ],
+    "prepaymentRefs": [
+      "packages/billing/src/services/accountingExportInvoiceSelector.ts",
+      "packages/billing/src/services/purchaseOrderService.ts",
+      "packages/billing/src/actions/manualInvoiceActions.ts",
+      "packages/billing/src/actions/invoiceModification.ts",
+      "packages/billing/src/actions/creditActions.ts",
+      "packages/billing/src/components/billing-dashboard/PrepaymentInvoices.tsx",
+      "packages/billing/src/components/billing-dashboard/ManualInvoices.tsx",
+      "packages/billing/src/components/billing-dashboard/invoicing/GenerateTab.tsx",
+      "server/src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts",
+      "server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts"
+    ],
+    "negativeInvoiceRefs": [
+      "packages/billing/src/actions/invoiceModification.ts",
+      "server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts"
+    ],
+    "accountingExportRefs": [
+      "packages/billing/src/adapters/accounting/xeroAdapter.ts",
+      "packages/billing/src/adapters/accounting/quickBooksOnlineAdapter.ts",
+      "packages/billing/src/repositories/accountingExportRepository.ts",
+      "packages/billing/src/services/accountingExportInvoiceSelector.ts",
+      "server/src/test/integration/accounting/invoiceSelection.integration.test.ts",
+      "server/src/test/integration/accounting/xeroLiveExport.integration.test.ts",
+      "server/src/test/integration/accounting/batchLifecycle.integration.test.ts",
+      "server/src/test/unit/accounting/xeroAdapter.spec.ts"
+    ],
+    "portalBillingRefs": [
+      "packages/client-portal/src/actions/account.ts",
+      "packages/client-portal/src/actions/client-portal-actions/client-billing.ts",
+      "packages/client-portal/src/actions/client-portal-actions/client-billing-metrics.ts",
+      "packages/client-portal/src/components/billing/BillingOverview.tsx",
+      "packages/client-portal/src/components/billing/BillingOverviewTab.tsx",
+      "packages/client-portal/src/components/billing/ContractLineDetailsDialog.tsx",
+      "packages/client-portal/src/components/account/BillingSection.tsx"
+    ],
+    "reportingRefs": [
+      "packages/billing/src/actions/contractReportActions.ts"
+    ]
+  },
+  "outOfScopeCompatibilityMatrix": [
+    {
+      "flow": "time entry billing",
+      "status": "out_of_scope_v1",
+      "boundary": "Retains event-driven service dates and existing billed-through semantics until a dedicated follow-on plan exists."
+    },
+    {
+      "flow": "usage-record billing",
+      "status": "out_of_scope_v1",
+      "boundary": "Retains usage-event timing instead of inheriting canonical recurring service periods."
+    },
+    {
+      "flow": "materials and non-recurring charges",
+      "status": "out_of_scope_v1",
+      "boundary": "Remain periodless or manually-timed unless a separate policy is defined."
+    },
+    {
+      "flow": "manual-only invoices",
+      "status": "coexist_only",
+      "boundary": "Must coexist with recurring detail periods but must not start generating recurring schedules in v1."
+    }
+  ]
+}
