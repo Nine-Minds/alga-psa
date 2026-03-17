@@ -26,7 +26,7 @@
   {
     "id": "T005",
     "description": "P0-1: Cycle count in .github/known-cycles.json decreased (was 30, expect ~12 after removing shared->workflows edge)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {

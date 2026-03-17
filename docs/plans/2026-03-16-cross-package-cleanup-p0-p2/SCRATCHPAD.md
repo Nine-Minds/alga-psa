@@ -146,6 +146,7 @@ By target package
 - T002 verified `cd ee/packages/workflows && npx tsc --noEmit` succeeds after the ten test-file moves.
 - T003 verified a fresh repo-root `npm run build` succeeds after the workflow moves, auth cleanup, and storage entity-image extraction work.
 - T004 hit the documented local skip condition: `npx nx graph --file=/tmp/graph.json` still fails with `brace_expansion_1.default is not a function`, so cycle verification continues to rely on the pruned baseline and removed import edge.
+- T005 confirmed `.github/known-cycles.json` now contains `12` baselined cycles, down from the prior `30`.
 
 ## Gotchas
 
