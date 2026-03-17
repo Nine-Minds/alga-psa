@@ -73,6 +73,29 @@ export interface IRecurringInvoiceCandidateGroup {
   dueSelections: IRecurringDuePeriodSelection[];
 }
 
+export interface IRecurringScopedDuePeriodSelection extends IRecurringDuePeriodSelection {
+  clientContractId?: string | null;
+  purchaseOrderScopeKey?: string | null;
+  currencyCode?: string | null;
+  taxSource?: string | null;
+  exportShapeKey?: string | null;
+}
+
+export type RecurringInvoiceSplitReason =
+  | 'single_contract'
+  | 'purchase_order_scope'
+  | 'financial_constraint';
+
+export interface IRecurringScopedInvoiceCandidateGroup extends IRecurringInvoiceCandidateGroup {
+  clientContractId?: string | null;
+  purchaseOrderScopeKey?: string | null;
+  currencyCode?: string | null;
+  taxSource?: string | null;
+  exportShapeKey?: string | null;
+  splitReasons: RecurringInvoiceSplitReason[];
+  dueSelections: IRecurringScopedDuePeriodSelection[];
+}
+
 export interface IResolvedRecurringSettlement {
   servicePeriod: IRecurringServicePeriod;
   coveredServicePeriod: IRecurringServicePeriod;

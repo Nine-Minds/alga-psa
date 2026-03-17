@@ -1406,7 +1406,7 @@
   {
     "id": "F157",
     "description": "Define invoice grouping rules that preserve single-contract invoice constraints when multiple due service periods are selected together",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 5",
       "Invoice and billing-flow requirements"
@@ -1415,7 +1415,7 @@
   {
     "id": "F158",
     "description": "Define invoice grouping and split rules for purchase-order constrained recurring charges when due service periods coincide",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 5",
       "Invoice and billing-flow requirements"
@@ -1424,7 +1424,7 @@
   {
     "id": "F159",
     "description": "Define invoice grouping and split rules for tax-source, currency, or export-shape constraints that prevent otherwise coincident recurring work from sharing one invoice",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 5",
       "Invoice and billing-flow requirements"
@@ -1433,7 +1433,7 @@
   {
     "id": "F160",
     "description": "Define the operator-visible split policy and explainability metadata when one due window produces multiple invoices by design",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Acceptance Criteria"

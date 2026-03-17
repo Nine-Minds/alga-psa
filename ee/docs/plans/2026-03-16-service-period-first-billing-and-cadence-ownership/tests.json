@@ -1634,7 +1634,7 @@
   {
     "id": "T188",
     "description": "Due service periods split into separate invoices when grouping would violate single-contract invoice constraints",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F157"
     ]
@@ -1642,7 +1642,7 @@
   {
     "id": "T189",
     "description": "Due service periods split into separate invoices when purchase-order scope requires it",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F158"
     ]
@@ -1650,7 +1650,7 @@
   {
     "id": "T190",
     "description": "Due service periods split into separate invoices when tax-source, currency, or export constraints require it",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F159",
       "F160"

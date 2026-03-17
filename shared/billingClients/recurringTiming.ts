@@ -24,6 +24,9 @@ import type {
   IRecurringInvoiceDetailTiming,
   IRecurringInvoiceWindow,
   IResolvedRecurringSettlement,
+  RecurringInvoiceSplitReason,
+  IRecurringScopedDuePeriodSelection,
+  IRecurringScopedInvoiceCandidateGroup,
   IRecurringServicePeriod,
 } from '@alga-psa/types';
 import { RECURRING_RANGE_SEMANTICS } from '@alga-psa/types';
@@ -223,6 +226,116 @@ export function groupDueServicePeriodsByInvoiceWindow(
         return left.windowStart.localeCompare(right.windowStart);
       }
 
+      return left.windowEnd.localeCompare(right.windowEnd);
+    });
+}
+
+export function groupDueServicePeriodsByInvoiceWindowAndContract(
+  dueSelections: IRecurringScopedDuePeriodSelection[],
+): IRecurringScopedInvoiceCandidateGroup[] {
+  return groupDueServicePeriodsForInvoiceCandidates(dueSelections);
+}
+
+export function groupDueServicePeriodsForInvoiceCandidates(
+  dueSelections: IRecurringScopedDuePeriodSelection[],
+): IRecurringScopedInvoiceCandidateGroup[] {
+  const grouped = new Map<string, IRecurringScopedInvoiceCandidateGroup>();
+  const windowScopeSummary = new Map<
+    string,
+    {
+      contractIds: Set<string>;
+      purchaseOrderScopeKeys: Set<string>;
+      financialScopeKeys: Set<string>;
+    }
+  >();
+
+  for (const selection of dueSelections) {
+    const contractScope = selection.clientContractId ?? '__no_contract_scope__';
+    const purchaseOrderScope = selection.purchaseOrderScopeKey ?? '__no_po_scope__';
+    const financialScope = [
+      selection.currencyCode ?? '__no_currency__',
+      selection.taxSource ?? '__no_tax_source__',
+      selection.exportShapeKey ?? '__no_export_shape__',
+    ].join(':');
+    const windowKey = `${selection.invoiceWindow.start}:${selection.invoiceWindow.end}`;
+    const key = `${windowKey}:${contractScope}:${purchaseOrderScope}:${financialScope}`;
+    const existing = grouped.get(key);
+    const windowSummary = windowScopeSummary.get(windowKey) ?? {
+      contractIds: new Set<string>(),
+      purchaseOrderScopeKeys: new Set<string>(),
+      financialScopeKeys: new Set<string>(),
+    };
+    windowSummary.contractIds.add(contractScope);
+    windowSummary.purchaseOrderScopeKeys.add(purchaseOrderScope);
+    windowSummary.financialScopeKeys.add(financialScope);
+    windowScopeSummary.set(windowKey, windowSummary);
+
+    if (existing) {
+      existing.dueSelections.push(selection);
+      if (!existing.cadenceOwners.includes(selection.servicePeriod.cadenceOwner)) {
+        existing.cadenceOwners.push(selection.servicePeriod.cadenceOwner);
+        existing.cadenceOwners.sort();
+      }
+      continue;
+    }
+
+    grouped.set(key, {
+      groupKey: key,
+      windowStart: selection.invoiceWindow.start,
+      windowEnd: selection.invoiceWindow.end,
+      semantics: selection.invoiceWindow.semantics,
+      cadenceOwners: [selection.servicePeriod.cadenceOwner],
+      clientContractId: selection.clientContractId ?? null,
+      purchaseOrderScopeKey: selection.purchaseOrderScopeKey ?? null,
+      currencyCode: selection.currencyCode ?? null,
+      taxSource: selection.taxSource ?? null,
+      exportShapeKey: selection.exportShapeKey ?? null,
+      splitReasons: [],
+      dueSelections: [selection],
+    });
+  }
+
+  return Array.from(grouped.values())
+    .map((group) => ({
+      ...group,
+      dueSelections: group.dueSelections.sort((left, right) => {
+        if (left.servicePeriod.start !== right.servicePeriod.start) {
+          return left.servicePeriod.start.localeCompare(right.servicePeriod.start);
+        }
+
+        return left.servicePeriod.sourceObligation.obligationId.localeCompare(
+          right.servicePeriod.sourceObligation.obligationId,
+        );
+      }),
+      splitReasons: (() => {
+        const windowSummary = windowScopeSummary.get(
+          `${group.windowStart}:${group.windowEnd}`,
+        );
+        const splitReasons: RecurringInvoiceSplitReason[] = [];
+
+        if ((windowSummary?.contractIds.size ?? 0) > 1) {
+          splitReasons.push('single_contract');
+        }
+        if ((windowSummary?.purchaseOrderScopeKeys.size ?? 0) > 1) {
+          splitReasons.push('purchase_order_scope');
+        }
+        if ((windowSummary?.financialScopeKeys.size ?? 0) > 1) {
+          splitReasons.push('financial_constraint');
+        }
+
+        return splitReasons;
+      })(),
+    }))
+    .sort((left, right) => {
+      if (left.windowStart !== right.windowStart) {
+        return left.windowStart.localeCompare(right.windowStart);
+      }
+      if ((left.clientContractId ?? '') !== (right.clientContractId ?? '')) {
+        return (left.clientContractId ?? '').localeCompare(right.clientContractId ?? '');
+      }
+      if ((left.purchaseOrderScopeKey ?? '') !== (right.purchaseOrderScopeKey ?? '')) {
+        return (left.purchaseOrderScopeKey ?? '').localeCompare(right.purchaseOrderScopeKey ?? '');
+      }
       return left.windowEnd.localeCompare(right.windowEnd);
     });
 }

@@ -39,6 +39,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Shared invoice-candidate grouping now carries explicit split reasons for PO and financial/export constraints, which closes `F158`, `F159`, `F160`, `T189`, and `T190`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now lets scoped due selections carry PO scope, currency, tax source, and export-shape keys, while scoped candidate groups now expose `splitReasons` with `single_contract`, `purchase_order_scope`, and `financial_constraint`
+  - `shared/billingClients/recurringTiming.ts` now exports `groupDueServicePeriodsForInvoiceCandidates(...)`, which applies those split constraints within each due window and annotates the resulting candidate groups with the operator-visible reasons they were split
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now locks all three grouping cases: contract-scope splitting, PO-scope splitting, and financial/export splitting with explainability metadata
+- (2026-03-17) The first explicit invoice-split rule is now codified at the shared-domain layer, which closes `F157` and `T188`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now distinguishes scoped due selections and scoped invoice-candidate groups so grouping logic can carry contract-scope metadata explicitly instead of assuming one invoice window always means one invoice
+  - `shared/billingClients/recurringTiming.ts` now exports `groupDueServicePeriodsByInvoiceWindowAndContract(...)`, which keeps mixed due selections on the same invoice window together only when they also share the same `clientContractId`
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now proves two due selections on the same invoice window still split into separate candidate groups when their contract scopes differ, preserving the existing single-contract invoice invariant before broader PO/tax/export split rules land
 - (2026-03-17) Client-cadence and contract-cadence due-work selection are now both explicit scheduler inputs instead of implicit billing-cycle-only assumptions, which closes `F155`, `F156`, `T186`, and `T187`:
   - `packages/billing/src/actions/recurringBillingRunActions.ts` now maps persisted `getAvailableBillingPeriods(...)` results into deterministic client-cadence recurring-run targets, selector inputs, and execution windows using the stored `period_start_date` / `period_end_date` boundaries rather than any current billing-setting anchor math
   - `shared/billingClients/recurringRunExecutionIdentity.ts` now exports `selectContractCadenceRecurringRunTargets(...)`, which uses the shared contract-cadence service-period generators plus `resolveContractCadenceInvoiceWindowForServicePeriod(...)` to produce schedulable contract-owned due windows before invoice grouping occurs
