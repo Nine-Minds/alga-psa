@@ -99,8 +99,8 @@
   {"id":"T090","description":"Invoice detail queries used by dashboard dialogs still return expected recurring line ordering and metadata","implemented":false,"featureIds":["F125","F126"]},
 
   {"id":"T091","description":"Credit application still applies against invoices generated from canonical recurring service periods","implemented":true,"featureIds":["F077"]},
-  {"id":"T092","description":"Credit reconciliation still works when recurring invoice detail rows carry more explicit service periods","implemented":false,"featureIds":["F078"]},
-  {"id":"T093","description":"Credit expiration still interprets recurring invoice timing correctly after service-period cutover","implemented":false,"featureIds":["F078"]},
+  {"id":"T092","description":"Credit reconciliation still works when recurring invoice detail rows carry more explicit service periods","implemented":true,"featureIds":["F078"]},
+  {"id":"T093","description":"Credit expiration still interprets recurring invoice timing correctly after service-period cutover","implemented":true,"featureIds":["F078"]},
   {"id":"T094","description":"Negative invoice creation remains valid when the originating recurring charges use canonical service periods","implemented":true,"featureIds":["F077"]},
   {"id":"T095","description":"Negative-invoice follow-on positive invoice reconciliation remains valid after recurring service-period cutover","implemented":true,"featureIds":["F077","F078"]},
   {"id":"T096","description":"Prepayment invoice generation still produces correct recurring prepayment behavior under canonical service periods","implemented":true,"featureIds":["F058"]},

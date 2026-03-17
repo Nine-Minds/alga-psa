@@ -223,6 +223,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/test/unit/billing/billingEngine.timing.test.ts` now closes `T078` by proving advance duplicate-prevention checks use the canonical service-period end date (`2025-01-31`) instead of the enclosing invoice-window end (`2025-02-01`), which is the billed-through seam `F080` depends on
   - no production code changed for `F077`; the existing runtime behavior already preserved these paths, but the plan had no focused regression contract proving it after the service-period-first cutover
   - a targeted DB-backed run of `negativeInvoiceCredit.test.ts` is still blocked locally because its suite-level `@alga-psa/core/secrets` mock no longer exports `getSecret`, so this checkpoint uses focused unit coverage instead of widening that unrelated harness repair
+- (2026-03-17) Credit expiration and reconciliation now have focused recurring regression coverage, but `F078` is still not fully closed:
+  - `server/src/test/unit/billing/creditReconciliation.servicePeriods.test.ts` now closes `T092` and `T093` by proving two core invariants on the service-period-first path:
+    - a negative-invoice credit that is fully consumed by a later credit application still reconciles to `remaining_amount = 0` without any dependency on invoice-header timing
+    - an expired negative-invoice credit still expires from `transactions.expiration_date` / `credit_tracking.expiration_date`, marks the tracking row expired, and creates the same reconciliation-report signal when the client balance has not yet been corrected
+  - this checkpoint intentionally stops short of flipping `F078` because the broader credit-reader (`T098`) and DB-backed integration (`T100`) seams are still open
 
 ## Commands / Runbooks
 
@@ -326,6 +331,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/invoiceGeneration.emptyResult.test.ts --coverage.enabled false`
 - (2026-03-17) Credit-flow and billed-through regression validation:
   - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+- (2026-03-17) Credit reconciliation / expiration validation:
+  - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts --coverage.enabled false`
 
 ## Links / References
 
