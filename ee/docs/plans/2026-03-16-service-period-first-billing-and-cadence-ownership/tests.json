@@ -1291,7 +1291,7 @@
   {
     "id": "T150",
     "description": "No recurring execution path mixes legacy and canonical timing models on the same line during staged rollout",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143"
     ]
@@ -1357,7 +1357,7 @@
   {
     "id": "T158",
     "description": "Partial rollout protection prevents fixed recurring from using canonical timing while product or license recurring still use legacy timing on the same execution path",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143"
     ]

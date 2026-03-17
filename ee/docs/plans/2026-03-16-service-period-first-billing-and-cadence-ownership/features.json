@@ -1280,7 +1280,7 @@
   {
     "id": "F143",
     "description": "Add runtime guardrails preventing partial rollout states where some recurring charge families use new timing and others still use old timing on the same execution path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks",
       "Implementation Sequence"

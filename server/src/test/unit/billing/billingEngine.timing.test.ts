@@ -125,6 +125,50 @@ const installFixedChargeMocks = (
   return billingPeriod;
 };
 
+const installRecurringRolloutGuardHarness = (
+  engine: BillingEngine,
+  clientContractLines: any[],
+) => {
+  (engine as any).tenant = "test_tenant";
+  vi.spyOn(engine as any, "initKnex").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "getClientContractLinesAndCycle").mockResolvedValue({
+    clientContractLines,
+    billingCycle: "monthly",
+  });
+  vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateFixedPriceCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateTimeBasedCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateUsageBasedCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateBucketPlanCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateProductCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateLicenseCharges").mockResolvedValue([]);
+
+  (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+    if (tableName === "clients") {
+      return buildQuery({
+        client_id: "client-1",
+        tenant: "test_tenant",
+        client_name: "Guardrail Client",
+        default_currency_code: "USD",
+        is_tax_exempt: false,
+      });
+    }
+
+    if (tableName === "client_billing_cycles") {
+      return buildQuery({
+        billing_cycle_id: "cycle-1",
+        client_id: "client-1",
+        tenant: "test_tenant",
+        start_date: "2025-02-01",
+        end_date: "2025-03-01",
+        effective_date: "2025-02-01",
+      });
+    }
+
+    return buildQuery(null);
+  });
+};
+
 describe("BillingEngine billing timing", () => {
   it("T045: fixed recurring arrears timing resolves partial first periods through shared coverage instead of a special skip branch", () => {
     const engine = new BillingEngine();
@@ -227,6 +271,119 @@ describe("BillingEngine billing timing", () => {
     expect(
       mixedOrderSelection["contract-line-different-window"],
     ).toBeUndefined();
+  });
+
+  it("T158: partial rollout protection rejects a billing run when provided recurring timing selections cover only some due recurring lines", async () => {
+    const engine = new BillingEngine();
+    const billingPeriod = {
+      startDate: "2025-02-01",
+      endDate: "2025-03-01",
+    };
+
+    const fixedLine = {
+      client_contract_line_id: "fixed-line",
+      contract_line_name: "Fixed Coverage",
+      contract_line_type: "Fixed",
+      currency_code: "USD",
+      billing_timing: "advance",
+      billing_frequency: "monthly",
+      cadence_owner: "client",
+      start_date: "2025-01-01",
+      end_date: null,
+    } as any;
+
+    const productLine = {
+      client_contract_line_id: "product-line",
+      contract_line_name: "Recurring Product",
+      contract_line_type: "Fixed",
+      currency_code: "USD",
+      billing_timing: "advance",
+      billing_frequency: "monthly",
+      cadence_owner: "client",
+      start_date: "2025-01-01",
+      end_date: null,
+    } as any;
+
+    installRecurringRolloutGuardHarness(engine, [fixedLine, productLine]);
+
+    const canonicalSelections = (engine as any).buildRecurringTimingSelections(
+      billingPeriod,
+      [fixedLine, productLine],
+      "monthly",
+    );
+
+    await expect(
+      (engine as any).calculateBillingInternal(
+        "client-1",
+        billingPeriod.startDate,
+        billingPeriod.endDate,
+        "cycle-1",
+        {
+          recurringTimingSelections: {
+            "fixed-line": canonicalSelections["fixed-line"],
+          },
+        },
+      ),
+    ).resolves.toMatchObject({
+      error:
+        "Recurring timing rollout guard blocked mixed legacy/canonical timing state: product-line: missing canonical selection",
+    });
+
+    expect((engine as any).calculateFixedPriceCharges).not.toHaveBeenCalled();
+    expect((engine as any).calculateProductCharges).not.toHaveBeenCalled();
+    expect((engine as any).calculateLicenseCharges).not.toHaveBeenCalled();
+  });
+
+  it("T150: partial rollout protection rejects a billing run when a provided recurring selection diverges from the canonical service period for a line", async () => {
+    const engine = new BillingEngine();
+    const billingPeriod = {
+      startDate: "2025-02-01",
+      endDate: "2025-03-01",
+    };
+
+    const recurringLine = {
+      client_contract_line_id: "recurring-line",
+      contract_line_name: "Recurring Fixed",
+      contract_line_type: "Fixed",
+      currency_code: "USD",
+      billing_timing: "arrears",
+      billing_frequency: "monthly",
+      cadence_owner: "client",
+      start_date: "2025-01-01",
+      end_date: null,
+    } as any;
+
+    installRecurringRolloutGuardHarness(engine, [recurringLine]);
+
+    const canonicalSelections = (engine as any).buildRecurringTimingSelections(
+      billingPeriod,
+      [recurringLine],
+      "monthly",
+    );
+
+    await expect(
+      (engine as any).calculateBillingInternal(
+        "client-1",
+        billingPeriod.startDate,
+        billingPeriod.endDate,
+        "cycle-1",
+        {
+          recurringTimingSelections: {
+            "recurring-line": {
+              ...canonicalSelections["recurring-line"],
+              servicePeriodEnd: "2025-01-30",
+            },
+          },
+        },
+      ),
+    ).resolves.toMatchObject({
+      error:
+        "Recurring timing rollout guard blocked mixed legacy/canonical timing state: recurring-line: selection diverged from canonical timing",
+    });
+
+    expect((engine as any).calculateFixedPriceCharges).not.toHaveBeenCalled();
+    expect((engine as any).calculateProductCharges).not.toHaveBeenCalled();
+    expect((engine as any).calculateLicenseCharges).not.toHaveBeenCalled();
   });
 
   it("skips hourly and usage contract lines when precomputing recurring timing selections", () => {

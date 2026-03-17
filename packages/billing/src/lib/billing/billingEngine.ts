@@ -90,6 +90,9 @@ type CalculateBillingOptions = {
 
 type ContractCadenceGenerator = typeof generateMonthlyContractCadenceServicePeriods;
 
+const RECURRING_TIMING_ROLLOUT_GUARD_PREFIX =
+  "Recurring timing rollout guard blocked mixed legacy/canonical timing state";
+
 export class BillingEngine {
   private knex: Knex;
   private tenant: string | null;
@@ -515,13 +518,17 @@ export class BillingEngine {
         `[BillingEngine] Resolved billing currency: ${billingCurrency}`,
       );
 
-      const recurringTimingSelections =
-        options.recurringTimingSelections ??
-        this.buildRecurringTimingSelections(
-          billingPeriod,
-          clientContractLines,
-          cycle,
-        );
+      const canonicalRecurringTimingSelections = this.buildRecurringTimingSelections(
+        billingPeriod,
+        clientContractLines,
+        cycle,
+      );
+      const recurringTimingSelections = options.recurringTimingSelections
+        ? this.assertRecurringTimingSelectionsMatchCanonical(
+            canonicalRecurringTimingSelections,
+            options.recurringTimingSelections,
+          )
+        : canonicalRecurringTimingSelections;
 
       // Ticket/Project materials are client-scoped and may exist even when there are no contract lines.
       const materialCharges = await this.calculateMaterialCharges(
@@ -1769,6 +1776,60 @@ export class BillingEngine {
     }
 
     return recurringTimingSelections;
+  }
+
+  private assertRecurringTimingSelectionsMatchCanonical(
+    canonicalSelections: RecurringChargeTimingSelections,
+    providedSelections: RecurringChargeTimingSelections,
+  ): RecurringChargeTimingSelections {
+    const mismatches: string[] = [];
+    const lineIds = Array.from(
+      new Set([
+        ...Object.keys(canonicalSelections),
+        ...Object.keys(providedSelections),
+      ]),
+    ).sort();
+
+    for (const lineId of lineIds) {
+      const canonical = canonicalSelections[lineId];
+      const provided = providedSelections[lineId];
+
+      if (!canonical) {
+        mismatches.push(`${lineId}: unexpected external selection`);
+        continue;
+      }
+
+      if (!provided) {
+        mismatches.push(`${lineId}: missing canonical selection`);
+        continue;
+      }
+
+      if (!this.areRecurringChargeTimingsEquivalent(canonical, provided)) {
+        mismatches.push(`${lineId}: selection diverged from canonical timing`);
+      }
+    }
+
+    if (mismatches.length > 0) {
+      throw new Error(
+        `${RECURRING_TIMING_ROLLOUT_GUARD_PREFIX}: ${mismatches.join("; ")}`,
+      );
+    }
+
+    return providedSelections;
+  }
+
+  private areRecurringChargeTimingsEquivalent(
+    left: ResolvedRecurringChargeTiming,
+    right: ResolvedRecurringChargeTiming,
+  ): boolean {
+    return (
+      left.duePosition === right.duePosition &&
+      left.servicePeriodStart === right.servicePeriodStart &&
+      left.servicePeriodEnd === right.servicePeriodEnd &&
+      left.servicePeriodStartExclusive === right.servicePeriodStartExclusive &&
+      left.servicePeriodEndExclusive === right.servicePeriodEndExclusive &&
+      Math.abs(left.coverageRatio - right.coverageRatio) < 1e-9
+    );
   }
 
   private isRecurringTimingEligibleContractLine(
