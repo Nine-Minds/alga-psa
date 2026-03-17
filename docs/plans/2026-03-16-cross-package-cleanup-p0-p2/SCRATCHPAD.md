@@ -167,10 +167,13 @@ By target package
 - T023 reuses the latest repo-root green build to validate the current document-cleanup changes.
 - F028 conditions are met in the current tree: repo-root build passes and the `documents` target is down to `34` warnings from the earlier `39` baseline.
 - The current document-cleanup series is committed through `F025`, `F026`, and the follow-up barrel fix, so the implemented P2-5b work is fully checked in.
+- Rolled the `DocumentsCrossFeatureContext` out into composition providers for MSP and client-portal shells, then migrated the remaining client-side document UI/util callers in `assets`, `tickets`, and `client-portal` to consume the context instead of importing `@alga-psa/documents` directly.
+- Moved the client-portal document provider out of `packages/client-portal` and into `server/src/app/client-portal/ClientPortalDocumentsProvider.tsx` after lint exposed that a local provider would itself create a new `client-portal -> documents` violation.
+- Validation after the provider rollout: `npm run lint` now reports `91` total `no-feature-to-feature-imports` warnings and only `27` targeting `documents` (down from `98`/`34` before this pass); repo-root `npm run build` also passes.
 
 ## Remaining Open Work
 
-- **F027:** still open. The remaining `@alga-psa/documents` imports are concentrated in `projects`, `tickets`, `clients`, `assets`, `billing`, and `client-portal`, and they mix UI components (`Documents`, `DocumentUpload`, `DocumentSelector`, `FolderSelectorModal`) with document actions/utilities (`getDocumentsByEntity`, `getDocumentByTicketId`, `getDocumentCountsForEntities`, `downloadDocument`, `getDocumentDownloadUrl`, KB article types). The next step needs a composition-provider rollout plus a decision on which of those action helpers should become horizontal exports versus context callbacks.
+- **F030:** next up. The remaining `client-portal` violations are now mostly non-document imports plus the knowledge-base type imports from `@alga-psa/documents`, so the next pass can focus on categorizing fixable vs acceptable client-portal composition edges.
 
 ## Gotchas
 

@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "P2-5b: Update all document-importing files to use context or horizontal imports",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5b"]
   },
   {

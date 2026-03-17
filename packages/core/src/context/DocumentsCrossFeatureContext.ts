@@ -21,8 +21,33 @@ export interface DocumentsCrossFeatureCallbacks {
   renderDocumentUpload: (props: DocumentUploadRenderProps) => ReactNode;
   renderDocumentSelector: (props: DocumentSelectorRenderProps) => ReactNode;
   renderFolderSelectorModal: (props: FolderSelectorModalRenderProps) => ReactNode;
-  downloadDocument: (documentId: string, fileName?: string) => Promise<unknown>;
+  downloadDocument: (
+    documentUrl: string,
+    fileName?: string,
+    useFileSystemAPI?: boolean
+  ) => Promise<unknown>;
   getDocumentDownloadUrl: (documentId: string, fileName?: string) => Promise<string>;
+  getDocumentsByEntity: (entityId: string, entityType: any) => Promise<any>;
+  getDocumentCountsForEntities: (entityIds: string[], entityType: any) => Promise<any>;
+  getDocumentsByContractId: (contractId: string) => Promise<any>;
+  getDocumentByTicketId: (ticketId: string) => Promise<any>;
+  getImageUrl: (fileId: string) => Promise<any>;
+  createDocumentAssociations: (
+    entityId: string,
+    entityType: any,
+    documentIds: string[]
+  ) => Promise<any>;
+  removeDocumentAssociations: (
+    entityId: string,
+    entityType: any,
+    documentIds?: string[]
+  ) => Promise<any>;
+  deleteDocument: (documentId: string, userId: string) => Promise<any>;
+  updateDocument: (documentId: string, data: any) => Promise<any>;
+  getBlockContent: (documentId: string) => Promise<any>;
+  updateBlockContent: (documentId: string, input: any) => Promise<any>;
+  downloadDocumentInBrowser: (documentId: string, documentName: string) => Promise<any>;
+  uploadDocument: (formData: FormData, metadata: any) => Promise<any>;
 }
 
 const DocumentsCrossFeatureContext = createContext<DocumentsCrossFeatureCallbacks | null>(null);
