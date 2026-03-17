@@ -82,7 +82,7 @@ export function FixedServiceConfigPanel({
               disabled={disabled}
             />
             <p className="text-sm text-muted-foreground mt-1">
-              Determines how partial periods are calculated
+              Controls how partial-period coverage is calculated when the recurring fee needs to scale to less than a full service period.
             </p>
           </div>
         )}

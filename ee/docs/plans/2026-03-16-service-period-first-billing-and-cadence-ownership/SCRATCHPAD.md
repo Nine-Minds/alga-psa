@@ -240,6 +240,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.tsx` now renders the staged cadence-owner chooser in business language so template authors see the same client-schedule versus contract-anniversary framing as live contract authors
   - `packages/billing/src/actions/contractWizardActions.ts` now persists `cadence_owner: submission.cadence_owner ?? 'client'` on all template-authored contract lines created by the wizard, which keeps future template snapshot and clone flows from losing the default at write time
   - `packages/billing/tests/templateWizardBucketOverlay.test.ts` and `packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts` now prove the default submits as `'client'` and that the UI/state/write seams stay source-backed
+- (2026-03-17) Fixed recurring authoring copy now explains partial-period coverage without teaching proration as the primary timing workaround:
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx`, `packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration.tsx`, `packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLinePresetConfiguration.tsx`, `packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx`, and `packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx` now describe `enable_proration` as scaling a recurring fee to covered service-period time instead of as a mid-cycle workaround
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.tsx` now reflects that wording back to the user as `Partial-Period Adjustment`
+  - `packages/billing/src/components/billing-dashboard/service-configurations/FixedServiceConfigPanel.tsx` now explains billing-cycle alignment as a legacy coverage-calculation choice rather than a generic proration toggle
+  - `packages/billing/src/components/billing-dashboard/Overview.tsx`, `packages/billing/src/components/billing-dashboard/contracts/QuickStartGuide.tsx`, and `packages/billing/src/components/billing-dashboard/BillingCycles.tsx` now describe client billing schedules, invoice windows, and service periods in service-period-first language
+  - `packages/billing/tests/fixedRecurringPartialPeriodCopy.wiring.test.ts` and `packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts` lock those phrases so the old “enable proration for mid-month starts” guidance does not drift back in unnoticed
 - (2026-03-17) Cadence-owner persistence is now explicit in live code, not only in domain types:
   - `server/migrations/20260317170000_add_cadence_owner_to_contract_lines.cjs` adds `contract_lines.cadence_owner` with default/backfill to `'client'` plus a check constraint for `client|contract`
   - `packages/types/src/interfaces/billing.interfaces.ts`, `packages/types/src/interfaces/contract.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `server/src/interfaces/contract.interfaces.ts` now expose `cadence_owner` on live contract-line and mapping interfaces
@@ -403,6 +409,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Template wizard cadence-owner validation:
   - `npx vitest run ../packages/billing/tests/templateWizardBucketOverlay.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Fixed recurring copy validation:
+  - `npx vitest run ../packages/billing/tests/fixedRecurringPartialPeriodCopy.wiring.test.ts ../packages/billing/tests/fixedContractLineConfiguration.cadenceOwner.ui.test.tsx --coverage.enabled false`
+  - `npx vitest run ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts ../packages/billing/tests/fixedRecurringPartialPeriodCopy.wiring.test.ts --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Cadence-owner persistence validation:
   - `npx vitest run src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts --coverage.enabled false`

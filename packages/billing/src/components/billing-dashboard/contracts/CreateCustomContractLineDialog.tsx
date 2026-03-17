@@ -970,7 +970,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      When enabled, the recurring fee will be prorated for partial billing periods
+                      When enabled, the recurring fee scales to the covered portion of a service period when the contract starts or ends inside that period.
                     </p>
                   </div>
                 </>

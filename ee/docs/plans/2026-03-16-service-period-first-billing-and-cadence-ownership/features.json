@@ -560,13 +560,13 @@
   {
     "id": "F094",
     "description": "Update fixed recurring configuration panels to explain partial-period settlement instead of proration-as-workaround",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Architecture Thesis"]
   },
   {
     "id": "F095",
     "description": "Update billing dashboard copy, quick-start guidance, and settings descriptions to reflect service-period-first semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

@@ -286,7 +286,7 @@ const BillingCycles: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-bold">Billing Cycles</h2>
-          <Tooltip content="Configure billing cycles for clients and create new billing periods.">
+          <Tooltip content="Configure client billing schedules and preview the invoice windows they create.">
             <Info className="h-4 w-4 text-muted-foreground" />
           </Tooltip>
         </div>

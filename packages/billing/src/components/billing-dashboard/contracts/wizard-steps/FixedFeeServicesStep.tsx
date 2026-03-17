@@ -202,12 +202,12 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                 checked={data.enable_proration}
                 onCheckedChange={(checked) => updateData({ enable_proration: checked })}
               />
-              <Tooltip content="Automatically adjust the recurring fee for partial billing periods based on the contract start and end dates.">
+              <Tooltip content="Adjust the recurring fee when contract dates cover only part of a service period.">
                 <HelpCircle className="h-4 w-4 text-[rgb(var(--color-text-300))] cursor-help" />
               </Tooltip>
             </div>
             <p className="text-xs text-[rgb(var(--color-text-400))]">
-              When enabled, the recurring fee is prorated if the contract starts or ends mid-cycle.
+              When enabled, the recurring fee scales to the covered portion of the service period when the contract starts or ends inside that period.
             </p>
           </div>
         )}

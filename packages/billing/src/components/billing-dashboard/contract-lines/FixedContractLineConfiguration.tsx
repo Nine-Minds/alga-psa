@@ -311,7 +311,7 @@ export function FixedPlanConfiguration({
             <div>
               <h3 className="text-lg font-semibold">Fixed Fee Settings</h3>
               <p className="text-sm text-muted-foreground">
-                Define the recurring base rate and optional proration behavior. Service allocations can be tuned once the line is active.
+                Define the recurring base rate and whether partial-period coverage should adjust the charge. Service allocations can be tuned once the line is active.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -366,7 +366,7 @@ export function FixedPlanConfiguration({
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Toggle this on if you want the base rate to be prorated when the contract starts mid-cycle.
+                  Enable this when the recurring fee should scale to the covered portion of a service period if the contract starts or ends inside that period.
                 </p>
                 {enableProration && (
                   <div>

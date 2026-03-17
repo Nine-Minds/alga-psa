@@ -268,7 +268,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-[rgb(var(--color-status-success))]" />
                 <p className="text-[rgb(var(--color-text-500))]">
-                  Proration: {data.enable_proration ? 'Enabled' : 'Disabled'}
+                  Partial-Period Adjustment: {data.enable_proration ? 'Enabled' : 'Disabled'}
                 </p>
               </div>
               {data.fixed_billing_frequency && data.fixed_billing_frequency !== data.billing_frequency && (

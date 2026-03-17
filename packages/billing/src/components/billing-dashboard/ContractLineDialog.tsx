@@ -1220,12 +1220,12 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                             markDirty();
                           }}
                         />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        When enabled, the recurring fee will be prorated for partial billing periods based on the start/end date
-                      </p>
                     </div>
-                  </>
+                    <p className="text-xs text-muted-foreground">
+                      When enabled, the recurring fee scales to the covered portion of a service period when the contract starts or ends inside that period.
+                    </p>
+                  </div>
+                </>
                 )}
               </section>
             )}
