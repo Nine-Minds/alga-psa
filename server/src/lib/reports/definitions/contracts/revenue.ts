@@ -22,7 +22,7 @@ export const contractRevenueReport: ReportDefinition = {
       description: 'Total count of active contracts',
       type: 'count',
       query: {
-        table: 'contracts',
+        table: 'client_contracts',
         aggregation: 'count',
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
@@ -41,22 +41,22 @@ export const contractRevenueReport: ReportDefinition = {
       description: 'Sum of all monthly recurring revenue from active contracts',
       type: 'sum',
       query: {
-        table: 'contracts',
+        table: 'client_contracts',
         joins: [
           {
             type: 'inner',
             table: 'contract_lines',
             on: [
-              { left: 'contracts.contract_id', right: 'contract_lines.contract_id' },
-              { left: 'contracts.tenant', right: 'contract_lines.tenant' }
+              { left: 'client_contracts.contract_id', right: 'contract_lines.contract_id' },
+              { left: 'client_contracts.tenant', right: 'contract_lines.tenant' }
             ]
           }
         ],
         fields: ['COALESCE(contract_lines.custom_rate, 0)'],
         aggregation: 'sum',
         filters: [
-          { field: 'contracts.tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'contracts.is_active', operator: 'eq', value: true }
+          { field: 'client_contracts.tenant', operator: 'eq', value: '{{tenant}}' },
+          { field: 'client_contracts.is_active', operator: 'eq', value: true }
         ]
       },
       formatting: {

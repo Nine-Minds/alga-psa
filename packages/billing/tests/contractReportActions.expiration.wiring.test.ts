@@ -40,7 +40,7 @@ describe('contractReportActions expiration report wiring', () => {
 
   it('keeps expiration-report sort semantics compatible with existing consumers', () => {
     expect(source).toContain(".orderBy('cc.end_date', 'asc');");
-    expect(source).toContain("const key = `${item.contract_name}-${item.client_name}-${item.end_date}`;");
+    expect(source).toContain("const key = `${item.contract_name}-${item.client_name}-${item.end_date}-${item.decision_due_date ?? 'none'}`;");
   });
 
   it('derives legacy auto_renew from effective renewal mode values', () => {

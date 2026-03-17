@@ -3,6 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
+import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 
 
 // Type definitions for reports
@@ -52,6 +53,18 @@ export interface ContractReportSummary {
   atRiskDecisionCount: number;
 }
 
+const mapAssignmentStatusToRevenueStatus = (
+  status: ReturnType<typeof deriveClientContractStatus>
+): ContractRevenue['status'] | null => {
+  if (status === 'draft') {
+    return 'upcoming';
+  }
+  if (status === 'terminated') {
+    return null;
+  }
+  return status;
+};
+
 /**
  * Get contract revenue report data
  * Shows monthly recurring revenue and year-to-date billing by contract
@@ -65,110 +78,84 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
     const excludedInvoiceStatuses = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'];
 
-    // First get aggregated invoice data by client to avoid cartesian product
-    const invoicesByClient = await knex('invoices')
+    const invoicesByAssignment = await knex('invoices')
       .where({ tenant })
-      // Status values are not fully normalized across tenants (some store Title Case like "Unpaid").
-      // Exclude drafts/cancelled rather than whitelisting a brittle list.
       .whereNotIn('status', excludedInvoiceStatuses)
       .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
-      .select('client_id')
+      .whereNotNull('client_contract_id')
+      .select('client_contract_id')
       .select(knex.raw('SUM(total_amount) as total_billed_ytd'))
-      .groupBy('client_id');
+      .groupBy('client_contract_id');
 
-    // Create a map for quick lookup
     const invoiceMap = new Map<string, number>();
-    for (const inv of invoicesByClient) {
-      // Postgres returns BIGINT aggregates as strings; if we don't coerce here we can
-      // accidentally concatenate strings later (e.g. in summary reduce), producing absurd values.
-      invoiceMap.set(inv.client_id, Number(inv.total_billed_ytd ?? 0) || 0);
+    for (const inv of invoicesByAssignment) {
+      invoiceMap.set(inv.client_contract_id, Number(inv.total_billed_ytd ?? 0) || 0);
     }
 
-    // Query to get contract data (without invoices to avoid join issues)
-    const data = await knex('contracts as c')
-      .leftJoin('client_contracts as cc', function joinClientContracts() {
-        this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
+    const data = await knex('client_contracts as cc')
+      .join('contracts as c', function joinContracts() {
+        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
       })
       .leftJoin('clients as cl', function joinClients() {
         this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
       })
-      .where({ 'c.tenant': tenant })
-      .where(builder => {
-        builder.where('cc.is_active', true).orWhereNull('cc.client_contract_id');
-      })
+      .where({ 'cc.tenant': tenant })
+      .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
+      .whereNotNull('c.owner_client_id')
       .select(
+        'cc.client_contract_id',
+        'cc.client_id',
+        'cc.is_active',
+        'cc.start_date',
+        'cc.end_date',
         'c.contract_id',
         'c.contract_name',
-        'c.is_active',
-        'cl.client_name',
-        'cc.client_id',
-        'cc.client_contract_id',
-        'cc.start_date',
-        'cc.end_date'
+        'cl.client_name'
       );
 
-    // Process data to aggregate by contract-client pair
     const aggregatedMap = new Map<string, any>();
 
     for (const row of data) {
-      const key = `${row.contract_id}-${row.client_name || 'Unknown'}`;
-
-      if (!aggregatedMap.has(key)) {
-        // Determine status based on contract active flag first, then date logic
-        let status: 'active' | 'upcoming' | 'expired' = row.is_active ? 'active' : 'expired';
-
-        // Only apply date logic if contract is still active
-        if (row.is_active) {
-          if (row.start_date) {
-            const startDate = new Date(row.start_date);
-            if (startDate > today) {
-              status = 'upcoming';
-            }
-          }
-          if (row.end_date) {
-            const endDate = new Date(row.end_date);
-            if (endDate < today) {
-              status = 'expired';
-            }
-          }
-        }
-
-        // Look up invoice total from the map using client_id
-        const totalBilledYtd = row.client_id ? (invoiceMap.get(row.client_id) || 0) : 0;
-
-        aggregatedMap.set(key, {
-          contract_name: row.contract_name,
-          client_name: row.client_name || 'Unknown Client',
-          monthly_recurring: 0, // Will be calculated from contract lines
-          total_billed_ytd: totalBilledYtd,
-          status
-        });
+      const assignmentStatus = deriveClientContractStatus({
+        isActive: Boolean(row.is_active),
+        startDate: row.start_date,
+        endDate: row.end_date,
+        now: today,
+      });
+      const status = mapAssignmentStatusToRevenueStatus(assignmentStatus);
+      if (!status) {
+        continue;
       }
+
+      aggregatedMap.set(row.client_contract_id, {
+        client_contract_id: row.client_contract_id,
+        contract_id: row.contract_id,
+        contract_name: row.contract_name,
+        client_name: row.client_name || 'Unknown Client',
+        monthly_recurring: 0,
+        total_billed_ytd: invoiceMap.get(row.client_contract_id) || 0,
+        status,
+      });
     }
 
-    // Query contract lines to get monthly recurring values
     const contractLines = await knex('contract_lines as cl')
       .where({ 'cl.tenant': tenant })
       .select(
         'cl.contract_id',
-        'cl.contract_line_id',
-        'cl.contract_line_name',
         'cl.custom_rate'
       );
 
-    // Add monthly recurring to aggregated data
     for (const contractLine of contractLines) {
-      const keys = Array.from(aggregatedMap.keys()).filter(k => k.startsWith(contractLine.contract_id));
-      // Rates across billing are represented in minor units (cents). `custom_rate` is stored
-      // on `contract_lines` as a numeric/decimal in the DB, but the value itself is cents.
       const rateInCents = Math.round(Number(contractLine.custom_rate) || 0);
-      for (const key of keys) {
-        const item = aggregatedMap.get(key)!;
+      for (const item of aggregatedMap.values()) {
+        if (item.contract_id !== contractLine.contract_id) {
+          continue;
+        }
         item.monthly_recurring += rateInCents;
       }
     }
 
-    return Array.from(aggregatedMap.values());
+    return Array.from(aggregatedMap.values()).map(({ client_contract_id, contract_id, ...rest }) => rest);
   } catch (error) {
     console.error('Error fetching contract revenue report:', error);
     if (error instanceof Error) {
@@ -202,8 +189,11 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         this.on('cc.tenant', '=', 'dbs.tenant');
       })
       .where({ 'c.tenant': tenant, 'cc.is_active': true })
+      .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
+      .whereNotNull('c.owner_client_id')
       .whereNotNull('cc.end_date')
       .select(
+        'cc.client_contract_id',
         'c.contract_id',
         'c.contract_name',
         'cl.client_name',
@@ -252,7 +242,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
     // Remove duplicates and aggregate by contract-client pair
     const seen = new Set<string>();
     const unique = expirations.filter(item => {
-      const key = `${item.contract_name}-${item.client_name}-${item.end_date}`;
+      const key = `${item.contract_name}-${item.client_name}-${item.end_date}-${item.decision_due_date ?? 'none'}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -424,13 +414,7 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
       .select(knex.raw('SUM(total_amount) as total_ytd')) as Array<{ total_ytd: string | number | null }>;
     const totalYTD = Number(ytdResult[0]?.total_ytd ?? 0) || 0;
 
-    // Count active contracts
-    const activeContracts = await knex('contracts')
-      .where({ tenant, is_active: true })
-      .count('* as count')
-      .first() as { count: string } | undefined;
-
-    const activeContractCount = Number(activeContracts?.count ?? 0);
+    const activeContractCount = revenueData.filter((item) => item.status === 'active').length;
     const summaryTodayDateOnly = today.toISOString().slice(0, 10);
     const inNinetyDays = new Date(today);
     inNinetyDays.setUTCDate(inNinetyDays.getUTCDate() + 90);
@@ -443,9 +427,16 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
       .where({
         'cc.tenant': tenant,
         'cc.is_active': true,
-        'c.status': 'active',
       })
+      .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
+      .whereNotNull('c.owner_client_id')
       .whereNotNull('cc.decision_due_date')
+      .andWhere((builder) => {
+        builder.whereNull('cc.start_date').orWhere('cc.start_date', '<=', summaryTodayDateOnly);
+      })
+      .andWhere((builder) => {
+        builder.whereNull('cc.end_date').orWhere('cc.end_date', '>=', summaryTodayDateOnly);
+      })
       .andWhere('cc.decision_due_date', '>=', summaryTodayDateOnly)
       .andWhere('cc.decision_due_date', '<=', summaryNinetyDaysDateOnly)
       .countDistinct('cc.client_contract_id as count')

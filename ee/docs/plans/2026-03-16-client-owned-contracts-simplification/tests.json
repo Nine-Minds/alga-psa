@@ -176,13 +176,13 @@
   {
     "id": "T030",
     "description": "Contract revenue action uses `client_contracts` as the fact source for live assigned contracts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027", "F028"]
   },
   {
     "id": "T031",
     "description": "Contract expiration action/report derives active/expiring rows from assignment truth rather than `contracts.is_active`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027", "F028"]
   },
   {

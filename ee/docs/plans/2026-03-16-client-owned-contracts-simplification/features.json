@@ -158,13 +158,13 @@
   {
     "id": "F027",
     "description": "Contract report actions: pivot live contract fact sourcing from `contracts` to `client_contracts`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F028",
     "description": "Revenue/expiration report definitions: stop counting active/live client contracts from `contracts.is_active`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {

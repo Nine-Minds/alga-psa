@@ -50,6 +50,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - neither has document associations
   - neither has direct `time_entries` or `usage_tracking` tied to those contract-line IDs
   - only `Managed IT Services` has invoice history, and only on the `The Green Thumb` assignment
+- (2026-03-16) Contract revenue reporting had one more legacy seam after the live-status UI work: `packages/billing` action code was already mostly assignment-aware, but both report-definition copies (`server` and `packages/reporting`) still counted live contracts from `contracts.is_active`.
 - (2026-03-16) The branch already had `F001/F002/F012-F015` runtime wiring in place: `IContract.owner_client_id`, billing dialog/wizard ownership writes, renewal draft ownership propagation, client-assignment ownership checks, and API schema/service ownership validation were already committed before the migration/helper batch.
 - (2026-03-16) The missing implementation gap was the shared-contract split itself. Added:
   - `server/migrations/20260316121000_client_owned_contracts_simplification.cjs`
@@ -76,6 +77,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - join shared contract targets to `client_contracts`, `contracts`, `contract_lines`, `invoices`, `time_entries`, `usage_tracking`, `document_associations`, and `contract_pricing_schedules`
 - (2026-03-16) Structural plan validation:
   - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-16-client-owned-contracts-simplification`
+- (2026-03-16) Verify assignment-first report wiring:
+  - `cd packages/billing && npx vitest run tests/contractReportActions.revenue.assignmentFact.test.ts tests/contractReportActions.summary.wiring.test.ts tests/contractReportActions.expiration.wiring.test.ts`
+  - `cd server && npx vitest run src/test/client-owned-contract-report-definitions.test.ts`
 - (2026-03-16) Focused ownership + migration verification:
   - `cd server && npx vitest run ../packages/billing/tests/contract.test.ts ../packages/billing/tests/renewalsQueueActions.createDraft.wiring.test.ts ../packages/clients/src/models/clientContract.ownerGuardrails.test.ts ../packages/types/src/interfaces/contractOwnerClient.typecheck.test.ts src/test/unit/api/contractCreateOwnerClientSchema.test.ts src/test/unit/migrations/clientOwnedContractOwnerMigration.test.ts src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts`
 - (2026-03-16) Guardrail verification:
