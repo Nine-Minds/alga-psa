@@ -35,6 +35,17 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
   const { t } = useTranslation('features/billing');
   const { t: tCommon } = useTranslation('common');
 
+  const formatServicePeriodRange = (
+    start: string | null | undefined,
+    end: string | null | undefined
+  ): string | null => {
+    if (!start || !end) {
+      return null;
+    }
+
+    return `${formatDate(start)} - ${formatDate(end)}`;
+  };
+
   // Fetch invoice details when dialog opens
   useEffect(() => {
     const fetchInvoiceDetails = async () => {
@@ -161,15 +172,29 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
               <tbody className="divide-y divide-gray-200">
                 {invoice.invoice_charges && invoice.invoice_charges.length > 0 ? (
                   invoice.invoice_charges.map((item, idx) => (
-                    <tr key={idx}>
+                    <tr key={idx} data-automation-id={`invoice-line-item-${idx}`}>
                       <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <span>{item.description}</span>
-                          {item.service_item_kind === 'product' ? (
-                            <Badge variant="secondary">Product</Badge>
-                          ) : null}
-                          {item.service_item_kind === 'product' && item.service_sku ? (
-                            <span className="text-xs text-muted-foreground">{item.service_sku}</span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span>{item.description}</span>
+                            {item.service_item_kind === 'product' ? (
+                              <Badge variant="secondary">Product</Badge>
+                            ) : null}
+                            {item.billing_timing ? (
+                              <Badge variant="outline">
+                                {item.billing_timing === 'advance'
+                                  ? t('invoice.advanceTiming', 'Advance')
+                                  : t('invoice.arrearsTiming', 'Arrears')}
+                              </Badge>
+                            ) : null}
+                            {item.service_item_kind === 'product' && item.service_sku ? (
+                              <span className="text-xs text-muted-foreground">{item.service_sku}</span>
+                            ) : null}
+                          </div>
+                          {formatServicePeriodRange(item.service_period_start, item.service_period_end) ? (
+                            <div className="text-xs text-muted-foreground">
+                              {t('invoice.servicePeriod', 'Service Period')}: {formatServicePeriodRange(item.service_period_start, item.service_period_end)}
+                            </div>
                           ) : null}
                         </div>
                       </td>

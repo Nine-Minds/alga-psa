@@ -286,7 +286,7 @@ const BillingCycles: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-bold">Billing Cycles</h2>
-          <Tooltip content="Configure client billing schedules and preview the invoice windows they create.">
+          <Tooltip content="Configure client billing schedules and preview the invoice windows they create for client-cadence recurring services.">
             <Info className="h-4 w-4 text-muted-foreground" />
           </Tooltip>
         </div>
@@ -294,6 +294,10 @@ const BillingCycles: React.FC = () => {
 
       <Card>
         <CardHeader className="flex flex-col gap-4">
+          <div className="text-sm text-muted-foreground">
+            Client billing schedules define invoice windows for recurring lines that invoice on the client billing schedule.
+            Contract-anniversary lines can follow their own cadence and are not previewed here.
+          </div>
           <div className="flex flex-wrap items-end gap-4">
             <div className="relative flex-1 min-w-[240px] max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

@@ -30,7 +30,13 @@ describe('billing dashboard recurring copy wiring', () => {
       'Enable proration for contracts that start/end mid-month'
     );
     expect(billingCyclesSource).toContain(
-      'Configure client billing schedules and preview the invoice windows they create.'
+      'Configure client billing schedules and preview the invoice windows they create for client-cadence recurring services.'
+    );
+    expect(billingCyclesSource).toContain(
+      'Client billing schedules define invoice windows for recurring lines that invoice on the client billing schedule.'
+    );
+    expect(billingCyclesSource).toContain(
+      'Contract-anniversary lines can follow their own cadence and are not previewed here.'
     );
   });
 });

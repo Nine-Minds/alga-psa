@@ -239,7 +239,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold">Billing Schedule</h3>
-          <Tooltip content="Configure billing cycle type + anchor. Changes only affect future non-invoiced billing cycles.">
+          <Tooltip content="Configure the client billing schedule for recurring lines that invoice on the client cadence. Changes only affect future non-invoiced billing cycles.">
             <Info className="h-4 w-4 text-gray-500" />
           </Tooltip>
         </div>
@@ -270,6 +270,9 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       <div className="mt-2 text-sm text-gray-600">
         {loading ? 'Loading current schedule…' : scheduleSummary}
       </div>
+      <div className="mt-1 text-sm text-gray-500">
+        This schedule drives invoice windows for recurring lines that invoice on the client billing schedule. Contract-anniversary lines keep their own cadence.
+      </div>
 
       <Dialog
         isOpen={dialogOpen}
@@ -281,6 +284,9 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         <div className="space-y-4 p-1">
           <div className="text-sm text-gray-600">
             Billing periods use <span className="font-mono">[start, end)</span> semantics. The end date is the start of the next period.
+          </div>
+          <div className="text-sm text-gray-600">
+            Previewed windows below apply to recurring lines that invoice on the client billing schedule. Contract-anniversary cadence is configured on the recurring line itself and is previewed separately.
           </div>
 
           <div className="space-y-2">
@@ -380,7 +386,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           </div>
 
           <div className="pt-2 border-t">
-            <div className="text-sm font-medium mb-2">Upcoming periods (preview)</div>
+            <div className="text-sm font-medium mb-2">Upcoming client-cadence invoice windows (preview)</div>
             {preview ? (
               <div className="space-y-1 text-sm text-gray-700">
                 {preview.map((p, idx) => (
@@ -389,11 +395,11 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
                   </div>
                 ))}
                 {previewLoading && (
-                  <div className="text-xs text-gray-500">Updating preview…</div>
+                  <div className="text-xs text-gray-500">Updating client-cadence preview…</div>
                 )}
               </div>
             ) : (
-              <div className="text-sm text-gray-500">Loading preview…</div>
+              <div className="text-sm text-gray-500">Loading client-cadence preview…</div>
             )}
           </div>
         </div>

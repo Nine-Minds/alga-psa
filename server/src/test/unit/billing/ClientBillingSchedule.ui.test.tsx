@@ -4,7 +4,7 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { ClientBillingSchedule } from 'server/src/components/clients/ClientBillingSchedule';
+import { ClientBillingSchedule } from '../../../../../packages/clients/src/components/clients/ClientBillingSchedule';
 
 vi.mock('react-hot-toast', () => ({
   toast: {
@@ -61,21 +61,15 @@ const mockPreviewBillingPeriodsForSchedule = vi.fn(async () => ([
   { periodStartDate: '2026-03-01T00:00:00Z', periodEndDate: '2026-04-01T00:00:00Z' },
 ]));
 
-vi.mock('@alga-psa/billing/actions', () => ({
-  getClientBillingCycleAnchor: (...args: any[]) => mockGetClientBillingCycleAnchor(...args),
-  previewBillingPeriodsForSchedule: (...args: any[]) => mockPreviewBillingPeriodsForSchedule(...args),
-}));
-
 const mockUpdateClientBillingSchedule = vi.fn(async () => ({ success: true }));
-
-vi.mock('@alga-psa/billing/actions', () => ({
-  updateClientBillingSchedule: (...args: any[]) => mockUpdateClientBillingSchedule(...args),
-}));
 
 const mockCreateNextBillingCycle = vi.fn(async () => ({ success: true }));
 
-vi.mock('@alga-psa/billing/actions', () => ({
-  createNextBillingCycle: (...args: any[]) => mockCreateNextBillingCycle(...args),
+vi.mock('../../../../../packages/clients/src/lib/billingHelpers', () => ({
+  getClientBillingCycleAnchorAsync: (...args: any[]) => mockGetClientBillingCycleAnchor(...args),
+  previewBillingPeriodsForScheduleAsync: (...args: any[]) => mockPreviewBillingPeriodsForSchedule(...args),
+  updateClientBillingScheduleAsync: (...args: any[]) => mockUpdateClientBillingSchedule(...args),
+  createNextBillingCycleAsync: (...args: any[]) => mockCreateNextBillingCycle(...args),
 }));
 
 describe('ClientBillingSchedule', () => {
@@ -95,6 +89,14 @@ describe('ClientBillingSchedule', () => {
     await waitFor(() => {
       expect(screen.getByText('Save Schedule')).toBeTruthy();
     });
+
+    expect(screen.getByText(
+      'This schedule drives invoice windows for recurring lines that invoice on the client billing schedule. Contract-anniversary lines keep their own cadence.'
+    )).toBeTruthy();
+    expect(screen.getByText(
+      'Previewed windows below apply to recurring lines that invoice on the client billing schedule. Contract-anniversary cadence is configured on the recurring line itself and is previewed separately.'
+    )).toBeTruthy();
+    expect(screen.getByText('Upcoming client-cadence invoice windows (preview)')).toBeTruthy();
 
     await waitFor(() => {
       expect(mockPreviewBillingPeriodsForSchedule).toHaveBeenCalled();

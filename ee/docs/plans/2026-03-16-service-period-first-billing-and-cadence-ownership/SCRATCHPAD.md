@@ -299,6 +299,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/test/unit/billing/invoiceGeneration.duplicate.test.ts` closes `T086` by proving the direct generate action blocks the second invoice for the same due window with the explicit duplicate error payload
   - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` closes `T082` by proving reruns skip duplicate cycles without incrementing `failedCount`
   - `server/src/test/unit/billing/billingEngine.timing.test.ts` closes `T087` by proving an already-persisted advance service period suppresses rebilling even when the enclosing invoice-window metadata is later, which keeps billed-through enforcement anchored to canonical service periods
+- (2026-03-17) Client billing schedule UI and preview flows now frame client cadence as one cadence-owner option instead of the only recurring timing source, which closes `F096`:
+  - `packages/billing/src/components/billing-dashboard/BillingCycles.tsx` now explains that the dashboard billing-schedule table previews invoice windows for client-cadence recurring lines only, while contract-anniversary lines can follow their own cadence outside this surface
+  - `packages/clients/src/components/clients/ClientBillingSchedule.tsx` now describes the per-client billing schedule as the client-cadence path, adds preview copy clarifying that the dialog shows client-cadence invoice windows, and explicitly states that contract-anniversary lines are previewed separately at the line level
+  - `packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts` and `server/src/test/unit/billing/ClientBillingSchedule.ui.test.tsx` now close `T117`, including a small harness repair so the client-schedule UI test imports the real package component and mocks its actual `billingHelpers` dependency
+- (2026-03-17) Client portal invoice and contract-line readers now surface recurring timing metadata instead of flattening it away, which closes `F097`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now renders canonical recurring `service_period_start` / `service_period_end` ranges and `billing_timing` badges directly on invoice line items, so client-visible invoice details keep the recurring coverage window instead of only showing pricing fields
+  - `packages/client-portal/src/actions/client-portal-actions/client-billing.ts` now selects `billing_timing` and `cadence_owner` for the client contract-line reader, and `packages/client-portal/src/components/billing/ContractLineDetailsDialog.tsx` now shows cadence-owner and billing-timing labels with a short recurring service-period explanation
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` and `packages/client-portal/src/components/billing/ContractLineDetailsDialog.servicePeriods.test.tsx` now close `T121` and `T122`
 
 ## Commands / Runbooks
 
@@ -456,6 +464,16 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Duplicate-prevention and billed-through validation:
   - `npx vitest run src/test/unit/billing/invoiceGeneration.duplicate.test.ts src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Client billing schedule cadence-owner copy validation:
+  - `npx vitest run src/test/unit/billing/ClientBillingSchedule.ui.test.tsx ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest picks up the existing workspace alias config for both server and package tests
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Client portal recurring timing display validation:
+  - `npx vitest run ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/ContractLineDetailsDialog.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for client-portal package tests
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
 
 ## Links / References
 

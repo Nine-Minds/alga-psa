@@ -572,13 +572,13 @@
   {
     "id": "F096",
     "description": "Update client billing schedule UI and preview flows to clarify that client cadence is one possible recurring service-period owner, not the only source of timing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
     "id": "F097",
     "description": "Update client portal invoice, contract-line, and billing-detail views to display canonical service-period metadata accurately",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

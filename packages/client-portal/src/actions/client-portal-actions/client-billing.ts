@@ -104,6 +104,8 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
           'cl.contract_line_id',
           'cl.contract_line_name',
           'cl.billing_frequency',
+          'cl.billing_timing',
+          'cl.cadence_owner',
           'cl.service_category',
           'cl.custom_rate',
           'cl.contract_id',
