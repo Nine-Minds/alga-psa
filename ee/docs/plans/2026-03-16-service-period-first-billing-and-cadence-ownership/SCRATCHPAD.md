@@ -333,6 +333,16 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `shared/billingClients/contractCadenceServicePeriods.ts` now exports `resolveContractCadenceAnchorDate(...)`, which defines the rollout rule plainly: future-start assignments and renewed contracts anchor to the new assignment start, while renew-in-place preserves the prior anniversary anchor when one exists
   - monthly contract-cadence generation already honored the future-start boundary by not emitting pre-anchor service periods; this checkpoint makes that behavior intentional and names the renewal-policy seam instead of leaving it to caller convention
   - focused regression coverage for those lifecycle rules now lives in `server/src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts`, which proves both the future-start no-prebilling behavior and the split between renew-in-place versus renewed-contract anchor resolution
+- (2026-03-17) Contract-cadence first/final invoice behavior is now explicit before mixed-cadence scheduler work, which closes `F106` and `F107`:
+  - `shared/billingClients/contractCadenceServicePeriods.ts` now exports `resolveContractCadenceInvoiceWindowForServicePeriod(...)`, which makes the missing policy explicit: contract cadence owns the due invoice window as well as the service-period boundary
+  - for `advance`, the first and final invoices stay on the same anniversary window as the due service period; client billing cycles do not pull those invoices back to the enclosing client cycle
+  - for `arrears`, the first and final invoices stay on the next anniversary window after the covered service period ends, including a partial final period caused by termination mid-period
+  - `server/src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts` now closes `T137` and `T138` by proving both due-position variants against a monthly `8th`-anchor scenario without enabling live contract-cadence execution yet
+- (2026-03-17) Mixed cadence grouping policy is now explicit at the shared-domain layer before scheduler identity changes, which closes `F108` and `F109`:
+  - `shared/billingClients/recurringTiming.ts` now exports `groupDueServicePeriodsByInvoiceWindow(...)`, which groups due work by `[start, end)` invoice-window identity and carries the set of cadence owners on each group for explainability
+  - the rule is now explicit: cadence owner alone does not force a split when client-owned and contract-owned due work lands on the same invoice window, but differing invoice windows always produce separate invoice candidates
+  - this checkpoint intentionally stops before `F110`: live recurring runs still iterate raw `billingCycleId`s, but later scheduler work can now build on a stable grouping contract instead of re-deciding the product rule
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now closes `T141` and `T142`
 
 ## Commands / Runbooks
 
@@ -526,6 +536,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/actions/report-actions/README.servicePeriods.test.ts --coverage.enabled false`
     - run from `packages/reporting/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Contract-cadence first/final invoice validation:
+  - `npx vitest run src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts --coverage.enabled false`
+- (2026-03-17) Mixed-cadence grouping validation:
+  - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
 
 ## Links / References
 
@@ -559,7 +573,5 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Open Questions
 
-- Does contract cadence change invoice timing as well as service-period boundaries?
 - Which bucket/allowance behaviors must join v1 versus a follow-on?
 - Which exact service-period edit operations belong in v1 versus a follow-on?
-- What exact mixed-cadence invoice-grouping rule do we want if dates coincide versus diverge?

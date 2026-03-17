@@ -409,6 +409,14 @@ This implies:
 ### Contract-cadence requirements
 
 - Contract cadence must be deterministic for monthly, quarterly, semi-annual, and annual recurring obligations.
+- Contract cadence owns invoice windows as well as service-period boundaries:
+  - `advance` bills on the contract-owned window that matches the due service period
+  - `arrears` bills on the next contract-owned window after the covered service period ends
+- A contract-cadence line that starts in the middle of a client billing cycle must still take its first invoice timing from the contract anniversary window, not from the enclosing client billing cycle.
+- A contract-cadence line that ends in the middle of a generated contract-owned period must settle that partial final coverage on the contract-owned due window implied by its timing mode.
+- Mixed cadence due work groups by invoice-window identity first:
+  - if client-cadence and contract-cadence due work land on the same `[start, end)` invoice window and no stricter split constraint applies, cadence owner alone does not force a separate invoice
+  - if their due windows differ, they become separate invoice candidates even when selected by the same recurring run
 - Mixed cadence ownership on the same client must have documented invoice grouping behavior.
 - First/final invoice behavior for contract cadence must be explicit and testable.
 
@@ -435,8 +443,6 @@ This implies:
   - boundary adjustment only
   - skip/defer
   - split/merge
-- Does `contract` cadence imply separate invoice timing, or only contract-owned service-period boundaries?
-- For mixed cadence ownership on the same client, do we still want a single consolidated invoice when due windows coincide?
 - What exact bucket/allowance behaviors should join the first cut versus a follow-on?
 - Should time and usage remain explicitly frozen out of scope after the recurring cutover, or should they become a separate follow-on plan immediately?
 

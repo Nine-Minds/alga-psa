@@ -7,6 +7,7 @@ import type {
 import {
   buildRecurringInvoiceDetailTiming,
   calculateServicePeriodCoverage,
+  groupDueServicePeriodsByInvoiceWindow,
   intersectActivityWindow,
   mapServicePeriodToInvoiceWindow,
   resolveRecurringSettlementsForInvoiceWindow,
@@ -454,5 +455,109 @@ describe('recurring timing shared domain', () => {
     });
 
     expect(settlements).toEqual([]);
+  });
+
+  it('T141: mixed cadence-owner due work in the same invoice window groups into one invoice candidate while retaining cadence-owner explainability', () => {
+    const sharedWindow = buildInvoiceWindow({
+      start: '2025-02-01',
+      end: '2025-03-01',
+      duePosition: 'advance',
+    });
+
+    const groups = groupDueServicePeriodsByInvoiceWindow([
+      {
+        servicePeriod: buildServicePeriod({
+          cadenceOwner: 'client',
+          duePosition: 'advance',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'client-line' }),
+          start: '2025-02-01',
+          end: '2025-03-01',
+        }),
+        invoiceWindow: {
+          ...sharedWindow,
+          cadenceOwner: 'client',
+        },
+      },
+      {
+        servicePeriod: buildServicePeriod({
+          cadenceOwner: 'contract',
+          duePosition: 'advance',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'contract-line' }),
+          start: '2025-02-01',
+          end: '2025-03-01',
+        }),
+        invoiceWindow: {
+          ...sharedWindow,
+          cadenceOwner: 'contract',
+        },
+      },
+    ]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+      cadenceOwners: ['client', 'contract'],
+    });
+    expect(groups[0]?.dueSelections.map((selection) => selection.servicePeriod.sourceObligation.obligationId)).toEqual([
+      'client-line',
+      'contract-line',
+    ]);
+  });
+
+  it('T142: mixed cadence-owner due work in different invoice windows stays split into separate invoice candidates', () => {
+    const groups = groupDueServicePeriodsByInvoiceWindow([
+      {
+        servicePeriod: buildServicePeriod({
+          cadenceOwner: 'client',
+          duePosition: 'advance',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'client-line' }),
+          start: '2025-02-01',
+          end: '2025-03-01',
+        }),
+        invoiceWindow: buildInvoiceWindow({
+          cadenceOwner: 'client',
+          start: '2025-02-01',
+          end: '2025-03-01',
+          duePosition: 'advance',
+        }),
+      },
+      {
+        servicePeriod: buildServicePeriod({
+          cadenceOwner: 'contract',
+          duePosition: 'advance',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'contract-line' }),
+          start: '2025-02-08',
+          end: '2025-03-08',
+        }),
+        invoiceWindow: buildInvoiceWindow({
+          cadenceOwner: 'contract',
+          start: '2025-02-08',
+          end: '2025-03-08',
+          duePosition: 'advance',
+        }),
+      },
+    ]);
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => ({
+      windowStart: group.windowStart,
+      windowEnd: group.windowEnd,
+      cadenceOwners: group.cadenceOwners,
+      obligations: group.dueSelections.map((selection) => selection.servicePeriod.sourceObligation.obligationId),
+    }))).toEqual([
+      {
+        windowStart: '2025-02-01',
+        windowEnd: '2025-03-01',
+        cadenceOwners: ['client'],
+        obligations: ['client-line'],
+      },
+      {
+        windowStart: '2025-02-08',
+        windowEnd: '2025-03-08',
+        cadenceOwners: ['contract'],
+        obligations: ['contract-line'],
+      },
+    ]);
   });
 });

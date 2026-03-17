@@ -632,25 +632,25 @@
   {
     "id": "F106",
     "description": "Define first-invoice behavior for contract-cadence lines that start in the middle of an existing client billing cycle",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Open Questions"]
   },
   {
     "id": "F107",
     "description": "Define final-invoice behavior for contract-cadence lines that end in the middle of a generated contract-owned period",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Open Questions"]
   },
   {
     "id": "F108",
     "description": "Define invoice grouping rules when a client has both client-cadence and contract-cadence recurring lines due in the same window",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Open Questions"]
   },
   {
     "id": "F109",
     "description": "Define invoice grouping rules when mixed cadence-owner recurring lines are due in different windows or at different frequencies",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Open Questions"]
   },
   {

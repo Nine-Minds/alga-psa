@@ -57,6 +57,15 @@ export interface IRecurringDuePeriodSelection {
   invoiceWindow: IRecurringInvoiceWindow;
 }
 
+export interface IRecurringInvoiceCandidateGroup {
+  groupKey: string;
+  windowStart: ISO8601String;
+  windowEnd: ISO8601String;
+  semantics: RecurringRangeSemantics;
+  cadenceOwners: CadenceOwner[];
+  dueSelections: IRecurringDuePeriodSelection[];
+}
+
 export interface IResolvedRecurringSettlement {
   servicePeriod: IRecurringServicePeriod;
   coveredServicePeriod: IRecurringServicePeriod;

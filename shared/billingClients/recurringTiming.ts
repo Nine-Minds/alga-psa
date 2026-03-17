@@ -16,6 +16,7 @@ import type {
   CadenceOwner,
   DuePosition,
   ICadenceBoundaryGenerator,
+  IRecurringInvoiceCandidateGroup,
   IRecurringActivityWindow,
   IRecurringCoverage,
   IRecurringDateRange,
@@ -174,6 +175,56 @@ export function resolveRecurringSettlementsForInvoiceWindow(input: {
       },
     ];
   });
+}
+
+export function groupDueServicePeriodsByInvoiceWindow(
+  dueSelections: IRecurringDuePeriodSelection[],
+): IRecurringInvoiceCandidateGroup[] {
+  const grouped = new Map<string, IRecurringInvoiceCandidateGroup>();
+
+  for (const selection of dueSelections) {
+    const key = `${selection.invoiceWindow.start}:${selection.invoiceWindow.end}`;
+    const existing = grouped.get(key);
+
+    if (existing) {
+      existing.dueSelections.push(selection);
+      if (!existing.cadenceOwners.includes(selection.servicePeriod.cadenceOwner)) {
+        existing.cadenceOwners.push(selection.servicePeriod.cadenceOwner);
+        existing.cadenceOwners.sort();
+      }
+      continue;
+    }
+
+    grouped.set(key, {
+      groupKey: key,
+      windowStart: selection.invoiceWindow.start,
+      windowEnd: selection.invoiceWindow.end,
+      semantics: selection.invoiceWindow.semantics,
+      cadenceOwners: [selection.servicePeriod.cadenceOwner],
+      dueSelections: [selection],
+    });
+  }
+
+  return Array.from(grouped.values())
+    .map((group) => ({
+      ...group,
+      dueSelections: group.dueSelections.sort((left, right) => {
+        if (left.servicePeriod.start !== right.servicePeriod.start) {
+          return left.servicePeriod.start.localeCompare(right.servicePeriod.start);
+        }
+
+        return left.servicePeriod.sourceObligation.obligationId.localeCompare(
+          right.servicePeriod.sourceObligation.obligationId,
+        );
+      }),
+    }))
+    .sort((left, right) => {
+      if (left.windowStart !== right.windowStart) {
+        return left.windowStart.localeCompare(right.windowStart);
+      }
+
+      return left.windowEnd.localeCompare(right.windowEnd);
+    });
 }
 
 export function buildRecurringInvoiceDetailTiming(input: {

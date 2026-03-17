@@ -2,6 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import type {
   DuePosition,
   ICadenceBoundaryGenerator,
+  IRecurringInvoiceWindow,
   IRecurringObligationRef,
   IRecurringServicePeriod,
   ISO8601String,
@@ -31,6 +32,13 @@ export interface ResolveContractCadenceAnchorDateInput {
   previousAnchorDate?: ISO8601String | null;
 }
 
+export interface ResolveContractCadenceInvoiceWindowForServicePeriodInput {
+  servicePeriod: IRecurringServicePeriod;
+  anchorDate: ISO8601String;
+  monthsPerPeriod: number;
+  windowId?: string;
+}
+
 const toPlainDate = (value: ISO8601String) => Temporal.PlainDate.from(value.slice(0, 10));
 
 const compareIsoDates = (left: ISO8601String, right: ISO8601String) =>
@@ -50,6 +58,55 @@ export function resolveContractCadenceAnchorDate(
   }
 
   return assignmentStartDate;
+}
+
+export function resolveContractCadenceInvoiceWindowForServicePeriod(
+  input: ResolveContractCadenceInvoiceWindowForServicePeriodInput,
+): IRecurringInvoiceWindow {
+  if (input.servicePeriod.cadenceOwner !== 'contract') {
+    throw new Error('Contract cadence invoice windows require a contract-owned service period.');
+  }
+
+  if (input.monthsPerPeriod <= 0) {
+    throw new Error('Contract cadence invoice windows require a positive monthsPerPeriod.');
+  }
+
+  const anchorDate = ensureUtcMidnightIsoDate(input.anchorDate);
+
+  if (input.servicePeriod.duePosition === 'advance') {
+    return {
+      kind: 'invoice_window',
+      cadenceOwner: 'contract',
+      duePosition: 'advance',
+      start: input.servicePeriod.start,
+      end: input.servicePeriod.end,
+      semantics: RECURRING_RANGE_SEMANTICS,
+      windowId: input.windowId,
+    };
+  }
+
+  const periodIndex = resolveBoundaryIndexAtOrBefore(
+    toPlainDate(anchorDate),
+    toPlainDate(input.servicePeriod.start),
+    input.monthsPerPeriod,
+  );
+  const invoiceWindowEnd = toUtcMidnightIsoDate(
+    toPlainDate(anchorDate).add({ months: (periodIndex + 2) * input.monthsPerPeriod }),
+  );
+
+  if (compareIsoDates(invoiceWindowEnd, input.servicePeriod.end) <= 0) {
+    throw new Error('Contract cadence arrears invoice windows must advance beyond the service period end.');
+  }
+
+  return {
+    kind: 'invoice_window',
+    cadenceOwner: 'contract',
+    duePosition: 'arrears',
+    start: input.servicePeriod.end,
+    end: invoiceWindowEnd,
+    semantics: RECURRING_RANGE_SEMANTICS,
+    windowId: input.windowId,
+  };
 }
 
 function toServicePeriod(input: {
