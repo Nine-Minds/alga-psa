@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "P1-4: Add 'export * from ./billing' to msp-composition/src/index.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P1-4"]
   },
   {
