@@ -14,6 +14,7 @@ const planRoot = path.join(
 
 const read = (file: string) => fs.readFileSync(path.join(planRoot, file), 'utf8');
 const appendix = read('PASS0_RECURRING_TIMING_APPENDIX.md');
+const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
 const prd = read('PRD.md');
 const runbook = read('RUNBOOK.md');
 const inventory = JSON.parse(read('pass-0-source-inventory.json')) as {
@@ -234,5 +235,29 @@ describe('service-period-first billing plan artifacts', () => {
     expect(runbook).toContain('## Rollback Posture');
     expect(runbook).toContain('do not delete canonical `invoice_charge_details` rows');
     expect(runbook).toContain('do not force `billing_cycle_alignment` back into live execution');
+  });
+
+  it('T148: runbook explains how to trace cadence-owner disputes and service-period mismatches through persisted metadata', () => {
+    expect(runbook).toContain('## Cadence-Owner Dispute Investigation');
+    expect(runbook).toContain('was the line stored as `client` cadence or `contract` cadence when the invoice was generated?');
+    expect(runbook).toContain('cl.contract_line_id,');
+    expect(runbook).toContain('left join invoice_charge_details icd');
+    expect(runbook).toContain('## Service-Period Mismatch Investigation');
+    expect(runbook).toContain('invoice headers remain the invoice-window grouping dates');
+    expect(runbook).toContain('canonical recurring detail rows remain the authoritative recurring coverage dates for migrated recurring lines');
+    expect(runbook).toContain('If the detail period is correct but the consumer output is wrong, investigate reader hydration, flattening, or export adapter logic.');
+  });
+
+  it('T170: feature-to-subsystem mapping stays explicit enough to trace implementation progress across all affected surfaces', () => {
+    expect(featureSubsystemMap).toContain('# Feature-To-Subsystem Map');
+    expect(featureSubsystemMap).toContain('## Tracking Discipline');
+    expect(featureSubsystemMap).toContain('## Subsystem Bands');
+    expect(featureSubsystemMap).toContain('Architecture, inventory, and parity scaffolding');
+    expect(featureSubsystemMap).toContain('Invoice generation, persistence, and recurring billing runs');
+    expect(featureSubsystemMap).toContain('Data model, repositories, APIs, and recurrence storage reconciliation');
+    expect(featureSubsystemMap).toContain('Reporting, portal readers, and accounting/export consumers');
+    expect(featureSubsystemMap).toContain('Materialized service-period ledger');
+    expect(featureSubsystemMap).toContain('runtime billing and timing domain');
+    expect(featureSubsystemMap).toContain('credits, prepayment, and negative-invoice flows');
   });
 });

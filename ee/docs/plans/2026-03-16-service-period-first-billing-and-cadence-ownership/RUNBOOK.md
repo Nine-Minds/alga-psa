@@ -106,6 +106,96 @@ order by service_period_start, service_id;
 - duplicate recurring invoice blocked:
   verify billed-through and duplicate checks against canonical recurring service periods, not invoice headers alone
 
+## Cadence-Owner Dispute Investigation
+
+Use this when support, billing, or finance asks why a recurring line followed the client schedule versus the contract anniversary.
+
+### Investigation order
+
+1. identify the disputed `contract_line_id`
+2. confirm the stored `cadence_owner`, `billing_frequency`, and `billing_timing`
+3. confirm whether the line was authored before contract cadence enablement or normalized during rollout
+4. compare the active client billing window to the contract-owned due invoice window
+5. inspect the resulting `invoice_charge_details` row that was persisted for the disputed invoice line
+
+### Operator questions to answer explicitly
+
+- was the line stored as `client` cadence or `contract` cadence when the invoice was generated?
+- if it was `contract`, did the contract-owned due invoice window exactly match the active run window?
+- if it was `client`, was the line normalized back to `client` cadence because mixed cadence remained staged?
+
+### Useful cadence-owner query
+
+```sql
+select
+  cl.contract_line_id,
+  cl.cadence_owner,
+  cl.billing_frequency,
+  cl.billing_timing,
+  cl.start_date,
+  cl.end_date,
+  ic.invoice_id,
+  icd.service_period_start,
+  icd.service_period_end
+from contract_lines cl
+left join invoice_charges ic
+  on ic.client_contract_line_id = cl.contract_line_id
+ and ic.tenant = cl.tenant
+left join invoice_charge_details icd
+  on icd.item_id = ic.item_id
+ and icd.tenant = ic.tenant
+where cl.tenant = :tenant
+  and cl.contract_line_id = :contract_line_id
+order by icd.service_period_start nulls last, ic.invoice_id;
+```
+
+## Service-Period Mismatch Investigation
+
+Use this when invoice header dates, portal views, exports, or support summaries appear to disagree with canonical recurring detail periods.
+
+### Investigation order
+
+1. inspect `invoices.billing_period_start` and `invoices.billing_period_end`
+2. inspect the canonical recurring `invoice_charge_details.service_period_start` and `service_period_end`
+3. confirm whether the invoice is historical/manual or detail-backed recurring
+4. confirm whether the reader is supposed to use header grouping dates or canonical recurring detail dates
+5. compare the consumer output against the documented flattening or fallback rule
+
+### Expected interpretation
+
+- invoice headers remain the invoice-window grouping dates
+- canonical recurring detail rows remain the authoritative recurring coverage dates for migrated recurring lines
+- historical or manual rows may still fall back to header or financial dates where canonical detail periods do not exist
+
+### Useful mismatch query
+
+```sql
+select
+  i.invoice_id,
+  i.billing_period_start,
+  i.billing_period_end,
+  ic.item_id,
+  ic.description,
+  ic.client_contract_line_id,
+  icd.service_period_start,
+  icd.service_period_end,
+  icd.billing_timing
+from invoices i
+join invoice_charges ic
+  on ic.invoice_id = i.invoice_id
+ and ic.tenant = i.tenant
+left join invoice_charge_details icd
+  on icd.item_id = ic.item_id
+ and icd.tenant = ic.tenant
+where i.tenant = :tenant
+  and i.invoice_id = :invoice_id
+order by ic.item_id, icd.service_period_start nulls first;
+```
+
+If the header window is correct but the detail period is wrong, investigate recurring timing selection and persistence.
+
+If the detail period is correct but the consumer output is wrong, investigate reader hydration, flattening, or export adapter logic.
+
 ## Rollback Posture
 
 Rollback means stopping rollout exposure, not undoing schema or canonical detail persistence blindly.

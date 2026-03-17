@@ -1334,7 +1334,7 @@
   {
     "id": "F149",
     "description": "Document an operational runbook for investigating cadence-owner disputes, service-period mismatches, and mixed-cadence invoice questions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Implementation Sequence",
       "Acceptance Criteria"
@@ -1343,7 +1343,7 @@
   {
     "id": "F150",
     "description": "Add a feature-to-subsystem mapping discipline in the plan artifacts so implementation progress stays traceable across runtime, invoices, APIs, UI, and downstream consumers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Implementation Sequence",
       "Acceptance Criteria"

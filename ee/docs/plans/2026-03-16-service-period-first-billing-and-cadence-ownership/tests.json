@@ -1291,7 +1291,7 @@
   {
     "id": "T148",
     "description": "Mixed cadence-owner disputes can be traced using the documented runbook and persisted metadata",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F149"
     ]
@@ -1476,7 +1476,7 @@
   {
     "id": "T170",
     "description": "Feature-to-subsystem mapping remains internally consistent so implementation progress can be tracked across all affected surfaces",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F150"
     ]

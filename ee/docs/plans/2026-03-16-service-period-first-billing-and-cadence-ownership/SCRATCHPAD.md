@@ -39,6 +39,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Feature-to-subsystem traceability is now explicit in the plan artifacts, which closes `F150` and `T170`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/FEATURE_SUBSYSTEM_MAP.md` now groups the feature backlog into subsystem bands spanning architecture/parity, shared timing domain, runtime execution, invoice generation/persistence, storage/API reconciliation, authoring surfaces, downstream readers/exports, contract cadence, and the later materialized-service-period ledger
+  - the map also defines the tracking discipline for future checkpoints: every completed feature should name its primary subsystem, note cross-cut surfaces in `SCRATCHPAD.md`, and keep commit scope aligned to a coherent subsystem slice instead of only chronological feature order
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now enforces the existence of that mapping artifact and the required subsystem coverage as `T170`
+- (2026-03-17) Operator investigation guidance now has explicit runbook paths for cadence-owner disputes and header-versus-detail service-period mismatches, which closes `F149` and `T148`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RUNBOOK.md` now includes a dedicated `Cadence-Owner Dispute Investigation` section that tells operators to compare stored `contract_lines.cadence_owner`, the active run window, and the persisted `invoice_charge_details` row before deciding whether a line truly followed client cadence or contract cadence
+  - the same runbook now includes a `Service-Period Mismatch Investigation` section that makes the intended interpretation explicit: invoice headers stay invoice-window grouping dates, while canonical recurring detail rows stay the authoritative coverage dates for migrated recurring lines
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks those operator questions, SQL fragments, and escalation rules as `T148`, so runbook drift will fail fast instead of silently weakening mixed-cadence support guidance
 - (2026-03-17) Time-and-usage unification now has its own executable follow-on boundary contract, which closes `F148` and `T169`:
   - the time/usage follow-on text was already present in `PRD.md` and `PASS0_RECURRING_TIMING_APPENDIX.md`, but `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks that scope boundary explicitly instead of leaving it as prose that could drift
   - this checkpoint did not widen recurring v1 scope; it made the existing rule enforceable: time entries and usage records remain event-driven until a separate follow-on plan deliberately reopens canonical period or ledger semantics for those domains
