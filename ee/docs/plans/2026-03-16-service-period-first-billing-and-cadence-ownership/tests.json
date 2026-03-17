@@ -76,7 +76,7 @@
   {"id":"T069","description":"Recurring product invoice detail rows persist canonical service-period metadata correctly","implemented":true,"featureIds":["F069"]},
   {"id":"T070","description":"Recurring license invoice detail rows persist canonical service-period metadata correctly","implemented":true,"featureIds":["F070"]},
 
-  {"id":"T071","description":"Invoice generation selects due recurring service periods for a billing cycle instead of deriving them ad hoc in each charge path","implemented":false,"featureIds":["F071"]},
+  {"id":"T071","description":"Invoice generation selects due recurring service periods for a billing cycle instead of deriving them ad hoc in each charge path","implemented":true,"featureIds":["F071"]},
   {"id":"T072","description":"Invoice header billing_period_start and billing_period_end remain stable after recurring service-period cutover","implemented":false,"featureIds":["F072"]},
   {"id":"T073","description":"Invoice subtotal and total calculations remain unchanged for client-cadence recurring invoices after cutover","implemented":false,"featureIds":["F071","F072"]},
   {"id":"T074","description":"Invoice finalization and status transitions continue to function after recurring service-period-first billing lands","implemented":false,"featureIds":["F073"]},

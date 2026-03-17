@@ -143,6 +143,30 @@ async function calculatePreviewTax(
   return totalTax;
 }
 
+export async function calculateBillingForInvoiceWindow(input: {
+  billingEngine: BillingEngine;
+  clientId: string;
+  cycleStart: ISO8601String;
+  cycleEnd: ISO8601String;
+  billingCycleId: string;
+}) {
+  const recurringTimingSelections =
+    await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
+      input.clientId,
+      input.cycleStart,
+      input.cycleEnd,
+      input.billingCycleId,
+    );
+
+  return input.billingEngine.calculateBilling(
+    input.clientId,
+    input.cycleStart,
+    input.cycleEnd,
+    input.billingCycleId,
+    { recurringTimingSelections },
+  );
+}
+
 export type PurchaseOrderOverageDecision = 'allow' | 'skip';
 
 export type PurchaseOrderOverageResult = {
@@ -193,7 +217,13 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
   }
 
   const billingEngine = new BillingEngine();
-  const billingResult = await billingEngine.calculateBilling(client_id, cycleStart, cycleEnd, billing_cycle_id);
+  const billingResult = await calculateBillingForInvoiceWindow({
+    billingEngine,
+    clientId: client_id,
+    cycleStart,
+    cycleEnd,
+    billingCycleId: billing_cycle_id,
+  });
   if (billingResult.error) {
     throw new Error(billingResult.error);
   }
@@ -425,7 +455,13 @@ export const previewInvoice = withAuth(async (
     const cycleEnd = await getNextBillingDate(client_id, effective_date); // Uses temporary import
 
     const billingEngine = new BillingEngine();
-    const billingResult = await billingEngine.calculateBilling(client_id, cycleStart, cycleEnd, billing_cycle_id);
+    const billingResult = await calculateBillingForInvoiceWindow({
+      billingEngine,
+      clientId: client_id,
+      cycleStart,
+      cycleEnd,
+      billingCycleId: billing_cycle_id,
+    });
 
     // Add this check first: If the billing engine returned a specific error, return it.
     if (billingResult.error) {
@@ -653,7 +689,13 @@ export const generateInvoice = withAuth(async (
   }
 
   const billingEngine = new BillingEngine();
-  const billingResult = await billingEngine.calculateBilling(client_id, cycleStart, cycleEnd, billing_cycle_id);
+  const billingResult = await calculateBillingForInvoiceWindow({
+    billingEngine,
+    clientId: client_id,
+    cycleStart,
+    cycleEnd,
+    billingCycleId: billing_cycle_id,
+  });
 
   if (billingResult.error) {
     throw new Error(billingResult.error);

@@ -10,6 +10,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import * as billingCycleActions from '@alga-psa/billing/actions/billingCycleActions';
 import * as billingAndTaxActions from '@alga-psa/billing/actions/billingAndTax';
 import * as invoiceGenerationActions from '@alga-psa/billing/actions/invoiceGeneration';
+import * as recurringBillingRunActions from '@alga-psa/billing/actions/recurringBillingRunActions';
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ data, columns, id }: any) => {
@@ -84,7 +85,7 @@ vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   },
 }));
 
-const { AutomaticInvoices } = await import('@alga-psa/billing');
+const { default: AutomaticInvoices } = await import('../../../../../packages/billing/src/components/billing-dashboard/AutomaticInvoices');
 
 function createPeriods() {
   return [
@@ -117,10 +118,13 @@ function createPeriods() {
 
 describe('Contract PO UI flows', () => {
   const previewInvoiceMock = vi.spyOn(invoiceGenerationActions, 'previewInvoice');
-  const generateInvoiceMock = vi.spyOn(invoiceGenerationActions, 'generateInvoice');
   const getPurchaseOrderOverageForBillingCycleMock = vi.spyOn(
     invoiceGenerationActions,
     'getPurchaseOrderOverageForBillingCycle'
+  );
+  const generateInvoicesAsRecurringBillingRunMock = vi.spyOn(
+    recurringBillingRunActions,
+    'generateInvoicesAsRecurringBillingRun'
   );
   const getInvoicedBillingCyclesPaginatedMock = vi.spyOn(billingCycleActions, 'getInvoicedBillingCyclesPaginated');
   const removeBillingCycleMock = vi.spyOn(billingCycleActions, 'removeBillingCycle');
@@ -129,8 +133,8 @@ describe('Contract PO UI flows', () => {
 
   beforeEach(() => {
     previewInvoiceMock.mockReset();
-    generateInvoiceMock.mockReset();
     getPurchaseOrderOverageForBillingCycleMock.mockReset();
+    generateInvoicesAsRecurringBillingRunMock.mockReset();
     getInvoicedBillingCyclesPaginatedMock.mockReset();
     removeBillingCycleMock.mockReset();
     hardDeleteBillingCycleMock.mockReset();
@@ -150,9 +154,14 @@ describe('Contract PO UI flows', () => {
       total: 2,
       page: 1,
       pageSize: 10,
-      totalPages: 1
+        totalPages: 1
+      });
+    generateInvoicesAsRecurringBillingRunMock.mockResolvedValue({
+      runId: 'run-1',
+      invoicesCreated: 0,
+      failedCount: 0,
+      failures: [],
     });
-    generateInvoiceMock.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -184,7 +193,10 @@ describe('Contract PO UI flows', () => {
 
     await waitFor(() => {
       expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalledTimes(2);
-      expect(generateInvoiceMock).toHaveBeenCalledTimes(2);
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        billingCycleIds: ['cycle-1', 'cycle-2'],
+      });
     });
 
     expect(screen.queryByText('Purchase Order Limit Overages')).toBeNull();
@@ -227,8 +239,11 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(document.getElementById('po-overage-batch-decision-confirm')!);
 
     await waitFor(() => {
-      expect(generateInvoiceMock).toHaveBeenCalledTimes(1);
-      expect(generateInvoiceMock).toHaveBeenCalledWith('cycle-2', { allowPoOverage: false });
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        billingCycleIds: ['cycle-2'],
+        allowPoOverage: false,
+      });
     });
 
     await waitFor(() => {
@@ -291,7 +306,10 @@ describe('Contract PO UI flows', () => {
     expect(typeof billingCycleId).toBe('string');
 
     await waitFor(() => {
-      expect(generateInvoiceMock).toHaveBeenCalledWith(billingCycleId, { allowPoOverage: true });
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        billingCycleIds: [billingCycleId],
+        allowPoOverage: true,
+      });
     });
   });
 });

@@ -350,7 +350,7 @@
   {
     "id": "F059",
     "description": "Ensure purchase-order support and PO banners continue to interpret recurring timing correctly after service-period cutover",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
@@ -422,7 +422,7 @@
   {
     "id": "F071",
     "description": "Refactor invoice generation to select due recurring service periods for a billing cycle window instead of deriving recurring service periods inside each charge path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {

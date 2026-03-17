@@ -7,7 +7,7 @@ import { render, screen } from '@testing-library/react';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
-import { PurchaseOrderSummaryBanner } from '@alga-psa/billing';
+import { PurchaseOrderSummaryBanner } from '../../../../../packages/billing/src/components/billing-dashboard/invoicing/PurchaseOrderSummaryBanner';
 
 describe('PurchaseOrderSummaryBanner', () => {
   it('T009: invoice metadata displays invoice-level PO number and PO summary (authorized/consumed/remaining)', () => {

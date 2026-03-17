@@ -161,6 +161,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx` is stale against `AutomaticInvoices`, which now calls `generateInvoicesAsRecurringBillingRun` instead of the older `generateInvoice` action the test spies on
   - integration coverage for PO + recurring detail persistence already exists in `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, but local execution is still blocked by unavailable Postgres
   - that leaves `F059` implementable, but not as the next low-risk checkpoint; product-path inventory (`F061`) is cleaner to land first
+- (2026-03-17) Purchase-order recurring safeguards are now regression-covered on the current UI execution path:
+  - `server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx` now imports `AutomaticInvoices` directly, mocks `generateInvoicesAsRecurringBillingRun`, and proves PO overage confirmations still gate batch and preview generation on the recurring-run path rather than the older per-cycle `generateInvoice` action
+  - `server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx` now imports `PurchaseOrderSummaryBanner` directly so the banner contract stays executable without pulling unrelated package-entry dependencies into the test graph
+  - no runtime code change was needed for `F059`; the recurring PO behavior and PO banner rendering were already correct, but the stale tests were no longer proving it after the recurring-run action cutover
+  - `T099` remains open because the broader credits-plus-PO interaction still depends on DB-backed coverage outside this UI regression seam
 - (2026-03-17) Recurring product timing now has an explicit migration target:
   - `packages/billing/src/lib/billing/billingEngine.ts` still constructs product charges against the enclosing invoice window, stamps `servicePeriodStart/servicePeriodEnd` from `billingPeriod.startDate` / `billingPeriod.endDate`, and calculates initial tax from `billingPeriod.endDate`
   - `BillingEngine.calculateBilling` still runs `applyProrationToPlan(...)` on `productCharges` after the charges are built when `enable_proration` is true
@@ -185,6 +190,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) The next boundary after `F070` is no longer a local billing-engine seam:
   - `packages/billing/src/actions/invoiceGeneration.ts` still derives work from `billing_cycle_id`, reads one billing cycle window, and calls `BillingEngine.calculateBilling(client_id, cycleStart, cycleEnd, billing_cycle_id)` directly
   - `packages/billing/src/actions/recurringBillingRunActions.ts` still treats a recurring run as a list of raw billing-cycle IDs, so `F071+` will need broader action/scheduler identity changes rather than another contained engine-only patch
+- (2026-03-17) Invoice generation now has an explicit due-service-period preselection seam before charge-family execution:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now supports an additive `recurringTimingSelections` option on `calculateBilling(...)` and exposes `selectDueRecurringServicePeriodsForBillingWindow(...)`, which precomputes one canonical timing selection per recurring contract line from the current billing window before fixed, product, and license charge paths run
+  - `calculateBillingInternal(...)` now builds those selections once per invoice window and threads them into the recurring charge families, so invoice generation no longer relies on each family rediscovering due periods independently inside its own path
+  - `packages/billing/src/actions/invoiceGeneration.ts` now routes preview, PO-overage inspection, and invoice generation through `calculateBillingForInvoiceWindow(...)`, making the action-layer contract explicit: select due recurring service periods first, then calculate billing with those selections
+  - direct unit tests that call private recurring helpers still work because the migrated fixed/product/license helpers now fall back to `getBillingCycle(...)` when no preselected billing cycle is provided; that preserves old test harness signatures while keeping live execution on the new preselection seam
 - (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
   - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
   - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
@@ -271,6 +281,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Prepayment recurring-detail reread validation:
   - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
   - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Purchase-order UI safeguard validation:
+  - `npx vitest run src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx --coverage.enabled false`
+- (2026-03-17) Invoice-generation recurring preselection validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts --coverage.enabled false`
 
 ## Links / References
 
