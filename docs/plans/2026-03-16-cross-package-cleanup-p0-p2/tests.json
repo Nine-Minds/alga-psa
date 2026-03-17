@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "P1-4: npm run build succeeds after adding re-exports",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
