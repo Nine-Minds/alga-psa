@@ -1059,6 +1059,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/billingEngine.recalculateInvoice.detailPeriods.test.ts --coverage.enabled false`
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Manual recurring-charge edit guard validation:
+  - `npx vitest run ../packages/billing/tests/invoiceModification.manualRecurringGuard.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 - (2026-03-17) Client contract assignment-date validation now distinguishes canonical recurring coverage from historical invoice-window fallback, which closes `F174` and `T204`:
   - `packages/clients/src/actions/clientContractActions.ts` now queries canonical `invoice_charge_details` coverage for the current `client_contract_id` before using legacy `client_billing_cycles` overlap logic, so end-date shortening and mid-cycle termination are enforced against billed recurring service periods rather than against the entire enclosing invoice window whenever authoritative detail rows exist
@@ -1073,6 +1077,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Invoice recalculation is now explicitly defined as a financial-only pass that preserves canonical recurring detail periods, which closes `F176` and `T206`:
   - `packages/billing/src/lib/billing/billingEngine.ts` now documents the intended contract inline at the recalculation seam: once an invoice exists, `invoice_charge_details` remains the authoritative recurring timing record and recalculation should only recompute tax distribution and invoice totals
   - `server/src/test/unit/billing/billingEngine.recalculateInvoice.detailPeriods.test.ts` proves that contract directly by exercising `BillingEngine.recalculateInvoice(...)` with a fake invoice/client store, asserting it delegates only to `calculateAndDistributeTax(...)` and `updateInvoiceTotalsAndRecordTransaction(...)`, and failing if the recalculation path starts querying `invoice_charge_details`
+- (2026-03-17) Manual invoice edit flows now make recurring provenance policy explicit instead of silently ignoring edits against recurring parent charges, which closes `F177` and `T207`:
+  - `packages/billing/src/actions/invoiceModification.ts` now checks targeted update/remove item IDs before manual edits proceed and rejects any non-manual invoice charge targets up front
+  - the recurring-specific rule is stricter and explicit: if a targeted parent charge already has canonical `invoice_charge_details` rows, the action throws `Cannot manually edit recurring invoice charges once canonical detail periods exist...` and tells the caller to add a manual adjustment or cancel/regenerate instead of mutating the recurring line in place
+  - `packages/billing/tests/invoiceModification.manualRecurringGuard.test.ts` proves that recurring-detail-backed invoice charges trip that guard and that the action does not fall through into invoice recalculation after the rejected edit attempt
 
 ## Links / References
 

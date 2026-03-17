@@ -1795,7 +1795,7 @@
   {
     "id": "T207",
     "description": "Manual edits to recurring invoice charges preserve or update canonical detail provenance according to policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F177"
     ]

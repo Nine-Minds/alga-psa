@@ -465,6 +465,41 @@ async function updateManualInvoiceItemsInternal(
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const targetedItemIds = Array.from(
+      new Set([
+        ...(changes.removedItemIds ?? []),
+        ...((changes.updatedItems ?? []).map((item) => item.item_id).filter(Boolean)),
+      ])
+    );
+
+    if (targetedItemIds.length > 0) {
+      const nonManualTargets = await trx('invoice_charges as ic')
+        .leftJoin('invoice_charge_details as iid', function(this: Knex.JoinClause) {
+          this.on('iid.item_id', '=', 'ic.item_id')
+            .andOn('iid.tenant', '=', 'ic.tenant');
+        })
+        .where('ic.invoice_id', invoiceId)
+        .andWhere('ic.tenant', tenant)
+        .whereIn('ic.item_id', targetedItemIds)
+        .where(function(this: Knex.QueryBuilder) {
+          this.where('ic.is_manual', false).orWhereNull('ic.is_manual');
+        })
+        .select('ic.item_id', 'ic.description', 'iid.item_detail_id');
+
+      if (nonManualTargets.length > 0) {
+        const touchesRecurringDetailBackedCharge = nonManualTargets.some((row: any) => Boolean(row.item_detail_id));
+        if (touchesRecurringDetailBackedCharge) {
+          throw new Error(
+            'Cannot manually edit recurring invoice charges once canonical detail periods exist. Add an adjustment as a manual item or cancel and regenerate the invoice instead.'
+          );
+        }
+
+        throw new Error(
+          'Cannot manually edit non-manual invoice charges. Add an adjustment as a manual item instead.'
+        );
+      }
+    }
+
     // Process removals
     if (changes.removedItemIds && changes.removedItemIds.length > 0) {
       await trx('invoice_charges')

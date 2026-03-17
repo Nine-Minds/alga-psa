@@ -1586,7 +1586,7 @@
   {
     "id": "F177",
     "description": "Define how manual edits to recurring invoice charges preserve, merge, or invalidate canonical detail-period provenance",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Read-model and post-persist lifecycle requirements",
       "Invoice and billing-flow requirements"
