@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "P1-4: Build passes after wiring exports (npm run build)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P1-4"]
   },
   {

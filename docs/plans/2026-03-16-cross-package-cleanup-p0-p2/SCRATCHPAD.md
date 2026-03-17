@@ -130,6 +130,7 @@ By target package
 - Added `export * from './assets'` to `packages/msp-composition/src/index.ts` to expose the existing assets composition barrel from the package root.
 - Added `export * from './billing'` to `packages/msp-composition/src/index.ts` so billing composition helpers are reachable from the main barrel.
 - Added `export * from './clients'` to `packages/msp-composition/src/index.ts`; the root barrel now exposes assets, billing, clients, tickets, projects, and scheduling.
+- `npm run build` passes with the expanded `@alga-psa/msp-composition` barrel; no new build regressions surfaced.
 
 ## Gotchas
 
