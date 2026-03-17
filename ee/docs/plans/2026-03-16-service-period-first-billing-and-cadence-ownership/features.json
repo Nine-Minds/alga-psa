@@ -842,7 +842,7 @@
   {
     "id": "F141",
     "description": "Audit company-sync, accounting mapping, and export validation services for service-period field assumptions affected by recurring timing changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

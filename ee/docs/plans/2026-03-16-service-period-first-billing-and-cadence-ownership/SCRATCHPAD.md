@@ -506,6 +506,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/client-portal/src/actions/clientPaymentActions.ts` now returns the same canonical summary fields during payment verification, which lets the payment-success flow explain what recurring coverage was settled without rereading invoice headers or relying on proration-style copy
   - `packages/client-portal/src/components/billing/BillingOverviewTab.tsx`, `packages/client-portal/src/components/billing/InvoicesTab.tsx`, and `packages/client-portal/src/components/billing/PaymentSuccessContent.tsx` now surface those canonical summaries in the overview, invoice-payment, and payment-success surfaces with explicit service-period-first wording
   - `packages/client-portal/src/components/billing/BillingOverviewTab.servicePeriods.test.tsx` and `packages/client-portal/src/components/billing/PaymentSuccessContent.servicePeriods.test.tsx` lock the two new portal UI seams, while the existing invoice detail/preview portal tests remain green on top of the new summary surfaces
+- (2026-03-17) Company-sync, accounting-mapping, and export-validation audit is now executable, which closes `F141`, `T335`, and `T336`:
+  - `packages/billing/src/services/companySync/companySyncService.ts` and `packages/billing/src/services/accountingMappingResolver.ts` remain intentionally period-agnostic; the audit now locks that by source contract instead of leaving it implicit
+  - `packages/billing/src/services/accountingExportValidation.ts` now makes the boundary explicit in code comments and carries canonical `service_period_start` / `service_period_end` metadata through mapping, tax, realm, client-reference, and payment-term validation errors, so export triage keeps the line-level recurring timing context selected earlier in the export pipeline
+  - `packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts` now locks both sides of the audit: company sync + mapping stay free of header-period assumptions, and export validation continues to preserve canonical service-period context without falling back to invoice-header billing dates
 
 ## Commands / Runbooks
 
@@ -866,6 +870,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
     - currently still fails on the pre-existing `packages/billing/src/actions/creditActions.ts(979,13)` type mismatch unrelated to `F140`
+- (2026-03-17) Accounting service-period audit validation:
+  - `npx vitest run ../packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 ## Links / References
 
