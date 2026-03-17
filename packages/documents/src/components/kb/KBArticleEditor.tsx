@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { CollaborativeEditor } from '../CollaborativeEditor';
 import { DocumentEditor } from '../DocumentEditor';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import {
   getArticle,
   updateArticle,
@@ -114,7 +115,7 @@ export default function KBArticleEditor({
         console.warn('[KBArticleEditor] Collab connection timeout, switching to fallback editor');
         setIsFallbackMode(true);
       }
-    }, 5000);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [isFallbackMode]);
 
@@ -362,6 +363,7 @@ export default function KBArticleEditor({
           <DocumentEditor
             documentId={article.document_id}
             userId={userId}
+            initialContent={article.block_data ?? null}
           />
         ) : (
           <CollaborativeEditor
@@ -369,6 +371,8 @@ export default function KBArticleEditor({
             tenantId={tenantId || article.tenant || ''}
             userId={userId}
             userName={userName || userId}
+            searchMentions={searchUsersForMentions}
+            initialContent={article.block_data ?? undefined}
             onConnectionStatusChange={(status) => {
               if (status === 'connected') collabConnectedRef.current = true;
               if (status === 'disconnected') setIsFallbackMode(true);

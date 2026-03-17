@@ -219,20 +219,20 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
     case 'bulletListItem': {
       const content = convertInlineContent(block.content);
       const listItem: ProseMirrorNode = {
-        type: 'list_item',
+        type: 'listItem',
         content: [
           content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' },
         ],
       };
       return {
-        type: 'bullet_list',
+        type: 'bulletList',
         content: [listItem],
       };
     }
     case 'numberedListItem': {
       const content = convertInlineContent(block.content);
       const listItem: ProseMirrorNode = {
-        type: 'list_item',
+        type: 'listItem',
         content: [
           content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' },
         ],
@@ -240,7 +240,7 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
       const orderRaw = block.props?.number;
       const order = typeof orderRaw === 'number' && orderRaw > 0 ? orderRaw : 1;
       return {
-        type: 'ordered_list',
+        type: 'orderedList',
         attrs: { order },
         content: [listItem],
       };
@@ -254,10 +254,10 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
         ...content,
       ];
       return {
-        type: 'bullet_list',
+        type: 'bulletList',
         content: [
           {
-            type: 'list_item',
+            type: 'listItem',
             content: [
               paragraphContent.length > 0
                 ? { type: 'paragraph', content: paragraphContent }
@@ -270,7 +270,7 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
     case 'codeBlock': {
       const codeText = extractInlineText(block.content);
       return {
-        type: 'code_block',
+        type: 'codeBlock',
         content: codeText ? [{ type: 'text', text: codeText }] : [],
       };
     }
@@ -296,7 +296,7 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
 };
 
 const isListType = (type: string): boolean =>
-  type === 'bullet_list' || type === 'ordered_list';
+  type === 'bulletList' || type === 'orderedList';
 
 const convertBlockNoteBlocks = (blocks: BlockNoteBlock[]): ProseMirrorNode[] => {
   const result: ProseMirrorNode[] = [];
@@ -319,6 +319,38 @@ const convertBlockNoteBlocks = (blocks: BlockNoteBlock[]): ProseMirrorNode[] => 
   }
 
   return result;
+};
+
+/**
+ * Normalizes legacy ProseMirror snake_case node types to TipTap camelCase.
+ * Handles content saved before the naming convention was fixed.
+ */
+const LEGACY_NODE_TYPE_MAP: Record<string, string> = {
+  bullet_list: 'bulletList',
+  ordered_list: 'orderedList',
+  list_item: 'listItem',
+  code_block: 'codeBlock',
+  hard_break: 'hardBreak',
+  horizontal_rule: 'horizontalRule',
+};
+
+const normalizeNodeTypes = (node: ProseMirrorNode): ProseMirrorNode => {
+  const normalizedType = LEGACY_NODE_TYPE_MAP[node.type] || node.type;
+  const result: ProseMirrorNode = { ...node, type: normalizedType };
+  if (result.content) {
+    result.content = result.content.map(normalizeNodeTypes);
+  }
+  return result;
+};
+
+export const normalizeProsemirrorJson = (doc: unknown): unknown => {
+  if (!doc || typeof doc !== 'object') return doc;
+  const maybeDoc = doc as { type?: string; content?: ProseMirrorNode[] };
+  if (maybeDoc.type !== 'doc' || !Array.isArray(maybeDoc.content)) return doc;
+  return {
+    ...maybeDoc,
+    content: maybeDoc.content.map(normalizeNodeTypes),
+  };
 };
 
 export const blockNoteJsonToProsemirrorJson = (blockData: unknown): ProseMirrorDoc => {

@@ -1075,7 +1075,12 @@ body {
   background: transparent !important;
 }
 
-/* Tiptap / ProseMirror dark text color */
+/* Tiptap / ProseMirror text color */
+.tiptap,
+.ProseMirror {
+  color: rgb(var(--color-text-700));
+}
+
 .dark .tiptap,
 .dark .ProseMirror {
   background-color: transparent;

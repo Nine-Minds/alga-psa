@@ -28,7 +28,9 @@ import {
   blockNoteJsonToProsemirrorJson,
   detectBlockContentFormat,
   parseBlockContent,
+  normalizeProsemirrorJson,
 } from '../lib/blockContentFormat';
+import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
@@ -53,6 +55,8 @@ interface CollaborativeEditorProps {
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   onSyncStateChange?: (synced: boolean) => void;
   onUsersChange?: (users: PresenceUser[]) => void;
+  /** Pre-loaded block_data to seed Y.js fragment instead of fetching from DB. */
+  initialContent?: unknown;
 }
 
 const USER_COLORS = [
@@ -125,6 +129,7 @@ export function CollaborativeEditor({
   onConnectionStatusChange,
   onSyncStateChange,
   onUsersChange,
+  initialContent,
 }: CollaborativeEditorProps) {
   const roomName = useMemo(() => `document:${tenantId}:${documentId}`, [tenantId, documentId]);
   const { provider, ydoc } = useMemo(
@@ -146,7 +151,17 @@ export function CollaborativeEditor({
   const [connectedUsers, setConnectedUsers] = useState<PresenceUser[]>([]);
   const [emojiState, setEmojiState] = useState<EmojiSuggestionState>(null);
   const [mentionState, setMentionState] = useState<MentionSuggestionState>(null);
+  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
   const hasInitializedContent = useRef(false);
+  const initialContentRef = useRef(initialContent);
+
+  useEffect(() => {
+    let cancelled = false;
+    isExperimentalFeatureEnabled('aiAssistant')
+      .then((enabled) => { if (!cancelled) setAiAssistantEnabled(enabled); })
+      .catch(() => { if (!cancelled) setAiAssistantEnabled(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleEmojiStateChange = useCallback((state: EmojiSuggestionState) => {
     setEmojiState(state);
@@ -314,11 +329,15 @@ export function CollaborativeEditor({
       }
 
       try {
-        const existing = await getBlockContent(documentId);
-        if (existing?.block_data) {
-          const format = detectBlockContentFormat(existing.block_data);
+        // Use pre-loaded content when available; otherwise fetch from DB
+        const blockData = initialContentRef.current !== undefined
+          ? initialContentRef.current
+          : (await getBlockContent(documentId))?.block_data ?? null;
+
+        if (blockData) {
+          const format = detectBlockContentFormat(blockData);
           if (format === 'blocknote') {
-            const converted = blockNoteJsonToProsemirrorJson(existing.block_data);
+            const converted = blockNoteJsonToProsemirrorJson(blockData);
             prosemirrorJSONToYXmlFragment(editor.schema, converted, fragment);
             try {
               await updateBlockContent(documentId, {
@@ -329,7 +348,7 @@ export function CollaborativeEditor({
               console.error('[CollaborativeEditor] Failed to persist converted block content:', persistError);
             }
           } else if (format === 'prosemirror') {
-            const parsed = parseBlockContent(existing.block_data);
+            const parsed = normalizeProsemirrorJson(parseBlockContent(blockData));
             prosemirrorJSONToYXmlFragment(editor.schema, parsed, fragment);
           }
         }
@@ -399,6 +418,7 @@ export function CollaborativeEditor({
               editor={editor}
               suggestionState={mentionState}
               searchMentions={searchMentions}
+              aiAssistantEnabled={aiAssistantEnabled}
             />
           )}
         </div>
