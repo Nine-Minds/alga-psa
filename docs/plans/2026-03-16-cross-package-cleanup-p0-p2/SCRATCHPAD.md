@@ -182,10 +182,11 @@ By target package
 - Moved the KB domain types into `packages/types/src/lib/knowledgeBase.ts` and exported them from `@alga-psa/types`; `packages/documents/src/actions/kbArticleActions.ts` now consumes those shared definitions instead of owning them locally.
 - Validation after F036: `cd packages/types && npx tsc --noEmit`, `cd packages/client-portal && npx tsc --noEmit`, and `cd packages/documents && npx tsc --noEmit` all pass.
 - Updated the three client-portal KB callers (`client-kb.ts`, `ClientKBArticleView.tsx`, `ClientKBPage.tsx`) to import the extracted KB types from `@alga-psa/types`; `npm run lint` now reports `0` remaining `client-portal` feature-import warnings and `57` total violations repo-wide.
+- Re-ran the full repo-root `npm run build` after the KB type import swap; build stays green, and the lint baseline remains at `57`, down from the original authoritative `103` count.
 
 ## Remaining Open Work
 
-- **F038:** next up. Re-run the full build and lock in the new lower lint baseline for the type-extraction pass.
+- **F039:** next up. The remaining P2-6 work is just the final commit checkpoint for the type extraction series.
 
 ## Gotchas
 
