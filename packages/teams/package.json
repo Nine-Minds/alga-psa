@@ -30,7 +30,6 @@
     "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
-    "@alga-psa/documents": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/types": "*",

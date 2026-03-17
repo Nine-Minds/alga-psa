@@ -1041,7 +1041,7 @@ export const getArticleTemplates = withAuth(
 interface BlockNoteBlock {
   type: string;
   props?: Record<string, any>;
-  content?: Array<{ type: string; text: string; styles?: Record<string, boolean> }>;
+  content?: Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }>;
   children?: BlockNoteBlock[];
 }
 
@@ -1052,6 +1052,29 @@ function markdownToBlocks(markdown: string): BlockNoteBlock[] {
 
   while (i < lines.length) {
     const line = lines[i];
+
+    // Horizontal rule
+    if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      blocks.push({ type: 'horizontalRule' });
+      i++;
+      continue;
+    }
+
+    // Blockquote
+    if (line.startsWith('> ') || line === '>') {
+      const quoteLines: string[] = [];
+      while (i < lines.length && (lines[i].startsWith('> ') || lines[i] === '>')) {
+        quoteLines.push(lines[i].replace(/^>\s?/, ''));
+        i++;
+      }
+      // Parse blockquote content as inline markdown
+      const quoteText = quoteLines.join(' ');
+      blocks.push({
+        type: 'blockquote',
+        content: parseInlineMarkdown(quoteText),
+      });
+      continue;
+    }
 
     // Fenced code block
     if (line.startsWith('```')) {
@@ -1143,10 +1166,10 @@ function markdownToBlocks(markdown: string): BlockNoteBlock[] {
 
 function parseInlineMarkdown(
   text: string
-): Array<{ type: string; text: string; styles?: Record<string, boolean> }> {
-  const segments: Array<{ type: string; text: string; styles?: Record<string, boolean> }> = [];
-  // Very simple: handle **bold**, *italic*, `code`
-  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
+): Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }> {
+  const segments: Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }> = [];
+  // Handle **bold**, *italic*, `code`, and [text](url)
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -1160,6 +1183,8 @@ function parseInlineMarkdown(
       segments.push({ type: 'text', text: match[3], styles: { italic: true } });
     } else if (match[4]) {
       segments.push({ type: 'text', text: match[4], styles: { code: true } });
+    } else if (match[5] && match[6]) {
+      segments.push({ type: 'text', text: match[5], styles: { link: { href: match[6] } } });
     }
     lastIndex = match.index + match[0].length;
   }

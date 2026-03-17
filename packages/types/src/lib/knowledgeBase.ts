@@ -32,6 +32,7 @@ export interface IKBArticle {
 export interface IKBArticleWithDocument extends IKBArticle {
   document?: IDocument;
   document_name?: string;
+  block_data?: unknown;
 }
 
 export interface IKBArticleReviewer {
