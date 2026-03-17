@@ -1,6 +1,5 @@
 import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
 import type { Knex } from 'knex';
-import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -19,14 +18,31 @@ import { BillingEngine } from '@alga-psa/billing/services';
 let db: Knex;
 let tenantId: string;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
+const authRef = vi.hoisted(() => ({
+  tenantId: '11111111-1111-1111-1111-111111111111',
+  userId: 'test-user',
+}));
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
   return {
     ...actual,
     createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
-    getCurrentTenantId: vi.fn(async () => tenantId ?? null),
+    getCurrentTenantId: vi.fn(() => tenantId ?? null),
     runWithTenant: vi.fn(async (_tenant, fn: () => Promise<any>) => fn())
+  };
+});
+
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+    getCurrentTenantId: vi.fn(() => tenantId ?? null),
+    runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn()),
+    withTransaction: vi.fn(async (_knex: unknown, fn: (trx: Knex) => Promise<any>) => fn(db)),
+    requireTenantId: vi.fn(async () => tenantId),
+    auditLog: vi.fn(async () => undefined),
   };
 });
 
@@ -35,11 +51,46 @@ vi.mock('server/src/lib/tenant', () => ({
   getTenantFromHeaders: vi.fn(() => tenantId ?? null)
 }));
 
+vi.mock('@alga-psa/auth/withAuth', () => ({
+  withAuth:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn(
+        {
+          user_id: authRef.userId,
+          tenant: authRef.tenantId,
+          roles: [],
+        },
+        { tenant: authRef.tenantId },
+        ...args
+      ),
+}));
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth:
+    (fn: (...args: any[]) => any) =>
+    (...args: any[]) =>
+      fn(
+        {
+          user_id: authRef.userId,
+          tenant: authRef.tenantId,
+          roles: [],
+        },
+        { tenant: authRef.tenantId },
+        ...args
+      ),
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(() => true),
+}));
+
 describe('Billing Invoice Timing Integration', () => {
   const HOOK_TIMEOUT = 180_000;
 
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
+    process.env.E2E_AUTH_BYPASS = 'true';
     process.env.DB_USER_ADMIN = process.env.DB_USER_ADMIN || 'postgres';
     process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';
     process.env.DB_HOST = process.env.DB_HOST || 'localhost';
@@ -49,8 +100,8 @@ describe('Billing Invoice Timing Integration', () => {
     process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'postpass123';
 
     db = await createTestDbConnection();
-    await runMigrationsAndSeeds(db);
     tenantId = await ensureTenant(db);
+    authRef.tenantId = tenantId;
     ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
   }, HOOK_TIMEOUT);
 
@@ -181,13 +232,15 @@ describe('Billing Invoice Timing Integration', () => {
       billingTiming: 'arrears'
     });
 
-    const advanceLine = await createFixedContractLine(contextLike, {
-      serviceName: 'Mixed Advance Service',
-      planName: 'Mixed Advance Plan',
-      baseRateCents: 22000,
-      startDate: '2024-12-01',
-      billingTiming: 'advance'
-    });
+  const advanceLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Mixed Advance Service',
+    planName: 'Mixed Advance Plan',
+    baseRateCents: 22000,
+    startDate: '2024-12-01',
+    billingTiming: 'advance',
+    contractId: arrearsLine.contractId,
+    clientContractId: arrearsLine.clientContractId
+  });
 
     const invoice = await generateInvoice(januaryCycleId);
     expect(invoice).toBeTruthy();
@@ -209,16 +262,158 @@ describe('Billing Invoice Timing Integration', () => {
     expect(normalizeDateValue(advanceDetail?.service_period_end)).toBe(januaryEnd);
     expect(advanceDetail?.billing_timing).toBe('advance');
   }, HOOK_TIMEOUT);
+
+it('T152: DB-backed monthly client-cadence recurring invoices preserve mixed advance and arrears outputs under the service-period-first engine', async () => {
+  setupCommonMocks({ tenantId, userId: 'monthly-parity-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    previousPeriodStart,
+    previousPeriodEnd,
+    currentPeriodStart,
+    currentPeriodEnd,
+    nextPeriodStart
+  } = await createClientWithRecurringCycles({
+    clientName: 'Monthly Parity Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01'
+  });
+
+  const arrearsLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Monthly Parity Arrears Service',
+    planName: 'Monthly Parity Arrears Plan',
+    baseRateCents: 15000,
+    startDate: previousPeriodStart,
+    billingTiming: 'arrears',
+    billingFrequency: 'monthly'
+  });
+
+  const advanceLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Monthly Parity Advance Service',
+    planName: 'Monthly Parity Advance Plan',
+    baseRateCents: 18000,
+    startDate: previousPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    contractId: arrearsLine.contractId,
+    clientContractId: arrearsLine.clientContractId
+  });
+
+  const invoice = await generateInvoice(cycleId);
+  expect(invoice).toBeTruthy();
+  expect(Number(invoice!.subtotal)).toBe(330);
+  const persistedInvoice = await getPersistedInvoice(invoice!.invoice_id);
+  expect(normalizeDateValue(persistedInvoice?.billing_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(persistedInvoice?.billing_period_end)).toBe(nextPeriodStart);
+
+  const detailRows = await getInvoiceDetailRows(invoice!.invoice_id);
+  expect(detailRows).toHaveLength(2);
+
+  const detailByService = new Map(detailRows.map((row) => [row.service_id, row]));
+  expect(detailByService.get(arrearsLine.serviceId)).toMatchObject({
+    billing_timing: 'arrears'
+  });
+  expect(normalizeDateValue(detailByService.get(arrearsLine.serviceId)?.service_period_start)).toBe(previousPeriodStart);
+  expect(normalizeDateValue(detailByService.get(arrearsLine.serviceId)?.service_period_end)).toBe(previousPeriodEnd);
+
+  expect(detailByService.get(advanceLine.serviceId)).toMatchObject({
+    billing_timing: 'advance'
+  });
+  expect(normalizeDateValue(detailByService.get(advanceLine.serviceId)?.service_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(detailByService.get(advanceLine.serviceId)?.service_period_end)).toBe(currentPeriodEnd);
+}, HOOK_TIMEOUT);
+
+it('T153: DB-backed annual client-cadence recurring invoices preserve longer-frequency advance and arrears outputs under the service-period-first engine', async () => {
+  setupCommonMocks({ tenantId, userId: 'annual-parity-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    previousPeriodStart,
+    previousPeriodEnd,
+    currentPeriodStart,
+    currentPeriodEnd,
+    nextPeriodStart
+  } = await createClientWithRecurringCycles({
+    clientName: 'Annual Parity Client',
+    billingCycle: 'annually',
+    previousPeriodStart: '2024-01-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2026-01-01'
+  });
+
+  const arrearsLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Annual Parity Arrears Service',
+    planName: 'Annual Parity Arrears Plan',
+    baseRateCents: 120000,
+    startDate: previousPeriodStart,
+    billingTiming: 'arrears',
+    billingFrequency: 'annually'
+  });
+
+  const advanceLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Annual Parity Advance Service',
+    planName: 'Annual Parity Advance Plan',
+    baseRateCents: 240000,
+    startDate: previousPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'annually',
+    contractId: arrearsLine.contractId,
+    clientContractId: arrearsLine.clientContractId
+  });
+
+  const invoice = await generateInvoice(cycleId);
+  expect(invoice).toBeTruthy();
+  expect(Number(invoice!.subtotal)).toBe(3600);
+  const persistedInvoice = await getPersistedInvoice(invoice!.invoice_id);
+  expect(normalizeDateValue(persistedInvoice?.billing_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(persistedInvoice?.billing_period_end)).toBe(nextPeriodStart);
+
+  const detailRows = await getInvoiceDetailRows(invoice!.invoice_id);
+  expect(detailRows).toHaveLength(2);
+
+  const detailByService = new Map(detailRows.map((row) => [row.service_id, row]));
+  expect(detailByService.get(arrearsLine.serviceId)).toMatchObject({
+    billing_timing: 'arrears'
+  });
+  expect(normalizeDateValue(detailByService.get(arrearsLine.serviceId)?.service_period_start)).toBe(previousPeriodStart);
+  expect(normalizeDateValue(detailByService.get(arrearsLine.serviceId)?.service_period_end)).toBe(previousPeriodEnd);
+
+  expect(detailByService.get(advanceLine.serviceId)).toMatchObject({
+    billing_timing: 'advance'
+  });
+  expect(normalizeDateValue(detailByService.get(advanceLine.serviceId)?.service_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(detailByService.get(advanceLine.serviceId)?.service_period_end)).toBe(currentPeriodEnd);
+}, HOOK_TIMEOUT);
+
 });
 
 interface ClientSetupResult {
   contextLike: { db: Knex; tenantId: string; clientId: string };
   clientId: string;
+  cycleId: string;
+  previousPeriodStart: string;
+  previousPeriodEnd: string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  nextPeriodStart: string;
+  billingCycle: 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
   januaryCycleId: string;
   decemberStart: string;
   decemberEnd: string;
   januaryStart: string;
   januaryEnd: string;
+}
+
+interface RecurringCycleSetupOptions {
+  clientName?: string;
+  billingCycle?: 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
+  previousPeriodStart?: string;
+  currentPeriodStart?: string;
+  nextPeriodStart?: string;
 }
 
 interface FixedLineOptions {
@@ -227,17 +422,45 @@ interface FixedLineOptions {
   baseRateCents: number;
   startDate: string;
   billingTiming: 'arrears' | 'advance';
+  billingFrequency?: 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
   customRateCents?: number;
+  contractId?: string;
+  clientContractId?: string;
 }
 
 async function createClientWithCycles(clientName = 'Timing Integration Client'): Promise<ClientSetupResult> {
+  return createClientWithRecurringCycles({ clientName });
+}
+
+async function createClientWithRecurringCycles(
+  options: RecurringCycleSetupOptions = {}
+): Promise<ClientSetupResult> {
   const clientId = uuidv4();
+  const billingCycle = options.billingCycle ?? 'monthly';
   await db('clients').insert({
     tenant: tenantId,
     client_id: clientId,
-    client_name: clientName,
-    billing_cycle: 'monthly',
+    client_name: options.clientName ?? 'Timing Integration Client',
+    billing_cycle: billingCycle,
     is_tax_exempt: false,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now()
+  });
+
+  await db('client_locations').insert({
+    location_id: uuidv4(),
+    tenant: tenantId,
+    client_id: clientId,
+    location_name: 'Billing',
+    address_line1: '1 Billing Way',
+    city: 'Testville',
+    state_province: 'NY',
+    postal_code: '10001',
+    country_code: 'US',
+    country_name: 'United States',
+    email: `${clientId.slice(0, 8)}@billing.test`,
+    is_default: true,
+    is_billing_address: true,
     created_at: db.fn.now(),
     updated_at: db.fn.now()
   });
@@ -259,33 +482,33 @@ async function createClientWithCycles(clientName = 'Timing Integration Client'):
   });
   await assignServiceTaxRate(contextLike as any, '*', 'US-NY', { onlyUnset: true });
 
-  const decemberStart = '2024-12-01';
-  const januaryStart = '2025-01-01';
-  const februaryStart = '2025-02-01';
-  const decemberEnd = Temporal.PlainDate.from(januaryStart).subtract({ days: 1 }).toString();
-  const januaryEnd = Temporal.PlainDate.from(februaryStart).subtract({ days: 1 }).toString();
+  const previousPeriodStart = options.previousPeriodStart ?? '2024-12-01';
+  const currentPeriodStart = options.currentPeriodStart ?? '2025-01-01';
+  const nextPeriodStart = options.nextPeriodStart ?? '2025-02-01';
+  const previousPeriodEnd = Temporal.PlainDate.from(currentPeriodStart).subtract({ days: 1 }).toString();
+  const currentPeriodEnd = Temporal.PlainDate.from(nextPeriodStart).subtract({ days: 1 }).toString();
 
   await db('client_billing_cycles').insert({
     billing_cycle_id: uuidv4(),
     tenant: tenantId,
     client_id: clientId,
-    billing_cycle: 'monthly',
-    effective_date: `${decemberStart}T00:00:00Z`,
-    period_start_date: `${decemberStart}T00:00:00Z`,
-    period_end_date: `${januaryStart}T00:00:00Z`,
+    billing_cycle: billingCycle,
+    effective_date: `${previousPeriodStart}T00:00:00Z`,
+    period_start_date: `${previousPeriodStart}T00:00:00Z`,
+    period_end_date: `${currentPeriodStart}T00:00:00Z`,
     created_at: db.fn.now(),
     updated_at: db.fn.now()
   });
 
-  const januaryCycleId = uuidv4();
+  const cycleId = uuidv4();
   await db('client_billing_cycles').insert({
-    billing_cycle_id: januaryCycleId,
+    billing_cycle_id: cycleId,
     tenant: tenantId,
     client_id: clientId,
-    billing_cycle: 'monthly',
-    effective_date: `${januaryStart}T00:00:00Z`,
-    period_start_date: `${januaryStart}T00:00:00Z`,
-    period_end_date: `${februaryStart}T00:00:00Z`,
+    billing_cycle: billingCycle,
+    effective_date: `${currentPeriodStart}T00:00:00Z`,
+    period_start_date: `${currentPeriodStart}T00:00:00Z`,
+    period_end_date: `${nextPeriodStart}T00:00:00Z`,
     created_at: db.fn.now(),
     updated_at: db.fn.now()
   });
@@ -293,18 +516,25 @@ async function createClientWithCycles(clientName = 'Timing Integration Client'):
   return {
     contextLike: contextLike as any,
     clientId,
-    januaryCycleId,
-    decemberStart,
-    decemberEnd,
-    januaryStart,
-    januaryEnd
+    cycleId,
+    previousPeriodStart,
+    previousPeriodEnd,
+    currentPeriodStart,
+    currentPeriodEnd,
+    nextPeriodStart,
+    billingCycle,
+    januaryCycleId: cycleId,
+    decemberStart: previousPeriodStart,
+    decemberEnd: previousPeriodEnd,
+    januaryStart: currentPeriodStart,
+    januaryEnd: currentPeriodEnd
   };
 }
 
 async function createFixedContractLine(
   contextLike: { db: Knex; tenantId: string; clientId: string },
   options: FixedLineOptions
-): Promise<{ serviceId: string; clientContractLineId: string }> {
+): Promise<{ serviceId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
   const serviceId = await createTestService(contextLike as any, {
     service_name: options.serviceName,
     billing_method: 'fixed',
@@ -313,49 +543,25 @@ async function createFixedContractLine(
     tax_region: 'US-NY'
   });
 
-  const { clientContractLineId } = await createFixedPlanAssignment(contextLike as any, serviceId, {
+  const result = await createFixedPlanAssignment(contextLike as any, serviceId, {
     planName: options.planName,
+    billingFrequency: options.billingFrequency ?? 'monthly',
     baseRateCents: options.baseRateCents,
     startDate: options.startDate,
+    endDate: null,
+    billingTiming: options.billingTiming,
     clientId: contextLike.clientId,
-    customRateCents: options.customRateCents
+    enableProration: false,
+    contractId: options.contractId,
+    clientContractId: options.clientContractId,
   });
 
-  if (options.customRateCents !== undefined) {
-    await contextLike.db('client_contract_line_pricing')
-      .insert({
-        tenant: contextLike.tenantId,
-        client_contract_line_id: clientContractLineId,
-        custom_rate: options.customRateCents,
-        created_at: contextLike.db.fn.now(),
-        updated_at: contextLike.db.fn.now()
-      })
-      .onConflict(['tenant', 'client_contract_line_id'])
-      .merge({
-        custom_rate: options.customRateCents,
-        updated_at: contextLike.db.fn.now()
-      });
-  }
-
-  if (await contextLike.db.schema.hasColumn('client_contract_line_terms', 'billing_timing')) {
-    await contextLike.db('client_contract_line_terms')
-      .insert({
-        tenant: contextLike.tenantId,
-        client_contract_line_id: clientContractLineId,
-        billing_frequency: 'monthly',
-        billing_timing: options.billingTiming,
-        created_at: contextLike.db.fn.now(),
-        updated_at: contextLike.db.fn.now()
-      })
-      .onConflict(['tenant', 'client_contract_line_id'])
-      .merge({
-        billing_frequency: 'monthly',
-        billing_timing: options.billingTiming,
-        updated_at: contextLike.db.fn.now()
-      });
-  }
-
-  return { serviceId, clientContractLineId };
+  return {
+    serviceId,
+    clientContractLineId: result.clientContractLineId,
+    contractId: result.contractId,
+    clientContractId: result.clientContractId
+  };
 }
 
 async function getInvoiceDetailRows(invoiceId: string) {
@@ -371,6 +577,12 @@ async function getInvoiceDetailRows(invoiceId: string) {
       'iid.service_period_end',
       'iid.billing_timing'
     ]);
+}
+
+async function getPersistedInvoice(invoiceId: string) {
+  return db('invoices')
+    .where({ invoice_id: invoiceId, tenant: tenantId })
+    .first(['invoice_id', 'billing_period_start', 'billing_period_end']);
 }
 
 function normalizeDateValue(value: unknown): string | null {
@@ -391,28 +603,6 @@ function normalizeDateValue(value: unknown): string | null {
   } catch (error) {
     return null;
   }
-}
-
-async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
-  await connection.raw('DROP SCHEMA IF EXISTS public CASCADE');
-  await connection.raw('CREATE SCHEMA public');
-  await connection.raw('GRANT ALL ON SCHEMA public TO public');
-  await connection.raw(`GRANT ALL ON SCHEMA public TO ${process.env.DB_USER_ADMIN || 'postgres'}`);
-
-  await connection.raw('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
-  await connection.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
-  try {
-    await connection.raw('CREATE EXTENSION IF NOT EXISTS "vector"');
-  } catch (error) {
-    console.warn('[billingInvoiceTiming.integration] pgvector extension unavailable:', error);
-  }
-
-  const migrationsDir = path.resolve(process.cwd(), 'server', 'migrations');
-  const seedsDir = path.resolve(process.cwd(), 'server', 'seeds', 'dev');
-
-  await connection.migrate.rollback({ directory: migrationsDir, loadExtensions: ['.cjs', '.js'] }, true);
-  await connection.migrate.latest({ directory: migrationsDir, loadExtensions: ['.cjs', '.js'] });
-  await connection.seed.run({ directory: seedsDir, loadExtensions: ['.cjs', '.js'] });
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {

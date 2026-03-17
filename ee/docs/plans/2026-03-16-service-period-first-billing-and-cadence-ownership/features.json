@@ -668,7 +668,7 @@
   {
     "id": "F112",
     "description": "Add DB-backed pre-cutover validation proving existing client-cadence recurring invoices remain unchanged under the new engine",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Acceptance Criteria"]
   },
   {
