@@ -39,6 +39,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Post-cutover source-plus-DB validation now proves the migrated live recurring path no longer depends on `billing_cycle_alignment` or `resolveServicePeriod`, which closes `F146`, `T166`, and `T167`:
+  - `server/src/test/unit/billing/billingEngine.cleanupSource.test.ts` remains the direct source contract: the billing engine file still does not contain the removed `resolveServicePeriod`, `_calculateProrationFactor`, or `applyProrationToPlan` seams
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now adds one DB-backed invariance test proving three otherwise-identical partial advance lines with `billing_cycle_alignment = start|end|prorated` all persist the same canonical `service_period_start`, `service_period_end`, and subtotal on the real invoice-generation path
+  - the same integration file now adds a DB-backed arrears partial-period test proving a mid-start monthly recurring line still persists `2025-02-10` through `2025-02-28` on the live invoice-generation path after the helper cleanup, which is the real-data closure for the old `resolveServicePeriod` seam
+  - local execution required overriding the stale `.env.localtest` `DB_PORT=5438` setting to `DB_PORT=57433`, because the active Postgres listener for this worktree is on `57433`
 - (2026-03-17) End-exclusive recurring boundary behavior now has explicit regression guards across mixed-cadence selection and pricing-schedule overlap, which closes `F145`, `T149`, and `T159`:
   - `server/src/test/unit/billing/billingEngine.timing.test.ts` now proves a contract-owned advance line whose first due window starts exactly at the active client invoice-window end is excluded from the current mixed-cadence selection set, so coexistence keeps `[start, end)` overlap semantics instead of treating touching windows as overlapping
   - `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts` now proves fixed recurring pricing schedules remain end-exclusive on both sides of the canonical service period, excluding schedules that only start at the service-period end or end at the service-period start

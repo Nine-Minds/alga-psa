@@ -1442,7 +1442,7 @@
   {
     "id": "T166",
     "description": "Database and source validation prove live recurring outputs no longer depend on billing_cycle_alignment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F116",
       "F146"
@@ -1451,7 +1451,7 @@
   {
     "id": "T167",
     "description": "Database and source validation prove live recurring outputs no longer depend on resolveServicePeriod",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F117",
       "F146"

@@ -1307,7 +1307,7 @@
   {
     "id": "F146",
     "description": "Add post-cutover source and database validation proving recurring outputs no longer depend on resolveServicePeriod or billing_cycle_alignment in live paths",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria",
       "Implementation Sequence"

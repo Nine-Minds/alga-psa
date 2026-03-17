@@ -560,6 +560,119 @@ it('T174: DB-backed recurring license invoices continue to generate correctly un
   expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(previousPeriodEnd);
 }, HOOK_TIMEOUT);
 
+it('T166: DB-backed recurring outputs stay stable across billing_cycle_alignment variants after cutover', async () => {
+  setupCommonMocks({ tenantId, userId: 'alignment-db-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    currentPeriodEnd
+  } = await createClientWithRecurringCycles({
+    clientName: 'Alignment Independence Client',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01'
+  });
+
+  const alignmentVariants = [
+    { suffix: 'Start', alignment: 'start' as const },
+    { suffix: 'End', alignment: 'end' as const },
+    { suffix: 'Prorated', alignment: 'prorated' as const },
+  ];
+
+  const createdLines: Array<{ serviceId: string; contractLineId: string }> = [];
+  let sharedContractId: string | undefined;
+  let sharedClientContractId: string | undefined;
+  for (const variant of alignmentVariants) {
+    const line = await createFixedContractLine(contextLike, {
+      serviceName: `Alignment ${variant.suffix} Service`,
+      planName: `Alignment ${variant.suffix} Plan`,
+      baseRateCents: 28000,
+      startDate: '2025-02-10',
+      billingTiming: 'advance',
+      billingFrequency: 'monthly',
+      contractId: sharedContractId,
+      clientContractId: sharedClientContractId,
+    });
+
+    sharedContractId ??= line.contractId;
+    sharedClientContractId ??= line.clientContractId;
+
+    await db('contract_lines')
+      .where({ tenant: tenantId, contract_line_id: line.contractLineId })
+      .update({
+        enable_proration: true,
+        billing_cycle_alignment: variant.alignment,
+        updated_at: db.fn.now()
+      });
+
+    createdLines.push({
+      serviceId: line.serviceId,
+      contractLineId: line.contractLineId,
+    });
+  }
+
+  const invoice = await generateInvoice(cycleId);
+  expect(invoice).toBeTruthy();
+  expect(Number(invoice!.subtotal)).toBe(570);
+
+  const detailRows = await getInvoiceDetailRows(invoice!.invoice_id);
+  expect(detailRows).toHaveLength(3);
+
+  const detailByService = new Map(detailRows.map((row) => [row.service_id, row]));
+  for (const line of createdLines) {
+    expect(detailByService.get(line.serviceId)).toMatchObject({
+      billing_timing: 'advance'
+    });
+    expect(normalizeDateValue(detailByService.get(line.serviceId)?.service_period_start)).toBe('2025-02-10');
+    expect(normalizeDateValue(detailByService.get(line.serviceId)?.service_period_end)).toBe(currentPeriodEnd);
+  }
+}, HOOK_TIMEOUT);
+
+it('T167: DB-backed recurring outputs still persist canonical partial service periods on live arrears paths after resolveServicePeriod cleanup', async () => {
+  setupCommonMocks({ tenantId, userId: 'resolve-cleanup-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    previousPeriodEnd
+  } = await createClientWithRecurringCycles({
+    clientName: 'Resolve Cleanup Client',
+    previousPeriodStart: '2025-02-01',
+    currentPeriodStart: '2025-03-01',
+    nextPeriodStart: '2025-04-01'
+  });
+
+  const line = await createFixedContractLine(contextLike, {
+    serviceName: 'Resolve Cleanup Service',
+    planName: 'Resolve Cleanup Plan',
+    baseRateCents: 28000,
+    startDate: '2025-02-10',
+    billingTiming: 'arrears',
+    billingFrequency: 'monthly'
+  });
+
+  await db('contract_lines')
+    .where({ tenant: tenantId, contract_line_id: line.contractLineId })
+    .update({
+      enable_proration: true,
+      updated_at: db.fn.now()
+    });
+
+  const invoice = await generateInvoice(cycleId);
+  expect(invoice).toBeTruthy();
+  expect(Number(invoice!.subtotal)).toBe(190);
+
+  const detailRows = await getInvoiceDetailRows(invoice!.invoice_id);
+  expect(detailRows).toHaveLength(1);
+  expect(detailRows[0]).toMatchObject({
+    service_id: line.serviceId,
+    billing_timing: 'arrears'
+  });
+  expect(normalizeDateValue(detailRows[0]?.service_period_start)).toBe('2025-02-10');
+  expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(previousPeriodEnd);
+}, HOOK_TIMEOUT);
+
 });
 
 interface ClientSetupResult {
@@ -710,7 +823,7 @@ async function createClientWithRecurringCycles(
 async function createFixedContractLine(
   contextLike: { db: Knex; tenantId: string; clientId: string },
   options: FixedLineOptions
-): Promise<{ serviceId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
+): Promise<{ serviceId: string; contractLineId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
   const serviceId = await createTestService(contextLike as any, {
     service_name: options.serviceName,
     billing_method: 'fixed',
@@ -734,6 +847,7 @@ async function createFixedContractLine(
 
   return {
     serviceId,
+    contractLineId: result.contractLineId,
     clientContractLineId: result.clientContractLineId,
     contractId: result.contractId,
     clientContractId: result.clientContractId
