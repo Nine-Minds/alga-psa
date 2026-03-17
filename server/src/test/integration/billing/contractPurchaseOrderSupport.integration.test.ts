@@ -147,6 +147,84 @@ describe('Contract Purchase Order Support', () => {
     void serviceId;
   }, HOOK_TIMEOUT);
 
+  it('T053/T050: fixed recurring invoices keep PO and assignment metadata while persisting canonical detail periods without subtotal drift', async () => {
+    const { clientId, billingCycleId } = await createClientWithBillingCycle('PO Fixed Metadata Client');
+    const { serviceTypeId, serviceId } = await createFixedService('PO Fixed Metadata Service');
+
+    await setupBillingPrereqs(clientId);
+
+    const poNumber = `PO-${uuidv4().slice(0, 8)}`;
+    await createClientContractFromWizard({
+      contract_name: 'PO Fixed Metadata Contract',
+      description: 'Contract used to validate fixed recurring PO and detail persistence',
+      client_id: clientId,
+      start_date: '2024-12-01',
+      end_date: undefined,
+      billing_frequency: 'monthly',
+      currency_code: 'USD',
+      po_required: true,
+      po_number: poNumber,
+      po_amount: null,
+      fixed_base_rate: 10000,
+      enable_proration: false,
+      fixed_services: [{ service_id: serviceId, quantity: 1, bucket_overlay: null }],
+      product_services: [],
+      hourly_services: [],
+      usage_services: [],
+      minimum_billable_time: undefined,
+      round_up_to_nearest: undefined,
+    });
+
+    const invoice = await generateInvoice(billingCycleId);
+    expect(invoice).toBeTruthy();
+
+    const invoiceRow = await db('invoices')
+      .where({ tenant: tenantId, invoice_id: invoice!.invoice_id })
+      .select(['po_number', 'client_contract_id', 'subtotal'])
+      .first();
+    expect(invoiceRow?.po_number).toBe(poNumber);
+    expect(invoiceRow?.client_contract_id).toBeTruthy();
+
+    const fixedChargeRow = await db('invoice_charges')
+      .where({ tenant: tenantId, invoice_id: invoice!.invoice_id })
+      .select(['item_id', 'client_contract_id', 'net_amount'])
+      .first();
+    expect(fixedChargeRow?.client_contract_id).toBe(invoiceRow?.client_contract_id);
+
+    const fixedDetailRows = await db('invoice_charge_details as iid')
+      .join('invoice_charge_fixed_details as iifd', function () {
+        this.on('iid.item_detail_id', '=', 'iifd.item_detail_id').andOn('iid.tenant', '=', 'iifd.tenant');
+      })
+      .where({ 'iid.tenant': tenantId, 'iid.item_id': fixedChargeRow?.item_id })
+      .select([
+        'iid.service_id',
+        'iid.service_period_start',
+        'iid.service_period_end',
+        'iid.billing_timing',
+        'iifd.allocated_amount'
+      ]);
+
+    expect(fixedDetailRows).toEqual([
+      expect.objectContaining({
+        service_id: serviceId,
+        service_period_start: expect.stringContaining('2024-12-01'),
+        service_period_end: expect.stringContaining('2024-12-31'),
+        billing_timing: 'arrears',
+        allocated_amount: 10000,
+      }),
+    ]);
+
+    const detailAllocatedSubtotal = fixedDetailRows.reduce(
+      (sum, row) => sum + Number(row.allocated_amount || 0),
+      0
+    );
+    expect(detailAllocatedSubtotal).toBe(Number(fixedChargeRow?.net_amount || 0));
+    expect(detailAllocatedSubtotal).toBe(Number(invoiceRow?.subtotal || 0));
+
+    void serviceTypeId;
+    void serviceId;
+  }, HOOK_TIMEOUT);
+
   it('T004: PO consumption sums finalized invoices and unconsumes when status changes away from finalized', async () => {
     const clientContractId = uuidv4();
     const otherClientContractId = uuidv4();

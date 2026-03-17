@@ -290,13 +290,13 @@
   {
     "id": "F049",
     "description": "Preserve purchase-order and assignment metadata behavior for fixed recurring charges after service-period-first cutover",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
     "id": "F050",
     "description": "Persist fixed recurring invoice detail rows with canonical service-period metadata and parity-check them against legacy behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {

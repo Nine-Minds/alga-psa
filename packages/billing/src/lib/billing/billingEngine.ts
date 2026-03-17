@@ -1283,37 +1283,21 @@ export class BillingEngine {
         (planLevelBaseRateCents === null ||
           Math.round(Number(effectiveCustomRate)) !== planLevelBaseRateCents);
 
-      if (hasCustomRateOverride) {
-        const resolvedCustomRateCents = Math.round(Number(effectiveCustomRate));
-        console.log(
-          `Using custom rate ${resolvedCustomRateCents} cents for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || "N/A"}`,
-        );
-
-        generatedCharges = [
-          {
-            type: "fixed",
-            serviceName: `${clientContractLine.contract_line_name}${clientContractLine.contract_name ? ` (Contract: ${clientContractLine.contract_name})` : ""}`,
-            quantity: 1,
-            rate: resolvedCustomRateCents,
-            total: resolvedCustomRateCents,
-            client_contract_line_id: clientContractLine.client_contract_line_id,
-            client_contract_id:
-              clientContractLine.client_contract_id || undefined,
-            contract_name: clientContractLine.contract_name || undefined,
-            tax_amount: 0,
-            tax_rate: 0,
-            tax_region: undefined,
-            servicePeriodStart,
-            servicePeriodEnd,
-            billingTiming: lineBillingTiming,
-          } as IFixedPriceCharge,
-        ];
-      } else if (isFixedFeePlan) {
+      if (isFixedFeePlan) {
         // For fixed fee plans, we want to create a single consolidated charge
         // but internally allocate the tax based on FMV of each service
 
-        // Use the plan-level base rate fetched earlier
-        const baseRate = planLevelBaseRate!; // Assert non-null based on checks above
+        const baseRateInCents = hasCustomRateOverride
+          ? Math.round(Number(effectiveCustomRate))
+          : Math.round(planLevelBaseRate! * 100);
+        const baseRate = baseRateInCents / 100;
+
+        if (hasCustomRateOverride) {
+          console.log(
+            `Using custom rate ${baseRateInCents} cents for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || "N/A"}`,
+          );
+        }
+
         console.log(
           `[DEBUG] Plan ${clientContractLine.contract_line_id} - Using Plan Level Base Rate: ${baseRate}`,
         );
@@ -1373,7 +1357,7 @@ export class BillingEngine {
 
             // --- Proration Calculation ---
             let prorationFactor = 1.0;
-            let effectiveBaseRateInCents = Math.round(baseRate * 100); // Start with full rate in cents
+            let effectiveBaseRateInCents = baseRateInCents; // Start with full rate in cents
 
             // Use the plan-level proration setting fetched earlier for fixed plans
             if (planLevelEnableProration) {
@@ -1531,7 +1515,7 @@ export class BillingEngine {
 
             // IFixedPriceCharge specific fields (newly added)
             config_id: planService.config_id, // From the modified query
-            base_rate: Math.round(baseRate * 100), // Use the PLAN-LEVEL base rate (converted to cents) used for allocation
+            base_rate: baseRateInCents, // Use the PLAN-LEVEL base rate in cents used for allocation
             enable_proration: planLevelEnableProration, // Use plan-level setting
             fmv: allocation.fmv, // Use FMV directly from allocation (already in cents)
             proportion: allocation.proportion, // Numeric proportion
@@ -1588,6 +1572,10 @@ export class BillingEngine {
                 rate: baseRateInCents, // Rate in cents
                 total, // Total in cents
                 type: "fixed",
+                client_contract_line_id: clientContractLine.client_contract_line_id,
+                client_contract_id:
+                  clientContractLine.client_contract_id || undefined,
+                contract_name: clientContractLine.contract_name || undefined,
                 tax_amount: 0,
                 tax_rate: 0,
                 tax_region:

@@ -20,6 +20,8 @@ const buildQuery = (firstResult: any, selectResult: any = []) => {
     return builder;
   });
   builder.andWhere = vi.fn().mockImplementation(() => builder);
+  builder.whereNull = vi.fn().mockImplementation(() => builder);
+  builder.whereIn = vi.fn().mockImplementation(() => builder);
   builder.orderBy = vi.fn().mockImplementation(() => builder);
   builder.join = vi.fn().mockImplementation(() => builder);
   builder.leftJoin = vi.fn().mockImplementation(() => builder);
@@ -39,6 +41,7 @@ interface FixedChargeMockOptions {
   assignmentCustomRate?: number | null;
   serviceRates?: number[];
   enableProration?: boolean;
+  contractLineType?: string;
 }
 
 const installFixedChargeMocks = (
@@ -88,14 +91,14 @@ const installFixedChargeMocks = (
       });
     }
 
-    if (tableName === "contract_lines") {
-      return buildQuery({
-        contract_line_id: "contract-line-1",
-        tenant: "test_tenant",
-        contract_line_type: "Fixed",
-        custom_rate: options.contractLineCustomRate ?? null,
-        enable_proration: options.enableProration ?? false,
-        billing_cycle_alignment: "start",
+      if (tableName === "contract_lines") {
+        return buildQuery({
+          contract_line_id: "contract-line-1",
+          tenant: "test_tenant",
+          contract_line_type: options.contractLineType ?? "Fixed",
+          custom_rate: options.contractLineCustomRate ?? null,
+          enable_proration: options.enableProration ?? false,
+          billing_cycle_alignment: "start",
       });
     }
 
@@ -266,6 +269,132 @@ describe("BillingEngine billing timing", () => {
     ]);
   });
 
+  it("T042: fixed recurring parity holds for a full-period monthly client-cadence contract", async () => {
+    const engine = new BillingEngine();
+    const billingPeriod = installFixedChargeMocks(engine, {
+      serviceRates: [6200],
+      enableProration: false,
+      billingPeriod: {
+        startDate: "2025-02-01",
+        endDate: "2025-03-01",
+      },
+    });
+
+    const charges = await (engine as any).calculateFixedPriceCharges(
+      "client-1",
+      billingPeriod,
+      {
+        client_contract_line_id: "ccd-1",
+        client_id: "client-1",
+        contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_id: "contract-1",
+        contract_line_name: "Managed Support",
+        contract_name: "Acme Corp",
+        billing_timing: "arrears",
+        start_date: "2025-01-01",
+        end_date: null,
+        custom_rate: null,
+      },
+    );
+
+    expect(charges).toEqual([
+      expect.objectContaining({
+        type: "fixed",
+        total: 6200,
+        rate: 6200,
+        servicePeriodStart: "2025-01-01",
+        servicePeriodEnd: "2025-01-31",
+        billingTiming: "arrears",
+        client_contract_id: "assignment-1",
+      }),
+    ]);
+  });
+
+  it("T043: fixed recurring parity holds for a mid-start monthly client-cadence contract", async () => {
+    const engine = new BillingEngine();
+    const billingPeriod = installFixedChargeMocks(engine, {
+      serviceRates: [6200],
+      enableProration: true,
+      billingPeriod: {
+        startDate: "2025-02-01",
+        endDate: "2025-03-01",
+      },
+    });
+
+    const charges = await (engine as any).calculateFixedPriceCharges(
+      "client-1",
+      billingPeriod,
+      {
+        client_contract_line_id: "ccd-1",
+        client_id: "client-1",
+        contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_id: "contract-1",
+        contract_line_name: "Managed Support",
+        contract_name: "Acme Corp",
+        billing_timing: "arrears",
+        start_date: "2025-01-10",
+        end_date: null,
+        custom_rate: null,
+      },
+    );
+
+    expect(charges).toEqual([
+      expect.objectContaining({
+        type: "fixed",
+        total: 4400,
+        rate: 4400,
+        servicePeriodStart: "2025-01-10",
+        servicePeriodEnd: "2025-01-31",
+        billingTiming: "arrears",
+        client_contract_id: "assignment-1",
+      }),
+    ]);
+  });
+
+  it("T044: fixed recurring parity holds for a mid-end monthly client-cadence contract", async () => {
+    const engine = new BillingEngine();
+    const billingPeriod = installFixedChargeMocks(engine, {
+      serviceRates: [6200],
+      enableProration: false,
+      billingPeriod: {
+        startDate: "2025-01-01",
+        endDate: "2025-02-01",
+      },
+    });
+
+    const charges = await (engine as any).calculateFixedPriceCharges(
+      "client-1",
+      billingPeriod,
+      {
+        client_contract_line_id: "ccd-1",
+        client_id: "client-1",
+        contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_id: "contract-1",
+        contract_line_name: "Managed Support",
+        contract_name: "Acme Corp",
+        billing_timing: "advance",
+        start_date: "2024-12-01",
+        end_date: "2025-01-20",
+        custom_rate: null,
+      },
+    );
+
+    expect(charges).toEqual([
+      expect.objectContaining({
+        type: "fixed",
+        total: 4000,
+        rate: 4000,
+        servicePeriodStart: "2025-01-01",
+        servicePeriodEnd: "2025-01-20",
+        billingTiming: "advance",
+        client_contract_id: "assignment-1",
+      }),
+    ]);
+  });
+
   it("T046: advance termination credits settle into one canonical partial fixed charge instead of a separate negative credit branch", async () => {
     const engine = new BillingEngine();
     const billingPeriod = installFixedChargeMocks(engine, {
@@ -419,9 +548,57 @@ describe("BillingEngine billing timing", () => {
 
     expect(charges).toEqual([
       expect.objectContaining({
+        config_id: "config-1",
+        serviceId: "service-1",
+        client_contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
         total: 2200,
         rate: 2200,
         servicePeriodStart: "2025-01-10",
+        servicePeriodEnd: "2025-01-31",
+        billingTiming: "arrears",
+      }),
+    ]);
+  });
+
+  it("preserves assignment metadata on fixed-service edge charges so PO-scoped billing can still group them correctly", async () => {
+    const engine = new BillingEngine();
+    const billingPeriod = installFixedChargeMocks(engine, {
+      contractLineType: "Time",
+      serviceRates: [6200],
+      enableProration: false,
+      billingPeriod: {
+        startDate: "2025-02-01",
+        endDate: "2025-03-01",
+      },
+    });
+
+    const charges = await (engine as any).calculateFixedPriceCharges(
+      "client-1",
+      billingPeriod,
+      {
+        client_contract_line_id: "contract-line-1",
+        client_id: "client-1",
+        contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_id: "contract-1",
+        contract_line_name: "Managed Support",
+        contract_name: "Acme Corp",
+        billing_timing: "arrears",
+        start_date: "2025-01-01",
+        end_date: null,
+        custom_rate: null,
+      },
+    );
+
+    expect(charges).toEqual([
+      expect.objectContaining({
+        type: "fixed",
+        config_id: "config-1",
+        client_contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_name: "Acme Corp",
+        servicePeriodStart: "2025-01-01",
         servicePeriodEnd: "2025-01-31",
         billingTiming: "arrears",
       }),

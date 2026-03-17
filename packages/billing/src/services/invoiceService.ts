@@ -566,6 +566,7 @@ async function persistFixedInvoiceCharges(
       is_manual: false,
       is_discount: false,
       is_taxable: planIsTaxable,
+      client_contract_id: planEntry.consolidatedItem.client_contract_id ?? null,
       created_by: session.user.id,
       created_at: now,
       updated_at: now,

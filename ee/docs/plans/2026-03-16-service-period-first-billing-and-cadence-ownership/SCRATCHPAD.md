@@ -78,6 +78,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Fixed tax behavior is now regression-covered on the canonical timing path:
   - taxable FMV allocations on a partial advance final period now have explicit unit coverage proving net tax amounts are preserved after coverage settlement
   - service-level tax regions remain stable when one service provides an explicit region and another falls back to the client default; both still route through the same fixed recurring settlement path
+- (2026-03-17) Fixed recurring persistence now closes the remaining custom-rate and assignment-metadata seams:
+  - custom-rate and pricing-schedule override fixed plans now emit detail-backed fixed charges with `config_id`, `serviceId`, `client_contract_line_id`, and `client_contract_id` instead of collapsing into a parent-only charge that could not write canonical `invoice_charge_details`
+  - the legacy edge path for fixed-config services on non-`Fixed` plan types now preserves contract assignment metadata, which keeps PO-scoped grouping and downstream invoice persistence from losing `client_contract_id`
+  - existing fixed-detail persistence tests continue to prove canonical `service_period_start`, `service_period_end`, and `billing_timing` are written without subtotal drift once charges reach `persistFixedInvoiceCharges`
 - (2026-03-16) `packages/billing/src/lib/billing/billingEngine.ts` currently mixes several timing models:
   - `resolveServicePeriod`
   - advance vs arrears branching
@@ -108,6 +112,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - regeneration after contract edits
   - future-period edit operations and conflict handling
 - (2026-03-17) The plan should explicitly avoid silently dragging time/usage into v1, while still specifying their compatibility boundaries and non-goals.
+- (2026-03-17) Fixed recurring metadata preservation now has an explicit persistence regression guard:
+  - `packages/billing/src/services/invoiceService.ts` was already carrying `client_contract_id` on grouped detailed fixed charges, but the consolidated parent `invoice_charges` insert dropped that assignment field entirely
+  - `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` now reproduces the issue without a database and verifies that canonical `invoice_charge_details` periods and `invoice_charge_fixed_details.allocated_amount` stay aligned with the parent fixed charge subtotal
+  - `packages/billing/src/services/invoiceService.ts` now persists `client_contract_id` on consolidated fixed parent rows, preserving assignment metadata for downstream invoice readers and PO-related invoice flows
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now adds explicit fixed-recurring parity coverage for full-period, mid-start, and mid-end monthly client-cadence scenarios
+  - `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts` now includes a PO + fixed-detail persistence regression test, but local execution remains blocked by the current Postgres socket permissions
 
 ## Commands / Runbooks
 
@@ -150,6 +160,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - broad legacy unit file currently fails outside this seam because its harness no longer satisfies unrelated `BillingEngine` query expectations (`this.knex.select` in `calculateMaterialCharges`, missing client lookup mocks in older pricing-schedule tests)
 - (2026-03-17) Fixed tax regression validation:
   - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+- (2026-03-17) Fixed detail persistence and metadata validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
+- (2026-03-17) Fixed metadata persistence validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts --coverage.enabled false`
+    - blocked locally by `EPERM` to Postgres on `127.0.0.1:5438` and `127.0.0.1:5432`
 
 ## Links / References
 
