@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "P2-5a: Build passes, violation count reduced",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5a"]
   },
   {
