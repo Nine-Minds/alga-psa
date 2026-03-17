@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "P2-5a: Create or update ClientCrossFeatureContext in packages/clients/src/context/",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5a"]
   },
   {

@@ -133,6 +133,7 @@ By target package
 - `npm run build` passes with the expanded `@alga-psa/msp-composition` barrel; no new build regressions surfaced.
 - The `msp-composition` export wiring is now fully committed via the `F013`-`F016` change series.
 - P2-5a inventory: `packages/projects/src/actions/projectActions.ts` is the active `projects -> clients` direct import (`getContactByContactNameId`); `packages/scheduling/src` currently has no direct `@alga-psa/clients` imports.
+- Verified `packages/clients/src/context/ClientCrossFeatureContext.tsx` already exports the client cross-feature provider + hook surface needed for composition-layer injection.
 
 ## Gotchas
 
