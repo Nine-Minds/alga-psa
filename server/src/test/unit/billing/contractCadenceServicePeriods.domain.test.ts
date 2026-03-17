@@ -13,6 +13,7 @@ import {
   resolveContractCadenceAnchorDate,
   resolveContractCadenceInvoiceWindowForServicePeriod,
 } from '@alga-psa/shared/billingClients/contractCadenceServicePeriods';
+import { selectContractCadenceRecurringRunTargets } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import {
   resolveRecurringSettlementsForInvoiceWindow,
   selectDueServicePeriodsForInvoiceWindow,
@@ -364,6 +365,43 @@ describe('contract cadence service periods', () => {
         coveredEnd: '2026-04-20T00:00:00Z',
         invoiceWindowStart: '2026-05-08T00:00:00Z',
         invoiceWindowEnd: '2026-06-08T00:00:00Z',
+      },
+    ]);
+  });
+
+  it('T187: contract-cadence due-work selection remains deterministic around assignment anchors and invoice-window boundary crossings', () => {
+    const targets = selectContractCadenceRecurringRunTargets({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      frequency: 'monthly',
+      duePosition: 'arrears',
+      anchorDate: '2026-02-08T00:00:00Z',
+      rangeStart: '2026-03-08T00:00:00Z',
+      rangeEnd: '2026-05-08T00:00:00Z',
+      sourceObligation,
+    });
+
+    expect(targets.map((target) => ({
+      selectionStart: target.selectorInput.windowStart,
+      selectionEnd: target.selectorInput.windowEnd,
+      servicePeriodStart: target.servicePeriodStart,
+      servicePeriodEnd: target.servicePeriodEnd,
+      identityKey: target.executionWindow.identityKey,
+    }))).toEqual([
+      {
+        selectionStart: '2026-03-08T00:00:00Z',
+        selectionEnd: '2026-04-08T00:00:00Z',
+        servicePeriodStart: '2026-02-08T00:00:00Z',
+        servicePeriodEnd: '2026-03-08T00:00:00Z',
+        identityKey: 'contract_cadence_window:contract:client-1:contract-1:line-1:2026-03-08T00:00:00Z:2026-04-08T00:00:00Z',
+      },
+      {
+        selectionStart: '2026-04-08T00:00:00Z',
+        selectionEnd: '2026-05-08T00:00:00Z',
+        servicePeriodStart: '2026-03-08T00:00:00Z',
+        servicePeriodEnd: '2026-04-08T00:00:00Z',
+        identityKey: 'contract_cadence_window:contract:client-1:contract-1:line-1:2026-04-08T00:00:00Z:2026-05-08T00:00:00Z',
       },
     ]);
   });

@@ -1618,7 +1618,7 @@
   {
     "id": "T186",
     "description": "Client-cadence due-work selection remains deterministic when billing settings or anchors changed historically",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F155"
     ]
@@ -1626,7 +1626,7 @@
   {
     "id": "T187",
     "description": "Contract-cadence due-work selection remains deterministic around assignment-start anchors and boundary crossings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F156"
     ]

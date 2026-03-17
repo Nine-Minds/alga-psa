@@ -1388,7 +1388,7 @@
   {
     "id": "F155",
     "description": "Define schedulable due-work selection for client-cadence recurring obligations without assuming client cadence is the only recurring clock",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 5",
       "Invoice and billing-flow requirements"
@@ -1397,7 +1397,7 @@
   {
     "id": "F156",
     "description": "Define schedulable due-work selection for contract-cadence recurring obligations before they enter invoice grouping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 7",
       "Contract-cadence requirements"

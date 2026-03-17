@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentUserAsync: vi.fn(),
   generateInvoice: vi.fn(),
   publishWorkflowEvent: vi.fn(),
+  getAvailableBillingPeriods: vi.fn(),
   buildRecurringBillingRunStartedPayload: vi.fn((input) => input),
   buildRecurringBillingRunCompletedPayload: vi.fn((input) => input),
   buildRecurringBillingRunFailedPayload: vi.fn((input) => input),
@@ -26,13 +27,17 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: mocks.publishWorkflowEvent,
 }));
 
+vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({
+  getAvailableBillingPeriods: mocks.getAvailableBillingPeriods,
+}));
+
 vi.mock('@shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders', () => ({
   buildRecurringBillingRunStartedPayload: mocks.buildRecurringBillingRunStartedPayload,
   buildRecurringBillingRunCompletedPayload: mocks.buildRecurringBillingRunCompletedPayload,
   buildRecurringBillingRunFailedPayload: mocks.buildRecurringBillingRunFailedPayload,
 }));
 
-const { generateInvoicesAsRecurringBillingRun } = await import(
+const { generateInvoicesAsRecurringBillingRun, selectClientCadenceRecurringRunTargets } = await import(
   '../../../../../packages/billing/src/actions/recurringBillingRunActions'
 );
 
@@ -45,6 +50,13 @@ describe('recurring billing run actions', () => {
     });
     mocks.generateInvoice.mockResolvedValue({ invoice_id: 'invoice-1' });
     mocks.publishWorkflowEvent.mockResolvedValue(undefined);
+    mocks.getAvailableBillingPeriods.mockResolvedValue({
+      periods: [],
+      total: 0,
+      page: 1,
+      pageSize: 10,
+      totalPages: 0,
+    });
   });
 
   it('T081: automatic recurring billing runs delegate each selected billing cycle through generateInvoice after the service-period-first cutover', async () => {
@@ -234,5 +246,86 @@ describe('recurring billing run actions', () => {
     expect(firstResult.retryKey).toBe(secondResult.retryKey);
     expect(firstResult.selectionKey).toContain('billing_cycle_window:client:client-1:cycle-1:2025-02-01:2025-03-01');
     expect(firstResult.selectionKey).toContain('contract_cadence_window:contract:client-1:contract-1:line-1:2025-02-08:2025-03-08');
+  });
+
+  it('T186: client-cadence due-work selection stays deterministic from persisted billing-period windows even when current anchors differ later', async () => {
+    mocks.getAvailableBillingPeriods.mockResolvedValue({
+      periods: [
+        {
+          client_id: 'client-1',
+          client_name: 'Acme',
+          billing_cycle_id: 'cycle-2',
+          billing_cycle: 'monthly',
+          period_start_date: '2025-02-10',
+          period_end_date: '2025-03-10',
+          effective_date: '2025-02-10',
+          tenant: 'tenant-1',
+          can_generate: true,
+          is_early: false,
+        },
+        {
+          client_id: 'client-1',
+          client_name: 'Acme',
+          billing_cycle_id: 'cycle-1',
+          billing_cycle: 'monthly',
+          period_start_date: '2025-01-10',
+          period_end_date: '2025-02-10',
+          effective_date: '2025-01-10',
+          tenant: 'tenant-1',
+          can_generate: true,
+          is_early: false,
+        },
+        {
+          client_id: 'client-1',
+          client_name: 'Acme',
+          billing_cycle_id: 'cycle-skipped',
+          billing_cycle: 'monthly',
+          period_start_date: '2025-03-10',
+          period_end_date: '2025-04-10',
+          effective_date: '2025-03-10',
+          tenant: 'tenant-1',
+          can_generate: false,
+          is_early: true,
+        },
+      ],
+      total: 3,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    const result = await selectClientCadenceRecurringRunTargets({
+      page: 1,
+      pageSize: 10,
+      searchTerm: 'Acme',
+    });
+
+    expect(mocks.getAvailableBillingPeriods).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 10,
+      searchTerm: 'Acme',
+    });
+    expect(result.targets.map((target) => target.billingCycleId)).toEqual(['cycle-1', 'cycle-2']);
+    expect(result.targets[0]).toMatchObject({
+      clientId: 'client-1',
+      clientName: 'Acme',
+      periodStart: '2025-01-10',
+      periodEnd: '2025-02-10',
+      selectorInput: {
+        clientId: 'client-1',
+        billingCycleId: 'cycle-1',
+        windowStart: '2025-01-10',
+        windowEnd: '2025-02-10',
+      },
+      executionWindow: {
+        kind: 'billing_cycle_window',
+        billingCycleId: 'cycle-1',
+        windowStart: '2025-01-10',
+        windowEnd: '2025-02-10',
+      },
+    });
+    expect(result.targets[1]?.selectorInput.executionWindow.identityKey).toBe(
+      'billing_cycle_window:client:client-1:cycle-2:2025-02-10:2025-03-10',
+    );
   });
 });

@@ -39,6 +39,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Client-cadence and contract-cadence due-work selection are now both explicit scheduler inputs instead of implicit billing-cycle-only assumptions, which closes `F155`, `F156`, `T186`, and `T187`:
+  - `packages/billing/src/actions/recurringBillingRunActions.ts` now maps persisted `getAvailableBillingPeriods(...)` results into deterministic client-cadence recurring-run targets, selector inputs, and execution windows using the stored `period_start_date` / `period_end_date` boundaries rather than any current billing-setting anchor math
+  - `shared/billingClients/recurringRunExecutionIdentity.ts` now exports `selectContractCadenceRecurringRunTargets(...)`, which uses the shared contract-cadence service-period generators plus `resolveContractCadenceInvoiceWindowForServicePeriod(...)` to produce schedulable contract-owned due windows before invoice grouping occurs
+  - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` now proves client-cadence target selection stays deterministic on historical persisted billing-cycle windows, and `server/src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts` now proves contract-cadence due-work selection stays deterministic across anniversary-window boundary crossings
 - (2026-03-17) Comparison-mode drift traces now carry deterministic recurring execution identity metadata, which closes `F154` and `T185`:
   - `packages/billing/src/actions/invoiceGeneration.ts` now routes comparison-mode logging through the selector-input contract and attaches `selectionKey`, `executionIdentityKeys`, and `executionWindowKinds` to legacy-vs-canonical drift warnings instead of logging only a billing-cycle placeholder
   - this keeps comparison-mode safe for staged rollout when recurring selection is no longer defined purely by `billingCycleId`: contract-cadence or other future execution windows can now be compared with traceable identity metadata even before full scheduler cutover lands

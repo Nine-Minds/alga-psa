@@ -1,13 +1,37 @@
 import type {
+  BillingCycleType,
+  DuePosition,
   IRecurringDueSelectionInput,
+  IRecurringObligationRef,
   IRecurringRunExecutionWindowIdentity,
+  ISO8601String,
   RecurringRunExecutionWindowKind,
 } from '@alga-psa/types';
+import { Temporal } from '@js-temporal/polyfill';
+import {
+  generateAnnualContractCadenceServicePeriods,
+  generateMonthlyContractCadenceServicePeriods,
+  generateQuarterlyContractCadenceServicePeriods,
+  generateSemiAnnualContractCadenceServicePeriods,
+  resolveContractCadenceInvoiceWindowForServicePeriod,
+} from './contractCadenceServicePeriods';
 
 export interface RecurringRunSelectionIdentity {
   executionIdentityKeys: string[];
   selectionKey: string;
   retryKey: string;
+}
+
+export type ContractCadenceSchedulableFrequency = Extract<
+  BillingCycleType,
+  'monthly' | 'quarterly' | 'semi-annually' | 'annually'
+>;
+
+export interface ContractCadenceRecurringRunTarget {
+  executionWindow: IRecurringRunExecutionWindowIdentity;
+  selectorInput: IRecurringDueSelectionInput;
+  servicePeriodStart: ISO8601String;
+  servicePeriodEnd: ISO8601String;
 }
 
 function compactIdentitySegments(segments: Array<string | null | undefined>): string[] {
@@ -135,4 +159,104 @@ export function buildContractCadenceDueSelectionInput(input: {
       windowEnd: input.windowEnd,
     }),
   };
+}
+
+const toPlainDate = (value: ISO8601String) => Temporal.PlainDate.from(value.slice(0, 10));
+
+function rangesOverlap(
+  left: { windowStart: ISO8601String; windowEnd: ISO8601String },
+  right: { windowStart: ISO8601String; windowEnd: ISO8601String },
+): boolean {
+  return (
+    Temporal.PlainDate.compare(toPlainDate(left.windowStart), toPlainDate(right.windowEnd)) < 0 &&
+    Temporal.PlainDate.compare(toPlainDate(right.windowStart), toPlainDate(left.windowEnd)) < 0
+  );
+}
+
+function getContractCadenceFrequencyDefinition(
+  frequency: ContractCadenceSchedulableFrequency,
+): {
+  monthsPerPeriod: number;
+  generate: (input: {
+    rangeStart: ISO8601String;
+    rangeEnd: ISO8601String;
+    sourceObligation: IRecurringObligationRef;
+    duePosition: DuePosition;
+    anchorDate: ISO8601String;
+  }) => ReturnType<typeof generateMonthlyContractCadenceServicePeriods>;
+} {
+  switch (frequency) {
+    case 'monthly':
+      return { monthsPerPeriod: 1, generate: generateMonthlyContractCadenceServicePeriods };
+    case 'quarterly':
+      return { monthsPerPeriod: 3, generate: generateQuarterlyContractCadenceServicePeriods };
+    case 'semi-annually':
+      return { monthsPerPeriod: 6, generate: generateSemiAnnualContractCadenceServicePeriods };
+    case 'annually':
+      return { monthsPerPeriod: 12, generate: generateAnnualContractCadenceServicePeriods };
+  }
+}
+
+export function selectContractCadenceRecurringRunTargets(input: {
+  clientId: string;
+  frequency: ContractCadenceSchedulableFrequency;
+  duePosition: DuePosition;
+  anchorDate: ISO8601String;
+  rangeStart: ISO8601String;
+  rangeEnd: ISO8601String;
+  sourceObligation: IRecurringObligationRef;
+  contractId?: string | null;
+  contractLineId?: string | null;
+}): ContractCadenceRecurringRunTarget[] {
+  const definition = getContractCadenceFrequencyDefinition(input.frequency);
+  const servicePeriodSearchStart = `${toPlainDate(input.rangeStart).subtract({ months: definition.monthsPerPeriod }).toString()}T00:00:00Z` as ISO8601String;
+  const queryRange = {
+    windowStart: input.rangeStart,
+    windowEnd: input.rangeEnd,
+  };
+
+  return definition
+    .generate({
+      rangeStart: servicePeriodSearchStart,
+      rangeEnd: input.rangeEnd,
+      sourceObligation: input.sourceObligation,
+      duePosition: input.duePosition,
+      anchorDate: input.anchorDate,
+    })
+    .map((servicePeriod) => {
+      const invoiceWindow = resolveContractCadenceInvoiceWindowForServicePeriod({
+        servicePeriod,
+        anchorDate: input.anchorDate,
+        monthsPerPeriod: definition.monthsPerPeriod,
+      });
+      const selectorInput = buildContractCadenceDueSelectionInput({
+        clientId: input.clientId,
+        contractId: input.contractId ?? null,
+        contractLineId: input.contractLineId ?? null,
+        windowStart: invoiceWindow.start,
+        windowEnd: invoiceWindow.end,
+      });
+
+      return {
+        executionWindow: selectorInput.executionWindow,
+        selectorInput,
+        servicePeriodStart: servicePeriod.start,
+        servicePeriodEnd: servicePeriod.end,
+      };
+    })
+    .filter((target) =>
+      rangesOverlap(
+        {
+          windowStart: target.selectorInput.windowStart,
+          windowEnd: target.selectorInput.windowEnd,
+        },
+        queryRange,
+      ),
+    )
+    .sort((left, right) => {
+      if (left.selectorInput.windowStart !== right.selectorInput.windowStart) {
+        return left.selectorInput.windowStart.localeCompare(right.selectorInput.windowStart);
+      }
+      return left.executionWindow.identityKey.localeCompare(right.executionWindow.identityKey);
+    });
 }
