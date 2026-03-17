@@ -121,6 +121,19 @@ describe('service-period-first billing plan artifacts', () => {
     expect(appendix).toContain('Non-blocking drift during staged rollout:');
   });
 
+  it('T151: staged rollout keeps client-cadence parity ahead of any contract-cadence enablement', () => {
+    expect(appendix).toContain('## Staged Rollout Plan');
+    expect(appendix).toContain('### Stage 1 — Additive groundwork only');
+    expect(appendix).toContain('Keep contract cadence blocked on all live write paths;');
+    expect(appendix).toContain('### Stage 2 — Client-cadence parity comparison');
+    expect(appendix).toContain('Run comparison mode for client-cadence recurring lines only.');
+    expect(appendix).toContain('contract cadence remains write-blocked while parity comparison is still required');
+    expect(appendix).toContain('### Stage 3 — Client-cadence cutover');
+    expect(appendix).toContain('Keep contract cadence blocked until client-cadence parity validation is signed off');
+    expect(appendix).toContain('### Stage 4 — Contract-cadence enablement');
+    expect(appendix).toContain('Enable contract cadence only after Stage 3 has been stable long enough to prove parity');
+  });
+
   it('T009: out-of-scope matrix explicitly names time, usage, materials, and manual-only boundaries', () => {
     const flowNames = inventory.outOfScopeCompatibilityMatrix.map((entry) => entry.flow);
     expect(flowNames).toEqual([

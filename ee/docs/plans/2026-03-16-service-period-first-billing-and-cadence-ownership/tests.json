@@ -164,7 +164,7 @@
   {"id":"T149","description":"End-exclusive overlap semantics remain correct when mixed cadence owners coexist","implemented":false,"featureIds":["F145"]},
   {"id":"T150","description":"No recurring execution path mixes legacy and canonical timing models on the same line during staged rollout","implemented":false,"featureIds":["F143"]},
 
-  {"id":"T151","description":"Rollout plan keeps client-cadence parity enabled before any contract-cadence capability is exposed","implemented":false,"featureIds":["F111"]},
+  {"id":"T151","description":"Rollout plan keeps client-cadence parity enabled before any contract-cadence capability is exposed","implemented":true,"featureIds":["F111"]},
   {"id":"T152","description":"DB-backed pre-cutover validation proves monthly client-cadence recurring invoices are unchanged under the new engine","implemented":false,"featureIds":["F112"]},
   {"id":"T153","description":"DB-backed pre-cutover validation proves quarterly or annual client-cadence recurring invoices are unchanged under the new engine","implemented":false,"featureIds":["F112"]},
   {"id":"T154","description":"Rollout controls or safety gates allow comparison mode without mutating live invoice outputs","implemented":false,"featureIds":["F113"]},

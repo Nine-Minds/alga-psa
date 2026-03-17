@@ -662,7 +662,7 @@
   {
     "id": "F111",
     "description": "Build a staged rollout plan that enables client-cadence parity before contract cadence",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Risks"]
   },
   {

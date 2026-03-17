@@ -197,6 +197,42 @@ Non-blocking drift during staged rollout:
 - new provenance fields
 - additive trace metadata used only for parity comparison or future service-period-first rollout
 
+## Staged Rollout Plan
+
+The rollout order must keep client-cadence parity ahead of any contract-cadence capability. The intent is to reduce risk in layers instead of enabling a second recurring clock before the first cutover is proven.
+
+### Stage 1 — Additive groundwork only
+
+- Ship shared recurring timing primitives, canonical detail persistence, and client-cadence parity scaffolding with `cadence_owner` defaulting to `client`.
+- Keep contract cadence blocked on all live write paths; API, service, and UI surfaces may describe the future option, but they must not let tenants persist `cadence_owner = contract` yet.
+- Treat any contract-cadence runtime support in this stage as dark code only. It may exist for tests and isolated selection logic, but it is not tenant-enabled behavior.
+
+### Stage 2 — Client-cadence parity comparison
+
+- Run comparison mode for client-cadence recurring lines only.
+- Exit criteria for this stage:
+  - parity harness reports no blocking drift for fixed, product, license, bucket-in-scope, pricing, discount, PO, credit, and export-reader scenarios
+  - DB-backed client-cadence sanity coverage passes for the representative monthly and longer-frequency fixtures called out in the PRD
+  - contract cadence remains write-blocked while parity comparison is still required
+
+### Stage 3 — Client-cadence cutover
+
+- Make the canonical service-period-first path the live execution path for existing client-cadence tenants.
+- Continue treating client billing cycles as the only schedulable recurring run identity in production during this stage.
+- Keep contract cadence blocked until client-cadence parity validation is signed off and the post-cutover sanity checks pass.
+
+### Stage 4 — Contract-cadence enablement
+
+- Enable contract cadence only after Stage 3 has been stable long enough to prove parity, duplicate prevention, reader hydration, and downstream export behavior on the live client-cadence cutover path.
+- When contract cadence is enabled, mixed-cadence selection and grouping must already be deterministic, and unsupported combinations must fail fast rather than falling back to client-cycle behavior.
+- Scheduler identity, due-work job payloads, and retry semantics for contract-owned windows remain a separate rollout gate; they must be complete before contract cadence is tenant-writable.
+
+### Stage 5 — Cleanup and deletion
+
+- Remove `billing_cycle_alignment` from live execution only after both client-cadence parity and contract-cadence rollout are validated.
+- Remove dead timing helpers and duplicated proration branches only after the validation suite proves no live recurring path still depends on them.
+- Preserve rollback posture long enough for historical flat invoices and canonical detail-backed invoices to coexist safely during reader migration.
+
 ## Fixture Builder Contract
 
 Fixture builders for parity and shared-domain tests should be composable rather than charge-family-specific:
