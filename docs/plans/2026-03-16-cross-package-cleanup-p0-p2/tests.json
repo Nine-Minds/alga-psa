@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "P1-3: ee/server/src/app/api/provisioning/tenants/route.ts imports getSession from @alga-psa/auth (not getServerSession from auth-compat)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
