@@ -81,7 +81,7 @@
   {"id":"T073","description":"Invoice subtotal and total calculations remain unchanged for client-cadence recurring invoices after cutover","implemented":true,"featureIds":["F071","F072"]},
   {"id":"T074","description":"Invoice finalization and status transitions continue to function after recurring service-period-first billing lands","implemented":true,"featureIds":["F073"]},
   {"id":"T075","description":"Invoice detail readers return canonical recurring service-period metadata without breaking existing query contracts","implemented":false,"featureIds":["F019","F125"]},
-  {"id":"T076","description":"One-cycle invoice preview uses canonical service periods and still matches expected recurring totals","implemented":false,"featureIds":["F075"]},
+  {"id":"T076","description":"One-cycle invoice preview uses canonical service periods and still matches expected recurring totals","implemented":true,"featureIds":["F075"]},
   {"id":"T077","description":"Recurring invoice generation for a cycle containing no eligible recurring service periods produces the expected empty-result behavior","implemented":false,"featureIds":["F071","F080"]},
   {"id":"T078","description":"Billing-period end dates used for billed-through calculations remain correct after canonical service-period selection","implemented":false,"featureIds":["F080"]},
   {"id":"T079","description":"Invoice workflow events continue to describe recurring invoice creation and updates correctly after cutover","implemented":false,"featureIds":["F079","F128"]},

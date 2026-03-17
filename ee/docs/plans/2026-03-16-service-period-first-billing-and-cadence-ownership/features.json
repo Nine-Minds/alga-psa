@@ -446,7 +446,7 @@
   {
     "id": "F075",
     "description": "Update preview and generate-one-cycle actions to compare and display recurring charges sourced from canonical service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "System Surfaces In Scope"]
   },
   {

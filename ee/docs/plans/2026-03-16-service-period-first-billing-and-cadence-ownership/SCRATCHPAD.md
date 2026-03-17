@@ -203,6 +203,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` proves `generateInvoicesAsRecurringBillingRun(...)` still fans out each selected `billingCycleId` through `generateInvoice(...)`, which is now the action path that performs due-service-period preselection before billing calculation
   - the test also keeps the recurring-run workflow events stable on that migrated path, so automatic invoice generation remains wired through the same started/completed event contract while recurring timing semantics move underneath `generateInvoice(...)`
   - no runtime code change was required for `F074`; the new seam landed in `generateInvoice(...)` during `F071`, and this checkpoint locks the automatic-run delegation onto that migrated action path
+- (2026-03-17) Preview generation now has an executable service-period-first contract without widening the preview payload shape yet:
+  - `server/src/test/unit/billing/invoiceGeneration.preview.test.ts` proves `previewInvoice(...)` constructs a `BillingEngine` preview through `calculateBillingForInvoiceWindow(...)`, so preview generation now preselects due recurring service periods before calculating recurring charges
+  - the preview regression intentionally keeps the current payload surface stable: preview totals and line items remain the same, but the underlying recurring charge source is now canonical service-period selection rather than per-family ad hoc timing math
+  - the "generate from preview" UI path already rides `generateInvoicesAsRecurringBillingRun(...)`, so `F074` plus the existing preview-dialog UI checks are the current guard that single-cycle generation stays on the same migrated execution path
 - (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
   - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
   - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
@@ -298,6 +302,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts --coverage.enabled false`
 - (2026-03-17) Recurring-run delegation validation:
   - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts --coverage.enabled false`
+- (2026-03-17) Preview recurring-timing validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts --coverage.enabled false`
 
 ## Links / References
 
