@@ -4,6 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import type { Knex } from 'knex';
 
 
 // Type definitions for reports
@@ -54,6 +55,122 @@ export interface ContractReportSummary {
   atRiskDecisionCount: number;
 }
 
+type ContractRevenueFactRow = {
+  item_id: string;
+  client_contract_id: string | null;
+  invoice_date: string | Date | null;
+  net_amount: string | number | null;
+  item_detail_id?: string | null;
+  service_period_end?: string | Date | null;
+  allocated_amount?: string | number | null;
+};
+
+const EXCLUDED_INVOICE_STATUSES = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'] as const;
+
+function normalizeDateOnly(value: string | Date | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  return value.slice(0, 10);
+}
+
+function isDateWithinRange(
+  value: string | Date | null | undefined,
+  startInclusive: string,
+  endExclusive: string
+): boolean {
+  const normalized = normalizeDateOnly(value);
+  if (!normalized) {
+    return false;
+  }
+
+  return normalized >= startInclusive && normalized < endExclusive;
+}
+
+async function getContractRevenueYtdByAssignment(
+  knex: Knex,
+  tenant: string,
+  yearStartDateOnly: string,
+  nextYearStartDateOnly: string
+): Promise<Map<string, number>> {
+  const revenueFactRows = await knex('invoice_charges as ic')
+    .join('invoices as inv', function joinInvoices() {
+      this.on('ic.invoice_id', '=', 'inv.invoice_id').andOn('ic.tenant', '=', 'inv.tenant');
+    })
+    .leftJoin('invoice_charge_details as iid', function joinChargeDetails() {
+      this.on('ic.item_id', '=', 'iid.item_id').andOn('ic.tenant', '=', 'iid.tenant');
+    })
+    .leftJoin('invoice_charge_fixed_details as iifd', function joinFixedDetails() {
+      this.on('iid.item_detail_id', '=', 'iifd.item_detail_id').andOn('iid.tenant', '=', 'iifd.tenant');
+    })
+    .where({ 'ic.tenant': tenant })
+    .whereNotIn('inv.status', EXCLUDED_INVOICE_STATUSES)
+    .whereNotNull('ic.client_contract_id')
+    .select(
+      'ic.item_id',
+      'ic.client_contract_id',
+      'inv.invoice_date',
+      'ic.net_amount',
+      'iid.item_detail_id',
+      'iid.service_period_end',
+      'iifd.allocated_amount'
+    ) as ContractRevenueFactRow[];
+
+  const rowsByItemId = new Map<string, ContractRevenueFactRow[]>();
+  for (const row of revenueFactRows) {
+    const existing = rowsByItemId.get(row.item_id) ?? [];
+    existing.push(row);
+    rowsByItemId.set(row.item_id, existing);
+  }
+
+  const totalsByAssignment = new Map<string, number>();
+
+  for (const itemRows of rowsByItemId.values()) {
+    const firstRow = itemRows[0];
+    const clientContractId = firstRow?.client_contract_id;
+    if (!clientContractId) {
+      continue;
+    }
+
+    const detailRows = itemRows.filter(
+      (row) => typeof row.item_detail_id === 'string' && row.item_detail_id.length > 0
+    );
+    const hasCanonicalServicePeriods = detailRows.some(
+      (row) => typeof normalizeDateOnly(row.service_period_end) === 'string'
+    );
+
+    let chargeAmount = 0;
+
+    if (hasCanonicalServicePeriods) {
+      const fixedDetailRows = detailRows.filter((row) => row.allocated_amount !== null && row.allocated_amount !== undefined);
+      if (fixedDetailRows.length > 0) {
+        chargeAmount = fixedDetailRows
+          .filter((row) => isDateWithinRange(row.service_period_end, yearStartDateOnly, nextYearStartDateOnly))
+          .reduce((sum, row) => sum + (Number(row.allocated_amount ?? 0) || 0), 0);
+      } else if (
+        detailRows.some((row) => isDateWithinRange(row.service_period_end, yearStartDateOnly, nextYearStartDateOnly))
+      ) {
+        chargeAmount = Number(firstRow.net_amount ?? 0) || 0;
+      }
+    } else if (isDateWithinRange(firstRow.invoice_date, yearStartDateOnly, nextYearStartDateOnly)) {
+      chargeAmount = Number(firstRow.net_amount ?? 0) || 0;
+    }
+
+    if (chargeAmount === 0) {
+      continue;
+    }
+
+    totalsByAssignment.set(clientContractId, (totalsByAssignment.get(clientContractId) ?? 0) + chargeAmount);
+  }
+
+  return totalsByAssignment;
+}
+
 const mapAssignmentStatusToRevenueStatus = (
   status: ReturnType<typeof deriveClientContractStatus>
 ): ContractRevenue['status'] | null => {
@@ -75,23 +192,14 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     const { knex } = await createTenantKnex();
 
     const today = new Date();
-    // Use a UTC boundary so we don't accidentally exclude invoices at 00:00Z on Jan 1 due to local tz offset.
-    const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
-    const excludedInvoiceStatuses = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'];
-
-    const invoicesByAssignment = await knex('invoices')
-      .where({ tenant })
-      .whereNotIn('status', excludedInvoiceStatuses)
-      .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
-      .whereNotNull('client_contract_id')
-      .select('client_contract_id')
-      .select(knex.raw('SUM(total_amount) as total_billed_ytd'))
-      .groupBy('client_contract_id');
-
-    const invoiceMap = new Map<string, number>();
-    for (const inv of invoicesByAssignment) {
-      invoiceMap.set(inv.client_contract_id, Number(inv.total_billed_ytd ?? 0) || 0);
-    }
+    const yearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
+    const nextYearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear() + 1, 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
+    const invoiceMap = await getContractRevenueYtdByAssignment(
+      knex,
+      tenant,
+      yearStartDateOnly,
+      nextYearStartDateOnly
+    );
 
     const data = await knex('client_contracts as cc')
       .join('contracts as c', function joinContracts() {
@@ -415,18 +523,19 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
     const revenueData = await getContractRevenueReport();
 
     const totalMRR = revenueData.reduce((sum, item) => sum + item.monthly_recurring, 0);
-    // Compute YTD directly from invoices to avoid:
-    // - BIGINT string concatenation bugs when summing in JS
-    // - accidental double-counting when a client's invoices appear across multiple contract rows
     const today = new Date();
-    const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
-    const excludedInvoiceStatuses = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'];
-    const ytdResult = await knex('invoices')
-      .where({ tenant })
-      .whereNotIn('status', excludedInvoiceStatuses)
-      .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
-      .select(knex.raw('SUM(total_amount) as total_ytd')) as Array<{ total_ytd: string | number | null }>;
-    const totalYTD = Number(ytdResult[0]?.total_ytd ?? 0) || 0;
+    const yearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
+    const nextYearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear() + 1, 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
+    const totalYTD = Array.from(
+      (
+        await getContractRevenueYtdByAssignment(
+          knex,
+          tenant,
+          yearStartDateOnly,
+          nextYearStartDateOnly
+        )
+      ).values()
+    ).reduce((sum, amount) => sum + amount, 0);
 
     const activeContractCount = revenueData.filter((item) => item.status === 'active').length;
     const summaryTodayDateOnly = today.toISOString().slice(0, 10);

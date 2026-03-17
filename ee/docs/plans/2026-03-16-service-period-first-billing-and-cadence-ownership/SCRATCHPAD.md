@@ -307,6 +307,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now renders canonical recurring `service_period_start` / `service_period_end` ranges and `billing_timing` badges directly on invoice line items, so client-visible invoice details keep the recurring coverage window instead of only showing pricing fields
   - `packages/client-portal/src/actions/client-portal-actions/client-billing.ts` now selects `billing_timing` and `cadence_owner` for the client contract-line reader, and `packages/client-portal/src/components/billing/ContractLineDetailsDialog.tsx` now shows cadence-owner and billing-timing labels with a short recurring service-period explanation
   - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` and `packages/client-portal/src/components/billing/ContractLineDetailsDialog.servicePeriods.test.tsx` now close `T121` and `T122`
+- (2026-03-17) Contract reporting now treats recurring YTD revenue as a service-period-based fact instead of an invoice-header-date fact, which closes `F098`:
+  - `packages/billing/src/actions/contractReportActions.ts` now aggregates contract revenue YTD from `invoice_charge_details.service_period_end` when canonical recurring detail rows exist, while falling back to `invoices.invoice_date` for historical/manual rows that still lack detail periods
+  - the fixed/product/license persistence assumptions are now explicit in reporting code: fixed detail-backed rows sum `invoice_charge_fixed_details.allocated_amount`, while current non-fixed recurring parents still rely on the existing one-detail-per-parent write contract
+  - `packages/reporting/src/lib/reports/definitions/contracts/revenue.ts` now matches that runtime behavior with a raw-SQL metric that uses canonical recurring service-period dates instead of invoice headers when detail rows exist
+  - `packages/reporting/src/lib/reports/definitions/contracts/expiration.ts` and `packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx` now clarify the reporting date basis in business language so contract-expiration reporting stays assignment-based while revenue reporting is explicitly service-period-based
+  - focused regression coverage now lives in `server/src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts`, `packages/reporting/src/lib/reports/definitions/contracts/revenue.servicePeriods.test.ts`, and `packages/billing/tests/ContractReports.revenueCopy.wiring.test.ts`
 
 ## Commands / Runbooks
 
@@ -474,6 +480,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - run from `server/` so Vitest uses the existing workspace alias config for client-portal package tests
   - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Contract reporting service-period basis validation:
+  - `npx vitest run src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts ../packages/billing/tests/ContractReports.revenueCopy.wiring.test.ts ../packages/billing/tests/contractReportActions.summary.wiring.test.ts ../packages/billing/tests/contractReportActions.revenue.assignmentFact.test.ts ../packages/billing/tests/contractReportActions.expiration.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest picks up the existing workspace alias config for package billing tests
+  - `npx vitest run src/lib/reports/definitions/contracts/revenue.servicePeriods.test.ts --coverage.enabled false`
+    - run from `packages/reporting/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/reporting/tsconfig.json`
 
 ## Links / References
 

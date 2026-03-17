@@ -7,6 +7,12 @@ const source = readFileSync(
 );
 
 describe('contractReportActions summary wiring', () => {
+  it('derives YTD totals from the canonical recurring revenue helper instead of raw invoice headers', () => {
+    expect(source).toContain('async function getContractRevenueYtdByAssignment(');
+    expect(source).toContain('await getContractRevenueYtdByAssignment(');
+    expect(source).not.toContain("const ytdResult = await knex('invoices')");
+  });
+
   it('exposes at-risk count based on decision_due_date windows', () => {
     expect(source).toContain('export interface ContractReportSummary {');
     expect(source).toContain('atRiskDecisionCount: number;');

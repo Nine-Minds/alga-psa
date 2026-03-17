@@ -584,7 +584,7 @@
   {
     "id": "F098",
     "description": "Update reporting actions and report definitions that summarize recurring invoices or contract billing periods to interpret canonical service periods correctly",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

@@ -363,7 +363,7 @@ const ContractReports: React.FC = () => {
             <h3 className="font-semibold">YTD Revenue</h3>
           </div>
           <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.totalYTD ?? 0)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Year to Date</p>
+          <p className="text-xs text-muted-foreground mt-1">Year to Date by billed service period</p>
         </Card>
 
         <Card className="p-4">
@@ -392,7 +392,7 @@ const ContractReports: React.FC = () => {
               <h3 className="text-lg font-semibold">Contract Revenue Report</h3>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Overview of monthly recurring revenue and year-to-date billing by contract
+              Overview of monthly recurring revenue and year-to-date billed service periods by contract.
             </p>
             {revenueData.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">No contract revenue data available</p>
