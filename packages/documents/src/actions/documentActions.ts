@@ -1,7 +1,7 @@
 'use server'
 
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
