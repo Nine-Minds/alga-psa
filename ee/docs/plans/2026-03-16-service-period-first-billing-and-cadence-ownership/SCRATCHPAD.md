@@ -236,6 +236,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Recurring billing workflow-event metadata is now explicitly locked on the service-period-first path, which closes `F079`:
   - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` now closes `T079` by proving the started/completed recurring billing run events keep stable `runId`, actor metadata, tenant correlation metadata, and completion counts even after recurring invoice generation moved to due-service-period preselection
   - no production code change was needed for this checkpoint; the value was converting an already-correct event contract into an executable guard before broader scheduler-identity work (`F151+`)
+- (2026-03-17) Duplicate prevention and rerun idempotency now have an explicit action-layer contract, which closes `F080`:
+  - `packages/billing/src/actions/invoiceGeneration.ts` now throws an explicit duplicate error contract (`code = DUPLICATE_RECURRING_INVOICE`) when a billing cycle already has an invoice, instead of surfacing the misleading legacy `"No active contract lines for this period"` message
+  - `packages/billing/src/actions/recurringBillingRunActions.ts` now treats that duplicate error as an idempotent skip during reruns, so automatic recurring runs do not mark already-billed cycles as failures while still refusing to create a second invoice
+  - `server/src/test/unit/billing/invoiceGeneration.duplicate.test.ts` closes `T086` by proving the direct generate action blocks the second invoice for the same due window with the explicit duplicate error payload
+  - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` closes `T082` by proving reruns skip duplicate cycles without incrementing `failedCount`
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` closes `T087` by proving an already-persisted advance service period suppresses rebilling even when the enclosing invoice-window metadata is later, which keeps billed-through enforcement anchored to canonical service periods
 
 ## Commands / Runbooks
 
@@ -348,6 +354,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Recurring workflow-event metadata validation:
   - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts --coverage.enabled false`
+- (2026-03-17) Duplicate-prevention and billed-through validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.duplicate.test.ts src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 ## Links / References
 

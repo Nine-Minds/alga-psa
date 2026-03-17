@@ -168,6 +168,7 @@ export async function calculateBillingForInvoiceWindow(input: {
 }
 
 export type PurchaseOrderOverageDecision = 'allow' | 'skip';
+export const DUPLICATE_RECURRING_INVOICE_CODE = 'DUPLICATE_RECURRING_INVOICE';
 
 export type PurchaseOrderOverageResult = {
   client_contract_id: string;
@@ -685,7 +686,13 @@ export const generateInvoice = withAuth(async (
   });
 
   if (existingInvoice) {
-    throw new Error('No active contract lines for this period');
+    const duplicateInvoiceError = new Error('Invoice already exists for this billing cycle');
+    Object.assign(duplicateInvoiceError, {
+      code: DUPLICATE_RECURRING_INVOICE_CODE,
+      billingCycleId: billing_cycle_id,
+      invoiceId: existingInvoice.invoice_id,
+    });
+    throw duplicateInvoiceError;
   }
 
   const billingEngine = new BillingEngine();

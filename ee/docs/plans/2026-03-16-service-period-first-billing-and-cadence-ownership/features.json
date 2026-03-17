@@ -476,7 +476,7 @@
   {
     "id": "F080",
     "description": "Ensure duplicate-invoice prevention and billed-through calculations still work when recurring selection is driven by due service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {

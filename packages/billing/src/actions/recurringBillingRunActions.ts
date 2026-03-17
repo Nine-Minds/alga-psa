@@ -3,7 +3,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getCurrentUserAsync } from '../lib/authHelpers';
-import { generateInvoice } from './invoiceGeneration';
+import { DUPLICATE_RECURRING_INVOICE_CODE, generateInvoice } from './invoiceGeneration';
 import {
   buildRecurringBillingRunCompletedPayload,
   buildRecurringBillingRunFailedPayload,
@@ -21,6 +21,15 @@ export type RecurringBillingRunResult = {
   failedCount: number;
   failures: RecurringBillingRunInvoiceFailure[];
 };
+
+function isDuplicateRecurringInvoiceError(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: string }).code === DUPLICATE_RECURRING_INVOICE_CODE
+  );
+}
 
 export async function generateInvoicesAsRecurringBillingRun(params: {
   billingCycleIds: string[];
@@ -68,6 +77,10 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
           invoicesCreated += 1;
         }
       } catch (err) {
+        if (isDuplicateRecurringInvoiceError(err)) {
+          continue;
+        }
+
         failures.push({
           billingCycleId,
           errorMessage: err instanceof Error ? err.message : 'Unknown error occurred',
@@ -124,4 +137,3 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
     throw fatalError;
   }
 }
-

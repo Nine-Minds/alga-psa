@@ -490,6 +490,89 @@ describe("BillingEngine billing timing", () => {
     ]);
   });
 
+  it("T087: billed-through suppression skips an already-persisted advance service period even when the invoice window is later metadata", async () => {
+    const engine = new BillingEngine();
+    (engine as any).tenant = "test_tenant";
+
+    vi.spyOn(engine as any, "getBillingCycle").mockResolvedValue("monthly");
+    vi.spyOn(engine as any, "hasExistingServicePeriodCharge").mockResolvedValue(
+      true,
+    );
+    vi.spyOn(engine as any, "getClientDefaultTaxRegionCode").mockResolvedValue(
+      "US-NY",
+    );
+    vi.spyOn(engine as any, "getTaxInfoFromService").mockResolvedValue({
+      taxRegion: undefined,
+      isTaxable: false,
+    });
+
+    (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+      if (tableName === "contract_pricing_schedules") {
+        return buildQuery(null);
+      }
+
+      if (tableName === "clients") {
+        return buildQuery({
+          client_id: "client-1",
+          tenant: "test_tenant",
+          client_name: "Mock Client",
+          is_tax_exempt: false,
+        });
+      }
+
+      if (tableName === "contract_lines") {
+        return buildQuery({
+          contract_line_id: "contract-line-1",
+          tenant: "test_tenant",
+          contract_line_type: "Fixed",
+          custom_rate: 6200,
+          enable_proration: false,
+          billing_cycle_alignment: "start",
+        });
+      }
+
+      if (tableName === "contract_line_services as cls") {
+        return buildQuery(null, [
+          {
+            service_id: "service-1",
+            service_name: "Managed Support",
+            default_rate: 6200,
+            tax_rate_id: null,
+            service_quantity: 1,
+            configuration_quantity: 1,
+            config_id: "config-1",
+            service_base_rate: 6200,
+          },
+        ]);
+      }
+
+      return buildQuery(null);
+    });
+
+    const charges = await (engine as any).calculateFixedPriceCharges(
+      "client-1",
+      {
+        startDate: "2025-01-01",
+        endDate: "2025-02-01",
+      },
+      {
+        client_contract_line_id: "ccd-1",
+        client_id: "client-1",
+        contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_id: "contract-1",
+        contract_line_name: "Managed Support",
+        contract_name: "Acme Corp",
+        billing_timing: "advance",
+        start_date: "2024-12-01",
+        end_date: null,
+        custom_rate: null,
+      },
+    );
+
+    expect(charges).toEqual([]);
+  });
+
   it("T046: advance termination credits settle into one canonical partial fixed charge instead of a separate negative credit branch", async () => {
     const engine = new BillingEngine();
     const billingPeriod = installFixedChargeMocks(engine, {

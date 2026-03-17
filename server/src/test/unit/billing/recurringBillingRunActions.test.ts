@@ -15,6 +15,7 @@ vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
 
 vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => ({
   generateInvoice: mocks.generateInvoice,
+  DUPLICATE_RECURRING_INVOICE_CODE: 'DUPLICATE_RECURRING_INVOICE',
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -121,5 +122,43 @@ describe('recurring billing run actions', () => {
         }),
       }),
     );
+  });
+
+  it('T082: automatic recurring billing reruns skip already-invoiced cycles without double-billing or marking the run failed', async () => {
+    const duplicateInvoiceError = Object.assign(
+      new Error('Invoice already exists for this billing cycle'),
+      {
+        code: 'DUPLICATE_RECURRING_INVOICE',
+        billingCycleId: 'cycle-1',
+        invoiceId: 'invoice-1',
+      },
+    );
+
+    mocks.generateInvoice
+      .mockRejectedValueOnce(duplicateInvoiceError)
+      .mockResolvedValueOnce({ invoice_id: 'invoice-2' });
+
+    const result = await generateInvoicesAsRecurringBillingRun({
+      billingCycleIds: ['cycle-1', 'cycle-2'],
+      allowPoOverage: true,
+    });
+
+    expect(mocks.generateInvoice).toHaveBeenNthCalledWith(1, 'cycle-1', {
+      allowPoOverage: true,
+    });
+    expect(mocks.generateInvoice).toHaveBeenNthCalledWith(2, 'cycle-2', {
+      allowPoOverage: true,
+    });
+    expect(result).toMatchObject({
+      invoicesCreated: 1,
+      failedCount: 0,
+      failures: [],
+    });
+    expect(mocks.buildRecurringBillingRunCompletedPayload).toHaveBeenCalledWith({
+      runId: result.runId,
+      completedAt: expect.any(String),
+      invoicesCreated: 1,
+      failedCount: 0,
+    });
   });
 });
