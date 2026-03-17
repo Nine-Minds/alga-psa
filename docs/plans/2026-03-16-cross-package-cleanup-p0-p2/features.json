@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "P2-5b: Build passes, documents target violations significantly reduced",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5b"]
   },
   {

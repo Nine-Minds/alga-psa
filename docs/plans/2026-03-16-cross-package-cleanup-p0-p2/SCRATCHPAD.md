@@ -165,6 +165,7 @@ By target package
 - T021 verified the latest lint run has `34` `documents`-target violations, which is below the `<36` target in the plan.
 - T022 verified no vertical package now imports `uploadEntityImage` or `deleteEntityImage` from `@alga-psa/documents`; those callers now resolve through `@alga-psa/storage`.
 - T023 reuses the latest repo-root green build to validate the current document-cleanup changes.
+- F028 conditions are met in the current tree: repo-root build passes and the `documents` target is down to `34` warnings from the earlier `39` baseline.
 
 ## Gotchas
 
