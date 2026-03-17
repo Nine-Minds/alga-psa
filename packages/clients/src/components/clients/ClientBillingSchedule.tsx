@@ -10,6 +10,7 @@ import { Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import type { BillingCycleType } from '@alga-psa/types';
+import { CLIENT_CADENCE_SCHEDULE_CONTEXT } from '@alga-psa/shared/billingClients';
 import {
   createNextBillingCycleAsync,
   getClientBillingCycleAnchorAsync,
@@ -23,6 +24,7 @@ interface BillingCyclePeriodPreview {
   periodEndDate: string;
 }
 import type { ISO8601String } from '@alga-psa/types';
+import type { ClientCadenceScheduleContext } from '@alga-psa/shared/billingClients';
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
@@ -107,6 +109,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewReferenceDate, setPreviewReferenceDate] = useState<ISO8601String | null>(null);
   const previewRequestIdRef = useRef(0);
+  const [cadenceContext, setCadenceContext] = useState<ClientCadenceScheduleContext>(CLIENT_CADENCE_SCHEDULE_CONTEXT);
 
   const [billingCycle, setBillingCycle] = useState<BillingCycleType>('monthly');
   const [anchorDraft, setAnchorDraft] = useState<AnchorDraft>(defaultAnchorDraftForCycle('monthly'));
@@ -119,6 +122,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       const config = await getClientBillingCycleAnchorAsync(clientId);
 
       setBillingCycle(config.billingCycle);
+      setCadenceContext(config.cadenceContext);
       const defaults = defaultAnchorDraftForCycle(config.billingCycle);
       setAnchorDraft({
         dayOfMonth: config.anchor.dayOfMonth ?? defaults.dayOfMonth,
@@ -156,9 +160,10 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         },
         { count: 3, referenceDate: previewReferenceDate }
       )
-        .then((periods) => {
+        .then((result) => {
           if (previewRequestIdRef.current !== requestId) return;
-          setPreview(periods);
+          setCadenceContext(result.cadenceContext);
+          setPreview(result.periods);
         })
         .catch((e) => {
           if (previewRequestIdRef.current !== requestId) return;
@@ -239,7 +244,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold">Billing Schedule</h3>
-          <Tooltip content="Configure the client billing schedule for recurring lines that invoice on the client cadence. Changes only affect future non-invoiced billing cycles.">
+          <Tooltip content={cadenceContext.changeScopeDescription}>
             <Info className="h-4 w-4 text-gray-500" />
           </Tooltip>
         </div>
@@ -271,7 +276,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         {loading ? 'Loading current schedule…' : scheduleSummary}
       </div>
       <div className="mt-1 text-sm text-gray-500">
-        This schedule drives invoice windows for recurring lines that invoice on the client billing schedule. Contract-anniversary lines keep their own cadence.
+        {cadenceContext.scheduleDescription}
       </div>
 
       <Dialog
@@ -286,7 +291,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
             Billing periods use <span className="font-mono">[start, end)</span> semantics. The end date is the start of the next period.
           </div>
           <div className="text-sm text-gray-600">
-            Previewed windows below apply to recurring lines that invoice on the client billing schedule. Contract-anniversary cadence is configured on the recurring line itself and is previewed separately.
+            {cadenceContext.previewDescription}
           </div>
 
           <div className="space-y-2">
@@ -386,7 +391,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           </div>
 
           <div className="pt-2 border-t">
-            <div className="text-sm font-medium mb-2">Upcoming client-cadence invoice windows (preview)</div>
+            <div className="text-sm font-medium mb-2">{cadenceContext.previewHeading}</div>
             {preview ? (
               <div className="space-y-1 text-sm text-gray-700">
                 {preview.map((p, idx) => (

@@ -14,6 +14,7 @@ export * from './invoiceTemplates';
 export * from './templateClone';
 export * from './taxSettings';
 export * from './billingSchedule';
+export * from './clientCadenceScheduleContext';
 export * from './clientContractStatus';
 export * from './recurringTiming';
 export * from './clientCadenceServicePeriods';

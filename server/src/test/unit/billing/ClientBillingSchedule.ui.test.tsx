@@ -52,14 +52,30 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 
 const mockGetClientBillingCycleAnchor = vi.fn(async () => ({
   billingCycle: 'monthly',
-  anchor: { dayOfMonth: 1, monthOfYear: null, dayOfWeek: null, referenceDate: null }
+  anchor: { dayOfMonth: 1, monthOfYear: null, dayOfWeek: null, referenceDate: null },
+  cadenceContext: {
+    cadenceOwner: 'client',
+    changeScopeDescription: 'Client-schedule edits affect future client-cadence windows only.',
+    scheduleDescription: 'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.',
+    previewDescription: 'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.',
+    previewHeading: 'Upcoming client-owned invoice windows (preview)',
+  }
 }));
 
-const mockPreviewBillingPeriodsForSchedule = vi.fn(async () => ([
-  { periodStartDate: '2026-01-01T00:00:00Z', periodEndDate: '2026-02-01T00:00:00Z' },
-  { periodStartDate: '2026-02-01T00:00:00Z', periodEndDate: '2026-03-01T00:00:00Z' },
-  { periodStartDate: '2026-03-01T00:00:00Z', periodEndDate: '2026-04-01T00:00:00Z' },
-]));
+const mockPreviewBillingPeriodsForSchedule = vi.fn(async () => ({
+  cadenceContext: {
+    cadenceOwner: 'client',
+    changeScopeDescription: 'Client-schedule edits affect future client-cadence windows only.',
+    scheduleDescription: 'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.',
+    previewDescription: 'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.',
+    previewHeading: 'Upcoming client-owned invoice windows (preview)',
+  },
+  periods: [
+    { periodStartDate: '2026-01-01T00:00:00Z', periodEndDate: '2026-02-01T00:00:00Z' },
+    { periodStartDate: '2026-02-01T00:00:00Z', periodEndDate: '2026-03-01T00:00:00Z' },
+    { periodStartDate: '2026-03-01T00:00:00Z', periodEndDate: '2026-04-01T00:00:00Z' },
+  ],
+}));
 
 const mockUpdateClientBillingSchedule = vi.fn(async () => ({ success: true }));
 
@@ -91,12 +107,12 @@ describe('ClientBillingSchedule', () => {
     });
 
     expect(screen.getByText(
-      'This schedule drives invoice windows for recurring lines that invoice on the client billing schedule. Contract-anniversary lines keep their own cadence.'
+      'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.'
     )).toBeTruthy();
     expect(screen.getByText(
-      'Previewed windows below apply to recurring lines that invoice on the client billing schedule. Contract-anniversary cadence is configured on the recurring line itself and is previewed separately.'
+      'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.'
     )).toBeTruthy();
-    expect(screen.getByText('Upcoming client-cadence invoice windows (preview)')).toBeTruthy();
+    expect(screen.getByText('Upcoming client-owned invoice windows (preview)')).toBeTruthy();
 
     await waitFor(() => {
       expect(mockPreviewBillingPeriodsForSchedule).toHaveBeenCalled();

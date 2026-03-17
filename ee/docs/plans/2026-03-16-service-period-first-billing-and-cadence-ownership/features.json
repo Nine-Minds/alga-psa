@@ -728,7 +728,7 @@
   {
     "id": "F122",
     "description": "Update billing cycle anchor actions and schedule-preview flows to coexist cleanly with explicit cadence ownership without implying that client cadence is universal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

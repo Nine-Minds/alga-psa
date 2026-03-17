@@ -17,6 +17,10 @@ import {
   type NormalizedBillingCycleAnchorSettings
 } from '../lib/billing/billingCycleAnchors';
 import { withAuth } from '@alga-psa/auth';
+import {
+  CLIENT_CADENCE_SCHEDULE_CONTEXT,
+  type ClientCadenceScheduleContext
+} from '@shared/billingClients/clientCadenceScheduleContext';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -35,6 +39,7 @@ function normalizeDbIsoUtcMidnight(value: unknown): ISO8601String {
 export type ClientBillingCycleAnchorConfig = {
   billingCycle: BillingCycleType;
   anchor: NormalizedBillingCycleAnchorSettings;
+  cadenceContext: ClientCadenceScheduleContext;
 };
 
 export const getClientBillingCycleAnchor = withAuth(async (
@@ -76,7 +81,11 @@ export const getClientBillingCycleAnchor = withAuth(async (
         : null
     });
 
-    return { billingCycle, anchor: normalized } satisfies ClientBillingCycleAnchorConfig;
+    return {
+      billingCycle,
+      anchor: normalized,
+      cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT
+    } satisfies ClientBillingCycleAnchorConfig;
   });
 
   return result;
@@ -174,13 +183,18 @@ export type BillingCyclePeriodPreview = {
   periodEndDate: ISO8601String;
 };
 
+export type BillingCyclePeriodPreviewResult = {
+  cadenceContext: ClientCadenceScheduleContext;
+  periods: BillingCyclePeriodPreview[];
+};
+
 export const previewBillingPeriodsForSchedule = withAuth(async (
   user,
   { tenant },
   billingCycle: BillingCycleType,
   anchor: BillingCycleAnchorSettingsInput,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<BillingCyclePeriodPreview[]> => {
+): Promise<BillingCyclePeriodPreviewResult> => {
   validateAnchorSettingsForCycle(billingCycle, anchor);
   const normalized = normalizeAnchorSettingsForCycle(billingCycle, anchor);
 
@@ -201,7 +215,10 @@ export const previewBillingPeriodsForSchedule = withAuth(async (
     periods.push({ periodStartDate: nextEnd, periodEndDate: nextNext });
   }
 
-  return periods;
+  return {
+    cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT,
+    periods
+  };
 });
 
 export const previewClientBillingPeriods = withAuth(async (
@@ -209,7 +226,7 @@ export const previewClientBillingPeriods = withAuth(async (
   { tenant },
   clientId: string,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<BillingCyclePeriodPreview[]> => {
+): Promise<BillingCyclePeriodPreviewResult> => {
   const { knex } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
@@ -265,7 +282,10 @@ export const previewClientBillingPeriods = withAuth(async (
     periods.push({ periodStartDate: nextEnd, periodEndDate: nextNext });
   }
 
-  return periods;
+  return {
+    cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT,
+    periods
+  };
 });
 
 async function ensureClientBillingSettingsRow(

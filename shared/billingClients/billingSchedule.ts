@@ -11,6 +11,10 @@ import {
   type NormalizedBillingCycleAnchorSettings
 } from './billingCycleAnchors';
 import { createClientContractLineCycles, type BillingCycleCreationResult } from './createBillingCycles';
+import {
+  CLIENT_CADENCE_SCHEDULE_CONTEXT,
+  type ClientCadenceScheduleContext,
+} from './clientCadenceScheduleContext';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -29,6 +33,7 @@ function normalizeDbIsoUtcMidnight(value: unknown): ISO8601String {
 export type ClientBillingCycleAnchorConfig = {
   billingCycle: BillingCycleType;
   anchor: NormalizedBillingCycleAnchorSettings;
+  cadenceContext: ClientCadenceScheduleContext;
 };
 
 export async function getClientBillingCycleAnchor(
@@ -61,7 +66,11 @@ export async function getClientBillingCycleAnchor(
       : null
   });
 
-  return { billingCycle, anchor: normalized };
+  return {
+    billingCycle,
+    anchor: normalized,
+    cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT,
+  };
 }
 
 async function ensureClientBillingSettingsRow(
@@ -190,11 +199,16 @@ export type BillingCyclePeriodPreview = {
   periodEndDate: ISO8601String;
 };
 
+export type BillingCyclePeriodPreviewResult = {
+  cadenceContext: ClientCadenceScheduleContext;
+  periods: BillingCyclePeriodPreview[];
+};
+
 export function previewBillingPeriodsForSchedule(
   billingCycle: BillingCycleType,
   anchor: BillingCycleAnchorSettingsInput,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): BillingCyclePeriodPreview[] {
+): BillingCyclePeriodPreviewResult {
   validateAnchorSettingsForCycle(billingCycle, anchor);
   const normalized = normalizeAnchorSettingsForCycle(billingCycle, anchor);
 
@@ -213,7 +227,10 @@ export function previewBillingPeriodsForSchedule(
     periods.push({ periodStartDate: nextEnd, periodEndDate: nextNext });
   }
 
-  return periods;
+  return {
+    cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT,
+    periods,
+  };
 }
 
 export async function createNextBillingCycle(
@@ -232,4 +249,3 @@ export async function createNextBillingCycle(
 function isKnexTransaction(knexOrTrx: Knex | Knex.Transaction): knexOrTrx is Knex.Transaction {
   return typeof (knexOrTrx as any).commit === 'function' && typeof (knexOrTrx as any).rollback === 'function';
 }
-

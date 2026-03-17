@@ -46,6 +46,10 @@ import {
   updateClientTaxExemptStatus,
   updateClientTaxSettings,
   type BillingCycleAnchorSettingsInput,
+  type BillingCyclePeriodPreview,
+  type BillingCyclePeriodPreviewResult,
+  type ClientBillingCycleAnchorConfig,
+  type ClientCadenceScheduleContext,
   type BillingCycleCreationResult,
   type ClientBillingSettings,
   type ServiceListOptions,
@@ -140,13 +144,9 @@ export const getClientBillingCycleAnchorAsync = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<{
-  billingCycle: BillingCycleType;
-  anchor: {
-    dayOfMonth: number | null;
-    monthOfYear: number | null;
-    dayOfWeek: number | null;
-    referenceDate: ISO8601String | null;
-  };
+  billingCycle: ClientBillingCycleAnchorConfig['billingCycle'];
+  anchor: ClientBillingCycleAnchorConfig['anchor'];
+  cadenceContext: ClientCadenceScheduleContext;
 }> => {
   const { knex } = await createTenantKnex();
 
@@ -160,7 +160,10 @@ export const previewBillingPeriodsForScheduleAsync = withAuthCheck(async (
   billingCycle: BillingCycleType,
   anchor: BillingCycleAnchorSettingsInput,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<Array<{ periodStartDate: ISO8601String; periodEndDate: ISO8601String }>> => {
+): Promise<{
+  cadenceContext: BillingCyclePeriodPreviewResult['cadenceContext'];
+  periods: BillingCyclePeriodPreview[];
+}> => {
   return previewBillingPeriodsForSchedule(billingCycle, anchor, options);
 });
 
