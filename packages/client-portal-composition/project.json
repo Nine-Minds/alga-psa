@@ -1,0 +1,22 @@
+{
+  "name": "@alga-psa/client-portal-composition",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/client-portal-composition/src",
+  "projectType": "library",
+  "tags": ["scope:client-portal-composition", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "nx:noop"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/client-portal-composition/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

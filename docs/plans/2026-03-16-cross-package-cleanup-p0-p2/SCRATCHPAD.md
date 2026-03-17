@@ -174,10 +174,12 @@ By target package
 - Acceptable/inherent client-portal edges: `client-billing.ts`, `client-tickets.ts`, `clientPaymentActions.ts`, `BillingOverview.tsx`, `ClientInvoicePreview.tsx`, `ClientProfile.tsx`, `ClientDetailsSettings.tsx`, `ClientPasswordChangeForm.tsx`, `UserManagementSettings.tsx`, `ClientAddTicket.tsx`, `TicketDetails.tsx`, `TicketDetails.originBadge.contract.test.ts`, and `TicketList.tsx`.
 - Fixable client-portal edges queued for later items: `client-kb.ts`, `ClientKBArticleView.tsx`, `ClientKBPage.tsx` (type-only `documents` imports for P2-6), plus `ProjectDetailView.tsx` (presentation imports from `projects`, a good `client-portal` composition-facade candidate for F032).
 - Added file-level `custom-rules/no-feature-to-feature-imports` disables with explicit justification comments to the acceptable/inherent client-portal composition files; a fresh `npm run lint` now reports `63` total violations and only `6` remaining `client-portal` warnings, all in the previously identified fixable KB/project files.
+- Created a new horizontal `@alga-psa/client-portal-composition` package and moved the project metrics card composition there via `ClientPortalProjectMetrics`; `packages/client-portal/src/components/projects/ProjectDetailView.tsx` no longer imports from `@alga-psa/projects` directly.
+- Validation after F032: `cd packages/client-portal && npx tsc --noEmit`, `cd server && npx tsc --noEmit`, and `npm run lint` all pass; only `3` `client-portal` violations remain, all from the KB type-only imports targeted by P2-6.
 
 ## Remaining Open Work
 
-- **F032:** next up. Only the fixable `client-portal` edges remain: the three KB type imports from `documents` and the three `ProjectDetailView.tsx` presentation imports from `projects`.
+- **F033:** next up. After the client-portal composition/package work, rerun the full build and close out the client-portal feature set.
 
 ## Gotchas
 

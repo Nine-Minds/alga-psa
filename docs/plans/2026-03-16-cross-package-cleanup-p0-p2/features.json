@@ -188,7 +188,7 @@
   {
     "id": "F032",
     "description": "P2-5c: Create client-portal-composition package OR context facades for fixable violations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-5c"]
   },
   {
