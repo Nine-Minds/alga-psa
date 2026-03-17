@@ -1757,7 +1757,7 @@
   {
     "id": "F196",
     "description": "Define stored export-batch persistence semantics when batches contain historical flat invoices and new detail-backed recurring invoices",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Read-model and post-persist lifecycle requirements"

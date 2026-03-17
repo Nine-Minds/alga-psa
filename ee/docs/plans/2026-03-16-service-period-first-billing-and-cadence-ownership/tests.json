@@ -1950,7 +1950,7 @@
   {
     "id": "T225",
     "description": "Stored export batches can be reread when they contain a mix of historical flat invoices and canonical detail-backed recurring invoices",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F196"
     ]

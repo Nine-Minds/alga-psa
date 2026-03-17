@@ -123,6 +123,10 @@ export class AccountingExportService {
     if (!batch) {
       return { batch: null, lines: [], errors: [] };
     }
+    // Mixed export batches are line-authoritative. Historical/header-fallback lines and
+    // canonical detail-backed recurring lines may coexist in one stored batch, and rereads
+    // must preserve each line's stored projection metadata instead of collapsing them to one
+    // batch-wide service-period basis.
     const [lines, errors] = await Promise.all([
       this.repository.listLines(batchId),
       this.repository.listErrors(batchId)
