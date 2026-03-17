@@ -1588,7 +1588,7 @@ export async function sendCancellationConfirmationEmail(
 
     // Get the tenant's registered email address
     const tenant = await adminKnex('tenants')
-      .select('email', 'company_name')
+      .select('email', 'client_name')
       .where({ tenant: tenantId })
       .first();
 
@@ -1602,7 +1602,7 @@ export async function sendCancellationConfirmationEmail(
     const { emailService: emailServicePromise } = await import('../services/email-service.js');
     const emailServiceInstance = await emailServicePromise;
 
-    const recipientName = tenant.company_name || tenantName;
+    const recipientName = tenant.client_name || tenantName;
     const { subject, htmlBody, textBody } = createCancellationEmailContent(tenantName, recipientName);
 
     try {
