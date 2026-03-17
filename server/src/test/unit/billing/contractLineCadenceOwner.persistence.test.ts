@@ -261,4 +261,27 @@ describe('contract line cadence owner persistence', () => {
       state.rawCalls.some((sql) => sql.includes('contract_lines_cadence_owner_check')),
     ).toBe(true);
   });
+
+  it('T110: cadence_owner backfill stays scoped to contract_lines and does not mutate invoice-backed outputs', async () => {
+    const repoRoot = path.resolve(import.meta.dirname, '../../../../..');
+    const migrationPath = path.join(
+      repoRoot,
+      'server/migrations/20260317170000_add_cadence_owner_to_contract_lines.cjs',
+    );
+    const migrationSource = fs.readFileSync(migrationPath, 'utf8');
+    const migrationModule = await import(pathToFileURL(migrationPath).href);
+    const { knex, state } = createMigrationKnex([
+      { contract_line_id: 'line-null', cadence_owner: null },
+      { contract_line_id: 'line-client', cadence_owner: 'client' },
+    ]);
+
+    await migrationModule.up(knex);
+
+    expect(migrationSource).not.toMatch(/invoice_charge_details|invoice_charges|invoices/);
+    expect(state.rows).toEqual([
+      { contract_line_id: 'line-null', cadence_owner: 'client' },
+      { contract_line_id: 'line-client', cadence_owner: 'client' },
+    ]);
+    expect(state.rawCalls.every((sql) => !/invoice_charge_details|invoice_charges|invoices/.test(sql))).toBe(true);
+  });
 });

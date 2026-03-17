@@ -27,7 +27,7 @@ const CADENCE_OWNER_OPTIONS = [
     value: 'contract',
     label: 'Invoice on contract anniversary',
     description:
-      'Use this contract line’s own anniversary dates. This option is staged for a later rollout.',
+      'Use this contract line’s own anniversary dates. Mixed client-schedule and contract-anniversary billing is staged for a later rollout.',
     disabled: true,
   },
 ];

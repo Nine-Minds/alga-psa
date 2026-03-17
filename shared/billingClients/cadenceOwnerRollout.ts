@@ -6,7 +6,7 @@ type CadenceOwnerRolloutValidationInput = {
 };
 
 export const CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE =
-  'Contract-owned cadence is not enabled during the client-cadence rollout.';
+  'Contract-owned cadence and mixed-cadence billing are not enabled during the client-cadence rollout.';
 
 export function getCadenceOwnerRolloutValidationMessage(
   input: CadenceOwnerRolloutValidationInput,

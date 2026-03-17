@@ -52,7 +52,7 @@ describe('FixedContractLineConfiguration cadence owner UI', () => {
     upsertContractLineTerms.mockResolvedValue(undefined);
   });
 
-  it('T111: recurring contract line configuration uses business-language cadence owner labels and persists the client cadence default', async () => {
+  it('T111 and T145: recurring contract line configuration uses business-language cadence owner labels and explains the staged mixed-cadence rollout block', async () => {
     const { FixedPlanConfiguration } = await import('../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration');
 
     render(<FixedPlanConfiguration contractLineId="line-1" />);
@@ -65,6 +65,9 @@ describe('FixedContractLineConfiguration cadence owner UI', () => {
     expect(contractOption.disabled).toBe(true);
     expect(
       screen.getByText(/Choose which schedule defines this recurring line's service periods/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Mixed client-schedule and contract-anniversary billing is staged for a later rollout/i),
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getByDisplayValue('Managed Support'), {

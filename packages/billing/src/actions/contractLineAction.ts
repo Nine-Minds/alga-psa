@@ -12,6 +12,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
 
 
 
@@ -148,6 +149,10 @@ export const createContractLine = withAuth(async (
 
             // Remove tenant field if present in planData to prevent override
             const { tenant: _, ...safePlanData } = planData;
+            assertSupportedCadenceOwnerDuringRollout({
+                cadenceOwner: safePlanData.cadence_owner ?? 'client',
+                billingTiming: safePlanData.billing_timing ?? 'arrears',
+            });
             delete safePlanData.billing_timing;
             const plan = await ContractLine.create(trx, safePlanData);
             const enrichedPlan: IContractLine = {
@@ -201,6 +206,10 @@ export const updateContractLine = withAuth(async (
 
             // Remove tenant field if present in updateData to prevent override
             const { tenant: _, ...safeUpdateData } = updateData;
+            assertSupportedCadenceOwnerDuringRollout({
+                cadenceOwner: safeUpdateData.cadence_owner ?? null,
+                billingTiming: safeUpdateData.billing_timing ?? null,
+            });
 
             // If the plan is hourly, remove only the per-service hourly_rate field
             // minimum_billable_time and round_up_to_nearest are now contract-line-level

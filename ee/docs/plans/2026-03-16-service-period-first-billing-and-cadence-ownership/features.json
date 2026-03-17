@@ -806,13 +806,13 @@
   {
     "id": "F135",
     "description": "Add backfill verification that all existing recurring records receive client cadence defaults without mutating current invoice behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Acceptance Criteria"]
   },
   {
     "id": "F136",
     "description": "Add explicit mixed-cadence validation at action, API, and UI layers for unsupported combinations during phased rollout",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {

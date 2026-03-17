@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { hasPermission } from '@alga-psa/auth/rbac';
 
+const CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE =
+  'Contract-owned cadence and mixed-cadence billing are not enabled during the client-cadence rollout.';
+
 const createTenantKnex = vi.fn();
 let currentTrx: any;
 
@@ -139,20 +142,20 @@ describe('contract line cadence_owner action persistence', () => {
     });
   });
 
-  it('T106: createCustomContractLine persists explicit cadence_owner and defaults missing values to client', async () => {
+  it('T106: createCustomContractLine persists explicit client cadence_owner and defaults missing values to client', async () => {
     const { createCustomContractLine } = await import('../src/actions/contractLinePresetActions');
 
     await createCustomContractLine('contract-1', {
       contract_line_name: 'Managed Services',
       contract_line_type: 'Fixed',
       billing_frequency: 'monthly',
-      cadence_owner: 'contract',
+      cadence_owner: 'client',
       base_rate: 15000,
       services: [{ service_id: 'svc-1', quantity: 1 }],
     });
 
     expect(contractLineCreate.mock.calls[0]?.[1]).toMatchObject({
-      cadence_owner: 'contract',
+      cadence_owner: 'client',
       contract_line_name: 'Managed Services',
     });
 
@@ -169,12 +172,13 @@ describe('contract line cadence_owner action persistence', () => {
     });
   });
 
-  it('persists cadence_owner overrides when copying presets into live contract lines', async () => {
+  it('preserves explicit client cadence overrides when copying presets into live contract lines', async () => {
     presetFindById.mockResolvedValue({
       preset_id: 'preset-1',
       preset_name: 'Preset Services',
       contract_line_type: 'Fixed',
       billing_frequency: 'monthly',
+      cadence_owner: 'contract',
       minimum_billable_time: null,
       round_up_to_nearest: null,
     });
@@ -182,13 +186,13 @@ describe('contract line cadence_owner action persistence', () => {
     const { copyPresetToContractLine } = await import('../src/actions/contractLinePresetActions');
 
     await copyPresetToContractLine('contract-1', 'preset-1', {
-      cadence_owner: 'contract',
+      cadence_owner: 'client',
     });
 
     expect(contractLineCreate).toHaveBeenCalledWith(
       currentTrx,
       expect.objectContaining({
-        cadence_owner: 'contract',
+        cadence_owner: 'client',
         contract_line_name: 'Preset Services',
       })
     );
@@ -199,11 +203,11 @@ describe('contract line cadence_owner action persistence', () => {
 
     presetFindById.mockResolvedValueOnce({
       preset_id: 'preset-2',
-      preset_name: 'Contract Anniversary Preset',
+      preset_name: 'Client Schedule Preset',
       contract_line_type: 'Fixed',
       billing_frequency: 'monthly',
       billing_timing: 'advance',
-      cadence_owner: 'contract',
+      cadence_owner: 'client',
       minimum_billable_time: null,
       round_up_to_nearest: null,
     });
@@ -213,10 +217,42 @@ describe('contract line cadence_owner action persistence', () => {
     expect(contractLineCreate).toHaveBeenLastCalledWith(
       currentTrx,
       expect.objectContaining({
-        cadence_owner: 'contract',
-        contract_line_name: 'Contract Anniversary Preset',
+        cadence_owner: 'client',
+        contract_line_name: 'Client Schedule Preset',
       })
     );
     expect(presetFixedConfigGetByPresetId).toHaveBeenLastCalledWith(currentTrx, 'preset-2');
+  });
+
+  it('T143: action-layer contract line creation paths reject staged mixed-cadence writes during rollout', async () => {
+    const { createCustomContractLine, copyPresetToContractLine } = await import('../src/actions/contractLinePresetActions');
+
+    await expect(
+      createCustomContractLine('contract-1', {
+        contract_line_name: 'Blocked Contract Cadence',
+        contract_line_type: 'Fixed',
+        billing_frequency: 'monthly',
+        cadence_owner: 'contract',
+        services: [{ service_id: 'svc-1', quantity: 1 }],
+      }),
+    ).rejects.toThrow(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
+
+    expect(contractLineCreate).not.toHaveBeenCalled();
+
+    presetFindById.mockResolvedValueOnce({
+      preset_id: 'preset-contract',
+      preset_name: 'Contract Anniversary Preset',
+      contract_line_type: 'Fixed',
+      billing_frequency: 'monthly',
+      cadence_owner: 'contract',
+      minimum_billable_time: null,
+      round_up_to_nearest: null,
+    });
+
+    await expect(copyPresetToContractLine('contract-1', 'preset-contract')).rejects.toThrow(
+      CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
+    );
+
+    expect(contractLineCreate).not.toHaveBeenCalled();
   });
 });

@@ -9,10 +9,11 @@ import {
 import {
   createContractLineSchema as createFinancialContractLineSchema,
   createClientContractLineSchema,
+  updateClientContractLineSchema,
 } from 'server/src/lib/api/schemas/financialSchemas';
 
 describe('contract line cadence owner API schemas', () => {
-  it('T105: server API schemas reject contract cadence during rollout while keeping stored responses compatible', () => {
+  it('T105 and T144: server API schemas reject contract cadence and mixed-cadence writes during rollout while keeping stored responses compatible', () => {
     const blockedCreate = createContractLineSchema.safeParse({
       contract_line_name: 'Managed Support',
       billing_frequency: 'monthly',
@@ -41,6 +42,10 @@ describe('contract line cadence owner API schemas', () => {
       client_id: '22222222-2222-4222-8222-222222222222',
       contract_line_id: '33333333-3333-4333-8333-333333333333',
       start_date: '2026-03-17T00:00:00.000Z',
+      cadence_owner: 'contract',
+    });
+
+    const blockedClientLineUpdate = updateClientContractLineSchema.safeParse({
       cadence_owner: 'contract',
     });
 
@@ -80,10 +85,12 @@ describe('contract line cadence owner API schemas', () => {
     expect(validFinancialCreate.success).toBe(true);
     expect(validClientLine.success).toBe(true);
     expect(blockedClientLine.success).toBe(false);
+    expect(blockedClientLineUpdate.success).toBe(false);
     expect(validResponse.success).toBe(true);
     expect(invalidCreate.success).toBe(false);
     expect(invalidUpdate.success).toBe(false);
     expect(blockedCreate.error?.issues[0]?.message).toBe(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
     expect(blockedClientLine.error?.issues[0]?.message).toBe(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
+    expect(blockedClientLineUpdate.error?.issues[0]?.message).toBe(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
   });
 });

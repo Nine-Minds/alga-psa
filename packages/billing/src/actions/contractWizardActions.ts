@@ -15,6 +15,7 @@ import {
   buildContractRenewalUpcomingPayload,
   computeContractRenewalUpcoming,
 } from '@shared/workflow/streams/domainEventBuilders/contractEventBuilders';
+import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
 
 
 import ContractLine from '../models/contractLine';
@@ -262,6 +263,10 @@ export const createContractTemplateFromWizard = withAuth(async (
       return permissionError('Permission denied: Cannot create billing templates');
     }
   }
+
+  assertSupportedCadenceOwnerDuringRollout({
+    cadenceOwner: submission.cadence_owner ?? 'client',
+  });
 
   const { knex } = await createTenantKnex();
 
@@ -699,6 +704,10 @@ export const createClientContractFromWizard = withAuth(async (
       return permissionError('Permission denied: Cannot create billing contracts');
     }
   }
+
+  assertSupportedCadenceOwnerDuringRollout({
+    cadenceOwner: submission.cadence_owner ?? 'client',
+  });
 
   const { knex } = await createTenantKnex();
 

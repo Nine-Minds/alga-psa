@@ -11,6 +11,7 @@ import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
+import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
 
 
 
@@ -79,6 +80,9 @@ export const createContractLinePreset = withAuth(async (
             }
 
             const { tenant: _, ...safePresetData } = presetData as any;
+            assertSupportedCadenceOwnerDuringRollout({
+                cadenceOwner: safePresetData.cadence_owner ?? 'client',
+            });
             const preset = await ContractLinePreset.create(trx, tenant, safePresetData);
 
             // Track analytics
@@ -121,6 +125,9 @@ export const updateContractLinePreset = withAuth(async (
             }
 
             const { tenant: _, preset_id: __, ...safeUpdateData } = updateData as any;
+            assertSupportedCadenceOwnerDuringRollout({
+                cadenceOwner: safeUpdateData.cadence_owner ?? null,
+            });
             const preset = await ContractLinePreset.update(trx, tenant, presetId, safeUpdateData);
 
             // Track analytics
@@ -341,6 +348,9 @@ export const copyPresetToContractLine = withAuth(async (
                     round_up_to_nearest: roundUpToNearest,
                 } : {}),
             };
+            assertSupportedCadenceOwnerDuringRollout({
+                cadenceOwner: contractLineData.cadence_owner ?? 'client',
+            });
 
             const contractLine = await ContractLine.create(trx, contractLineData);
 
@@ -599,6 +609,10 @@ export const createCustomContractLine = withAuth(async (
                     round_up_to_nearest: roundUpToNearest,
                 } : {}),
             };
+            assertSupportedCadenceOwnerDuringRollout({
+                cadenceOwner: contractLineData.cadence_owner ?? 'client',
+                billingTiming: contractLineData.billing_timing ?? 'advance',
+            });
 
             const contractLine = await ContractLine.create(trx, contractLineData);
 

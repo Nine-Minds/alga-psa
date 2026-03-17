@@ -118,7 +118,7 @@
   {"id":"T107","description":"Fixture builders and test helpers create valid client-cadence and contract-cadence recurring scenarios with stable defaults","implemented":true,"featureIds":["F087","F134"]},
   {"id":"T108","description":"Compatibility readers preserve client-cadence behavior when cadence_owner is absent on legacy records","implemented":true,"featureIds":["F089"]},
   {"id":"T109","description":"billing_cycle_alignment remains readable for staged rollout while no longer being required for new writes","implemented":true,"featureIds":["F090","F137"]},
-  {"id":"T110","description":"Schema and defaulting migrations do not mutate existing invoice outputs for untouched tenants","implemented":false,"featureIds":["F082","F114","F135"]},
+  {"id":"T110","description":"Schema and defaulting migrations do not mutate existing invoice outputs for untouched tenants","implemented":true,"featureIds":["F082","F114","F135"]},
 
   {"id":"T111","description":"Recurring contract line configuration UI presents cadence owner in business language without exposing internal engine jargon","implemented":true,"featureIds":["F091"]},
   {"id":"T112","description":"Contract wizard captures cadence_owner for new recurring lines and preserves it across step transitions","implemented":true,"featureIds":["F092"]},
@@ -155,9 +155,9 @@
 
   {"id":"T141","description":"Mixed cadence-owner recurring lines due in the same invoice window follow the documented grouping rule","implemented":true,"featureIds":["F108","F110"]},
   {"id":"T142","description":"Mixed cadence-owner recurring lines due in different windows follow the documented grouping rule","implemented":true,"featureIds":["F109","F110"]},
-  {"id":"T143","description":"Unsupported mixed-cadence combinations fail fast in the action layer with clear validation errors","implemented":false,"featureIds":["F088","F136"]},
-  {"id":"T144","description":"Unsupported mixed-cadence combinations fail fast in API schemas with clear validation errors","implemented":false,"featureIds":["F085","F136"]},
-  {"id":"T145","description":"Unsupported mixed-cadence combinations surface clear validation in UI configuration flows","implemented":false,"featureIds":["F091","F136"]},
+  {"id":"T143","description":"Unsupported mixed-cadence combinations fail fast in the action layer with clear validation errors","implemented":true,"featureIds":["F088","F136"]},
+  {"id":"T144","description":"Unsupported mixed-cadence combinations fail fast in API schemas with clear validation errors","implemented":true,"featureIds":["F085","F136"]},
+  {"id":"T145","description":"Unsupported mixed-cadence combinations surface clear validation in UI configuration flows","implemented":true,"featureIds":["F091","F136"]},
   {"id":"T146","description":"Recurring run selection remains deterministic when both cadence owners are present on one client","implemented":true,"featureIds":["F110"]},
   {"id":"T147","description":"Portal and export consumers remain stable when invoices contain mixed cadence-owner recurring lines","implemented":false,"featureIds":["F097","F099","F110"]},
   {"id":"T148","description":"Mixed cadence-owner disputes can be traced using the documented runbook and persisted metadata","implemented":false,"featureIds":["F149"]},
