@@ -61,6 +61,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - (2026-03-17) Client-cadence service-period generation now preserves current anchor behavior while separating two cases explicitly:
   - when no historical cycle is authoritative, generation returns the anchored period containing the requested date
   - when a historical cycle ends exactly at the next cursor, generation treats that cursor as an authoritative transition boundary and moves forward without reaching back into pre-cutover periods
+- (2026-03-17) Shared recurring timing resolution now has one additive seam for the next cutover:
+  - `selectDueServicePeriodsForInvoiceWindow` chooses due service periods from a current invoice window without rebuilding separate advance vs arrears period definitions
+  - `resolveRecurringSettlementsForInvoiceWindow` intersects those due periods with line activity dates, returns covered periods, and computes one coverage ratio for fixed, product, and license families
+  - zero-coverage periods are filtered before any family-specific charge math runs, which is the intended bridge away from bespoke proration and skip branches
 - (2026-03-16) `packages/billing/src/lib/billing/billingEngine.ts` currently mixes several timing models:
   - `resolveServicePeriod`
   - advance vs arrears branching
@@ -117,6 +121,9 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
 - (2026-03-17) Client cadence validation:
   - `npx vitest run src/test/unit/billing/clientCadenceServicePeriods.domain.test.ts src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Shared due-period/coverage validation:
+  - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
 
 ## Links / References
 

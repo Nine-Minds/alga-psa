@@ -52,6 +52,18 @@ export interface IRecurringCoverage {
   coverageRatio: number;
 }
 
+export interface IRecurringDuePeriodSelection {
+  servicePeriod: IRecurringServicePeriod;
+  invoiceWindow: IRecurringInvoiceWindow;
+}
+
+export interface IResolvedRecurringSettlement {
+  servicePeriod: IRecurringServicePeriod;
+  coveredServicePeriod: IRecurringServicePeriod;
+  invoiceWindow: IRecurringInvoiceWindow;
+  coverage: IRecurringCoverage;
+}
+
 export interface IRecurringInvoiceDetailTiming {
   cadenceOwner: CadenceOwner;
   duePosition: DuePosition;

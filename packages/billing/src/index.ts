@@ -47,9 +47,11 @@ export type {
   ICadenceBoundaryGeneratorInput,
   IRecurringActivityWindow,
   IRecurringCoverage,
+  IRecurringDuePeriodSelection,
   IRecurringInvoiceDetailTiming,
   IRecurringInvoiceWindow,
   IRecurringObligationRef,
+  IResolvedRecurringSettlement,
   IRecurringServicePeriod,
 } from '@alga-psa/types';
 
@@ -84,7 +86,9 @@ export {
   calculateServicePeriodCoverage,
   intersectActivityWindow,
   mapServicePeriodToInvoiceWindow,
+  resolveRecurringSettlementsForInvoiceWindow,
   resolveCadenceOwner,
+  selectDueServicePeriodsForInvoiceWindow,
   selectCadenceBoundaryGenerator,
 } from '@alga-psa/shared/billingClients/recurringTiming';
 export type {

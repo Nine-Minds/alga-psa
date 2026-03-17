@@ -182,61 +182,61 @@
   {
     "id": "F031",
     "description": "Map advance timing to the current service period on the current invoice window without separate service-period logic",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Implementation Sequence"]
   },
   {
     "id": "F032",
     "description": "Map arrears timing to the previous service period on the current invoice window without separate service-period logic",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Implementation Sequence"]
   },
   {
     "id": "F033",
     "description": "Replace mid-period start handling with activity-window intersection against generated service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Architecture Thesis"]
   },
   {
     "id": "F034",
     "description": "Replace mid-period end handling with activity-window intersection against generated service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Architecture Thesis"]
   },
   {
     "id": "F035",
     "description": "Replace fixed-charge proration factor logic with partial-period settlement derived from actual service-period coverage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Implementation Sequence"]
   },
   {
     "id": "F036",
     "description": "Replace product and license proration factor logic with the same partial-period settlement model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Implementation Sequence"]
   },
   {
     "id": "F037",
     "description": "Define first-period behavior for newly activated recurring lines under both advance and arrears timing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {
     "id": "F038",
     "description": "Define final-period behavior for terminated recurring lines under both advance and arrears timing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {
     "id": "F039",
     "description": "Define no-coverage and zero-length behavior so unsupported or empty service periods never create duplicate or spurious recurring charges",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Detailed Requirements", "Risks"]
   },
   {
     "id": "F040",
     "description": "Centralize recurring timing resolution so fixed, product, and license charge families no longer implement their own date math",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture Thesis", "Detailed Requirements"]
   },
   {

@@ -6,8 +6,10 @@ import type {
   IRecurringActivityWindow,
   IRecurringCoverage,
   IRecurringDateRange,
+  IRecurringDuePeriodSelection,
   IRecurringInvoiceDetailTiming,
   IRecurringInvoiceWindow,
+  IResolvedRecurringSettlement,
   IRecurringServicePeriod,
 } from '@alga-psa/types';
 import { RECURRING_RANGE_SEMANTICS } from '@alga-psa/types';
@@ -93,6 +95,72 @@ export function mapServicePeriodToInvoiceWindow(
       ? (options.nextInvoiceWindow ?? options.currentInvoiceWindow)
       : options.currentInvoiceWindow,
   };
+}
+
+function rangesOverlap(
+  left: Pick<IRecurringDateRange, 'start' | 'end'>,
+  right: Pick<IRecurringDateRange, 'start' | 'end'>,
+): boolean {
+  return (
+    Temporal.PlainDate.compare(toPlainDate(left.start), toPlainDate(right.end)) < 0 &&
+    Temporal.PlainDate.compare(toPlainDate(right.start), toPlainDate(left.end)) < 0
+  );
+}
+
+export function selectDueServicePeriodsForInvoiceWindow(
+  servicePeriods: IRecurringServicePeriod[],
+  options: {
+    duePosition: DuePosition;
+    invoiceWindow: IRecurringInvoiceWindow;
+  },
+): IRecurringDuePeriodSelection[] {
+  return servicePeriods
+    .filter((servicePeriod) => servicePeriod.duePosition === options.duePosition)
+    .filter((servicePeriod) => {
+      if (options.duePosition === 'advance') {
+        return rangesOverlap(servicePeriod, options.invoiceWindow);
+      }
+
+      return Temporal.PlainDate.compare(
+        toPlainDate(servicePeriod.end),
+        toPlainDate(options.invoiceWindow.start),
+      ) === 0;
+    })
+    .map((servicePeriod) => ({
+      servicePeriod,
+      invoiceWindow: options.invoiceWindow,
+    }));
+}
+
+export function resolveRecurringSettlementsForInvoiceWindow(input: {
+  servicePeriods: IRecurringServicePeriod[];
+  invoiceWindow: IRecurringInvoiceWindow;
+  activityWindow: IRecurringActivityWindow;
+  duePosition: DuePosition;
+}): IResolvedRecurringSettlement[] {
+  return selectDueServicePeriodsForInvoiceWindow(input.servicePeriods, {
+    duePosition: input.duePosition,
+    invoiceWindow: input.invoiceWindow,
+  }).flatMap(({ servicePeriod, invoiceWindow }) => {
+    const coveredServicePeriod = intersectActivityWindow(servicePeriod, input.activityWindow);
+    if (!coveredServicePeriod) {
+      return [];
+    }
+
+    const coverage = calculateServicePeriodCoverage(servicePeriod, coveredServicePeriod);
+    if (coverage.coveredDays <= 0) {
+      return [];
+    }
+
+    return [
+      {
+        servicePeriod,
+        coveredServicePeriod,
+        invoiceWindow,
+        coverage,
+      },
+    ];
+  });
 }
 
 export function buildRecurringInvoiceDetailTiming(input: {

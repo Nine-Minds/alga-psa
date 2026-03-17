@@ -11,6 +11,8 @@ import {
   calculateServicePeriodCoverage,
   intersectActivityWindow,
   mapServicePeriodToInvoiceWindow,
+  resolveRecurringSettlementsForInvoiceWindow,
+  selectDueServicePeriodsForInvoiceWindow,
 } from '@alga-psa/shared/billingClients/recurringTiming';
 import {
   DEFAULT_CADENCE_OWNER as billingDefaultCadenceOwner,
@@ -51,6 +53,39 @@ const buildInvoiceWindow = (
   windowId: 'window-1',
   ...overrides,
 });
+
+const buildMonthlyServicePeriods = (overrides: {
+  duePosition?: 'advance' | 'arrears';
+  chargeFamily?: 'fixed' | 'product' | 'license';
+} = {}): IRecurringServicePeriod[] => [
+  buildServicePeriod({
+    duePosition: overrides.duePosition ?? 'advance',
+    sourceObligation: {
+      ...sourceObligation,
+      chargeFamily: overrides.chargeFamily ?? 'fixed',
+    },
+    start: '2024-12-01',
+    end: '2025-01-01',
+  }),
+  buildServicePeriod({
+    duePosition: overrides.duePosition ?? 'advance',
+    sourceObligation: {
+      ...sourceObligation,
+      chargeFamily: overrides.chargeFamily ?? 'fixed',
+    },
+    start: '2025-01-01',
+    end: '2025-02-01',
+  }),
+  buildServicePeriod({
+    duePosition: overrides.duePosition ?? 'advance',
+    sourceObligation: {
+      ...sourceObligation,
+      chargeFamily: overrides.chargeFamily ?? 'fixed',
+    },
+    start: '2025-02-01',
+    end: '2025-03-01',
+  }),
+];
 
 describe('recurring timing shared domain', () => {
   it('T011: canonical service-period types preserve cadence owner, source obligation, and explicit boundaries', () => {
@@ -225,5 +260,224 @@ describe('recurring timing shared domain', () => {
       invoiceWindowStart: '2025-01-11',
       invoiceWindowEnd: '2025-01-21',
     });
+  });
+
+  it('T031: advance timing maps the current service period onto the current invoice window for client cadence', () => {
+    const invoiceWindow = buildInvoiceWindow({
+      start: '2025-01-01',
+      end: '2025-02-01',
+      duePosition: 'advance',
+      windowId: 'jan-2025',
+    });
+
+    const selected = selectDueServicePeriodsForInvoiceWindow(buildMonthlyServicePeriods(), {
+      duePosition: 'advance',
+      invoiceWindow,
+    });
+
+    expect(selected).toHaveLength(1);
+    expect(selected[0]?.servicePeriod.start).toBe('2025-01-01');
+    expect(selected[0]?.servicePeriod.end).toBe('2025-02-01');
+    expect(selected[0]?.invoiceWindow.windowId).toBe('jan-2025');
+  });
+
+  it('T032: arrears timing maps the previous service period onto the current invoice window for client cadence', () => {
+    const invoiceWindow = buildInvoiceWindow({
+      start: '2025-01-01',
+      end: '2025-02-01',
+      duePosition: 'arrears',
+      windowId: 'jan-2025',
+    });
+
+    const selected = selectDueServicePeriodsForInvoiceWindow(
+      buildMonthlyServicePeriods({ duePosition: 'arrears' }),
+      {
+        duePosition: 'arrears',
+        invoiceWindow,
+      },
+    );
+
+    expect(selected).toHaveLength(1);
+    expect(selected[0]?.servicePeriod.start).toBe('2024-12-01');
+    expect(selected[0]?.servicePeriod.end).toBe('2025-01-01');
+    expect(selected[0]?.invoiceWindow.windowId).toBe('jan-2025');
+  });
+
+  it('T033: mid-period start produces a partial first service period through activity-window intersection', () => {
+    const settlements = resolveRecurringSettlementsForInvoiceWindow({
+      servicePeriods: buildMonthlyServicePeriods(),
+      invoiceWindow: buildInvoiceWindow({
+        start: '2025-01-01',
+        end: '2025-02-01',
+        duePosition: 'advance',
+      }),
+      activityWindow: {
+        start: '2025-01-10',
+        end: '2025-03-01',
+        semantics: RECURRING_RANGE_SEMANTICS,
+      },
+      duePosition: 'advance',
+    });
+
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0]?.servicePeriod.start).toBe('2025-01-01');
+    expect(settlements[0]?.coveredServicePeriod.start).toBe('2025-01-10');
+    expect(settlements[0]?.coveredServicePeriod.end).toBe('2025-02-01');
+    expect(settlements[0]?.coverage.coverageRatio).toBeCloseTo(22 / 31, 6);
+  });
+
+  it('T034: mid-period end produces a partial final service period through activity-window intersection', () => {
+    const settlements = resolveRecurringSettlementsForInvoiceWindow({
+      servicePeriods: buildMonthlyServicePeriods(),
+      invoiceWindow: buildInvoiceWindow({
+        start: '2025-01-01',
+        end: '2025-02-01',
+        duePosition: 'advance',
+      }),
+      activityWindow: {
+        start: '2024-12-01',
+        end: '2025-01-21',
+        semantics: RECURRING_RANGE_SEMANTICS,
+      },
+      duePosition: 'advance',
+    });
+
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0]?.coveredServicePeriod.start).toBe('2025-01-01');
+    expect(settlements[0]?.coveredServicePeriod.end).toBe('2025-01-21');
+    expect(settlements[0]?.coverage.coverageRatio).toBeCloseTo(20 / 31, 6);
+  });
+
+  it('T035: fixed, product, and license recurring lines use the same partial-period settlement rules', () => {
+    const chargeFamilies: Array<'fixed' | 'product' | 'license'> = ['fixed', 'product', 'license'];
+
+    const settlements = chargeFamilies.map((chargeFamily) =>
+      resolveRecurringSettlementsForInvoiceWindow({
+        servicePeriods: buildMonthlyServicePeriods({ chargeFamily }),
+        invoiceWindow: buildInvoiceWindow({
+          start: '2025-01-01',
+          end: '2025-02-01',
+          duePosition: 'advance',
+        }),
+        activityWindow: {
+          start: '2025-01-10',
+          end: '2025-01-21',
+          semantics: RECURRING_RANGE_SEMANTICS,
+        },
+        duePosition: 'advance',
+      })[0],
+    );
+
+    expect(settlements).toHaveLength(3);
+    expect(new Set(settlements.map((entry) => entry?.coverage.coveredDays))).toEqual(new Set([11]));
+    expect(new Set(settlements.map((entry) => entry?.coverage.totalDays))).toEqual(new Set([31]));
+    expect(new Set(settlements.map((entry) => entry?.coverage.coverageRatio.toFixed(6)))).toEqual(
+      new Set([(11 / 31).toFixed(6)]),
+    );
+  });
+
+  it('T036: newly activated recurring lines have explicit first-period behavior under advance timing', () => {
+    const settlements = resolveRecurringSettlementsForInvoiceWindow({
+      servicePeriods: buildMonthlyServicePeriods({ duePosition: 'advance' }),
+      invoiceWindow: buildInvoiceWindow({
+        start: '2025-01-01',
+        end: '2025-02-01',
+        duePosition: 'advance',
+      }),
+      activityWindow: {
+        start: '2025-01-10',
+        end: '2025-03-01',
+        semantics: RECURRING_RANGE_SEMANTICS,
+      },
+      duePosition: 'advance',
+    });
+
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0]?.servicePeriod.start).toBe('2025-01-01');
+    expect(settlements[0]?.coveredServicePeriod.start).toBe('2025-01-10');
+  });
+
+  it('T037: newly activated recurring lines have explicit first-period behavior under arrears timing', () => {
+    const settlements = resolveRecurringSettlementsForInvoiceWindow({
+      servicePeriods: buildMonthlyServicePeriods({ duePosition: 'arrears' }),
+      invoiceWindow: buildInvoiceWindow({
+        start: '2025-02-01',
+        end: '2025-03-01',
+        duePosition: 'arrears',
+      }),
+      activityWindow: {
+        start: '2025-01-10',
+        end: '2025-03-01',
+        semantics: RECURRING_RANGE_SEMANTICS,
+      },
+      duePosition: 'arrears',
+    });
+
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0]?.servicePeriod.start).toBe('2025-01-01');
+    expect(settlements[0]?.coveredServicePeriod.start).toBe('2025-01-10');
+    expect(settlements[0]?.invoiceWindow.start).toBe('2025-02-01');
+  });
+
+  it('T038: terminated recurring lines have explicit final-period behavior under advance timing', () => {
+    const settlements = resolveRecurringSettlementsForInvoiceWindow({
+      servicePeriods: buildMonthlyServicePeriods({ duePosition: 'advance' }),
+      invoiceWindow: buildInvoiceWindow({
+        start: '2025-01-01',
+        end: '2025-02-01',
+        duePosition: 'advance',
+      }),
+      activityWindow: {
+        start: '2024-12-01',
+        end: '2025-01-21',
+        semantics: RECURRING_RANGE_SEMANTICS,
+      },
+      duePosition: 'advance',
+    });
+
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0]?.coveredServicePeriod.end).toBe('2025-01-21');
+    expect(settlements[0]?.coverage.coveredDays).toBe(20);
+  });
+
+  it('T039: terminated recurring lines have explicit final-period behavior under arrears timing', () => {
+    const settlements = resolveRecurringSettlementsForInvoiceWindow({
+      servicePeriods: buildMonthlyServicePeriods({ duePosition: 'arrears' }),
+      invoiceWindow: buildInvoiceWindow({
+        start: '2025-02-01',
+        end: '2025-03-01',
+        duePosition: 'arrears',
+      }),
+      activityWindow: {
+        start: '2024-12-01',
+        end: '2025-01-21',
+        semantics: RECURRING_RANGE_SEMANTICS,
+      },
+      duePosition: 'arrears',
+    });
+
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0]?.servicePeriod.start).toBe('2025-01-01');
+    expect(settlements[0]?.coveredServicePeriod.end).toBe('2025-01-21');
+    expect(settlements[0]?.invoiceWindow.start).toBe('2025-02-01');
+  });
+
+  it('T040: zero-coverage or empty service periods never emit recurring settlements', () => {
+    const settlements = resolveRecurringSettlementsForInvoiceWindow({
+      servicePeriods: buildMonthlyServicePeriods({ duePosition: 'advance' }),
+      invoiceWindow: buildInvoiceWindow({
+        start: '2025-01-01',
+        end: '2025-02-01',
+        duePosition: 'advance',
+      }),
+      activityWindow: {
+        start: '2025-02-01',
+        end: '2025-03-01',
+        semantics: RECURRING_RANGE_SEMANTICS,
+      },
+      duePosition: 'advance',
+    });
+
+    expect(settlements).toEqual([]);
   });
 });
