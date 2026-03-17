@@ -332,6 +332,7 @@ export const contractResponseSchema = z.object({
   contract_name: z.string(),
   contract_description: z.string().nullable(),
   owner_client_id: uuidSchema,
+  owner_client_name: z.string().nullable().optional(),
   billing_frequency: billingFrequencySchema,
   is_active: z.boolean(),
   created_at: z.string().datetime(),

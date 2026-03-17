@@ -194,13 +194,13 @@
   {
     "id": "T033",
     "description": "API responses/documentation for `/contracts` reflect client-owned instantiated contract headers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
     "id": "T034",
     "description": "Documentation updates describe templates as the only reusable concept and non-template contracts as client-owned instances",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {

@@ -9,7 +9,8 @@ export type RenewalWorkItemStatus = 'pending' | 'renewing' | 'non_renewing' | 's
 
 /**
  * Interface for a Contract
- * Represents a collection of contract lines (formerly contract lines) assignable to clients.
+ * Represents a client-owned instantiated contract header that owns contract lines.
+ * Reusable contract-definition behavior lives in contract templates, not non-template contracts.
  */
 export interface IContract extends TenantEntity {
   contract_id: string;

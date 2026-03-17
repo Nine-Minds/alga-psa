@@ -170,13 +170,13 @@
   {
     "id": "F029",
     "description": "API semantics: document and return `/contracts` as client-owned instantiated headers rather than reusable shared contracts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
     "id": "F030",
     "description": "Docs: update contract-domain documentation to reflect templates-only reuse and client-owned non-template contracts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Summary", "Goals"]
   },
   {

@@ -6,7 +6,7 @@ The billing platform supports the full contract-centric workflow used by managed
 
 Key goals:
 
-- Represent reusable offer structures with templates while keeping client-specific data separate.
+- Represent reusable offer structures only through templates while keeping instantiated contract headers client-owned.
 - Allow multiple simultaneous contract lines per client, each with its own pricing configuration.
 - Capture time, usage, and product charges without losing the context required for auditing or taxation.
 - Harmonize manual invoices and automated contract billing through the same taxation and transaction pipelines.
@@ -16,8 +16,8 @@ Key goals:
 | Term | Description | Primary Tables |
 | --- | --- | --- |
 | **Contract template** | A reusable blueprint for a contract, including recommended lines, default billing frequencies, and metadata. | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_*` |
-| **Contract** | A sellable contract definition that can be assigned to clients. Created directly or derived from a template. | `contracts`, `contract_lines`, `contract_pricing_schedules` |
-| **Client contract** | A specific assignment of a contract to a client, with start/end dates, PO requirements, and lifecycle status. | `client_contracts` |
+| **Contract** | A client-owned instantiated contract header. Non-template contracts belong to exactly one owning client and hold the line/configuration data used for billing. | `contracts`, `contract_lines`, `contract_pricing_schedules` |
+| **Client contract** | The assignment/lifecycle record for a client-owned contract header, including start/end dates, PO requirements, renewal workflow state, and live status. | `client_contracts` |
 | **Contract line** | A billable line definition (fixed, hourly, usage, bucket, product, license). | `contract_lines`, `contract_line_fixed_config`, `contract_line_service_configuration`, `contract_line_service_*` |
 | **Client contract line** | A client-scoped instance of a contract line. Stores cloned template data, pricing overrides, and service configuration snapshots. | `client_contract_lines`, `client_contract_line_pricing`, `client_contract_line_terms`, `client_contract_services`, `client_contract_service_configuration`, `client_contract_service_*` |
 | **Billing cycle** | Defines the cadence for invoicing a client. | `client_billing_cycles`, retrieved through `BillingEngine.getBillingCycle` |
@@ -71,21 +71,21 @@ Templates give sales and operations teams a curated starting point.
 
 Publishing or cloning a template never mutates the template tables; instead, the structure is copied into the client-specific tables via `cloneTemplateContractLine` (`server/src/lib/billing/utils/templateClone.ts`).
 
-### Contract Library (sellable contracts)
+### Client-Owned Contract Header Layer
 
-Contracts live in tenant scope and are managed through `server/src/lib/actions/contractActions.ts`.
+Contracts live in tenant scope and are managed through `server/src/lib/actions/contractActions.ts`, but non-template rows are no longer a reusable shared library concept.
 
-- `contracts` – stores live contract definitions. `status` drives availability (`draft`, `active`, `expired`, etc.).
+- `contracts` – stores instantiated contract headers. Non-template rows must carry `owner_client_id`. Header `status` remains useful for draft/header workflow, but live client lifecycle now comes from `client_contracts`.
 - `contract_lines` – stores contract-specific lines (including display order, billing timing, and optional custom rates) alongside shared metadata (`contract_line_name`, type, frequency, etc.).
 - `contract_pricing_schedules` – time-bound overrides that swap in a custom rate when a schedule is effective during billing.
 
-Contracts can be created manually or cloned from templates. When cloning, template IDs are preserved in `contracts.template_metadata` for traceability.
+Contracts can be created manually for a client or cloned from templates into a client-owned draft. When cloning, template IDs are preserved in `contracts.template_metadata` for traceability, but templates remain the only reusable definition layer.
 
 ### Client Instance Layer
 
-When a contract is assigned to a client, the system snapshots all relevant data:
+When a client-owned contract header is assigned or activated, the system snapshots all relevant data:
 
-- `client_contracts` – assignment record with start/end dates, PO requirements, and current status. Managed by `clientContractActions` (`server/src/lib/actions/client-actions/clientContractActions.ts`).
+- `client_contracts` – assignment/lifecycle record with start/end dates, PO requirements, renewal workflow state, and live status semantics. Managed by `clientContractActions` (`server/src/lib/actions/client-actions/clientContractActions.ts`).
   - Purchase order fields:
     - `po_required` (boolean) – blocks invoice generation when enabled and `po_number` is missing.
     - `po_number` (text) – the customer’s PO reference used on invoices and accounting exports.
@@ -125,11 +125,18 @@ If `client_contracts.po_amount` is set, billing computes warnings when a newly g
 ## Contract Lifecycle
 
 1. **Author or import template** – users manage templates through `ContractTemplateModel` actions (`server/src/lib/models/contractTemplate.ts`) and UI in `server/src/components/billing-dashboard/contracts/templates/*`.
-2. **Create contract** – `createContract` in `contractActions.ts` creates a sellable contract. Templates can be cloned using wizard actions (`contractWizardActions.ts`) to seed contract lines and metadata.
+2. **Create contract** – `createContract` in `contractActions.ts` creates a client-owned contract header for one owning client. Templates can be cloned using wizard actions (`contractWizardActions.ts`) to seed contract lines and metadata.
 3. **Attach contract lines** – server actions in `server/src/lib/actions/contractActions.ts` call the shared repository to clone template lines into `contract_lines` (or update template snapshots) while exposing `addContractLine(contractId, contractLineId, customRate?)` to callers.
-4. **Assign to client** – `assignContractToClient(clientId, contractId, startDate, endDate?)` from `clientContractActions.ts` creates `client_contracts` rows. This call ensures there is no overlap with other active contracts.
+4. **Assign to client** – `assignContractToClient(clientId, contractId, startDate, endDate?)` from `clientContractActions.ts` creates `client_contracts` rows. For non-template contracts, the assignment client must match `contracts.owner_client_id`, and this call ensures there is no overlap with other active contracts.
 5. **Clone template data** – if the assignment originated from a template, `cloneTemplateContractLine` copies default terms, services, and configuration into the client tables. Additional overrides can be applied through `clientContractLineActions` and `clientContractServiceActions`.
-6. **Maintain lifecycle** – `updateContract`, `updateClientContract`, and the pricing schedule actions keep data in sync as contracts renew, expire, or are repriced.
+6. **Maintain lifecycle** – `updateContract`, `updateClientContract`, and the pricing schedule actions keep data in sync as contracts renew, expire, or are repriced. Live status shown in UI/reporting derives from `client_contracts`, not `contracts.status`.
+
+## Contracts API Semantics
+
+- `/api/v1/contracts` and `/api/v2/contracts` represent client-owned instantiated contract headers.
+- These endpoints exclude reusable templates; template authoring and listing lives under the dedicated template APIs/UI.
+- Contract responses include `owner_client_id`, and list responses also expose the owner client name so consumers do not have to infer ownership from `client_contracts`.
+- Live client lifecycle still belongs to `client_contracts`; `/contracts` should be treated as the header/line owner resource, not the live status fact table.
 
 Example (simplified):
 
@@ -141,6 +148,7 @@ import { assignContractToClient } from 'server/src/lib/actions/client-actions/cl
 const contract = await createContract({
   contract_name: 'Standard MSP Package',
   contract_description: 'Baseline services for managed clients',
+  owner_client_id: 'client-id',
   billing_frequency: 'monthly',
   status: 'draft',
   is_active: false

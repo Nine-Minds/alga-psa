@@ -29,6 +29,7 @@ import {
   UpdateContractLineData,
   ContractLineResponse,
   ContractLineFilterData,
+  ContractFilterData,
   CreateFixedPlanConfigData,
   UpdateFixedPlanConfigData,
   CreateContractData,
@@ -672,7 +673,106 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
 
   /**
-   * Create a new contract
+   * List client-owned contract headers exposed by the /contracts resource.
+   * Templates are managed through dedicated template endpoints and are excluded here.
+   */
+  async listContracts(
+    options: ListOptions,
+    context: ServiceContext
+  ): Promise<ListResult<ContractResponse>> {
+    const { knex } = await this.getKnex();
+    const {
+      page = 1,
+      limit = 25,
+      filters = {} as ContractFilterData,
+      sort,
+      order,
+    } = options;
+
+    const sortColumns: Record<string, string> = {
+      contract_name: 'c.contract_name',
+      billing_frequency: 'c.billing_frequency',
+      is_active: 'c.is_active',
+      created_at: 'c.created_at',
+      updated_at: 'c.updated_at',
+    };
+    const sortColumn = sort ? sortColumns[sort] ?? 'c.contract_name' : 'c.contract_name';
+    const sortDirection = order === 'desc' ? 'desc' : 'asc';
+
+    const baseQuery = knex('contracts as c')
+      .leftJoin('clients as oc', function joinOwnerClient() {
+        this.on('c.owner_client_id', '=', 'oc.client_id').andOn('c.tenant', '=', 'oc.tenant');
+      })
+      .leftJoin('contract_lines as cl', function joinLines() {
+        this.on('c.contract_id', '=', 'cl.contract_id').andOn('c.tenant', '=', 'cl.tenant');
+      })
+      .leftJoin('client_contracts as cc', function joinAssignments() {
+        this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
+      })
+      .where({ 'c.tenant': context.tenant })
+      .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
+      .whereNotNull('c.owner_client_id')
+      .groupBy('c.contract_id', 'oc.client_name')
+      .select(
+        'c.contract_id',
+        'c.contract_name',
+        'c.contract_description',
+        'c.owner_client_id',
+        'c.billing_frequency',
+        'c.is_active',
+        'c.created_at',
+        'c.updated_at',
+        'c.tenant',
+        'oc.client_name as owner_client_name',
+        knex.raw('COUNT(DISTINCT cl.contract_line_id)::int as total_plans'),
+        knex.raw('COUNT(DISTINCT cc.client_id)::int as clients_using_contract')
+      );
+
+    if (filters.contract_name) {
+      baseQuery.andWhere('c.contract_name', 'ilike', `%${filters.contract_name}%`);
+    }
+
+    if (typeof filters.is_active === 'boolean') {
+      baseQuery.andWhere('c.is_active', filters.is_active);
+    }
+
+    if (typeof filters.has_plans === 'boolean') {
+      baseQuery.havingRaw(
+        `COUNT(DISTINCT cl.contract_line_id) ${filters.has_plans ? '>' : '='} 0`
+      );
+    }
+
+    if (typeof filters.clients_count_min === 'number') {
+      baseQuery.havingRaw('COUNT(DISTINCT cc.client_id) >= ?', [filters.clients_count_min]);
+    }
+
+    if (typeof filters.clients_count_max === 'number') {
+      baseQuery.havingRaw('COUNT(DISTINCT cc.client_id) <= ?', [filters.clients_count_max]);
+    }
+
+    const [contracts, [{ count }]] = await Promise.all([
+      baseQuery
+        .clone()
+        .orderBy(sortColumn, sortDirection)
+        .limit(limit)
+        .offset((page - 1) * limit),
+      knex
+        .from(baseQuery.clone().as('client_owned_contracts'))
+        .count('* as count'),
+    ]);
+
+    const contractsWithLinks = contracts.map((contract: any) =>
+      addHateoasLinks(contract, this.generateContractLinks(contract.contract_id, context))
+    );
+
+    return {
+      data: contractsWithLinks as ContractResponse[],
+      total: parseInt(String(count ?? '0'), 10),
+    };
+  }
+
+  /**
+   * Create a new client-owned instantiated contract header.
    */
   async createContract(
     data: CreateContractData,
