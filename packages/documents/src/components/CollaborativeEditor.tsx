@@ -30,7 +30,6 @@ import {
   parseBlockContent,
   normalizeProsemirrorJson,
 } from '../lib/blockContentFormat';
-import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
@@ -57,6 +56,8 @@ interface CollaborativeEditorProps {
   onUsersChange?: (users: PresenceUser[]) => void;
   /** Pre-loaded block_data to seed Y.js fragment instead of fetching from DB. */
   initialContent?: unknown;
+  /** Whether the AI assistant experimental feature is enabled. */
+  aiAssistantEnabled?: boolean;
 }
 
 const USER_COLORS = [
@@ -130,6 +131,7 @@ export function CollaborativeEditor({
   onSyncStateChange,
   onUsersChange,
   initialContent,
+  aiAssistantEnabled = false,
 }: CollaborativeEditorProps) {
   const roomName = useMemo(() => `document:${tenantId}:${documentId}`, [tenantId, documentId]);
   const { provider, ydoc } = useMemo(
@@ -151,17 +153,8 @@ export function CollaborativeEditor({
   const [connectedUsers, setConnectedUsers] = useState<PresenceUser[]>([]);
   const [emojiState, setEmojiState] = useState<EmojiSuggestionState>(null);
   const [mentionState, setMentionState] = useState<MentionSuggestionState>(null);
-  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
   const hasInitializedContent = useRef(false);
   const initialContentRef = useRef(initialContent);
-
-  useEffect(() => {
-    let cancelled = false;
-    isExperimentalFeatureEnabled('aiAssistant')
-      .then((enabled) => { if (!cancelled) setAiAssistantEnabled(enabled); })
-      .catch(() => { if (!cancelled) setAiAssistantEnabled(false); });
-    return () => { cancelled = true; };
-  }, []);
 
   const handleEmojiStateChange = useCallback((state: EmojiSuggestionState) => {
     setEmojiState(state);
