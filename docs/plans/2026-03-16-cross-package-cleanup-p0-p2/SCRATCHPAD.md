@@ -157,6 +157,7 @@ By target package
 - T013 reuses the latest repo-root green build to validate the auth-compat removal end-to-end.
 - T014 verified `packages/msp-composition/src/index.ts` exports `./assets` from the root barrel.
 - T015 verified `packages/msp-composition/src/index.ts` exports `./billing` from the root barrel.
+- T016 verified `packages/msp-composition/src/index.ts` exports `./clients` from the root barrel.
 
 ## Gotchas
 

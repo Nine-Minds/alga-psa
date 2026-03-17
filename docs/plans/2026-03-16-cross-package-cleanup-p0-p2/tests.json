@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "P1-4: packages/msp-composition/src/index.ts contains 'export * from ./clients'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
