@@ -142,6 +142,7 @@ By target package
 - Moved the public `uploadEntityImage` / `deleteEntityImage` entrypoint to `@alga-psa/storage` and updated the `client-portal`, `teams`, `users`, `tenancy`, and `clients` callers to import from the horizontal package instead of `@alga-psa/documents`.
 - Added a horizontal `DocumentsCrossFeatureContext` to `@alga-psa/core` so remaining document UI imports can be replaced without introducing new vertical-to-vertical dependencies.
 - `DocumentsCrossFeatureContext` must stay off the root `@alga-psa/core` barrel because exporting a client-only React context there causes server imports of `@alga-psa/core` to fail Next.js builds.
+- T001 verified that `shared/` only mentions `@alga-psa/workflows` in the comment inside `shared/types/product-email-domains.d.ts`; there are no actual code imports left.
 
 ## Gotchas
 

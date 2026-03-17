@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "P0-1: grep -r '@alga-psa/workflows' shared/ --include='*.ts' --include='*.tsx' returns no actual imports (only comments/type declarations)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
