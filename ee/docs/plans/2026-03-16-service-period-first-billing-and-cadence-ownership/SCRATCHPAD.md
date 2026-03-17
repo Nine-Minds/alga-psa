@@ -328,6 +328,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/reporting/src/lib/reports/definitions/contracts/revenue.ts` now matches that runtime behavior with a raw-SQL metric that uses canonical recurring service-period dates instead of invoice headers when detail rows exist
   - `packages/reporting/src/lib/reports/definitions/contracts/expiration.ts` and `packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx` now clarify the reporting date basis in business language so contract-expiration reporting stays assignment-based while revenue reporting is explicitly service-period-based
   - focused regression coverage now lives in `server/src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts`, `packages/reporting/src/lib/reports/definitions/contracts/revenue.servicePeriods.test.ts`, and `packages/billing/tests/ContractReports.revenueCopy.wiring.test.ts`
+- (2026-03-17) Contract reporting summary and adjacent report surfaces now make the clarified date basis visible instead of leaving it implicit, which closes `F129`:
+  - `packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx` now renders the already-computed `atRiskDecisionCount` as a fourth summary card (`Renewal Decisions Due`), so the summary surface exposes renewal-decision timing alongside the recurring YTD service-period metric
+  - `server/src/test/unit/contractReportActions.summary.servicePeriods.test.ts` now proves `getContractReportSummary()` combines canonical recurring `service_period_end` YTD totals with decision-due-date risk counts, instead of silently reverting the summary to invoice-header timing
+  - `server/src/test/unit/contractReportActions.expiration.servicePeriods.test.ts` now proves contract expiration rows remain assignment-end and renewal-decision based, independent of recurring invoice service-period projection
+  - `packages/reporting/src/lib/reports/definitions/contracts/expiration.servicePeriods.test.ts`, `packages/reporting/src/actions/reconciliationReportActions.servicePeriods.test.ts`, and `packages/billing/tests/ContractReports.summaryCopy.wiring.test.ts` now lock the remaining reporting seams: expiration remains assignment-based, reconciliation remains discrepancy-based, and the dashboard summary copy surfaces the new semantics explicitly
 - (2026-03-17) Accounting export line selection now preserves canonical recurring service periods instead of falling back to invoice header windows, which closes `F099`:
   - `packages/billing/src/services/accountingExportInvoiceSelector.ts` now joins `invoice_charge_details`, collapses multiple detail rows back to one export preview line per charge, and prefers canonical detail-level `service_period_start` / `service_period_end` over `invoices.billing_period_start` / `billing_period_end`
   - export preview and batch creation still preserve a safe fallback for historical/manual charges that do not have canonical detail rows yet, so export lines remain perioded without forcing detail backfills
@@ -693,6 +698,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - run from `packages/reporting/`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p packages/reporting/tsconfig.json`
+- (2026-03-17) Contract reporting summary and expiration validation:
+  - `npx vitest run src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts src/test/unit/contractReportActions.expiration.servicePeriods.test.ts src/test/unit/contractReportActions.summary.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run tests/ContractReports.revenueCopy.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts tests/ContractReports.summaryCopy.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/contractReportActions.expiration.wiring.test.ts`
+    - run from `packages/billing/`
+  - `npx vitest run src/lib/reports/definitions/contracts/revenue.servicePeriods.test.ts src/lib/reports/definitions/contracts/expiration.servicePeriods.test.ts src/actions/reconciliationReportActions.servicePeriods.test.ts`
+    - run from `packages/reporting/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 - (2026-03-17) Accounting export service-period validation:
   - `npx vitest run src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts ../packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts ../packages/billing/tests/accountingExportAdapters.servicePeriods.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest picks up the existing workspace alias config for package billing tests

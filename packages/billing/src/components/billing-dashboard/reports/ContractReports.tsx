@@ -278,8 +278,8 @@ const ContractReports: React.FC = () => {
           <Skeleton className="h-4 w-72" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, index) => (
             <Card key={`summary-skeleton-${index}`} className="p-4">
               <div className="space-y-2">
                 <Skeleton className="h-4 w-32" />
@@ -347,7 +347,7 @@ const ContractReports: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <Coins className="h-5 w-5 text-green-600" />
@@ -373,6 +373,15 @@ const ContractReports: React.FC = () => {
           </div>
           <p className="text-2xl font-bold text-purple-600">{summary?.activeContractCount ?? 0}</p>
           <p className="text-xs text-muted-foreground mt-1">Billable clients</p>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="h-5 w-5 text-amber-600" />
+            <h3 className="font-semibold">Renewal Decisions Due</h3>
+          </div>
+          <p className="text-2xl font-bold text-amber-600">{summary?.atRiskDecisionCount ?? 0}</p>
+          <p className="text-xs text-muted-foreground mt-1">Decision due dates in the next 90 days</p>
         </Card>
       </div>
 

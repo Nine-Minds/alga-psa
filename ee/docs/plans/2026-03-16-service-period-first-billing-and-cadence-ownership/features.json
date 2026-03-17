@@ -770,7 +770,7 @@
   {
     "id": "F129",
     "description": "Update contract revenue, expiration, reconciliation, and invoice-summary reporting surfaces to use canonical service-period meaning where recurring timing matters",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {
