@@ -1755,7 +1755,7 @@
   {
     "id": "T202",
     "description": "Contract-line edit and remove guards respect canonical detail periods when determining whether a recurring line has already been invoiced",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F172"
     ]

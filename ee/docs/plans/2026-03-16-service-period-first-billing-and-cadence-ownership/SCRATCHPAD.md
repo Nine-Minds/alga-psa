@@ -43,6 +43,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/lib/billing/billingEngine.ts` was already reading duplicate-prevention state from `invoice_charge_details.service_period_start`, `invoice_charge_details.service_period_end`, and `invoice_charge_details.billing_timing` via `hasExistingServicePeriodCharge(...)`; this checkpoint made that lifecycle-enforcement contract explicit rather than leaving it implicit in the helper
   - `server/src/test/unit/billing/billingEngine.billedThroughReader.test.ts` now proves the reader targets `invoice_charge_details as iid` plus detail-period fields and does not query `billing_period_end` from invoice headers, while the existing `T087` runtime regression in `server/src/test/unit/billing/billingEngine.timing.test.ts` remains the behavior-level guard that an already-persisted advance service period is skipped even when the enclosing invoice window metadata is later
   - no production code changed in this checkpoint; the work was to convert the already-migrated billed-through reader into an executable contract before broader recurring lifecycle guards (`F172+`) build on it
+- (2026-03-17) Client contract-line mutation guards now treat canonical recurring detail periods as authoritative for edit/remove/replace safety checks, which closes `F172` and `T202`:
+  - `packages/clients/src/actions/clientContractLineActions.ts` now reads the latest recurring billed-through boundary from `invoice_charge_details.service_period_end` joined through `contract_line_service_configuration`, so contract-line mutation guards follow the same authoritative detail-period source as the recurring billed-through reader
+  - historical flat invoices are still protected during staged coexistence because the new helper falls back to the older invoice-header reader only when no canonical recurring detail periods exist yet
+  - mutation policy is now explicit in the client action layer: if canonical recurring detail periods already exist, replacing the assigned contract line (`contract_line_id` swap) is blocked and end-date/deactivation checks compare against the authoritative billed-through service-period end rather than invoice headers
+  - focused coverage now lives in `server/src/test/unit/billing/clientContractLineMutationGuards.test.ts`, proving both the deactivation guard and the replace-after-billing guard
 
 - (2026-03-17) Invoice workflow events and audit logs now carry recurring-detail provenance instead of relying implicitly on invoice headers alone, which closes `F170` and `T199`:
   - `server/src/lib/api/services/invoiceWorkflowEvents.ts` now defines `summarizeInvoiceRecurringProvenance(...)`, which reduces hydrated invoice charges into one additive provenance summary: whether recurring timing is authoritative from canonical detail rows or only parent charge fields, how many detail-backed charges/periods exist, the recurring summary range, and whether timing is uniform or mixed
@@ -1028,6 +1033,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
     - run from `server/`
   - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
     - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not on the `F171` billed-through reader contract
+- (2026-03-17) Client contract-line mutation-guard validation:
+  - `npx vitest run src/test/unit/billing/clientContractLineMutationGuards.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
 
 ## Links / References
 

@@ -10,8 +10,9 @@ import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTi
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { withAuth } from '@alga-psa/auth';
 
-// Helper function to get the latest invoiced end date
-async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {
+// Historical flat invoices can still lack canonical recurring detail rows during rollout.
+// Mutation guards therefore prefer recurring detail periods and fall back only for old flat invoices.
+async function getLatestHistoricalInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {
   // First, get the client_contract_id associated with the clientContractLineId
   const planInfo = await db('contract_lines as cl')
     .join('client_contracts as cc', function(this: Knex.JoinClause) {
@@ -63,6 +64,73 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
 
   // If no invoices found or no usable dates, return null
   return null;
+}
+
+async function getLatestAuthoritativeRecurringPeriodEndDate(
+  db: any,
+  tenant: string,
+  clientContractLineId: string,
+): Promise<Temporal.PlainDate | null> {
+  const canonicalDetail = await db('invoice_charge_details as iid')
+    .join('contract_line_service_configuration as clsc', function(this: Knex.JoinClause) {
+      this.on('iid.config_id', '=', 'clsc.config_id')
+        .andOn('iid.tenant', '=', 'clsc.tenant');
+    })
+    .where('iid.tenant', tenant)
+    .andWhere('clsc.contract_line_id', clientContractLineId)
+    .whereNotNull('iid.service_period_end')
+    .orderBy('iid.service_period_end', 'desc')
+    .first('iid.service_period_end');
+
+  if (canonicalDetail?.service_period_end) {
+    return toPlainDate(canonicalDetail.service_period_end);
+  }
+
+  const historicalInvoiceEndDate = await getLatestHistoricalInvoicedEndDate(db, tenant, clientContractLineId);
+  return historicalInvoiceEndDate ? toPlainDate(historicalInvoiceEndDate) : null;
+}
+
+function assertContractLineMutationAllowed(
+  latestInvoicedPeriodEnd: Temporal.PlainDate | null,
+  clientContractLineId: string,
+  updates: Partial<IClientContractLine>,
+): void {
+  if (!latestInvoicedPeriodEnd) {
+    return;
+  }
+
+  const proposedReplacementLineId = updates.contract_line_id?.trim();
+  if (
+    proposedReplacementLineId &&
+    proposedReplacementLineId.length > 0 &&
+    proposedReplacementLineId !== clientContractLineId
+  ) {
+    throw new Error(
+      `Cannot replace contract line assignment after it has authoritative recurring detail periods through ${latestInvoicedPeriodEnd.toString()}. End the current line and add a new contract line instead.`
+    );
+  }
+
+  const proposedEndDate = updates.end_date ? toPlainDate(new Date(updates.end_date)) : null;
+  const today = toPlainDate(new Date());
+
+  if (
+    updates.is_active === false &&
+    !proposedEndDate &&
+    Temporal.PlainDate.compare(today, latestInvoicedPeriodEnd) < 0
+  ) {
+    throw new Error(
+      `Cannot deactivate contract line assignment before ${latestInvoicedPeriodEnd.toString()} as it has been invoiced through that date.`
+    );
+  }
+
+  if (
+    proposedEndDate &&
+    Temporal.PlainDate.compare(proposedEndDate, latestInvoicedPeriodEnd) < 0
+  ) {
+    throw new Error(
+      `Cannot set end date to ${proposedEndDate.toString()} as the contract line has been invoiced through ${latestInvoicedPeriodEnd.toString()}. The earliest end date allowed is ${latestInvoicedPeriodEnd.toString()}.`
+    );
+  }
 }
 
 async function getExistingCadenceOwner(
@@ -143,6 +211,8 @@ export const updateClientContractLine = withAuth(async (
 ): Promise<void> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const latestInvoicedPeriodEnd = await getLatestAuthoritativeRecurringPeriodEndDate(db, tenant, clientContractLineId);
+    assertContractLineMutationAllowed(latestInvoicedPeriodEnd, clientContractLineId, updates);
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const cadenceOwner = updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, clientContractLineId);
 
@@ -288,20 +358,10 @@ export const removeClientContractLine = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     // --- Validation Start ---
-    const latestInvoicedEndDate = await getLatestInvoicedEndDate(db, tenant, clientContractLineId);
-    const now = new Date();
-
-    if (latestInvoicedEndDate) {
-        // Convert to PlainDate for reliable comparison
-        const latestInvoicedPlainDate = toPlainDate(latestInvoicedEndDate);
-        const nowPlainDate = toPlainDate(now);
-
-        if (Temporal.PlainDate.compare(nowPlainDate, latestInvoicedPlainDate) < 0) {
-            throw new Error(
-                `Cannot deactivate contract line assignment before ${latestInvoicedPlainDate.toLocaleString()} as it has been invoiced through that date. The earliest end date allowed is ${latestInvoicedPlainDate.toLocaleString()}.`
-            );
-        }
-    }
+    const latestInvoicedPeriodEnd = await getLatestAuthoritativeRecurringPeriodEndDate(db, tenant, clientContractLineId);
+    assertContractLineMutationAllowed(latestInvoicedPeriodEnd, clientContractLineId, {
+      is_active: false,
+    });
     // --- Validation End ---
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -352,30 +412,8 @@ export const editClientContractLine = withAuth(async (
     }
 
     // --- Validation Start ---
-    const latestInvoicedEndDate = await getLatestInvoicedEndDate(db, tenant, clientContractLineId);
-
-    if (latestInvoicedEndDate) {
-        const latestInvoicedPlainDate = toPlainDate(latestInvoicedEndDate);
-        const proposedEndDate = updateData.end_date ? toPlainDate(updateData.end_date) : null;
-        const proposedIsActive = updateData.is_active; // Could be true, false, or undefined (if not changing)
-        const nowPlainDate = toPlainDate(new Date()); // Needed if setting is_active to false
-
-        // Check if trying to set inactive before the latest invoice date
-        // Note: Deactivating implicitly sets end_date to now if not provided.
-        // If an end_date IS provided along with is_active=false, the end_date check below handles it.
-        if (proposedIsActive === false && !proposedEndDate && Temporal.PlainDate.compare(nowPlainDate, latestInvoicedPlainDate) < 0) {
-             throw new Error(
-                `Cannot deactivate contract line assignment before ${latestInvoicedPlainDate.toLocaleString()} as it has been invoiced through that date.`
-              );
-        }
-
-        // Check if trying to set an end date before the latest invoice date
-        if (proposedEndDate && Temporal.PlainDate.compare(proposedEndDate, latestInvoicedPlainDate) < 0) {
-            throw new Error(
-            `Cannot set end date to ${proposedEndDate.toLocaleString()} as the contract line has been invoiced through ${latestInvoicedPlainDate.toLocaleString()}. The earliest end date allowed is ${latestInvoicedPlainDate.toLocaleString()}.`
-            );
-        }
-    }
+    const latestInvoicedPeriodEnd = await getLatestAuthoritativeRecurringPeriodEndDate(db, tenant, clientContractLineId);
+    assertContractLineMutationAllowed(latestInvoicedPeriodEnd, clientContractLineId, updates);
     // --- Validation End ---
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {

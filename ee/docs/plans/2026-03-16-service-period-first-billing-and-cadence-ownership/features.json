@@ -1541,7 +1541,7 @@
   {
     "id": "F172",
     "description": "Define contract-line mutation guards against authoritative detail periods for edit, remove, pause, and replace operations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Invoice and billing-flow requirements",
       "Read-model and post-persist lifecycle requirements"
