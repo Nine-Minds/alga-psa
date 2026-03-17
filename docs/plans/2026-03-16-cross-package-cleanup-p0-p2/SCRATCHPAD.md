@@ -40,8 +40,8 @@ npx nx graph --file=/tmp/graph.json && node scripts/check-circular-deps.mjs /tmp
 # Update baseline after fixing cycles (include tightened baseline in commit)
 npx nx graph --file=/tmp/graph.json && node scripts/check-circular-deps.mjs /tmp/graph.json --update-baseline .github/known-cycles.json
 
-# NOTE: As of 2026-03-16, nx graph may fail with "brace_expansion_1.default is not a function"
-# Workaround: clear nx cache: npx nx reset && npx nx graph --file=/tmp/graph.json
+# As of 2026-03-17, the root `package.json` override `nx -> brace-expansion@^2.0.2`
+# restores `npx nx graph --file=/tmp/graph.json` in this workspace.
 ```
 
 ### Grep Patterns for Finding Violations
@@ -74,17 +74,18 @@ cd server && npx vitest run path/to/test.test.ts
 ## Decisions
 
 - **2026-03-16:** P0-1 test files moved to `ee/packages/workflows/` (not `packages/workflows/`) because the tests reference EE-specific domain event builders
-- **2026-03-16:** `nx graph` has brace_expansion bug — may need `npx nx reset` or skip circular dep checking for some commits
 - **2026-03-16:** `@alga-psa/shared` added as devDependency to `ee/packages/workflows/package.json` for moved test imports
 - **2026-03-16:** Removed 18 baseline cycles that all contained the resolved `@alga-psa/shared -> @alga-psa/workflows` edge; used manual baseline pruning because local Nx graph generation is still broken by the `brace_expansion_1.default` runtime error
+- **2026-03-17:** Added a root `overrides.nx.brace-expansion = ^2.0.2` pin so `nx`'s bundled `minimatch@9` resolves a compatible `brace-expansion` version and `npx nx graph` works again locally.
+- **2026-03-17:** `packages/storage` now owns its document/media workflow-event payload builders and no longer depends on `@alga-psa/auth`, `@alga-psa/shared`, `@alga-psa/workflow-streams`, or `@alga-psa/workflows`; this removed the last unbaselined storage-driven cycles without changing emitted payload shapes.
 
-## Current State (2026-03-16)
+## Current State (2026-03-17)
 
 - **Branch:** cleanup/circular_deps (rebased on origin/main)
-- **Uncommitted:** P0-1 test file moves (10 files moved, ee/packages/workflows/package.json modified)
-- **Known cycles baseline:** 12 cycles after removing the 18 entries that depended on the resolved shared->workflows edge
-- **auth-compat callers:** 2 EE files (ee/server/src/app/api/extensions/_auth.ts, ee/server/src/app/api/provisioning/tenants/route.ts)
-- **msp-composition missing re-exports:** assets/, billing/, clients/
+- **Feature checklist:** complete through `F039`
+- **Known cycles baseline:** 11 cycles after the restored Nx graph check and the storage dependency cleanup
+- **Authoritative lint count:** 57 `no-feature-to-feature-imports` violations (down from the original 103 baseline)
+- **Build / graph status:** `npm run build`, `cd packages/storage && npx tsc --noEmit`, `cd packages/storage && npx vitest run tests/storageService.workflowEvents.test.ts`, and `npx nx graph --file=/tmp/graph.json && node scripts/check-circular-deps.mjs /tmp/graph.json --baseline .github/known-cycles.json` all pass locally
 
 ## 2026-03-16 Progress Log
 
@@ -184,7 +185,10 @@ By target package
 - Updated the three client-portal KB callers (`client-kb.ts`, `ClientKBArticleView.tsx`, `ClientKBPage.tsx`) to import the extracted KB types from `@alga-psa/types`; `npm run lint` now reports `0` remaining `client-portal` feature-import warnings and `57` total violations repo-wide.
 - Re-ran the full repo-root `npm run build` after the KB type import swap; build stays green, and the lint baseline remains at `57`, down from the original authoritative `103` count.
 - The P2-6 type extraction series is now fully checkpointed through `F035`-`F039`: candidates identified, KB types moved into `@alga-psa/types`, callers updated, build re-verified, and the feature checklist is complete.
-- T024 remains blocked locally: even after `npx nx reset`, `npx nx graph --file=/tmp/graph.json` still fails with `brace_expansion_1.default is not a function`, so circular-dependency verification cannot be completed via Nx on this machine.
+- Root-cause for the old `nx graph` failure: `nx`'s bundled `minimatch@9.0.3` was resolving the repo-level `brace-expansion@5`, which breaks `braceExpand()` at runtime. Pinning `overrides.nx.brace-expansion` to `^2.0.2` and refreshing `node_modules` restored `npx nx graph`.
+- Removed stale `packages/storage` dependencies on auth/shared/workflows and replaced its `@alga-psa/workflow-streams` payload-builder imports with local equivalents in `packages/storage/src/workflowEventPayloads.ts`; this eliminated the remaining storage-driven graph cycles while preserving the same published event payload fields.
+- Validation for the storage cleanup: `cd packages/storage && npx tsc --noEmit`, `cd packages/storage && npx vitest run tests/storageService.workflowEvents.test.ts`, `npx nx graph --file=/tmp/graph.json && node scripts/check-circular-deps.mjs /tmp/graph.json --baseline .github/known-cycles.json`, and repo-root `npm run build` all pass.
+- T024 now passes end-to-end: the restored graph run reports `11` total cycles, `.github/known-cycles.json` has been tightened from `12` to `11`, and the checker reports `No new circular dependencies.`
 - T025 verified the client-portal cleanup end-to-end: `npm run lint` now reports `0` remaining `Feature package "client-portal"` violations, which means every prior client-portal edge was either removed via composition/type extraction or intentionally suppressed with a justification comment.
 - T026 reuses the latest repo-root green `npm run build` after the client-portal composition package and KB type-extraction changes, confirming the client-portal cleanup series remains build-safe.
 - T027 verified `grep -rn "import type.*@alga-psa/documents" packages/client-portal/ --include='*.ts' --include='*.tsx'` now returns `0` matches.
@@ -194,12 +198,12 @@ By target package
 
 ## Remaining Open Work
 
-- **Tests:** feature checklist is complete. Only the remaining verification items in `tests.json` are left.
+- None. Feature and test checklists are complete.
 
 ## Gotchas
 
 - `npm run lint` is the correct command (not `npx nx run-many --target=lint` which misses ~50% of violations)
-- `nx graph` may fail with brace_expansion error — try `npx nx reset` first
+- The repo engine range is `>=20 <25`; under the current local Node `v25.8.1`, `npm install` emits `EBADENGINE` warnings even though the verified commands above still pass.
 - Never create re-export shims when migrating — update all callers directly
 - `client-portal` is inherently a composition layer — some violations may be acceptable with eslint-disable
 - When adding context facades, providers must go in `DefaultLayout.tsx` (not per-page) because DrawerOutlet renders at layout level

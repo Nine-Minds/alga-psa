@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "P2-5b: npx nx graph --file=/tmp/graph.json && node scripts/check-circular-deps.mjs /tmp/graph.json --baseline .github/known-cycles.json passes (no new cycles)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F028"]
   },
   {
