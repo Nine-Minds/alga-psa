@@ -1,7 +1,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
 import { AccountingMappingResolver } from './accountingMappingResolver';
-import type { AccountingExportLine } from '@alga-psa/types';
+import type { AccountingExportLine, AccountingExportServicePeriodSource } from '@alga-psa/types';
 
 type ChargeDetailProjection = {
   item_id: string;
@@ -199,17 +199,26 @@ export class AccountingExportValidation {
       }
 
       const canonicalPeriods = canonicalPeriodsByChargeId.get(line.invoice_charge_id) ?? [];
+      const exportSource = normalizeExportLineServicePeriodSource(line.payload);
+      const exportSummaryStart = normalizeIsoString(line.service_period_start);
+      const exportSummaryEnd = normalizeIsoString(line.service_period_end);
+      const expectedSource: AccountingExportServicePeriodSource =
+        canonicalPeriods.length > 0
+          ? 'canonical_detail_periods'
+          : exportSummaryStart || exportSummaryEnd
+            ? 'invoice_header_fallback'
+            : 'financial_document_fallback';
+
       if (canonicalPeriods.length > 0) {
         const exportPeriods = normalizeExportLinePeriods(line.payload);
-        const exportSummaryStart = normalizeIsoString(line.service_period_start);
-        const exportSummaryEnd = normalizeIsoString(line.service_period_end);
         const expectedSummaryStart = canonicalPeriods[0]?.service_period_start ?? null;
         const expectedSummaryEnd = canonicalPeriods[canonicalPeriods.length - 1]?.service_period_end ?? null;
+        const sourceMismatch = exportSource !== expectedSource;
         const summaryMismatch =
           exportSummaryStart !== expectedSummaryStart || exportSummaryEnd !== expectedSummaryEnd;
         const detailMismatch = !areRecurringPeriodsEqual(exportPeriods, canonicalPeriods);
 
-        if (summaryMismatch || detailMismatch) {
+        if (sourceMismatch || summaryMismatch || detailMismatch) {
           await repo.addError({
             batch_id: batchId,
             line_id: line.line_id,
@@ -225,8 +234,35 @@ export class AccountingExportValidation {
                 service_period_start: exportSummaryStart,
                 service_period_end: exportSummaryEnd
               },
+              expected_source: expectedSource,
+              actual_source: exportSource ?? null,
               expected_detail_periods: canonicalPeriods,
               actual_detail_periods: exportPeriods
+            }
+          });
+          continue;
+        }
+      } else {
+        const exportPeriods = normalizeExportLinePeriods(line.payload);
+        const sourceMismatch = exportSource !== expectedSource;
+        const detailMismatch = exportPeriods.length > 0;
+
+        if (sourceMismatch || detailMismatch) {
+          await repo.addError({
+            batch_id: batchId,
+            line_id: line.line_id,
+            code: 'service_period_projection_mismatch',
+            message: 'Historical or financial export lines must not claim canonical recurring detail periods',
+            metadata: {
+              invoice_charge_id: line.invoice_charge_id,
+              expected_source: expectedSource,
+              actual_source: exportSource ?? null,
+              expected_detail_periods: [],
+              actual_detail_periods: exportPeriods,
+              actual_summary: {
+                service_period_start: exportSummaryStart,
+                service_period_end: exportSummaryEnd
+              }
             }
           });
           continue;
@@ -399,6 +435,20 @@ function normalizeExportLinePeriods(
     .map((period) => normalizeRecurringPeriod((period ?? {}) as Record<string, unknown>))
     .filter((period) => period.service_period_start || period.service_period_end)
     .sort(compareRecurringPeriods);
+}
+
+function normalizeExportLineServicePeriodSource(
+  payload: { service_period_source?: unknown } | null | undefined
+): AccountingExportServicePeriodSource | null {
+  if (!payload) {
+    return null;
+  }
+
+  return payload.service_period_source === 'canonical_detail_periods' ||
+    payload.service_period_source === 'invoice_header_fallback' ||
+    payload.service_period_source === 'financial_document_fallback'
+    ? payload.service_period_source
+    : null;
 }
 
 function areRecurringPeriodsEqual(

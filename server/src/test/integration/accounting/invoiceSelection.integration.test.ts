@@ -72,6 +72,9 @@ describe('Accounting export invoice selection integration', () => {
 
     const dbModule = await import('server/src/lib/db');
     vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: ctx.db, tenant: ctx.tenantId });
+    vi.spyOn(AccountingExportService, 'createForTenant').mockResolvedValue(
+      new AccountingExportService(repository, {} as any)
+    );
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -179,7 +182,7 @@ describe('Accounting export invoice selection integration', () => {
           item_id: chargeId,
           tenant: ctx.tenantId,
           service_id: serviceId,
-          config_id: null,
+          config_id: uuidv4(),
           quantity: 1,
           rate: params.chargeAmount,
           service_period_start: params.detailServicePeriodStart ?? null,
@@ -290,19 +293,23 @@ describe('Accounting export invoice selection integration', () => {
     const manualLine = preview.find((line) => line.chargeId === seeded.manual.chargeId)!;
     expect(manualLine.isManualInvoice).toBe(true);
     expect(manualLine.isManualCharge).toBe(true);
+    expect(manualLine.servicePeriodSource).toBe('financial_document_fallback');
 
     const multiPeriodLine = preview.find((line) => line.chargeId === seeded.multiPeriod.chargeId)!;
     expect(multiPeriodLine.isMultiPeriod).toBe(true);
     expect(multiPeriodLine.servicePeriodStart).toBe('2025-01-01T00:00:00.000Z');
     expect(multiPeriodLine.servicePeriodEnd).toBe('2025-02-01T00:00:00.000Z');
+    expect(multiPeriodLine.servicePeriodSource).toBe('canonical_detail_periods');
 
     const creditLine = preview.find((line) => line.chargeId === seeded.credit.chargeId)!;
     expect(creditLine.isCredit).toBe(true);
     expect(creditLine.amountCents).toBeLessThan(0);
+    expect(creditLine.servicePeriodSource).toBe('financial_document_fallback');
 
     const zeroLine = preview.find((line) => line.chargeId === seeded.zeroAmount.chargeId)!;
     expect(zeroLine.isZeroAmount).toBe(true);
     expect(zeroLine.amountCents).toBe(0);
+    expect(zeroLine.servicePeriodSource).toBe('financial_document_fallback');
 
     preview.forEach((line) => {
       const expected = expectedMap.get(line.chargeId)!;
@@ -344,6 +351,21 @@ describe('Accounting export invoice selection integration', () => {
       if (line.invoice_charge_id === seeded.multiPeriod.chargeId) {
         expect(line.service_period_start).toBe('2025-01-01T00:00:00.000Z');
         expect(line.service_period_end).toBe('2025-02-01T00:00:00.000Z');
+        expect(payload?.service_period_source).toBe('canonical_detail_periods');
+        expect(payload?.recurring_detail_periods).toEqual([
+          {
+            service_period_start: '2025-01-01T00:00:00.000Z',
+            service_period_end: '2025-02-01T00:00:00.000Z',
+            billing_timing: 'arrears'
+          }
+        ]);
+      }
+
+      if (line.invoice_charge_id === seeded.manual.chargeId) {
+        expect(line.service_period_start).toBeNull();
+        expect(line.service_period_end).toBeNull();
+        expect(payload?.service_period_source).toBe('financial_document_fallback');
+        expect(payload?.recurring_detail_periods).toBeNull();
       }
     }
   }, HOOK_TIMEOUT);

@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 
 import { createTenantKnex } from '@alga-psa/db';
 import { AccountingExportService } from './accountingExportService';
-import { AccountingExportBatch } from '@alga-psa/types';
+import { AccountingExportBatch, AccountingExportServicePeriodSource } from '@alga-psa/types';
 import { AppError } from '@alga-psa/core';
 
 type Nullable<T> = T | null | undefined;
@@ -35,6 +35,7 @@ export interface InvoicePreviewLine {
     service_period_end?: string | null;
     billing_timing?: 'arrears' | 'advance' | null;
   }>;
+  servicePeriodSource: AccountingExportServicePeriodSource;
   isManualInvoice: boolean;
   isManualCharge: boolean;
   isMultiPeriod: boolean;
@@ -252,6 +253,11 @@ export class AccountingExportInvoiceSelector {
           detailServicePeriodEnds[detailServicePeriodEnds.length - 1] ??
           null
         : toIsoString(row.billing_period_end);
+      const servicePeriodSource = resolveServicePeriodSource({
+        hasCanonicalDetailPeriods,
+        servicePeriodStart,
+        servicePeriodEnd
+      });
       const distinctDetailPeriods = new Set(
         recurringDetailPeriods.map((period) => `${period.service_period_start ?? ''}|${period.service_period_end ?? ''}`)
       );
@@ -272,6 +278,7 @@ export class AccountingExportInvoiceSelector {
         servicePeriodStart,
         servicePeriodEnd,
         recurringDetailPeriods: recurringDetailPeriods.length > 0 ? recurringDetailPeriods : undefined,
+        servicePeriodSource,
         isManualInvoice: Boolean(row.invoice_is_manual),
         isManualCharge: Boolean(row.charge_is_manual),
         isMultiPeriod,
@@ -298,7 +305,7 @@ export class AccountingExportInvoiceSelector {
       );
     }
 
-    const exportService = await AccountingExportService.create();
+    const exportService = await AccountingExportService.createForTenant(this.tenantId);
     const batch = await exportService.createBatch({
       adapter_type: options.adapterType,
       export_type: 'invoice',
@@ -321,6 +328,7 @@ export class AccountingExportInvoiceSelector {
         invoice_number: line.invoiceNumber,
         invoice_status: line.invoiceStatus,
         client_name: line.clientName,
+        service_period_source: line.servicePeriodSource,
         recurring_detail_periods: line.recurringDetailPeriods ?? null,
         metadata: {
           manual_invoice: line.isManualInvoice,
@@ -414,7 +422,41 @@ function toIsoString(value: unknown): string | null {
     return null;
   }
 
-  const date = value instanceof Date ? value : new Date(value as string);
+  if (value instanceof Date) {
+    const isLocalMidnight =
+      value.getHours() === 0 &&
+      value.getMinutes() === 0 &&
+      value.getSeconds() === 0 &&
+      value.getMilliseconds() === 0;
+    const isUtcMidnight =
+      value.getUTCHours() === 0 &&
+      value.getUTCMinutes() === 0 &&
+      value.getUTCSeconds() === 0 &&
+      value.getUTCMilliseconds() === 0;
+
+    const year = isLocalMidnight ? value.getFullYear() : value.getUTCFullYear();
+    const month = isLocalMidnight ? value.getMonth() + 1 : value.getUTCMonth() + 1;
+    const day = isLocalMidnight ? value.getDate() : value.getUTCDate();
+
+    if (isLocalMidnight || isUtcMidnight) {
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00.000Z`;
+    }
+
+    return value.toISOString();
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return `${trimmed}T00:00:00.000Z`;
+    }
+  }
+
+  const date = new Date(value as string);
   if (Number.isNaN(date.getTime())) {
     return null;
   }
@@ -477,4 +519,20 @@ function normalizeFilters(filters: InvoiceSelectionFilters): Record<string, unkn
   }
 
   return Object.keys(normalized).length > 0 ? normalized : null;
+}
+
+function resolveServicePeriodSource(params: {
+  hasCanonicalDetailPeriods: boolean;
+  servicePeriodStart: string | null;
+  servicePeriodEnd: string | null;
+}): AccountingExportServicePeriodSource {
+  if (params.hasCanonicalDetailPeriods) {
+    return 'canonical_detail_periods';
+  }
+
+  if (params.servicePeriodStart || params.servicePeriodEnd) {
+    return 'invoice_header_fallback';
+  }
+
+  return 'financial_document_fallback';
 }

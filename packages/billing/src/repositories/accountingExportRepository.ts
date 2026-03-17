@@ -7,10 +7,160 @@ import {
   AccountingExportLine,
   AccountingExportLinePayload,
   AccountingExportLineStatus,
+  AccountingExportServicePeriodSource,
   AccountingExportStatus
 } from '@alga-psa/types';
 
 type Nullable<T> = T | null | undefined;
+
+const ACCOUNTING_EXPORT_SERVICE_PERIOD_SOURCES = new Set<AccountingExportServicePeriodSource>([
+  'canonical_detail_periods',
+  'invoice_header_fallback',
+  'financial_document_fallback'
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeServicePeriodSource(
+  value: unknown
+): AccountingExportServicePeriodSource | null | undefined {
+  if (value === null || value === undefined) {
+    return value as null | undefined;
+  }
+
+  return ACCOUNTING_EXPORT_SERVICE_PERIOD_SOURCES.has(value as AccountingExportServicePeriodSource)
+    ? (value as AccountingExportServicePeriodSource)
+    : undefined;
+}
+
+function normalizeRecurringDetailPeriods(
+  value: unknown
+): AccountingExportLinePayload['recurring_detail_periods'] {
+  if (value === null || value === undefined) {
+    return value as null | undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value
+    .filter(isRecord)
+    .map((period) => {
+      const billingTiming: 'advance' | 'arrears' | null =
+        period.billing_timing === 'advance' || period.billing_timing === 'arrears'
+          ? period.billing_timing
+          : null;
+
+      return {
+        service_period_start:
+          typeof period.service_period_start === 'string' ? period.service_period_start : null,
+        service_period_end:
+          typeof period.service_period_end === 'string' ? period.service_period_end : null,
+        billing_timing: billingTiming
+      };
+    })
+    .filter((period) => period.service_period_start || period.service_period_end);
+}
+
+function normalizeIsoDateField(value: unknown): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    const isLocalMidnight =
+      value.getHours() === 0 &&
+      value.getMinutes() === 0 &&
+      value.getSeconds() === 0 &&
+      value.getMilliseconds() === 0;
+    const isUtcMidnight =
+      value.getUTCHours() === 0 &&
+      value.getUTCMinutes() === 0 &&
+      value.getUTCSeconds() === 0 &&
+      value.getUTCMilliseconds() === 0;
+
+    const year = isLocalMidnight ? value.getFullYear() : value.getUTCFullYear();
+    const month = isLocalMidnight ? value.getMonth() + 1 : value.getUTCMonth() + 1;
+    const day = isLocalMidnight ? value.getDate() : value.getUTCDate();
+
+    if (isLocalMidnight || isUtcMidnight) {
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00.000Z`;
+    }
+
+    return value.toISOString();
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return `${trimmed}T00:00:00.000Z`;
+    }
+
+    return trimmed;
+  }
+
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+
+  return date.toISOString();
+}
+
+function normalizeLinePayload(payload: unknown): AccountingExportLinePayload | null {
+  if (!isRecord(payload)) {
+    return null;
+  }
+
+  const metadata = isRecord(payload.metadata)
+    ? {
+        manual_invoice: payload.metadata.manual_invoice === true ? true : undefined,
+        manual_charge: payload.metadata.manual_charge === true ? true : undefined,
+        multi_period: payload.metadata.multi_period === true ? true : undefined,
+        credit_memo: payload.metadata.credit_memo === true ? true : undefined,
+        zero_amount: payload.metadata.zero_amount === true ? true : undefined
+      }
+    : null;
+
+  const normalized: AccountingExportLinePayload = {
+    invoice_number: typeof payload.invoice_number === 'string' ? payload.invoice_number : undefined,
+    invoice_status: typeof payload.invoice_status === 'string' ? payload.invoice_status : undefined,
+    client_name:
+      typeof payload.client_name === 'string'
+        ? payload.client_name
+        : payload.client_name === null
+          ? null
+          : undefined,
+    service_period_source: normalizeServicePeriodSource(payload.service_period_source),
+    recurring_detail_periods: normalizeRecurringDetailPeriods(payload.recurring_detail_periods),
+    metadata,
+    transaction_ids: Array.isArray(payload.transaction_ids)
+      ? payload.transaction_ids.filter((value): value is string => typeof value === 'string')
+      : undefined
+  };
+
+  return Object.values(normalized).some((value) => value !== undefined) ? normalized : null;
+}
+
+function normalizeExportLine(line: AccountingExportLine): AccountingExportLine {
+  return {
+    ...line,
+    service_period_start: normalizeIsoDateField(line.service_period_start),
+    service_period_end: normalizeIsoDateField(line.service_period_end),
+    payload: normalizeLinePayload(line.payload)
+  };
+}
 
 export interface CreateExportBatchInput {
   adapter_type: string;
@@ -163,14 +313,15 @@ export class AccountingExportRepository {
         status: input.status ?? 'pending'
       })
       .returning('*');
-    return line;
+    return normalizeExportLine(line);
   }
 
   async listLines(batchId: string): Promise<AccountingExportLine[]> {
     const tenant = this.requireTenant();
-    return this.knex<AccountingExportLine>('accounting_export_lines')
+    const lines = await this.knex<AccountingExportLine>('accounting_export_lines')
       .where({ batch_id: batchId, tenant })
       .orderBy('created_at');
+    return lines.map(normalizeExportLine);
   }
 
   async updateLine(lineId: string, updates: Partial<AccountingExportLine>): Promise<AccountingExportLine | null> {
@@ -179,7 +330,7 @@ export class AccountingExportRepository {
       .where({ line_id: lineId, tenant })
       .update({ ...updates, updated_at: new Date().toISOString() })
       .returning('*');
-    return line || null;
+    return line ? normalizeExportLine(line) : null;
   }
 
   async addError(input: CreateExportErrorInput): Promise<AccountingExportError> {

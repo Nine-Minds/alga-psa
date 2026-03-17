@@ -5,6 +5,7 @@ import type {
   AccountingExportBatch,
   AccountingExportError,
   AccountingExportLine,
+  AccountingExportServicePeriodSource,
   AccountingExportStatus,
   IUser,
   IUserWithRoles,
@@ -64,6 +65,7 @@ export interface AccountingExportPreviewLine {
     service_period_end?: string | null;
     billing_timing?: 'arrears' | 'advance' | null;
   }>;
+  servicePeriodSource: AccountingExportServicePeriodSource;
 }
 
 export interface AccountingExportPreviewResult {
@@ -230,7 +232,8 @@ export const previewAccountingExport = withAuth(async (
     currencyCode: line.currencyCode || 'USD',
     servicePeriodStart: line.servicePeriodStart ?? null,
     servicePeriodEnd: line.servicePeriodEnd ?? null,
-    recurringDetailPeriods: line.recurringDetailPeriods ?? undefined
+    recurringDetailPeriods: line.recurringDetailPeriods ?? undefined,
+    servicePeriodSource: line.servicePeriodSource
   }));
 
   return {

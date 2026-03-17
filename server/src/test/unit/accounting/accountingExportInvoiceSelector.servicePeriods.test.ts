@@ -116,6 +116,7 @@ describe('AccountingExportInvoiceSelector service-period behavior', () => {
       invoiceId: 'invoice-1',
       servicePeriodStart: '2025-01-01T00:00:00.000Z',
       servicePeriodEnd: '2025-03-01T00:00:00.000Z',
+      servicePeriodSource: 'canonical_detail_periods',
       isMultiPeriod: true,
       transactionIds: ['txn-1'],
     });
@@ -137,6 +138,7 @@ describe('AccountingExportInvoiceSelector service-period behavior', () => {
       invoiceId: 'invoice-2',
       servicePeriodStart: '2025-02-10T00:00:00.000Z',
       servicePeriodEnd: '2025-02-10T00:00:00.000Z',
+      servicePeriodSource: 'invoice_header_fallback',
       isManualInvoice: true,
       isManualCharge: true,
       transactionIds: ['txn-2'],
@@ -200,7 +202,7 @@ describe('AccountingExportInvoiceSelector service-period behavior', () => {
     const createBatch = vi.fn().mockResolvedValue({ batch_id: 'batch-1' });
     const appendLines = vi.fn().mockResolvedValue([]);
     const serviceCreateSpy = vi
-      .spyOn(AccountingExportService, 'create')
+      .spyOn(AccountingExportService, 'createForTenant')
       .mockResolvedValue({
         createBatch,
         appendLines,
@@ -213,6 +215,8 @@ describe('AccountingExportInvoiceSelector service-period behavior', () => {
         targetRealm: 'realm-1',
         filters: {},
       });
+
+      expect(serviceCreateSpy).toHaveBeenCalledWith('tenant-1');
 
       expect(createBatch).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -229,6 +233,7 @@ describe('AccountingExportInvoiceSelector service-period behavior', () => {
             service_period_start: '2025-01-01T00:00:00.000Z',
             service_period_end: '2025-03-01T00:00:00.000Z',
             payload: expect.objectContaining({
+              service_period_source: 'canonical_detail_periods',
               recurring_detail_periods: [
                 {
                   service_period_start: '2025-01-01T00:00:00.000Z',

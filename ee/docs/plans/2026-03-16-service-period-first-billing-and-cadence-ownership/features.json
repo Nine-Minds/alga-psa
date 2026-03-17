@@ -1748,7 +1748,7 @@
   {
     "id": "F195",
     "description": "Define the authoritative accounting-export repository read contract for canonical recurring detail periods and legacy fallback invoices",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Read-model and post-persist lifecycle requirements"
