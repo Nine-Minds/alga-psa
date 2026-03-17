@@ -734,7 +734,7 @@
   {
     "id": "F123",
     "description": "Update contract line preset actions and preset models to persist cadence-owner defaults independently from billing_cycle_alignment",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["System Surfaces In Scope", "Detailed Requirements"]
   },
   {

@@ -332,7 +332,7 @@ export const copyPresetToContractLine = withAuth(async (
                 contract_line_name: preset.preset_name,
                 contract_line_type: preset.contract_line_type,
                 billing_frequency: preset.billing_frequency,
-                cadence_owner: overrides?.cadence_owner ?? 'client',
+                cadence_owner: overrides?.cadence_owner ?? preset.cadence_owner ?? 'client',
                 service_category: undefined, // Presets don't have service_category
                 is_custom: false, // Contract lines created from presets are not custom
                 // Add hourly-specific fields if this is an hourly contract line

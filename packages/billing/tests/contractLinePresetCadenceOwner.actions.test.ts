@@ -39,9 +39,13 @@ vi.mock('../src/models/contractLine', () => ({
 }));
 
 const presetFindById = vi.fn();
+const presetCreate = vi.fn();
+const presetUpdate = vi.fn();
 vi.mock('../src/models/contractLinePreset', () => ({
   default: {
     findById: (...args: any[]) => presetFindById(...args),
+    create: (...args: any[]) => presetCreate(...args),
+    update: (...args: any[]) => presetUpdate(...args),
   },
 }));
 
@@ -119,6 +123,14 @@ describe('contract line cadence_owner action persistence', () => {
       contract_line_type: 'Fixed',
       billing_frequency: 'monthly',
     });
+    presetCreate.mockImplementation(async (_trx: any, _tenant: string, preset: any) => ({
+      preset_id: 'preset-created',
+      ...preset,
+    }));
+    presetUpdate.mockImplementation(async (_trx: any, _tenant: string, _presetId: string, preset: any) => ({
+      preset_id: 'preset-updated',
+      ...preset,
+    }));
     presetServiceGetByPresetId.mockResolvedValue([]);
     presetFixedConfigGetByPresetId.mockResolvedValue({
       base_rate: 5000,
@@ -180,5 +192,31 @@ describe('contract line cadence_owner action persistence', () => {
         contract_line_name: 'Preset Services',
       })
     );
+  });
+
+  it('T118: preset copies use stored cadence_owner defaults instead of inferring cadence from billing_cycle_alignment', async () => {
+    const { copyPresetToContractLine } = await import('../src/actions/contractLinePresetActions');
+
+    presetFindById.mockResolvedValueOnce({
+      preset_id: 'preset-2',
+      preset_name: 'Contract Anniversary Preset',
+      contract_line_type: 'Fixed',
+      billing_frequency: 'monthly',
+      billing_timing: 'advance',
+      cadence_owner: 'contract',
+      minimum_billable_time: null,
+      round_up_to_nearest: null,
+    });
+
+    await copyPresetToContractLine('contract-1', 'preset-2');
+
+    expect(contractLineCreate).toHaveBeenLastCalledWith(
+      currentTrx,
+      expect.objectContaining({
+        cadence_owner: 'contract',
+        contract_line_name: 'Contract Anniversary Preset',
+      })
+    );
+    expect(presetFixedConfigGetByPresetId).toHaveBeenLastCalledWith(currentTrx, 'preset-2');
   });
 });

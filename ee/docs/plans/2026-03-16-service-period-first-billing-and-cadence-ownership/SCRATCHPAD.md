@@ -401,6 +401,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `shared/billingClients/clientCadenceScheduleContext.ts` now defines one shared client-cadence schedule context with explicit change-scope, schedule, and preview messaging for client-owned invoice windows
   - `shared/billingClients/billingSchedule.ts` and `packages/billing/src/actions/billingCycleAnchorActions.ts` now attach that context to `getClientBillingCycleAnchor(...)` and schedule-preview results, so action consumers can tell that these windows apply only to client-cadence recurring lines and that contract-anniversary lines are configured separately
   - `packages/clients/src/components/clients/ClientBillingSchedule.tsx` now renders those messages from the returned action contract instead of hardcoding the cadence-owner explanation locally, which keeps the preview flow aligned with explicit cadence ownership at the data-contract layer as well as the UI layer
+- (2026-03-17) Preset-backed recurring cadence defaults now persist on the preset itself instead of being implicit or alignment-adjacent, which closes `F123` and `T118`:
+  - `server/migrations/20260317193000_add_cadence_owner_to_contract_line_presets.cjs` adds `contract_line_presets.cadence_owner` with safe backfill to `'client'` plus a `client|contract` check constraint, giving preset-backed recurring defaults their own storage surface instead of piggybacking on `billing_cycle_alignment`
+  - `packages/types/src/interfaces/billing.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `packages/billing/src/models/contractLinePreset.ts` now expose and normalize preset `cadence_owner`, defaulting missing legacy rows to `'client'` on reads and preserving an existing stored cadence owner on updates when callers omit the field
+  - `packages/billing/src/actions/contractLinePresetActions.ts` now copies preset-backed recurring lines using `preset.cadence_owner ?? 'client'` when no override is provided, so preset reuse reads an explicit cadence-owner default instead of inferring anything from fixed-config `billing_cycle_alignment`
 - (2026-03-17) Comparison-mode rollout control now closes `F113` and `T154` without changing live invoice persistence:
   - `packages/billing/src/actions/invoiceGeneration.ts` now treats `RECURRING_BILLING_COMPARISON_MODE=legacy-vs-canonical` as an additive action-layer gate on `calculateBillingForInvoiceWindow(...)`
   - when enabled, the action runs the canonical preselected recurring path first, then executes one legacy-style billing calculation without `recurringTimingSelections` and logs a structured drift warning if the comparison snapshot differs
@@ -619,6 +623,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/billing/previewClientBillingPeriods.test.ts src/test/unit/billing/ClientBillingSchedule.ui.test.tsx --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Preset cadence-owner persistence validation:
+  - `npx vitest run ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
 - (2026-03-17) Client billing schedule cadence-owner copy validation:
   - `npx vitest run src/test/unit/billing/ClientBillingSchedule.ui.test.tsx ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest picks up the existing workspace alias config for both server and package tests

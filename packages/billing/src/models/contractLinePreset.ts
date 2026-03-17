@@ -2,6 +2,14 @@
 import { Knex } from 'knex';
 import type { IContractLinePreset } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
+
+function normalizeContractLinePreset<T extends Partial<IContractLinePreset>>(preset: T): T & Pick<IContractLinePreset, 'cadence_owner'> {
+  return {
+    ...preset,
+    cadence_owner: resolveCadenceOwner(preset.cadence_owner),
+  };
+}
 
 const ContractLinePreset = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<IContractLinePreset[]> => {
@@ -12,7 +20,7 @@ const ContractLinePreset = {
         .orderBy('created_at', 'desc');
 
       console.log(`Retrieved ${presets.length} contract line presets for tenant ${tenant}`);
-      return presets;
+      return presets.map((preset) => normalizeContractLinePreset(preset));
     } catch (error) {
       console.error('Error fetching contract line presets:', error);
       throw error;
@@ -34,7 +42,7 @@ const ContractLinePreset = {
       }
 
       console.log(`Retrieved contract line preset ${presetId} for tenant ${tenant}`);
-      return preset;
+      return normalizeContractLinePreset(preset);
     } catch (error) {
       console.error(`Error fetching contract line preset ${presetId}:`, error);
       throw error;
@@ -48,6 +56,7 @@ const ContractLinePreset = {
   ): Promise<IContractLinePreset> => {
     const presetWithId = {
       ...preset,
+      cadence_owner: resolveCadenceOwner(preset.cadence_owner),
       preset_id: uuidv4(),
       tenant
     };
@@ -56,7 +65,7 @@ const ContractLinePreset = {
       .insert(presetWithId)
       .returning('*');
 
-    return createdPreset;
+    return normalizeContractLinePreset(createdPreset);
   },
 
   update: async (
@@ -66,22 +75,37 @@ const ContractLinePreset = {
     updateData: Partial<IContractLinePreset>
   ): Promise<IContractLinePreset> => {
     try {
+      const existingPreset = await knexOrTrx<IContractLinePreset>('contract_line_presets')
+        .where({
+          preset_id: presetId,
+          tenant
+        })
+        .first();
+
+      if (!existingPreset) {
+        throw new Error(`Contract line preset ${presetId} not found or belongs to different tenant`);
+      }
+
       // Remove tenant from update data to prevent modification
       const { tenant: _, preset_id: __, ...dataToUpdate } = updateData;
+      const updatePayload = {
+        ...dataToUpdate,
+        cadence_owner: resolveCadenceOwner(dataToUpdate.cadence_owner ?? existingPreset.cadence_owner),
+      };
 
       const [updatedPreset] = await knexOrTrx<IContractLinePreset>('contract_line_presets')
         .where({
           preset_id: presetId,
           tenant
         })
-        .update(dataToUpdate)
+        .update(updatePayload)
         .returning('*');
 
       if (!updatedPreset) {
         throw new Error(`Contract line preset ${presetId} not found or belongs to different tenant`);
       }
 
-      return updatedPreset;
+      return normalizeContractLinePreset(updatedPreset);
     } catch (error) {
       console.error(`Error updating contract line preset ${presetId}:`, error);
       throw error;

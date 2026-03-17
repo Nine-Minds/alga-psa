@@ -265,6 +265,7 @@ export interface IContractLinePreset extends TenantEntity {
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
   billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: CadenceOwner;
   // Hourly-specific fields
   hourly_rate?: number | null;
   minimum_billable_time?: number | null;

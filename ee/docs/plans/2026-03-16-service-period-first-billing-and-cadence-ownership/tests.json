@@ -127,7 +127,7 @@
   {"id":"T115","description":"Fixed recurring configuration panels explain partial-period coverage rather than proration-as-workaround","implemented":true,"featureIds":["F094"]},
   {"id":"T116","description":"Billing dashboard quick-start and overview copy no longer teaches users to infer timing primarily via proration","implemented":true,"featureIds":["F095"]},
   {"id":"T117","description":"Client billing schedule preview clarifies that client cadence is a cadence owner choice rather than the only recurring timing model","implemented":true,"featureIds":["F096","F122"]},
-  {"id":"T118","description":"Preset-based recurring line creation carries cadence-owner defaults without relying on billing_cycle_alignment","implemented":false,"featureIds":["F123"]},
+  {"id":"T118","description":"Preset-based recurring line creation carries cadence-owner defaults without relying on billing_cycle_alignment","implemented":true,"featureIds":["F123"]},
   {"id":"T119","description":"Template-authored recurring defaults clone cadence-owner safely into instantiated contract lines","implemented":false,"featureIds":["F138"]},
   {"id":"T120","description":"Draft and resume flows across contract and template creation keep cadence-owner and timing defaults stable end to end","implemented":false,"featureIds":["F123","F138","F144"]},
 
