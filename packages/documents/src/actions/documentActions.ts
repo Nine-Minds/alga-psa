@@ -2159,8 +2159,37 @@ export const uploadDocument = withAuth(async (
       }
 
       // Create document record
-      // Documents uploaded by client users are automatically client-visible
-      const isClientVisible = user.user_type === 'client';
+      // Documents uploaded by client users are automatically client-visible.
+      // For internal users, inherit visibility from the target folder.
+      let isClientVisible = user.user_type === 'client';
+      if (!isClientVisible && resolvedFolderPath) {
+        try {
+          const folderVisibilityQuery = knex('document_folders')
+            .select('is_client_visible')
+            .where('tenant', tenant)
+            .andWhere('folder_path', resolvedFolderPath);
+
+          const entityId = options.ticketId || options.projectTaskId || options.contractId
+            || options.clientId || options.assetId;
+          const entityType = options.ticketId ? 'ticket'
+            : options.projectTaskId ? 'project_task'
+            : options.contractId ? 'contract'
+            : options.clientId ? 'client'
+            : options.assetId ? 'asset'
+            : null;
+
+          if (entityId && entityType) {
+            folderVisibilityQuery.andWhere('entity_id', entityId).andWhere('entity_type', entityType);
+          }
+
+          const targetFolder = await folderVisibilityQuery.first();
+          if (targetFolder?.is_client_visible) {
+            isClientVisible = true;
+          }
+        } catch {
+          // Silent failure — best-effort, never fails the upload
+        }
+      }
       const document: IDocument = {
         document_id: uuidv4(),
         document_name: fileData.name,
@@ -2289,31 +2318,28 @@ export const uploadDocument = withAuth(async (
         );
       }
 
-      // Generate previews asynchronously (non-blocking)
-      // This happens after the transaction completes and document is returned to user
-      // Preview generation failures won't affect the upload success
-      // Use runWithTenant to preserve tenant context for the async operation
-      runWithTenant(tenant!, async () => {
-        try {
-          const previewResult = await generateDocumentPreviews(document, buffer);
-          if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
-            // Update document with preview file IDs
-            const { knex: previewKnex } = await createTenantKnex(tenant);
-            await previewKnex('documents')
-              .where({ document_id: document.document_id, tenant })
-              .update({
-                thumbnail_file_id: previewResult.thumbnail_file_id,
-                preview_file_id: previewResult.preview_file_id,
-                preview_generated_at: previewResult.preview_generated_at,
-                updated_at: new Date(),
-              });
-            console.log(`[uploadDocument] Preview generation completed for document ${document.document_id}`);
-          }
-        } catch (error) {
-          console.error(`[uploadDocument] Preview generation failed for document ${document.document_id}:`, error);
-          // Don't fail the upload - just log the error
+      // Generate previews after the transaction completes.
+      // Awaited so the preview is ready before the response reaches the client.
+      // Failures are caught internally and won't affect the upload success.
+      try {
+        const previewResult = await generateDocumentPreviews(document, buffer);
+        if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
+          await knex('documents')
+            .where({ document_id: document.document_id, tenant })
+            .update({
+              thumbnail_file_id: previewResult.thumbnail_file_id,
+              preview_file_id: previewResult.preview_file_id,
+              preview_generated_at: previewResult.preview_generated_at,
+              updated_at: new Date(),
+            });
+          // Update the returned document object so the caller has preview IDs
+          document.thumbnail_file_id = previewResult.thumbnail_file_id;
+          document.preview_file_id = previewResult.preview_file_id;
+          console.log(`[uploadDocument] Preview generation completed for document ${document.document_id}`);
         }
-      });
+      } catch (error) {
+        console.error(`[uploadDocument] Preview generation failed for document ${document.document_id}:`, error);
+      }
 
       return result;
   } catch (error) {
@@ -3072,7 +3098,8 @@ export const toggleFolderVisibilityByPath = withAuth(async (
   folderPath: string,
   isClientVisible: boolean,
   entityId?: string | null,
-  entityType?: string | null
+  entityType?: string | null,
+  cascade?: boolean
 ): Promise<{ folderUpdated: boolean; updatedDocuments: number } | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'update'))) {
     return permissionError('Permission denied');
@@ -3102,9 +3129,46 @@ export const toggleFolderVisibilityByPath = withAuth(async (
       is_client_visible: isClientVisible,
     });
 
+  let updatedDocuments = 0;
+
+  if (cascade) {
+    const escapedPath = folder.folder_path.replace(/%/g, '\\%').replace(/_/g, '\\_');
+    let documentsQuery = knex('documents as d')
+      .where('d.tenant', tenant)
+      .where(function() {
+        this.where('d.folder_path', folder.folder_path)
+          .orWhere('d.folder_path', 'like', `${escapedPath}/%`);
+      });
+
+    if (folder.entity_id && folder.entity_type) {
+      documentsQuery = documentsQuery.whereExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant)
+          .andWhere('da.entity_id', folder.entity_id)
+          .andWhere('da.entity_type', folder.entity_type);
+      });
+    } else {
+      documentsQuery = documentsQuery.whereNotExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant);
+      });
+    }
+
+    const documentUpdatedCount = await documentsQuery.update({
+      is_client_visible: isClientVisible,
+      updated_at: new Date(),
+    });
+
+    updatedDocuments = Number(documentUpdatedCount || 0);
+  }
+
   return {
     folderUpdated: Number(folderUpdatedCount || 0) > 0,
-    updatedDocuments: 0,
+    updatedDocuments,
   };
 });
 

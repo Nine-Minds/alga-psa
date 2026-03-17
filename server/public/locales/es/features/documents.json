@@ -211,5 +211,12 @@
     "feedbackThanks": "¡Gracias por sus comentarios!",
     "feedbackError": "Error al enviar los comentarios",
     "filterByTags": "Filtrar por etiquetas..."
+  },
+  "visibility": {
+    "cascadeTitle": "Actualizar visibilidad de documentos",
+    "cascadeMakeVisible": "¿También desea hacer visibles los {{count}} documento(s) en \"{{name}}\" en el portal del cliente?",
+    "cascadeMakeHidden": "¿También desea ocultar los {{count}} documento(s) en \"{{name}}\" del portal del cliente?",
+    "cascadeYes": "Sí, actualizar documentos",
+    "cascadeNo": "No, solo la carpeta"
   }
 }
