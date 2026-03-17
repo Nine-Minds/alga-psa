@@ -24,6 +24,7 @@ import {
 } from 'server/src/lib/repositories/contractLineRepository';
 import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
 import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
+import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 
 // Import schema types for validation
 import {
@@ -273,7 +274,10 @@ export class ContractLineService extends BaseService<IContractLine> {
 
         const baseRate = (data as any).base_rate ?? planData.custom_rate ?? null;
         const enableProration = (data as any).enable_proration ?? false;
-        const alignment = (data as any).billing_cycle_alignment ?? 'start';
+        const alignment = resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: (data as any).billing_cycle_alignment,
+          enableProration,
+        });
 
         planData.custom_rate = data.contract_line_type === 'Fixed' ? baseRate : planData.custom_rate ?? null;
         planData.enable_proration = enableProration;
@@ -465,11 +469,16 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
 
       const model = new ContractLineFixedConfig(trx, context.tenant);
+      const existingConfig = await model.getByPlanId(planId);
       await model.upsert({
         contract_line_id: planId,
         base_rate: data.base_rate,
         enable_proration: data.enable_proration,
-        billing_cycle_alignment: data.billing_cycle_alignment,
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: data.billing_cycle_alignment,
+          enableProration: data.enable_proration,
+          fallbackAlignment: existingConfig?.billing_cycle_alignment,
+        }),
         tenant: context.tenant,
       });
 
@@ -497,7 +506,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     return {
       base_rate: planConfig?.base_rate || null,
       enable_proration: planConfig?.enable_proration || false,
-      billing_cycle_alignment: planConfig?.billing_cycle_alignment || 'start',
+      billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+        billingCycleAlignment: planConfig?.billing_cycle_alignment,
+        enableProration: planConfig?.enable_proration,
+      }),
       config_id: serviceConfig?.config_id
     };
   }

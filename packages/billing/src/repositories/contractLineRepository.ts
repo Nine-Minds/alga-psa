@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { IContractLine, IContractLineMapping } from '@alga-psa/types';
+import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 
 export type DetailedContractLine = IContractLineMapping & {
@@ -281,6 +282,10 @@ async function cloneTemplateLineToContract(
     customRate ??
     templateLine.custom_rate ??
     (templateFixedConfig?.base_rate != null ? Number(templateFixedConfig.base_rate) : null);
+  const templateBillingCycleAlignment = resolveBillingCycleAlignmentForCompatibility({
+    billingCycleAlignment: templateFixedConfig?.billing_cycle_alignment,
+    enableProration: templateFixedConfig?.enable_proration,
+  });
 
   // Insert directly into contract_lines with all values (terms columns are now inline)
   await trx('contract_lines').insert({
@@ -309,7 +314,7 @@ async function cloneTemplateLineToContract(
     billing_timing: templateTerms?.billing_timing ?? templateLine.billing_timing ?? 'arrears',
     cadence_owner: 'client',
     enable_proration: templateFixedConfig?.enable_proration ?? false,
-    billing_cycle_alignment: templateFixedConfig?.billing_cycle_alignment ?? 'start',
+    billing_cycle_alignment: templateBillingCycleAlignment,
   });
 
   const templateServices = await trx('contract_template_line_services')

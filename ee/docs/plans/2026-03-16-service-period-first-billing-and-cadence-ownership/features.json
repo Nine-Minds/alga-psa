@@ -536,7 +536,7 @@
   {
     "id": "F090",
     "description": "Prepare a staged deprecation path for billing_cycle_alignment in repositories, models, and API payloads without breaking rollout",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Implementation Sequence", "Detailed Requirements"]
   },
   {

@@ -560,7 +560,7 @@ const withCadenceOwnerRolloutValidation = <T extends z.ZodTypeAny>(schema: T): T
         message,
       });
     }
-  }) as T;
+  }) as unknown as T;
 
 export const createContractLineSchema = withCadenceOwnerRolloutValidation(contractLineBaseSchema.extend({
   tenant: uuidSchema

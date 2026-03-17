@@ -73,7 +73,7 @@ const withCadenceOwnerRolloutValidation = <T extends z.ZodTypeAny>(schema: T): T
         message,
       });
     }
-  }) as T;
+  }) as unknown as T;
 
 // Create contract line schema
 export const createContractLineSchema = withCadenceOwnerRolloutValidation(baseContractLineSchema.refine(data => {
@@ -128,7 +128,7 @@ export const contractLineResponseSchema = z.object({
 export const createFixedPlanConfigSchema = z.object({
   base_rate: z.number().min(0).optional(),
   enable_proration: z.boolean().default(false),
-  billing_cycle_alignment: billingCycleAlignmentSchema.default('start')
+  billing_cycle_alignment: billingCycleAlignmentSchema.optional()
 });
 
 export const updateFixedPlanConfigSchema = createUpdateSchema(createFixedPlanConfigSchema);

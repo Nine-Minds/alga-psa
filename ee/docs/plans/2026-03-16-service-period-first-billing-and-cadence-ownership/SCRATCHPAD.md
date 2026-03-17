@@ -260,6 +260,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/src/actions/contractLineMappingActions.ts` and `packages/billing/src/models/contractLineMapping.ts` now normalize legacy mapping payloads so template and live contract-line association flows return `cadence_owner: 'client'` when older rows do not yet carry the column, and touched live association writes preserve/backfill that default
   - `server/src/lib/api/services/ContractLineService.ts` now normalizes `list`, `listWithOptions`, `getById`, and `setPlanActivation` responses through one cadence-owner compatibility helper and persists `'client'` on touched legacy update paths when callers omit cadence owner
   - `packages/clients/src/actions/clientContractLineActions.ts` now preserves the existing cadence owner when editing client contract lines and backfills `'client'` when legacy rows are edited without an explicit cadence owner, instead of letting writes keep the column null
+- (2026-03-17) `billing_cycle_alignment` now has an explicit staged-deprecation seam instead of remaining an unconditional required write input, which closes `F090`:
+  - `shared/billingClients/billingCycleAlignmentCompatibility.ts` now defines one compatibility resolver for legacy alignment values, preserving explicit stored values when present and deriving a readable fallback from `enable_proration` when new writes omit the field
+  - `server/src/lib/api/schemas/contractLineSchemas.ts` now allows fixed-plan config create payloads to omit `billing_cycle_alignment`, which stops new API writes from treating the legacy field as mandatory while leaving response payloads readable
+  - `packages/billing/src/models/contractLineFixedConfig.ts` now uses the compatibility resolver on reads and on update/upsert writes, so fixed-config writes can omit the field without losing a readable legacy alignment value
+  - `server/src/lib/api/services/ContractLineService.ts` and both server/package contract-line repositories now route fixed-config and template-clone alignment handling through the same compatibility resolver rather than hard-coding `'start'` at each seam
 - (2026-03-17) Credit-reader invoice context now stays on canonical recurring detail metadata, which closes `F078` without pretending the blocked DB integration is done:
   - `packages/billing/src/actions/creditActions.ts` now loads source invoices through `Invoice.getById(...)` for both `getCreditDetails(...)` and the invoice-summary enrichment inside `listClientCredits(...)`, instead of rereading raw `invoices` rows that dropped recurring `invoice_charge_details`
   - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
@@ -402,6 +407,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `npx vitest run src/test/unit/api/contractLineService.cadenceOwner.test.ts src/test/unit/api/contractLineService.cadenceOwnerCompatibility.wiring.test.ts --coverage.enabled false`
   - `npx vitest run ../packages/billing/tests/contractLineCadenceOwnerCompatibility.repository.test.ts ../packages/billing/tests/contractLineCadenceOwnerCompatibility.wiring.test.ts --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json && npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Billing-cycle-alignment staged-deprecation validation:
+  - `npx vitest run src/test/unit/api/billingCycleAlignmentCompatibility.schema.test.ts src/test/unit/api/billingCycleAlignmentCompatibility.repository.wiring.test.ts src/test/unit/api/contractLineService.billingCycleAlignmentCompatibility.wiring.test.ts --coverage.enabled false`
+  - `npx vitest run ../packages/billing/tests/billingCycleAlignmentCompatibility.model.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked by an unrelated pre-existing type error in `packages/billing/src/actions/creditActions.ts:979` (`IInvoice | null` inferred against `null`)
 - (2026-03-17) Credit-reader canonical invoice-context validation:
   - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
   - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
