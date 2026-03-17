@@ -187,6 +187,7 @@ By target package
 - T024 remains blocked locally: even after `npx nx reset`, `npx nx graph --file=/tmp/graph.json` still fails with `brace_expansion_1.default is not a function`, so circular-dependency verification cannot be completed via Nx on this machine.
 - T025 verified the client-portal cleanup end-to-end: `npm run lint` now reports `0` remaining `Feature package "client-portal"` violations, which means every prior client-portal edge was either removed via composition/type extraction or intentionally suppressed with a justification comment.
 - T026 reuses the latest repo-root green `npm run build` after the client-portal composition package and KB type-extraction changes, confirming the client-portal cleanup series remains build-safe.
+- T027 verified `grep -rn "import type.*@alga-psa/documents" packages/client-portal/ --include='*.ts' --include='*.tsx'` now returns `0` matches.
 
 ## Remaining Open Work
 

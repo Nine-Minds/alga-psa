@@ -158,7 +158,7 @@
   {
     "id": "T027",
     "description": "P2-6: grep -rn 'import type.*@alga-psa/documents' packages/client-portal/ returns no results for moved types",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
   {
