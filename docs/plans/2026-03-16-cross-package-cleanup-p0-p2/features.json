@@ -212,7 +212,7 @@
   {
     "id": "F036",
     "description": "P2-6: Move identified types to packages/types/src/",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["P2-6"]
   },
   {

@@ -179,10 +179,12 @@ By target package
 - Re-ran the full repo-root `npm run build` after the new `@alga-psa/client-portal-composition` package landed; the build is green, so the client-portal cleanup track is now blocked only on the planned P2-6 type extraction.
 - The client-portal cleanup series is now fully checkpointed through `F030`-`F034`: acceptable edges are documented and justified, the project-detail composition moved to a horizontal package, the build is green, and only the KB type-only imports remain for P2-6.
 - F035 inventory: the meaningful remaining P2-6 candidates are the KB types `IKBArticleWithDocument` and `ArticleType`, imported type-only from `@alga-psa/documents/actions` in `packages/client-portal/src/actions/client-portal-actions/client-kb.ts`, `packages/client-portal/src/components/kb/ClientKBArticleView.tsx`, and `packages/client-portal/src/components/kb/ClientKBPage.tsx`. The broader grep also finds many same-package or horizontal-package type imports, but those are not cross-vertical cleanup targets.
+- Moved the KB domain types into `packages/types/src/lib/knowledgeBase.ts` and exported them from `@alga-psa/types`; `packages/documents/src/actions/kbArticleActions.ts` now consumes those shared definitions instead of owning them locally.
+- Validation after F036: `cd packages/types && npx tsc --noEmit`, `cd packages/client-portal && npx tsc --noEmit`, and `cd packages/documents && npx tsc --noEmit` all pass.
 
 ## Remaining Open Work
 
-- **F036:** next up. Move the KB article type definitions out of `packages/documents/src/actions/kbArticleActions.ts` into `packages/types/src/` and re-export them there.
+- **F037:** next up. Update the three client-portal KB callers to import the moved types from `@alga-psa/types` directly.
 
 ## Gotchas
 
