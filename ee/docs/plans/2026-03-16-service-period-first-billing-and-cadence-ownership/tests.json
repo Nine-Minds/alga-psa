@@ -1299,7 +1299,7 @@
   {
     "id": "T149",
     "description": "End-exclusive overlap semantics remain correct when mixed cadence owners coexist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F145"
     ]
@@ -1381,7 +1381,7 @@
   {
     "id": "T159",
     "description": "End-exclusive query behavior remains correct in billing-engine selection logic after helper removal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F145"
     ]

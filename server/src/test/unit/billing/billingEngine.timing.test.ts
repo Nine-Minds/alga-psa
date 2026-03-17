@@ -273,6 +273,49 @@ describe("BillingEngine billing timing", () => {
     ).toBeUndefined();
   });
 
+  it("T149: end-exclusive overlap semantics remain correct when mixed cadence owners coexist", () => {
+    const engine = new BillingEngine();
+
+    const billingPeriod = {
+      startDate: "2025-02-01",
+      endDate: "2025-03-01",
+    };
+
+    const clientAdvanceLine = {
+      client_contract_line_id: "client-line",
+      billing_timing: "advance",
+      billing_frequency: "monthly",
+      cadence_owner: "client",
+      start_date: "2025-01-01",
+      end_date: null,
+    } as any;
+
+    const contractBoundaryAdvanceLine = {
+      client_contract_line_id: "contract-boundary-line",
+      billing_timing: "advance",
+      billing_frequency: "monthly",
+      cadence_owner: "contract",
+      start_date: "2025-03-01",
+      end_date: null,
+    } as any;
+
+    const selections = (engine as any).buildRecurringTimingSelections(
+      billingPeriod,
+      [clientAdvanceLine, contractBoundaryAdvanceLine],
+      "monthly",
+    );
+
+    expect(Object.keys(selections)).toEqual(["client-line"]);
+    expect(selections).toMatchObject({
+      "client-line": {
+        duePosition: "advance",
+        servicePeriodStart: "2025-02-01",
+        servicePeriodEnd: "2025-02-28",
+      },
+    });
+    expect(selections["contract-boundary-line"]).toBeUndefined();
+  });
+
   it("T158: partial rollout protection rejects a billing run when provided recurring timing selections cover only some due recurring lines", async () => {
     const engine = new BillingEngine();
     const billingPeriod = {

@@ -360,4 +360,114 @@ describe("BillingEngine discount and pricing timing parity", () => {
       "discount-mar",
     ]);
   });
+
+  it("T159: pricing-schedule overlap stays end-exclusive when schedules only touch the canonical service-period boundary", async () => {
+    const engine = new BillingEngine();
+    const pricingScheduleBuilder = buildPricingScheduleQuery([
+      {
+        schedule_id: "schedule-boundary-start",
+        contract_id: "contract-1",
+        effective_date: "2025-02-01",
+        end_date: null,
+        custom_rate: 9900,
+      },
+      {
+        schedule_id: "schedule-boundary-end",
+        contract_id: "contract-1",
+        effective_date: "2024-12-01",
+        end_date: "2025-01-01",
+        custom_rate: 8800,
+      },
+      {
+        schedule_id: "schedule-active",
+        contract_id: "contract-1",
+        effective_date: "2025-01-01",
+        end_date: "2025-02-01",
+        custom_rate: 6200,
+      },
+    ]);
+
+    (engine as any).tenant = "test_tenant";
+    vi.spyOn(engine as any, "getBillingCycle").mockResolvedValue("monthly");
+    vi.spyOn(engine as any, "hasExistingServicePeriodCharge").mockResolvedValue(false);
+    vi.spyOn(engine as any, "getClientDefaultTaxRegionCode").mockResolvedValue("US-NY");
+    vi.spyOn(engine as any, "getTaxInfoFromService").mockResolvedValue({
+      taxRegion: undefined,
+      isTaxable: false,
+    });
+
+    (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+      if (tableName === "contract_pricing_schedules") {
+        return pricingScheduleBuilder;
+      }
+
+      if (tableName === "clients") {
+        return buildStaticQuery({
+          client_id: "client-1",
+          tenant: "test_tenant",
+          client_name: "Boundary Client",
+          is_tax_exempt: false,
+        });
+      }
+
+      if (tableName === "contract_lines") {
+        return buildStaticQuery({
+          contract_line_id: "contract-line-1",
+          tenant: "test_tenant",
+          contract_line_type: "Fixed",
+          custom_rate: null,
+          enable_proration: false,
+          billing_cycle_alignment: "start",
+        });
+      }
+
+      if (tableName === "contract_line_services as cls") {
+        return buildStaticQuery(null, [
+          {
+            service_id: "service-1",
+            service_name: "Managed Support",
+            default_rate: 5000,
+            tax_rate_id: null,
+            service_quantity: 1,
+            configuration_quantity: 1,
+            config_id: "config-1",
+            service_base_rate: 5000,
+          },
+        ]);
+      }
+
+      return buildStaticQuery(null);
+    });
+
+    const charges = await (engine as any).calculateFixedPriceCharges(
+      "client-1",
+      {
+        startDate: "2025-02-01",
+        endDate: "2025-03-01",
+      },
+      {
+        client_contract_line_id: "ccd-1",
+        client_id: "client-1",
+        contract_line_id: "contract-line-1",
+        client_contract_id: "assignment-1",
+        contract_id: "contract-1",
+        contract_line_name: "Managed Support",
+        contract_name: "Acme Corp",
+        billing_timing: "arrears",
+        start_date: "2025-01-01",
+        end_date: null,
+        custom_rate: null,
+      },
+    );
+
+    expect(charges).toEqual([
+      expect.objectContaining({
+        total: 6200,
+        rate: 6200,
+        servicePeriodStart: "2025-01-01",
+        servicePeriodEnd: "2025-01-31",
+        billingTiming: "arrears",
+      }),
+    ]);
+  });
 });

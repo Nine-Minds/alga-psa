@@ -1298,7 +1298,7 @@
   {
     "id": "F145",
     "description": "Preserve end-exclusive query behavior and overlap semantics in billing-engine selection logic when service-period-first timing replaces legacy helper logic",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Detailed Requirements",
       "Risks"

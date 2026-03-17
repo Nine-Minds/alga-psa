@@ -39,6 +39,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) End-exclusive recurring boundary behavior now has explicit regression guards across mixed-cadence selection and pricing-schedule overlap, which closes `F145`, `T149`, and `T159`:
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now proves a contract-owned advance line whose first due window starts exactly at the active client invoice-window end is excluded from the current mixed-cadence selection set, so coexistence keeps `[start, end)` overlap semantics instead of treating touching windows as overlapping
+  - `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts` now proves fixed recurring pricing schedules remain end-exclusive on both sides of the canonical service period, excluding schedules that only start at the service-period end or end at the service-period start
+  - no production code changed in this checkpoint; the value was locking the already-correct selection/query boundaries in executable tests before later scheduler and reader work adds more mixed-cadence pressure
 - (2026-03-17) Billing dashboard invoice-generation surfaces now explain service-period-first recurring semantics consistently, which closes `F139` and adds `T332`:
   - `packages/billing/src/components/billing-dashboard/Overview.tsx` now frames invoice management as invoice-window generation for recurring service periods plus separate manual/prepayment financial handling
   - `packages/billing/src/components/billing-dashboard/invoicing/GenerateTab.tsx` now explains the semantic boundary for automatic, manual, and prepayment flows directly under the invoice-type selector
