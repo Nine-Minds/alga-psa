@@ -35,6 +35,7 @@ import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { getCurrentUser, searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
 import {
   getDocumentsByEntity,
   getDocumentsByFolder,
@@ -158,6 +159,7 @@ const Documents = ({
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [visibilityUpdatingIds, setVisibilityUpdatingIds] = useState<Set<string>>(new Set());
   const [isClientUserContext, setIsClientUserContext] = useState(false);
+  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
   const [shareDialogDocument, setShareDialogDocument] = useState<IDocument | null>(null);
   const { enabled: documentFeaturesEnabled } = useFeatureFlag('document-folder-templates', { defaultValue: false });
 
@@ -276,7 +278,18 @@ const Documents = ({
       }
     };
 
+    const loadAiFeatureFlag = async () => {
+      try {
+        const features = await getExperimentalFeatures();
+        if (!mounted) return;
+        setAiAssistantEnabled(features.aiAssistant ?? false);
+      } catch {
+        // Feature flag not available — leave disabled
+      }
+    };
+
     void loadCurrentUser();
+    void loadAiFeatureFlag();
 
     return () => {
       mounted = false;
@@ -1310,6 +1323,7 @@ const Documents = ({
                   userName={currentUserName || userId}
                   editorRef={collabEditorRef}
                   searchMentions={searchUsersForMentions}
+                  aiAssistantEnabled={aiAssistantEnabled}
                   onConnectionStatusChange={handleCollabConnectionStatusChange}
                 />
               )

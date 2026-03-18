@@ -29,6 +29,8 @@ import {
   detectBlockContentFormat,
   parseBlockContent,
   normalizeProsemirrorJson,
+  isRawMarkdownInProsemirror,
+  convertRawMarkdownProsemirror,
 } from '../lib/blockContentFormat';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
@@ -317,6 +319,12 @@ export function CollaborativeEditor({
 
       const fragment = ydoc.getXmlFragment('prosemirror');
       if (fragment.length > 0) {
+        // Check if existing Y.js content is raw markdown in paragraphs
+        const json = editor.getJSON();
+        if (isRawMarkdownInProsemirror(json)) {
+          const converted = convertRawMarkdownProsemirror(json);
+          editor.commands.setContent(converted);
+        }
         hasInitializedContent.current = true;
         return;
       }
@@ -341,8 +349,19 @@ export function CollaborativeEditor({
               console.error('[CollaborativeEditor] Failed to persist converted block content:', persistError);
             }
           } else if (format === 'prosemirror') {
-            const parsed = normalizeProsemirrorJson(parseBlockContent(blockData));
-            prosemirrorJSONToYXmlFragment(editor.schema, parsed, fragment);
+            let parsed = normalizeProsemirrorJson(parseBlockContent(blockData));
+            if (isRawMarkdownInProsemirror(parsed)) {
+              parsed = convertRawMarkdownProsemirror(parsed);
+              try {
+                await updateBlockContent(documentId, {
+                  block_data: JSON.stringify(parsed),
+                  user_id: userId,
+                });
+              } catch (persistError) {
+                console.error('[CollaborativeEditor] Failed to persist markdown conversion:', persistError);
+              }
+            }
+            prosemirrorJSONToYXmlFragment(editor.schema, parsed as any, fragment);
           }
         }
       } catch (error) {

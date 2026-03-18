@@ -13,6 +13,8 @@ import {
   blockNoteJsonToProsemirrorJson,
   parseBlockContent,
   normalizeProsemirrorJson,
+  isRawMarkdownInProsemirror,
+  convertRawMarkdownProsemirror,
 } from '../lib/blockContentFormat';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -143,6 +145,9 @@ export function DocumentEditor({
               parsedContent = blockNoteJsonToProsemirrorJson(blockData);
             } else {
               parsedContent = normalizeProsemirrorJson(parseBlockContent(blockData));
+              if (isRawMarkdownInProsemirror(parsedContent)) {
+                parsedContent = convertRawMarkdownProsemirror(parsedContent);
+              }
             }
             if (editor && !editor.isDestroyed) {
               editor.commands.setContent(parsedContent as Parameters<typeof editor.commands.setContent>[0]);
