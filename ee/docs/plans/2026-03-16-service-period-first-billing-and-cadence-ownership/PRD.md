@@ -492,6 +492,54 @@ When that follow-on begins, it must define at implementation depth:
 - reconciliation guarantees so invoice linkage, provenance, and auditability survive any denormalization or archival step
 - migration and rollback posture when tenants may temporarily have both canonical live records and derived ledger extensions
 
+## Follow-on Boundary — Persisted Recurring Execution Records
+
+Recurring v1 introduces explicit execution-window identity, selector inputs, and retry keys, but it does not automatically require a durable ledger of recurring run attempts or due-selection snapshots.
+
+The following remain explicit follow-on work unless v1 proves they are operationally necessary:
+
+- persisted recurring run records keyed by execution-window identity
+- durable selection snapshots for every due-work batch
+- operator-facing replay history beyond the existing job/audit surfaces
+- recovery tooling that depends on replaying a stored execution ledger instead of recomputing due work from source truth
+
+That follow-on should not start unless recurring v1 demonstrates a concrete gap such as:
+
+- retry or replay debugging cannot be explained from existing job metadata plus canonical invoice/detail persistence
+- support or finance workflows require durable proof of exactly which due selections were considered for a failed run
+- contract-cadence execution produces operational ambiguity that transient logs and current job payloads cannot resolve safely
+
+When that follow-on begins, it must define at implementation depth:
+
+- the authoritative relationship between persisted execution records and canonical recurring service-period truth
+- retention and repair rules for execution records that outlive transient jobs
+- replay semantics when a stored execution record disagrees with current source recurrence rules
+- rollback posture when some tenants have durable recurring execution records and others still rely on transient scheduler metadata
+
+## Follow-on Boundary — Invoice-Schema Versioning
+
+Recurring v1 keeps dual old-shape and new-shape invoice support additive so historical flat invoices and canonical detail-backed invoices can coexist. It does not automatically introduce a versioned invoice schema contract.
+
+The following remain explicit follow-on work unless dual-shape support becomes long-lived enough to justify it:
+
+- explicit invoice payload version markers for API or export consumers
+- schema-negotiation rules between historical flat invoices and canonical detail-backed invoices
+- consumer-specific version pinning for portal, export, reporting, or workflow payloads
+- backfill or re-projection work whose only goal is to collapse dual-shape support into one versioned contract
+
+That follow-on should not start unless recurring v1 demonstrates a concrete limit such as:
+
+- dual-shape compatibility branches remaining in place long enough to create real maintenance or consumer-onboarding risk
+- downstream integrations needing an explicit version handshake instead of documented additive fields
+- reader rollback or coexistence rules becoming too implicit to govern safely without a versioned contract
+
+When that follow-on begins, it must define at implementation depth:
+
+- the authoritative version boundary between historical flat invoice payloads and canonical detail-backed invoice payloads
+- whether versioning applies only at API boundaries or also to stored export, workflow, and audit projections
+- migration and coexistence rules for tenants that still need both shapes during the transition
+- rollback posture when some consumers understand only the new versioned shape and others still depend on additive dual-shape compatibility
+
 ## Acceptance Criteria (Definition of Done)
 
 - The plan fully specifies recurring-billing changes across runtime, invoice generation, downstream consumers, data model, UI, reporting, exports, migration, and cleanup.

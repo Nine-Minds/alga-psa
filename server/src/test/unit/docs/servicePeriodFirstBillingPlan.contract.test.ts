@@ -14,6 +14,7 @@ const planRoot = path.join(
 
 const read = (file: string) => fs.readFileSync(path.join(planRoot, file), 'utf8');
 const appendix = read('PASS0_RECURRING_TIMING_APPENDIX.md');
+const cutoverSequence = read('CUTOVER_SEQUENCE.md');
 const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
 const prd = read('PRD.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
@@ -195,6 +196,24 @@ describe('service-period-first billing plan artifacts', () => {
     expect(appendix).toContain('usage-record billing keeps usage-event timestamps and current billed-through semantics as its authoritative selection model');
   });
 
+  it('T258: persisted recurring execution records remain explicitly out of scope unless their follow-on boundary is invoked', () => {
+    expect(prd).toContain('## Follow-on Boundary — Persisted Recurring Execution Records');
+    expect(prd).toContain('persisted recurring run records keyed by execution-window identity');
+    expect(prd).toContain('durable selection snapshots for every due-work batch');
+    expect(appendix).toContain('## Follow-On Boundary — Persisted Recurring Execution Records');
+    expect(appendix).toContain('It does not automatically include a durable recurring-run ledger or persisted due-selection snapshots.');
+    expect(appendix).toContain('rollback posture when some tenants have durable recurring execution records and others still rely on transient scheduler metadata');
+  });
+
+  it('T259: invoice-schema versioning remains explicitly out of scope unless its follow-on boundary is invoked', () => {
+    expect(prd).toContain('## Follow-on Boundary — Invoice-Schema Versioning');
+    expect(prd).toContain('dual old-shape and new-shape invoice support additive');
+    expect(prd).toContain('explicit invoice payload version markers for API or export consumers');
+    expect(appendix).toContain('## Follow-On Boundary — Invoice-Schema Versioning');
+    expect(appendix).toContain('Recurring v1 keeps old-shape and new-shape invoice support additive.');
+    expect(appendix).toContain('whether versioning applies only at API boundaries or also to stored export, workflow, and audit projections');
+  });
+
   it('T061: recurring product timing sources remain source-backed after migration', () => {
     expect(inventory.timingControls.productLateStageProrationRefs.slice().sort()).toEqual(
       rgList(
@@ -266,6 +285,32 @@ describe('service-period-first billing plan artifacts', () => {
     expect(runbook).toContain('do not force `billing_cycle_alignment` back into live execution');
   });
 
+  it('T253: reader-first then writer and scheduler cutover stages stay explicit for coexistence safety', () => {
+    expect(cutoverSequence).toContain('# Cutover Sequence');
+    expect(cutoverSequence).toContain('## Reader-First Core Cutover');
+    expect(cutoverSequence).toContain('### Stage A — Reader compatibility before writer cutover');
+    expect(cutoverSequence).toContain('### Stage B — Writer cutover after reader compatibility');
+    expect(cutoverSequence).toContain('### Stage C — Scheduler identity cutover after reader and writer stability');
+    expect(cutoverSequence).toContain('### Stage D — Grouping and invoice-candidate policy cutover');
+    expect(cutoverSequence).toContain('### Stage E — Contract-cadence tenant enablement');
+  });
+
+  it('T254: reporting, portal, and export cutover order stays explicit after the canonical invoice read-model lands', () => {
+    expect(cutoverSequence).toContain('## Downstream Consumer Cutover');
+    expect(cutoverSequence).toContain('### Portal and dashboard readers');
+    expect(cutoverSequence).toContain('### Reporting families');
+    expect(cutoverSequence).toContain('### Accounting export readers and adapters');
+    expect(cutoverSequence).toContain('Export adapters are the last downstream step');
+  });
+
+  it('T255: rollback posture remains explicit while historical flat invoices and canonical detail-backed invoices coexist', () => {
+    expect(cutoverSequence).toContain('## Rollback And Coexistence');
+    expect(cutoverSequence).toContain('Historical flat invoices and canonical detail-backed invoices will remain queryable together for an extended period.');
+    expect(cutoverSequence).toContain('must not delete canonical `invoice_charge_details`');
+    expect(cutoverSequence).toContain('must not force contract-cadence identities back through fake `billingCycleId` bridges');
+    expect(cutoverSequence).toContain('Keep dual-shape invoice schema support until product explicitly decides that historical flat readers can be removed.');
+  });
+
   it('T148: runbook explains how to trace cadence-owner disputes and service-period mismatches through persisted metadata', () => {
     expect(runbook).toContain('## Cadence-Owner Dispute Investigation');
     expect(runbook).toContain('was the line stored as `client` cadence or `contract` cadence when the invoice was generated?');
@@ -275,6 +320,22 @@ describe('service-period-first billing plan artifacts', () => {
     expect(runbook).toContain('invoice headers remain the invoice-window grouping dates');
     expect(runbook).toContain('canonical recurring detail rows remain the authoritative recurring coverage dates for migrated recurring lines');
     expect(runbook).toContain('If the detail period is correct but the consumer output is wrong, investigate reader hydration, flattening, or export adapter logic.');
+  });
+
+  it('T256: projection-mismatch runbook stays explicit enough to diagnose header-versus-detail disagreements', () => {
+    expect(runbook).toContain('## Projection Mismatch Investigation');
+    expect(runbook).toContain('confirm whether the invoice charge has `invoice_charge_details` rows');
+    expect(runbook).toContain('parent_service_period_start');
+    expect(runbook).toContain('canonical_detail_start');
+    expect(runbook).toContain('if `detail_period_count > 0`, canonical recurring detail periods remain authoritative');
+  });
+
+  it('T257: authoring-default drift runbook stays explicit enough to diagnose divergence across templates, presets, and live authoring paths', () => {
+    expect(runbook).toContain('## Authoring-Default Drift Investigation');
+    expect(runbook).toContain('contract wizard');
+    expect(runbook).toContain('preset create or reuse');
+    expect(runbook).toContain('template_billing_timing');
+    expect(runbook).toContain('legacy compatibility fields may still exist, but they must not be the reason a live recurring line silently changes cadence or timing');
   });
 
   it('T170: feature-to-subsystem mapping stays explicit enough to trace implementation progress across all affected surfaces', () => {

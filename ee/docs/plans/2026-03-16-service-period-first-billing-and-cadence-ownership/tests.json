@@ -2189,7 +2189,7 @@
   {
     "id": "T253",
     "description": "Reader-first then writer and scheduler cutover stages preserve compatibility while historical invoices and new invoices coexist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F224"
     ]
@@ -2197,7 +2197,7 @@
   {
     "id": "T254",
     "description": "Reporting, portal, and export cutover stages preserve compatibility after the canonical recurring read-model contract lands",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F225"
     ]
@@ -2205,7 +2205,7 @@
   {
     "id": "T255",
     "description": "Rollback posture is defined and works when historical flat invoices and canonical detail-backed invoices coexist for an extended period",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F226"
     ]
@@ -2213,7 +2213,7 @@
   {
     "id": "T256",
     "description": "The projection-mismatch runbook is sufficient to diagnose header-versus-detail recurring period disagreements",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F227"
     ]
@@ -2221,7 +2221,7 @@
   {
     "id": "T257",
     "description": "The authoring-default drift runbook is sufficient to diagnose divergence across templates, presets, wizard flows, and custom lines",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F228"
     ]
@@ -2229,7 +2229,7 @@
   {
     "id": "T258",
     "description": "Persisted recurring execution records remain explicitly out of scope unless the documented follow-on boundary is invoked",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F229"
     ]
@@ -2237,7 +2237,7 @@
   {
     "id": "T259",
     "description": "Long-lived dual-shape invoice support remains explicitly bounded by the documented invoice-schema versioning follow-on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F230"
     ]

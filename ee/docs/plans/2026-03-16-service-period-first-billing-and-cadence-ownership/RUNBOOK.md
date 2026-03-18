@@ -196,6 +196,103 @@ If the header window is correct but the detail period is wrong, investigate recu
 
 If the detail period is correct but the consumer output is wrong, investigate reader hydration, flattening, or export adapter logic.
 
+## Projection Mismatch Investigation
+
+Use this when one reader, renderer, portal surface, or export shows invoice-header periods while another surface shows canonical recurring detail periods for the same invoice.
+
+### Investigation order
+
+1. confirm whether the invoice charge has `invoice_charge_details` rows
+2. inspect the parent-charge projection fields and any stored `recurring_projection` metadata
+3. confirm whether the consumer is documented as:
+   - canonical-detail-first
+   - flattened summary
+   - historical/header fallback only
+4. compare stored export or preview payload provenance before blaming live reader hydration
+
+### Useful projection query
+
+```sql
+select
+  i.invoice_id,
+  ic.item_id,
+  ic.description,
+  ic.service_period_start as parent_service_period_start,
+  ic.service_period_end as parent_service_period_end,
+  count(icd.detail_id) as detail_period_count,
+  min(icd.service_period_start) as canonical_detail_start,
+  max(icd.service_period_end) as canonical_detail_end
+from invoices i
+join invoice_charges ic
+  on ic.invoice_id = i.invoice_id
+ and ic.tenant = i.tenant
+left join invoice_charge_details icd
+  on icd.item_id = ic.item_id
+ and icd.tenant = ic.tenant
+where i.tenant = :tenant
+  and i.invoice_id = :invoice_id
+group by
+  i.invoice_id,
+  ic.item_id,
+  ic.description,
+  ic.service_period_start,
+  ic.service_period_end
+order by ic.item_id;
+```
+
+### Expected interpretation
+
+- if `detail_period_count > 0`, canonical recurring detail periods remain authoritative even when a consumer flattens them to a summary range
+- if `detail_period_count = 0`, the invoice may be historical flat data or a financial-only artifact, so header or financial dates may still be the documented fallback
+- if a consumer ignores canonical detail periods where they exist, investigate read-model hydration before changing billing outputs
+
+## Authoring-Default Drift Investigation
+
+Use this when templates, presets, contract wizard flows, inline contract-line edits, or custom recurring-line creation appear to store different cadence-owner or timing defaults for the same intended behavior.
+
+### Investigation order
+
+1. identify which authoring path created or last updated the recurring line:
+   - contract wizard
+   - inline contract-line edit
+   - custom line create
+   - preset create or reuse
+   - template authoring or template clone
+2. inspect the stored recurring fields on every surface involved in that path
+3. confirm whether the path should have normalized through the shared recurring authoring policy or recurrence storage model helpers
+4. compare the stored line against the source template or preset snapshot instead of assuming UI defaults were persisted correctly
+
+### Useful drift queries
+
+```sql
+select
+  cl.contract_line_id,
+  cl.billing_timing,
+  cl.cadence_owner,
+  cl.enable_proration,
+  ctl.template_line_id,
+  ctl.billing_timing as template_billing_timing,
+  ctl.cadence_owner as template_cadence_owner,
+  cp.preset_id,
+  cp.billing_timing as preset_billing_timing,
+  cp.cadence_owner as preset_cadence_owner
+from contract_lines cl
+left join contract_template_lines ctl
+  on ctl.template_line_id = cl.source_template_line_id
+ and ctl.tenant = cl.tenant
+left join contract_line_presets cp
+  on cp.preset_id = cl.source_preset_id
+ and cp.tenant = cl.tenant
+where cl.tenant = :tenant
+  and cl.contract_line_id = :contract_line_id;
+```
+
+### Expected interpretation
+
+- `cadence_owner` and `billing_timing` should agree across live-line, template, and preset storage once the path is normalized
+- legacy compatibility fields may still exist, but they must not be the reason a live recurring line silently changes cadence or timing
+- if storage is correct but UI copy or preview text disagrees, investigate the authoring reader or preview builder instead of rewriting persisted fields
+
 ## Rollback Posture
 
 Rollback means stopping rollout exposure, not undoing schema or canonical detail persistence blindly.

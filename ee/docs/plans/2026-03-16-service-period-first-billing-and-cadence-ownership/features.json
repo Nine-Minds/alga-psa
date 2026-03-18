@@ -2009,7 +2009,7 @@
   {
     "id": "F224",
     "description": "Define the staged cutover order for readers, writers, scheduler identity, and grouping rules so coexistence phases are explicit and safe",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Implementation Sequence",
       "Risks"
@@ -2018,7 +2018,7 @@
   {
     "id": "F225",
     "description": "Define the staged cutover order for reporting, portal, and accounting exports after the canonical recurring read-model contract lands",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Implementation Sequence",
       "UI and downstream-consumer requirements"
@@ -2027,7 +2027,7 @@
   {
     "id": "F226",
     "description": "Define rollback posture and coexistence expectations when historical flat invoices and canonical detail-backed invoices both remain queryable for a long period",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks",
       "Open Questions"
@@ -2036,7 +2036,7 @@
   {
     "id": "F227",
     "description": "Document an operational runbook for diagnosing projection mismatches between invoice header periods and canonical recurring detail periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 8",
       "Acceptance Criteria"
@@ -2045,7 +2045,7 @@
   {
     "id": "F228",
     "description": "Document an operational runbook for diagnosing authoring-default drift across templates, presets, wizard flows, and custom recurring lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 8",
       "Authoring-path and storage-reconciliation requirements"
@@ -2054,7 +2054,7 @@
   {
     "id": "F229",
     "description": "Capture a follow-on boundary for persisted recurring execution records if scheduler identity, retries, and operational traceability prove too implicit after v1 materialization",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Open Questions",
       "Risks"
@@ -2063,7 +2063,7 @@
   {
     "id": "F230",
     "description": "Capture a follow-on boundary for invoice-schema versioning if dual old-shape and new-shape invoice support becomes long-lived after rollout",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Open Questions",
       "Read-model and post-persist lifecycle requirements"

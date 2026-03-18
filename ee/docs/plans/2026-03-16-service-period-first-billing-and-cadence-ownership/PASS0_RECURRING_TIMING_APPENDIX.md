@@ -188,6 +188,52 @@ When that follow-on starts, it must define:
 - replay and repair behavior when derived ledger structures drift from canonical persisted periods
 - rollback posture if tenants temporarily carry both the canonical ledger and performance-oriented derivatives
 
+## Follow-On Boundary — Persisted Recurring Execution Records
+
+Recurring v1 includes typed execution-window identity, selector inputs, and retry keys. It does not automatically include a durable recurring-run ledger or persisted due-selection snapshots.
+
+Keep the following out of v1 unless there is concrete operational evidence they are needed:
+
+- persisted recurring run records keyed by execution-window identity
+- durable selection snapshots for every due-work batch
+- operator-facing replay history beyond current job metadata, audit logs, and canonical invoice/detail persistence
+- repair tooling that depends on replaying a stored execution ledger instead of recomputing due work from current source truth
+
+Trigger this follow-on only when:
+
+- support or finance workflows cannot explain failed or retried recurring runs from current scheduler metadata
+- contract-cadence execution creates ambiguity that transient logs cannot resolve safely
+- replay/debug requirements become strong enough that transient execution identity is no longer sufficient
+
+When that follow-on starts, it must define:
+
+- the authoritative relationship between persisted execution records and canonical recurring service-period truth
+- retention, replay, and repair rules for execution records that outlive transient jobs
+- rollback posture when some tenants have durable recurring execution records and others still rely on transient scheduler metadata
+
+## Follow-On Boundary — Invoice-Schema Versioning
+
+Recurring v1 keeps old-shape and new-shape invoice support additive. It does not automatically introduce a formal invoice-schema version boundary.
+
+Keep the following out of v1 unless dual-shape support becomes long-lived enough to justify versioning:
+
+- explicit invoice payload version markers
+- consumer-specific schema negotiation for portal, export, reporting, or workflow payloads
+- version pinning whose only purpose is to replace documented additive compatibility fields
+- forced backfill or re-projection work done only to collapse dual-shape support into one versioned contract
+
+Trigger this follow-on only when:
+
+- dual-shape compatibility remains in place long enough to create meaningful maintenance risk
+- downstream consumers need an explicit version handshake instead of additive compatibility fields
+- reader rollback and coexistence rules become too implicit to govern safely without a versioned boundary
+
+When that follow-on starts, it must define:
+
+- the authoritative boundary between historical flat invoice payloads and canonical detail-backed invoice payloads
+- whether versioning applies only at API boundaries or also to stored export, workflow, and audit projections
+- migration and rollback posture when tenants or consumers still need both shapes during the transition
+
 ## Parity Matrix
 
 The minimum comparison matrix for client-cadence parity must cover the cross-product below before contract cadence is enabled:
