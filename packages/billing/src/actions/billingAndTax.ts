@@ -66,10 +66,25 @@ export interface FetchRecurringDueWorkOptions extends FetchBillingPeriodsOptions
 
 export interface PaginatedRecurringDueWorkResult {
     rows: IRecurringDueWorkRow[];
+    materializationGaps: RecurringDueWorkMaterializationGap[];
     total: number;
     page: number;
     pageSize: number;
     totalPages: number;
+}
+
+export interface RecurringDueWorkMaterializationGap {
+    executionIdentityKey: string;
+    selectionKey: string;
+    clientId: string;
+    clientName?: string | null;
+    billingCycleId?: string | null;
+    invoiceWindowStart: ISO8601String;
+    invoiceWindowEnd: ISO8601String;
+    servicePeriodStart: ISO8601String;
+    servicePeriodEnd: ISO8601String;
+    reason: 'missing_service_period_materialization';
+    detail: string;
 }
 
 interface PersistedRecurringDueWorkDbRow {
@@ -89,6 +104,15 @@ interface PersistedRecurringDueWorkDbRow {
     contract_name?: string | null;
     contract_line_id?: string | null;
     contract_line_name?: string | null;
+}
+
+interface ClientCadenceRecurringLineActivityRow {
+    client_id: string;
+    start_date?: ISO8601String | null;
+    end_date?: ISO8601String | null;
+    cadence_owner?: 'client' | 'contract' | null;
+    billing_frequency?: string | null;
+    billing_timing?: string | null;
 }
 
 function isMissingRecurringDueWorkRelation(error: unknown): boolean {
@@ -124,6 +148,36 @@ function applyBillingPeriodSearchAndDateFilters(
     }
 
     return query;
+}
+
+function normalizeDateOnly(value?: ISO8601String | null) {
+    return value ? value.slice(0, 10) : null;
+}
+
+function rangesOverlap(input: {
+    rangeStart?: ISO8601String | null;
+    rangeEnd?: ISO8601String | null;
+    windowStart: ISO8601String;
+    windowEnd: ISO8601String;
+}) {
+    const rangeStart = normalizeDateOnly(input.rangeStart);
+    const rangeEnd = normalizeDateOnly(input.rangeEnd);
+    const windowStart = normalizeDateOnly(input.windowStart);
+    const windowEnd = normalizeDateOnly(input.windowEnd);
+
+    if (!windowStart || !windowEnd) {
+        return false;
+    }
+
+    if (rangeStart && rangeStart >= windowEnd) {
+        return false;
+    }
+
+    if (rangeEnd && rangeEnd < windowStart) {
+        return false;
+    }
+
+    return true;
 }
 
 function buildAvailableBillingPeriodsBaseQuery(
@@ -314,6 +368,85 @@ async function fetchPersistedRecurringDueWorkDbRows(
     ]);
 
     return [...contractLineRows, ...clientContractLineRows] as PersistedRecurringDueWorkDbRow[];
+}
+
+async function fetchCompatibilityMaterializationGapKeys(
+    trx: Knex.Transaction,
+    tenant: string,
+    compatibilityPeriods: BillingPeriodWithMeta[],
+): Promise<Set<string>> {
+    if (compatibilityPeriods.length === 0) {
+        return new Set();
+    }
+
+    const clientIds = Array.from(new Set(compatibilityPeriods.map((period) => period.client_id).filter(Boolean)));
+    if (clientIds.length === 0) {
+        return new Set();
+    }
+
+    const activeRecurringRows = await trx('client_contract_lines as ccl')
+        .join('contract_lines as cl', function () {
+            this.on('cl.contract_line_id', '=', 'ccl.contract_line_id')
+                .andOn('cl.tenant', '=', 'ccl.tenant');
+        })
+        .where('ccl.tenant', tenant)
+        .whereIn('ccl.client_id', clientIds)
+        .where('cl.cadence_owner', 'client')
+        .whereNotNull('cl.billing_frequency')
+        .whereNotNull('cl.billing_timing')
+        .select(
+            'ccl.client_id',
+            'ccl.start_date',
+            'ccl.end_date',
+            'cl.cadence_owner',
+            'cl.billing_frequency',
+            'cl.billing_timing',
+        ) as ClientCadenceRecurringLineActivityRow[];
+
+    const recurringClientsById = new Map<string, ClientCadenceRecurringLineActivityRow[]>();
+    for (const row of activeRecurringRows) {
+        if (!row.client_id) {
+            continue;
+        }
+
+        const clientRows = recurringClientsById.get(row.client_id) ?? [];
+        clientRows.push(row);
+        recurringClientsById.set(row.client_id, clientRows);
+    }
+
+    const gapKeys = new Set<string>();
+
+    for (const period of compatibilityPeriods) {
+        const recurringRows = recurringClientsById.get(period.client_id) ?? [];
+        const matchesRecurringWindow = recurringRows.some((row) =>
+            rangesOverlap({
+                rangeStart: row.start_date ?? null,
+                rangeEnd: row.end_date ?? null,
+                windowStart: period.period_start_date,
+                windowEnd: period.period_end_date,
+            }),
+        );
+
+        if (!matchesRecurringWindow) {
+            continue;
+        }
+
+        gapKeys.add(
+            buildClientScheduleDueWorkRow({
+                clientId: period.client_id,
+                clientName: period.client_name,
+                billingCycleId: period.billing_cycle_id as string,
+                servicePeriodStart: period.period_start_date,
+                servicePeriodEnd: period.period_end_date,
+                invoiceWindowStart: period.period_start_date,
+                invoiceWindowEnd: period.period_end_date,
+                asOf: toISODate(Temporal.Now.plainDateISO()),
+                canGenerate: period.can_generate,
+            }).executionIdentityKey,
+        );
+    }
+
+    return gapKeys;
 }
 
 function mapPersistedRecurringDueWorkDbRowsToRows(
@@ -576,6 +709,11 @@ export const getAvailableRecurringDueWork = withAuth(async (
                 tenant,
                 options,
             );
+            const compatibilityGapKeys = await fetchCompatibilityMaterializationGapKeys(
+                trx,
+                tenant,
+                compatibilityPeriods,
+            );
             const compatibilityRows = compatibilityPeriods.map((period) =>
                 buildClientScheduleDueWorkRow({
                     clientId: period.client_id,
@@ -611,9 +749,26 @@ export const getAvailableRecurringDueWork = withAuth(async (
             const total = mergedRows.length;
             const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
             const offset = (page - 1) * pageSize;
+            const materializationGaps = mergedRows
+                .filter((row) => row.recordId == null && compatibilityGapKeys.has(row.executionIdentityKey))
+                .map((row): RecurringDueWorkMaterializationGap => ({
+                    executionIdentityKey: row.executionIdentityKey,
+                    selectionKey: row.selectionKey,
+                    clientId: row.clientId,
+                    clientName: row.clientName ?? null,
+                    billingCycleId: row.billingCycleId ?? null,
+                    invoiceWindowStart: row.invoiceWindowStart,
+                    invoiceWindowEnd: row.invoiceWindowEnd,
+                    servicePeriodStart: row.servicePeriodStart,
+                    servicePeriodEnd: row.servicePeriodEnd,
+                    reason: 'missing_service_period_materialization',
+                    detail:
+                        'Falling back to a client billing-cycle row because no persisted recurring service periods were materialized for this recurring window.',
+                }));
 
             return {
                 rows: mergedRows.slice(offset, offset + pageSize),
+                materializationGaps,
                 total,
                 page,
                 pageSize,

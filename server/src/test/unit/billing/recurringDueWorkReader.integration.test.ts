@@ -216,6 +216,29 @@ describe('recurring due-work reader', () => {
       },
     ];
 
+    mocks.rowsByTable.client_contract_lines = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        contract_line_id: 'assignment-1',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        start_date: '2025-01-01',
+        end_date: null,
+      },
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-2',
+        contract_line_id: 'assignment-2',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        start_date: '2025-01-01',
+        end_date: null,
+      },
+    ];
+
     mocks.rowsByTable.recurring_service_periods = [
       {
         tenant: 'tenant-1',
@@ -374,5 +397,31 @@ describe('recurring due-work reader', () => {
       invoiceWindowEnd: '2025-05-08',
       servicePeriodEnd: '2025-04-08',
     });
+  });
+
+  it('reports missing service-period materialization diagnostics when recurring client-cadence work falls back to a billing-cycle bridge row', async () => {
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(result.materializationGaps).toEqual([
+      {
+        executionIdentityKey:
+          'billing_cycle_window:client:client-2:cycle-2025-02:2025-02-01:2025-03-01',
+        selectionKey:
+          'recurring-run-selection:billing_cycle_window:client:client-2:cycle-2025-02:2025-02-01:2025-03-01',
+        clientId: 'client-2',
+        clientName: 'Bravo Co',
+        billingCycleId: 'cycle-2025-02',
+        invoiceWindowStart: '2025-02-01',
+        invoiceWindowEnd: '2025-03-01',
+        servicePeriodStart: '2025-02-01',
+        servicePeriodEnd: '2025-03-01',
+        reason: 'missing_service_period_materialization',
+        detail:
+          'Falling back to a client billing-cycle row because no persisted recurring service periods were materialized for this recurring window.',
+      },
+    ]);
   });
 });

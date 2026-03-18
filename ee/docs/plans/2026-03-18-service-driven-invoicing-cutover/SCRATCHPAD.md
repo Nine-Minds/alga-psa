@@ -42,6 +42,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) Persisted recurring service periods currently store canonical half-open service periods while invoice charge details still serialize an inclusive `servicePeriodEnd` date in some paths. Matching linkage must therefore tolerate either the exact stored end date or the next-day exclusive representation to avoid missing otherwise-equivalent rows.
 - (2026-03-18) `hardDeleteInvoice(...)` had an existing safeguard that blocked deleting any invoice with canonical recurring detail rows. The correct cutover behavior is narrower: keep blocking unlinked historical-detail invoices, but allow deletion when those canonical detail rows are also mirrored by persisted `recurring_service_periods` linkage that can be explicitly reopened.
 - (2026-03-18) Because persisted service periods do not currently remember whether a billed row was originally `generated` or `edited`, delete-repair now restores linked rows to `locked`. That keeps them invoiceable for due selection while avoiding a false claim about the exact prior mutable state.
+- (2026-03-18) The safest first cut for missing-materialization diagnostics is to flag compatibility billing-cycle rows that survive the due-work merge only because no persisted client-cadence service-period row exists for the same recurring window. That produces actionable operator feedback without guessing about contract-cadence windows that may simply not be due yet.
 
 ## Commands / Runbooks
 
@@ -68,6 +69,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) `DB_HOST=127.0.0.1 DB_PORT=57433 DB_NAME=server DB_NAME_SERVER=server DB_USER_SERVER=app_user DB_USER_ADMIN=postgres DB_PASSWORD_SERVER=postpass123 DB_PASSWORD_ADMIN=postpass123 pnpm exec vitest run --coverage.enabled=false src/test/integration/billingInvoiceTiming.integration.test.ts -t "T020"` (from `server/`; passed)
 - (2026-03-18) `pnpm exec vitest run ../packages/billing/tests/invoiceModification.recurringDeletionGuard.test.ts` (from `server/`; passed and confirmed the legacy unlinked canonical-detail delete guard still holds)
 - (2026-03-18) `DB_HOST=127.0.0.1 DB_PORT=57433 DB_NAME=server DB_NAME_SERVER=server DB_USER_SERVER=app_user DB_USER_ADMIN=postgres DB_PASSWORD_SERVER=postpass123 DB_PASSWORD_ADMIN=postpass123 pnpm exec vitest run --coverage.enabled=false src/test/integration/billingInvoiceTiming.integration.test.ts -t "T021"` (from `server/`; passed)
+- (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringDueWorkReader.integration.test.ts` (from `server/`; passed after narrowing diagnostics to compatibility rows that survive merge without a persisted `recordId`)
 
 ## Links / References
 
@@ -105,6 +107,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) Completed `F017`, `F018`, `F019`, `T017`, and `T018` by widening the shared recurring charge-family contract and the `recurring_service_periods` migration constraint to include `hourly` and `usage`, then proving those persisted rows flow into due-work selection. The chosen cutover model is explicit ledger support for hourly/usage obligations, not a parallel family-agnostic abstraction.
 - (2026-03-18) Completed `F020`, `T019`, and `T020` by linking persisted `recurring_service_periods` rows to the exact `invoice_charge_details` rows created during invoice persistence for fixed, product, and license recurring charges. The linkage now marks matching service periods as `billed`, stores invoice/item/detail IDs plus `invoice_linked_at`, and has focused DB-backed proof for both bridged client-cadence and unbridged contract-cadence invoice creation paths.
 - (2026-03-18) Completed `F021` and `T021` by repairing recurring service-period linkage during invoice hard-delete for linked recurring invoices. Deletion now clears `invoice_id` / charge linkage columns, restores affected rows to `locked`, and makes the same unbridged contract-cadence service period invoiceable again, while preserving the legacy hard-delete guard for invoices that only have canonical detail rows and no persisted service-period linkage.
+- (2026-03-18) Completed `F022` by adding `materializationGaps` diagnostics to `getAvailableRecurringDueWork(...)`. The due-work reader now reports when a client-cadence recurring window is only surfacing through the legacy billing-cycle compatibility path because persisted recurring service periods were not materialized for that window, giving operator surfaces an explicit explanation instead of a silent fallback.
 
 ## Open Questions
 
