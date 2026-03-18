@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.0.9-rc4",
+  "version": "1.0.10-rc4",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
