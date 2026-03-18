@@ -611,11 +611,7 @@ export async function fetchContractLineById(
     return undefined;
   }
 
-  return {
-    ...row,
-    billing_timing: row.billing_timing ?? 'arrears',
-    cadence_owner: resolveCadenceOwner(row.cadence_owner),
-  };
+  return normalizeLiveRecurringStorage(row);
 }
 
 export async function updateContractLineRate(
@@ -630,21 +626,37 @@ export async function updateContractLineRate(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
+    const existingTemplateLine = await knex('contract_template_lines')
+      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+      .first(['billing_timing']);
+    const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      billingTiming,
+      fallbackBillingTiming: existingTemplateLine?.billing_timing,
+    });
+
     await knex('contract_template_lines')
       .where({ tenant, template_id: contractId, template_line_id: contractLineId })
       .update({
         custom_rate: rate,
-        billing_timing: billingTiming ?? undefined,
+        billing_timing: recurringAuthoringPolicy.billingTiming,
         updated_at: now,
       });
     return;
   }
 
+  const existingLine = await knex('contract_lines')
+    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+    .first(['billing_timing']);
+  const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    billingTiming,
+    fallbackBillingTiming: existingLine?.billing_timing,
+  });
+
   await knex('contract_lines')
     .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
     .update({
       custom_rate: rate,
-      billing_timing: billingTiming ?? undefined,
+      billing_timing: recurringAuthoringPolicy.billingTiming,
       updated_at: now,
     });
 }

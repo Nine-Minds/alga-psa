@@ -1937,7 +1937,7 @@
   {
     "id": "F216",
     "description": "Remove repository and model write-path behavior that silently drops or inconsistently normalizes recurring cadence fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "Cleanup requirements"

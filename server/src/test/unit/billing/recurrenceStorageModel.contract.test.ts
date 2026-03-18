@@ -324,6 +324,41 @@ describe('recurrence storage model contracts', () => {
     expect(fixedContractLineConfiguration).not.toContain("billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start'");
   });
 
+  it('T246: repository and model write paths no longer silently drop or normalize recurrence fields inconsistently', () => {
+    const contractLineMappingActions = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/actions/contractLineMappingActions.ts'),
+      'utf8',
+    );
+    const contractLineMappingModel = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/models/contractLineMapping.ts'),
+      'utf8',
+    );
+    const packageRepository = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/repositories/contractLineRepository.ts'),
+      'utf8',
+    );
+    const serverRepository = fs.readFileSync(
+      path.join(repoRoot, 'server/src/lib/repositories/contractLineRepository.ts'),
+      'utf8',
+    );
+
+    expect(contractLineMappingActions).toContain('const contractRecurringStorage = normalizeLiveRecurringStorage(contractLine);');
+    expect(contractLineMappingActions).toContain('billing_timing: contractRecurringStorage.billing_timing,');
+    expect(contractLineMappingActions).toContain('const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({');
+    expect(contractLineMappingActions).toContain('billingTiming: dbUpdateData.billing_timing,');
+    expect(contractLineMappingActions).toContain('billing_timing: recurringAuthoringPolicy.billingTiming,');
+    expect(contractLineMappingModel).toContain('return normalizeLiveRecurringStorage(line);');
+    expect(contractLineMappingModel).toContain("first(['cadence_owner', 'billing_timing']);");
+    expect(contractLineMappingModel).toContain('billing_timing: recurringAuthoringPolicy.billingTiming,');
+    expect(contractLineMappingModel).toContain("'billing_timing',");
+    expect(packageRepository).toContain('return normalizeLiveRecurringStorage(row);');
+    expect(packageRepository).toContain('fallbackBillingTiming: existingTemplateLine?.billing_timing,');
+    expect(packageRepository).toContain('fallbackBillingTiming: existingLine?.billing_timing,');
+    expect(serverRepository).toContain('return row ? normalizeLiveRecurringStorage(row) : undefined;');
+    expect(serverRepository).toContain('fallbackBillingTiming: existingTemplateLine?.billing_timing,');
+    expect(serverRepository).toContain('fallbackBillingTiming: existingLine?.billing_timing,');
+  });
+
   it('T242: template-line cadence_owner schema and backfill behavior stay correct for v1 template recurrence storage', async () => {
     const migrationPath = path.join(
       repoRoot,

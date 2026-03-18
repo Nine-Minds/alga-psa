@@ -18,10 +18,10 @@ describe('contract line cadence_owner compatibility wiring', () => {
       'utf8',
     );
 
-    expect(actionsSource).toContain('cadence_owner: resolveCadenceOwner(line.cadence_owner),');
-    expect(actionsSource.match(/cadence_owner: 'client'/g)?.length).toBeGreaterThanOrEqual(2);
-    expect(modelSource).toContain("cadence_owner: contractLine.cadence_owner ?? 'client',");
-    expect(modelSource).toContain(`db.raw("'client' as cadence_owner")`);
+    expect(actionsSource).toContain('return normalizeLiveRecurringStorage(line);');
+    expect(actionsSource).toContain('cadence_owner: contractRecurringStorage.cadence_owner,');
+    expect(modelSource).toContain('return normalizeLiveRecurringStorage(line);');
+    expect(modelSource).toContain("cadence_owner: recurringAuthoringPolicy.cadenceOwner,");
     expect(clientActionsSource).toContain(
       "const cadenceOwner = updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, clientContractLineId);",
     );

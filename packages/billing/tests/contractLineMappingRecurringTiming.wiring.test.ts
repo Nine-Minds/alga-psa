@@ -14,10 +14,12 @@ describe('contract line mapping recurring timing audit', () => {
       'utf8',
     );
 
-    expect(actionsSource).toContain('cadence_owner: resolveCadenceOwner(line.cadence_owner),');
-    expect(actionsSource.match(/cadence_owner: 'client'/g)?.length).toBeGreaterThanOrEqual(2);
-    expect(modelSource).toContain('cadence_owner: resolveCadenceOwner(line.cadence_owner),');
-    expect(modelSource).toContain("cadence_owner: contractLine.cadence_owner ?? 'client',");
+    expect(actionsSource).toContain('return normalizeLiveRecurringStorage(line);');
+    expect(actionsSource).toContain('const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({');
+    expect(actionsSource).toContain('billingTiming: dbUpdateData.billing_timing,');
+    expect(modelSource).toContain('return normalizeLiveRecurringStorage(line);');
+    expect(modelSource).toContain("first(['cadence_owner', 'billing_timing']);");
+    expect(modelSource).toContain('billing_timing: recurringAuthoringPolicy.billingTiming,');
 
     const mappingAndDisambiguationSource =
       actionsSource.split('/**\n * Retrieve all contract line mappings')[1] ?? actionsSource;

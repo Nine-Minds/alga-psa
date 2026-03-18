@@ -607,12 +607,7 @@ export async function fetchContractLineById(
   contractLineId: string
 ): Promise<IContractLine | undefined> {
   const row = await knex('contract_lines').where({ tenant, contract_line_id: contractLineId }).first();
-  return row
-    ? {
-        ...row,
-        cadence_owner: row.cadence_owner ?? 'client',
-      }
-    : undefined;
+  return row ? normalizeLiveRecurringStorage(row) : undefined;
 }
 
 export async function updateContractLineRate(
@@ -627,21 +622,37 @@ export async function updateContractLineRate(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
+    const existingTemplateLine = await knex('contract_template_lines')
+      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+      .first(['billing_timing']);
+    const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      billingTiming,
+      fallbackBillingTiming: existingTemplateLine?.billing_timing,
+    });
+
     await knex('contract_template_lines')
       .where({ tenant, template_id: contractId, template_line_id: contractLineId })
       .update({
         custom_rate: rate,
-        billing_timing: billingTiming ?? undefined,
+        billing_timing: recurringAuthoringPolicy.billingTiming,
         updated_at: now,
       });
     return;
   }
 
+  const existingLine = await knex('contract_lines')
+    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+    .first(['billing_timing']);
+  const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    billingTiming,
+    fallbackBillingTiming: existingLine?.billing_timing,
+  });
+
   await knex('contract_lines')
     .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
     .update({
       custom_rate: rate,
-      billing_timing: billingTiming ?? undefined,
+      billing_timing: recurringAuthoringPolicy.billingTiming,
       updated_at: now,
     });
 }

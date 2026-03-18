@@ -2124,7 +2124,7 @@
   {
     "id": "T246",
     "description": "Repository and model write paths no longer silently drop or normalize recurrence fields inconsistently",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F216"
     ]
