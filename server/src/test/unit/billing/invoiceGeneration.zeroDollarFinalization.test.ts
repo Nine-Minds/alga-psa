@@ -267,7 +267,7 @@ describe('invoice generation zero-dollar recurring handling', () => {
     mocks.rowsByTable.invoices.length = 0;
   });
 
-  it('T210: zero-dollar recurring invoices with canonical billing content are persisted and finalized according to zero-dollar settings', async () => {
+  it('T210/T273: zero-dollar recurring invoices with canonical billing content are persisted and finalized according to zero-dollar settings', async () => {
     const result = await generateInvoice('cycle-1');
 
     expect(mocks.persistInvoiceCharges).toHaveBeenCalledTimes(1);

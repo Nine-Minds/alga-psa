@@ -1281,7 +1281,7 @@
   {
     "id": "T147",
     "description": "Portal and export consumers remain stable when invoices contain mixed cadence-owner recurring lines",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F097",
       "F099",
@@ -1549,7 +1549,7 @@
   {
     "id": "T178",
     "description": "DB-backed sanity: accounting export readers produce stable service-period fields after recurring cutover",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099",
       "F127",
@@ -2351,7 +2351,7 @@
   {
     "id": "T270",
     "description": "Validation catches header-versus-detail recurring period drift before it leaks into downstream readers or exports",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F222",
       "F227"
@@ -2378,7 +2378,7 @@
   {
     "id": "T273",
     "description": "Zero-dollar recurring invoice handling is covered explicitly so the existing finalization seam cannot survive cutover unnoticed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F180"
     ]
@@ -2395,7 +2395,7 @@
   {
     "id": "T275",
     "description": "Canonical recurring detail periods survive recalculation and remain visible in export preview and downstream inspection flows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F176",
       "F195",
@@ -2455,7 +2455,7 @@
   {
     "id": "T281",
     "description": "Persisted service-period records store obligation linkage, cadence owner, boundaries, provenance, and lifecycle state coherently",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F231",
       "F233",
@@ -2922,7 +2922,7 @@
   {
     "id": "T329",
     "description": "Plan artifacts now treat materialized service periods as in-scope v1 behavior rather than a deferred follow-on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F231",
       "F242",
@@ -2932,7 +2932,7 @@
   {
     "id": "T330",
     "description": "The expanded plan preserves implementation-grade detail after adding materialized service periods and editable future billing objects",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F150",
       "F231",

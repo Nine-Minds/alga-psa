@@ -41,6 +41,17 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Additional materialized-ledger and export-reader coverage now closes `T178`, `T273`, `T275`, `T281`, `T329`, and `T330`:
+  - `server/src/test/integration/accounting/exportDashboard.integration.test.ts` now explicitly claims the DB-backed stored-reader seam for export lines: mixed historical fallback rows and canonical recurring-detail-backed rows reread through `getBatchWithDetails(...)` without collapsing their persisted service-period semantics
+  - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` now explicitly claims the export-preview persistence seam: `createBatchFromFilters(...)` preserves canonical recurring detail periods, summary bounds, and source metadata when preview lines become stored export lines for downstream inspection
+  - `server/src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts` now tags the zero-dollar recurring finalization seam directly as `T210/T273`, making the previously documented zero-dollar checkpoint executable against the live persistence/finalization branch rather than leaving it only in scratchpad prose
+  - `packages/types/src/recurringServicePeriodRecord.typecheck.test.ts` now explicitly claims `T281` alongside `T341`, which keeps the shared persisted-record vocabulary anchored to one executable contract for obligation linkage, cadence owner, boundaries, provenance, and lifecycle state
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks that materialized service periods are in-scope v1 behavior rather than a deferred follow-on, and that the expanded plan still preserves implementation-grade breadth after adding editable future billing objects
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/accounting/exportDashboard.integration.test.ts src/test/integration/accounting/invoiceSelection.integration.test.ts src/test/integration/accounting/servicePeriodProjectionValidation.integration.test.ts -t "T178|T275|T270" --hookTimeout 600000 --coverage.enabled false`
+      - first pass proved `T178` and `T275` while exposing a real schema-harness issue in the new `T270` seed data: `invoice_charge_details.config_id` is non-null in the live schema, so the validation fixture had to stop inserting nulls there
+
 - (2026-03-18) Plan-integrity coverage now closes `T179`, `T180`, `T279`, and `T280`:
   - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now reads `SCRATCHPAD.md`, `features.json`, and `tests.json` directly so the docs contract suite can assert both the qualitative replan posture and the quantitative checklist breadth instead of relying on memory or manual review
   - the new assertions lock the system-wide PRD blast radius, the scratchpad’s explicit recursive decomposition and second-pass critique, and the current implementation-grade checklist size/tail contract (`270` features through `F270`, `349` tests through `T332`)
@@ -1813,3 +1824,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 - Which bucket/allowance behaviors must join v1 versus a follow-on?
 - Which exact service-period edit operations belong in v1 versus a follow-on?
+
+- (2026-03-18) Mixed-cadence portal/export coverage and header-vs-detail drift validation are now explicit, which closes `T147` and `T270`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` now covers a mixed invoice that contains both client-cadence and contract-cadence canonical recurring rows, so the portal detail dialog proves both shapes remain readable on one invoice instead of only exercising a single cadence path
+  - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` now carries `T147`, proving export preview persistence remains stable when one invoice contains both a client-cadence recurring detail row and a contract-cadence recurring detail row; both persisted export lines keep `service_period_source = canonical_detail_periods` with their distinct canonical date ranges intact
+  - `server/src/test/unit/accounting/accountingExportValidation.servicePeriodProjection.test.ts` now carries `T270` on a focused validation seam instead of a migration-heavy integration harness: it proves `AccountingExportValidation.ensureMappingsForBatch(...)` marks the batch `needs_attention` and records `service_period_projection_mismatch` when stored export-line summary dates drift away from canonical `invoice_charge_details`
+  - `pass-0-source-inventory.json` was refreshed in the same checkpoint because `T003` inventory coverage must follow the live persisted-reader set; deleting the abandoned integration seam and adding the focused unit seam changed that list
+  - the first DB-backed `T270` attempt was intentionally discarded because it added migration churn without improving the contract under test; the focused unit seam exercises the validator directly and keeps the actual mismatch rule explicit instead of burying it under unrelated bootstrap noise
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/accounting/accountingExportValidation.servicePeriodProjection.test.ts --coverage.enabled false`
+    - `cd server && npx vitest run ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx --coverage.enabled false`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts -t "T147" --hookTimeout 600000 --coverage.enabled false`

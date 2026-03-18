@@ -439,7 +439,166 @@ describe('Accounting export invoice selection integration', () => {
     ]);
   }, HOOK_TIMEOUT);
 
-  it('creates a batch from filters and records transaction linkage', async () => {
+  it('T147: export preview remains stable when one invoice contains client- and contract-cadence recurring detail rows', async () => {
+    const serviceId = await createTestService(ctx, {
+      service_name: 'Mixed Cadence Export Service',
+      billing_method: 'fixed',
+      default_rate: 10000,
+      unit_of_measure: 'device',
+      description: 'Mixed cadence export validation'
+    });
+
+    const invoiceId = uuidv4();
+    const clientChargeId = uuidv4();
+    const contractChargeId = uuidv4();
+    const transactionId = uuidv4();
+    const invoiceDate = '2025-02-10T00:00:00.000Z';
+
+    await ctx.db('invoices').insert({
+      invoice_id: invoiceId,
+      tenant: ctx.tenantId,
+      client_id: ctx.clientId,
+      invoice_number: 'INV-MIXED-CADENCE',
+      invoice_date: invoiceDate,
+      due_date: invoiceDate,
+      subtotal: 22000,
+      tax: 0,
+      total_amount: 22000,
+      status: 'sent',
+      currency_code: 'USD',
+      is_manual: false,
+      billing_period_start: '2025-02-01T00:00:00.000Z',
+      billing_period_end: '2025-03-01T00:00:00.000Z',
+      created_at: invoiceDate,
+      updated_at: invoiceDate
+    });
+
+    await ctx.db('invoice_charges').insert([
+      {
+        item_id: clientChargeId,
+        tenant: ctx.tenantId,
+        invoice_id: invoiceId,
+        service_id: serviceId,
+        description: 'Client cadence recurring charge',
+        quantity: 1,
+        unit_price: 12000,
+        total_price: 12000,
+        net_amount: 12000,
+        tax_amount: 0,
+        is_manual: false,
+        created_at: invoiceDate,
+        updated_at: invoiceDate
+      },
+      {
+        item_id: contractChargeId,
+        tenant: ctx.tenantId,
+        invoice_id: invoiceId,
+        service_id: serviceId,
+        description: 'Contract cadence recurring charge',
+        quantity: 1,
+        unit_price: 10000,
+        total_price: 10000,
+        net_amount: 10000,
+        tax_amount: 0,
+        is_manual: false,
+        created_at: invoiceDate,
+        updated_at: invoiceDate
+      }
+    ]);
+
+    await ctx.db('invoice_charge_details').insert([
+      {
+        item_detail_id: uuidv4(),
+        item_id: clientChargeId,
+        tenant: ctx.tenantId,
+        service_id: serviceId,
+        config_id: uuidv4(),
+        quantity: 1,
+        rate: 12000,
+        service_period_start: '2025-02-01T00:00:00.000Z',
+        service_period_end: '2025-03-01T00:00:00.000Z',
+        billing_timing: 'advance',
+        created_at: invoiceDate,
+        updated_at: invoiceDate
+      },
+      {
+        item_detail_id: uuidv4(),
+        item_id: contractChargeId,
+        tenant: ctx.tenantId,
+        service_id: serviceId,
+        config_id: uuidv4(),
+        quantity: 1,
+        rate: 10000,
+        service_period_start: '2025-02-08T00:00:00.000Z',
+        service_period_end: '2025-03-08T00:00:00.000Z',
+        billing_timing: 'advance',
+        created_at: invoiceDate,
+        updated_at: invoiceDate
+      }
+    ]);
+
+    await ctx.db('transactions').insert({
+      transaction_id: transactionId,
+      tenant: ctx.tenantId,
+      client_id: ctx.clientId,
+      invoice_id: invoiceId,
+      amount: 22000,
+      type: 'invoice_generated',
+      description: 'Transaction for mixed cadence export invoice',
+      created_at: invoiceDate,
+      status: 'completed',
+      balance_after: 22000
+    });
+
+    const { batch } = await selector.createBatchFromFilters({
+      adapterType: 'xero',
+      filters: {
+        startDate: '2025-02-01',
+        endDate: '2025-02-28',
+        invoiceStatuses: ['sent'],
+        clientIds: [ctx.clientId]
+      },
+      notes: 'Mixed cadence export batch'
+    });
+
+    const storedLines = await repository.listLines(batch.batch_id);
+    const invoiceLines = storedLines.filter((line) => line.invoice_id === invoiceId);
+    expect(invoiceLines).toHaveLength(2);
+
+    const lineByChargeId = new Map(invoiceLines.map((line) => [line.invoice_charge_id, line]));
+    expect(lineByChargeId.get(clientChargeId)).toMatchObject({
+      service_period_start: '2025-02-01T00:00:00.000Z',
+      service_period_end: '2025-03-01T00:00:00.000Z',
+      payload: {
+        service_period_source: 'canonical_detail_periods',
+        recurring_detail_periods: [
+          {
+            service_period_start: '2025-02-01T00:00:00.000Z',
+            service_period_end: '2025-03-01T00:00:00.000Z',
+            billing_timing: 'advance'
+          }
+        ],
+        transaction_ids: [transactionId]
+      }
+    });
+    expect(lineByChargeId.get(contractChargeId)).toMatchObject({
+      service_period_start: '2025-02-08T00:00:00.000Z',
+      service_period_end: '2025-03-08T00:00:00.000Z',
+      payload: {
+        service_period_source: 'canonical_detail_periods',
+        recurring_detail_periods: [
+          {
+            service_period_start: '2025-02-08T00:00:00.000Z',
+            service_period_end: '2025-03-08T00:00:00.000Z',
+            billing_timing: 'advance'
+          }
+        ],
+        transaction_ids: [transactionId]
+      }
+    });
+  }, HOOK_TIMEOUT);
+
+  it('T275: createBatchFromFilters preserves canonical recurring detail periods through export preview persistence', async () => {
     const seeded = await seedInvoices();
 
     const { batch, lines: previewLines } = await selector.createBatchFromFilters({

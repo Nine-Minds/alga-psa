@@ -18,7 +18,7 @@ import {
 } from '@alga-psa/types';
 
 describe('persisted recurring service-period record typing', () => {
-  it('T341: shared recurring timing types define the persisted service-period record contract with identifiers, obligation linkage, cadence owner, boundaries, provenance, and lifecycle state', () => {
+  it('T281/T341: shared recurring timing types define the persisted service-period record contract with identifiers, obligation linkage, cadence owner, boundaries, provenance, and lifecycle state', () => {
     expect(RECURRING_SERVICE_PERIOD_LIFECYCLE_STATES).toEqual([
       'generated',
       'edited',

@@ -511,6 +511,15 @@ describe('service-period-first billing plan artifacts', () => {
     expect(testChecklist.some((item) => item.id === 'T253' && item.implemented)).toBe(true);
   });
 
+  it('T329 and T330: plan artifacts treat materialized service periods as in-scope v1 behavior while preserving implementation-grade detail after the expansion', () => {
+    expect(prd).toContain('materialized service-period records represent those boundaries as editable future billing objects');
+    expect(scratchpad).toContain('Materialized service periods are now in-scope for v1.');
+    expect(scratchpad).toContain('if users need to change a future recurring period explicitly');
+    expect(scratchpad).toContain('Use recursive top-down decomposition for the feature/test lists');
+    expect(scratchpad).toContain('Downstream persisted-period contracts are now explicit across charge-family behavior, bucket semantics, post-materialization lifecycle, authoring predictability, grouping after edits, and client/support explanations');
+    expect(scratchpad).toContain('The first DB-backed persisted-ledger lifecycle validation now exists');
+  });
+
   it('T349: edit transport surfaces define request, provenance, and structured validation feedback before dashboard editing lands', () => {
     expect(recurringServicePeriodEditSurfaces).toContain('# Recurring Service-Period Edit Surfaces');
     expect(recurringServicePeriodEditSurfaces).toContain('## Request Contract');

@@ -6,6 +6,99 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import InvoiceDetailsDialog from './InvoiceDetailsDialog';
 
+const invoiceFixture = {
+  invoice_id: 'inv-1',
+  client_id: 'client-1',
+  invoice_date: '2026-02-01',
+  due_date: '2026-02-15',
+  subtotal: 10000,
+  tax: 0,
+  total: 10000,
+  total_amount: 10000,
+  currencyCode: 'USD',
+  currency_code: 'USD',
+  status: 'sent',
+  invoice_number: 'INV-001',
+  finalized_at: '2026-02-01',
+  credit_applied: 0,
+  is_manual: false,
+  invoice_charges: [
+    {
+      item_id: 'charge-1',
+      invoice_id: 'inv-1',
+      description: 'Managed Firewall',
+      quantity: 1,
+      unit_price: 10000,
+      total_price: 10000,
+      tax_amount: 0,
+      net_amount: 10000,
+      is_manual: false,
+      service_period_start: '2026-01-01',
+      service_period_end: '2026-02-01',
+      billing_timing: 'advance',
+      cadence_owner: 'client',
+      recurring_detail_periods: [
+        {
+          service_period_start: '2026-02-01',
+          service_period_end: '2026-03-01',
+          billing_timing: 'advance',
+        },
+        {
+          service_period_start: '2026-01-01',
+          service_period_end: '2026-02-01',
+          billing_timing: 'advance',
+        },
+      ],
+    },
+    {
+      item_id: 'charge-contract',
+      invoice_id: 'inv-1',
+      description: 'Contract Anniversary Backup',
+      quantity: 1,
+      unit_price: 7000,
+      total_price: 7000,
+      tax_amount: 0,
+      net_amount: 7000,
+      is_manual: false,
+      service_period_start: '2026-01-08',
+      service_period_end: '2026-02-08',
+      billing_timing: 'advance',
+      cadence_owner: 'contract',
+      recurring_detail_periods: [
+        {
+          service_period_start: '2026-01-08',
+          service_period_end: '2026-02-08',
+          billing_timing: 'advance',
+        },
+      ],
+    },
+    {
+      item_id: 'charge-2',
+      invoice_id: 'inv-1',
+      description: 'Legacy Summary Service',
+      quantity: 1,
+      unit_price: 5000,
+      total_price: 5000,
+      tax_amount: 0,
+      net_amount: 5000,
+      is_manual: false,
+      service_period_start: '2025-12-01',
+      service_period_end: '2026-01-01',
+    },
+    {
+      item_id: 'charge-3',
+      invoice_id: 'inv-1',
+      description: 'Manual Credit',
+      quantity: 1,
+      unit_price: -500,
+      total_price: -500,
+      tax_amount: 0,
+      net_amount: -500,
+      is_manual: true,
+    },
+  ],
+};
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback?: string) => fallback ?? _key,
@@ -20,75 +113,7 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 vi.mock('@alga-psa/client-portal/actions', () => ({
-  getClientInvoiceById: vi.fn(async () => ({
-    invoice_id: 'inv-1',
-    client_id: 'client-1',
-    invoice_date: '2026-02-01',
-    due_date: '2026-02-15',
-    subtotal: 10000,
-    tax: 0,
-    total: 10000,
-    total_amount: 10000,
-    currencyCode: 'USD',
-    currency_code: 'USD',
-    status: 'sent',
-    invoice_number: 'INV-001',
-    finalized_at: '2026-02-01',
-    credit_applied: 0,
-    is_manual: false,
-    invoice_charges: [
-      {
-        item_id: 'charge-1',
-        invoice_id: 'inv-1',
-        description: 'Managed Firewall',
-        quantity: 1,
-        unit_price: 10000,
-        total_price: 10000,
-        tax_amount: 0,
-        net_amount: 10000,
-        is_manual: false,
-        service_period_start: '2026-01-01',
-        service_period_end: '2026-02-01',
-        billing_timing: 'advance',
-        recurring_detail_periods: [
-          {
-            service_period_start: '2026-02-01',
-            service_period_end: '2026-03-01',
-            billing_timing: 'advance',
-          },
-          {
-            service_period_start: '2026-01-01',
-            service_period_end: '2026-02-01',
-            billing_timing: 'advance',
-          },
-        ],
-      },
-      {
-        item_id: 'charge-2',
-        invoice_id: 'inv-1',
-        description: 'Legacy Summary Service',
-        quantity: 1,
-        unit_price: 5000,
-        total_price: 5000,
-        tax_amount: 0,
-        net_amount: 5000,
-        is_manual: false,
-        service_period_start: '2025-12-01',
-        service_period_end: '2026-01-01',
-      },
-      {
-        item_id: 'charge-3',
-        invoice_id: 'inv-1',
-        description: 'Manual Credit',
-        quantity: 1,
-        unit_price: -500,
-        total_price: -500,
-        tax_amount: 0,
-        net_amount: -500,
-        is_manual: true,
-      },
-    ],
-  })),
+  getClientInvoiceById: vi.fn(async () => invoiceFixture),
   downloadClientInvoicePdf: vi.fn(async () => ({ success: true, fileId: 'file-1' })),
   sendClientInvoiceEmail: vi.fn(async () => ({ success: true })),
 }));
@@ -134,7 +159,7 @@ describe('InvoiceDetailsDialog recurring service periods', () => {
       '2026-01-01 - 2026-02-01',
       '2026-02-01 - 2026-03-01',
     ]);
-    expect(screen.getByText('Advance')).toBeInTheDocument();
+    expect(within(firewallRow as HTMLElement).getByText('Advance')).toBeInTheDocument();
   });
 
   it('T196: client-portal invoice detail dialogs flatten or omit recurring period copy according to the documented projection policy', async () => {
@@ -162,5 +187,32 @@ describe('InvoiceDetailsDialog recurring service periods', () => {
     expect(manualRow).not.toBeNull();
     expect(within(manualRow as HTMLElement).queryByText(/Service Period/)).not.toBeInTheDocument();
     expect(within(manualRow as HTMLElement).getByText('Financial-only line. No recurring service period.')).toBeInTheDocument();
+  });
+
+  it('keeps client- and contract-cadence recurring lines readable when one invoice mixes both canonical detail-backed shapes', async () => {
+    render(
+      <InvoiceDetailsDialog
+        invoiceId="inv-1"
+        isOpen={true}
+        onClose={() => {}}
+        formatCurrency={(amount) => `$${(amount / 100).toFixed(2)}`}
+        formatDate={(date) => String(date)}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Managed Firewall')).toBeInTheDocument();
+      expect(screen.getByText('Contract Anniversary Backup')).toBeInTheDocument();
+    });
+
+    const clientCadenceRow = screen.getByText('Managed Firewall').closest('tr');
+    expect(clientCadenceRow).not.toBeNull();
+    expect(within(clientCadenceRow as HTMLElement).getByText('Service Periods:')).toBeInTheDocument();
+
+    const contractCadenceRow = screen.getByText('Contract Anniversary Backup').closest('tr');
+    expect(contractCadenceRow).not.toBeNull();
+    expect(
+      within(contractCadenceRow as HTMLElement).getByText('Service Period: 2026-01-08 - 2026-02-08')
+    ).toBeInTheDocument();
   });
 });

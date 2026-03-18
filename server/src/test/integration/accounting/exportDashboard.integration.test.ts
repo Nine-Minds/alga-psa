@@ -254,7 +254,7 @@ describe('Accounting export dashboard integration', () => {
     expect(detail.errors[0].code).toBe('XERO_VALIDATION_ERROR');
   });
 
-  it('rereads mixed historical and canonical export lines without collapsing stored period semantics', async () => {
+  it('T178: rereads mixed historical and canonical export lines without collapsing stored period semantics', async () => {
     const batchId = uuidv4();
     const canonicalLineId = uuidv4();
     const historicalLineId = uuidv4();
