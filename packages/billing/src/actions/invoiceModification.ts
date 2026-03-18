@@ -66,6 +66,42 @@ async function hasCanonicalRecurringDetailPeriodsForInvoice(
   return Boolean(detailRow);
 }
 
+async function hasLinkedRecurringServicePeriodsForInvoice(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<boolean> {
+  const linkedRow = await trx('recurring_service_periods')
+    .where({
+      tenant,
+      invoice_id: invoiceId,
+    })
+    .first('record_id');
+
+  return Boolean(linkedRow);
+}
+
+async function releaseRecurringServicePeriodInvoiceLinkageForInvoice(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  releasedAt: string,
+) {
+  return trx('recurring_service_periods')
+    .where({
+      tenant,
+      invoice_id: invoiceId,
+    })
+    .update({
+      lifecycle_state: 'locked',
+      invoice_id: null,
+      invoice_charge_id: null,
+      invoice_charge_detail_id: null,
+      invoice_linked_at: null,
+      updated_at: releasedAt,
+    });
+}
+
 
 export const finalizeInvoice = withAuth(async (
   user,
@@ -842,9 +878,18 @@ export const hardDeleteInvoice = withAuth(async (
         return; // Exit if invoice doesn't exist
     }
 
+    const hasLinkedRecurringServicePeriods = await hasLinkedRecurringServicePeriodsForInvoice(
+      trx,
+      tenant,
+      invoiceId,
+    );
+
     // Canonical recurring detail rows are authoritative historical coverage metadata.
     // Preserve them by cancelling the invoice through the regular lifecycle instead of hard deletion.
-    if (await hasCanonicalRecurringDetailPeriodsForInvoice(trx, tenant, invoiceId)) {
+    if (
+      await hasCanonicalRecurringDetailPeriodsForInvoice(trx, tenant, invoiceId)
+      && !hasLinkedRecurringServicePeriods
+    ) {
       throw new Error(
         `Cannot delete invoice ${invoiceId}: canonical recurring detail periods already exist. Cancel the invoice instead of deleting it.`
       );
@@ -1016,6 +1061,15 @@ export const hardDeleteInvoice = withAuth(async (
         tenant
       })
       .delete();
+
+    if (hasLinkedRecurringServicePeriods) {
+      await releaseRecurringServicePeriodInvoiceLinkageForInvoice(
+        trx,
+        tenant,
+        invoiceId,
+        now,
+      );
+    }
 
     // 8. Delete invoice items
     await trx('invoice_charges')

@@ -37,6 +37,7 @@ let db: Knex;
 let tenantId: string;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let generateInvoiceForSelectionInput: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoiceForSelectionInput;
+let hardDeleteInvoiceAction: typeof import('@alga-psa/billing/actions/invoiceModification').hardDeleteInvoice;
 const authRef = vi.hoisted(() => ({
   tenantId: '11111111-1111-1111-1111-111111111111',
   userId: 'test-user',
@@ -122,6 +123,7 @@ describe('Billing Invoice Timing Integration', () => {
     tenantId = await ensureTenant(db);
     authRef.tenantId = tenantId;
     ({ generateInvoice, generateInvoiceForSelectionInput } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ hardDeleteInvoice: hardDeleteInvoiceAction } = await import('@alga-psa/billing/actions/invoiceModification'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -959,6 +961,108 @@ it('T020: billed recurring service periods link back to invoice charge detail ro
   expect(normalizeTimestampValue(billedRow?.invoice_linked_at)).toBeTruthy();
   expect(normalizeDateValue(billedRow?.service_period_start)).toBe(materializationPlan.records[0].servicePeriod.start);
   expect(normalizeDateValue(billedRow?.service_period_end)).toBe(materializationPlan.records[0].servicePeriod.end);
+}, HOOK_TIMEOUT);
+
+it('T021: deleting a recurring invoice clears service-period invoice linkage and restores invoiceable lifecycle state for unbridged contract-cadence rows', async () => {
+  setupCommonMocks({ tenantId, userId: 'contract-delete-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Contract Delete Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-03-12',
+    currentPeriodStart: '2025-04-12',
+    nextPeriodStart: '2025-05-12',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Contract Delete Service',
+    planName: 'Contract Delete Plan',
+    baseRateCents: 24500,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+
+  const materializationPlan = materializeContractCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T18:30:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: `${currentPeriodStart}T00:00:00Z`,
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: fixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-contract-delete',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+
+  await upsertRecurringServicePeriodRecord(materializationPlan.records[0]);
+
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: contextLike.clientId,
+    contractId: fixedLine.contractId,
+    contractLineId: fixedLine.contractLineId,
+    windowStart: `${currentPeriodStart}T00:00:00Z`,
+    windowEnd: `${nextPeriodStart}T00:00:00Z`,
+  });
+
+  const generatedInvoice = await generateInvoiceForSelectionInput(selectorInput);
+  expect(generatedInvoice).toBeTruthy();
+  expect(generatedInvoice?.billing_cycle_id ?? null).toBeNull();
+
+  await hardDeleteInvoiceAction(generatedInvoice!.invoice_id);
+
+  const deletedInvoice = await db('invoices')
+    .where({ tenant: tenantId, invoice_id: generatedInvoice!.invoice_id })
+    .first(['invoice_id']);
+  expect(deletedInvoice).toBeUndefined();
+
+  const reopenedRow = await db('recurring_service_periods')
+    .where({ tenant: tenantId, record_id: materializationPlan.records[0].recordId })
+    .first([
+      'record_id',
+      'lifecycle_state',
+      'invoice_id',
+      'invoice_charge_id',
+      'invoice_charge_detail_id',
+      'invoice_linked_at',
+    ]);
+
+  expect(reopenedRow).toMatchObject({
+    record_id: materializationPlan.records[0].recordId,
+    lifecycle_state: 'locked',
+    invoice_id: null,
+    invoice_charge_id: null,
+    invoice_charge_detail_id: null,
+    invoice_linked_at: null,
+  });
+
+  const invoiceableRows = await db('recurring_service_periods')
+    .where({
+      tenant: tenantId,
+      record_id: materializationPlan.records[0].recordId,
+      schedule_key: materializationPlan.records[0].scheduleKey,
+      invoice_window_start: currentPeriodStart,
+      invoice_window_end: nextPeriodStart,
+    })
+    .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
+    .whereNull('invoice_id')
+    .whereNull('invoice_charge_id')
+    .whereNull('invoice_charge_detail_id')
+    .select('record_id');
+
+  expect(invoiceableRows.map((row) => row.record_id)).toEqual([materializationPlan.records[0].recordId]);
 }, HOOK_TIMEOUT);
 
 it('T276: DB-backed monthly contract-cadence scheduling, grouping, invoice generation, and hydration stay coherent for an 8th-anchored line', async () => {

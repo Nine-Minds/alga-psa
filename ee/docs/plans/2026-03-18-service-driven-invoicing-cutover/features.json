@@ -19,7 +19,7 @@
   { "id": "F018", "description": "Widen the recurring service-period participation model so usage recurring obligations can invoice on service-driven cadence windows.", "implemented": true },
   { "id": "F019", "description": "Resolve whether hourly/usage support requires widening the persisted `charge_family` constraint or a family-agnostic due-window layer, and implement the chosen model.", "implemented": true },
   { "id": "F020", "description": "Link billed recurring service periods back to invoice charge detail rows for all recurring execution-window paths, not only bridged billing-cycle invoices.", "implemented": true },
-  { "id": "F021", "description": "Repair recurring service-period linkage when recurring invoices are deleted, reversed, or rebuilt from service-driven windows.", "implemented": false },
+  { "id": "F021", "description": "Repair recurring service-period linkage when recurring invoices are deleted, reversed, or rebuilt from service-driven windows.", "implemented": true },
   { "id": "F022", "description": "Expose generation gaps or missing-materialization state so operator surfaces can explain why expected recurring due rows are absent.", "implemented": false },
   { "id": "F023", "description": "Add a service-period generation/replenishment runbook or system action entrypoint that billing operators can invoke when due rows are missing.", "implemented": false },
   { "id": "F024", "description": "Ensure duplicate-prevention semantics remain deterministic for recurring due-work rows with and without `billing_cycle_id` bridges.", "implemented": false },
