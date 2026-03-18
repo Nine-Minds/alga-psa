@@ -792,6 +792,13 @@ export default function ProjectDetail({
       [taskId]: tags
     }));
   };
+
+  const handleCommentCountChange = useCallback((taskId: string, count: number) => {
+    setTaskCommentCounts(prev => ({
+      ...prev,
+      [taskId]: count
+    }));
+  }, []);
   
   // Fetch project completion metrics, tree data, priorities, and task types in parallel
   useEffect(() => {
@@ -2622,6 +2629,7 @@ export default function ProjectDetail({
                 projectStatuses={projectStatuses}
                 users={users}
                 projectTreeData={projectTreeData}
+                onCommentCountChange={handleCommentCountChange}
               />
             ) : (
               <TaskQuickAdd

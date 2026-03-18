@@ -90,6 +90,7 @@ interface TaskFormProps {
   inDrawer?: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
   prefillData?: TaskFormPrefillData;
+  onCommentCountChange?: (taskId: string, count: number) => void;
 }
 
 export default function TaskForm({
@@ -105,7 +106,8 @@ export default function TaskForm({
   onPhaseChange,
   inDrawer = false,
   projectTreeData = [],
-  prefillData
+  prefillData,
+  onCommentCountChange
 }: TaskFormProps): React.JSX.Element {
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
@@ -1775,6 +1777,7 @@ export default function TaskForm({
               <TaskCommentThread
                 taskId={task.task_id}
                 projectId={phase.project_id}
+                onCommentCountChange={onCommentCountChange}
               />
             </div>
           )}
