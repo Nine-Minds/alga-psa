@@ -185,6 +185,7 @@ export class TicketMobileEditorRuntime {
       },
     });
     this.emitStateChange();
+    this.emitContentHeight();
   }
 
   private executeCommand(command: TicketMobileEditorCommand, value?: unknown): boolean {
@@ -363,6 +364,7 @@ export class TicketMobileEditorRuntime {
         json: this.getNormalizedJsonValue(),
       },
     });
+    this.emitContentHeight();
   }
 
   private clearContentChangeTimer(): void {
@@ -372,6 +374,14 @@ export class TicketMobileEditorRuntime {
 
     this.clearTimeoutFn(this.contentChangeTimer);
     this.contentChangeTimer = null;
+  }
+
+  private emitContentHeight(): void {
+    const height = this.element.scrollHeight;
+    this.emitMessage({
+      type: 'content-height',
+      payload: { height },
+    });
   }
 
   private emitError(code: string, message: string): void {
@@ -385,6 +395,10 @@ export class TicketMobileEditorRuntime {
   }
 
   private toEditorContent(document: TicketMobileRichTextDocument): Content {
+    if (document.sourceFormat === 'empty') {
+      return null;
+    }
+
     if (document.format === 'prosemirror') {
       return document.content as Content;
     }

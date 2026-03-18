@@ -16,12 +16,31 @@ export type TimeEntry = {
   approval_status: string;
 };
 
+export type ServiceOption = {
+  service_id: string;
+  service_name: string;
+};
+
+export function getServices(
+  client: ApiClient,
+  params: { apiKey: string },
+): Promise<ApiResult<SuccessResponse<ServiceOption[]>>> {
+  return client.request<SuccessResponse<ServiceOption[]>>({
+    method: "GET",
+    path: "/api/v1/services?is_active=true&limit=100",
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
 export function createTimeEntry(
   client: ApiClient,
   params: {
     apiKey: string;
     work_item_type: WorkItemType;
     work_item_id?: string;
+    service_id: string;
     start_time: string;
     end_time: string;
     notes?: string;
@@ -39,6 +58,7 @@ export function createTimeEntry(
     body: {
       work_item_type: params.work_item_type,
       work_item_id: params.work_item_id,
+      service_id: params.service_id,
       start_time: params.start_time,
       end_time: params.end_time,
       notes: params.notes,

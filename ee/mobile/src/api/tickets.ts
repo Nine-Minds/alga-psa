@@ -39,12 +39,17 @@ export type TicketListItem = {
 
 export type TicketRichAttributes = {
   description?: string | null;
+  due_date?: string | null;
+  watcher_user_ids?: string[] | null;
   [key: string]: unknown;
 };
 
 export type TicketDetail = TicketListItem & {
   attributes?: TicketRichAttributes | null;
   description_html?: string | null;
+  priority_id?: string | null;
+  assigned_to?: string | null;
+  due_date?: string | null;
 } & Record<string, unknown>;
 
 export type TicketStats = {
