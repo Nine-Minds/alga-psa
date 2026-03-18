@@ -31,6 +31,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) A due-work reader can safely merge persisted service-period rows with compatibility `client_billing_cycles` rows by deduping on `executionIdentityKey`, letting persisted canonical rows win while still surfacing legacy client-cadence work when no canonical row exists.
 - (2026-03-18) The current persisted-reader implementation can resolve `contract_line` and `client_contract_line` obligations directly from `recurring_service_periods`; other obligation types remain outside this first reader cut and therefore continue to rely on compatibility/fallback behavior.
 - (2026-03-18) `shared/billingClients/backfillRecurringServicePeriods.ts` was already present and exported through `packages/billing/src/index.ts`; the missing work for `F014` was plan-specific validation that the zero-existing-records case is covered explicitly.
+- (2026-03-18) `shared/billingClients/recurringServicePeriodGenerationHorizon.ts` already models target horizon vs replenishment threshold coverage. The remaining gap for `F015` was explicit plan-level test coverage proving we report below-target horizon state before the low-water replenishment trigger trips.
+- (2026-03-18) `shared/billingClients/regenerateRecurringServicePeriods.ts` and the existing `billingInvoiceTiming.integration.test.ts` staged-rollout scenario already implement regeneration semantics for untouched future rows while preserving edited/billed history. The remaining gap for `F016` was explicit unit coverage of the combined edited+billed override case in one regeneration pass.
 
 ## Commands / Runbooks
 
@@ -45,6 +47,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) `pnpm exec tsc --noEmit -p tsconfig.json` (from `server/`; broad compile did not return promptly during this checkpoint, so relied on targeted unit coverage instead)
 - (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringDueWork.domain.test.ts src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts src/test/unit/billing/recurringTiming.domain.test.ts` (from `server/`; passed)
 - (2026-03-18) `pnpm exec tsc --noEmit -p tsconfig.json` (from `packages/billing/`; passed after fixing one implicit-`any` in `billingAndTax.ts`)
+- (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringServicePeriodGenerationHorizon.domain.test.ts` (from `server/`; passed)
+- (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringServicePeriodRegeneration.domain.test.ts src/test/unit/billing/recurringServicePeriodRegenerationConflict.domain.test.ts src/test/unit/billing/recurringServicePeriodGenerationHorizon.domain.test.ts` (from `server/`; passed)
+- (2026-03-18) `pnpm exec vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T316/T323/T324/T327"` (from `server/`; blocked in this environment because Postgres on `127.0.0.1:5438` refused connections)
 
 ## Links / References
 
@@ -75,6 +80,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) Completed `F003`, `F004`, `F008`, `F009`, `F010`, `F011`, `F012`, and `F013` by adding `getAvailableRecurringDueWork(...)` in `billingAndTax.ts`. The reader now pulls ready persisted rows from `recurring_service_periods`, carries schedule/period keys and due-state metadata into due-work rows, allows unbridged contract-cadence windows, and merges compatibility billing-cycle rows underneath canonical rows by execution identity.
 - (2026-03-18) Completed `T006`, `T007`, and `T008` with unit coverage for billed/archived/superseded suppression and compatibility-row merge behavior when canonical persisted rows are absent.
 - (2026-03-18) Completed `F014` / `T013` by validating the pre-existing `backfillRecurringServicePeriods(...)` support with an explicit zero-existing-records test. Active recurring obligations can now be asserted to backfill into future generated service-period rows before the UI depends on them.
+- (2026-03-18) Completed `F015` / `T014` by validating the pre-existing generation-horizon coverage model with an explicit replenishment test. The system now has plan-specific proof that future service periods can be assessed against both the target horizon and the lower replenishment threshold without conflating those two states.
+- (2026-03-18) Completed `F016` / `T015` by validating the pre-existing regeneration planner with an explicit edited-plus-billed override preservation test. Future untouched rows can now be regenerated while edited and billed slots remain preserved rather than being silently overwritten.
 
 ## Open Questions
 

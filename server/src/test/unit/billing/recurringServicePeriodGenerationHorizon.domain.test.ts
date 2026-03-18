@@ -87,4 +87,22 @@ describe('recurring service-period generation horizon', () => {
       },
     ]);
   });
+
+  it('T014: recurring service-period replenishment reports missing-horizon state when future rows do not reach the configured target horizon', () => {
+    const coverage = assessRecurringServicePeriodGenerationCoverage({
+      asOf: '2025-01-01',
+      targetHorizonDays: 90,
+      replenishmentThresholdDays: 30,
+      futurePeriods: [
+        buildRecurringServicePeriod({ start: '2025-01-01', end: '2025-02-01' }),
+      ],
+    });
+
+    expect(coverage.targetHorizonEnd).toBe('2025-04-01');
+    expect(coverage.replenishmentThresholdEnd).toBe('2025-01-31');
+    expect(coverage.furthestGeneratedEnd).toBe('2025-02-01');
+    expect(coverage.meetsTargetHorizon).toBe(false);
+    expect(coverage.needsReplenishment).toBe(false);
+    expect(coverage.continuityIssues).toEqual([]);
+  });
 });
