@@ -247,6 +247,70 @@ function buildPreviewInvoiceFailure(
   };
 }
 
+function buildDuplicateRecurringInvoiceError(input: {
+  selectorInput: IRecurringDueSelectionInput;
+  invoiceId: string;
+}): Error {
+  const billingCycleId = resolveRecurringInvoiceBridgeId(input.selectorInput);
+  const error = new Error(
+    billingCycleId
+      ? 'Invoice already exists for this billing cycle'
+      : 'Invoice already exists for this recurring execution window',
+  );
+
+  Object.assign(error, {
+    code: DUPLICATE_RECURRING_INVOICE_CODE,
+    billingCycleId,
+    executionIdentityKey: input.selectorInput.executionWindow.identityKey,
+    invoiceId: input.invoiceId,
+  });
+
+  return error;
+}
+
+async function findExistingRecurringInvoiceForSelectionInput(params: {
+  knex: Knex;
+  tenant: string;
+  selectorInput: IRecurringDueSelectionInput;
+}): Promise<{ invoiceId: string } | null> {
+  const billingCycleId = resolveRecurringInvoiceBridgeId(params.selectorInput);
+  if (billingCycleId) {
+    const invoice = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+      return trx('invoices')
+        .where({
+          billing_cycle_id: billingCycleId,
+          tenant: params.tenant,
+        })
+        .first('invoice_id');
+    });
+
+    return invoice?.invoice_id ? { invoiceId: invoice.invoice_id } : null;
+  }
+
+  const executionWindow = params.selectorInput.executionWindow;
+  if (
+    executionWindow.kind === 'contract_cadence_window'
+    && executionWindow.contractLineId
+  ) {
+    const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+      return trx('recurring_service_periods')
+        .where({
+          tenant: params.tenant,
+          obligation_type: 'contract_line',
+          obligation_id: executionWindow.contractLineId,
+          invoice_window_start: params.selectorInput.windowStart,
+          invoice_window_end: params.selectorInput.windowEnd,
+        })
+        .whereNotNull('invoice_id')
+        .first('invoice_id');
+    });
+
+    return linkedRow?.invoice_id ? { invoiceId: linkedRow.invoice_id } : null;
+  }
+
+  return null;
+}
+
 // TODO: Move to billingAndTax.ts
 async function calculatePreviewTax(
   charges: IBillingCharge[],
@@ -1069,26 +1133,17 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   // fast duplicate bridge. Selector-input-only execution windows rely on the
   // canonical recurring detail/billed-through guards instead of forcing a
   // non-UUID execution identity into invoices.billing_cycle_id.
-  const existingInvoice = billing_cycle_id
-    ? await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('invoices')
-          .where({
-            billing_cycle_id,
-            tenant
-          })
-          .first();
-      })
-    : null;
+  const existingInvoice = await findExistingRecurringInvoiceForSelectionInput({
+    knex,
+    tenant,
+    selectorInput,
+  });
 
   if (existingInvoice) {
-    const duplicateInvoiceError = new Error('Invoice already exists for this billing cycle');
-    Object.assign(duplicateInvoiceError, {
-      code: DUPLICATE_RECURRING_INVOICE_CODE,
-      billingCycleId: billing_cycle_id,
-      executionIdentityKey,
-      invoiceId: existingInvoice.invoice_id,
+    throw buildDuplicateRecurringInvoiceError({
+      selectorInput,
+      invoiceId: existingInvoice.invoiceId,
     });
-    throw duplicateInvoiceError;
   }
 
   const billingEngine = new BillingEngine();

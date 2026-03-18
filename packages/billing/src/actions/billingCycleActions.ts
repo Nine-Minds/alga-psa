@@ -326,6 +326,115 @@ export const hardDeleteBillingCycle = withAuth(async (
   }
 });
 
+export interface InvoicedRecurringHistoryRow {
+  invoiceId: string;
+  invoiceNumber: string | null;
+  invoiceStatus: string | null;
+  invoiceDate: ISO8601String | null;
+  clientId: string;
+  clientName: string;
+  billingCycleId: string | null;
+  hasBillingCycleBridge: boolean;
+  cadenceSource: 'client_schedule' | 'contract_anniversary';
+  executionWindowKind: 'billing_cycle_window' | 'contract_cadence_window';
+  servicePeriodStart: ISO8601String | null;
+  servicePeriodEnd: ISO8601String | null;
+  servicePeriodLabel: string;
+  invoiceWindowStart: ISO8601String | null;
+  invoiceWindowEnd: ISO8601String | null;
+  invoiceWindowLabel: string;
+}
+
+function formatHistoryRangeLabel(start?: string | null, end?: string | null) {
+  if (!start && !end) {
+    return 'Unavailable';
+  }
+
+  if (!start || !end) {
+    return start ?? end ?? 'Unavailable';
+  }
+
+  return `${start} to ${end}`;
+}
+
+function normalizeHistoryDate(value: unknown): string | null {
+  if (!value) {
+    return null;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return null;
+}
+
+function mapRecurringHistoryRow(row: any): InvoicedRecurringHistoryRow {
+  const servicePeriodStart = normalizeHistoryDate(row.service_period_start);
+  const servicePeriodEnd = normalizeHistoryDate(row.service_period_end);
+  const invoiceWindowStart = normalizeHistoryDate(row.invoice_window_start);
+  const invoiceWindowEnd = normalizeHistoryDate(row.invoice_window_end);
+  const invoiceDate = normalizeHistoryDate(row.invoice_date);
+  const cadenceSource = row.cadence_owner === 'contract'
+    ? 'contract_anniversary'
+    : 'client_schedule';
+  const executionWindowKind = row.cadence_owner === 'contract'
+    ? 'contract_cadence_window'
+    : 'billing_cycle_window';
+
+  return {
+    invoiceId: row.invoice_id,
+    invoiceNumber: row.invoice_number ?? null,
+    invoiceStatus: row.status ?? null,
+    clientId: row.client_id,
+    clientName: row.client_name,
+    billingCycleId: row.billing_cycle_id ?? null,
+    hasBillingCycleBridge: Boolean(row.billing_cycle_id),
+    cadenceSource,
+    executionWindowKind,
+    servicePeriodStart,
+    servicePeriodEnd,
+    servicePeriodLabel: formatHistoryRangeLabel(
+      servicePeriodStart,
+      servicePeriodEnd,
+    ),
+    invoiceDate,
+    invoiceWindowStart,
+    invoiceWindowEnd,
+    invoiceWindowLabel: formatHistoryRangeLabel(
+      invoiceWindowStart,
+      invoiceWindowEnd,
+    ),
+  };
+}
+
+export const reverseRecurringInvoice = withAuth(async (
+  user,
+  { tenant },
+  params: { invoiceId: string; billingCycleId?: string | null }
+): Promise<void> => {
+  if (params.billingCycleId) {
+    await removeBillingCycle(params.billingCycleId);
+    return;
+  }
+
+  await hardDeleteInvoice(params.invoiceId);
+});
+
+export const hardDeleteRecurringInvoice = withAuth(async (
+  user,
+  { tenant },
+  params: { invoiceId: string; billingCycleId?: string | null }
+): Promise<void> => {
+  if (params.billingCycleId) {
+    await hardDeleteBillingCycle(params.billingCycleId);
+    return;
+  }
+
+  await hardDeleteInvoice(params.invoiceId);
+});
+
 export const getInvoicedBillingCycles = withAuth(async (
   user,
   { tenant }
@@ -373,11 +482,7 @@ export interface FetchInvoicedCyclesOptions {
 }
 
 export interface PaginatedInvoicedCyclesResult {
-  cycles: (IClientContractLineCycle & {
-    client_name: string;
-    period_start_date: ISO8601String;
-    period_end_date: ISO8601String;
-  })[];
+  cycles: InvoicedRecurringHistoryRow[];
   total: number;
   page: number;
   pageSize: number;
@@ -401,21 +506,48 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
   const { knex: conn } = await createTenantKnex();
 
   const result = await withTransaction(conn, async (trx: Knex.Transaction) => {
-    // Build base query
-    const buildBaseQuery = () => {
-      const query = trx('client_billing_cycles as cbc')
-        .join('clients as c', function () {
-          this.on('c.client_id', '=', 'cbc.client_id')
-            .andOn('c.tenant', '=', 'cbc.tenant');
-        })
-        .join('invoices as i', function () {
-          this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-            .andOn('i.tenant', '=', 'cbc.tenant');
-        })
-        .where('cbc.tenant', tenant)
-        .whereNotNull('cbc.period_end_date');
+    const detailServicePeriodStartSql = `
+      SELECT MIN(iid.service_period_start)
+      FROM invoice_charges ic
+      JOIN invoice_charge_details iid
+        ON iid.item_id = ic.item_id
+       AND iid.tenant = ic.tenant
+      WHERE ic.invoice_id = i.invoice_id
+        AND ic.tenant = i.tenant
+    `;
+    const detailServicePeriodEndSql = `
+      SELECT MAX(iid.service_period_end)
+      FROM invoice_charges ic
+      JOIN invoice_charge_details iid
+        ON iid.item_id = ic.item_id
+       AND iid.tenant = ic.tenant
+      WHERE ic.invoice_id = i.invoice_id
+        AND ic.tenant = i.tenant
+    `;
+    const recurringSummaryQuery = trx('recurring_service_periods as rsp')
+      .where('rsp.tenant', tenant)
+      .whereNotNull('rsp.invoice_id')
+      .select('rsp.invoice_id')
+      .min('rsp.service_period_start as service_period_start')
+      .max('rsp.service_period_end as service_period_end')
+      .min('rsp.invoice_window_start as invoice_window_start')
+      .max('rsp.invoice_window_end as invoice_window_end')
+      .max('rsp.cadence_owner as cadence_owner')
+      .groupBy('rsp.invoice_id')
+      .as('rsp_summary');
 
-      // Apply search filter
+    const buildBaseQuery = () => {
+      const query = trx('invoices as i')
+        .join('clients as c', function () {
+          this.on('c.client_id', '=', 'i.client_id')
+            .andOn('c.tenant', '=', 'i.tenant');
+        })
+        .leftJoin(recurringSummaryQuery, 'rsp_summary.invoice_id', 'i.invoice_id')
+        .where('i.tenant', tenant)
+        .whereRaw(
+          `coalesce(rsp_summary.service_period_start, (${detailServicePeriodStartSql})) is not null`,
+        );
+
       if (searchTerm.trim()) {
         const searchPattern = `%${searchTerm.trim().toLowerCase()}%`;
         query.whereRaw('LOWER(c.client_name) LIKE ?', [searchPattern]);
@@ -426,7 +558,7 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
 
     // Get total count
     const countResult = await buildBaseQuery()
-      .countDistinct('cbc.billing_cycle_id as count')
+      .countDistinct('i.invoice_id as count')
       .first();
     const total = parseInt(String(countResult?.count || '0'), 10);
 
@@ -447,21 +579,26 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
     // Fetch paginated data
     const cycles = await buildBaseQuery()
       .select(
-        'cbc.billing_cycle_id',
-        'cbc.client_id',
+        'i.invoice_id',
+        'i.invoice_number',
+        'i.status',
+        'i.invoice_date',
+        'i.billing_cycle_id',
+        'i.client_id',
         'c.client_name',
-        'cbc.billing_cycle',
-        'cbc.period_start_date',
-        'cbc.period_end_date',
-        'cbc.effective_date',
-        'cbc.tenant'
+        trx.raw(`coalesce(rsp_summary.service_period_start, (${detailServicePeriodStartSql})) as service_period_start`),
+        trx.raw(`coalesce(rsp_summary.service_period_end, (${detailServicePeriodEndSql})) as service_period_end`),
+        trx.raw(`coalesce(rsp_summary.invoice_window_start, i.billing_period_start) as invoice_window_start`),
+        trx.raw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end) as invoice_window_end`),
+        trx.raw(`coalesce(rsp_summary.cadence_owner, case when i.billing_cycle_id is not null then 'client' else null end) as cadence_owner`)
       )
-      .orderBy('cbc.period_end_date', 'desc')
+      .orderByRaw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end, i.invoice_date) desc`)
+      .orderBy('i.invoice_id', 'desc')
       .limit(pageSize)
       .offset(offset);
 
     return {
-      cycles,
+      cycles: cycles.map(mapRecurringHistoryRow),
       total,
       page,
       pageSize,

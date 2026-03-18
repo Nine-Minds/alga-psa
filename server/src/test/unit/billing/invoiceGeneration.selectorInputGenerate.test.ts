@@ -21,6 +21,10 @@ function createQueryBuilder(rows: Row[], tableName: string) {
       return builder;
     }),
     andWhere: vi.fn(() => builder),
+    whereNotNull: vi.fn((column: string) => {
+      resultRows = resultRows.filter((row) => row[column] != null);
+      return builder;
+    }),
     select: vi.fn(() => builder),
     first: vi.fn(async () => resultRows[0]),
     update: vi.fn(async () => 1),
@@ -64,6 +68,7 @@ const mocks = vi.hoisted(() => {
       },
     ],
     invoices: [],
+    recurring_service_periods: [],
     client_billing_settings: [
       {
         client_id: 'client-1',
@@ -296,11 +301,15 @@ vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
 const { generateInvoice, generateInvoiceForSelectionInput } = await import(
   '../../../../../packages/billing/src/actions/invoiceGeneration'
 );
+const {
+  DUPLICATE_RECURRING_INVOICE_CODE,
+} = await import('../../../../../packages/billing/src/actions/invoiceGeneration.constants');
 
 describe('selector-input recurring generation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.rowsByTable.invoices.length = 0;
+    mocks.rowsByTable.recurring_service_periods.length = 0;
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
     mocks.calculateBilling.mockResolvedValue(mocks.clientBillingResult);
     mocks.calculateBillingForExecutionWindow.mockResolvedValue(mocks.contractBillingResult);
@@ -343,6 +352,40 @@ describe('selector-input recurring generation', () => {
     expect(mocks.rowsByTable.invoices[0]?.billing_cycle_id).toBe('cycle-1');
     expect(result).toMatchObject({
       billing_cycle_id: 'cycle-1',
+    });
+  });
+
+  it('T024: duplicate prevention blocks re-invoicing the same contract-cadence execution window even when there is no billing_cycle_id', async () => {
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    mocks.rowsByTable.invoices.push({
+      invoice_id: 'invoice-existing',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      billing_cycle_id: null,
+    });
+    mocks.rowsByTable.recurring_service_periods.push({
+      record_id: 'record-1',
+      tenant: 'tenant-1',
+      obligation_type: 'contract_line',
+      obligation_id: 'line-1',
+      invoice_window_start: '2025-02-08',
+      invoice_window_end: '2025-03-08',
+      invoice_id: 'invoice-existing',
+    });
+
+    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
+      message: 'Invoice already exists for this recurring execution window',
+      code: DUPLICATE_RECURRING_INVOICE_CODE,
+      billingCycleId: null,
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+      invoiceId: 'invoice-existing',
     });
   });
 });

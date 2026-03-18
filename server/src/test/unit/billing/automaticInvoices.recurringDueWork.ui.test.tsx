@@ -30,7 +30,7 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
         <table data-testid={id || 'data-table'}>
           <tbody>
             {data.map((row: any, rowIndex: number) => (
-              <tr key={row.rowKey ?? row.executionIdentityKey ?? row.billing_cycle_id ?? rowIndex}>
+              <tr key={row.rowKey ?? row.executionIdentityKey ?? row.invoiceId ?? row.billing_cycle_id ?? rowIndex}>
                 {columns.map((col: any, colIndex: number) => (
                   <td key={colIndex}>
                     {col.render
@@ -75,6 +75,18 @@ vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
       </div>
     );
   },
+}));
+
+vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
+  DropdownMenu: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, onClick, id }: any) => (
+    <button id={id} onClick={onClick} type="button">
+      {children}
+    </button>
+  ),
+  DropdownMenuSeparator: () => <div />,
 }));
 
 const { default: AutomaticInvoices } = await import(
@@ -124,6 +136,48 @@ function createContractRow() {
   });
 }
 
+function createInvoicedClientRow() {
+  return {
+    invoiceId: 'invoice-client-1',
+    invoiceNumber: 'INV-1001',
+    invoiceStatus: 'draft',
+    invoiceDate: '2025-04-01',
+    clientId: 'client-1',
+    clientName: 'Acme Co',
+    billingCycleId: 'cycle-2025-03',
+    hasBillingCycleBridge: true,
+    cadenceSource: 'client_schedule' as const,
+    executionWindowKind: 'billing_cycle_window' as const,
+    servicePeriodStart: '2025-03-01',
+    servicePeriodEnd: '2025-04-01',
+    servicePeriodLabel: '2025-03-01 to 2025-04-01',
+    invoiceWindowStart: '2025-03-01',
+    invoiceWindowEnd: '2025-04-01',
+    invoiceWindowLabel: '2025-03-01 to 2025-04-01',
+  };
+}
+
+function createInvoicedContractRow() {
+  return {
+    invoiceId: 'invoice-contract-1',
+    invoiceNumber: 'INV-2001',
+    invoiceStatus: 'draft',
+    invoiceDate: '2025-05-08',
+    clientId: 'client-9',
+    clientName: 'Zenith Health',
+    billingCycleId: null,
+    hasBillingCycleBridge: false,
+    cadenceSource: 'contract_anniversary' as const,
+    executionWindowKind: 'contract_cadence_window' as const,
+    servicePeriodStart: '2025-03-08',
+    servicePeriodEnd: '2025-04-08',
+    servicePeriodLabel: '2025-03-08 to 2025-04-08',
+    invoiceWindowStart: '2025-04-08',
+    invoiceWindowEnd: '2025-05-08',
+    invoiceWindowLabel: '2025-04-08 to 2025-05-08',
+  };
+}
+
 describe('AutomaticInvoices recurring due-work UI', () => {
   const getAvailableRecurringDueWorkMock = vi.spyOn(billingAndTaxActions, 'getAvailableRecurringDueWork');
   const getAvailableBillingPeriodsMock = vi.spyOn(billingAndTaxActions, 'getAvailableBillingPeriods');
@@ -139,6 +193,14 @@ describe('AutomaticInvoices recurring due-work UI', () => {
   const generateInvoicesAsRecurringBillingRunMock = vi.spyOn(
     recurringBillingRunActions,
     'generateInvoicesAsRecurringBillingRun',
+  );
+  const reverseRecurringInvoiceMock = vi.spyOn(
+    billingCycleActions,
+    'reverseRecurringInvoice',
+  );
+  const hardDeleteRecurringInvoiceMock = vi.spyOn(
+    billingCycleActions,
+    'hardDeleteRecurringInvoice',
   );
 
   beforeEach(() => {
@@ -183,6 +245,8 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       pageSize: 10,
       totalPages: 0,
     });
+    reverseRecurringInvoiceMock.mockResolvedValue();
+    hardDeleteRecurringInvoiceMock.mockResolvedValue();
     generateInvoicesAsRecurringBillingRunMock.mockResolvedValue({
       runId: 'run-1',
       selectionKey: 'selection-1',
@@ -449,6 +513,75 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(
         screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(0\)/i }),
       ).toBeDisabled();
+    });
+  });
+
+  it('T053/T058: invoiced recurring history renders a contract-cadence row without a billing_cycle_id and shows service-period-backed reverse copy', async () => {
+    getInvoicedBillingCyclesPaginatedMock.mockResolvedValue({
+      cycles: [createInvoicedContractRow()],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('INV-2001')).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByText('Contract anniversary').length).toBeGreaterThan(0);
+    expect(screen.getByText('Service-period-backed')).toBeInTheDocument();
+    expect(screen.getAllByText('2025-03-08 to 2025-04-08').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('2025-04-08 to 2025-05-08').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByRole('button', { name: /open menu/i }).at(-1)!);
+    fireEvent.click(screen.getByText('Reverse Invoice'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/without requiring a client billing cycle row/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Yes, Reverse Invoice/i }));
+
+    await waitFor(() => {
+      expect(reverseRecurringInvoiceMock).toHaveBeenCalledWith({
+        invoiceId: 'invoice-contract-1',
+        billingCycleId: null,
+      });
+    });
+  });
+
+  it('renders a bridged client-cadence history row and deletes it through the billing-cycle-compatible wrapper', async () => {
+    getInvoicedBillingCyclesPaginatedMock.mockResolvedValue({
+      cycles: [createInvoicedClientRow()],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('INV-1001')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /open menu/i }).at(-1)!);
+    fireEvent.click(screen.getByText('Delete Invoice'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/linked billing cycle will also be deleted/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(document.getElementById('delete-recurring-invoice-confirmation-confirm')!);
+
+    await waitFor(() => {
+      expect(hardDeleteRecurringInvoiceMock).toHaveBeenCalledWith({
+        invoiceId: 'invoice-client-1',
+        billingCycleId: 'cycle-2025-03',
+      });
     });
   });
 });

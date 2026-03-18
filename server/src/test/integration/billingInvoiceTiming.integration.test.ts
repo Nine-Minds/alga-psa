@@ -38,6 +38,9 @@ let tenantId: string;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let generateInvoiceForSelectionInput: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoiceForSelectionInput;
 let hardDeleteInvoiceAction: typeof import('@alga-psa/billing/actions/invoiceModification').hardDeleteInvoice;
+let getInvoicedBillingCyclesPaginatedAction: typeof import('@alga-psa/billing/actions/billingCycleActions').getInvoicedBillingCyclesPaginated;
+let reverseRecurringInvoiceAction: typeof import('@alga-psa/billing/actions/billingCycleActions').reverseRecurringInvoice;
+let hardDeleteRecurringInvoiceAction: typeof import('@alga-psa/billing/actions/billingCycleActions').hardDeleteRecurringInvoice;
 const authRef = vi.hoisted(() => ({
   tenantId: '11111111-1111-1111-1111-111111111111',
   userId: 'test-user',
@@ -124,6 +127,11 @@ describe('Billing Invoice Timing Integration', () => {
     authRef.tenantId = tenantId;
     ({ generateInvoice, generateInvoiceForSelectionInput } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ hardDeleteInvoice: hardDeleteInvoiceAction } = await import('@alga-psa/billing/actions/invoiceModification'));
+    ({
+      getInvoicedBillingCyclesPaginated: getInvoicedBillingCyclesPaginatedAction,
+      reverseRecurringInvoice: reverseRecurringInvoiceAction,
+      hardDeleteRecurringInvoice: hardDeleteRecurringInvoiceAction,
+    } = await import('@alga-psa/billing/actions/billingCycleActions'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -1063,6 +1071,439 @@ it('T021: deleting a recurring invoice clears service-period invoice linkage and
     .select('record_id');
 
   expect(invoiceableRows.map((row) => row.record_id)).toEqual([materializationPlan.records[0].recordId]);
+}, HOOK_TIMEOUT);
+
+it('T051: invoiced-history reader returns client-cadence recurring invoices with service-period metadata', async () => {
+  setupCommonMocks({ tenantId, userId: 'client-history-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Client History Reader',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Client History Service',
+    planName: 'Client History Plan',
+    baseRateCents: 19900,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+
+  const materializationPlan = materializeClientCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T18:40:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: fixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-client-history',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(materializationPlan.records[0]);
+
+  const generatedInvoice = await generateInvoice(cycleId);
+  expect(generatedInvoice).toBeTruthy();
+
+  const history = await getInvoicedBillingCyclesPaginatedAction({
+    page: 1,
+    pageSize: 10,
+    searchTerm: 'Client History Reader',
+  });
+
+  expect(history.total).toBeGreaterThan(0);
+  const historyRow = history.cycles.find((row) => row.invoiceId === generatedInvoice!.invoice_id);
+  expect(historyRow).toMatchObject({
+    invoiceId: generatedInvoice!.invoice_id,
+    clientName: 'Client History Reader',
+    billingCycleId: cycleId,
+    hasBillingCycleBridge: true,
+    cadenceSource: 'client_schedule',
+    executionWindowKind: 'billing_cycle_window',
+  });
+  expect(normalizeDateValue(historyRow?.servicePeriodStart)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(historyRow?.servicePeriodEnd)).toBe(nextPeriodStart);
+  expect(normalizeDateValue(historyRow?.invoiceWindowStart)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(historyRow?.invoiceWindowEnd)).toBe(nextPeriodStart);
+  expect(historyRow?.servicePeriodLabel).toContain(currentPeriodStart);
+  expect(historyRow?.servicePeriodLabel).toContain(nextPeriodStart);
+  expect(historyRow?.invoiceWindowLabel).toContain(currentPeriodStart);
+  expect(historyRow?.invoiceWindowLabel).toContain(nextPeriodStart);
+}, HOOK_TIMEOUT);
+
+it('T052: invoiced-history reader returns contract-cadence recurring invoices with service-period metadata and no billing-cycle bridge', async () => {
+  setupCommonMocks({ tenantId, userId: 'contract-history-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Contract History Reader',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-08',
+    currentPeriodStart: '2025-02-08',
+    nextPeriodStart: '2025-03-08',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Contract History Service',
+    planName: 'Contract History Plan',
+    baseRateCents: 22100,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+
+  const materializationPlan = materializeContractCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T18:45:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: `${currentPeriodStart}T00:00:00Z`,
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: fixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-contract-history',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(materializationPlan.records[0]);
+
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: contextLike.clientId,
+    contractId: fixedLine.contractId,
+    contractLineId: fixedLine.contractLineId,
+    windowStart: `${currentPeriodStart}T00:00:00Z`,
+    windowEnd: `${nextPeriodStart}T00:00:00Z`,
+  });
+
+  const generatedInvoice = await generateInvoiceForSelectionInput(selectorInput);
+  expect(generatedInvoice).toBeTruthy();
+
+  const history = await getInvoicedBillingCyclesPaginatedAction({
+    page: 1,
+    pageSize: 10,
+    searchTerm: 'Contract History Reader',
+  });
+
+  expect(history.total).toBeGreaterThan(0);
+  const historyRow = history.cycles.find((row) => row.invoiceId === generatedInvoice!.invoice_id);
+  expect(historyRow).toMatchObject({
+    invoiceId: generatedInvoice!.invoice_id,
+    clientName: 'Contract History Reader',
+    billingCycleId: null,
+    hasBillingCycleBridge: false,
+    cadenceSource: 'contract_anniversary',
+    executionWindowKind: 'contract_cadence_window',
+  });
+  expect(normalizeDateValue(historyRow?.servicePeriodStart)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(historyRow?.servicePeriodEnd)).toBe(nextPeriodStart);
+  expect(normalizeDateValue(historyRow?.invoiceWindowStart)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(historyRow?.invoiceWindowEnd)).toBe(nextPeriodStart);
+  expect(historyRow?.servicePeriodLabel).toContain(currentPeriodStart);
+  expect(historyRow?.servicePeriodLabel).toContain(nextPeriodStart);
+  expect(historyRow?.invoiceWindowLabel).toContain(currentPeriodStart);
+  expect(historyRow?.invoiceWindowLabel).toContain(nextPeriodStart);
+}, HOOK_TIMEOUT);
+
+it('T022/T056: reversing a bridged client-cadence recurring invoice updates history and restores service-period state while preserving billing-cycle-backed behavior', async () => {
+  setupCommonMocks({ tenantId, userId: 'client-reverse-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Client Reverse Reader',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Client Reverse Service',
+    planName: 'Client Reverse Plan',
+    baseRateCents: 20100,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+
+  const materializationPlan = materializeClientCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T18:50:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: fixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-client-reverse',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(materializationPlan.records[0]);
+
+  const generatedInvoice = await generateInvoice(cycleId);
+  expect(generatedInvoice).toBeTruthy();
+
+  await reverseRecurringInvoiceAction({
+    invoiceId: generatedInvoice!.invoice_id,
+    billingCycleId: cycleId,
+  });
+
+  const history = await getInvoicedBillingCyclesPaginatedAction({
+    page: 1,
+    pageSize: 10,
+    searchTerm: 'Client Reverse Reader',
+  });
+  expect(history.cycles.some((row) => row.invoiceId === generatedInvoice!.invoice_id)).toBe(false);
+
+  const reopenedRow = await db('recurring_service_periods')
+    .where({ tenant: tenantId, record_id: materializationPlan.records[0].recordId })
+    .first(['lifecycle_state', 'invoice_id', 'invoice_charge_id', 'invoice_charge_detail_id']);
+  expect(reopenedRow).toMatchObject({
+    lifecycle_state: 'locked',
+    invoice_id: null,
+    invoice_charge_id: null,
+    invoice_charge_detail_id: null,
+  });
+
+  const billingCycle = await db('client_billing_cycles')
+    .where({ tenant: tenantId, billing_cycle_id: cycleId })
+    .first(['billing_cycle_id', 'is_active']);
+  expect(billingCycle?.billing_cycle_id).toBe(cycleId);
+  expect(Boolean(billingCycle?.is_active)).toBe(false);
+}, HOOK_TIMEOUT);
+
+it('T054: reversing a contract-cadence recurring invoice updates invoiced history and restores service-period state', async () => {
+  setupCommonMocks({ tenantId, userId: 'contract-reverse-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Contract Reverse Reader',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-03-12',
+    currentPeriodStart: '2025-04-12',
+    nextPeriodStart: '2025-05-12',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Contract Reverse Service',
+    planName: 'Contract Reverse Plan',
+    baseRateCents: 24500,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+
+  const materializationPlan = materializeContractCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T18:55:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: `${currentPeriodStart}T00:00:00Z`,
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: fixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-contract-reverse',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(materializationPlan.records[0]);
+
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: contextLike.clientId,
+    contractId: fixedLine.contractId,
+    contractLineId: fixedLine.contractLineId,
+    windowStart: `${currentPeriodStart}T00:00:00Z`,
+    windowEnd: `${nextPeriodStart}T00:00:00Z`,
+  });
+  const generatedInvoice = await generateInvoiceForSelectionInput(selectorInput);
+  expect(generatedInvoice).toBeTruthy();
+
+  await reverseRecurringInvoiceAction({
+    invoiceId: generatedInvoice!.invoice_id,
+    billingCycleId: null,
+  });
+
+  const history = await getInvoicedBillingCyclesPaginatedAction({
+    page: 1,
+    pageSize: 10,
+    searchTerm: 'Contract Reverse Reader',
+  });
+  expect(history.cycles.some((row) => row.invoiceId === generatedInvoice!.invoice_id)).toBe(false);
+
+  const reopenedRow = await db('recurring_service_periods')
+    .where({ tenant: tenantId, record_id: materializationPlan.records[0].recordId })
+    .first(['lifecycle_state', 'invoice_id']);
+  expect(reopenedRow).toMatchObject({
+    lifecycle_state: 'locked',
+    invoice_id: null,
+  });
+}, HOOK_TIMEOUT);
+
+it('T055/T057: hard-deleting contract and bridged client recurring invoices updates history and restores the correct persisted state', async () => {
+  setupCommonMocks({ tenantId, userId: 'mixed-delete-user', permissionCheck: () => true });
+
+  const clientSetup = await createClientWithRecurringCycles({
+    clientName: 'Client Hard Delete Reader',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const clientFixedLine = await createFixedContractLine(clientSetup.contextLike, {
+    serviceName: 'Client Hard Delete Service',
+    planName: 'Client Hard Delete Plan',
+    baseRateCents: 20500,
+    startDate: clientSetup.currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+
+  const clientMaterializationPlan = materializeClientCadenceServicePeriods({
+    asOf: `${clientSetup.currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T19:00:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: clientFixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${clientFixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-client-hard-delete',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(clientMaterializationPlan.records[0]);
+
+  const clientInvoice = await generateInvoice(clientSetup.cycleId);
+  expect(clientInvoice).toBeTruthy();
+
+  await hardDeleteRecurringInvoiceAction({
+    invoiceId: clientInvoice!.invoice_id,
+    billingCycleId: clientSetup.cycleId,
+  });
+
+  const deletedBillingCycle = await db('client_billing_cycles')
+    .where({ tenant: tenantId, billing_cycle_id: clientSetup.cycleId })
+    .first(['billing_cycle_id']);
+  expect(deletedBillingCycle).toBeUndefined();
+
+  const contractSetup = await createClientWithRecurringCycles({
+    clientName: 'Contract Hard Delete Reader',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-03-12',
+    currentPeriodStart: '2025-04-12',
+    nextPeriodStart: '2025-05-12',
+  });
+
+  const contractFixedLine = await createFixedContractLine(contractSetup.contextLike, {
+    serviceName: 'Contract Hard Delete Service',
+    planName: 'Contract Hard Delete Plan',
+    baseRateCents: 24700,
+    startDate: contractSetup.currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+
+  const contractMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: `${contractSetup.currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T19:05:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: `${contractSetup.currentPeriodStart}T00:00:00Z`,
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: contractFixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${contractFixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-contract-hard-delete',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(contractMaterializationPlan.records[0]);
+
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: contractSetup.contextLike.clientId,
+    contractId: contractFixedLine.contractId,
+    contractLineId: contractFixedLine.contractLineId,
+    windowStart: `${contractSetup.currentPeriodStart}T00:00:00Z`,
+    windowEnd: `${contractSetup.nextPeriodStart}T00:00:00Z`,
+  });
+  const contractInvoice = await generateInvoiceForSelectionInput(selectorInput);
+  expect(contractInvoice).toBeTruthy();
+
+  await hardDeleteRecurringInvoiceAction({
+    invoiceId: contractInvoice!.invoice_id,
+    billingCycleId: null,
+  });
+
+  const history = await getInvoicedBillingCyclesPaginatedAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Hard Delete Reader',
+  });
+  expect(history.cycles.some((row) =>
+    row.invoiceId === clientInvoice!.invoice_id || row.invoiceId === contractInvoice!.invoice_id,
+  )).toBe(false);
+
+  const reopenedContractRow = await db('recurring_service_periods')
+    .where({ tenant: tenantId, record_id: contractMaterializationPlan.records[0].recordId })
+    .first(['lifecycle_state', 'invoice_id']);
+  expect(reopenedContractRow).toMatchObject({
+    lifecycle_state: 'locked',
+    invoice_id: null,
+  });
 }, HOOK_TIMEOUT);
 
 it('T276: DB-backed monthly contract-cadence scheduling, grouping, invoice generation, and hydration stay coherent for an 8th-anchored line', async () => {
