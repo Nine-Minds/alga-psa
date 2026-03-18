@@ -14,6 +14,11 @@ import {
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
 import { BillingEngine } from '@alga-psa/billing/services';
+import type { IRecurringServicePeriodRecord } from '@alga-psa/types';
+import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
+import { editRecurringServicePeriodBoundaries } from '@alga-psa/shared/billingClients/editRecurringServicePeriodBoundaries';
+import { regenerateRecurringServicePeriods } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
+import { applyRecurringServicePeriodInvoiceLinkage } from '@alga-psa/shared/billingClients/recurringServicePeriodInvoiceLinkage';
 import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 let db: Knex;
@@ -779,6 +784,267 @@ it('T252: DB-backed contract-cadence invoice generation can execute from selecto
   expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(currentPeriodEnd);
 }, HOOK_TIMEOUT);
 
+it('T316: DB-backed persisted service-period generation, editing, regeneration, and invoice linkage remain coherent under staged rollout', async () => {
+  setupCommonMocks({ tenantId, userId: 'persisted-ledger-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    currentPeriodStart,
+    currentPeriodEnd,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Persisted Ledger Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Persisted Ledger Service',
+    planName: 'Persisted Ledger Plan',
+    baseRateCents: 19500,
+    startDate: '2024-12-01',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+
+  const sourceObligation = {
+    tenant: tenantId,
+    obligationId: fixedLine.clientContractLineId,
+    obligationType: 'client_contract_line',
+    chargeFamily: 'fixed',
+  } as const;
+
+  const materializedRecordIds = [uuidv4(), uuidv4(), uuidv4(), uuidv4()];
+  let materializedRecordIndex = 0;
+  const nextRecordId = () => materializedRecordIds[materializedRecordIndex++] ?? uuidv4();
+
+  const materializationPlan = materializeClientCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T15:00:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation,
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.clientContractLineId}:v1`,
+    sourceRunKey: 'integration-materialize',
+    targetHorizonDays: 60,
+    recordIdFactory: nextRecordId,
+  });
+
+  const [currentGenerated, futureGenerated] = materializationPlan.records;
+  expect(currentGenerated).toBeTruthy();
+  expect(futureGenerated).toBeTruthy();
+
+  await upsertRecurringServicePeriodRecord(currentGenerated);
+  await upsertRecurringServicePeriodRecord(futureGenerated);
+
+  const boundaryEdit = editRecurringServicePeriodBoundaries({
+    record: currentGenerated,
+    editedAt: '2026-03-18T15:05:00.000Z',
+    sourceRuleVersion: `${fixedLine.clientContractLineId}:v1`,
+    updatedServicePeriod: {
+      start: '2025-01-10',
+      end: nextPeriodStart,
+      semantics: 'half_open',
+    },
+    updatedActivityWindow: {
+      start: '2025-01-10',
+      end: nextPeriodStart,
+      semantics: 'half_open',
+    },
+    recordIdFactory: nextRecordId,
+  });
+
+  await upsertRecurringServicePeriodRecord(boundaryEdit.supersededRecord);
+  await upsertRecurringServicePeriodRecord(boundaryEdit.editedRecord);
+
+  const preservedSlotCandidate: IRecurringServicePeriodRecord = {
+    ...currentGenerated,
+    recordId: uuidv4(),
+    servicePeriod: boundaryEdit.editedRecord.servicePeriod,
+    invoiceWindow: boundaryEdit.editedRecord.invoiceWindow,
+    activityWindow: boundaryEdit.editedRecord.activityWindow,
+    provenance: {
+      kind: 'generated',
+      reasonCode: 'initial_materialization',
+      sourceRuleVersion: `${fixedLine.clientContractLineId}:v2`,
+      sourceRunKey: 'integration-regenerate',
+    },
+    createdAt: '2026-03-18T15:10:00.000Z',
+    updatedAt: '2026-03-18T15:10:00.000Z',
+  };
+
+  const changedFutureCandidate: IRecurringServicePeriodRecord = {
+    ...futureGenerated,
+    recordId: uuidv4(),
+    servicePeriod: {
+      start: '2025-02-05',
+      end: '2025-03-01',
+      semantics: 'half_open',
+    },
+    activityWindow: {
+      start: '2025-02-05',
+      end: '2025-03-01',
+      semantics: 'half_open',
+    },
+    provenance: {
+      kind: 'generated',
+      reasonCode: 'initial_materialization',
+      sourceRuleVersion: `${fixedLine.clientContractLineId}:v2`,
+      sourceRunKey: 'integration-regenerate',
+    },
+    createdAt: '2026-03-18T15:10:00.000Z',
+    updatedAt: '2026-03-18T15:10:00.000Z',
+  };
+
+  const regenerationPlan = regenerateRecurringServicePeriods({
+    existingRecords: [boundaryEdit.editedRecord, futureGenerated],
+    candidateRecords: [preservedSlotCandidate, changedFutureCandidate],
+    regeneratedAt: '2026-03-18T15:10:00.000Z',
+    sourceRuleVersion: `${fixedLine.clientContractLineId}:v2`,
+    sourceRunKey: 'integration-regenerate',
+    recordIdFactory: nextRecordId,
+  });
+
+  expect(regenerationPlan.conflicts).toEqual([]);
+  expect(regenerationPlan.preservedRecords).toEqual([boundaryEdit.editedRecord]);
+  expect(regenerationPlan.regeneratedRecords).toHaveLength(1);
+
+  await upsertRecurringServicePeriodRecord(regenerationPlan.supersededRecords[0]);
+  await upsertRecurringServicePeriodRecord(regenerationPlan.regeneratedRecords[0]);
+
+  const preInvoiceRows = await db('recurring_service_periods')
+    .where({ tenant: tenantId, schedule_key: materializationPlan.scheduleKey })
+    .orderBy('service_period_start', 'asc')
+    .orderBy('revision', 'asc')
+    .select([
+      'record_id',
+      'lifecycle_state',
+      'service_period_start',
+      'service_period_end',
+      'invoice_charge_detail_id',
+    ]);
+
+  expect(preInvoiceRows).toHaveLength(4);
+  expect(preInvoiceRows.filter((row) => row.lifecycle_state === 'superseded')).toHaveLength(2);
+  const editedLedgerRow = preInvoiceRows.find(
+    (row) => row.record_id === boundaryEdit.editedRecord.recordId,
+  );
+  expect(editedLedgerRow?.lifecycle_state).toBe('edited');
+  expect(normalizeDateValue(editedLedgerRow?.service_period_start)).toBe('2025-01-10');
+  expect(normalizeDateValue(editedLedgerRow?.service_period_end)).toBe(nextPeriodStart);
+  expect(editedLedgerRow?.invoice_charge_detail_id ?? null).toBeNull();
+
+  const dueLedgerRows = await db('recurring_service_periods')
+    .where({
+      tenant: tenantId,
+      obligation_id: fixedLine.clientContractLineId,
+      obligation_type: 'client_contract_line',
+    })
+    .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
+    .where('invoice_window_start', currentPeriodStart)
+    .where('invoice_window_end', nextPeriodStart)
+    .whereNull('invoice_charge_detail_id')
+    .orderBy('service_period_start', 'asc')
+    .select([
+      'record_id',
+      'due_position',
+      'service_period_start',
+      'service_period_end',
+      'invoice_window_start',
+      'invoice_window_end',
+    ]);
+  expect(dueLedgerRows).toHaveLength(1);
+  expect(dueLedgerRows[0]).toMatchObject({
+    record_id: boundaryEdit.editedRecord.recordId,
+    due_position: 'advance',
+  });
+  expect(normalizeDateValue(dueLedgerRows[0]?.service_period_start)).toBe('2025-01-10');
+  expect(normalizeDateValue(dueLedgerRows[0]?.service_period_end)).toBe(nextPeriodStart);
+  expect(normalizeDateValue(dueLedgerRows[0]?.invoice_window_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(dueLedgerRows[0]?.invoice_window_end)).toBe(nextPeriodStart);
+
+  const configRow = await db('contract_line_service_configuration')
+    .where({
+      tenant: tenantId,
+      contract_line_id: fixedLine.contractLineId,
+      service_id: fixedLine.serviceId,
+    })
+    .first<{ config_id: string }>('config_id');
+  expect(configRow?.config_id).toBeTruthy();
+
+  const persistedInvoice = await createManualRecurringInvoiceDetail({
+    clientId: contextLike.clientId,
+    serviceId: fixedLine.serviceId,
+    configId: configRow!.config_id,
+    billingPeriodStart: currentPeriodStart,
+    billingPeriodEnd: nextPeriodStart,
+    servicePeriodStart: '2025-01-10',
+    servicePeriodEnd: currentPeriodEnd,
+    billingTiming: 'advance',
+    amountCents: 19500,
+  });
+
+  const linkedRecord = applyRecurringServicePeriodInvoiceLinkage(boundaryEdit.editedRecord, {
+    invoiceId: persistedInvoice.invoiceId,
+    invoiceChargeId: persistedInvoice.invoiceChargeId,
+    invoiceChargeDetailId: persistedInvoice.invoiceChargeDetailId,
+    linkedAt: '2026-03-18T15:15:00.000Z',
+  });
+
+  await upsertRecurringServicePeriodRecord(linkedRecord);
+
+  const billedRow = await db('recurring_service_periods')
+    .where({ tenant: tenantId, record_id: linkedRecord.recordId })
+    .first([
+      'record_id',
+      'lifecycle_state',
+      'invoice_id',
+      'invoice_charge_id',
+      'invoice_charge_detail_id',
+    ]);
+  expect(billedRow).toMatchObject({
+    record_id: linkedRecord.recordId,
+    lifecycle_state: 'billed',
+    invoice_id: persistedInvoice.invoiceId,
+    invoice_charge_id: persistedInvoice.invoiceChargeId,
+    invoice_charge_detail_id: persistedInvoice.invoiceChargeDetailId,
+  });
+
+  const futureRow = await db('recurring_service_periods')
+    .where({ tenant: tenantId, record_id: regenerationPlan.regeneratedRecords[0].recordId })
+    .first([
+      'record_id',
+      'lifecycle_state',
+      'service_period_start',
+      'service_period_end',
+      'invoice_charge_detail_id',
+    ]);
+  expect(futureRow).toMatchObject({
+    record_id: regenerationPlan.regeneratedRecords[0].recordId,
+    lifecycle_state: 'generated',
+    invoice_charge_detail_id: null,
+  });
+  expect(normalizeDateValue(futureRow?.service_period_start)).toBe('2025-02-05');
+  expect(normalizeDateValue(futureRow?.service_period_end)).toBe('2025-03-01');
+
+  const remainingDueLedgerRows = await db('recurring_service_periods')
+    .where({
+      tenant: tenantId,
+      obligation_id: fixedLine.clientContractLineId,
+      obligation_type: 'client_contract_line',
+    })
+    .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
+    .where('invoice_window_start', currentPeriodStart)
+    .where('invoice_window_end', nextPeriodStart)
+    .whereNull('invoice_charge_detail_id')
+    .select('record_id');
+  expect(remainingDueLedgerRows).toEqual([]);
+}, HOOK_TIMEOUT);
+
 });
 
 interface ClientSetupResult {
@@ -1037,6 +1303,145 @@ async function getPersistedInvoice(invoiceId: string) {
   return db('invoices')
     .where({ invoice_id: invoiceId, tenant: tenantId })
     .first(['invoice_id', 'billing_period_start', 'billing_period_end']);
+}
+
+async function upsertRecurringServicePeriodRecord(record: IRecurringServicePeriodRecord) {
+  const linkage = record.invoiceLinkage;
+
+  await db('recurring_service_periods')
+    .insert({
+      record_id: record.recordId,
+      tenant: record.sourceObligation.tenant,
+      schedule_key: record.scheduleKey,
+      period_key: record.periodKey,
+      revision: record.revision,
+      obligation_id: record.sourceObligation.obligationId,
+      obligation_type: record.sourceObligation.obligationType,
+      charge_family: record.sourceObligation.chargeFamily,
+      cadence_owner: record.cadenceOwner,
+      due_position: record.duePosition,
+      lifecycle_state: record.lifecycleState,
+      service_period_start: record.servicePeriod.start,
+      service_period_end: record.servicePeriod.end,
+      invoice_window_start: record.invoiceWindow.start,
+      invoice_window_end: record.invoiceWindow.end,
+      activity_window_start: record.activityWindow?.start ?? null,
+      activity_window_end: record.activityWindow?.end ?? null,
+      timing_metadata: record.timingMetadata ?? null,
+      provenance_kind: record.provenance.kind,
+      source_rule_version: record.provenance.sourceRuleVersion,
+      reason_code: record.provenance.reasonCode ?? null,
+      source_run_key: record.provenance.sourceRunKey ?? null,
+      supersedes_record_id: record.provenance.supersedesRecordId ?? null,
+      invoice_id: linkage?.invoiceId ?? null,
+      invoice_charge_id: linkage?.invoiceChargeId ?? null,
+      invoice_charge_detail_id: linkage?.invoiceChargeDetailId ?? null,
+      invoice_linked_at: linkage?.linkedAt ?? null,
+      created_at: record.createdAt,
+      updated_at: record.updatedAt,
+    })
+    .onConflict(['tenant', 'record_id'])
+    .merge({
+      schedule_key: record.scheduleKey,
+      period_key: record.periodKey,
+      revision: record.revision,
+      obligation_id: record.sourceObligation.obligationId,
+      obligation_type: record.sourceObligation.obligationType,
+      charge_family: record.sourceObligation.chargeFamily,
+      cadence_owner: record.cadenceOwner,
+      due_position: record.duePosition,
+      lifecycle_state: record.lifecycleState,
+      service_period_start: record.servicePeriod.start,
+      service_period_end: record.servicePeriod.end,
+      invoice_window_start: record.invoiceWindow.start,
+      invoice_window_end: record.invoiceWindow.end,
+      activity_window_start: record.activityWindow?.start ?? null,
+      activity_window_end: record.activityWindow?.end ?? null,
+      timing_metadata: record.timingMetadata ?? null,
+      provenance_kind: record.provenance.kind,
+      source_rule_version: record.provenance.sourceRuleVersion,
+      reason_code: record.provenance.reasonCode ?? null,
+      source_run_key: record.provenance.sourceRunKey ?? null,
+      supersedes_record_id: record.provenance.supersedesRecordId ?? null,
+      invoice_id: linkage?.invoiceId ?? null,
+      invoice_charge_id: linkage?.invoiceChargeId ?? null,
+      invoice_charge_detail_id: linkage?.invoiceChargeDetailId ?? null,
+      invoice_linked_at: linkage?.linkedAt ?? null,
+      created_at: record.createdAt,
+      updated_at: record.updatedAt,
+    });
+}
+
+async function createManualRecurringInvoiceDetail(input: {
+  clientId: string;
+  serviceId: string;
+  configId: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  servicePeriodStart: string;
+  servicePeriodEnd: string;
+  billingTiming: 'advance' | 'arrears';
+  amountCents: number;
+}) {
+  const invoiceId = uuidv4();
+  const invoiceChargeId = uuidv4();
+  const invoiceChargeDetailId = uuidv4();
+  const now = '2026-03-18T15:15:00.000Z';
+
+  await db('invoices').insert({
+    invoice_id: invoiceId,
+    tenant: tenantId,
+    client_id: input.clientId,
+    invoice_number: `INV-${invoiceId.slice(0, 8)}`,
+    invoice_date: now,
+    due_date: now,
+    subtotal: input.amountCents,
+    tax: 0,
+    total_amount: input.amountCents,
+    status: 'draft',
+    currency_code: 'USD',
+    billing_period_start: input.billingPeriodStart,
+    billing_period_end: input.billingPeriodEnd,
+    created_at: now,
+    updated_at: now,
+  });
+
+  await db('invoice_charges').insert({
+    item_id: invoiceChargeId,
+    tenant: tenantId,
+    invoice_id: invoiceId,
+    service_id: input.serviceId,
+    description: 'Persisted recurring service period',
+    quantity: 1,
+    unit_price: input.amountCents / 100,
+    total_price: input.amountCents / 100,
+    net_amount: input.amountCents / 100,
+    tax_amount: 0,
+    is_manual: false,
+    created_at: now,
+    updated_at: now,
+  });
+
+  await db('invoice_charge_details').insert({
+    item_detail_id: invoiceChargeDetailId,
+    item_id: invoiceChargeId,
+    tenant: tenantId,
+    service_id: input.serviceId,
+    config_id: input.configId,
+    quantity: 1,
+    rate: input.amountCents / 100,
+    service_period_start: input.servicePeriodStart,
+    service_period_end: input.servicePeriodEnd,
+    billing_timing: input.billingTiming,
+    created_at: now,
+    updated_at: now,
+  });
+
+  return {
+    invoiceId,
+    invoiceChargeId,
+    invoiceChargeDetailId,
+  };
 }
 
 function normalizeDateValue(value: unknown): string | null {

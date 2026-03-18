@@ -2396,7 +2396,7 @@
   {
     "id": "F267",
     "description": "Add DB-backed validation proving persisted service-period generation, editing, regeneration, and invoice linkage remain coherent under staged rollout",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Acceptance Criteria"

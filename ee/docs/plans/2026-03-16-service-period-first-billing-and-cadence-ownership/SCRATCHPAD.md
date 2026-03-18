@@ -41,6 +41,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The first DB-backed persisted-ledger lifecycle validation now exists, which closes `F267` and `T316`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now carries `T316`, which persists real `recurring_service_periods` rows under the live schema, supersedes a generated row through an explicit boundary edit, regenerates a later future slot while preserving the edited row, and then links the billed edited revision to a real `invoice_charge_details` row
+  - the integration checkpoint intentionally validates the staged-rollout ledger seam instead of claiming full edited-period invoice-generation cutover: the test proves database selection eligibility, supersession state, regenerated future continuity, and billed linkage persistence without depending on later runtime/UI passes that own edited-period invoice explanations
+  - the DB-backed test also exposed one concrete implementation gotcha that the earlier domain-only helpers could not: persisted-record helpers need UUID `recordIdFactory` inputs when they are used against the physical `recurring_service_periods` table because the live schema stores `record_id` as `uuid`
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T316" --hookTimeout 600000 --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+      - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not by the new persisted-ledger integration test
+
 - (2026-03-18) Downstream persisted-period contracts are now explicit across charge-family behavior, bucket semantics, post-materialization lifecycle, authoring predictability, grouping after edits, and client/support explanations, which closes `F261`, `F262`, `F263`, `F264`, `F265`, `F266`, `T311`, `T312`, `T313`, `T314`, and `T315`:
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_CHARGE_FAMILIES.md` now documents that fixed, product, and license recurring lines share one persisted service-period lifecycle contract even if rating logic still differs by family, keeping `F261` aligned with the later runtime cutover rather than inviting family-specific ledger semantics
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_BUCKET_SEMANTICS.md` now classifies bucket/allowance behavior explicitly under edited, skipped, deferred, and regenerated periods so v1 does not silently imply unsupported automatic rollover repair when operators change future schedules

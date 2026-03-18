@@ -2804,7 +2804,7 @@
   {
     "id": "T316",
     "description": "DB-backed validation proves persisted service-period generation, editing, regeneration, and invoice linkage stay coherent during staged rollout",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F267"
     ]
