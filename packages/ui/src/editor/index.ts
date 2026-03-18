@@ -8,3 +8,4 @@ export { EmojiSuggestionExtension, EmojiSuggestionPopup } from './EmojiSuggestio
 export type { EmojiSuggestionState } from './EmojiSuggestion';
 export { MentionNode, MentionSuggestionExtension, MentionSuggestionPopup } from './MentionSuggestion';
 export type { MentionSuggestionState, MentionUser as MentionSuggestionUser } from './MentionSuggestion';
+export { AiResponseBlock } from './AiResponseBlock';
