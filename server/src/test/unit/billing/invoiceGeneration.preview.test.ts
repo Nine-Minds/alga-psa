@@ -88,7 +88,25 @@ const mocks = vi.hoisted(() => {
   const getDueDate = vi.fn(async () => '2025-03-15');
   const getClientDefaultTaxRegionCode = vi.fn(async () => 'US-NY');
   const getClientLogoUrl = vi.fn(async () => null);
-  const getClientContractPurchaseOrderContext = vi.fn(async () => ({ po_number: null }));
+  const getClientContractPurchaseOrderContext = vi.fn(async () => ({ po_number: null, po_amount: null }));
+  const getPurchaseOrderConsumedCents = vi.fn(async () => 0);
+  const computePurchaseOrderOverage = vi.fn(
+    ({
+      authorizedCents,
+      consumedCents,
+      invoiceTotalCents,
+    }: {
+      authorizedCents: number;
+      consumedCents: number;
+      invoiceTotalCents: number;
+    }) => ({
+      authorizedCents,
+      consumedCents,
+      remainingCents: authorizedCents - consumedCents,
+      invoiceTotalCents,
+      overageCents: Math.max(0, invoiceTotalCents - Math.max(0, authorizedCents - consumedCents)),
+    }),
+  );
   const hasPermission = vi.fn(() => true);
   const selectDueRecurringServicePeriodsForBillingWindow = vi.fn(async () => ({
     'contract-line-1': {
@@ -135,6 +153,8 @@ const mocks = vi.hoisted(() => {
     getClientDefaultTaxRegionCode,
     getClientLogoUrl,
     getClientContractPurchaseOrderContext,
+    getPurchaseOrderConsumedCents,
+    computePurchaseOrderOverage,
     hasPermission,
     selectDueRecurringServicePeriodsForBillingWindow,
     calculateBilling,
@@ -193,9 +213,9 @@ vi.mock('@alga-psa/formatting/avatarUtils', () => ({
 }));
 
 vi.mock('../../../../../packages/billing/src/services/purchaseOrderService', () => ({
-  computePurchaseOrderOverage: vi.fn(),
+  computePurchaseOrderOverage: mocks.computePurchaseOrderOverage,
   getClientContractPurchaseOrderContext: mocks.getClientContractPurchaseOrderContext,
-  getPurchaseOrderConsumedCents: vi.fn(),
+  getPurchaseOrderConsumedCents: mocks.getPurchaseOrderConsumedCents,
 }));
 
 vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => ({
@@ -207,7 +227,7 @@ vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => (
   },
 }));
 
-const { previewInvoice, previewInvoiceForSelectionInput } = await import(
+const { previewInvoice, previewInvoiceForSelectionInput, getPurchaseOrderOverageForSelectionInput } = await import(
   '../../../../../packages/billing/src/actions/invoiceGeneration'
 );
 
@@ -215,6 +235,8 @@ describe('invoice preview recurring timing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.hasPermission.mockReturnValue(true);
+    mocks.getClientContractPurchaseOrderContext.mockResolvedValue({ po_number: null, po_amount: null });
+    mocks.getPurchaseOrderConsumedCents.mockResolvedValue(0);
   });
 
   it('T076: one-cycle invoice preview uses canonical service periods and still matches expected recurring totals', async () => {
@@ -446,6 +468,108 @@ describe('invoice preview recurring timing', () => {
           }),
         ],
       }),
+    });
+  });
+
+  it('T044: selector-input PO-overage action returns null when the preview spans no PO-governed client contract', async () => {
+    mocks.calculateBilling.mockResolvedValueOnce({
+      charges: [
+        {
+          type: 'product',
+          serviceId: 'service-1',
+          serviceName: 'Managed Router',
+          quantity: 1,
+          rate: 4000,
+          total: 4000,
+          tax_amount: 200,
+          tax_rate: 5,
+          tax_region: 'US-NY',
+          is_taxable: true,
+          servicePeriodStart: '2025-01-01',
+          servicePeriodEnd: '2025-02-01',
+          billingTiming: 'arrears',
+          client_contract_id: null,
+          contract_name: null,
+        },
+      ],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 4000,
+      finalAmount: 4000,
+      currency_code: 'USD',
+    });
+
+    const result = await getPurchaseOrderOverageForSelectionInput(
+      buildContractCadenceDueSelectionInput({
+        clientId: 'client-1',
+        contractId: 'contract-1',
+        contractLineId: 'line-1',
+        windowStart: '2025-02-08',
+        windowEnd: '2025-03-08',
+      }),
+    );
+
+    expect(result).toBeNull();
+    expect(mocks.getClientContractPurchaseOrderContext).not.toHaveBeenCalled();
+    expect(mocks.computePurchaseOrderOverage).not.toHaveBeenCalled();
+  });
+
+  it('T045: selector-input PO-overage action computes overage correctly for a contract-cadence execution window', async () => {
+    mocks.calculateBilling.mockResolvedValueOnce({
+      charges: [
+        {
+          type: 'product',
+          serviceId: 'service-1',
+          serviceName: 'Managed Router',
+          quantity: 1,
+          rate: 4000,
+          total: 4000,
+          tax_amount: 200,
+          tax_rate: 5,
+          tax_region: 'US-NY',
+          is_taxable: true,
+          servicePeriodStart: '2025-01-01',
+          servicePeriodEnd: '2025-02-01',
+          billingTiming: 'arrears',
+          client_contract_id: 'contract-1',
+          contract_name: 'Zenith Annual Support',
+        },
+      ],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 4000,
+      finalAmount: 4000,
+      currency_code: 'USD',
+    });
+    mocks.getClientContractPurchaseOrderContext.mockResolvedValueOnce({
+      po_number: 'PO-CONTRACT',
+      po_amount: 3000,
+    });
+    mocks.getPurchaseOrderConsumedCents.mockResolvedValueOnce(500);
+
+    const result = await getPurchaseOrderOverageForSelectionInput(
+      buildContractCadenceDueSelectionInput({
+        clientId: 'client-1',
+        contractId: 'contract-1',
+        contractLineId: 'line-1',
+        windowStart: '2025-02-08',
+        windowEnd: '2025-03-08',
+      }),
+    );
+
+    expect(mocks.computePurchaseOrderOverage).toHaveBeenCalledWith({
+      authorizedCents: 3000,
+      consumedCents: 500,
+      invoiceTotalCents: 4200,
+    });
+    expect(result).toEqual({
+      client_contract_id: 'contract-1',
+      po_number: 'PO-CONTRACT',
+      authorized_cents: 3000,
+      consumed_cents: 500,
+      remaining_cents: 2500,
+      invoice_total_cents: 4200,
+      overage_cents: 1700,
     });
   });
 });

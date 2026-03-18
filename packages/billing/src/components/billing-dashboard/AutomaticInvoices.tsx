@@ -11,8 +11,12 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Search, Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
-import type { IClientContractLineCycle, IRecurringDueWorkRow } from '@alga-psa/types';
-import { getPurchaseOrderOverageForBillingCycle, previewInvoiceForSelectionInput } from '@alga-psa/billing/actions/invoiceGeneration';
+import type { IClientContractLineCycle, IRecurringDueSelectionInput, IRecurringDueWorkRow } from '@alga-psa/types';
+import {
+  getPurchaseOrderOverageForBillingCycle,
+  getPurchaseOrderOverageForSelectionInput,
+  previewInvoiceForSelectionInput,
+} from '@alga-psa/billing/actions/invoiceGeneration';
 import { generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
 import { getInvoicedBillingCyclesPaginated, removeBillingCycle, hardDeleteBillingCycle } from '@alga-psa/billing/actions/billingCycleActions';
@@ -108,7 +112,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [previewState, setPreviewState] = useState<{
     data: WasmInvoiceViewModel | null; // Use the directly imported ViewModel type
     billingCycleId: string | null;
-  }>({ data: null, billingCycleId: null });
+    executionIdentityKey: string | null;
+    selectorInput: IRecurringDueSelectionInput | null;
+  }>({ data: null, billingCycleId: null, executionIdentityKey: null, selectorInput: null });
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isGeneratingFromPreview, setIsGeneratingFromPreview] = useState(false); // Loading state for generate from preview
   const [poOverageDialogState, setPoOverageDialogState] = useState<{
@@ -123,11 +129,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [poOverageSingleConfirm, setPoOverageSingleConfirm] = useState<{
     isOpen: boolean;
     billingCycleId: string | null;
+    executionIdentityKey: string | null;
+    selectorInput: IRecurringDueSelectionInput | null;
     overageCents: number;
     poNumber: string | null;
   }>({
     isOpen: false,
     billingCycleId: null,
+    executionIdentityKey: null,
+    selectorInput: null,
     overageCents: 0,
     poNumber: null,
   });
@@ -339,6 +349,24 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     };
   };
 
+  const buildRecurringRunTargetFromSelection = (selection: {
+    billingCycleId?: string | null;
+    selectorInput: IRecurringDueSelectionInput;
+  }) => {
+    if (selection.billingCycleId) {
+      return {
+        billingCycleId: selection.billingCycleId,
+        selectorInput: selection.selectorInput,
+        executionWindow: selection.selectorInput.executionWindow,
+      };
+    }
+
+    return {
+      selectorInput: selection.selectorInput,
+      executionWindow: selection.selectorInput.executionWindow,
+    };
+  };
+
   const resolveFailurePeriod = (failure: {
     billingCycleId?: string | null;
     executionIdentityKey?: string;
@@ -354,10 +382,20 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     const response = await previewInvoiceForSelectionInput(period.selectorInput);
     if (response.success) {
       // No cast needed now, types should match directly
-      setPreviewState({ data: response.data, billingCycleId: period.billingCycleId ?? null });
+      setPreviewState({
+        data: response.data,
+        billingCycleId: period.billingCycleId ?? null,
+        executionIdentityKey: period.executionIdentityKey,
+        selectorInput: period.selectorInput,
+      });
       setShowPreviewDialog(true);
     } else {
-      setPreviewState({ data: null, billingCycleId: null }); // Clear preview state on error
+      setPreviewState({
+        data: null,
+        billingCycleId: null,
+        executionIdentityKey: null,
+        selectorInput: null,
+      }); // Clear preview state on error
       setErrors({
         preview: (response as { success: false; error: string }).error
       });
@@ -381,10 +419,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     try {
       const overageResults = await Promise.all(
         selectedExecutionPeriods
-          .filter((period) => Boolean(period.billingCycleId))
           .map(async (period) => {
           try {
-            const overage = await getPurchaseOrderOverageForBillingCycle(period.billingCycleId as string);
+            const overage = await getPurchaseOrderOverageForSelectionInput(period.selectorInput);
             return { period, overage };
           } catch (err) {
             // If overage analysis fails, treat as "no overage warning" and let generation surface errors normally.
@@ -539,29 +576,43 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const handleGenerateFromPreview = async () => {
-    if (!previewState.billingCycleId) return;
+    if (!previewState.selectorInput) return;
 
     setIsGeneratingFromPreview(true);
     setErrors({}); // Clear previous errors
 
     try {
-      const overage = await getPurchaseOrderOverageForBillingCycle(previewState.billingCycleId);
+      const overage = await getPurchaseOrderOverageForSelectionInput(previewState.selectorInput);
       if (overage && overage.overage_cents > 0) {
         setPoOverageSingleConfirm({
           isOpen: true,
           billingCycleId: previewState.billingCycleId,
+          executionIdentityKey: previewState.executionIdentityKey,
+          selectorInput: previewState.selectorInput,
           overageCents: overage.overage_cents,
           poNumber: overage.po_number ?? null,
         });
         return;
       }
 
-      const runResult = await generateInvoicesAsRecurringBillingRun({ billingCycleIds: [previewState.billingCycleId] });
+      const runResult = await generateInvoicesAsRecurringBillingRun({
+        targets: [
+          buildRecurringRunTargetFromSelection({
+            billingCycleId: previewState.billingCycleId,
+            selectorInput: previewState.selectorInput,
+          }),
+        ],
+      });
       if (runResult.failures.length > 0) {
         throw new Error(runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview');
       }
       setShowPreviewDialog(false); // Close dialog on success
-      setPreviewState({ data: null, billingCycleId: null }); // Reset preview state
+      setPreviewState({
+        data: null,
+        billingCycleId: null,
+        executionIdentityKey: null,
+        selectorInput: null,
+      }); // Reset preview state
       onGenerateSuccess(); // Refresh data lists
     } catch (err) {
       setErrors({
@@ -573,26 +624,43 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const handlePoOverageSingleConfirm = async () => {
-    if (!poOverageSingleConfirm.billingCycleId) {
+    if (!poOverageSingleConfirm.selectorInput) {
       return;
     }
 
-    const billingCycleId = poOverageSingleConfirm.billingCycleId;
-    setPoOverageSingleConfirm({ isOpen: false, billingCycleId: null, overageCents: 0, poNumber: null });
+    const { billingCycleId, selectorInput } = poOverageSingleConfirm;
+    setPoOverageSingleConfirm({
+      isOpen: false,
+      billingCycleId: null,
+      executionIdentityKey: null,
+      selectorInput: null,
+      overageCents: 0,
+      poNumber: null,
+    });
 
     setIsGeneratingFromPreview(true);
     setErrors({});
 
     try {
       const runResult = await generateInvoicesAsRecurringBillingRun({
-        billingCycleIds: [billingCycleId],
+        targets: [
+          buildRecurringRunTargetFromSelection({
+            billingCycleId,
+            selectorInput,
+          }),
+        ],
         allowPoOverage: true,
       });
       if (runResult.failures.length > 0) {
         throw new Error(runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview');
       }
       setShowPreviewDialog(false);
-      setPreviewState({ data: null, billingCycleId: null });
+      setPreviewState({
+        data: null,
+        billingCycleId: null,
+        executionIdentityKey: null,
+        selectorInput: null,
+      });
       onGenerateSuccess();
     } catch (err) {
       setErrors({
@@ -781,6 +849,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     <Badge variant="outline">
                       {record.cadenceSource === 'contract_anniversary' ? 'Contract anniversary' : 'Client schedule'}
                     </Badge>
+                    {!record.hasBillingCycleBridge ? (
+                      <Badge variant="secondary">No billing cycle bridge</Badge>
+                    ) : null}
                     <div className="text-xs text-muted-foreground">
                       {record.dueState === 'early' ? 'Early' : 'Due'}
                     </div>
@@ -1019,7 +1090,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         // Reset preview state when dialog is closed
         onClose={() => {
           setShowPreviewDialog(false);
-          setPreviewState({ data: null, billingCycleId: null });
+          setPreviewState({
+            data: null,
+            billingCycleId: null,
+            executionIdentityKey: null,
+            selectorInput: null,
+          });
           setErrors({}); // Clear preview-specific errors on close
         }}
         title="Invoice Preview"
@@ -1139,7 +1215,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             variant="outline" // Use outline for secondary action
             onClick={() => {
               setShowPreviewDialog(false);
-              setPreviewState({ data: null, billingCycleId: null }); // Reset state on close
+              setPreviewState({
+                data: null,
+                billingCycleId: null,
+                executionIdentityKey: null,
+                selectorInput: null,
+              }); // Reset state on close
               setErrors({}); // Clear errors on close
             }}
             disabled={isGeneratingFromPreview} // Disable while generating
@@ -1154,7 +1235,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             disabled={
               !!errors.preview
               || !previewState.data
-              || !previewState.billingCycleId
+              || !previewState.selectorInput
               || isGeneratingFromPreview
               || isPreviewLoading
             }
@@ -1216,7 +1297,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       <ConfirmationDialog
         id="po-overage-single-confirm"
         isOpen={poOverageSingleConfirm.isOpen}
-        onClose={() => setPoOverageSingleConfirm({ isOpen: false, billingCycleId: null, overageCents: 0, poNumber: null })}
+        onClose={() =>
+          setPoOverageSingleConfirm({
+            isOpen: false,
+            billingCycleId: null,
+            executionIdentityKey: null,
+            selectorInput: null,
+            overageCents: 0,
+            poNumber: null,
+          })
+        }
         title="Purchase Order Limit Overages"
         message={
           <div className="space-y-2">

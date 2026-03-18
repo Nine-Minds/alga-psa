@@ -132,6 +132,10 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     invoiceGenerationActions,
     'previewInvoiceForSelectionInput',
   );
+  const getPurchaseOrderOverageForSelectionInputMock = vi.spyOn(
+    invoiceGenerationActions,
+    'getPurchaseOrderOverageForSelectionInput',
+  );
   const generateInvoicesAsRecurringBillingRunMock = vi.spyOn(
     recurringBillingRunActions,
     'generateInvoicesAsRecurringBillingRun',
@@ -163,6 +167,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         total: 0,
       },
     } as any);
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue(null);
     getAvailableRecurringDueWorkMock.mockResolvedValue({
       rows: [createContractRow(), createClientRow()],
       materializationGaps: [],
@@ -204,7 +209,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.getByText('Zenith Health')).toBeInTheDocument();
   });
 
-  it('T026/T029/T030: AutomaticInvoices renders contract-cadence rows with cadence, service-period, invoice-window, and contract context metadata', async () => {
+  it('T026/T029/T030/T039: AutomaticInvoices renders contract-cadence rows with cadence, service-period, invoice-window, contract context, and an unbridged badge', async () => {
     const contractRow = createContractRow();
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
 
@@ -216,6 +221,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.getByText('2025-04-08 to 2025-05-08')).toBeInTheDocument();
     expect(screen.getByText('Zenith Annual Support')).toBeInTheDocument();
     expect(screen.getByText('Managed Services')).toBeInTheDocument();
+    expect(screen.getByText('No billing cycle bridge')).toBeInTheDocument();
 
     fireEvent.click(document.getElementById(`select-${contractRow.executionIdentityKey}`)!);
 
@@ -227,6 +233,17 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
       ).not.toBeDisabled();
     });
+  });
+
+  it('T040: AutomaticInvoices still renders compatibility client-cadence rows during the cutover', async () => {
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Client schedule')).toBeInTheDocument();
+    expect(screen.getAllByText('2025-03-01 to 2025-04-01').length).toBeGreaterThan(0);
   });
 
   it('T032: AutomaticInvoices preview opens for a client-cadence row through the selector-input preview path', async () => {
@@ -280,7 +297,45 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     });
   });
 
-  it('T027/T031: mixed selection generates with execution-window targets and maps failures back to unbridged contract rows', async () => {
+  it('T034: AutomaticInvoices batch generate submits selector-input execution windows for unbridged contract-cadence rows', async () => {
+    const contractRow = createContractRow();
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      rows: [contractRow],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    fireEvent.click(document.getElementById(`select-${contractRow.executionIdentityKey}`)!);
+    fireEvent.click(
+      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+    );
+
+    await waitFor(() => {
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        targets: [
+          expect.objectContaining({
+            selectorInput: contractRow.selectorInput,
+            executionWindow: contractRow.executionWindow,
+          }),
+        ],
+      });
+    });
+
+    const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
+    expect(generateCall?.[0]?.targets?.[0]?.billingCycleId).toBeUndefined();
+  });
+
+  it('T027/T031/T035: mixed selection generates with execution-window targets and maps failures back to unbridged contract rows', async () => {
     const contractRow = createContractRow();
     const clientRow = createClientRow();
 

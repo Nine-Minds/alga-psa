@@ -437,6 +437,85 @@ export type PurchaseOrderOverageResult = {
   overage_cents: number;
 };
 
+async function getPurchaseOrderOverageForSelectionInputInternal(params: {
+  knex: Knex;
+  tenant: string;
+  selectorInput: IRecurringDueSelectionInput;
+}): Promise<PurchaseOrderOverageResult | null> {
+  const { knex, tenant, selectorInput } = params;
+  const client_id = selectorInput.clientId;
+  const cycleEnd = selectorInput.windowEnd;
+
+  const billingEngine = new BillingEngine();
+  const billingResult = await calculateBillingForSelectionInput({
+    billingEngine,
+    selectorInput,
+  });
+  if (billingResult.error) {
+    throw new Error(billingResult.error);
+  }
+
+  const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
+  if (!clientContractId) {
+    return null;
+  }
+
+  const poContext = await getClientContractPurchaseOrderContext({
+    knex,
+    tenant,
+    clientContractId,
+  });
+
+  if (poContext.po_amount == null) {
+    return null;
+  }
+
+  const client = await getClientDetails(knex, tenant, client_id);
+  const defaultRegion = await getClientDefaultTaxRegionCode(knex, tenant, client_id);
+  const previewTax = await calculatePreviewTax(
+    billingResult.charges,
+    client_id,
+    cycleEnd,
+    defaultRegion || client?.tax_region || '',
+  );
+  const invoiceTotal = Math.trunc(billingResult.totalAmount + previewTax);
+
+  const consumed = await getPurchaseOrderConsumedCents({ knex, tenant, clientContractId });
+  const computed = computePurchaseOrderOverage({
+    authorizedCents: poContext.po_amount,
+    consumedCents: consumed,
+    invoiceTotalCents: invoiceTotal,
+  });
+
+  return {
+    client_contract_id: clientContractId,
+    po_number: poContext.po_number,
+    authorized_cents: computed.authorizedCents,
+    consumed_cents: computed.consumedCents,
+    remaining_cents: computed.remainingCents,
+    invoice_total_cents: computed.invoiceTotalCents,
+    overage_cents: computed.overageCents,
+  };
+}
+
+export const getPurchaseOrderOverageForSelectionInput = withAuth(async (
+  user,
+  { tenant },
+  selectorInput: IRecurringDueSelectionInput,
+): Promise<PurchaseOrderOverageResult | null> => {
+  const { knex } = await createTenantKnex();
+
+  if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+    throw new Error('Permission denied: Cannot generate invoices');
+  }
+
+  return getPurchaseOrderOverageForSelectionInputInternal({
+    knex,
+    tenant,
+    selectorInput,
+  });
+});
+
 export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
   user,
   { tenant },
@@ -474,54 +553,16 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
     throw new Error('Invalid billing cycle dates');
   }
 
-  const billingEngine = new BillingEngine();
-  const billingResult = await calculateBillingForInvoiceWindow({
-    billingEngine,
-    clientId: client_id,
-    cycleStart,
-    cycleEnd,
-    billingCycleId: billing_cycle_id,
-  });
-  if (billingResult.error) {
-    throw new Error(billingResult.error);
-  }
-
-  const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
-  if (!clientContractId) {
-    return null;
-  }
-
-  const poContext = await getClientContractPurchaseOrderContext({
+  return getPurchaseOrderOverageForSelectionInputInternal({
     knex,
     tenant,
-    clientContractId,
+    selectorInput: buildBillingCycleDueSelectionInput({
+      clientId: client_id,
+      billingCycleId: billing_cycle_id,
+      windowStart: cycleStart,
+      windowEnd: cycleEnd,
+    }),
   });
-
-  if (poContext.po_amount == null) {
-    return null;
-  }
-
-  const client = await getClientDetails(knex, tenant, client_id);
-  const defaultRegion = await getClientDefaultTaxRegionCode(knex, tenant, client_id);
-  const previewTax = await calculatePreviewTax(billingResult.charges, client_id, cycleEnd, defaultRegion || client?.tax_region || '');
-  const invoiceTotal = Math.trunc(billingResult.totalAmount + previewTax);
-
-  const consumed = await getPurchaseOrderConsumedCents({ knex, tenant, clientContractId });
-  const computed = computePurchaseOrderOverage({
-    authorizedCents: poContext.po_amount,
-    consumedCents: consumed,
-    invoiceTotalCents: invoiceTotal,
-  });
-
-  return {
-    client_contract_id: clientContractId,
-    po_number: poContext.po_number,
-    authorized_cents: computed.authorizedCents,
-    consumed_cents: computed.consumedCents,
-    remaining_cents: computed.remainingCents,
-    invoice_total_cents: computed.invoiceTotalCents,
-    overage_cents: computed.overageCents,
-  };
 });
 
 // TODO: Move to billingAndTax.ts

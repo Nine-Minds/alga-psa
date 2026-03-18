@@ -4,7 +4,11 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { buildClientScheduleDueWorkRow } from '@alga-psa/shared/billingClients/recurringDueWork';
+import {
+  buildClientScheduleDueWorkRow,
+  buildServicePeriodRecurringDueWorkRow,
+} from '@alga-psa/shared/billingClients/recurringDueWork';
+import { buildRecurringServicePeriodRecord } from '../../test-utils/recurringTimingFixtures';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
@@ -111,11 +115,42 @@ function createPeriods() {
   ] as any;
 }
 
+function createContractRow() {
+  return buildServicePeriodRecurringDueWorkRow({
+    clientId: 'client-9',
+    clientName: 'Zenith Health',
+    contractId: 'contract-1',
+    contractLineId: 'line-1',
+    contractName: 'Zenith Annual Support',
+    contractLineName: 'Managed Services',
+    record: buildRecurringServicePeriodRecord({
+      cadenceOwner: 'contract',
+      duePosition: 'arrears',
+      sourceObligation: {
+        tenant: 'tenant-1',
+        obligationId: 'line-1',
+        obligationType: 'contract_line',
+        chargeFamily: 'fixed',
+      },
+      invoiceWindow: {
+        start: '2025-04-08',
+        end: '2025-05-08',
+        semantics: 'half_open',
+      },
+      servicePeriod: {
+        start: '2025-03-08',
+        end: '2025-04-08',
+        semantics: 'half_open',
+      },
+    }),
+  });
+}
+
 describe('Contract PO UI flows', () => {
   const previewInvoiceForSelectionInputMock = vi.spyOn(invoiceGenerationActions, 'previewInvoiceForSelectionInput');
-  const getPurchaseOrderOverageForBillingCycleMock = vi.spyOn(
+  const getPurchaseOrderOverageForSelectionInputMock = vi.spyOn(
     invoiceGenerationActions,
-    'getPurchaseOrderOverageForBillingCycle'
+    'getPurchaseOrderOverageForSelectionInput'
   );
   const generateInvoicesAsRecurringBillingRunMock = vi.spyOn(
     recurringBillingRunActions,
@@ -128,7 +163,7 @@ describe('Contract PO UI flows', () => {
 
   beforeEach(() => {
     previewInvoiceForSelectionInputMock.mockReset();
-    getPurchaseOrderOverageForBillingCycleMock.mockReset();
+    getPurchaseOrderOverageForSelectionInputMock.mockReset();
     generateInvoicesAsRecurringBillingRunMock.mockReset();
     getInvoicedBillingCyclesPaginatedMock.mockReset();
     removeBillingCycleMock.mockReset();
@@ -158,6 +193,7 @@ describe('Contract PO UI flows', () => {
       failedCount: 0,
       failures: [],
     });
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -165,7 +201,7 @@ describe('Contract PO UI flows', () => {
   });
 
   it('T007: batch invoicing does not prompt when no invoice can overrun PO limits', async () => {
-    getPurchaseOrderOverageForBillingCycleMock.mockResolvedValue(null);
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue(null);
 
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
 
@@ -188,7 +224,7 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(generateButton!);
 
     await waitFor(() => {
-      expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalledTimes(2);
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledTimes(2);
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
         targets: [
@@ -202,8 +238,8 @@ describe('Contract PO UI flows', () => {
   });
 
   it('T008: batch invoicing prompts upfront when overage possible and can skip overage invoices', async () => {
-    getPurchaseOrderOverageForBillingCycleMock.mockImplementation(async (billingCycleId: string) => {
-      if (billingCycleId === 'cycle-1') {
+    getPurchaseOrderOverageForSelectionInputMock.mockImplementation(async (selectorInput: any) => {
+      if (selectorInput.billingCycleId === 'cycle-1') {
         return { overage_cents: 500, po_number: 'PO-1' };
       }
       return null;
@@ -251,7 +287,7 @@ describe('Contract PO UI flows', () => {
   });
 
   it('T006: single invoice requires explicit override confirmation to proceed on overage', async () => {
-    getPurchaseOrderOverageForBillingCycleMock.mockResolvedValue({ overage_cents: 2500, po_number: 'PO-OVR' });
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue({ overage_cents: 2500, po_number: 'PO-OVR' });
     previewInvoiceForSelectionInputMock.mockResolvedValue({
       success: true,
       data: {
@@ -291,24 +327,136 @@ describe('Contract PO UI flows', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Generate Invoice$/i }));
 
     await waitFor(() => {
-      expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalled();
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalled();
       expect(screen.getByRole('button', { name: /Proceed Anyway/i })).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Proceed Anyway/i }));
 
     await waitFor(() => {
-      expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalledTimes(1);
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledTimes(1);
     });
 
-    const [billingCycleId] = getPurchaseOrderOverageForBillingCycleMock.mock.calls[0] ?? [];
-    expect(typeof billingCycleId).toBe('string');
+    const [selectorInput] = getPurchaseOrderOverageForSelectionInputMock.mock.calls[0] ?? [];
+    expect(selectorInput?.billingCycleId).toBe('cycle-1');
 
     await waitFor(() => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        billingCycleIds: [billingCycleId],
+        targets: [expect.objectContaining({ billingCycleId: 'cycle-1' })],
         allowPoOverage: true,
       });
     });
+  });
+
+  it('T036: batch PO-overage analysis resolves a contract-cadence row with no billing_cycle_id', async () => {
+    const contractRow = createContractRow();
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      rows: [contractRow],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue({
+      overage_cents: 1200,
+      po_number: 'PO-CONTRACT',
+    } as any);
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const checkbox = within(readyTable).getAllByRole('checkbox')[0];
+    fireEvent.click(checkbox!);
+    fireEvent.click(
+      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+    );
+
+    await waitFor(() => {
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledWith(contractRow.selectorInput);
+      expect(screen.getByText('Purchase Order Limit Overages')).toBeInTheDocument();
+      expect(screen.getByText(/Zenith Health: over by/i)).toBeInTheDocument();
+    });
+  });
+
+  it('T037/T038: selector-input preview generate supports contract-cadence rows, survives reopen, and submits recurring targets without a billing-cycle bridge', async () => {
+    const contractRow = createContractRow();
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      rows: [contractRow],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue({
+      overage_cents: 2500,
+      po_number: 'PO-CONTRACT',
+    } as any);
+    previewInvoiceForSelectionInputMock.mockResolvedValue({
+      success: true,
+      data: {
+        invoiceNumber: 'INV-CONTRACT',
+        issueDate: '2025-04-08',
+        dueDate: '2025-05-08',
+        currencyCode: 'USD',
+        customer: { name: 'Zenith Health', address: '200 Support Way' },
+        tenantClient: { name: 'Tenant', address: 'Tenant Address', logoUrl: null },
+        items: [],
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+      },
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const checkbox = within(readyTable).getAllByRole('checkbox')[0];
+    fireEvent.click(checkbox!);
+    fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Generate Invoice$/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Close Preview/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
+
+    await waitFor(() => {
+      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledTimes(2);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Generate Invoice$/i }));
+
+    await waitFor(() => {
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledWith(contractRow.selectorInput);
+      expect(screen.getByRole('button', { name: /Proceed Anyway/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Proceed Anyway/i }));
+
+    await waitFor(() => {
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        targets: [
+          expect.objectContaining({
+            selectorInput: contractRow.selectorInput,
+            executionWindow: contractRow.executionWindow,
+          }),
+        ],
+        allowPoOverage: true,
+      });
+    });
+
+    const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
+    expect(generateCall?.[0]?.targets?.[0]?.billingCycleId).toBeUndefined();
   });
 });
