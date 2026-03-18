@@ -33,7 +33,7 @@ export interface PlatformNotification {
   banner_content: string;
   detail_content: string;
   target_audience: TargetAudience;
-  priority: 'info' | 'warning' | 'destructive' | 'success' | 'default';
+  variant: 'info' | 'warning' | 'destructive' | 'success' | 'default';
   starts_at: Date;
   expires_at: Date | null;
   created_by: string | null;
@@ -53,7 +53,7 @@ export interface CreateNotificationInput {
   banner_content: string;
   detail_content: string;
   target_audience?: TargetAudience;
-  priority?: string;
+  variant?: string;
   starts_at?: string;
   expires_at?: string;
   recipients?: RecipientInput[];
@@ -64,7 +64,7 @@ export interface UpdateNotificationInput {
   banner_content?: string;
   detail_content?: string;
   target_audience?: TargetAudience;
-  priority?: string;
+  variant?: string;
   starts_at?: string;
   expires_at?: string;
   is_active?: boolean;
@@ -141,7 +141,7 @@ export class PlatformNotificationService {
           banner_content: input.banner_content,
           detail_content: input.detail_content,
           target_audience: JSON.stringify(input.target_audience ?? { filters: {} }),
-          priority: input.priority || 'info',
+          variant: input.variant || 'info',
           starts_at: input.starts_at ? new Date(input.starts_at) : new Date(),
           expires_at: input.expires_at ? new Date(input.expires_at) : null,
           created_by: createdBy || null,
@@ -168,7 +168,7 @@ export class PlatformNotificationService {
       if (input.banner_content !== undefined) updateData.banner_content = input.banner_content;
       if (input.detail_content !== undefined) updateData.detail_content = input.detail_content;
       if (input.target_audience !== undefined) updateData.target_audience = JSON.stringify(input.target_audience);
-      if (input.priority !== undefined) updateData.priority = input.priority;
+      if (input.variant !== undefined) updateData.variant = input.variant;
       if (input.starts_at !== undefined) updateData.starts_at = new Date(input.starts_at);
       if (input.expires_at !== undefined) updateData.expires_at = input.expires_at ? new Date(input.expires_at) : null;
       if (input.is_active !== undefined) updateData.is_active = input.is_active;
@@ -284,10 +284,10 @@ export class PlatformNotificationService {
     const rows = await query;
     const notifications = rows.map(this.parseRow);
 
-    // Sort by priority, then by starts_at desc
-    const priorityOrder: Record<string, number> = { destructive: 0, warning: 1, info: 2, success: 3, default: 4 };
+    // Sort by variant, then by starts_at desc
+    const variantOrder: Record<string, number> = { destructive: 0, warning: 1, info: 2, success: 3, default: 4 };
     return notifications.sort((a, b) => {
-      const pDiff = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
+      const pDiff = (variantOrder[a.variant] ?? 2) - (variantOrder[b.variant] ?? 2);
       if (pDiff !== 0) return pDiff;
       return new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime();
     });

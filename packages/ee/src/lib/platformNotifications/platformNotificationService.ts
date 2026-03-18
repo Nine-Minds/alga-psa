@@ -24,7 +24,7 @@ export interface PlatformNotification {
   banner_content: string;
   detail_content: string;
   target_audience: TargetAudience;
-  priority: string;
+  variant: string;
   starts_at: Date;
   expires_at: Date | null;
   created_by: string | null;
@@ -44,7 +44,7 @@ export interface CreateNotificationInput {
   banner_content: string;
   detail_content: string;
   target_audience?: TargetAudience;
-  priority?: string;
+  variant?: string;
   starts_at?: string;
   expires_at?: string;
   recipients?: RecipientInput[];
@@ -55,7 +55,7 @@ export interface UpdateNotificationInput {
   banner_content?: string;
   detail_content?: string;
   target_audience?: TargetAudience;
-  priority?: string;
+  variant?: string;
   starts_at?: string;
   expires_at?: string;
   is_active?: boolean;

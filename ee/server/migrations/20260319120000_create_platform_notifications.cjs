@@ -17,7 +17,7 @@ exports.up = async function up(knex) {
     table.text('banner_content').notNullable();
     table.text('detail_content').notNullable();
     table.jsonb('target_audience').notNullable().defaultTo(JSON.stringify({ filters: {} }));
-    table.string('priority', 20).notNullable().defaultTo('info');
+    table.string('variant', 20).notNullable().defaultTo('info');
     table.timestamp('starts_at').notNullable().defaultTo(knex.fn.now());
     table.timestamp('expires_at').nullable();
     table.uuid('created_by').nullable();

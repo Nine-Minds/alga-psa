@@ -11,7 +11,7 @@ interface PlatformUpdateDetailProps {
   notificationId: string;
   title: string;
   detailContent: string;
-  priority: string;
+  variant: string;
   createdAt: string;
 }
 
@@ -25,9 +25,9 @@ const variantLabels: Record<string, string> = {
   default: 'Notice',
 };
 
-function toAlertVariant(priority: string): AlertVariant {
+function toAlertVariant(v: string): AlertVariant {
   const valid: AlertVariant[] = ['default', 'destructive', 'success', 'warning', 'info'];
-  if (valid.includes(priority as AlertVariant)) return priority as AlertVariant;
+  if (valid.includes(v as AlertVariant)) return v as AlertVariant;
   return 'info';
 }
 
@@ -35,13 +35,13 @@ export function PlatformUpdateDetail({
   notificationId,
   title,
   detailContent,
-  priority,
+  variant: variantProp,
   createdAt,
 }: PlatformUpdateDetailProps) {
   const router = useRouter();
   const viewRecorded = useRef(false);
-  const variant = toAlertVariant(priority);
-  const label = variantLabels[priority] || 'Notice';
+  const variant = toAlertVariant(variantProp);
+  const label = variantLabels[variantProp] || 'Notice';
 
   // Record detail view on client mount — avoids overcounting from prefetch/RSC renders
   useEffect(() => {
@@ -53,6 +53,7 @@ export function PlatformUpdateDetail({
   return (
     <div className="max-w-3xl mx-auto py-6 px-4">
       <Button
+        id="platform-update-back"
         variant="ghost"
         size="sm"
         onClick={() => router.back()}

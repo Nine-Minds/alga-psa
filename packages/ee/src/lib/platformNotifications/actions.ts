@@ -1,10 +1,12 @@
 'use server';
 
+import type { PlatformNotification } from './platformNotificationService';
+
 /**
  * Platform Notification Actions - CE Empty Stub
  */
 
-export async function getActivePlatformNotifications(): Promise<never[]> {
+export async function getActivePlatformNotifications(): Promise<PlatformNotification[]> {
   return [];
 }
 

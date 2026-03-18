@@ -6285,7 +6285,7 @@ interface PlatformNotification {
     excluded_user_ids?: string[];
     resolved_user_count?: number;
   };
-  priority: 'info' | 'warning' | 'destructive' | 'success' | 'default';
+  variant: 'info' | 'warning' | 'destructive' | 'success' | 'default';
   starts_at: string;
   expires_at: string | null;
   created_by: string | null;
@@ -6356,12 +6356,12 @@ function NotificationsView() {
       ),
     },
     {
-      title: 'Priority',
-      dataIndex: 'priority',
+      title: 'Variant',
+      dataIndex: 'variant',
       render: (_, row) => {
         const toneMap: Record<string, string> = { destructive: 'danger', warning: 'warning', info: 'info', success: 'success', default: 'muted' };
-        const tone = toneMap[row.priority] || 'info';
-        return <Badge tone={tone as any}>{row.priority}</Badge>;
+        const tone = toneMap[row.variant] || 'info';
+        return <Badge tone={tone as any}>{row.variant}</Badge>;
       },
     },
     {
@@ -6442,7 +6442,7 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
   const [title, setTitle] = useState(notification?.title || '');
   const [bannerContent, setBannerContent] = useState(notification?.banner_content || '');
   const [detailContent, setDetailContent] = useState(notification?.detail_content || '');
-  const [priority, setPriority] = useState(notification?.priority || 'info');
+  const [variant, setVariant] = useState(notification?.variant || 'info');
   const [startsAt, setStartsAt] = useState(notification?.starts_at ? notification.starts_at.slice(0, 16) : '');
   const [expiresAt, setExpiresAt] = useState(notification?.expires_at ? notification.expires_at.slice(0, 16) : '');
   const [isActive, setIsActive] = useState(notification?.is_active ?? true);
@@ -6554,7 +6554,7 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
       banner_content: bannerContent,
       detail_content: detailContent,
       target_audience: targetAudience,
-      priority,
+      variant,
       recipients: recipientList,
       ...(startsAt && { starts_at: new Date(startsAt).toISOString() }),
       ...(expiresAt && { expires_at: new Date(expiresAt).toISOString() }),
@@ -6603,7 +6603,7 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
       )
     : recipients;
 
-  const priorityOptions: SelectOption[] = [
+  const variantOptions: SelectOption[] = [
     { value: 'info', label: 'Info (blue)' },
     { value: 'warning', label: 'Warning (amber)' },
     { value: 'destructive', label: 'Destructive (red)' },
@@ -6617,12 +6617,13 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
 
   const tenantOptions: SelectOption[] = tenants.map(t => ({ value: t.tenant, label: t.company_name }));
 
-  const priorityColors: Record<string, string> = {
-    info: '#3b82f6',
-    warning: '#f59e0b',
-    destructive: '#ef4444',
-    success: '#22c55e',
-    default: '#64748b',
+  // Map DB variant to ui-kit Alert tone
+  const variantToTone: Record<string, 'info' | 'success' | 'warning' | 'danger'> = {
+    info: 'info',
+    warning: 'warning',
+    destructive: 'danger',
+    success: 'success',
+    default: 'info',
   };
 
   return (
@@ -6662,8 +6663,8 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
             <div>
-              <Label>Priority</Label>
-              <CustomSelect options={priorityOptions} value={priority} onValueChange={setPriority} />
+              <Label>Variant</Label>
+              <CustomSelect options={variantOptions} value={variant} onValueChange={setVariant} />
             </div>
             {isEdit && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '1.5rem' }}>
@@ -6691,19 +6692,13 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
 
           <div style={{ marginBottom: '1rem' }}>
             <Label style={{ marginBottom: '0.5rem', display: 'block' }}>Banner Preview</Label>
-            <div style={{
-              padding: '0.75rem 1rem',
-              borderRadius: '0.5rem',
-              backgroundColor: `${priorityColors[priority]}15`,
-              border: `1px solid ${priorityColors[priority]}40`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-            }}>
-              <div style={{ flex: 1, fontSize: '0.875rem' }} dangerouslySetInnerHTML={{ __html: bannerContent || '<em>Banner content preview...</em>' }} />
-              <button style={{ padding: '0.25rem 0.75rem', borderRadius: '0.25rem', border: '1px solid #ccc', background: 'white', fontSize: '0.75rem', cursor: 'pointer' }}>Learn More</button>
-              <button style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', border: 'none', background: 'transparent', fontSize: '0.75rem', cursor: 'pointer', color: '#666' }}>✕</button>
-            </div>
+            <Alert tone={variantToTone[variant] || 'info'}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ flex: 1, fontSize: '0.875rem' }} dangerouslySetInnerHTML={{ __html: bannerContent || '<em>Banner content preview...</em>' }} />
+                <button style={{ padding: '0.25rem 0.75rem', borderRadius: '0.25rem', border: '1px solid #ccc', background: 'white', fontSize: '0.75rem', cursor: 'pointer' }}>Learn More</button>
+                <button style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', border: 'none', background: 'transparent', fontSize: '0.75rem', cursor: 'pointer', color: '#666' }}>✕</button>
+              </div>
+            </Alert>
           </div>
 
           <Separator />

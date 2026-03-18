@@ -27,7 +27,7 @@ export default async function PlatformUpdatePage({ params }: PageProps) {
       notificationId={notification.notification_id}
       title={notification.title}
       detailContent={notification.detail_content}
-      priority={notification.priority}
+      variant={notification.variant}
       createdAt={notification.created_at instanceof Date ? notification.created_at.toISOString() : String(notification.created_at)}
     />
   );
