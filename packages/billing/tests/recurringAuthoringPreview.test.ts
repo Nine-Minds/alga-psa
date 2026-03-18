@@ -58,4 +58,51 @@ describe('recurring authoring preview copy', () => {
         'Partial periods keep the full recurring fee even when contract dates land inside a service period.',
     });
   });
+
+  it('T308: schedule previews and explainers show illustrative future materialized service periods before a contract line is saved', () => {
+    expect(
+      getRecurringAuthoringPreview({
+        cadenceOwner: 'client',
+        billingTiming: 'advance',
+        billingFrequency: 'monthly',
+        enableProration: true,
+      }),
+    ).toMatchObject({
+      materializedPeriodsHeading: 'Illustrative future materialized periods',
+      materializedPeriodsSummary:
+        'If you save this recurring line, future periods would materialize on the client billing schedule preview before invoice generation.',
+      materializedPeriods: expect.arrayContaining([
+        {
+          servicePeriodLabel: '2025-04-01 to 2025-05-01',
+          invoiceWindowLabel: '2025-04-01 to 2025-05-01',
+        },
+        {
+          servicePeriodLabel: '2025-05-01 to 2025-06-01',
+          invoiceWindowLabel: '2025-05-01 to 2025-06-01',
+        },
+      ]),
+    });
+
+    expect(
+      getRecurringAuthoringPreview({
+        cadenceOwner: 'contract',
+        billingTiming: 'arrears',
+        billingFrequency: 'monthly',
+        enableProration: false,
+      }),
+    ).toMatchObject({
+      materializedPeriodsSummary:
+        'If you save this recurring line, future periods would materialize on an anniversary-style preview anchored to the 8th before invoice generation.',
+      materializedPeriods: expect.arrayContaining([
+        {
+          servicePeriodLabel: '2025-04-08 to 2025-05-08',
+          invoiceWindowLabel: '2025-05-08 to 2025-06-08',
+        },
+        {
+          servicePeriodLabel: '2025-05-08 to 2025-06-08',
+          invoiceWindowLabel: '2025-06-08 to 2025-07-08',
+        },
+      ]),
+    });
+  });
 });

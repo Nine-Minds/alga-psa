@@ -29,6 +29,7 @@ const recurringServicePeriodUiStates = read('RECURRING_SERVICE_PERIOD_UI_STATES.
 const recurringServicePeriodEditValidation = read('RECURRING_SERVICE_PERIOD_EDIT_VALIDATION.md');
 const recurringServicePeriodEditConflicts = read('RECURRING_SERVICE_PERIOD_EDIT_CONFLICTS.md');
 const recurringServicePeriodListing = read('RECURRING_SERVICE_PERIOD_LISTING.md');
+const recurringServicePeriodAuthoringPreview = read('RECURRING_SERVICE_PERIOD_AUTHORING_PREVIEW.md');
 const recurringServicePeriodOperationalViews = read('RECURRING_SERVICE_PERIOD_OPERATIONAL_VIEWS.md');
 const recurringServicePeriodDueSelection = read('RECURRING_SERVICE_PERIOD_DUE_SELECTION.md');
 const recurringServicePeriodInvoiceLinkage = read('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
@@ -366,6 +367,19 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodOperationalViews).toContain('`exceptionRows`');
     expect(recurringServicePeriodOperationalViews).toContain('edited`, `skipped`, or `locked` state');
     expect(recurringServicePeriodOperationalViews).toContain('before invoice generation');
+  });
+
+  it('T308: authoring previews show illustrative future materialized service periods before a recurring line is saved', () => {
+    expect(recurringServicePeriodAuthoringPreview).toContain('# Recurring Service-Period Authoring Preview');
+    expect(recurringServicePeriodAuthoringPreview).toContain('## Preview Contract');
+    expect(recurringServicePeriodAuthoringPreview).toContain('packages/billing/src/components/billing-dashboard/contracts/recurringAuthoringPreview.ts');
+    expect(recurringServicePeriodAuthoringPreview).toContain('`materializedPeriodsHeading`');
+    expect(recurringServicePeriodAuthoringPreview).toContain('`materializedPeriods[]`');
+    expect(recurringServicePeriodAuthoringPreview).toContain('## Illustrative Materialized Periods');
+    expect(recurringServicePeriodAuthoringPreview).toContain('client-cadence previews use the client-cadence materialization helper');
+    expect(recurringServicePeriodAuthoringPreview).toContain('contract-cadence previews use the contract-cadence materialization helper');
+    expect(recurringServicePeriodAuthoringPreview).toContain('the preview rows are explanatory examples, not persisted ledger records');
+    expect(recurringServicePeriodAuthoringPreview).toContain('before save instead of appearing only after contract creation');
   });
 
   it('T349: edit transport surfaces define request, provenance, and structured validation feedback before dashboard editing lands', () => {

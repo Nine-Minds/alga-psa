@@ -48,6 +48,9 @@ describe('contract wizard cadence_owner wiring', () => {
     expect(fixedFeeStepSource).toContain("import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';");
     expect(fixedFeeStepSource).toContain('Recurring Preview Before Save');
     expect(fixedFeeStepSource).toContain('recurringPreview.firstInvoiceSummary');
+    expect(fixedFeeStepSource).toContain('billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency');
+    expect(fixedFeeStepSource).toContain('recurringPreview.materializedPeriodsHeading');
+    expect(fixedFeeStepSource).toContain('recurringPreview.materializedPeriods.map');
     expect(fixedFeeStepSource).toContain(
       "updateData({ cadence_owner: value as ContractWizardData['cadence_owner'] })"
     );

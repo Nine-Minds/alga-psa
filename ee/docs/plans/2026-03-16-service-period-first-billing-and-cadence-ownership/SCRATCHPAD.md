@@ -41,6 +41,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Pre-save authoring previews now show illustrative future materialized periods, which closes `F258` and `T308`:
+  - `packages/billing/src/components/billing-dashboard/contracts/recurringAuthoringPreview.ts` now generates `materializedPeriods[]` alongside the existing cadence-owner, first-invoice, and partial-period explainer copy; the preview rows are illustrative, but they come from the same client-cadence and contract-cadence materialization helpers used elsewhere instead of ad hoc sample text
+  - the fixed-fee contract wizard step, contract review step, template fixed-fee step, and template review step now all thread billing frequency into that helper and render the illustrative future service periods plus invoice windows, so staff can see the service-period-first model before the recurring line is saved
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_AUTHORING_PREVIEW.md` now documents the explicit rule: unsaved work gets explanatory future-period examples generated from materialization logic, not fake persisted rows
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run ../packages/billing/tests/recurringAuthoringPreview.test.ts ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) Billing-staff operational inspection now has an explicit shared view contract, which closes `F257` and `T300`:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodOperationalView`, `IRecurringServicePeriodOperationalViewSummary`, and `IRecurringServicePeriodOperationalViewRow`, so upcoming-period inspection has one typed read model instead of every later dashboard surface inventing its own row contract
   - `shared/billingClients/recurringServicePeriodOperationalView.ts` now projects the existing future-listing query and display-state contract into one operational view: deterministic upcoming rows, lifecycle-aware display badges, and summary counts for generated versus exception rows (`edited|skipped|locked`) before invoice generation

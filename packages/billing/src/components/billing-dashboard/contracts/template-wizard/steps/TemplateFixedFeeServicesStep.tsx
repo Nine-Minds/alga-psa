@@ -53,6 +53,7 @@ export function TemplateFixedFeeServicesStep({
   const recurringPreview = getRecurringAuthoringPreview({
     cadenceOwner: data.cadence_owner,
     billingTiming: data.billing_timing,
+    billingFrequency: data.billing_frequency,
     enableProration: data.enable_proration,
   });
 
@@ -210,6 +211,16 @@ export function TemplateFixedFeeServicesStep({
           <p><strong>Billing Timing:</strong> {recurringPreview.billingTimingLabel}</p>
           <p>{recurringPreview.billingTimingSummary}</p>
           <p>{recurringPreview.partialPeriodSummary}</p>
+          <p><strong>{recurringPreview.materializedPeriodsHeading}:</strong></p>
+          <p>{recurringPreview.materializedPeriodsSummary}</p>
+          <ul className="list-disc pl-5 space-y-1">
+            {recurringPreview.materializedPeriods.map((period) => (
+              <li key={`${period.servicePeriodLabel}:${period.invoiceWindowLabel}`}>
+                <span><strong>Service:</strong> {period.servicePeriodLabel}</span>
+                <span className="block"><strong>Invoice window:</strong> {period.invoiceWindowLabel}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <TemplateServicePreviewSection

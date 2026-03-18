@@ -17,6 +17,7 @@ export function TemplateReviewContractStep({
   const recurringPreview = getRecurringAuthoringPreview({
     cadenceOwner: data.cadence_owner,
     billingTiming: data.billing_timing,
+    billingFrequency: data.billing_frequency,
     enableProration: data.enable_proration,
   });
 
@@ -115,6 +116,16 @@ export function TemplateReviewContractStep({
                   <p>{recurringPreview.cadenceOwnerSummary}</p>
                   <p>{recurringPreview.firstInvoiceSummary}</p>
                   <p>{recurringPreview.partialPeriodSummary}</p>
+                  <p className="font-medium">{recurringPreview.materializedPeriodsHeading}</p>
+                  <p>{recurringPreview.materializedPeriodsSummary}</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {recurringPreview.materializedPeriods.map((period) => (
+                      <li key={`${period.servicePeriodLabel}:${period.invoiceWindowLabel}`}>
+                        <span><strong>Service:</strong> {period.servicePeriodLabel}</span>
+                        <span className="block"><strong>Invoice window:</strong> {period.invoiceWindowLabel}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
                 {data.fixed_services.map((service, index) => (
                   <div key={`${service.service_id}-${index}`} className="border border-[rgb(var(--color-border-200))] rounded-md p-3 bg-[rgb(var(--color-border-50))]">

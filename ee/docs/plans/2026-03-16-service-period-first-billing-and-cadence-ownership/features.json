@@ -2315,7 +2315,7 @@
   {
     "id": "F258",
     "description": "Define how materialized service periods participate in schedule previews and explainers before a contract line is saved",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Authoring-path and storage-reconciliation requirements"

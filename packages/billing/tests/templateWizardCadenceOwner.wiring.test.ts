@@ -72,9 +72,14 @@ describe('template wizard cadence_owner wiring', () => {
     expect(fixedStepSource).toContain('recurringPreview.firstInvoiceSummary');
     expect(fixedStepSource).toContain('recurringPreview.cadenceOwnerSummary');
     expect(fixedStepSource).toContain('recurringPreview.partialPeriodSummary');
+    expect(fixedStepSource).toContain('billingFrequency: data.billing_frequency');
+    expect(fixedStepSource).toContain('recurringPreview.materializedPeriodsHeading');
+    expect(fixedStepSource).toContain('recurringPreview.materializedPeriods.map');
 
     expect(reviewSource).toContain('Partial-period adjustment:');
     expect(reviewSource).toContain('recurringPreview.firstInvoiceSummary');
+    expect(reviewSource).toContain('recurringPreview.materializedPeriodsHeading');
+    expect(reviewSource).toContain('recurringPreview.materializedPeriods.map');
     expect(actionsSource).toContain('billingTiming: submission.billing_timing,');
   });
 });

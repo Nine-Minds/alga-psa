@@ -2739,7 +2739,7 @@
   {
     "id": "T308",
     "description": "Schedule previews and explainers show future materialized service periods before a contract line is saved",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F258"
     ]
