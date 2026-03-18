@@ -4,6 +4,7 @@ import type {
   ISO8601String,
 } from '@alga-psa/types';
 import { evaluateRecurringServicePeriodMutationPermission } from './recurringServicePeriodMutations';
+import { validateRecurringServicePeriodEditContinuity } from './recurringServicePeriodEditValidation';
 import { validateRecurringServicePeriodProvenance } from './recurringServicePeriodProvenance';
 
 export interface SkipOrDeferRecurringServicePeriodInput {
@@ -12,6 +13,7 @@ export interface SkipOrDeferRecurringServicePeriodInput {
   editedAt: ISO8601String;
   sourceRuleVersion: string;
   deferredInvoiceWindow?: IRecurringDateRange;
+  siblingRecords?: IRecurringServicePeriodRecord[];
   sourceRunKey?: string | null;
   recordIdFactory?: (input: {
     scheduleKey: string;
@@ -110,6 +112,17 @@ export function skipOrDeferRecurringServicePeriod(
   const provenanceValidation = validateRecurringServicePeriodProvenance(editedRecord.provenance);
   if (!provenanceValidation.valid) {
     throw new Error(provenanceValidation.errors.join(' '));
+  }
+
+  if (input.siblingRecords?.length) {
+    const continuityValidation = validateRecurringServicePeriodEditContinuity({
+      editedRecord,
+      siblingRecords: input.siblingRecords,
+      supersededRecordId: input.record.recordId,
+    });
+    if (!continuityValidation.valid) {
+      throw new Error(continuityValidation.errors.join(' '));
+    }
   }
 
   return {

@@ -2640,7 +2640,7 @@
   {
     "id": "T298",
     "description": "User edits that create overlaps, gaps, or invalid continuity are rejected with clear validation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F248"
     ]
@@ -2648,7 +2648,7 @@
   {
     "id": "T299",
     "description": "Source-rule changes that conflict with user-edited future periods surface explicit conflict handling rather than silent corruption",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F249"
     ]

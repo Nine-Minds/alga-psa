@@ -4,6 +4,20 @@ import type {
   ISO8601String,
 } from '@alga-psa/types';
 
+export type RecurringServicePeriodRegenerationConflictKind =
+  | 'missing_candidate'
+  | 'service_period_mismatch'
+  | 'invoice_window_mismatch'
+  | 'activity_window_mismatch';
+
+export interface IRecurringServicePeriodRegenerationConflict {
+  kind: RecurringServicePeriodRegenerationConflictKind;
+  recordId: string;
+  scheduleKey: string;
+  periodKey: string;
+  reason: string;
+}
+
 export interface RegenerateRecurringServicePeriodsInput {
   existingRecords: IRecurringServicePeriodRecord[];
   candidateRecords: IRecurringServicePeriodRecord[];
@@ -24,6 +38,7 @@ export interface IRecurringServicePeriodRegenerationPlan {
   regeneratedRecords: IRecurringServicePeriodRecord[];
   supersededRecords: IRecurringServicePeriodRecord[];
   newRecords: IRecurringServicePeriodRecord[];
+  conflicts: IRecurringServicePeriodRegenerationConflict[];
 }
 
 function defaultRecordIdFactory(input: {
@@ -77,6 +92,53 @@ function areEquivalentFutureRecords(
   });
 }
 
+function buildOverrideConflict(
+  existing: IRecurringServicePeriodRecord,
+  candidate: IRecurringServicePeriodRecord | undefined,
+): IRecurringServicePeriodRegenerationConflict | null {
+  if (!candidate) {
+    return {
+      kind: 'missing_candidate',
+      recordId: existing.recordId,
+      scheduleKey: existing.scheduleKey,
+      periodKey: existing.periodKey,
+      reason: 'No regenerated candidate remains for this preserved override slot.',
+    };
+  }
+
+  if (JSON.stringify(existing.servicePeriod) !== JSON.stringify(candidate.servicePeriod)) {
+    return {
+      kind: 'service_period_mismatch',
+      recordId: existing.recordId,
+      scheduleKey: existing.scheduleKey,
+      periodKey: existing.periodKey,
+      reason: 'The regenerated candidate no longer matches the preserved override service-period boundary.',
+    };
+  }
+
+  if (JSON.stringify(existing.invoiceWindow) !== JSON.stringify(candidate.invoiceWindow)) {
+    return {
+      kind: 'invoice_window_mismatch',
+      recordId: existing.recordId,
+      scheduleKey: existing.scheduleKey,
+      periodKey: existing.periodKey,
+      reason: 'The regenerated candidate no longer matches the preserved override invoice window.',
+    };
+  }
+
+  if (JSON.stringify(existing.activityWindow ?? null) !== JSON.stringify(candidate.activityWindow ?? null)) {
+    return {
+      kind: 'activity_window_mismatch',
+      recordId: existing.recordId,
+      scheduleKey: existing.scheduleKey,
+      periodKey: existing.periodKey,
+      reason: 'The regenerated candidate no longer matches the preserved override activity window.',
+    };
+  }
+
+  return null;
+}
+
 export function regenerateRecurringServicePeriods(
   input: RegenerateRecurringServicePeriodsInput,
 ): IRecurringServicePeriodRegenerationPlan {
@@ -92,6 +154,7 @@ export function regenerateRecurringServicePeriods(
   const supersededRecords: IRecurringServicePeriodRecord[] = [];
   const newRecords: IRecurringServicePeriodRecord[] = [];
   const activeRecords: IRecurringServicePeriodRecord[] = [];
+  const conflicts: IRecurringServicePeriodRegenerationConflict[] = [];
 
   let candidateIndex = 0;
 
@@ -99,6 +162,10 @@ export function regenerateRecurringServicePeriods(
     const candidate = candidateRecords[candidateIndex];
 
     if (isPreservedOverrideRecord(existing)) {
+      const conflict = buildOverrideConflict(existing, candidate);
+      if (conflict) {
+        conflicts.push(conflict);
+      }
       preservedRecords.push(existing);
       activeRecords.push(existing);
       if (candidate) {
@@ -166,5 +233,6 @@ export function regenerateRecurringServicePeriods(
     regeneratedRecords,
     supersededRecords,
     newRecords,
+    conflicts,
   };
 }

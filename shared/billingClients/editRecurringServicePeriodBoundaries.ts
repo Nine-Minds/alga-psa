@@ -7,6 +7,7 @@ import type {
 import {
   evaluateRecurringServicePeriodMutationPermission,
 } from './recurringServicePeriodMutations';
+import { validateRecurringServicePeriodEditContinuity } from './recurringServicePeriodEditValidation';
 import { validateRecurringServicePeriodProvenance } from './recurringServicePeriodProvenance';
 
 export interface EditRecurringServicePeriodBoundariesInput {
@@ -16,6 +17,7 @@ export interface EditRecurringServicePeriodBoundariesInput {
   updatedServicePeriod?: IRecurringDateRange;
   updatedInvoiceWindow?: IRecurringDateRange;
   updatedActivityWindow?: IRecurringActivityWindow | null;
+  siblingRecords?: IRecurringServicePeriodRecord[];
   sourceRunKey?: string | null;
   recordIdFactory?: (input: {
     scheduleKey: string;
@@ -172,6 +174,17 @@ export function editRecurringServicePeriodBoundaries(
   const provenanceValidation = validateRecurringServicePeriodProvenance(editedRecord.provenance);
   if (!provenanceValidation.valid) {
     throw new Error(provenanceValidation.errors.join(' '));
+  }
+
+  if (input.siblingRecords?.length) {
+    const continuityValidation = validateRecurringServicePeriodEditContinuity({
+      editedRecord,
+      siblingRecords: input.siblingRecords,
+      supersededRecordId: input.record.recordId,
+    });
+    if (!continuityValidation.valid) {
+      throw new Error(continuityValidation.errors.join(' '));
+    }
   }
 
   return {

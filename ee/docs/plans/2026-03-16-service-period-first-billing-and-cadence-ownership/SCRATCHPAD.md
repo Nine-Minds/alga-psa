@@ -41,6 +41,24 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Regeneration conflicts against preserved user edits are now explicit, which closes `F249` and `T299`:
+  - `shared/billingClients/regenerateRecurringServicePeriods.ts` now returns additive `conflicts` metadata instead of silently discarding disagreements when preserved override rows no longer match regenerated source candidates
+  - the first v1 conflict kinds are `missing_candidate`, `service_period_mismatch`, `invoice_window_mismatch`, and `activity_window_mismatch`, which keeps preserved edits active while making the disagreement queryable for later operator tooling
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_CONFLICTS.md` now documents that conservative handling rule explicitly: preserve the edited row, surface the conflict, and leave repair/merge tooling for later passes
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodRegenerationConflict.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-18) Neighbor-aware edit validation is now explicit, which closes `F248` and `T298`:
+  - `shared/billingClients/recurringServicePeriodEditValidation.ts` now defines the first continuity guard for edited future rows: when sibling rows on the same `scheduleKey` are supplied, edits are rejected for `gap before`, `overlap before`, `gap after`, and `overlap after` states instead of silently corrupting the schedule
+  - `shared/billingClients/editRecurringServicePeriodBoundaries.ts` and `shared/billingClients/skipOrDeferRecurringServicePeriod.ts` now call the same validator when caller-side sibling context is present, which keeps the boundary-adjustment and disposition helpers aligned on one continuity rule instead of each inventing their own local checks
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_VALIDATION.md` now documents the same-schedule adjacency rule and its explicit boundary with the later regeneration-conflict and UI transport passes
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodEditValidation.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
 - (2026-03-18) Split and merge are now explicitly fenced out of v1, which closes `F247` and adds/closes `T347` while intentionally leaving `T297` for any later advanced-edit pass:
   - `shared/billingClients/recurringServicePeriodEditCapabilities.ts` now makes the v1 edit surface executable instead of leaving it as docs only: supported operations are `boundary_adjustment`, `skip`, and `defer`, while `split` and `merge` fail fast as unsupported v1 operations
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md` now carries an explicit `Unsupported In V1` section so later UI/API work cannot quietly assume split/merge support before a deliberate follow-on pass exists

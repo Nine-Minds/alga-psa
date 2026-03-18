@@ -160,6 +160,9 @@ export {
   RECURRING_SERVICE_PERIOD_UNSUPPORTED_V1_EDIT_OPERATIONS,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodEditCapabilities';
 export {
+  validateRecurringServicePeriodEditContinuity,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodEditValidation';
+export {
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
 export {
@@ -195,7 +198,12 @@ export type {
   UnsupportedRecurringServicePeriodV1EditOperation,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodEditCapabilities';
 export type {
+  IRecurringServicePeriodEditContinuityValidation,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodEditValidation';
+export type {
+  IRecurringServicePeriodRegenerationConflict,
   IRecurringServicePeriodRegenerationPlan,
+  RecurringServicePeriodRegenerationConflictKind,
   RegenerateRecurringServicePeriodsInput,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
 export {

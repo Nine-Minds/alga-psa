@@ -21,6 +21,8 @@ const prd = read('PRD.md');
 const recurringServicePeriodGenerationHorizon = read('RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md');
 const recurringServicePeriodBackfill = read('RECURRING_SERVICE_PERIOD_BACKFILL.md');
 const recurringServicePeriodEditOperations = read('RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md');
+const recurringServicePeriodEditValidation = read('RECURRING_SERVICE_PERIOD_EDIT_VALIDATION.md');
+const recurringServicePeriodEditConflicts = read('RECURRING_SERVICE_PERIOD_EDIT_CONFLICTS.md');
 const recurringServicePeriodDueSelection = read('RECURRING_SERVICE_PERIOD_DUE_SELECTION.md');
 const recurringServicePeriodInvoiceLinkage = read('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
@@ -306,6 +308,30 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodEditOperations).toContain('shared/billingClients/recurringServicePeriodEditCapabilities.ts');
     expect(recurringServicePeriodEditOperations).toContain('supported v1 edit operations are `boundary_adjustment`, `skip`, and `defer`');
     expect(recurringServicePeriodEditOperations).toContain('`split` and `merge` fail fast as unsupported v1 operations');
+  });
+
+  it('T298: edit validation rejects gaps and overlaps against adjacent active service periods', () => {
+    expect(recurringServicePeriodEditValidation).toContain('# Recurring Service-Period Edit Validation');
+    expect(recurringServicePeriodEditValidation).toContain('## Continuity Rule');
+    expect(recurringServicePeriodEditValidation).toContain('adjacent active rows on the same `scheduleKey`');
+    expect(recurringServicePeriodEditValidation).toContain('shared/billingClients/recurringServicePeriodEditValidation.ts');
+    expect(recurringServicePeriodEditValidation).toContain('## Rejected States');
+    expect(recurringServicePeriodEditValidation).toContain('gap before the edited period');
+    expect(recurringServicePeriodEditValidation).toContain('overlap before the edited period');
+    expect(recurringServicePeriodEditValidation).toContain('gap after the edited period');
+    expect(recurringServicePeriodEditValidation).toContain('overlap after the edited period');
+  });
+
+  it('T299: regeneration surfaces explicit conflict records when source changes diverge from preserved user edits', () => {
+    expect(recurringServicePeriodEditConflicts).toContain('# Recurring Service-Period Edit Conflicts');
+    expect(recurringServicePeriodEditConflicts).toContain('## Conflict Rule');
+    expect(recurringServicePeriodEditConflicts).toContain('shared/billingClients/regenerateRecurringServicePeriods.ts');
+    expect(recurringServicePeriodEditConflicts).toContain('## Conflict Kinds');
+    expect(recurringServicePeriodEditConflicts).toContain('`missing_candidate`');
+    expect(recurringServicePeriodEditConflicts).toContain('`service_period_mismatch`');
+    expect(recurringServicePeriodEditConflicts).toContain('`invoice_window_mismatch`');
+    expect(recurringServicePeriodEditConflicts).toContain('`activity_window_mismatch`');
+    expect(recurringServicePeriodEditConflicts).toContain('preserved user edits remain active');
   });
 
   it('documents the architecture thesis and system-surface matrix in the PRD and appendix', () => {

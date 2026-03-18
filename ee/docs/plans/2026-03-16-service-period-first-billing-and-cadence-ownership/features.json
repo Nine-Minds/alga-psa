@@ -2225,7 +2225,7 @@
   {
     "id": "F248",
     "description": "Define overlap, gap, and continuity validation rules when a user edits future persisted service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Data model and API requirements"
@@ -2234,7 +2234,7 @@
   {
     "id": "F249",
     "description": "Define conflict handling when source-rule changes would invalidate or overlap user-edited future persisted service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Risks"
