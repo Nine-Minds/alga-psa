@@ -149,7 +149,7 @@ spec:
           {{- end }}
           # ----------- AI Document Assist ----------------
           - name: AI_DOCUMENT_API_URL
-            value: "http://server.{{ include "sebastian.namespace" . }}.svc.cluster.local:3000/api/v1/ai/document-assist"
+            value: "https://{{ .Values.host }}/api/v1/ai/document-assist"
           - name: AI_DOCUMENT_API_KEY
             valueFrom:
               secretKeyRef:
