@@ -387,6 +387,7 @@ describe('recurrence storage model contracts', () => {
         'contract_line_terms|contract_line_mappings|contract_template_line_mappings',
         'packages/billing/src',
         'server/src/lib',
+        'shared/billingClients',
       ),
     ).toEqual([]);
   });

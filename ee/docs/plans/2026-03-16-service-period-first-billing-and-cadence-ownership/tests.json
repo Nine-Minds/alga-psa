@@ -1906,6 +1906,14 @@
     ]
   },
   {
+    "id": "T340",
+    "description": "DB-backed validation proves recurring invoice generation still succeeds after dropped recurrence-related tables are removed from the live schema",
+    "implemented": true,
+    "featureIds": [
+      "F221"
+    ]
+  },
+  {
     "id": "T220",
     "description": "Financial artifacts with missing canonical period metadata follow the documented fallback and failure-handling behavior",
     "implemented": true,
@@ -2165,7 +2173,7 @@
   {
     "id": "T251",
     "description": "Source and DB validation prove authoritative recurring readers prefer canonical detail periods over invoice header periods when both exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F222"
     ]
@@ -2173,7 +2181,7 @@
   {
     "id": "T252",
     "description": "Source and DB validation prove contract-cadence execution paths are not blocked on billingCycleId-only assumptions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F223"
     ]
@@ -2336,7 +2344,7 @@
   {
     "id": "T271",
     "description": "Source validation shows no live contract-cadence scheduler path depends on billingCycleId as its only execution identity",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F151",
       "F223"
@@ -2345,7 +2353,7 @@
   {
     "id": "T272",
     "description": "Source validation shows authoritative recurring readers no longer fall back to header-period fields when canonical detail periods exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F171",
       "F222"

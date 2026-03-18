@@ -304,6 +304,37 @@ export class BillingEngine {
     });
   }
 
+  async calculateBillingForExecutionWindow(
+    clientId: string,
+    startDate: ISO8601String,
+    endDate: ISO8601String,
+    options: CalculateBillingOptions = {},
+  ): Promise<IBillingResult & { error?: string }> {
+    this.clientDefaultTaxRegionCodeCache.clear();
+    return this.withPinnedTransaction(async () => {
+      await this.initKnex();
+      const client = await this.knex<IClient>("clients")
+        .where({ client_id: clientId, tenant: this.tenant! })
+        .first();
+
+      const billingPeriod: IBillingPeriod = {
+        startDate: toISODate(toPlainDate(startDate)),
+        endDate: toISODate(toPlainDate(endDate)),
+      };
+
+      console.log(
+        `Calculating billing for client ${client?.client_name} (${clientId}) using execution window: ${billingPeriod.startDate} to ${billingPeriod.endDate}`,
+      );
+
+      return this.calculateBillingForPreparedPeriod(
+        clientId,
+        billingPeriod,
+        client,
+        options,
+      );
+    });
+  }
+
   async selectDueRecurringServicePeriodsForBillingWindow(
     clientId: string,
     startDate: ISO8601String,
@@ -426,7 +457,6 @@ export class BillingEngine {
         };
       }
 
-      // Use the determined periodStartDate and periodEndDate consistently below
       const billingPeriod: IBillingPeriod = {
         startDate: periodStartDate,
         endDate: periodEndDate,
@@ -435,270 +465,12 @@ export class BillingEngine {
         `Consistent billing period: ${billingPeriod.startDate} to ${billingPeriod.endDate}`,
       );
 
-      // Validate that the billing period doesn't cross a cycle change
-      const validationResult = await this.validateBillingPeriod(
-        clientId,
-        periodStartDate,
-        periodEndDate,
-      );
-      if (!validationResult.success) {
-        return {
-          charges: [],
-          totalAmount: 0,
-          discounts: [],
-          adjustments: [],
-          finalAmount: 0,
-          currency_code: client?.default_currency_code || "USD",
-          error: validationResult.error,
-        };
-      }
-
-      // Initialize all variables we'll need throughout the function
-      let totalCharges: IBillingCharge[] = [];
-
-      // Get contract lines and cycle
-      const plansResult = await this.getClientContractLinesAndCycle(
+      return this.calculateBillingForPreparedPeriod(
         clientId,
         billingPeriod,
+        client,
+        options,
       );
-
-      // Type assertion to include error property
-      const {
-        clientContractLines,
-        billingCycle: cycle,
-        error: plansError,
-      } = plansResult as {
-        clientContractLines: IClientContractLine[];
-        billingCycle: string;
-        error?: string;
-      };
-
-      if (plansError) {
-        return {
-          charges: [],
-          totalAmount: 0,
-          discounts: [],
-          adjustments: [],
-          finalAmount: 0,
-          currency_code: client?.default_currency_code || "USD",
-          error: plansError,
-        };
-      }
-
-      // --- Currency Validation Logic ---
-      // Extract unique currency codes from active contracts
-      const uniqueCurrencies = Array.from(
-        new Set(
-          clientContractLines
-            .map((line) => line.currency_code)
-            .filter((code): code is string => !!code), // Filter out null/undefined
-        ),
-      );
-
-      if (uniqueCurrencies.length > 1) {
-        return {
-          charges: [],
-          totalAmount: 0,
-          discounts: [],
-          adjustments: [],
-          finalAmount: 0,
-          currency_code: client?.default_currency_code || "USD",
-          error: `Billing Error: Client ${clientId} has active contracts in multiple currencies (${uniqueCurrencies.join(", ")}). Mixed currency billing is not supported.`,
-        };
-      }
-
-      // Determine the billing currency for this cycle
-      // Priority: Contract Currency > Client Default > USD
-      const billingCurrency =
-        uniqueCurrencies.length === 1
-          ? uniqueCurrencies[0]
-          : client?.default_currency_code || "USD";
-
-      console.log(
-        `[BillingEngine] Resolved billing currency: ${billingCurrency}`,
-      );
-
-      const canonicalRecurringTimingSelections = this.buildRecurringTimingSelections(
-        billingPeriod,
-        clientContractLines,
-        cycle,
-      );
-      const recurringTimingSelections = options.recurringTimingSelections
-        ? this.assertRecurringTimingSelectionsMatchCanonical(
-            canonicalRecurringTimingSelections,
-            options.recurringTimingSelections,
-          )
-        : canonicalRecurringTimingSelections;
-
-      // Ticket/Project materials are client-scoped and may exist even when there are no contract lines.
-      const materialCharges = await this.calculateMaterialCharges(
-        clientId,
-        billingPeriod,
-        billingCurrency,
-      );
-
-      if (clientContractLines.length === 0) {
-        if (materialCharges.length === 0) {
-          return {
-            charges: [],
-            totalAmount: 0,
-            discounts: [],
-            adjustments: [],
-            finalAmount: 0,
-            currency_code: billingCurrency,
-            error:
-              "No active contract lines found for this client in the selected billing period.",
-          };
-        }
-
-        totalCharges = totalCharges.concat(materialCharges);
-      }
-
-      console.log(
-        `Found ${clientContractLines.length} active contract line(s) for client ${clientId}`,
-      );
-      console.log(`Billing cycle: ${cycle}`);
-
-      for (const clientContractLine of clientContractLines) {
-        console.log(
-          `Processing contract line: ${clientContractLine.contract_line_name}`,
-        );
-        const [
-          fixedPriceCharges,
-          timeBasedCharges,
-          usageBasedCharges,
-          bucketPlanCharges,
-          productCharges,
-          licenseCharges,
-        ] = await Promise.all([
-          this.calculateFixedPriceCharges(
-            clientId,
-            billingPeriod,
-            clientContractLine,
-            cycle,
-            recurringTimingSelections[clientContractLine.client_contract_line_id],
-          ),
-          this.calculateTimeBasedCharges(
-            clientId,
-            billingPeriod,
-            clientContractLine,
-          ),
-          this.calculateUsageBasedCharges(
-            clientId,
-            billingPeriod,
-            clientContractLine,
-          ),
-          this.calculateBucketPlanCharges(
-            clientId,
-            billingPeriod,
-            clientContractLine,
-          ),
-          this.calculateProductCharges(
-            clientId,
-            billingPeriod,
-            clientContractLine,
-            cycle,
-            recurringTimingSelections[clientContractLine.client_contract_line_id],
-          ),
-          this.calculateLicenseCharges(
-            clientId,
-            billingPeriod,
-            clientContractLine,
-            cycle,
-            recurringTimingSelections[clientContractLine.client_contract_line_id],
-          ),
-        ]);
-
-        console.log(`Fixed price charges: ${fixedPriceCharges.length}`);
-        console.log(`Time-based charges: ${timeBasedCharges.length}`);
-        console.log(`Usage-based charges: ${usageBasedCharges.length}`);
-        console.log(`Bucket plan charges: ${bucketPlanCharges.length}`);
-        console.log(`Product charges: ${productCharges.length}`);
-        console.log(`License charges: ${licenseCharges.length}`);
-
-        const totalFixedCharges = fixedPriceCharges.reduce(
-          (sum: number, charge: IFixedPriceCharge) => sum + charge.total,
-          0,
-        );
-        console.log(
-          `Total fixed charges: ${getCurrencySymbol(billingCurrency)}${(totalFixedCharges / 100).toFixed(2)} (${totalFixedCharges} cents)`,
-        );
-
-        // Combine all charges (time/usage are not prorated here)
-        totalCharges = totalCharges.concat(
-          fixedPriceCharges,
-          timeBasedCharges,
-          usageBasedCharges,
-          bucketPlanCharges,
-          productCharges,
-          licenseCharges,
-        );
-
-        console.log("Total charges breakdown:");
-        const currencySymbol = getCurrencySymbol(billingCurrency);
-        fixedPriceCharges.forEach((charge: IBillingCharge) => {
-          console.log(
-            `fixed - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-          );
-        });
-        timeBasedCharges.forEach((charge: ITimeBasedCharge) => {
-          console.log(
-            `hourly - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-          );
-        });
-        usageBasedCharges.forEach((charge: IUsageBasedCharge) => {
-          console.log(
-            `usage - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-          );
-        });
-        bucketPlanCharges.forEach((charge: IBucketCharge) => {
-          console.log(
-            `bucket - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-          );
-        });
-        productCharges.forEach((charge: IProductCharge) => {
-          console.log(
-            `product - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-          );
-        });
-        licenseCharges.forEach((charge: ILicenseCharge) => {
-          console.log(
-            `license - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-          );
-        });
-
-        console.log("Total charges:", totalCharges);
-      }
-
-      if (clientContractLines.length > 0 && materialCharges.length > 0) {
-        totalCharges = totalCharges.concat(materialCharges);
-      }
-
-      const totalAmount = totalCharges.reduce(
-        (sum: number, charge: IBillingCharge) => sum + charge.total,
-        0,
-      );
-
-      const finalCharges = await this.applyDiscountsAndAdjustments(
-        {
-          charges: totalCharges,
-          totalAmount,
-          discounts: [],
-          adjustments: [],
-          finalAmount: totalAmount,
-          currency_code: billingCurrency,
-        },
-        clientId,
-        billingPeriod,
-      );
-
-      console.log(`Discounts applied: ${finalCharges.discounts.length}`);
-      console.log(`Adjustments applied: ${finalCharges.adjustments.length}`);
-      console.log(
-        `Final amount after discounts and adjustments: ${getCurrencySymbol(billingCurrency)}${(finalCharges.finalAmount / 100).toFixed(2)} (${finalCharges.finalAmount} cents)`,
-      );
-
-      return finalCharges;
     } catch (err) {
       console.error("Error in calculateBilling:", err);
       return {
@@ -714,6 +486,268 @@ export class BillingEngine {
             : "An error occurred while calculating billing",
       };
     }
+  }
+
+  private async calculateBillingForPreparedPeriod(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    client: IClient | undefined,
+    options: CalculateBillingOptions = {},
+  ): Promise<IBillingResult & { error?: string }> {
+    // Validate that the billing period doesn't cross a cycle change.
+    const validationResult = await this.validateBillingPeriod(
+      clientId,
+      billingPeriod.startDate,
+      billingPeriod.endDate,
+    );
+    if (!validationResult.success) {
+      return {
+        charges: [],
+        totalAmount: 0,
+        discounts: [],
+        adjustments: [],
+        finalAmount: 0,
+        currency_code: client?.default_currency_code || "USD",
+        error: validationResult.error,
+      };
+    }
+
+    let totalCharges: IBillingCharge[] = [];
+    const plansResult = await this.getClientContractLinesAndCycle(
+      clientId,
+      billingPeriod,
+    );
+
+    const {
+      clientContractLines,
+      billingCycle: cycle,
+      error: plansError,
+    } = plansResult as {
+      clientContractLines: IClientContractLine[];
+      billingCycle: string;
+      error?: string;
+    };
+
+    if (plansError) {
+      return {
+        charges: [],
+        totalAmount: 0,
+        discounts: [],
+        adjustments: [],
+        finalAmount: 0,
+        currency_code: client?.default_currency_code || "USD",
+        error: plansError,
+      };
+    }
+
+    const uniqueCurrencies = Array.from(
+      new Set(
+        clientContractLines
+          .map((line) => line.currency_code)
+          .filter((code): code is string => !!code),
+      ),
+    );
+
+    if (uniqueCurrencies.length > 1) {
+      return {
+        charges: [],
+        totalAmount: 0,
+        discounts: [],
+        adjustments: [],
+        finalAmount: 0,
+        currency_code: client?.default_currency_code || "USD",
+        error: `Billing Error: Client ${clientId} has active contracts in multiple currencies (${uniqueCurrencies.join(", ")}). Mixed currency billing is not supported.`,
+      };
+    }
+
+    const billingCurrency =
+      uniqueCurrencies.length === 1
+        ? uniqueCurrencies[0]
+        : client?.default_currency_code || "USD";
+
+    console.log(
+      `[BillingEngine] Resolved billing currency: ${billingCurrency}`,
+    );
+
+    const canonicalRecurringTimingSelections = this.buildRecurringTimingSelections(
+      billingPeriod,
+      clientContractLines,
+      cycle,
+    );
+    const recurringTimingSelections = options.recurringTimingSelections
+      ? this.assertRecurringTimingSelectionsMatchCanonical(
+          canonicalRecurringTimingSelections,
+          options.recurringTimingSelections,
+        )
+      : canonicalRecurringTimingSelections;
+
+    const materialCharges = await this.calculateMaterialCharges(
+      clientId,
+      billingPeriod,
+      billingCurrency,
+    );
+
+    if (clientContractLines.length === 0) {
+      if (materialCharges.length === 0) {
+        return {
+          charges: [],
+          totalAmount: 0,
+          discounts: [],
+          adjustments: [],
+          finalAmount: 0,
+          currency_code: billingCurrency,
+          error:
+            "No active contract lines found for this client in the selected billing period.",
+        };
+      }
+
+      totalCharges = totalCharges.concat(materialCharges);
+    }
+
+    console.log(
+      `Found ${clientContractLines.length} active contract line(s) for client ${clientId}`,
+    );
+    console.log(`Billing cycle: ${cycle}`);
+
+    for (const clientContractLine of clientContractLines) {
+      console.log(
+        `Processing contract line: ${clientContractLine.contract_line_name}`,
+      );
+      const [
+        fixedPriceCharges,
+        timeBasedCharges,
+        usageBasedCharges,
+        bucketPlanCharges,
+        productCharges,
+        licenseCharges,
+      ] = await Promise.all([
+        this.calculateFixedPriceCharges(
+          clientId,
+          billingPeriod,
+          clientContractLine,
+          cycle,
+          recurringTimingSelections[clientContractLine.client_contract_line_id],
+        ),
+        this.calculateTimeBasedCharges(
+          clientId,
+          billingPeriod,
+          clientContractLine,
+        ),
+        this.calculateUsageBasedCharges(
+          clientId,
+          billingPeriod,
+          clientContractLine,
+        ),
+        this.calculateBucketPlanCharges(
+          clientId,
+          billingPeriod,
+          clientContractLine,
+        ),
+        this.calculateProductCharges(
+          clientId,
+          billingPeriod,
+          clientContractLine,
+          cycle,
+          recurringTimingSelections[clientContractLine.client_contract_line_id],
+        ),
+        this.calculateLicenseCharges(
+          clientId,
+          billingPeriod,
+          clientContractLine,
+          cycle,
+          recurringTimingSelections[clientContractLine.client_contract_line_id],
+        ),
+      ]);
+
+      console.log(`Fixed price charges: ${fixedPriceCharges.length}`);
+      console.log(`Time-based charges: ${timeBasedCharges.length}`);
+      console.log(`Usage-based charges: ${usageBasedCharges.length}`);
+      console.log(`Bucket plan charges: ${bucketPlanCharges.length}`);
+      console.log(`Product charges: ${productCharges.length}`);
+      console.log(`License charges: ${licenseCharges.length}`);
+
+      const totalFixedCharges = fixedPriceCharges.reduce(
+        (sum: number, charge: IFixedPriceCharge) => sum + charge.total,
+        0,
+      );
+      console.log(
+        `Total fixed charges: ${getCurrencySymbol(billingCurrency)}${(totalFixedCharges / 100).toFixed(2)} (${totalFixedCharges} cents)`,
+      );
+
+      totalCharges = totalCharges.concat(
+        fixedPriceCharges,
+        timeBasedCharges,
+        usageBasedCharges,
+        bucketPlanCharges,
+        productCharges,
+        licenseCharges,
+      );
+
+      console.log("Total charges breakdown:");
+      const currencySymbol = getCurrencySymbol(billingCurrency);
+      fixedPriceCharges.forEach((charge: IBillingCharge) => {
+        console.log(
+          `fixed - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
+        );
+      });
+      timeBasedCharges.forEach((charge: ITimeBasedCharge) => {
+        console.log(
+          `hourly - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
+        );
+      });
+      usageBasedCharges.forEach((charge: IUsageBasedCharge) => {
+        console.log(
+          `usage - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
+        );
+      });
+      bucketPlanCharges.forEach((charge: IBucketCharge) => {
+        console.log(
+          `bucket - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
+        );
+      });
+      productCharges.forEach((charge: IProductCharge) => {
+        console.log(
+          `product - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
+        );
+      });
+      licenseCharges.forEach((charge: ILicenseCharge) => {
+        console.log(
+          `license - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
+        );
+      });
+
+      console.log("Total charges:", totalCharges);
+    }
+
+    if (clientContractLines.length > 0 && materialCharges.length > 0) {
+      totalCharges = totalCharges.concat(materialCharges);
+    }
+
+    const totalAmount = totalCharges.reduce(
+      (sum: number, charge: IBillingCharge) => sum + charge.total,
+      0,
+    );
+
+    const finalCharges = await this.applyDiscountsAndAdjustments(
+      {
+        charges: totalCharges,
+        totalAmount,
+        discounts: [],
+        adjustments: [],
+        finalAmount: totalAmount,
+        currency_code: billingCurrency,
+      },
+      clientId,
+      billingPeriod,
+    );
+
+    console.log(`Discounts applied: ${finalCharges.discounts.length}`);
+    console.log(`Adjustments applied: ${finalCharges.adjustments.length}`);
+    console.log(
+      `Final amount after discounts and adjustments: ${getCurrencySymbol(billingCurrency)}${(finalCharges.finalAmount / 100).toFixed(2)} (${finalCharges.finalAmount} cents)`,
+    );
+
+    return finalCharges;
   }
 
   private async getClientContractLinesAndCycle(

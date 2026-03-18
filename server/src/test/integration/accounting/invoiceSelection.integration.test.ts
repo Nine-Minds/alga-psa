@@ -317,6 +317,128 @@ describe('Accounting export invoice selection integration', () => {
     });
   }, HOOK_TIMEOUT);
 
+  it('T251: preview selection prefers canonical detail periods over invoice header periods when both exist', async () => {
+    const serviceId = await createTestService(ctx, {
+      service_name: 'Detail Beats Header Service',
+      billing_method: 'fixed',
+      default_rate: 7500,
+      unit_of_measure: 'device',
+      description: 'Recurring service period validation'
+    });
+
+    const invoiceId = uuidv4();
+    const chargeId = uuidv4();
+    const transactionId = uuidv4();
+    const invoiceDate = '2025-02-10T00:00:00.000Z';
+
+    await ctx.db('invoices').insert({
+      invoice_id: invoiceId,
+      tenant: ctx.tenantId,
+      client_id: ctx.clientId,
+      invoice_number: 'INV-DETAIL-HEADER',
+      invoice_date: invoiceDate,
+      due_date: invoiceDate,
+      subtotal: 15000,
+      tax: 0,
+      total_amount: 15000,
+      status: 'sent',
+      currency_code: 'USD',
+      is_manual: false,
+      billing_period_start: '2025-03-01T00:00:00.000Z',
+      billing_period_end: '2025-04-01T00:00:00.000Z',
+      created_at: invoiceDate,
+      updated_at: invoiceDate
+    });
+
+    await ctx.db('invoice_charges').insert({
+      item_id: chargeId,
+      tenant: ctx.tenantId,
+      invoice_id: invoiceId,
+      service_id: serviceId,
+      description: 'Canonical detail-backed recurring charge',
+      quantity: 1,
+      unit_price: 15000,
+      total_price: 15000,
+      net_amount: 15000,
+      tax_amount: 0,
+      is_manual: false,
+      created_at: invoiceDate,
+      updated_at: invoiceDate
+    });
+
+    await ctx.db('invoice_charge_details').insert([
+      {
+        item_detail_id: uuidv4(),
+        item_id: chargeId,
+        tenant: ctx.tenantId,
+        service_id: serviceId,
+        config_id: uuidv4(),
+        quantity: 1,
+        rate: 7500,
+        service_period_start: '2025-01-01T00:00:00.000Z',
+        service_period_end: '2025-02-01T00:00:00.000Z',
+        billing_timing: 'advance',
+        created_at: invoiceDate,
+        updated_at: invoiceDate
+      },
+      {
+        item_detail_id: uuidv4(),
+        item_id: chargeId,
+        tenant: ctx.tenantId,
+        service_id: serviceId,
+        config_id: uuidv4(),
+        quantity: 1,
+        rate: 7500,
+        service_period_start: '2025-02-01T00:00:00.000Z',
+        service_period_end: '2025-03-01T00:00:00.000Z',
+        billing_timing: 'advance',
+        created_at: invoiceDate,
+        updated_at: invoiceDate
+      }
+    ]);
+
+    await ctx.db('transactions').insert({
+      transaction_id: transactionId,
+      tenant: ctx.tenantId,
+      client_id: ctx.clientId,
+      invoice_id: invoiceId,
+      amount: 15000,
+      type: 'invoice_generated',
+      description: 'Transaction for canonical detail-backed recurring charge',
+      created_at: invoiceDate,
+      status: 'completed',
+      balance_after: 15000
+    });
+
+    const preview = await selector.previewInvoiceLines({
+      startDate: '2025-02-01',
+      endDate: '2025-02-28',
+      invoiceStatuses: ['sent'],
+      clientIds: [ctx.clientId]
+    });
+
+    const line = preview.find((previewLine) => previewLine.chargeId === chargeId);
+    expect(line).toMatchObject({
+      invoiceId,
+      servicePeriodStart: '2025-01-01T00:00:00.000Z',
+      servicePeriodEnd: '2025-03-01T00:00:00.000Z',
+      servicePeriodSource: 'canonical_detail_periods',
+      transactionIds: [transactionId]
+    });
+    expect(line?.recurringDetailPeriods).toEqual([
+      {
+        service_period_start: '2025-01-01T00:00:00.000Z',
+        service_period_end: '2025-02-01T00:00:00.000Z',
+        billing_timing: 'advance'
+      },
+      {
+        service_period_start: '2025-02-01T00:00:00.000Z',
+        service_period_end: '2025-03-01T00:00:00.000Z',
+        billing_timing: 'advance'
+      }
+    ]);
+  }, HOOK_TIMEOUT);
+
   it('creates a batch from filters and records transaction linkage', async () => {
     const seeded = await seedInvoices();
 

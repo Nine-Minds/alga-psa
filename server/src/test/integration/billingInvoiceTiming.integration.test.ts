@@ -14,10 +14,12 @@ import {
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
 import { BillingEngine } from '@alga-psa/billing/services';
+import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 let db: Knex;
 let tenantId: string;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
+let generateInvoiceForSelectionInput: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoiceForSelectionInput;
 const authRef = vi.hoisted(() => ({
   tenantId: '11111111-1111-1111-1111-111111111111',
   userId: 'test-user',
@@ -102,7 +104,7 @@ describe('Billing Invoice Timing Integration', () => {
     db = await createTestDbConnection();
     tenantId = await ensureTenant(db);
     authRef.tenantId = tenantId;
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ generateInvoice, generateInvoiceForSelectionInput } = await import('@alga-psa/billing/actions/invoiceGeneration'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -560,6 +562,58 @@ it('T174: DB-backed recurring license invoices continue to generate correctly un
   expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(previousPeriodEnd);
 }, HOOK_TIMEOUT);
 
+it('F221: DB-backed recurring invoice generation succeeds while dropped recurrence tables remain absent', async () => {
+  setupCommonMocks({ tenantId, userId: 'cleanup-validation-user', permissionCheck: () => true });
+
+  const droppedRecurrenceTables = [
+    'contract_line_terms',
+    'contract_line_mappings',
+    'contract_template_line_mappings',
+  ];
+
+  const legacyTables = await db('information_schema.tables')
+    .where({ table_schema: 'public' })
+    .whereIn('table_name', droppedRecurrenceTables)
+    .select('table_name');
+
+  expect(legacyTables).toEqual([]);
+
+  const {
+    contextLike,
+    cycleId,
+    currentPeriodStart,
+    currentPeriodEnd,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Dropped Table Validation Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Dropped Table Validation Service',
+    planName: 'Dropped Table Validation Plan',
+    baseRateCents: 19000,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+  });
+
+  const invoice = await generateInvoice(cycleId);
+  expect(invoice).toBeTruthy();
+  expect(Number(invoice!.subtotal)).toBe(190);
+
+  const detailRows = await getInvoiceDetailRows(invoice!.invoice_id);
+  expect(detailRows).toHaveLength(1);
+  expect(detailRows[0]).toMatchObject({
+    service_id: fixedLine.serviceId,
+    billing_timing: 'advance',
+  });
+  expect(normalizeDateValue(detailRows[0]?.service_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(currentPeriodEnd);
+}, HOOK_TIMEOUT);
+
 it('T166: DB-backed recurring outputs stay stable across billing_cycle_alignment variants after cutover', async () => {
   setupCommonMocks({ tenantId, userId: 'alignment-db-user', permissionCheck: () => true });
 
@@ -673,6 +727,58 @@ it('T167: DB-backed recurring outputs still persist canonical partial service pe
   expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(previousPeriodEnd);
 }, HOOK_TIMEOUT);
 
+it('T252: DB-backed contract-cadence invoice generation can execute from selector input without a raw billingCycleId bridge', async () => {
+  setupCommonMocks({ tenantId, userId: 'contract-cadence-window-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    currentPeriodStart,
+    currentPeriodEnd,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Contract Cadence Window Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-08',
+    currentPeriodStart: '2025-02-08',
+    nextPeriodStart: '2025-03-08',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Contract Cadence Window Service',
+    planName: 'Contract Cadence Window Plan',
+    baseRateCents: 21000,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: contextLike.clientId,
+    contractId: fixedLine.contractId,
+    contractLineId: fixedLine.contractLineId,
+    windowStart: `${currentPeriodStart}T00:00:00Z`,
+    windowEnd: `${nextPeriodStart}T00:00:00Z`,
+  });
+
+  const invoice = await generateInvoiceForSelectionInput(selectorInput);
+  expect(invoice).toBeTruthy();
+  expect(invoice?.billing_cycle_id ?? null).toBeNull();
+
+  const persistedInvoice = await getPersistedInvoice(invoice!.invoice_id);
+  expect(normalizeDateValue(persistedInvoice?.billing_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(persistedInvoice?.billing_period_end)).toBe(nextPeriodStart);
+
+  const detailRows = await getInvoiceDetailRows(invoice!.invoice_id);
+  expect(detailRows).toHaveLength(1);
+  expect(detailRows[0]).toMatchObject({
+    service_id: fixedLine.serviceId,
+    billing_timing: 'advance'
+  });
+  expect(normalizeDateValue(detailRows[0]?.service_period_start)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(currentPeriodEnd);
+}, HOOK_TIMEOUT);
+
 });
 
 interface ClientSetupResult {
@@ -707,6 +813,7 @@ interface FixedLineOptions {
   startDate: string;
   billingTiming: 'arrears' | 'advance';
   billingFrequency?: 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
+  cadenceOwner?: 'client' | 'contract';
   customRateCents?: number;
   contractId?: string;
   clientContractId?: string;
@@ -840,6 +947,7 @@ async function createFixedContractLine(
     endDate: null,
     billingTiming: options.billingTiming,
     clientId: contextLike.clientId,
+    cadenceOwner: options.cadenceOwner,
     enableProration: false,
     contractId: options.contractId,
     clientContractId: options.clientContractId,

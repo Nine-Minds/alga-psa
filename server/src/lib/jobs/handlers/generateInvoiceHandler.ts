@@ -1,4 +1,7 @@
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import {
+  generateInvoice,
+  generateInvoiceForSelectionInput,
+} from '@alga-psa/billing/actions/invoiceGeneration';
 import type {
   IRecurringDueSelectionInput,
   IRecurringRunExecutionWindowIdentity,
@@ -23,7 +26,7 @@ export async function generateInvoiceHandler(data: GenerateInvoiceData): Promise
         })
       : undefined);
 
-  if (!data.billingCycleId) {
+  if (!data.billingCycleId && !data.selectorInput) {
     throw new Error(
       executionWindow
         ? `Recurring execution window ${executionWindow.identityKey} is defined but no billingCycleId bridge was provided.`
@@ -41,6 +44,17 @@ export async function generateInvoiceHandler(data: GenerateInvoiceData): Promise
   }
 
   try {
+    if (data.selectorInput && !data.billingCycleId) {
+      await generateInvoiceForSelectionInput(data.selectorInput);
+      return;
+    }
+
+    if (!data.billingCycleId) {
+      throw new Error(
+        `Recurring execution window ${executionWindow?.identityKey} could not resolve a billingCycleId bridge for invoice generation.`,
+      );
+    }
+
     // Generate invoice using the existing invoice generation logic
     await generateInvoice(data.billingCycleId);
   } catch (error) {

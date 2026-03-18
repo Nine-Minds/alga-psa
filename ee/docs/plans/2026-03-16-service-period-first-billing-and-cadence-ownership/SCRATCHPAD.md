@@ -39,6 +39,26 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Cleanup-proof source/DB validation now covers the remaining dropped-table, authoritative-reader, and selector-input scheduler seams, which closes `F221`, `F222`, `F223`, `T251`, `T252`, `T271`, `T272`, and adds `T340` for the missing DB half of `F221`:
+  - `shared/billingClients/templateClone.ts` no longer reads `contract_template_line_mappings.custom_rate`; template-clone custom-rate lookup now reads the authoritative `contract_template_lines.custom_rate`, which removes the last live shared-package dependency on a dropped recurrence mapping table
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now scans `shared/billingClients` alongside `packages/billing/src` and `server/src/lib`, so the dropped-table source contract covers shared runtime helpers instead of only package/server code
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now carries `F221` DB validation proving recurring invoice generation still succeeds while `contract_line_terms`, `contract_line_mappings`, and `contract_template_line_mappings` are absent from the live schema; `tests.json` gained `T340` because the existing `T247` checklist item only covered source absence
+  - `packages/billing/src/actions/invoiceGeneration.ts` and `packages/billing/src/lib/billing/billingEngine.ts` now distinguish real billing-cycle UUID bridges from selector-input-only execution windows: selector windows no longer get forced into `invoices.billing_cycle_id` or reloaded through `client_billing_cycles`
+  - `packages/billing/src/lib/billing/billingEngine.ts` now exposes `calculateBillingForExecutionWindow(...)`, which reuses the canonical prepared-period path without assuming the execution window can be looked up by billing-cycle UUID
+  - comparison-mode drift logging now skips execution windows that have no real billing-cycle bridge instead of trying to replay legacy billing against a typed contract-cadence identity
+  - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` passes `T251`, proving preview selection prefers canonical detail periods over invoice header periods when both exist
+  - `packages/billing/tests/authoritativeRecurringReaders.servicePeriods.wiring.test.ts` passes `T272`, locking the source-side preference for canonical detail periods over header fallbacks
+  - `server/src/test/unit/jobs/generateInvoiceHandler.recurringExecutionIdentity.test.ts` passes `T271`, and `server/src/test/integration/billingInvoiceTiming.integration.test.ts` passes `T252`, proving selector-input contract-cadence execution can run and persist invoices with `billing_cycle_id = null` instead of being blocked on a billing-cycle-only scheduler assumption
+  - focused validation for this checkpoint used:
+    - `cd server && npx tsc --pretty false --noEmit -p ../packages/billing/tsconfig.json`
+    - `cd server && npx vitest run ../packages/billing/tests/authoritativeRecurringReaders.servicePeriods.wiring.test.ts src/test/unit/jobs/generateInvoiceHandler.recurringExecutionIdentity.test.ts src/test/unit/billing/recurrenceStorageModel.contract.test.ts --coverage.enabled false`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T252" --hookTimeout 600000 --coverage.enabled false`
+    - `PGPASSWORD=postpass123 psql -h 127.0.0.1 -p 57433 -U postgres -d postgres -c 'DROP DATABASE IF EXISTS test_database;'`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts -t "T251" --hookTimeout 600000 --coverage.enabled false`
+  - notable harness gotchas:
+    - DB-backed suites still require overriding the stale `.env.localtest` database port from `5438` to `57433`
+    - re-running `invoiceSelection.integration.test.ts` back-to-back can leave a stale `test_database`; dropping it before the isolated rerun avoids the duplicate-DB bootstrap failure
+
 - (2026-03-17) Partially migrated live recurrence rows now normalize at the remaining client-facing read/write edges, which closes `F219` and `T249`:
   - `packages/clients/src/models/clientContract.ts` now normalizes `contract_lines` rereads with `normalizeLiveRecurringStorage(...)`, so client-contract authoring flows stop returning raw legacy-null `billing_timing` / `cadence_owner` values
   - `packages/clients/src/actions/clientContractLineActions.ts` now normalizes partially migrated recurring fields on both sides of the client-line seam: `getClientContractLine(...)` returns normalized defaults before date serialization, and `addClientContractLine(...)` now clones from `templateRecurringStorage` instead of hand-written `?? 'arrears' / 'client'` fallbacks

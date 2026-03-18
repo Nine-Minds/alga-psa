@@ -216,6 +216,10 @@ function hasPersistedInvoiceContent(billingResult: IBillingResult): boolean {
   );
 }
 
+function resolveRecurringInvoiceBridgeId(selectorInput: IRecurringDueSelectionInput): string | null {
+  return selectorInput.billingCycleId ?? null;
+}
+
 // TODO: Move to billingAndTax.ts
 async function calculatePreviewTax(
   charges: IBillingCharge[],
@@ -260,28 +264,36 @@ export async function calculateBillingForSelectionInput(input: {
   billingEngine: BillingEngine;
   selectorInput: IRecurringDueSelectionInput;
 }) {
+  const billingCycleBridgeId = input.selectorInput.billingCycleId ?? null;
   const recurringTimingSelections =
     await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
       input.selectorInput.clientId,
       input.selectorInput.windowStart,
       input.selectorInput.windowEnd,
-      input.selectorInput.billingCycleId ?? input.selectorInput.executionWindow.identityKey,
+      billingCycleBridgeId ?? input.selectorInput.executionWindow.identityKey,
     );
 
-  const canonicalBillingResult = await input.billingEngine.calculateBilling(
-    input.selectorInput.clientId,
-    input.selectorInput.windowStart,
-    input.selectorInput.windowEnd,
-    input.selectorInput.billingCycleId ?? input.selectorInput.executionWindow.identityKey,
-    { recurringTimingSelections },
-  );
+  const canonicalBillingResult = billingCycleBridgeId
+    ? await input.billingEngine.calculateBilling(
+        input.selectorInput.clientId,
+        input.selectorInput.windowStart,
+        input.selectorInput.windowEnd,
+        billingCycleBridgeId,
+        { recurringTimingSelections },
+      )
+    : await input.billingEngine.calculateBillingForExecutionWindow(
+        input.selectorInput.clientId,
+        input.selectorInput.windowStart,
+        input.selectorInput.windowEnd,
+        { recurringTimingSelections },
+      );
 
   await runRecurringBillingComparisonMode({
     billingEngine: input.billingEngine,
     clientId: input.selectorInput.clientId,
     cycleStart: input.selectorInput.windowStart,
     cycleEnd: input.selectorInput.windowEnd,
-    billingCycleId: input.selectorInput.billingCycleId ?? input.selectorInput.executionWindow.identityKey,
+    billingCycleId: billingCycleBridgeId,
     comparisonTrace: {
       executionIdentityKeys: [input.selectorInput.executionWindow.identityKey],
       executionWindowKinds: [input.selectorInput.executionWindow.kind],
@@ -355,7 +367,7 @@ async function runRecurringBillingComparisonMode(input: {
   clientId: string;
   cycleStart: ISO8601String;
   cycleEnd: ISO8601String;
-  billingCycleId: string;
+  billingCycleId: string | null;
   comparisonTrace?: {
     executionIdentityKeys: string[];
     executionWindowKinds: string[];
@@ -364,6 +376,10 @@ async function runRecurringBillingComparisonMode(input: {
   canonicalBillingResult: IBillingResult;
 }) {
   if (getRecurringBillingComparisonMode() !== 'legacy-vs-canonical') {
+    return;
+  }
+
+  if (!input.billingCycleId) {
     return;
   }
 
@@ -885,19 +901,6 @@ export const generateInvoice = withAuth(async (
 
   const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
 
-  // Validate that the client has a billing email (required for online payments)
-  const clientForValidation = await knex('clients')
-    .where({ client_id, tenant })
-    .select('client_name')
-    .first();
-
-  if (clientForValidation) {
-    const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
-    if (!emailValidation.valid) {
-      throw new Error(emailValidation.error);
-    }
-  }
-
   let cycleStart: ISO8601String;
   let cycleEnd: ISO8601String;
 
@@ -915,33 +918,80 @@ export const generateInvoice = withAuth(async (
     throw new Error('Invalid billing cycle dates');
   }
 
-  // Check if an invoice already exists for this billing cycle
-  const existingInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('invoices')
-      .where({
-        billing_cycle_id,
-        tenant
+  return generateInvoiceForSelectionInput({
+    clientId: client_id,
+    billingCycleId: billing_cycle_id,
+    windowStart: cycleStart,
+    windowEnd: cycleEnd,
+    executionWindow: buildBillingCycleDueSelectionInput({
+      clientId: client_id,
+      billingCycleId: billing_cycle_id,
+      windowStart: cycleStart,
+      windowEnd: cycleEnd,
+    }).executionWindow,
+  }, options);
+});
+
+export const generateInvoiceForSelectionInput = withAuth(async (
+  user,
+  { tenant },
+  selectorInput: IRecurringDueSelectionInput,
+  options: { allowPoOverage?: boolean } = {}
+): Promise<InvoiceViewModel | null> => {
+  const { knex } = await createTenantKnex();
+  const billing_cycle_id = resolveRecurringInvoiceBridgeId(selectorInput);
+  const executionIdentityKey = selectorInput.executionWindow.identityKey;
+  const client_id = selectorInput.clientId;
+  const cycleStart = selectorInput.windowStart;
+  const cycleEnd = selectorInput.windowEnd;
+
+  // Validate that the client has a billing email (required for online payments)
+  const clientForValidation = await knex('clients')
+    .where({ client_id, tenant })
+    .select('client_name')
+    .first();
+
+  if (clientForValidation) {
+    const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
+    if (!emailValidation.valid) {
+      throw new Error(emailValidation.error);
+    }
+  }
+
+  // Client-cadence runs can still use the persisted billing-cycle UUID as a
+  // fast duplicate bridge. Selector-input-only execution windows rely on the
+  // canonical recurring detail/billed-through guards instead of forcing a
+  // non-UUID execution identity into invoices.billing_cycle_id.
+  const existingInvoice = billing_cycle_id
+    ? await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('invoices')
+          .where({
+            billing_cycle_id,
+            tenant
+          })
+          .first();
       })
-      .first();
-  });
+    : null;
 
   if (existingInvoice) {
     const duplicateInvoiceError = new Error('Invoice already exists for this billing cycle');
     Object.assign(duplicateInvoiceError, {
       code: DUPLICATE_RECURRING_INVOICE_CODE,
-      billingCycleId: billing_cycle_id,
+      billingCycleId: billing_cycle_id ?? executionIdentityKey,
       invoiceId: existingInvoice.invoice_id,
     });
     throw duplicateInvoiceError;
   }
 
   const billingEngine = new BillingEngine();
-  const billingResult = await calculateBillingForInvoiceWindow({
+  const billingResult = await calculateBillingForSelectionInput({
     billingEngine,
-    clientId: client_id,
-    cycleStart,
-    cycleEnd,
-    billingCycleId: billing_cycle_id,
+    selectorInput: {
+      ...selectorInput,
+      clientId: client_id,
+      windowStart: cycleStart,
+      windowEnd: cycleEnd,
+    },
   });
 
   if (billingResult.error) {
@@ -1177,7 +1227,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
   clientId: string,
   cycleStart: ISO8601String,
   cycleEnd: ISO8601String,
-  billing_cycle_id: string,
+  billing_cycle_id: string | null,
   userId: string
 ): Promise<IInvoice> => {
   // Verify that the userId matches the current user

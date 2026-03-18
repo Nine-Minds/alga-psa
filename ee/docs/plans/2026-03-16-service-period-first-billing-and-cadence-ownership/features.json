@@ -1982,7 +1982,7 @@
   {
     "id": "F221",
     "description": "Add source and DB validation proving live runtime no longer depends on dropped recurrence-related tables after cleanup lands",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Cleanup requirements",
       "Acceptance Criteria"
@@ -1991,7 +1991,7 @@
   {
     "id": "F222",
     "description": "Add source and DB validation proving authoritative recurring readers no longer fall back to invoice header periods when canonical detail periods exist",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Cleanup requirements",
       "Acceptance Criteria"
@@ -2000,7 +2000,7 @@
   {
     "id": "F223",
     "description": "Add source and DB validation proving contract-cadence execution paths are no longer blocked on billingCycleId-only scheduler assumptions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Cleanup requirements",
       "Contract-cadence requirements"
