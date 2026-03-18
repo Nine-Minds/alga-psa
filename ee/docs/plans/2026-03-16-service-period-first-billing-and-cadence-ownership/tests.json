@@ -2522,7 +2522,7 @@
   {
     "id": "T288",
     "description": "Regeneration refreshes future unedited service periods when source recurrence rules change",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F238",
       "F254"
@@ -2531,7 +2531,7 @@
   {
     "id": "T289",
     "description": "Regeneration preserves user-edited future service periods instead of silently overwriting them",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F239"
     ]

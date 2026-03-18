@@ -2135,7 +2135,7 @@
   {
     "id": "F238",
     "description": "Define and implement the regeneration algorithm that refreshes future unedited service periods when source recurrence rules change",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Pass 2"
@@ -2144,7 +2144,7 @@
   {
     "id": "F239",
     "description": "Define and implement override-preservation rules so user-edited future service periods are not silently overwritten by regeneration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Risks"

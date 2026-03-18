@@ -21,6 +21,7 @@ const prd = read('PRD.md');
 const recurringServicePeriodGenerationHorizon = read('RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
 const recurringServicePeriodProvenance = read('RECURRING_SERVICE_PERIOD_PROVENANCE.md');
+const recurringServicePeriodRegeneration = read('RECURRING_SERVICE_PERIOD_REGENERATION.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
 const recurrenceStorageMatrix = read('RECURRENCE_STORAGE_MATRIX.md');
 const runbook = read('RUNBOOK.md');
@@ -324,6 +325,16 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodGenerationHorizon).toContain('`gap`');
     expect(recurringServicePeriodGenerationHorizon).toContain('`overlap`');
     expect(recurringServicePeriodGenerationHorizon).toContain('shared/billingClients/recurringServicePeriodGenerationHorizon.ts');
+  });
+
+  it('T288 and T289: documents regeneration of untouched future rows and explicit preservation of edited overrides', () => {
+    expect(recurringServicePeriodRegeneration).toContain('# Recurring Service-Period Regeneration');
+    expect(recurringServicePeriodRegeneration).toContain('untouched generated future rows may be refreshed');
+    expect(recurringServicePeriodRegeneration).toContain('user-edited or repair-driven future rows must not be silently overwritten');
+    expect(recurringServicePeriodRegeneration).toContain('by reusing the prior `periodKey` and incrementing `revision`');
+    expect(recurringServicePeriodRegeneration).toContain('provenance.kind = user_edited');
+    expect(recurringServicePeriodRegeneration).toContain('provenance.kind = repair');
+    expect(recurringServicePeriodRegeneration).toContain('shared/billingClients/regenerateRecurringServicePeriods.ts');
   });
 
   it('T250: the recurrence field source-of-truth matrix matches the authoritative storage model and compatibility seams', () => {

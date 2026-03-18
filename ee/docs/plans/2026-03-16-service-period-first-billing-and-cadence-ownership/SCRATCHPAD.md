@@ -41,6 +41,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The first regeneration and override-preservation algorithm now exists, which closes `F238`, `F239`, `T288`, and `T289`:
+  - `shared/billingClients/regenerateRecurringServicePeriods.ts` now defines the v1 regeneration rule for future active rows: untouched generated slots can be refreshed into `regenerated` revisions, replaced rows become `superseded`, and leftover candidate slots stay new generated rows
+  - the same helper now makes override preservation explicit instead of accidental: `user_edited`, `repair`, `edited`, `locked`, and `billed` future rows are preserved as-is, and the candidate slot that would have overwritten them is intentionally discarded until a later explicit conflict-resolution flow exists
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_REGENERATION.md` now documents the slot-order regeneration policy, period-key/revision continuity, and the deliberate v1 boundary that preserved overrides are not merged automatically
+  - `server/src/test/unit/billing/recurringServicePeriodRegeneration.domain.test.ts` now locks both halves directly: changed untouched rows regenerate into a new revision while user-edited rows remain preserved and unmodified
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodRegeneration.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) The first contract-cadence materialization helper now exists, which closes `F237` and `T287`:
   - `shared/billingClients/materializeContractCadenceServicePeriods.ts` now wraps the existing contract-anniversary generators and `resolveContractCadenceInvoiceWindowForServicePeriod(...)`, producing persisted future record candidates for contract-owned recurring obligations without waiting for later invoice-selection cutover work
   - the helper keeps contract-owned timing explicit at the persisted-record seam: schedule keys are `contract` owned, timing metadata preserves the anniversary anchor, `advance` invoice windows match the contract-owned service period, and `arrears` invoice windows land on the next contract-owned window after the covered period ends

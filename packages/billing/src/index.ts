@@ -136,6 +136,13 @@ export type {
   MaterializeContractCadenceServicePeriodsInput,
 } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
 export {
+  regenerateRecurringServicePeriods,
+} from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
+export type {
+  IRecurringServicePeriodRegenerationPlan,
+  RegenerateRecurringServicePeriodsInput,
+} from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
+export {
   isRecurringServicePeriodProvenanceDivergent,
   isRecurringServicePeriodProvenanceReasonCode,
   validateRecurringServicePeriodProvenance,
