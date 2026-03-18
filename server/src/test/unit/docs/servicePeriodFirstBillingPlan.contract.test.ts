@@ -19,6 +19,7 @@ const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
 const persistedServicePeriodRecord = read('PERSISTED_SERVICE_PERIOD_RECORD.md');
 const prd = read('PRD.md');
 const recurringServicePeriodGenerationHorizon = read('RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md');
+const recurringServicePeriodInvoiceLinkage = read('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
 const recurringServicePeriodImmutability = read('RECURRING_SERVICE_PERIOD_IMMUTABILITY.md');
 const recurringServicePeriodProvenance = read('RECURRING_SERVICE_PERIOD_PROVENANCE.md');
@@ -299,6 +300,19 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodLifecycle).toContain('billed -> archived');
     expect(recurringServicePeriodLifecycle).toContain('## Terminal States');
     expect(recurringServicePeriodLifecycle).toContain('shared/billingClients/recurringServicePeriodLifecycle.ts');
+  });
+
+  it('documents the recurring service-period invoice linkage contract and billed-history traceability boundary', () => {
+    expect(recurringServicePeriodInvoiceLinkage).toContain('# Recurring Service-Period Invoice Linkage');
+    expect(recurringServicePeriodInvoiceLinkage).toContain('## Linkage Shape');
+    expect(recurringServicePeriodInvoiceLinkage).toContain('invoiceChargeDetailId');
+    expect(recurringServicePeriodInvoiceLinkage).toContain('`invoice_charge_details.item_detail_id` remains the canonical recurring detail identity');
+    expect(recurringServicePeriodInvoiceLinkage).toContain('## Lifecycle Effect');
+    expect(recurringServicePeriodInvoiceLinkage).toContain('lifecycleState = billed');
+    expect(recurringServicePeriodInvoiceLinkage).toContain('invoice_linkage_repair');
+    expect(recurringServicePeriodInvoiceLinkage).toContain('shared/billingClients/recurringServicePeriodInvoiceLinkage.ts');
+    expect(recurringServicePeriodInvoiceLinkage).toContain('server/migrations/20260318143000_add_invoice_linkage_to_recurring_service_periods.cjs');
+    expect(persistedServicePeriodRecord).toContain('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
   });
 
   it('T284: documents the persisted provenance model for generated, user-edited, regenerated, and repair rows', () => {

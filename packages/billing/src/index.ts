@@ -52,6 +52,7 @@ export type {
   IRecurringCoverage,
   IRecurringDuePeriodSelection,
   IRecurringInvoiceDetailTiming,
+  IRecurringServicePeriodInvoiceLinkage,
   IRecurringInvoiceWindow,
   IRecurringObligationRef,
   IRecurringServicePeriod,
@@ -138,6 +139,10 @@ export type {
 export {
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
+export {
+  applyRecurringServicePeriodInvoiceLinkage,
+  hasRecurringServicePeriodInvoiceLinkage,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodInvoiceLinkage';
 export type {
   IRecurringServicePeriodRegenerationPlan,
   RegenerateRecurringServicePeriodsInput,

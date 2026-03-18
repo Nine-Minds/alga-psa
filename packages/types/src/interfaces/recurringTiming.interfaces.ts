@@ -243,6 +243,13 @@ export type IRecurringServicePeriodRecordProvenance =
   | IRegeneratedRecurringServicePeriodRecordProvenance
   | IRepairRecurringServicePeriodRecordProvenance;
 
+export interface IRecurringServicePeriodInvoiceLinkage {
+  invoiceId: string;
+  invoiceChargeId: string;
+  invoiceChargeDetailId: string;
+  linkedAt: ISO8601String;
+}
+
 export interface IRecurringServicePeriodRecord {
   kind: 'persisted_service_period_record';
   recordId: string;
@@ -258,6 +265,7 @@ export interface IRecurringServicePeriodRecord {
   activityWindow?: IRecurringActivityWindow | null;
   timingMetadata?: RecurringTimingMetadata;
   provenance: IRecurringServicePeriodRecordProvenance;
+  invoiceLinkage?: IRecurringServicePeriodInvoiceLinkage | null;
   createdAt: ISO8601String;
   updatedAt: ISO8601String;
 }

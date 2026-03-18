@@ -2162,7 +2162,7 @@
   {
     "id": "F241",
     "description": "Link persisted service periods to resulting invoice detail rows so billed history can be traced back to explicit period records",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Read-model and post-persist lifecycle requirements"

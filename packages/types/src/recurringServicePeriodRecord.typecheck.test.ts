@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import type {
   GeneratedRecurringServicePeriodReasonCode,
   IPersistedRecurringObligationRef,
+  IRecurringServicePeriodInvoiceLinkage,
   IRecurringServicePeriodRecord,
   IRecurringServicePeriodRecordProvenance,
   RecurringServicePeriodLifecycleState,
@@ -38,7 +39,7 @@ describe('persisted recurring service-period record typing', () => {
       'backfill_materialization',
     ]);
 
-    const lifecycleState: RecurringServicePeriodLifecycleState = 'generated';
+    const lifecycleState: RecurringServicePeriodLifecycleState = 'billed';
     const provenanceKind: RecurringServicePeriodProvenanceKind = 'generated';
     const generatedReasonCode: GeneratedRecurringServicePeriodReasonCode = 'initial_materialization';
     const editedReasonCode: UserEditedRecurringServicePeriodReasonCode = 'boundary_adjustment';
@@ -55,6 +56,12 @@ describe('persisted recurring service-period record typing', () => {
       sourceRuleVersion: 'contract-line-1:v1',
       reasonCode: generatedReasonCode,
       sourceRunKey: 'materialize-2026-03-18',
+    };
+    const invoiceLinkage: IRecurringServicePeriodInvoiceLinkage = {
+      invoiceId: 'invoice-1',
+      invoiceChargeId: 'charge-1',
+      invoiceChargeDetailId: 'detail-1',
+      linkedAt: '2026-03-18T11:00:00.000Z',
     };
 
     const record: IRecurringServicePeriodRecord = {
@@ -87,6 +94,7 @@ describe('persisted recurring service-period record typing', () => {
         boundarySource: 'client_billing_cycle',
       },
       provenance,
+      invoiceLinkage,
       createdAt: '2026-03-18T10:00:00.000Z',
       updatedAt: '2026-03-18T10:00:00.000Z',
     };
@@ -94,7 +102,8 @@ describe('persisted recurring service-period record typing', () => {
     expect(record.scheduleKey).toContain('contract-line-1');
     expect(record.provenance.kind).toBe('generated');
     expect(record.provenance.reasonCode).toBe('initial_materialization');
-    expect(record.lifecycleState).toBe('generated');
+    expect(record.lifecycleState).toBe('billed');
+    expect(record.invoiceLinkage?.invoiceChargeDetailId).toBe('detail-1');
     expect(record.servicePeriod.semantics).toBe(RECURRING_RANGE_SEMANTICS);
     expect(record.sourceObligation.tenant).toBe('tenant-1');
     expect(editedReasonCode).toBe('boundary_adjustment');
@@ -102,5 +111,6 @@ describe('persisted recurring service-period record typing', () => {
     expectTypeOf<IRecurringServicePeriodRecord['sourceObligation']>().toEqualTypeOf<IPersistedRecurringObligationRef>();
     expectTypeOf<IRecurringServicePeriodRecord['lifecycleState']>().toEqualTypeOf<RecurringServicePeriodLifecycleState>();
     expectTypeOf<IRecurringServicePeriodRecord['provenance']>().toEqualTypeOf<IRecurringServicePeriodRecordProvenance>();
+    expectTypeOf<IRecurringServicePeriodRecord['invoiceLinkage']>().toEqualTypeOf<IRecurringServicePeriodInvoiceLinkage | null | undefined>();
   });
 });

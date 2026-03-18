@@ -138,7 +138,6 @@ This checkpoint does not yet define:
 
 - the physical database table, indexes, or foreign-key layout for persisted service-period records
 - due-selection queries that read persisted rows instead of deriving periods on demand
-- invoice linkage fields or join contracts to `invoice_charge_details`
 - regeneration algorithms, edit operations, or conflict resolution rules
 - UI read/write surfaces for listing or editing persisted records
 
@@ -147,3 +146,16 @@ Those concerns remain sequenced behind:
 - `F232` for schema and integrity constraints
 - `F233-F255` for lifecycle, provenance, regeneration, and edit semantics
 - `F241-F267` for invoice linkage, due selection, runtime adoption, and DB-backed validation
+
+## Invoice Linkage
+
+`F241` adds the first billed-history linkage contract in
+`RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md`.
+
+Persisted rows may now carry additive `invoiceLinkage` metadata pointing at:
+
+- the billed invoice header
+- the parent invoice charge
+- the canonical `invoice_charge_details` row that consumed the service period
+
+This linkage remains optional until billing occurs; future unbilled rows continue to exist without invoice metadata.

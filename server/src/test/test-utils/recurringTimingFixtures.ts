@@ -2,6 +2,7 @@ import type {
   CadenceOwner,
   IPersistedRecurringObligationRef,
   IRecurringInvoiceWindow,
+  IRecurringServicePeriodInvoiceLinkage,
   IRecurringObligationRef,
   IRecurringServicePeriodRecord,
   IRecurringServicePeriod,
@@ -148,8 +149,19 @@ export const buildRecurringServicePeriodRecord = (
       reasonCode: 'initial_materialization',
       sourceRunKey: 'materialize-2026-03-18',
     },
+    invoiceLinkage: null,
     createdAt: '2026-03-18T10:00:00.000Z',
     updatedAt: '2026-03-18T10:00:00.000Z',
     ...overrides,
   };
 };
+
+export const buildRecurringServicePeriodInvoiceLinkage = (
+  overrides: Partial<IRecurringServicePeriodInvoiceLinkage> = {},
+): IRecurringServicePeriodInvoiceLinkage => ({
+  invoiceId: 'invoice-1',
+  invoiceChargeId: 'charge-1',
+  invoiceChargeDetailId: 'detail-1',
+  linkedAt: '2026-03-18T11:00:00.000Z',
+  ...overrides,
+});

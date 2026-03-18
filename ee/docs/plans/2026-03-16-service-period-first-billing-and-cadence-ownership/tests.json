@@ -2547,7 +2547,7 @@
   {
     "id": "T291",
     "description": "Persisted service periods link cleanly to resulting invoice detail rows after invoice generation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F241"
     ]
