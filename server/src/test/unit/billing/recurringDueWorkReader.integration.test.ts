@@ -399,7 +399,7 @@ describe('recurring due-work reader', () => {
     });
   });
 
-  it('reports missing service-period materialization diagnostics when recurring client-cadence work falls back to a billing-cycle bridge row', async () => {
+  it('T075: due-work reader reports a missing-materialization state when a recurring obligation should exist but no future periods have been generated', async () => {
     const result = await getAvailableRecurringDueWork({
       page: 1,
       pageSize: 10,
