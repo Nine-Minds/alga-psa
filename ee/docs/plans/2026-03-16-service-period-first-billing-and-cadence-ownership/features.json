@@ -2198,7 +2198,7 @@
   {
     "id": "F245",
     "description": "Define the minimal v1 service-period edit operations supported for billing admins, including boundary adjustments",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Open Questions"

@@ -20,6 +20,7 @@ const persistedServicePeriodRecord = read('PERSISTED_SERVICE_PERIOD_RECORD.md');
 const prd = read('PRD.md');
 const recurringServicePeriodGenerationHorizon = read('RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md');
 const recurringServicePeriodBackfill = read('RECURRING_SERVICE_PERIOD_BACKFILL.md');
+const recurringServicePeriodEditOperations = read('RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md');
 const recurringServicePeriodDueSelection = read('RECURRING_SERVICE_PERIOD_DUE_SELECTION.md');
 const recurringServicePeriodInvoiceLinkage = read('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
@@ -273,6 +274,20 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodBackfill).toContain('shared/billingClients/backfillRecurringServicePeriods.ts');
     expect(persistedServicePeriodRecord).toContain('## Backfill Boundary');
     expect(persistedServicePeriodRecord).toContain('already billed historical coverage stays authoritative on invoice detail history');
+  });
+
+  it('T345: boundary adjustment is defined as the minimal v1 edit operation before continuity and UI passes land', () => {
+    expect(recurringServicePeriodEditOperations).toContain('# Recurring Service-Period Edit Operations');
+    expect(recurringServicePeriodEditOperations).toContain('## Minimal Supported Operation');
+    expect(recurringServicePeriodEditOperations).toContain('`boundary_adjustment`');
+    expect(recurringServicePeriodEditOperations).toContain('shared/billingClients/editRecurringServicePeriodBoundaries.ts');
+    expect(recurringServicePeriodEditOperations).toContain('## Revision And Provenance Rule');
+    expect(recurringServicePeriodEditOperations).toContain('`lifecycleState = superseded`');
+    expect(recurringServicePeriodEditOperations).toContain('`lifecycleState = edited`');
+    expect(recurringServicePeriodEditOperations).toContain('`invoice_window_adjustment`');
+    expect(recurringServicePeriodEditOperations).toContain('`activity_window_adjustment`');
+    expect(recurringServicePeriodEditOperations).toContain('## Minimal Local Validation');
+    expect(recurringServicePeriodEditOperations).toContain('billed or locked rows remain non-editable in place');
   });
 
   it('documents the architecture thesis and system-surface matrix in the PRD and appendix', () => {

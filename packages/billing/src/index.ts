@@ -148,6 +148,9 @@ export {
   backfillRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/backfillRecurringServicePeriods';
 export {
+  editRecurringServicePeriodBoundaries,
+} from '@alga-psa/shared/billingClients/editRecurringServicePeriodBoundaries';
+export {
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
 export {
@@ -170,6 +173,10 @@ export type {
   BackfillRecurringServicePeriodsInput,
   IRecurringServicePeriodBackfillPlan,
 } from '@alga-psa/shared/billingClients/backfillRecurringServicePeriods';
+export type {
+  EditRecurringServicePeriodBoundariesInput,
+  IRecurringServicePeriodBoundaryEditResult,
+} from '@alga-psa/shared/billingClients/editRecurringServicePeriodBoundaries';
 export type {
   IRecurringServicePeriodRegenerationPlan,
   RegenerateRecurringServicePeriodsInput,

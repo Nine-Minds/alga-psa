@@ -41,6 +41,16 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The minimal v1 boundary-adjustment edit operation is now explicit, which closes `F245` and adds/closes `T345` while intentionally leaving `T295` for the later continuity + UI passes:
+  - `shared/billingClients/editRecurringServicePeriodBoundaries.ts` now defines the first explicit edit primitive for persisted service periods: mutable future rows can be superseded by a new `edited` revision, `provenance.kind = user_edited`, and the helper infers `boundary_adjustment`, `invoice_window_adjustment`, or `activity_window_adjustment` reason codes instead of hiding edits behind source-rule changes
+  - the helper stays intentionally narrow at this pass: it reuses the existing immutability guard, validates only local half-open boundary integrity plus in-period activity clipping, rejects no-op edits, and does not yet attempt neighbor continuity or transport-surface validation that belongs to `F248` and `F251`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md` now documents that `boundary_adjustment` is the only supported v1 edit operation at this checkpoint, while skip/defer, split/merge, and UI/API editing remain sequenced later
+  - `tests.json` now adds `T345` because the original `T295` also depends on the later continuity-validation and editing-surface work in `F248` and `F251`; the new test locks the edit primitive itself without pretending the broader pass already exists
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodBoundaryEdit.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
 - (2026-03-18) The first billed-history-safe backfill planner now exists, which closes `F244`, `T286`, and `T294`:
   - `shared/billingClients/backfillRecurringServicePeriods.ts` now defines the v1 initialization rule for legacy recurring lines before runtime cutover: future candidate rows are normalized onto `provenance.reasonCode = backfill_materialization`, billed-history boundaries come from legacy billed-through data plus any already-linked persisted rows, and candidates overlapping that boundary are rejected instead of being silently clipped
   - the same helper now makes partial-rollout backfill explicit instead of accidental: already-billed rows are retained unchanged, equivalent future rows are retained unchanged, and untouched generated future rows that drift from the current candidate schedule are regenerated with `reasonCode = backfill_realignment` while preserving the earlier row as `superseded`

@@ -2561,6 +2561,14 @@
     ]
   },
   {
+    "id": "T345",
+    "description": "Boundary adjustment is the minimal supported v1 edit operation and creates an explicit edited revision before broader continuity or UI passes land",
+    "implemented": true,
+    "featureIds": [
+      "F245"
+    ]
+  },
+  {
     "id": "T292",
     "description": "Invoice generation selects due persisted service periods rather than deriving schedule boundaries on demand",
     "implemented": false,
