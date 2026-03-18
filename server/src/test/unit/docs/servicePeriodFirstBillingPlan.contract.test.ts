@@ -20,6 +20,7 @@ const persistedServicePeriodRecord = read('PERSISTED_SERVICE_PERIOD_RECORD.md');
 const prd = read('PRD.md');
 const recurringServicePeriodGenerationHorizon = read('RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
+const recurringServicePeriodImmutability = read('RECURRING_SERVICE_PERIOD_IMMUTABILITY.md');
 const recurringServicePeriodProvenance = read('RECURRING_SERVICE_PERIOD_PROVENANCE.md');
 const recurringServicePeriodRegeneration = read('RECURRING_SERVICE_PERIOD_REGENERATION.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
@@ -335,6 +336,14 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodRegeneration).toContain('provenance.kind = user_edited');
     expect(recurringServicePeriodRegeneration).toContain('provenance.kind = repair');
     expect(recurringServicePeriodRegeneration).toContain('shared/billingClients/regenerateRecurringServicePeriods.ts');
+  });
+
+  it('T290: documents immutability for locked or billed service periods and the narrow corrective-flow boundary', () => {
+    expect(recurringServicePeriodImmutability).toContain('# Recurring Service-Period Immutability');
+    expect(recurringServicePeriodImmutability).toContain('locked or billed rows are immutable in place');
+    expect(recurringServicePeriodImmutability).toContain('invoice_linkage_repair');
+    expect(recurringServicePeriodImmutability).toContain('edit_boundaries');
+    expect(recurringServicePeriodImmutability).toContain('shared/billingClients/recurringServicePeriodMutations.ts');
   });
 
   it('T250: the recurrence field source-of-truth matrix matches the authoritative storage model and compatibility seams', () => {

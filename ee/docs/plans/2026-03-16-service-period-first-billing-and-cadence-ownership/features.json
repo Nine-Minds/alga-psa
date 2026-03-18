@@ -2153,7 +2153,7 @@
   {
     "id": "F240",
     "description": "Define billed-period and locked-period immutability rules, including which corrective flows are allowed after invoice linkage exists",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Read-model and post-persist lifecycle requirements"

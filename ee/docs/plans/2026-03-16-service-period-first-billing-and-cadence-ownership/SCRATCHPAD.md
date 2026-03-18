@@ -41,6 +41,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Locked/billed immutability is now explicit, which closes `F240` and `T290`:
+  - `shared/billingClients/recurringServicePeriodMutations.ts` now defines the v1 mutation guard for persisted service-period rows: unlocked future rows may still follow normal edit/regeneration flows, while `locked` and `billed` rows reject ordinary edits and allow only the narrow corrective operations `invoice_linkage_repair` and `archive`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_IMMUTABILITY.md` now documents that billed coverage remains audit history instead of mutable schedule draft state, while also keeping the invoice-linkage repair boundary explicit for the later linkage pass
+  - `server/src/test/unit/billing/recurringServicePeriodMutations.domain.test.ts` now locks the allowed/disallowed operations directly for generated, locked, and billed rows, and `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks the immutability artifact
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodMutations.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) The first regeneration and override-preservation algorithm now exists, which closes `F238`, `F239`, `T288`, and `T289`:
   - `shared/billingClients/regenerateRecurringServicePeriods.ts` now defines the v1 regeneration rule for future active rows: untouched generated slots can be refreshed into `regenerated` revisions, replaced rows become `superseded`, and leftover candidate slots stay new generated rows
   - the same helper now makes override preservation explicit instead of accidental: `user_edited`, `repair`, `edited`, `locked`, and `billed` future rows are preserved as-is, and the candidate slot that would have overwritten them is intentionally discarded until a later explicit conflict-resolution flow exists

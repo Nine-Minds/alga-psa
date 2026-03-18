@@ -143,6 +143,14 @@ export type {
   RegenerateRecurringServicePeriodsInput,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
 export {
+  evaluateRecurringServicePeriodMutationPermission,
+  RECURRING_SERVICE_PERIOD_MUTATION_OPERATIONS,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodMutations';
+export type {
+  IRecurringServicePeriodMutationDecision,
+  RecurringServicePeriodMutationOperation,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodMutations';
+export {
   isRecurringServicePeriodProvenanceDivergent,
   isRecurringServicePeriodProvenanceReasonCode,
   validateRecurringServicePeriodProvenance,
