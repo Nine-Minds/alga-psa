@@ -35,6 +35,7 @@ export interface TemplateWizardData {
   description?: string;
   billing_frequency: string;
   cadence_owner?: 'client' | 'contract';
+  billing_timing?: 'arrears' | 'advance';
   // Templates are currency-neutral. Currency and rates are determined when a contract
   // is created from this template - rates come from the service's prices in the client's currency.
   enable_proration?: boolean;
@@ -81,6 +82,8 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     description: '',
     billing_frequency: 'monthly',
     cadence_owner: 'client',
+    billing_timing: 'arrears',
+    enable_proration: false,
     // currency_code removed - templates are now currency-neutral
     fixed_services: [],
     product_services: [],
@@ -95,6 +98,8 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         description: '',
         billing_frequency: 'monthly',
         cadence_owner: 'client',
+        billing_timing: 'arrears',
+        enable_proration: false,
         // currency_code removed - templates are now currency-neutral
         fixed_services: [],
         product_services: [],
@@ -112,6 +117,8 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     contract_name: wizardData.contract_name.trim(),
     description: wizardData.description?.trim() || undefined,
     cadence_owner: wizardData.cadence_owner ?? 'client',
+    billing_timing: wizardData.billing_timing ?? 'arrears',
+    enable_proration: wizardData.enable_proration ?? false,
     fixed_services: wizardData.fixed_services ?? [],
     product_services: wizardData.product_services ?? [],
     hourly_services: wizardData.hourly_services ?? [],
@@ -237,6 +244,8 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         description: '',
         billing_frequency: 'monthly',
         cadence_owner: 'client',
+        billing_timing: 'arrears',
+        enable_proration: false,
         // currency_code removed - templates are now currency-neutral
         fixed_services: [],
         product_services: [],

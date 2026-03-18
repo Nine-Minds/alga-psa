@@ -86,6 +86,24 @@ export function TemplateReviewContractStep({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
+                <div className="text-xs text-[rgb(var(--color-text-500))] flex flex-wrap gap-3 mb-2 pb-2 border-b border-[rgb(var(--color-border-200))]">
+                  <span>
+                    Cadence owner:{' '}
+                    {data.cadence_owner === 'contract'
+                      ? 'Contract anniversary'
+                      : 'Client billing schedule'}
+                  </span>
+                  <span>
+                    Billing timing:{' '}
+                    {data.billing_timing === 'advance'
+                      ? 'Advance'
+                      : 'Arrears'}
+                  </span>
+                  <span>
+                    Partial-period adjustment:{' '}
+                    {data.enable_proration ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
                 {data.fixed_services.map((service, index) => (
                   <div key={`${service.service_id}-${index}`} className="border border-[rgb(var(--color-border-200))] rounded-md p-3 bg-[rgb(var(--color-border-50))]">
                     <p className="font-medium text-[rgb(var(--color-text-900))]">

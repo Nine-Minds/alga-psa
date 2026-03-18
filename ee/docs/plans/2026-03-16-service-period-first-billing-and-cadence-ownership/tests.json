@@ -2034,7 +2034,7 @@
   {
     "id": "T235",
     "description": "Template-line authoring persists canonical recurring cadence semantics wherever template support exists in v1",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F206",
       "F212"

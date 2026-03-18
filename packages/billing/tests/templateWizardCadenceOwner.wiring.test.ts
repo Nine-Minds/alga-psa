@@ -30,6 +30,48 @@ describe('template wizard cadence_owner wiring', () => {
     expect(fixedStepSource).toContain(
       "updateData({ cadence_owner: value as TemplateWizardData['cadence_owner'] })"
     );
-    expect(actionsSource.match(/cadence_owner: submission\.cadence_owner \?\? 'client'/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(actionsSource.match(/cadence_owner: recurringAuthoringPolicy\.cadenceOwner/g)?.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('T235: template fixed-line authoring captures billing timing and partial-period defaults explicitly before template persistence', () => {
+    const wizardSource = readFileSync(
+      resolve(__dirname, '../src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx'),
+      'utf8'
+    );
+    const fixedStepSource = readFileSync(
+      resolve(
+        __dirname,
+        '../src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.tsx'
+      ),
+      'utf8'
+    );
+    const reviewSource = readFileSync(
+      resolve(
+        __dirname,
+        '../src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.tsx'
+      ),
+      'utf8'
+    );
+    const actionsSource = readFileSync(
+      resolve(__dirname, '../src/actions/contractWizardActions.ts'),
+      'utf8'
+    );
+
+    expect(wizardSource).toContain("billing_timing: 'arrears'");
+    expect(wizardSource).toContain('enable_proration: false');
+    expect(wizardSource).toContain("billing_timing: wizardData.billing_timing ?? 'arrears'");
+    expect(wizardSource).toContain('enable_proration: wizardData.enable_proration ?? false');
+
+    expect(fixedStepSource).toContain('Billing Timing');
+    expect(fixedStepSource).toContain('Adjust for Partial Periods');
+    expect(fixedStepSource).toContain(
+      "updateData({ billing_timing: value as TemplateWizardData['billing_timing'] })"
+    );
+    expect(fixedStepSource).toContain("updateData({ enable_proration: checked })");
+    expect(fixedStepSource).toContain('The first invoice bills at the start of the first covered service period.');
+    expect(fixedStepSource).toContain('The first invoice bills after the first covered service period closes.');
+
+    expect(reviewSource).toContain('Partial-period adjustment:');
+    expect(actionsSource).toContain('billingTiming: submission.billing_timing,');
   });
 });

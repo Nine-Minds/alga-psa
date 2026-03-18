@@ -82,7 +82,25 @@ vi.mock('../src/components/billing-dashboard/contracts/template-wizard/steps/Tem
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep', () => ({
-  TemplateFixedFeeServicesStep: () => React.createElement('div', { 'data-testid': 'step-fixed' }),
+  TemplateFixedFeeServicesStep: ({ updateData }: { updateData: (data: any) => void }) => {
+    React.useEffect(() => {
+      updateData({
+        cadence_owner: 'client',
+        billing_timing: 'advance',
+        enable_proration: true,
+        fixed_services: [
+          {
+            service_id: 'svc-fixed-1',
+            service_name: 'Fixed Service',
+            quantity: 1,
+          },
+        ],
+      });
+      // Intentionally initialize once per mount for test setup.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    return React.createElement('div', { 'data-testid': 'step-fixed' });
+  },
 }));
 
 vi.mock('../src/components/billing-dashboard/contracts/template-wizard/steps/TemplateProductsStep', () => ({
@@ -190,6 +208,8 @@ describe('TemplateWizard bucket overlays', () => {
 
     const submitted = createContractTemplateFromWizard.mock.calls[0][0];
     expect(submitted.cadence_owner).toBe('client');
+    expect(submitted.billing_timing).toBe('advance');
+    expect(submitted.enable_proration).toBe(true);
     expect(submitted.hourly_services?.[0]?.bucket_overlay).toEqual({
       total_minutes: 120,
       overage_rate: 15000,

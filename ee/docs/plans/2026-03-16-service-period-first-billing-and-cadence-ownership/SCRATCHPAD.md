@@ -39,6 +39,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Template fixed-line authoring now captures recurring timing and first-invoice semantics explicitly instead of silently defaulting everything to arrears/no-adjustment, which closes `F206` and `T235`:
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx` now carries `billing_timing` and `enable_proration` in template wizard state, defaults them to `arrears` / `false`, and includes both fields in `ContractTemplateWizardSubmission`
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.tsx` now lets authors choose fixed-line `Billing Timing`, toggle `Adjust for Partial Periods`, and see first-invoice explainer copy directly in the template authoring step alongside the existing cadence-owner chooser
+  - `packages/billing/src/actions/contractWizardActions.ts` now passes `submission.billing_timing` into `resolveRecurringAuthoringPolicy(...)` when creating template-backed fixed, product, hourly, and usage lines, so template-created recurring defaults stop relying on the action-layer arrears fallback when the wizard meant `advance`
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.tsx` now echoes cadence owner, billing timing, and partial-period adjustment in the review summary so template authors can verify first-invoice semantics before publishing
+  - focused coverage now lives in `packages/billing/tests/templateWizardBucketOverlay.test.ts` and `packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts`; the runtime wizard test now proves submission carries `billing_timing: 'advance'` plus `enable_proration: true`, while the wiring test locks the new template fixed-step and action-layer seams
+
 - (2026-03-17) Preset authoring/editing now persists the same recurring timing defaults that preset reuse was already replaying, which closes `F205` and `T234`:
   - `packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx` now persists explicit preset recurrence defaults instead of dropping them at the modal save seam: fixed presets write `billing_timing`, preset creates/updates write `cadence_owner: 'client'` during the current rollout, and fixed preset config writes now preserve the active partial-period alignment instead of hard-coding `start`
   - the preset create/edit modal now promotes the hidden fixed-config compatibility alignment from `start` to `prorated` when `Adjust for Partial Periods` is enabled on a preset that did not already carry a more specific stored alignment, matching the partial-period policy used elsewhere
@@ -749,6 +756,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts` now locks both sides of the audit: company sync + mapping stay free of header-period assumptions, and export validation continues to preserve canonical service-period context without falling back to invoice-header billing dates
 
 ## Commands / Runbooks
+
+- (2026-03-17) Template recurring authoring validation:
+  - `npx vitest run ../packages/billing/tests/templateWizardBucketOverlay.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 - (2026-03-17) Preset recurring authoring validation:
   - `npx vitest run ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/contractLinePresetRecurringAuthoring.wiring.test.ts --coverage.enabled false`

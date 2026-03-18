@@ -74,6 +74,7 @@ export type ContractTemplateWizardSubmission = {
   description?: string;
   billing_frequency?: string;
   cadence_owner?: CadenceOwner;
+  billing_timing?: 'arrears' | 'advance';
   // currency_code removed - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from this template
   fixed_services: TemplateFixedServiceInput[];
@@ -354,6 +355,7 @@ export const createContractTemplateFromWizard = withAuth(async (
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
       cadenceOwner: submission.cadence_owner,
+      billingTiming: submission.billing_timing,
       enableProration: submission.enable_proration,
     });
 

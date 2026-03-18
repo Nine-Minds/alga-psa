@@ -1847,7 +1847,7 @@
   {
     "id": "F206",
     "description": "Update template-line authoring flows so cadence-owner, timing, and first-invoice semantics are authored explicitly at the template level when supported",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "UI and downstream-consumer requirements"
