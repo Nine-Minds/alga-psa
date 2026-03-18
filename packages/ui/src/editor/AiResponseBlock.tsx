@@ -4,6 +4,7 @@ import React, { useCallback } from 'react';
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent } from '@tiptap/react';
 import type { Editor } from '@tiptap/react';
+import type { Transaction } from '@tiptap/pm/state';
 import { Check, X, Sparkles } from 'lucide-react';
 
 /**
@@ -33,7 +34,7 @@ function AiResponseBlockView(props: any) {
     editor
       .chain()
       .focus()
-      .command(({ tr }) => {
+      .command(({ tr }: { tr: Transaction }) => {
         tr.replaceWith(pos, pos + nodeAtPos.nodeSize, content);
         return true;
       })
@@ -51,7 +52,7 @@ function AiResponseBlockView(props: any) {
     editor
       .chain()
       .focus()
-      .command(({ tr }) => {
+      .command(({ tr }: { tr: Transaction }) => {
         tr.delete(pos, pos + nodeAtPos.nodeSize);
         return true;
       })
