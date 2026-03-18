@@ -1964,7 +1964,7 @@
   {
     "id": "F219",
     "description": "Add compatibility readers and writers for partially migrated recurrence records across all authoring and read-model surfaces",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data model and API requirements",
       "Read-model and post-persist lifecycle requirements"

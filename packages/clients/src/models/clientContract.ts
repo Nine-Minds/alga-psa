@@ -3,6 +3,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 
 type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
 
@@ -725,7 +726,7 @@ const ClientContract = {
         .where({ contract_id: clientContract.contract_id, tenant })
         .select('*');
 
-      return contractLines;
+      return contractLines.map((line) => normalizeLiveRecurringStorage(line));
     } catch (error) {
       console.error(`Error fetching contract lines for client contract ${clientContractId}:`, error);
       throw error;

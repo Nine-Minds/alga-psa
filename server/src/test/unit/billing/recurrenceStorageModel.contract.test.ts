@@ -423,6 +423,36 @@ describe('recurrence storage model contracts', () => {
     expect(serverRepository).toContain('staged compatibility fallback only');
   });
 
+  it('T249: compatibility readers and writers handle partially migrated recurrence records across authoring and read-model surfaces', () => {
+    const clientContractModel = fs.readFileSync(
+      path.join(repoRoot, 'packages/clients/src/models/clientContract.ts'),
+      'utf8',
+    );
+    const clientContractLineActions = fs.readFileSync(
+      path.join(repoRoot, 'packages/clients/src/actions/clientContractLineActions.ts'),
+      'utf8',
+    );
+    const clientPortalBilling = fs.readFileSync(
+      path.join(repoRoot, 'packages/client-portal/src/actions/client-portal-actions/client-billing.ts'),
+      'utf8',
+    );
+
+    expect(clientContractModel).toContain('normalizeLiveRecurringStorage');
+    expect(clientContractModel).toContain('return contractLines.map((line) => normalizeLiveRecurringStorage(line));');
+    expect(clientContractLineActions).toContain('const recurringStorage = normalizeLiveRecurringStorage(billing);');
+    expect(clientContractLineActions).toContain('const templateRecurringStorage = normalizeLiveRecurringStorage(templateLine);');
+    expect(clientContractLineActions).toContain('billing_timing: templateRecurringStorage.billing_timing,');
+    expect(clientContractLineActions).toContain(
+      'cadence_owner: newBilling.cadence_owner ?? templateRecurringStorage.cadence_owner,',
+    );
+    expect(clientContractLineActions).not.toContain("billing_timing: templateLine.billing_timing ?? 'arrears'");
+    expect(clientContractLineActions).not.toContain(
+      "cadence_owner: newBilling.cadence_owner ?? templateLine.cadence_owner ?? 'client'",
+    );
+    expect(clientPortalBilling).toContain('normalizeLiveRecurringStorage');
+    expect(clientPortalBilling).toContain('return plan ? normalizeLiveRecurringStorage(plan) : null;');
+  });
+
   it('T242: template-line cadence_owner schema and backfill behavior stay correct for v1 template recurrence storage', async () => {
     const migrationPath = path.join(
       repoRoot,

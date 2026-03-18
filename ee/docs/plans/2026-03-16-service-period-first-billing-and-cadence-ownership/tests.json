@@ -2149,7 +2149,7 @@
   {
     "id": "T249",
     "description": "Compatibility readers and writers handle partially migrated recurrence records across authoring and read-model surfaces",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F219"
     ]

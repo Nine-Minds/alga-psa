@@ -6,6 +6,7 @@ import { Knex } from 'knex';
 import type { IClientContractLine } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
+import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { withAuth } from '@alga-psa/auth';
@@ -189,14 +190,16 @@ export const getClientContractLine = withAuth(async (
         .orderBy('cc.start_date', 'desc');
     });
 
-    return clientContractLine.map((billing: IClientContractLine): IClientContractLine => ({
-      ...billing,
-      // Convert dates to ISO8601String as expected by the interface
-      // Convert dates to ISO8601String: DB -> PlainDate -> ISOString
-      start_date: toISODate(toPlainDate(billing.start_date)),
-      end_date: billing.end_date ? toISODate(toPlainDate(billing.end_date)) : null,
-      cadence_owner: billing.cadence_owner ?? 'client'
-    }));
+    return clientContractLine.map((billing: IClientContractLine): IClientContractLine => {
+      const recurringStorage = normalizeLiveRecurringStorage(billing);
+      return {
+        ...recurringStorage,
+        // Convert dates to ISO8601String as expected by the interface
+        // Convert dates to ISO8601String: DB -> PlainDate -> ISOString
+        start_date: toISODate(toPlainDate(billing.start_date)),
+        end_date: billing.end_date ? toISODate(toPlainDate(billing.end_date)) : null,
+      };
+    });
   } catch (error) {
     console.error('Error fetching client contract line:', error);
     throw new Error('Failed to fetch client contract line');
@@ -280,6 +283,7 @@ export const addClientContractLine = withAuth(async (
       if (!templateLine) {
         throw new Error(`Template contract line ${newBilling.contract_line_id} not found`);
       }
+      const templateRecurringStorage = normalizeLiveRecurringStorage(templateLine);
 
       // Check if this contract already has a line from the same template
       const existingLine = await trx('contract_lines')
@@ -310,8 +314,8 @@ export const addClientContractLine = withAuth(async (
           billing_frequency: templateLine.billing_frequency,
           contract_line_type: templateLine.contract_line_type,
           service_category: newBilling.service_category ?? templateLine.service_category,
-          billing_timing: templateLine.billing_timing ?? 'arrears',
-          cadence_owner: newBilling.cadence_owner ?? templateLine.cadence_owner ?? 'client',
+          billing_timing: templateRecurringStorage.billing_timing,
+          cadence_owner: newBilling.cadence_owner ?? templateRecurringStorage.cadence_owner,
           is_active: newBilling.is_active ?? true,
           is_custom: false,
           custom_rate: newBilling.custom_rate ?? templateLine.custom_rate,

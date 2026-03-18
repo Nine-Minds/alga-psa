@@ -24,6 +24,7 @@ import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobService } from '@alga-psa/jobs';
 import { JobStatus } from '@alga-psa/jobs';
+import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 
 /**
  * Get clientId from user's contact - avoids nested withAuth calls
@@ -118,7 +119,7 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
         .first();
     });
 
-    return plan || null;
+    return plan ? normalizeLiveRecurringStorage(plan) : null;
   } catch (error) {
     console.error('Error fetching client contract line:', error);
     throw new Error('Failed to fetch contract line');
