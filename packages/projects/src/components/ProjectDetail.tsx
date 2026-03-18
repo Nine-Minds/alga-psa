@@ -2517,7 +2517,7 @@ export default function ProjectDetail({
               </div>
             </div>
             {/* Independent sticky status strip */}
-            {showStickyStatusNames && (
+            {showStickyStatusNames && viewMode === 'kanban' && (
               <div
                 className={styles.kanbanStatusStripSticky}
                 style={{ top: isHeaderPinned ? `${kanbanHeaderHeight}px` : 0 }}
