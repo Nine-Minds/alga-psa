@@ -250,7 +250,7 @@ export default function ProjectDetail({
   const { tags: allTags } = useTags();
   const hasNotifiedParent = useRef(false);
   const hasOpenedInitialTask = useRef(false);
-  
+
   // Auto-select phase based on URL param or default to first phase
   useEffect(() => {
     // Don't auto-select if we have an initialTaskId - that case is handled separately
@@ -545,12 +545,14 @@ export default function ProjectDetail({
   const stickyStatusStripRef = useRef<HTMLDivElement>(null);
   const [boardScrollWidth, setBoardScrollWidth] = useState(0);
   const [kanbanHeaderHeight, setKanbanHeaderHeight] = useState(0);
+  const [phasesPanelHeight, setPhasesPanelHeight] = useState<number | null>(null);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedsRef = useRef<{ horizontal: number; vertical: number; column: HTMLElement | null }>({
     horizontal: 0,
     vertical: 0,
     column: null
   });
+  const phasesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     return () => {
@@ -559,6 +561,29 @@ export default function ProjectDetail({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (viewMode !== 'kanban') return;
+
+    const updatePhasesPanelHeight = () => {
+      const el = phasesContainerRef.current;
+      if (!el) return;
+
+      const rect = el.getBoundingClientRect();
+      const bottomGap = 4; // Keep panel nearly flush with viewport bottom.
+      const nextHeight = Math.max(260, Math.floor(window.innerHeight - rect.top - bottomGap));
+      setPhasesPanelHeight(nextHeight);
+    };
+
+    updatePhasesPanelHeight();
+    window.addEventListener('resize', updatePhasesPanelHeight);
+    window.addEventListener('scroll', updatePhasesPanelHeight, { passive: true });
+
+    return () => {
+      window.removeEventListener('resize', updatePhasesPanelHeight);
+      window.removeEventListener('scroll', updatePhasesPanelHeight);
+    };
+  }, [viewMode, isPhasesPanelVisible]);
 
   const kanbanColumnWidth = useMemo(() => calculateColumnWidth(kanbanZoomLevel), [kanbanZoomLevel]);
   const visibleKanbanStatuses = useMemo(
@@ -2451,7 +2476,11 @@ export default function ProjectDetail({
         <div className={styles.contentWrapper}>
           {/* Phases panel - collapsible in kanban view */}
           {viewMode === 'kanban' && (
-            <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
+            <div
+                ref={phasesContainerRef}
+                className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}
+                style={phasesPanelHeight && isPhasesPanelVisible ? { height: `${phasesPanelHeight}px`, maxHeight: `${phasesPanelHeight}px` } : undefined}
+              >
               {/* Toggle button */}
               <CollapseToggleButton
                 id="toggle-phases-panel"
