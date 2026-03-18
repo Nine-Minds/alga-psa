@@ -19,6 +19,7 @@ const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
 const persistedServicePeriodRecord = read('PERSISTED_SERVICE_PERIOD_RECORD.md');
 const prd = read('PRD.md');
 const recurringServicePeriodGenerationHorizon = read('RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md');
+const recurringServicePeriodBackfill = read('RECURRING_SERVICE_PERIOD_BACKFILL.md');
 const recurringServicePeriodDueSelection = read('RECURRING_SERVICE_PERIOD_DUE_SELECTION.md');
 const recurringServicePeriodInvoiceLinkage = read('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
@@ -257,6 +258,21 @@ describe('service-period-first billing plan artifacts', () => {
     expect(appendix).toContain('cadence owner');
     expect(appendix).toContain('without requiring invoice persistence as a side effect');
     expect(appendix).toContain('fixed, product, and license recurring families');
+  });
+
+  it('T286 and T294: backfill policy initializes only future persisted rows and keeps billed history outside mutation scope', () => {
+    expect(recurringServicePeriodBackfill).toContain('# Recurring Service-Period Backfill');
+    expect(recurringServicePeriodBackfill).toContain('## Historical Boundary');
+    expect(recurringServicePeriodBackfill).toContain('legacyBilledThroughEnd');
+    expect(recurringServicePeriodBackfill).toContain('candidate periods ending on or before the boundary are skipped');
+    expect(recurringServicePeriodBackfill).toContain('candidate that overlaps the boundary is rejected');
+    expect(recurringServicePeriodBackfill).toContain('## Initialization Policy');
+    expect(recurringServicePeriodBackfill).toContain('`provenance.reasonCode = backfill_materialization`');
+    expect(recurringServicePeriodBackfill).toContain('## Existing Future Rows');
+    expect(recurringServicePeriodBackfill).toContain('`reasonCode = backfill_realignment`');
+    expect(recurringServicePeriodBackfill).toContain('shared/billingClients/backfillRecurringServicePeriods.ts');
+    expect(persistedServicePeriodRecord).toContain('## Backfill Boundary');
+    expect(persistedServicePeriodRecord).toContain('already billed historical coverage stays authoritative on invoice detail history');
   });
 
   it('documents the architecture thesis and system-surface matrix in the PRD and appendix', () => {

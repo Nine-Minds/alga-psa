@@ -2189,7 +2189,7 @@
   {
     "id": "F244",
     "description": "Define backfill rules for initializing persisted future service periods from existing recurring lines without mutating billed history",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Implementation Sequence"

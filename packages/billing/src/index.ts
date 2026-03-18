@@ -145,6 +145,9 @@ export type {
   MaterializeContractCadenceServicePeriodsInput,
 } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
 export {
+  backfillRecurringServicePeriods,
+} from '@alga-psa/shared/billingClients/backfillRecurringServicePeriods';
+export {
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
 export {
@@ -163,6 +166,10 @@ export {
   isRecurringServicePeriodRecordDue,
   selectDueRecurringServicePeriodRecords,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodDueSelection';
+export type {
+  BackfillRecurringServicePeriodsInput,
+  IRecurringServicePeriodBackfillPlan,
+} from '@alga-psa/shared/billingClients/backfillRecurringServicePeriods';
 export type {
   IRecurringServicePeriodRegenerationPlan,
   RegenerateRecurringServicePeriodsInput,

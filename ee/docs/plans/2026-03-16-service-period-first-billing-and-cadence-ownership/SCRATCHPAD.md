@@ -41,6 +41,16 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The first billed-history-safe backfill planner now exists, which closes `F244`, `T286`, and `T294`:
+  - `shared/billingClients/backfillRecurringServicePeriods.ts` now defines the v1 initialization rule for legacy recurring lines before runtime cutover: future candidate rows are normalized onto `provenance.reasonCode = backfill_materialization`, billed-history boundaries come from legacy billed-through data plus any already-linked persisted rows, and candidates overlapping that boundary are rejected instead of being silently clipped
+  - the same helper now makes partial-rollout backfill explicit instead of accidental: already-billed rows are retained unchanged, equivalent future rows are retained unchanged, and untouched generated future rows that drift from the current candidate schedule are regenerated with `reasonCode = backfill_realignment` while preserving the earlier row as `superseded`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_BACKFILL.md` now documents the historical-boundary rule, backfill provenance, and the deliberate boundary that historical invoices are not rehydrated into synthetic persisted rows during v1 initialization
+  - `server/src/test/unit/billing/recurringServicePeriodBackfill.domain.test.ts` now locks both halves directly: billed client-cadence history fences off future inserts without mutation, and stale future generated rows realign under explicit backfill provenance while billed history remains unchanged
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodBackfill.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
 - (2026-03-18) Persisted-schedule parity comparison is now explicit, which closes `F243` and `T293`:
   - `shared/billingClients/recurringServicePeriodKeys.ts` now centralizes canonical `scheduleKey` and `periodKey` generation, and both materializers now use that helper so persisted schedule identity cannot drift from later comparison logic
   - `shared/billingClients/recurringServicePeriodParity.ts` now defines the staged-cutover parity seam for materialized schedules: legacy derived selections normalize onto `scheduleKey + periodKey`, active persisted rows normalize onto the same key, and schedule parity reports only the rollout-significant drift kinds `missing_persisted_period`, `unexpected_persisted_period`, and `invoice_window_mismatch`

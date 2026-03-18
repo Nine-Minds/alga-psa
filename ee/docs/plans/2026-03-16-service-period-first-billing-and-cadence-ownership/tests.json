@@ -2497,7 +2497,7 @@
   {
     "id": "T286",
     "description": "Existing client-cadence recurring lines backfill persisted future service periods without altering billed history",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F236",
       "F244"
@@ -2580,7 +2580,7 @@
   {
     "id": "T294",
     "description": "Backfill initializes future persisted service periods for existing recurring lines under parity-safe rules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F244"
     ]

@@ -159,3 +159,14 @@ Persisted rows may now carry additive `invoiceLinkage` metadata pointing at:
 - the canonical `invoice_charge_details` row that consumed the service period
 
 This linkage remains optional until billing occurs; future unbilled rows continue to exist without invoice metadata.
+
+## Backfill Boundary
+
+`F244` now defines the initialization rule for legacy recurring lines in
+`RECURRING_SERVICE_PERIOD_BACKFILL.md`.
+
+The persisted ledger remains future-first during rollout:
+
+- already billed historical coverage stays authoritative on invoice detail history rather than being rehydrated into synthetic historical persisted rows
+- backfill initializes only future candidate rows beyond the billed-history boundary
+- overlap with the billed-history boundary is treated as an explicit repair problem, not as silent clipping during backfill
