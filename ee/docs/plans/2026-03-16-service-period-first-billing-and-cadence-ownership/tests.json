@@ -1539,7 +1539,7 @@
   {
     "id": "T177",
     "description": "DB-backed sanity: credits and negative invoices still reconcile correctly after recurring service-period-first cutover",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077",
       "F078",

@@ -41,6 +41,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) DB-backed credit reconciliation coverage now closes `T177` without relying on the older negative-invoice infrastructure harness:
+  - `server/src/test/integration/billing/creditReconciliation.integration.test.ts` now seeds a negative-invoice credit issuance plus a later credit application against a positive invoice in the live DB schema, then runs `validateCreditTrackingRemainingAmounts(...)` against those persisted rows
+  - the test deliberately uses canonical recurring timing at the reader seam instead of the old header-only assumption: it seeds `invoice_charge_details.service_period_start|service_period_end|billing_timing`, and its mocked `Invoice.getById(...)` projects those detail periods back onto parent charge rows before reconciliation metadata is summarized
+  - this replaced an abandoned attempt to reuse `server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts`; that infrastructure path kept dragging in unrelated invoice-finalization, UI, and module-resolution dependencies before the credit-reconciliation assertion became trustworthy
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billing/creditReconciliation.integration.test.ts --hookTimeout 600000 --coverage.enabled false`
+
 - (2026-03-18) Additional materialized-ledger and export-reader coverage now closes `T178`, `T273`, `T275`, `T281`, `T329`, and `T330`:
   - `server/src/test/integration/accounting/exportDashboard.integration.test.ts` now explicitly claims the DB-backed stored-reader seam for export lines: mixed historical fallback rows and canonical recurring-detail-backed rows reread through `getBatchWithDetails(...)` without collapsing their persisted service-period semantics
   - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` now explicitly claims the export-preview persistence seam: `createBatchFromFilters(...)` preserves canonical recurring detail periods, summary bounds, and source metadata when preview lines become stored export lines for downstream inspection
