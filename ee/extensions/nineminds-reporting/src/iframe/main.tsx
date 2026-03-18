@@ -228,6 +228,16 @@ function mapApiPathToHandlerRoute(path: string): string {
     return `/feature-flags${suffix}`;
   }
 
+  // Handle platform notifications prefix
+  const notifPrefix = '/api/v1/platform-notifications';
+  if (path.startsWith(notifPrefix)) {
+    const suffix = path.slice(notifPrefix.length);
+    if (suffix === '' || suffix === '/') {
+      return '/notifications';
+    }
+    return `/notifications${suffix}`;
+  }
+
   // Return as-is if it doesn't match the expected prefix
   return path;
 }
@@ -266,6 +276,9 @@ async function proxyApiCall<T>(
     bodyData = bodyData || {};
     bodyData.__action = 'create';
   } else if (method === 'POST' && handlerRoute === '/feature-flags') {
+    bodyData = bodyData || {};
+    bodyData.__action = 'create';
+  } else if (method === 'POST' && handlerRoute === '/notifications') {
     bodyData = bodyData || {};
     bodyData.__action = 'create';
   }
@@ -382,7 +395,7 @@ interface AuditLogEntry {
   event_type: string;
   user_id: string | null;
   user_email: string | null;
-  resource_type: 'report' | 'tenant' | 'user' | 'subscription' | null;
+  resource_type: 'report' | 'tenant' | 'user' | 'subscription' | 'notification' | null;
   resource_id: string | null;
   resource_name: string | null;
   workflow_id: string | null;
@@ -490,6 +503,44 @@ async function callFeatureFlagApi<T>(
     return { success: true, data: result as T };
   } catch (error) {
     console.error('Feature Flag API call failed:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+// API client for platform notification endpoints
+async function callNotificationApi<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<ApiResponse<T>> {
+  const route = `/api/v1/platform-notifications${path}`;
+
+  try {
+    let body: any = undefined;
+    if (options.body && typeof options.body === 'string') {
+      try {
+        body = JSON.parse(options.body);
+      } catch {
+        body = options.body;
+      }
+    }
+
+    const result = await proxyApiCall<any>(route, {
+      method: options.method as string || 'GET',
+      body,
+    });
+
+    if (result && typeof result === 'object') {
+      if ('success' in result) {
+        return result as ApiResponse<T>;
+      }
+      if ('data' in result) {
+        return { success: true, data: result.data as T };
+      }
+      return { success: true, data: result as T };
+    }
+    return { success: true, data: result as T };
+  } catch (error) {
+    console.error('Notification API call failed:', error);
     return { success: false, error: String(error) };
   }
 }
@@ -6216,7 +6267,658 @@ function FeatureFlagDetail({
 }
 
 // Main App
-type View = 'execute' | 'reports' | 'tenants' | 'feature-flags' | 'audit';
+// ============================================================================
+// Notifications View - Platform-wide announcements/alerts management
+// ============================================================================
+
+interface PlatformNotification {
+  notification_id: string;
+  title: string;
+  banner_content: string;
+  detail_content: string;
+  target_audience: {
+    filters: {
+      roles?: string[];
+      tenant_ids?: string[];
+      user_types?: string[];
+    };
+    excluded_user_ids?: string[];
+    resolved_user_count?: number;
+  };
+  priority: 'info' | 'warning' | 'destructive' | 'success' | 'default';
+  starts_at: string;
+  expires_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
+interface NotificationStats {
+  notification_id: string;
+  total_dismissed: number;
+  total_detail_viewed: number;
+  reads_by_tenant: Array<{ tenant: string; tenant_name: string | null; dismissed: number; detail_viewed: number }>;
+}
+
+interface ResolvedRecipient {
+  user_id: string;
+  tenant: string;
+  tenant_name: string | null;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  roles: string[];
+  user_type: string;
+}
+
+function NotificationsView() {
+  const [view, setView] = useState<'list' | 'create' | 'edit'>('list');
+  const [notifications, setNotifications] = useState<PlatformNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editingNotification, setEditingNotification] = useState<PlatformNotification | null>(null);
+
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const result = await callNotificationApi<PlatformNotification[]>('?activeOnly=false');
+    if (result.success && result.data) {
+      setNotifications(result.data);
+    } else {
+      setError(result.error || 'Failed to load notifications');
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+
+  if (view === 'create') {
+    return <NotificationEditor onBack={() => { setView('list'); fetchNotifications(); }} />;
+  }
+
+  if (view === 'edit' && editingNotification) {
+    return <NotificationEditor notification={editingNotification} onBack={() => { setView('list'); setEditingNotification(null); fetchNotifications(); }} />;
+  }
+
+  // ── List view ──
+  const columns: Column<PlatformNotification>[] = [
+    {
+      title: 'Title',
+      dataIndex: 'title',
+      render: (_, row) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{row.title}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg, #666)' }}>
+            {row.banner_content.length > 80 ? row.banner_content.slice(0, 80) + '...' : row.banner_content}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: 'Priority',
+      dataIndex: 'priority',
+      render: (_, row) => {
+        const toneMap: Record<string, string> = { destructive: 'danger', warning: 'warning', info: 'info', success: 'success', default: 'muted' };
+        const tone = toneMap[row.priority] || 'info';
+        return <Badge tone={tone as any}>{row.priority}</Badge>;
+      },
+    },
+    {
+      title: 'Audience',
+      dataIndex: 'target_audience',
+      render: (_, row) => {
+        const f = row.target_audience?.filters || {};
+        const parts: string[] = [];
+        if (f.roles?.length) parts.push(`Roles: ${f.roles.join(', ')}`);
+        if (f.tenant_ids?.length) parts.push(`${f.tenant_ids.length} tenant(s)`);
+        if (f.user_types?.length) parts.push(`Types: ${f.user_types.join(', ')}`);
+        const excluded = row.target_audience?.excluded_user_ids?.length || 0;
+        const count = row.target_audience?.resolved_user_count;
+        return (
+          <div style={{ fontSize: '0.8rem' }}>
+            {parts.length > 0 ? parts.join(' · ') : 'All users'}
+            {count != null && <span style={{ color: 'var(--alga-muted-fg, #666)' }}> ({count} users{excluded > 0 ? `, ${excluded} excluded` : ''})</span>}
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Status',
+      dataIndex: 'is_active',
+      render: (_, row) => {
+        const now = new Date();
+        const started = new Date(row.starts_at) <= now;
+        const expired = row.expires_at && new Date(row.expires_at) <= now;
+        if (!row.is_active) return <Badge tone="danger">Inactive</Badge>;
+        if (expired) return <Badge tone="warning">Expired</Badge>;
+        if (!started) return <Badge tone="info">Scheduled</Badge>;
+        return <Badge tone="success">Active</Badge>;
+      },
+    },
+    {
+      title: 'Created',
+      dataIndex: 'created_at',
+      render: (_, row) => new Date(row.created_at).toLocaleDateString(),
+    },
+    {
+      title: '',
+      dataIndex: 'notification_id',
+      render: (_, row) => (
+        <Button size="sm" variant="outline" onClick={() => { setEditingNotification(row); setView('edit'); }}>
+          Edit
+        </Button>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Platform Notifications</h3>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button size="sm" variant="outline" onClick={fetchNotifications}>Refresh</Button>
+          <Button size="sm" onClick={() => setView('create')}>Create Notification</Button>
+        </div>
+      </div>
+
+      {error && <Alert tone="danger">{error}</Alert>}
+
+      {loading ? (
+        <LoadingIndicator size="sm" text="Loading notifications..." />
+      ) : (
+        <DataTable columns={columns} data={notifications} pagination={true} pageSize={10} />
+      )}
+    </div>
+  );
+}
+
+// ── Notification Editor (Create / Edit) ──
+
+function NotificationEditor({ notification, onBack }: { notification?: PlatformNotification; onBack: () => void }) {
+  const isEdit = !!notification;
+
+  // Form state
+  const [title, setTitle] = useState(notification?.title || '');
+  const [bannerContent, setBannerContent] = useState(notification?.banner_content || '');
+  const [detailContent, setDetailContent] = useState(notification?.detail_content || '');
+  const [priority, setPriority] = useState(notification?.priority || 'info');
+  const [startsAt, setStartsAt] = useState(notification?.starts_at ? notification.starts_at.slice(0, 16) : '');
+  const [expiresAt, setExpiresAt] = useState(notification?.expires_at ? notification.expires_at.slice(0, 16) : '');
+  const [isActive, setIsActive] = useState(notification?.is_active ?? true);
+
+  // Audience targeting
+  const [filterRoles, setFilterRoles] = useState<string[]>(notification?.target_audience?.filters?.roles || []);
+  const [filterTenantIds, setFilterTenantIds] = useState<string[]>(notification?.target_audience?.filters?.tenant_ids || []);
+  const [filterUserTypes, setFilterUserTypes] = useState<string[]>(notification?.target_audience?.filters?.user_types || []);
+  const [emailSearch, setEmailSearch] = useState('');
+  const [roleInput, setRoleInput] = useState('');
+
+  // Recipient resolution
+  const [recipients, setRecipients] = useState<ResolvedRecipient[]>([]);
+  const [excludedUserIds, setExcludedUserIds] = useState<Set<string>>(new Set(notification?.target_audience?.excluded_user_ids || []));
+  const [recipientsResolved, setRecipientsResolved] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState('');
+
+  // Stats (edit mode)
+  const [stats, setStats] = useState<NotificationStats | null>(null);
+
+  // Tenants list for multi-select
+  const [tenants, setTenants] = useState<Array<{ tenant: string; company_name: string }>>([]);
+
+  // UI state
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Fetch tenants on mount
+  useEffect(() => {
+    const fetchTenants = async () => {
+      try {
+        const result = await proxyApiCall<any>('/api/v1/tenant-management/tenants');
+        const data = result?.data || result;
+        if (Array.isArray(data)) {
+          setTenants(data.map((t: any) => ({ tenant: t.tenant, company_name: t.company_name || t.tenant })));
+        }
+      } catch { /* ignore */ }
+    };
+    fetchTenants();
+  }, []);
+
+  // Fetch stats in edit mode
+  useEffect(() => {
+    if (!isEdit || !notification) return;
+    const fetchStats = async () => {
+      const result = await callNotificationApi<NotificationStats>(`/${notification.notification_id}/stats`);
+      if (result.success && result.data) setStats(result.data);
+    };
+    fetchStats();
+  }, [isEdit, notification]);
+
+  const handleResolveRecipients = async () => {
+    setResolving(true);
+    const filters: Record<string, unknown> = {};
+    if (filterRoles.length > 0) filters.roles = filterRoles;
+    if (filterTenantIds.length > 0) filters.tenant_ids = filterTenantIds;
+    if (filterUserTypes.length > 0) filters.user_types = filterUserTypes;
+
+    const result = await callNotificationApi<ResolvedRecipient[]>('/resolve-recipients', {
+      method: 'POST',
+      body: JSON.stringify({ filters, email_search: emailSearch || undefined }),
+    });
+
+    if (result.success && result.data) {
+      setRecipients(result.data);
+      setRecipientsResolved(true);
+      // Preserve existing exclusions, remove any that are no longer in the resolved list
+      const resolvedIds = new Set(result.data.map(r => r.user_id));
+      setExcludedUserIds(prev => {
+        const next = new Set<string>();
+        prev.forEach(id => { if (resolvedIds.has(id)) next.add(id); });
+        return next;
+      });
+    }
+    setResolving(false);
+  };
+
+  const handleSave = async () => {
+    if (!recipientsResolved) {
+      setSaveError('Please resolve recipients before saving.');
+      return;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+
+    const targetAudience = {
+      filters: {
+        ...(filterRoles.length > 0 && { roles: filterRoles }),
+        ...(filterTenantIds.length > 0 && { tenant_ids: filterTenantIds }),
+        ...(filterUserTypes.length > 0 && { user_types: filterUserTypes }),
+        ...(emailSearch.trim() && { email_search: emailSearch.trim() }),
+      },
+      excluded_user_ids: Array.from(excludedUserIds),
+      resolved_user_count: recipients.length - excludedUserIds.size,
+    };
+
+    // Send the full materialized recipient list with exclusion flags
+    const recipientList = recipients.map(r => ({
+      user_id: r.user_id,
+      tenant: r.tenant,
+      excluded: excludedUserIds.has(r.user_id),
+    }));
+
+    const body: Record<string, unknown> = {
+      title,
+      banner_content: bannerContent,
+      detail_content: detailContent,
+      target_audience: targetAudience,
+      priority,
+      recipients: recipientList,
+      ...(startsAt && { starts_at: new Date(startsAt).toISOString() }),
+      ...(expiresAt && { expires_at: new Date(expiresAt).toISOString() }),
+    };
+
+    if (isEdit) {
+      body.is_active = isActive;
+    }
+
+    const result = isEdit
+      ? await callNotificationApi(`/${notification!.notification_id}`, { method: 'PUT', body: JSON.stringify(body) })
+      : await callNotificationApi('', { method: 'POST', body: JSON.stringify(body) });
+
+    if (result.success) {
+      onBack();
+    } else {
+      setSaveError(result.error || 'Failed to save notification');
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async () => {
+    const result = await callNotificationApi(`/${notification!.notification_id}`, { method: 'DELETE' });
+    if (result.success) {
+      onBack();
+    } else {
+      setSaveError(result.error || 'Failed to delete notification');
+    }
+    setShowDeleteConfirm(false);
+  };
+
+  const addRole = () => {
+    const r = roleInput.trim();
+    if (r && !filterRoles.includes(r)) {
+      setFilterRoles([...filterRoles, r]);
+    }
+    setRoleInput('');
+  };
+
+  const selectedCount = recipientsResolved ? recipients.length - excludedUserIds.size : null;
+  const allSelected = recipientsResolved && excludedUserIds.size === 0;
+
+  const filteredRecipients = recipientSearch
+    ? recipients.filter(r =>
+        `${r.first_name} ${r.last_name} ${r.email} ${r.tenant_name}`.toLowerCase().includes(recipientSearch.toLowerCase())
+      )
+    : recipients;
+
+  const priorityOptions: SelectOption[] = [
+    { value: 'info', label: 'Info (blue)' },
+    { value: 'warning', label: 'Warning (amber)' },
+    { value: 'destructive', label: 'Destructive (red)' },
+    { value: 'success', label: 'Success (green)' },
+  ];
+
+  const userTypeOptions: SelectOption[] = [
+    { value: 'internal', label: 'Internal users' },
+    { value: 'client', label: 'Client portal users' },
+  ];
+
+  const tenantOptions: SelectOption[] = tenants.map(t => ({ value: t.tenant, label: t.company_name }));
+
+  const priorityColors: Record<string, string> = {
+    info: '#3b82f6',
+    warning: '#f59e0b',
+    destructive: '#ef4444',
+    success: '#22c55e',
+    default: '#64748b',
+  };
+
+  return (
+    <div style={{ padding: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+        <Button size="sm" variant="outline" onClick={onBack}>← Back</Button>
+        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>{isEdit ? 'Edit Notification' : 'Create Notification'}</h3>
+        {isEdit && (
+          <Button size="sm" variant="destructive" onClick={() => setShowDeleteConfirm(true)} style={{ marginLeft: 'auto' }}>
+            Delete
+          </Button>
+        )}
+      </div>
+
+      {saveError && <Alert tone="danger" style={{ marginBottom: '1rem' }}>{saveError}</Alert>}
+
+      {/* ── Section 1: Content Editor (split pane) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+        {/* Left: Editor */}
+        <Card style={{ padding: '1rem' }}>
+          <h4 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>Content</h4>
+
+          <div style={{ marginBottom: '0.75rem' }}>
+            <Label>Title *</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Notification title" />
+          </div>
+
+          <div style={{ marginBottom: '0.75rem' }}>
+            <Label>Banner Content * (short HTML for the alert banner)</Label>
+            <TextArea value={bannerContent} onChange={(e) => setBannerContent(e.target.value)} rows={3} placeholder="<p>Short announcement text shown in the banner...</p>" />
+          </div>
+
+          <div style={{ marginBottom: '0.75rem' }}>
+            <Label>Detail Content * (full HTML for the learn-more page)</Label>
+            <TextArea value={detailContent} onChange={(e) => setDetailContent(e.target.value)} rows={10} placeholder="<h2>Full announcement details...</h2><p>Detailed information here.</p>" style={{ fontFamily: 'monospace', fontSize: '0.85rem' }} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <div>
+              <Label>Priority</Label>
+              <CustomSelect options={priorityOptions} value={priority} onValueChange={setPriority} />
+            </div>
+            {isEdit && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '1.5rem' }}>
+                <Switch checked={isActive} onCheckedChange={setIsActive} />
+                <Label>Active</Label>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <Label>Starts At</Label>
+              <Input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+            </div>
+            <div>
+              <Label>Expires At (optional)</Label>
+              <Input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+            </div>
+          </div>
+        </Card>
+
+        {/* Right: Live Preview */}
+        <Card style={{ padding: '1rem' }}>
+          <h4 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>Live Preview</h4>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <Label style={{ marginBottom: '0.5rem', display: 'block' }}>Banner Preview</Label>
+            <div style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '0.5rem',
+              backgroundColor: `${priorityColors[priority]}15`,
+              border: `1px solid ${priorityColors[priority]}40`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+            }}>
+              <div style={{ flex: 1, fontSize: '0.875rem' }} dangerouslySetInnerHTML={{ __html: bannerContent || '<em>Banner content preview...</em>' }} />
+              <button style={{ padding: '0.25rem 0.75rem', borderRadius: '0.25rem', border: '1px solid #ccc', background: 'white', fontSize: '0.75rem', cursor: 'pointer' }}>Learn More</button>
+              <button style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', border: 'none', background: 'transparent', fontSize: '0.75rem', cursor: 'pointer', color: '#666' }}>✕</button>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div style={{ marginTop: '1rem' }}>
+            <Label style={{ marginBottom: '0.5rem', display: 'block' }}>Detail Page Preview</Label>
+            <div style={{
+              padding: '1rem',
+              borderRadius: '0.5rem',
+              border: '1px solid var(--alga-muted, #e2e8f0)',
+              backgroundColor: 'var(--alga-card-bg, white)',
+              maxHeight: '400px',
+              overflow: 'auto',
+              fontSize: '0.875rem',
+              lineHeight: 1.6,
+            }}>
+              {title && <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.25rem' }}>{title}</h2>}
+              <div dangerouslySetInnerHTML={{ __html: detailContent || '<em>Detail content preview...</em>' }} />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* ── Section 2: Audience Targeting ── */}
+      <Card style={{ padding: '1rem', marginBottom: '1.5rem' }}>
+        <h4 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>Audience Targeting</h4>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          {/* Roles */}
+          <div>
+            <Label>Roles (leave empty for all)</Label>
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <Input value={roleInput} onChange={(e) => setRoleInput(e.target.value)} placeholder="e.g. admin" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addRole(); } }} />
+              <Button size="sm" variant="outline" onClick={addRole}>Add</Button>
+            </div>
+            {filterRoles.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+                {filterRoles.map(r => (
+                  <Badge key={r} tone="info">
+                    {r} <span style={{ cursor: 'pointer', marginLeft: '0.25rem' }} onClick={() => setFilterRoles(filterRoles.filter(x => x !== r))}>✕</span>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tenants */}
+          <div>
+            <Label>Tenants (leave empty for all)</Label>
+            <CustomSelect
+              options={tenantOptions}
+              value=""
+              onValueChange={(v) => { if (v && !filterTenantIds.includes(v)) setFilterTenantIds([...filterTenantIds, v]); }}
+              placeholder="Select tenant..."
+            />
+            {filterTenantIds.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+                {filterTenantIds.map(id => {
+                  const name = tenants.find(t => t.tenant === id)?.company_name || id.slice(0, 8);
+                  return (
+                    <Badge key={id} tone="info">
+                      {name} <span style={{ cursor: 'pointer', marginLeft: '0.25rem' }} onClick={() => setFilterTenantIds(filterTenantIds.filter(x => x !== id))}>✕</span>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* User Types */}
+          <div>
+            <Label>User Types</Label>
+            <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.25rem' }}>
+              {userTypeOptions.map(opt => (
+                <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={filterUserTypes.includes(opt.value)}
+                    onChange={(e) => {
+                      if (e.target.checked) setFilterUserTypes([...filterUserTypes, opt.value]);
+                      else setFilterUserTypes(filterUserTypes.filter(t => t !== opt.value));
+                    }}
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Email search */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          <Input value={emailSearch} onChange={(e) => setEmailSearch(e.target.value)} placeholder="Search by email..." style={{ flex: 1 }} />
+          <Button size="sm" onClick={handleResolveRecipients} disabled={resolving}>
+            {resolving ? 'Resolving...' : 'Resolve Recipients'}
+          </Button>
+        </div>
+
+        {/* Recipient list */}
+        {recipientsResolved && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={(e) => {
+                      if (e.target.checked) setExcludedUserIds(new Set());
+                      else setExcludedUserIds(new Set(recipients.map(r => r.user_id)));
+                    }}
+                  />
+                  Select All
+                </label>
+                <Text tone="muted">{selectedCount} of {recipients.length} users selected</Text>
+              </div>
+              <Input
+                value={recipientSearch}
+                onChange={(e) => setRecipientSearch(e.target.value)}
+                placeholder="Filter recipients..."
+                style={{ width: '250px' }}
+              />
+            </div>
+
+            <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid var(--alga-muted, #e2e8f0)', borderRadius: '0.375rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--alga-muted, #e2e8f0)', background: 'var(--alga-muted, #f8fafc)' }}>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', width: '40px' }}></th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Name</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Email</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Tenant</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Roles</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRecipients.map(r => (
+                    <tr key={r.user_id} style={{ borderBottom: '1px solid var(--alga-muted, #e2e8f0)' }}>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={!excludedUserIds.has(r.user_id)}
+                          onChange={(e) => {
+                            const next = new Set(excludedUserIds);
+                            if (e.target.checked) next.delete(r.user_id);
+                            else next.add(r.user_id);
+                            setExcludedUserIds(next);
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{r.first_name} {r.last_name}</td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{r.email}</td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{r.tenant_name || r.tenant.slice(0, 8)}</td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{r.roles.join(', ') || '—'}</td>
+                    </tr>
+                  ))}
+                  {filteredRecipients.length === 0 && (
+                    <tr><td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>No matching recipients</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* ── Section 3: Stats (edit mode) ── */}
+      {isEdit && stats && (
+        <Card style={{ padding: '1rem', marginBottom: '1.5rem' }}>
+          <h4 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>Read Statistics</h4>
+          <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
+            <div>
+              <Text tone="muted">Dismissed (banner)</Text>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{stats.total_dismissed}</div>
+            </div>
+            <div>
+              <Text tone="muted">Viewed details</Text>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{stats.total_detail_viewed}</div>
+            </div>
+          </div>
+          {stats.reads_by_tenant.length > 0 && (
+            <DataTable
+              columns={[
+                { title: 'Tenant', dataIndex: 'tenant_name', render: (_, row) => row.tenant_name || row.tenant.slice(0, 8) },
+                { title: 'Dismissed', dataIndex: 'dismissed' },
+                { title: 'Detail Viewed', dataIndex: 'detail_viewed' },
+              ] as Column<(typeof stats.reads_by_tenant)[0]>[]}
+              data={stats.reads_by_tenant}
+            />
+          )}
+        </Card>
+      )}
+
+      {/* ── Save button ── */}
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <Button onClick={handleSave} disabled={saving || !title || !bannerContent || !detailContent || !recipientsResolved}>
+          {saving ? 'Saving...' : (isEdit ? 'Update Notification' : 'Create Notification')}
+        </Button>
+        <Button variant="outline" onClick={onBack}>Cancel</Button>
+      </div>
+
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          isOpen={true}
+          title="Delete Notification"
+          message="This will deactivate the notification. It will no longer be shown to any users."
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+type View = 'execute' | 'reports' | 'tenants' | 'feature-flags' | 'notifications' | 'audit';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('execute');
@@ -6247,6 +6949,7 @@ function App() {
     { key: 'reports', label: 'Reports', content: <ReportsList /> },
     { key: 'tenants', label: 'Tenant Management', content: <TenantManagementView /> },
     { key: 'feature-flags', label: 'Feature Flags', content: <FeatureFlagsView /> },
+    { key: 'notifications', label: 'Notifications', content: <NotificationsView /> },
     { key: 'audit', label: 'Audit Logs', content: <AuditLogs /> },
   ];
 
