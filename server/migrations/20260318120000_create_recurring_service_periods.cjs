@@ -94,7 +94,7 @@ exports.up = async function up(knex) {
     await knex.raw(`
       ALTER TABLE ${TABLE}
       ADD CONSTRAINT ${CHECK_CONSTRAINTS.chargeFamily}
-      CHECK (charge_family IN ('fixed', 'product', 'license', 'bucket'))
+      CHECK (charge_family IN ('fixed', 'product', 'license', 'bucket', 'hourly', 'usage'))
     `);
     await knex.raw(`
       ALTER TABLE ${TABLE}

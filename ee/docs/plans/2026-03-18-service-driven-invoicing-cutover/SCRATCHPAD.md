@@ -13,6 +13,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) Scope includes all remaining app-level work necessary to make service-period-driven invoicing operationally true, including broader unfinished items that directly affect invoicing behavior.
 - (2026-03-18) Hourly and usage are in scope for service-driven invoicing windows. They do not precompute charges, but they must bill available content inside the selected service period.
 - (2026-03-18) The first cutover checkpoint should establish a shared due-work contract/builder layer in `shared/` and `@alga-psa/types` before changing any reader or UI code, so later steps reuse the same execution identity and display metadata.
+- (2026-03-18) For hourly/usage participation, widen the persisted `recurring_service_periods.charge_family` contract instead of introducing a family-agnostic shadow layer. The engine already evaluates content inside the selected service period; the missing cutover work was to let hourly/usage obligations exist honestly in the persisted service-period ledger and due-work contracts.
 
 ## Discoveries / Constraints
 
@@ -34,6 +35,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) `shared/billingClients/recurringServicePeriodGenerationHorizon.ts` already models target horizon vs replenishment threshold coverage. The remaining gap for `F015` was explicit plan-level test coverage proving we report below-target horizon state before the low-water replenishment trigger trips.
 - (2026-03-18) `shared/billingClients/regenerateRecurringServicePeriods.ts` and the existing `billingInvoiceTiming.integration.test.ts` staged-rollout scenario already implement regeneration semantics for untouched future rows while preserving edited/billed history. The remaining gap for `F016` was explicit unit coverage of the combined edited+billed override case in one regeneration pass.
 - (2026-03-18) Action-level integration coverage for `getAvailableRecurringDueWork(...)` is practical with a fake transaction/query-builder harness because the reader logic is mostly SQL filtering/merging over server actions. This gives deterministic coverage for mixed-row sorting, pagination, search, and invoice-window date filtering without requiring the unavailable local Postgres harness.
+- (2026-03-18) A live local test Postgres container was already running on `127.0.0.1:57433` with `app_user/postpass123`; `.env.localtest` was stale (`5438` + old password). Focused DB-backed billing tests can run in this workspace by overriding the DB env vars inline instead of relying on the stale file values.
+- (2026-03-18) The persisted recurring timing contract originally blocked hourly/usage participation at the schema/type level even though the current billing engine worktree already resolves service-period timing for time and usage charges. Widening `RecurringChargeFamily` plus the migration constraint is the cutover step that lets those obligations be represented in due-work and persisted service-period ledgers.
 
 ## Commands / Runbooks
 
@@ -52,6 +55,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringServicePeriodRegeneration.domain.test.ts src/test/unit/billing/recurringServicePeriodRegenerationConflict.domain.test.ts src/test/unit/billing/recurringServicePeriodGenerationHorizon.domain.test.ts` (from `server/`; passed)
 - (2026-03-18) `pnpm exec vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T316/T323/T324/T327"` (from `server/`; blocked in this environment because Postgres on `127.0.0.1:5438` refused connections)
 - (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringDueWorkReader.integration.test.ts` (from `server/`; passed)
+- (2026-03-18) `DB_HOST=127.0.0.1 DB_PORT=57433 DB_NAME=server DB_NAME_SERVER=server DB_USER_SERVER=app_user DB_USER_ADMIN=postgres DB_PASSWORD_SERVER=postpass123 DB_PASSWORD_ADMIN=postpass123 pnpm exec vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T316/T323/T324/T327"` (from `server/`; passed)
+- (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringDueWork.domain.test.ts src/test/unit/migrations/recurringServicePeriodsMigration.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts` (from `server/`; passed)
+- (2026-03-18) `pnpm exec tsc --noEmit -p packages/types/tsconfig.json` (from repo root; passed)
 
 ## Links / References
 
@@ -85,6 +91,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) Completed `F015` / `T014` by validating the pre-existing generation-horizon coverage model with an explicit replenishment test. The system now has plan-specific proof that future service periods can be assessed against both the target horizon and the lower replenishment threshold without conflating those two states.
 - (2026-03-18) Completed `F016` / `T015` by validating the pre-existing regeneration planner with an explicit edited-plus-billed override preservation test. Future untouched rows can now be regenerated while edited and billed slots remain preserved rather than being silently overwritten.
 - (2026-03-18) Completed `T009` through `T012` with an action-level due-work reader harness that exercises the real `getAvailableRecurringDueWork(...)` logic. Mixed client/contract rows now have explicit coverage for deterministic ordering, pagination stability, search by client name without a billing-cycle bridge, and invoice-window-based date filtering.
+- (2026-03-18) Completed `T016` by running the existing DB-backed staged-rollout regeneration scenario against the live local Postgres container with inline DB env overrides. The integration path now has verified proof that regeneration updates future rows while preserving edited and billed history.
+- (2026-03-18) Completed `F017`, `F018`, `F019`, `T017`, and `T018` by widening the shared recurring charge-family contract and the `recurring_service_periods` migration constraint to include `hourly` and `usage`, then proving those persisted rows flow into due-work selection. The chosen cutover model is explicit ledger support for hourly/usage obligations, not a parallel family-agnostic abstraction.
 
 ## Open Questions
 

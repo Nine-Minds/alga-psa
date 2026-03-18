@@ -54,7 +54,7 @@ export const buildRecurringInvoiceWindow = (
 type BuildMonthlyRecurringFixtureOptions = {
   cadenceOwner?: CadenceOwner;
   duePosition?: 'advance' | 'arrears';
-  chargeFamily?: 'fixed' | 'product' | 'license';
+  chargeFamily?: 'fixed' | 'product' | 'license' | 'bucket' | 'hourly' | 'usage';
   obligationOverrides?: Partial<IRecurringObligationRef>;
 };
 

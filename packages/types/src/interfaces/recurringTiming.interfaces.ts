@@ -16,7 +16,13 @@ export type DuePosition = (typeof DUE_POSITIONS)[number];
 export const RECURRING_RANGE_SEMANTICS = 'half_open' as const;
 export type RecurringRangeSemantics = typeof RECURRING_RANGE_SEMANTICS;
 
-export type RecurringChargeFamily = 'fixed' | 'product' | 'license' | 'bucket';
+export type RecurringChargeFamily =
+  | 'fixed'
+  | 'product'
+  | 'license'
+  | 'bucket'
+  | 'hourly'
+  | 'usage';
 export type RecurringObligationType = 'contract_line' | 'client_contract_line' | 'template_line' | 'preset_line';
 export type RecurringTimingMetadataValue = string | number | boolean | null;
 export type RecurringTimingMetadata = Record<string, RecurringTimingMetadataValue>;

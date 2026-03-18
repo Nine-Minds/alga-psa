@@ -6,6 +6,7 @@ import type {
   IRecurringServicePeriodInvoiceLinkage,
   IRecurringServicePeriodRecord,
   IRecurringServicePeriodRecordProvenance,
+  RecurringChargeFamily,
   RecurringServicePeriodLifecycleState,
   RecurringServicePeriodProvenanceKind,
   UserEditedRecurringServicePeriodReasonCode,
@@ -43,6 +44,8 @@ describe('persisted recurring service-period record typing', () => {
     const provenanceKind: RecurringServicePeriodProvenanceKind = 'generated';
     const generatedReasonCode: GeneratedRecurringServicePeriodReasonCode = 'initial_materialization';
     const editedReasonCode: UserEditedRecurringServicePeriodReasonCode = 'boundary_adjustment';
+    const hourlyChargeFamily: RecurringChargeFamily = 'hourly';
+    const usageChargeFamily: RecurringChargeFamily = 'usage';
 
     const sourceObligation: IPersistedRecurringObligationRef = {
       tenant: 'tenant-1',
@@ -107,6 +110,8 @@ describe('persisted recurring service-period record typing', () => {
     expect(record.servicePeriod.semantics).toBe(RECURRING_RANGE_SEMANTICS);
     expect(record.sourceObligation.tenant).toBe('tenant-1');
     expect(editedReasonCode).toBe('boundary_adjustment');
+    expect(hourlyChargeFamily).toBe('hourly');
+    expect(usageChargeFamily).toBe('usage');
 
     expectTypeOf<IRecurringServicePeriodRecord['sourceObligation']>().toEqualTypeOf<IPersistedRecurringObligationRef>();
     expectTypeOf<IRecurringServicePeriodRecord['lifecycleState']>().toEqualTypeOf<RecurringServicePeriodLifecycleState>();

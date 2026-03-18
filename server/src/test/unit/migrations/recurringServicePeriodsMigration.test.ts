@@ -149,11 +149,27 @@ describe('recurring service periods migration', () => {
     const rawSql = rawCalls.join('\n');
     expect(rawSql).toContain("CHECK (cadence_owner IN ('client', 'contract'))");
     expect(rawSql).toContain("CHECK (due_position IN ('advance', 'arrears'))");
+    expect(rawSql).toContain("CHECK (charge_family IN ('fixed', 'product', 'license', 'bucket', 'hourly', 'usage'))");
     expect(rawSql).toContain("CHECK (provenance_kind IN ('generated', 'user_edited', 'regenerated', 'repair'))");
     expect(rawSql).toContain('CHECK (service_period_start < service_period_end)');
     expect(rawSql).toContain('CHECK (invoice_window_start < invoice_window_end)');
     expect(rawSql).toContain('activity_window_start >= service_period_start');
     expect(rawSql).toContain('supersedes_record_id IS NULL OR supersedes_record_id <> record_id');
+  });
+
+  it('T017/T018: migration widens persisted recurring service-period charge families so hourly and usage obligations can participate in service-driven selection', async () => {
+    const repoRoot = path.resolve(import.meta.dirname, '../../../../..');
+    const migration = await import(
+      pathToFileURL(
+        path.join(repoRoot, 'server/migrations/20260318120000_create_recurring_service_periods.cjs'),
+      ).href
+    );
+
+    const { knex, rawCalls } = createFakeKnex();
+    await migration.up(knex);
+
+    const rawSql = rawCalls.join('\n');
+    expect(rawSql).toContain("CHECK (charge_family IN ('fixed', 'product', 'license', 'bucket', 'hourly', 'usage'))");
   });
 
   it('T342: migration adds persisted service-period indexes for schedule lookup, obligation-state scans, and due selection', async () => {
