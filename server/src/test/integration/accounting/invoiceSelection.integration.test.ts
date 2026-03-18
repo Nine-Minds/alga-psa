@@ -11,9 +11,26 @@ import {
   AccountingExportRepository,
   AccountingExportService
 } from '@alga-psa/billing/services';
+import Invoice from '@alga-psa/billing/models/invoice';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 240_000;
+
+function toDateOnly(value: unknown): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+
+  return null;
+}
 
 type SeededInvoice = {
   invoiceId: string;
@@ -596,6 +613,310 @@ describe('Accounting export invoice selection integration', () => {
         transaction_ids: [transactionId]
       }
     });
+  }, HOOK_TIMEOUT);
+
+  it('T278: DB-backed sanity: mixed cadence-owner invoices remain stable across export and portal readers when historical and canonical invoices coexist', async () => {
+    const serviceId = await createTestService(ctx, {
+      service_name: 'Coexistence Export Portal Service',
+      billing_method: 'fixed',
+      default_rate: 11000,
+      unit_of_measure: 'device',
+      description: 'Historical and canonical coexistence validation'
+    });
+
+    const historicalInvoiceId = uuidv4();
+    const canonicalInvoiceId = uuidv4();
+    const historicalChargeId = uuidv4();
+    const clientChargeId = uuidv4();
+    const contractChargeId = uuidv4();
+    const historicalTransactionId = uuidv4();
+    const canonicalTransactionId = uuidv4();
+    const historicalInvoiceDate = '2025-01-20T00:00:00.000Z';
+    const canonicalInvoiceDate = '2025-02-20T00:00:00.000Z';
+
+    await ctx.db('invoices').insert([
+      {
+        invoice_id: historicalInvoiceId,
+        tenant: ctx.tenantId,
+        client_id: ctx.clientId,
+        invoice_number: 'INV-HIST-COEXIST',
+        invoice_date: historicalInvoiceDate,
+        due_date: historicalInvoiceDate,
+        subtotal: 5000,
+        tax: 0,
+        total_amount: 5000,
+        status: 'sent',
+        currency_code: 'USD',
+        is_manual: false,
+        billing_period_start: '2025-01-01T00:00:00.000Z',
+        billing_period_end: '2025-02-01T00:00:00.000Z',
+        created_at: historicalInvoiceDate,
+        updated_at: historicalInvoiceDate
+      },
+      {
+        invoice_id: canonicalInvoiceId,
+        tenant: ctx.tenantId,
+        client_id: ctx.clientId,
+        invoice_number: 'INV-CANON-COEXIST',
+        invoice_date: canonicalInvoiceDate,
+        due_date: canonicalInvoiceDate,
+        subtotal: 22000,
+        tax: 0,
+        total_amount: 22000,
+        status: 'sent',
+        currency_code: 'USD',
+        is_manual: false,
+        billing_period_start: '2025-02-01T00:00:00.000Z',
+        billing_period_end: '2025-03-01T00:00:00.000Z',
+        created_at: canonicalInvoiceDate,
+        updated_at: canonicalInvoiceDate
+      }
+    ]);
+
+    await ctx.db('invoice_charges').insert([
+      {
+        item_id: historicalChargeId,
+        tenant: ctx.tenantId,
+        invoice_id: historicalInvoiceId,
+        service_id: serviceId,
+        description: 'Historical flat recurring line',
+        quantity: 1,
+        unit_price: 5000,
+        total_price: 5000,
+        net_amount: 5000,
+        tax_amount: 0,
+        is_manual: false,
+        created_at: historicalInvoiceDate,
+        updated_at: historicalInvoiceDate
+      },
+      {
+        item_id: clientChargeId,
+        tenant: ctx.tenantId,
+        invoice_id: canonicalInvoiceId,
+        service_id: serviceId,
+        description: 'Client cadence recurring line',
+        quantity: 1,
+        unit_price: 12000,
+        total_price: 12000,
+        net_amount: 12000,
+        tax_amount: 0,
+        is_manual: false,
+        created_at: canonicalInvoiceDate,
+        updated_at: canonicalInvoiceDate
+      },
+      {
+        item_id: contractChargeId,
+        tenant: ctx.tenantId,
+        invoice_id: canonicalInvoiceId,
+        service_id: serviceId,
+        description: 'Contract cadence recurring line',
+        quantity: 1,
+        unit_price: 10000,
+        total_price: 10000,
+        net_amount: 10000,
+        tax_amount: 0,
+        is_manual: false,
+        created_at: canonicalInvoiceDate,
+        updated_at: canonicalInvoiceDate
+      }
+    ]);
+
+    await ctx.db('invoice_charge_details').insert([
+      {
+        item_detail_id: uuidv4(),
+        item_id: clientChargeId,
+        tenant: ctx.tenantId,
+        service_id: serviceId,
+        config_id: uuidv4(),
+        quantity: 1,
+        rate: 12000,
+        service_period_start: '2025-02-01T00:00:00.000Z',
+        service_period_end: '2025-03-01T00:00:00.000Z',
+        billing_timing: 'advance',
+        created_at: canonicalInvoiceDate,
+        updated_at: canonicalInvoiceDate
+      },
+      {
+        item_detail_id: uuidv4(),
+        item_id: contractChargeId,
+        tenant: ctx.tenantId,
+        service_id: serviceId,
+        config_id: uuidv4(),
+        quantity: 1,
+        rate: 10000,
+        service_period_start: '2025-02-08T00:00:00.000Z',
+        service_period_end: '2025-03-08T00:00:00.000Z',
+        billing_timing: 'advance',
+        created_at: canonicalInvoiceDate,
+        updated_at: canonicalInvoiceDate
+      }
+    ]);
+
+    await ctx.db('transactions').insert([
+      {
+        transaction_id: historicalTransactionId,
+        tenant: ctx.tenantId,
+        client_id: ctx.clientId,
+        invoice_id: historicalInvoiceId,
+        amount: 5000,
+        type: 'invoice_generated',
+        description: 'Transaction for historical coexistence invoice',
+        created_at: historicalInvoiceDate,
+        status: 'completed',
+        balance_after: 5000
+      },
+      {
+        transaction_id: canonicalTransactionId,
+        tenant: ctx.tenantId,
+        client_id: ctx.clientId,
+        invoice_id: canonicalInvoiceId,
+        amount: 22000,
+        type: 'invoice_generated',
+        description: 'Transaction for canonical coexistence invoice',
+        created_at: canonicalInvoiceDate,
+        status: 'completed',
+        balance_after: 22000
+      }
+    ]);
+
+    const { batch } = await selector.createBatchFromFilters({
+      adapterType: 'xero',
+      filters: {
+        startDate: '2025-01-01',
+        endDate: '2025-02-28',
+        invoiceStatuses: ['sent'],
+        clientIds: [ctx.clientId]
+      },
+      notes: 'Historical and canonical coexistence batch'
+    });
+
+    const storedLines = await repository.listLines(batch.batch_id);
+    expect(storedLines).toHaveLength(3);
+
+    const historicalExportLine = storedLines.find((line) => line.invoice_charge_id === historicalChargeId);
+    expect(historicalExportLine).toMatchObject({
+      invoice_id: historicalInvoiceId,
+      service_period_start: '2025-01-01T00:00:00.000Z',
+      service_period_end: '2025-02-01T00:00:00.000Z',
+      payload: {
+        invoice_number: 'INV-HIST-COEXIST',
+        service_period_source: 'invoice_header_fallback',
+        recurring_detail_periods: null,
+        transaction_ids: [historicalTransactionId]
+      }
+    });
+
+    const clientExportLine = storedLines.find((line) => line.invoice_charge_id === clientChargeId);
+    expect(clientExportLine).toMatchObject({
+      invoice_id: canonicalInvoiceId,
+      service_period_start: '2025-02-01T00:00:00.000Z',
+      service_period_end: '2025-03-01T00:00:00.000Z',
+      payload: {
+        invoice_number: 'INV-CANON-COEXIST',
+        service_period_source: 'canonical_detail_periods',
+        recurring_detail_periods: [
+          {
+            service_period_start: '2025-02-01T00:00:00.000Z',
+            service_period_end: '2025-03-01T00:00:00.000Z',
+            billing_timing: 'advance'
+          }
+        ],
+        transaction_ids: [canonicalTransactionId]
+      }
+    });
+
+    const contractExportLine = storedLines.find((line) => line.invoice_charge_id === contractChargeId);
+    expect(contractExportLine).toMatchObject({
+      invoice_id: canonicalInvoiceId,
+      service_period_start: '2025-02-08T00:00:00.000Z',
+      service_period_end: '2025-03-08T00:00:00.000Z',
+      payload: {
+        invoice_number: 'INV-CANON-COEXIST',
+        service_period_source: 'canonical_detail_periods',
+        recurring_detail_periods: [
+          {
+            service_period_start: '2025-02-08T00:00:00.000Z',
+            service_period_end: '2025-03-08T00:00:00.000Z',
+            billing_timing: 'advance'
+          }
+        ],
+        transaction_ids: [canonicalTransactionId]
+      }
+    });
+
+    const historicalPortalInvoice = await Invoice.getFullInvoiceById(ctx.db, ctx.tenantId, historicalInvoiceId);
+    const canonicalPortalInvoice = await Invoice.getFullInvoiceById(ctx.db, ctx.tenantId, canonicalInvoiceId);
+
+    expect(historicalPortalInvoice?.invoice_charges).toHaveLength(1);
+    expect(historicalPortalInvoice?.invoice_charges?.[0]).toMatchObject({
+      item_id: historicalChargeId,
+      description: 'Historical flat recurring line'
+    });
+    expect(historicalPortalInvoice?.invoice_charges?.[0]).not.toHaveProperty('recurring_detail_periods');
+    expect(historicalPortalInvoice?.invoice_charges?.[0]).not.toHaveProperty('recurring_projection');
+
+    expect(canonicalPortalInvoice?.invoice_charges).toHaveLength(2);
+    const canonicalByDescription = new Map(
+      canonicalPortalInvoice?.invoice_charges?.map((charge) => [charge.description, charge]) ?? []
+    );
+
+    expect(canonicalByDescription.get('Client cadence recurring line')).toMatchObject({
+      item_id: clientChargeId,
+      billing_timing: 'advance',
+      recurring_projection: {
+        source: 'canonical_detail_rows',
+        detail_period_count: 1,
+        detail_billing_timing_shape: 'uniform'
+      }
+    });
+    expect(
+      toDateOnly(canonicalByDescription.get('Client cadence recurring line')?.service_period_start)
+    ).toBe('2025-02-01');
+    expect(
+      toDateOnly(canonicalByDescription.get('Client cadence recurring line')?.service_period_end)
+    ).toBe('2025-03-01');
+    expect(
+      canonicalByDescription.get('Client cadence recurring line')?.recurring_detail_periods?.map((period) => ({
+        service_period_start: toDateOnly(period.service_period_start),
+        service_period_end: toDateOnly(period.service_period_end),
+        billing_timing: period.billing_timing
+      }))
+    ).toEqual([
+      {
+        service_period_start: '2025-02-01',
+        service_period_end: '2025-03-01',
+        billing_timing: 'advance'
+      }
+    ]);
+
+    expect(canonicalByDescription.get('Contract cadence recurring line')).toMatchObject({
+      item_id: contractChargeId,
+      billing_timing: 'advance',
+      recurring_projection: {
+        source: 'canonical_detail_rows',
+        detail_period_count: 1,
+        detail_billing_timing_shape: 'uniform'
+      }
+    });
+    expect(
+      toDateOnly(canonicalByDescription.get('Contract cadence recurring line')?.service_period_start)
+    ).toBe('2025-02-08');
+    expect(
+      toDateOnly(canonicalByDescription.get('Contract cadence recurring line')?.service_period_end)
+    ).toBe('2025-03-08');
+    expect(
+      canonicalByDescription.get('Contract cadence recurring line')?.recurring_detail_periods?.map((period) => ({
+        service_period_start: toDateOnly(period.service_period_start),
+        service_period_end: toDateOnly(period.service_period_end),
+        billing_timing: period.billing_timing
+      }))
+    ).toEqual([
+      {
+        service_period_start: '2025-02-08',
+        service_period_end: '2025-03-08',
+        billing_timing: 'advance'
+      }
+    ]);
   }, HOOK_TIMEOUT);
 
   it('T275: createBatchFromFilters preserves canonical recurring detail periods through export preview persistence', async () => {

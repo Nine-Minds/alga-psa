@@ -2426,7 +2426,7 @@
   {
     "id": "T278",
     "description": "DB-backed sanity: mixed cadence-owner invoices remain stable across export and portal readers when historical and canonical invoices coexist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F167",
       "F195",
@@ -2647,7 +2647,7 @@
   {
     "id": "T297",
     "description": "If split or merge operations are supported in v1, they preserve continuity, provenance, and due-selection semantics",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F247",
       "F248"
@@ -2865,7 +2865,7 @@
   {
     "id": "T323",
     "description": "DB-backed sanity: regeneration after a contract-line change updates only eligible future periods and preserves edited ones",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F238",
       "F239",
@@ -2875,7 +2875,7 @@
   {
     "id": "T324",
     "description": "DB-backed sanity: billed persisted service periods become immutable after invoice linkage is created",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F240",
       "F241"
@@ -2884,7 +2884,7 @@
   {
     "id": "T325",
     "description": "DB-backed sanity: future contract-cadence service periods can be inspected and edited before invoice generation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F237",
       "F245",
@@ -2894,7 +2894,7 @@
   {
     "id": "T326",
     "description": "DB-backed sanity: mixed cadence-owner recurring obligations materialize distinct future period ledgers without collision",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F236",
       "F237",
@@ -2904,7 +2904,7 @@
   {
     "id": "T327",
     "description": "DB-backed sanity: invoice detail rows retain traceable links back to persisted service-period records after generation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F241",
       "F267"

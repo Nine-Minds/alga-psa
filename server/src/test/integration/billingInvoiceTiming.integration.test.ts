@@ -1094,7 +1094,7 @@ it('T264: generateInvoice to persistence to getFullInvoiceById round-trips canon
   }
 }, HOOK_TIMEOUT);
 
-it('T316: DB-backed persisted service-period generation, editing, regeneration, and invoice linkage remain coherent under staged rollout', async () => {
+it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed immutability, and invoice-detail linkage remain coherent under staged rollout', async () => {
   setupCommonMocks({ tenantId, userId: 'persisted-ledger-user', permissionCheck: () => true });
 
   const {
@@ -1324,6 +1324,24 @@ it('T316: DB-backed persisted service-period generation, editing, regeneration, 
     invoice_charge_detail_id: persistedInvoice.invoiceChargeDetailId,
   });
 
+  const linkedDetailRow = await db('invoice_charge_details')
+    .where({
+      tenant: tenantId,
+      item_detail_id: persistedInvoice.invoiceChargeDetailId,
+    })
+    .first([
+      'item_detail_id',
+      'service_period_start',
+      'service_period_end',
+      'billing_timing',
+    ]);
+  expect(linkedDetailRow).toMatchObject({
+    item_detail_id: persistedInvoice.invoiceChargeDetailId,
+    billing_timing: 'advance',
+  });
+  expect(normalizeDateValue(linkedDetailRow?.service_period_start)).toBe('2025-01-10');
+  expect(normalizeDateValue(linkedDetailRow?.service_period_end)).toBe(currentPeriodEnd);
+
   const futureRow = await db('recurring_service_periods')
     .where({ tenant: tenantId, record_id: regenerationPlan.regeneratedRecords[0].recordId })
     .first([
@@ -1353,6 +1371,37 @@ it('T316: DB-backed persisted service-period generation, editing, regeneration, 
     .whereNull('invoice_charge_detail_id')
     .select('record_id');
   expect(remainingDueLedgerRows).toEqual([]);
+
+  const immutableAttempt = applyRecurringServicePeriodEditRequest({
+    record: linkedRecord,
+    request: {
+      recordId: linkedRecord.recordId,
+      operation: 'defer',
+      deferredInvoiceWindow: {
+        start: '2025-02-01',
+        end: '2025-03-01',
+        semantics: 'half_open',
+      },
+    },
+    context: {
+      editedAt: '2026-03-18T15:20:00.000Z',
+      sourceRuleVersion: `${fixedLine.clientContractLineId}:v3`,
+      sourceRunKey: 'integration-immutable-billed-ledger',
+    },
+    recordIdFactory: () => uuidv4(),
+  });
+  expect(immutableAttempt).toEqual({
+    ok: false,
+    operation: 'defer',
+    recordId: linkedRecord.recordId,
+    validationIssues: [
+      {
+        code: 'immutable_record',
+        field: 'operation',
+        message: 'Locked or billed service periods cannot be edited, skipped, deferred, or regenerated in place.',
+      },
+    ],
+  });
 }, HOOK_TIMEOUT);
 
 it('T320/T301: DB-backed billing-staff inspection and edit flows list future client-cadence service periods and preserve edited provenance', async () => {
@@ -1745,6 +1794,242 @@ it('T322/T328: DB-backed skipped client-cadence periods block invoice generation
   expect(selectDueRecurringServicePeriodRecords(reloadedRecords, laterWindowQuery).map((record) => record.recordId)).toEqual([
     laterFutureRecord.recordId,
   ]);
+}, HOOK_TIMEOUT);
+
+it('T325: DB-backed future contract-cadence service periods can be inspected and edited before invoice generation', async () => {
+  setupCommonMocks({ tenantId, userId: 'ledger-contract-edit-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Persisted Contract Ledger Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Persisted Contract Ledger Service',
+    planName: 'Persisted Contract Ledger Plan',
+    baseRateCents: 23500,
+    startDate: '2025-01-08',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+
+  const materializationPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-01-08T00:00:00Z',
+    materializedAt: '2026-03-18T17:30:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-01-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: fixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-contract-operational-view',
+    targetHorizonDays: 95,
+    replenishmentThresholdDays: 20,
+    recordIdFactory: () => uuidv4(),
+  });
+
+  for (const record of materializationPlan.records.slice(0, 3)) {
+    await upsertRecurringServicePeriodRecord(record);
+  }
+
+  const initialRecords = await loadRecurringServicePeriodRecords({
+    obligationId: fixedLine.contractLineId,
+  });
+  const listingQuery = buildRecurringServicePeriodListingQuery({
+    tenant: tenantId,
+    asOf: '2025-01-08T00:00:00Z',
+    scheduleKeys: [materializationPlan.scheduleKey],
+  });
+  const initialView = buildRecurringServicePeriodOperationalView({
+    records: initialRecords,
+    query: listingQuery,
+  });
+
+  expect(initialView.summary).toMatchObject({
+    totalRows: 3,
+    generatedRows: 3,
+    editedRows: 0,
+    exceptionRows: 0,
+  });
+  expect(initialView.rows[0]).toMatchObject({
+    cadenceOwner: 'contract',
+    servicePeriod: {
+      start: '2025-01-08',
+      end: '2025-02-08',
+    },
+    invoiceWindow: {
+      start: '2025-01-08',
+      end: '2025-02-08',
+    },
+  });
+
+  const targetRecord = initialRecords[1];
+  const editResponse = applyRecurringServicePeriodEditRequest({
+    record: targetRecord,
+    request: {
+      recordId: targetRecord.recordId,
+      operation: 'boundary_adjustment',
+      updatedInvoiceWindow: {
+        start: '2025-02-10',
+        end: '2025-03-10',
+        semantics: 'half_open',
+      },
+    },
+    context: {
+      editedAt: '2026-03-18T17:35:00.000Z',
+      sourceRuleVersion: `${fixedLine.contractLineId}:v2`,
+      sourceRunKey: 'integration-contract-operational-view-edit',
+    },
+    siblingRecords: initialRecords,
+    recordIdFactory: () => uuidv4(),
+  });
+
+  expect(editResponse.ok).toBe(true);
+  if (!editResponse.ok) {
+    throw new Error('Expected contract-cadence persisted edit request to succeed');
+  }
+
+  await upsertRecurringServicePeriodRecord(editResponse.supersededRecord);
+  await upsertRecurringServicePeriodRecord(editResponse.editedRecord);
+
+  const editedRecords = await loadRecurringServicePeriodRecords({
+    obligationId: fixedLine.contractLineId,
+  });
+  const editedView = buildRecurringServicePeriodOperationalView({
+    records: editedRecords,
+    query: listingQuery,
+  });
+  const editedRow = editedView.rows.find((row) => row.recordId === editResponse.editedRecord.recordId);
+
+  expect(editedView.summary).toMatchObject({
+    totalRows: 3,
+    generatedRows: 2,
+    editedRows: 1,
+    exceptionRows: 1,
+  });
+  expect(editedRow).toMatchObject({
+    recordId: editResponse.editedRecord.recordId,
+    cadenceOwner: 'contract',
+    isException: true,
+    invoiceWindow: {
+      start: '2025-02-10',
+      end: '2025-03-10',
+    },
+  });
+}, HOOK_TIMEOUT);
+
+it('T326: DB-backed mixed cadence-owner recurring obligations materialize distinct future period ledgers without collision', async () => {
+  setupCommonMocks({ tenantId, userId: 'ledger-mixed-materialization-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    currentPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Persisted Mixed Ledger Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const clientCadenceLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Persisted Mixed Client Service',
+    planName: 'Persisted Mixed Client Plan',
+    baseRateCents: 24500,
+    startDate: '2024-12-01',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+  const contractCadenceLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Persisted Mixed Contract Service',
+    planName: 'Persisted Mixed Contract Plan',
+    baseRateCents: 25500,
+    startDate: '2025-01-08',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+
+  const clientPlan = materializeClientCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T17:40:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: clientCadenceLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${clientCadenceLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-mixed-client-materialize',
+    targetHorizonDays: 60,
+    replenishmentThresholdDays: 20,
+    recordIdFactory: () => uuidv4(),
+  });
+  const contractPlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-01-08T00:00:00Z',
+    materializedAt: '2026-03-18T17:40:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-01-08T00:00:00Z',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: contractCadenceLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${contractCadenceLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-mixed-contract-materialize',
+    targetHorizonDays: 60,
+    replenishmentThresholdDays: 20,
+    recordIdFactory: () => uuidv4(),
+  });
+
+  for (const record of [...clientPlan.records.slice(0, 2), ...contractPlan.records.slice(0, 2)]) {
+    await upsertRecurringServicePeriodRecord(record);
+  }
+
+  const mixedRows = await db('recurring_service_periods')
+    .where({ tenant: tenantId })
+    .whereIn('schedule_key', [clientPlan.scheduleKey, contractPlan.scheduleKey])
+    .orderBy('schedule_key', 'asc')
+    .orderBy('service_period_start', 'asc')
+    .select([
+      'record_id',
+      'schedule_key',
+      'cadence_owner',
+      'service_period_start',
+      'service_period_end',
+      'invoice_window_start',
+      'invoice_window_end',
+    ]);
+
+  expect(mixedRows).toHaveLength(4);
+  expect(new Set(mixedRows.map((row) => row.schedule_key))).toEqual(
+    new Set([clientPlan.scheduleKey, contractPlan.scheduleKey]),
+  );
+
+  const clientRows = mixedRows.filter((row) => row.schedule_key === clientPlan.scheduleKey);
+  const contractRows = mixedRows.filter((row) => row.schedule_key === contractPlan.scheduleKey);
+
+  expect(clientRows.every((row) => row.cadence_owner === 'client')).toBe(true);
+  expect(contractRows.every((row) => row.cadence_owner === 'contract')).toBe(true);
+  expect(normalizeDateValue(clientRows[0]?.service_period_start)).toBe('2025-01-01');
+  expect(normalizeDateValue(clientRows[0]?.invoice_window_start)).toBe('2025-01-01');
+  expect(normalizeDateValue(contractRows[0]?.service_period_start)).toBe('2025-01-08');
+  expect(normalizeDateValue(contractRows[0]?.invoice_window_start)).toBe('2025-01-08');
 }, HOOK_TIMEOUT);
 
 });

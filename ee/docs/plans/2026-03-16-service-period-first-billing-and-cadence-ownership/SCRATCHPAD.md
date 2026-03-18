@@ -41,6 +41,20 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Mixed-cadence coexistence now has one DB-backed export-plus-portal sanity seam, which closes `T278`, and the remaining conditional split/merge checklist item is now resolved explicitly:
+  - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` now seeds one historical flat invoice plus one canonical mixed-cadence invoice, then proves `AccountingExportInvoiceSelector.createBatchFromFilters(...)` stores stable historical-vs-canonical export lines while `Invoice.getFullInvoiceById(...)` rereads the same canonical recurring detail rows without collapsing the historical invoice into fake recurring metadata
+  - the portal-side assertion intentionally uses date-only equality for parent `service_period_*` summary bounds because DB-backed `Date` hydration can surface offset-normalized ISO timestamps while the authoritative `recurring_detail_periods[]` contract remains unchanged; this keeps the test locked to the stable business period semantics instead of one driver-specific timestamp shape
+  - `T297` is now treated as satisfied by the already-implemented v1 non-support decision in `T347`: split and merge remain explicitly unsupported edit operations, so the conditional “if supported in v1” behavior never becomes active in this rollout and does not require a contradictory execution path
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts -t "T278" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) Additional DB-backed persisted-ledger lifecycle coverage now closes `T323`, `T324`, `T325`, `T326`, and `T327`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now lets the existing staged-rollout lifecycle seam explicitly claim the regeneration/change-management contract as `T316/T323/T324/T327`: regenerated future rows supersede only the eligible untouched future slot, edited rows stay preserved, billed rows fail future edit attempts with `immutable_record`, and the linked `invoice_charge_details.item_detail_id` row remains traceable from the persisted billed record
+  - the same file now adds a dedicated `T325` contract-cadence operational-view case, proving future 8th-anchored contract-owned periods can be listed and boundary-edited before invoice generation with the same explicit provenance and exception-state semantics as client cadence
+  - the new `T326` integration keeps mixed materialization honest at the physical ledger seam instead of only the shared-domain seam: client-owned and contract-owned recurring obligations on the same client persist distinct `schedule_key` ledgers, retain their own cadence-owner metadata, and keep their own invoice-window anchors (`1st` vs `8th`) without row collisions
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T316|T323|T324|T327|T325|T326" --hookTimeout 600000 --coverage.enabled false`
+
 - (2026-03-18) DB-backed persisted-ledger inspection/edit/runtime coverage now closes `T301`, `T320`, `T321`, `T322`, and `T328`, and exposed a real zero-dollar suppression bug on the live invoice path:
   - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now proves billing staff can list future client-cadence persisted periods, edit a future row with explicit edited provenance, move due selection to a new invoice window without rewriting billed history, and skip the current due row while later persisted work remains selectable
   - the integration fixtures had to align with two live contracts the earlier domain tests did not exercise directly:
