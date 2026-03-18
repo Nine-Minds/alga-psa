@@ -1,7 +1,9 @@
 import type {
   CadenceOwner,
+  IPersistedRecurringObligationRef,
   IRecurringInvoiceWindow,
   IRecurringObligationRef,
+  IRecurringServicePeriodRecord,
   IRecurringServicePeriod,
 } from '@alga-psa/types';
 import { RECURRING_RANGE_SEMANTICS } from '@alga-psa/types';
@@ -26,6 +28,13 @@ export const buildRecurringServicePeriod = (
   end: '2025-01-11',
   semantics: RECURRING_RANGE_SEMANTICS,
   ...overrides,
+});
+
+export const buildPersistedRecurringObligationRef = (
+  overrides: Partial<IPersistedRecurringObligationRef> = {},
+): IPersistedRecurringObligationRef => ({
+  ...buildRecurringObligationRef(overrides),
+  tenant: overrides.tenant ?? 'tenant-1',
 });
 
 export const buildRecurringInvoiceWindow = (
@@ -100,3 +109,46 @@ export const buildMonthlyRecurringFixture = (
 export const buildMonthlyServicePeriods = (
   options: BuildMonthlyRecurringFixtureOptions = {},
 ): IRecurringServicePeriod[] => buildMonthlyRecurringFixture(options).servicePeriods;
+
+export const buildRecurringServicePeriodRecord = (
+  overrides: Partial<IRecurringServicePeriodRecord> = {},
+): IRecurringServicePeriodRecord => {
+  const sourceObligation = overrides.sourceObligation ?? buildPersistedRecurringObligationRef();
+  const cadenceOwner = overrides.cadenceOwner ?? 'client';
+  const duePosition = overrides.duePosition ?? 'advance';
+
+  return {
+    kind: 'persisted_service_period_record',
+    recordId: 'rsp_01',
+    scheduleKey: `schedule:${sourceObligation.obligationId}:${cadenceOwner}:${duePosition}`,
+    periodKey: 'period:2025-01-01:2025-02-01',
+    revision: 1,
+    sourceObligation,
+    cadenceOwner,
+    duePosition,
+    lifecycleState: 'generated',
+    servicePeriod: {
+      start: '2025-01-01',
+      end: '2025-02-01',
+      semantics: RECURRING_RANGE_SEMANTICS,
+    },
+    invoiceWindow: {
+      start: '2025-01-01',
+      end: '2025-02-01',
+      semantics: RECURRING_RANGE_SEMANTICS,
+    },
+    activityWindow: {
+      start: '2025-01-01',
+      end: '2025-02-01',
+      semantics: RECURRING_RANGE_SEMANTICS,
+    },
+    provenance: {
+      kind: 'generated',
+      sourceRuleVersion: `${sourceObligation.obligationId}:v1`,
+      sourceRunKey: 'materialize-2026-03-18',
+    },
+    createdAt: '2026-03-18T10:00:00.000Z',
+    updatedAt: '2026-03-18T10:00:00.000Z',
+    ...overrides,
+  };
+};

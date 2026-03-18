@@ -12,6 +12,8 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Decisions
 
+- (2026-03-18) Treat `F231` as the logical record-contract checkpoint for materialized recurring periods, not the physical schema checkpoint.
+  - Rationale: `F232` still needs freedom to choose concrete table/index layout, but the repo needs one shared record vocabulary now so docs, APIs, fixtures, and future migrations do not drift.
 - (2026-03-16) Sequence this plan so service periods become canonical under existing client-cadence behavior before exposing contract-owned cadence. Parity first, new option second, cleanup last.
 - (2026-03-16) Scope the first cut to recurring contract-backed charges. Time and usage remain on their current event-driven model unless a compatibility blocker appears.
 - (2026-03-16) Treat invoice windows as the grouping layer and service periods as the recurring-billing truth for this plan.
@@ -38,6 +40,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - stale dropped-table and repository normalization cleanup
 
 ## Discoveries / Constraints
+
+- (2026-03-18) The first materialized-ledger checkpoint now has one authoritative logical record contract, which closes `F231` and adds/closes `T341`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IPersistedRecurringObligationRef`, `IRecurringServicePeriodRecordProvenance`, `IRecurringServicePeriodRecord`, `RecurringServicePeriodLifecycleState`, and `RecurringServicePeriodProvenanceKind`, so future schema/runtime work can target one shared persisted-record vocabulary instead of inventing ad hoc shapes
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PERSISTED_SERVICE_PERIOD_RECORD.md` now defines the logical record shape explicitly: `recordId`, `scheduleKey`, `periodKey`, `revision`, obligation linkage, cadence ownership, `[start, end)` service/invoice boundaries, provenance, and lifecycle state, while also naming the follow-on boundaries for `F232`, `F233`, and later invoice-linkage/runtime adoption work
+  - `server/src/test/test-utils/recurringTimingFixtures.ts` now includes persisted-record fixture builders so the later materialized-ledger passes can reuse one contract-aware test seam instead of recreating record shapes inline
+  - executable coverage for this checkpoint now lives in `packages/types/src/recurringServicePeriodRecord.typecheck.test.ts`, while `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now also locks the presence and core sections of the new persisted-record artifact
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
 
 - (2026-03-17) The staged cutover, rollback, and follow-on boundary posture is now explicit in the plan artifacts, which closes `F224`, `F225`, `F226`, `F227`, `F228`, `F229`, `F230`, `T253`, `T254`, `T255`, `T256`, `T257`, `T258`, and `T259`:
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/CUTOVER_SEQUENCE.md` now defines the ordered cutover bands for reader-first invoice hydration, writer propagation, scheduler identity, grouping, downstream reporting/portal/export adoption, and rollback/coexistence expectations while historical flat invoices and canonical detail-backed invoices both remain queryable
@@ -831,6 +842,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Commands / Runbooks
 
+- (2026-03-18) Persisted service-period record contract validation:
+  - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
 - (2026-03-17) Billing-timing default normalization validation:
   - `npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`
     - run from `server/`
@@ -1432,7 +1447,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 - Pass-0 artifacts:
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PASS0_RECURRING_TIMING_APPENDIX.md`
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/pass-0-source-inventory.json`
+- Materialized-ledger artifacts:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PERSISTED_SERVICE_PERIOD_RECORD.md`
 - Key runtime files:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts`
   - `packages/billing/src/lib/billing/billingEngine.ts`
   - `packages/billing/src/lib/billing/recurringTiming.ts`
   - `shared/billingClients/createBillingCycles.ts`

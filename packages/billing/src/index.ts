@@ -45,14 +45,19 @@ export type {
   DuePosition,
   ICadenceBoundaryGenerator,
   ICadenceBoundaryGeneratorInput,
+  IPersistedRecurringObligationRef,
   IRecurringActivityWindow,
   IRecurringCoverage,
   IRecurringDuePeriodSelection,
   IRecurringInvoiceDetailTiming,
   IRecurringInvoiceWindow,
   IRecurringObligationRef,
+  IRecurringServicePeriodRecord,
+  IRecurringServicePeriodRecordProvenance,
   IResolvedRecurringSettlement,
   IRecurringServicePeriod,
+  RecurringServicePeriodLifecycleState,
+  RecurringServicePeriodProvenanceKind,
 } from '@alga-psa/types';
 
 // Re-export invoice constants

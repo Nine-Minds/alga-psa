@@ -18,6 +18,29 @@ export type RecurringRangeSemantics = typeof RECURRING_RANGE_SEMANTICS;
 
 export type RecurringChargeFamily = 'fixed' | 'product' | 'license' | 'bucket';
 export type RecurringObligationType = 'contract_line' | 'client_contract_line' | 'template_line' | 'preset_line';
+export type RecurringTimingMetadataValue = string | number | boolean | null;
+export type RecurringTimingMetadata = Record<string, RecurringTimingMetadataValue>;
+
+export const RECURRING_SERVICE_PERIOD_LIFECYCLE_STATES = [
+  'generated',
+  'edited',
+  'skipped',
+  'locked',
+  'billed',
+  'superseded',
+  'archived',
+] as const;
+export type RecurringServicePeriodLifecycleState =
+  (typeof RECURRING_SERVICE_PERIOD_LIFECYCLE_STATES)[number];
+
+export const RECURRING_SERVICE_PERIOD_PROVENANCE_KINDS = [
+  'generated',
+  'user_edited',
+  'regenerated',
+  'repair',
+] as const;
+export type RecurringServicePeriodProvenanceKind =
+  (typeof RECURRING_SERVICE_PERIOD_PROVENANCE_KINDS)[number];
 
 export interface IRecurringObligationRef {
   tenant?: string;
@@ -41,7 +64,7 @@ export interface IRecurringServicePeriod extends IRecurringDateRange {
   cadenceOwner: CadenceOwner;
   duePosition: DuePosition;
   sourceObligation: IRecurringObligationRef;
-  timingMetadata?: Record<string, string | number | boolean | null>;
+  timingMetadata?: RecurringTimingMetadata;
 }
 
 export interface IRecurringInvoiceWindow extends IRecurringDateRange {
@@ -123,6 +146,37 @@ export interface IRecurringRunExecutionWindowIdentity {
   contractLineId?: string | null;
   windowStart?: ISO8601String | null;
   windowEnd?: ISO8601String | null;
+}
+
+export interface IPersistedRecurringObligationRef extends IRecurringObligationRef {
+  tenant: string;
+}
+
+export interface IRecurringServicePeriodRecordProvenance {
+  kind: RecurringServicePeriodProvenanceKind;
+  sourceRuleVersion: string;
+  reasonCode?: string | null;
+  sourceRunKey?: string | null;
+  supersedesRecordId?: string | null;
+}
+
+export interface IRecurringServicePeriodRecord {
+  kind: 'persisted_service_period_record';
+  recordId: string;
+  scheduleKey: string;
+  periodKey: string;
+  revision: number;
+  sourceObligation: IPersistedRecurringObligationRef;
+  cadenceOwner: CadenceOwner;
+  duePosition: DuePosition;
+  lifecycleState: RecurringServicePeriodLifecycleState;
+  servicePeriod: IRecurringDateRange;
+  invoiceWindow: IRecurringDateRange;
+  activityWindow?: IRecurringActivityWindow | null;
+  timingMetadata?: RecurringTimingMetadata;
+  provenance: IRecurringServicePeriodRecordProvenance;
+  createdAt: ISO8601String;
+  updatedAt: ISO8601String;
 }
 
 export interface IRecurringDueSelectionInput {

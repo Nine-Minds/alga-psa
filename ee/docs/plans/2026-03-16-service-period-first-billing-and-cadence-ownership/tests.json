@@ -1914,6 +1914,14 @@
     ]
   },
   {
+    "id": "T341",
+    "description": "Shared recurring timing types define the persisted service-period record contract with identifiers, obligation linkage, cadence owner, boundaries, provenance, and lifecycle state",
+    "implemented": true,
+    "featureIds": [
+      "F231"
+    ]
+  },
+  {
     "id": "T220",
     "description": "Financial artifacts with missing canonical period metadata follow the documented fallback and failure-handling behavior",
     "implemented": true,

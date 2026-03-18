@@ -16,6 +16,7 @@ const read = (file: string) => fs.readFileSync(path.join(planRoot, file), 'utf8'
 const appendix = read('PASS0_RECURRING_TIMING_APPENDIX.md');
 const cutoverSequence = read('CUTOVER_SEQUENCE.md');
 const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
+const persistedServicePeriodRecord = read('PERSISTED_SERVICE_PERIOD_RECORD.md');
 const prd = read('PRD.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
 const recurrenceStorageMatrix = read('RECURRENCE_STORAGE_MATRIX.md');
@@ -258,6 +259,24 @@ describe('service-period-first billing plan artifacts', () => {
     expect(appendix).toContain('Accounting exports');
     expect(appendix).toContain('Portal / reporting / downstream readers');
     expect(appendix).toContain('Migration / cleanup');
+  });
+
+  it('documents the authoritative persisted service-period record contract for materialized recurring billing', () => {
+    expect(persistedServicePeriodRecord).toContain('# Persisted Service-Period Record');
+    expect(persistedServicePeriodRecord).toContain('## Record Identity');
+    expect(persistedServicePeriodRecord).toContain('recordId');
+    expect(persistedServicePeriodRecord).toContain('scheduleKey');
+    expect(persistedServicePeriodRecord).toContain('periodKey');
+    expect(persistedServicePeriodRecord).toContain('## Obligation And Cadence Linkage');
+    expect(persistedServicePeriodRecord).toContain('IPersistedRecurringObligationRef');
+    expect(persistedServicePeriodRecord).toContain('## Boundary Contract');
+    expect(persistedServicePeriodRecord).toContain('servicePeriod');
+    expect(persistedServicePeriodRecord).toContain('invoiceWindow');
+    expect(persistedServicePeriodRecord).toContain('## Provenance And Lifecycle');
+    expect(persistedServicePeriodRecord).toContain('RecurringServicePeriodLifecycleState');
+    expect(persistedServicePeriodRecord).toContain('RecurringServicePeriodProvenanceKind');
+    expect(persistedServicePeriodRecord).toContain('F232');
+    expect(persistedServicePeriodRecord).toContain('F233-F255');
   });
 
   it('T250: the recurrence field source-of-truth matrix matches the authoritative storage model and compatibility seams', () => {

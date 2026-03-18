@@ -2072,7 +2072,7 @@
   {
     "id": "F231",
     "description": "Define the authoritative persisted service-period record shape for recurring billing, including identifiers, obligation linkage, cadence owner, boundaries, provenance, and lifecycle state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Data model and API requirements"
