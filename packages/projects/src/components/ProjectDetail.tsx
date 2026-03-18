@@ -1095,6 +1095,7 @@ export default function ProjectDetail({
       } catch (error) {
         if (!stale) {
           console.error('Error fetching comment counts:', error);
+          toast.error('Failed to load comment counts');
           setTaskCommentCounts({});
         }
       }
