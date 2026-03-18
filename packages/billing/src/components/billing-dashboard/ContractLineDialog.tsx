@@ -26,6 +26,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './contracts/BucketOverlayFields';
 import { BucketOverlayInput } from './contracts/ContractWizard';
 import { ServiceCatalogPicker } from './contracts/ServiceCatalogPicker';
+import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
@@ -107,7 +108,12 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             if (cfg) {
               setBaseRate(cfg.base_rate ?? undefined);
               setEnableProration(!!cfg.enable_proration);
-              setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
+              setBillingCycleAlignment(
+                resolveBillingCycleAlignmentForCompatibility({
+                  billingCycleAlignment: cfg.billing_cycle_alignment,
+                  enableProration: cfg.enable_proration,
+                }) as any,
+              );
             }
           })
           .catch(() => {});
@@ -309,7 +315,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
           await updateContractLinePresetFixedConfig(savedPresetId, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
-            billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start',
+            billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+              billingCycleAlignment: billingCycleAlignment,
+              enableProration: enableProration,
+            }),
           });
 
           // Save Fixed services

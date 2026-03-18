@@ -8,6 +8,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
+import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -276,7 +277,10 @@ export async function ensureTemplateLineSnapshot(
         template_line_id: contractLineId,
         base_rate: contractLine.custom_rate ?? null,
         enable_proration: contractLine.enable_proration ?? false,
-        billing_cycle_alignment: contractLine.billing_cycle_alignment ?? 'start',
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: contractLine.billing_cycle_alignment,
+          enableProration: contractLine.enable_proration,
+        }),
         created_at: contractLine.created_at ?? now,
         updated_at: now,
       })
@@ -284,7 +288,10 @@ export async function ensureTemplateLineSnapshot(
       .merge({
         base_rate: contractLine.custom_rate ?? null,
         enable_proration: contractLine.enable_proration ?? false,
-        billing_cycle_alignment: contractLine.billing_cycle_alignment ?? 'start',
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: contractLine.billing_cycle_alignment,
+          enableProration: contractLine.enable_proration,
+        }),
         updated_at: now,
       });
   }

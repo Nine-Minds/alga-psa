@@ -15,9 +15,7 @@ describe('contract line preset recurring authoring wiring', () => {
 
     expect(dialogSource).toContain("billing_timing: planType === 'Fixed' ? billingTiming : 'arrears',");
     expect(dialogSource).toContain("cadence_owner: 'client',");
-    expect(dialogSource).toContain(
-      "billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start',",
-    );
+    expect(dialogSource).toContain("resolveBillingCycleAlignmentForCompatibility({");
     expect(dialogSource).toContain("currentAlignment === 'start'");
     expect(dialogSource).toContain("? 'prorated'");
 

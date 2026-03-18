@@ -22,6 +22,7 @@ import { IService, IContractLinePreset } from '@alga-psa/types';
 import FixedContractLinePresetServicesList from '../FixedContractLinePresetServicesList'; // Import the preset-specific component
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
+import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 
 interface FixedPresetConfigurationProps {
   presetId: string;
@@ -90,7 +91,12 @@ export function FixedPresetConfiguration({
               setBaseRateInput((cfg.base_rate / 100).toFixed(2));
             }
             setEnableProration(!!cfg.enable_proration);
-            setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
+            setBillingCycleAlignment(
+              resolveBillingCycleAlignmentForCompatibility({
+                billingCycleAlignment: cfg.billing_cycle_alignment,
+                enableProration: cfg.enable_proration,
+              }) as any,
+            );
           }
         }
         setIsDirty(false);
@@ -144,7 +150,10 @@ export function FixedPresetConfiguration({
           await updateContractLinePresetFixedConfig(plan.preset_id, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
-            billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start',
+            billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+              billingCycleAlignment: billingCycleAlignment,
+              enableProration: enableProration,
+            }),
           });
         }
       }

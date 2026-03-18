@@ -2116,7 +2116,7 @@
   {
     "id": "T245",
     "description": "Legacy billing_cycle_alignment defaults are normalized consistently before execution deprecation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F215"
     ]

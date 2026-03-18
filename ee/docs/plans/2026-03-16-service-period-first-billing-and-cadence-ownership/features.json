@@ -1928,7 +1928,7 @@
   {
     "id": "F215",
     "description": "Normalize legacy billing_cycle_alignment default mapping across all recurring write paths before deprecating it from execution",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data model and API requirements",
       "Cleanup requirements"

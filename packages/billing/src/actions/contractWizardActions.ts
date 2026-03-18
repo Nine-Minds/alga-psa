@@ -16,6 +16,7 @@ import {
   computeContractRenewalUpcoming,
 } from '@shared/workflow/streams/domainEventBuilders/contractEventBuilders';
 import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
+import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
 
 
@@ -2088,7 +2089,10 @@ async function replicateContractLinesToClient(
           config_id: clientConfigId,
           base_rate: toCurrencyOrNull(planFixedConfig?.base_rate),
           enable_proration: Boolean(plan.enable_proration),
-          billing_cycle_alignment: plan.billing_cycle_alignment ?? 'start'
+          billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+            billingCycleAlignment: plan.billing_cycle_alignment,
+            enableProration: plan.enable_proration,
+          }),
         });
 
         const planBucketConfig = await trx('contract_line_service_bucket_config')

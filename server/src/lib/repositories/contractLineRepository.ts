@@ -137,10 +137,10 @@ export async function fetchDetailedContractLines(
             ? Number(row.default_rate)
             : null,
       enable_proration: row.template_enable_proration ?? false,
-      billing_cycle_alignment: (row.template_billing_cycle_alignment ?? 'start') as
-        | 'start'
-        | 'end'
-        | 'prorated',
+      billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+        billingCycleAlignment: row.template_billing_cycle_alignment,
+        enableProration: row.template_enable_proration,
+      }),
     }));
   }
 
@@ -175,7 +175,10 @@ export async function fetchDetailedContractLines(
       billing_frequency: row.billing_frequency,
     rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
     enable_proration: row.enable_proration ?? false,
-    billing_cycle_alignment: row.billing_cycle_alignment ?? 'start',
+    billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+      billingCycleAlignment: row.billing_cycle_alignment,
+      enableProration: row.enable_proration,
+    }),
   }));
 }
 

@@ -255,6 +255,75 @@ describe('recurrence storage model contracts', () => {
     expect(contractLineService).toContain('normalizeTemplateRecurringStorage({');
   });
 
+  it('T245: legacy billing_cycle_alignment defaults stay normalized consistently across recurring write and reread paths', () => {
+    expect(
+      normalizeLiveRecurringStorage({
+        billing_timing: 'arrears',
+        cadence_owner: 'client',
+      }),
+    ).toMatchObject({
+      billing_timing: 'arrears',
+      cadence_owner: 'client',
+    });
+
+    const compatibilityHelper = fs.readFileSync(
+      path.join(repoRoot, 'shared/billingClients/billingCycleAlignmentCompatibility.ts'),
+      'utf8',
+    );
+    const contractLineAction = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/actions/contractLineAction.ts'),
+      'utf8',
+    );
+    const contractWizardActions = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/actions/contractWizardActions.ts'),
+      'utf8',
+    );
+    const contractLineMappingActions = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/actions/contractLineMappingActions.ts'),
+      'utf8',
+    );
+    const contractLineDialog = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx'),
+      'utf8',
+    );
+    const fixedPresetConfiguration = fs.readFileSync(
+      path.join(
+        repoRoot,
+        'packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLinePresetConfiguration.tsx',
+      ),
+      'utf8',
+    );
+    const fixedContractLineConfiguration = fs.readFileSync(
+      path.join(
+        repoRoot,
+        'packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration.tsx',
+      ),
+      'utf8',
+    );
+    const packageRepository = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/repositories/contractLineRepository.ts'),
+      'utf8',
+    );
+    const serverRepository = fs.readFileSync(
+      path.join(repoRoot, 'server/src/lib/repositories/contractLineRepository.ts'),
+      'utf8',
+    );
+
+    expect(compatibilityHelper).toContain("return input.enableProration ? 'prorated' : DEFAULT_BILLING_CYCLE_ALIGNMENT;");
+    expect(contractLineAction).toContain("import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';");
+    expect(contractLineAction).toContain('fallbackAlignment: existingConfig?.billing_cycle_alignment,');
+    expect(contractWizardActions).toContain('resolveBillingCycleAlignmentForCompatibility({');
+    expect(contractLineMappingActions).toContain('resolveBillingCycleAlignmentForCompatibility({');
+    expect(contractLineDialog).toContain('resolveBillingCycleAlignmentForCompatibility({');
+    expect(fixedPresetConfiguration).toContain('resolveBillingCycleAlignmentForCompatibility({');
+    expect(fixedContractLineConfiguration).toContain('resolveBillingCycleAlignmentForCompatibility({');
+    expect(packageRepository).toContain('billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({');
+    expect(serverRepository).toContain('billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({');
+    expect(contractLineDialog).not.toContain("billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start'");
+    expect(fixedPresetConfiguration).not.toContain("billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start'");
+    expect(fixedContractLineConfiguration).not.toContain("billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start'");
+  });
+
   it('T242: template-line cadence_owner schema and backfill behavior stay correct for v1 template recurrence storage', async () => {
     const migrationPath = path.join(
       repoRoot,

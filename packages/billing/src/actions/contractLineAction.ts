@@ -13,6 +13,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
+import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
 import {
     normalizeLiveRecurringStorage,
@@ -403,7 +404,10 @@ export const getCombinedFixedPlanConfiguration = withAuth(async (
             // Default values if plan-level config doesn't exist
             const contract_line_base_rate = planConfig?.base_rate ?? null; // Get base_rate from plan config
             const enable_proration = planConfig?.enable_proration ?? false;
-            const billing_cycle_alignment = planConfig?.billing_cycle_alignment ?? 'start';
+            const billing_cycle_alignment = resolveBillingCycleAlignmentForCompatibility({
+                billingCycleAlignment: planConfig?.billing_cycle_alignment,
+                enableProration: planConfig?.enable_proration,
+            });
 
             // --- Fetch Service-Level Config ID (Optional, if needed elsewhere) ---
             // We no longer need service-level config to get the base rate for the combined view.
@@ -462,8 +466,7 @@ export const getContractLineFixedConfig = withAuth(async (
             }
 
             const model = new ContractLineFixedConfig(trx, tenant);
-            const config = await model.getByPlanId(planId);
-            return config;
+            return await model.getByPlanId(planId);
         });
     } catch (error) {
         console.error(`Error fetching contract_line_fixed_config for plan ${planId}:`, error);
@@ -506,6 +509,7 @@ export const updateContractLineFixedConfig = withAuth(async (
             }
 
             const model = new ContractLineFixedConfig(trx, tenant);
+            const existingConfig = await model.getByPlanId(planId);
 
             // Prepare data for upsert, ensuring contract_line_id and tenant are included
             // Prepare data for upsert, ensuring contract_line_id, tenant, and base_rate are included
@@ -513,7 +517,11 @@ export const updateContractLineFixedConfig = withAuth(async (
                 contract_line_id: planId,
                 base_rate: configData.base_rate, // Include base_rate from input
                 enable_proration: configData.enable_proration ?? false, // Provide default if undefined
-                billing_cycle_alignment: configData.billing_cycle_alignment ?? 'start', // Provide default if undefined
+                billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+                    billingCycleAlignment: configData.billing_cycle_alignment,
+                    enableProration: configData.enable_proration,
+                    fallbackAlignment: existingConfig?.billing_cycle_alignment,
+                }),
                 tenant: tenant,
             };
 
