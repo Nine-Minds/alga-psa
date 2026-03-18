@@ -21,6 +21,11 @@ const prd = read('PRD.md');
 const recurringServicePeriodGenerationHorizon = read('RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md');
 const recurringServicePeriodBackfill = read('RECURRING_SERVICE_PERIOD_BACKFILL.md');
 const recurringServicePeriodEditOperations = read('RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md');
+const recurringServicePeriodEditSurfaces = read('RECURRING_SERVICE_PERIOD_EDIT_SURFACES.md');
+const recurringServicePeriodGovernance = read('RECURRING_SERVICE_PERIOD_GOVERNANCE.md');
+const recurringServicePeriodRegenerationTriggers = read('RECURRING_SERVICE_PERIOD_REGENERATION_TRIGGERS.md');
+const recurringServicePeriodSourceOverrideBoundary = read('RECURRING_SERVICE_PERIOD_SOURCE_OVERRIDE_BOUNDARY.md');
+const recurringServicePeriodUiStates = read('RECURRING_SERVICE_PERIOD_UI_STATES.md');
 const recurringServicePeriodEditValidation = read('RECURRING_SERVICE_PERIOD_EDIT_VALIDATION.md');
 const recurringServicePeriodEditConflicts = read('RECURRING_SERVICE_PERIOD_EDIT_CONFLICTS.md');
 const recurringServicePeriodListing = read('RECURRING_SERVICE_PERIOD_LISTING.md');
@@ -345,6 +350,116 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodListing).toContain('`skipped`');
     expect(recurringServicePeriodListing).toContain('servicePeriod.end > asOf');
     expect(recurringServicePeriodListing).toContain('billing staff can inspect future intent even when a row is skipped or not currently due');
+  });
+
+  it('T349: edit transport surfaces define request, provenance, and structured validation feedback before dashboard editing lands', () => {
+    expect(recurringServicePeriodEditSurfaces).toContain('# Recurring Service-Period Edit Surfaces');
+    expect(recurringServicePeriodEditSurfaces).toContain('## Request Contract');
+    expect(recurringServicePeriodEditSurfaces).toContain('`IRecurringServicePeriodEditRequest`');
+    expect(recurringServicePeriodEditSurfaces).toContain('shared/billingClients/recurringServicePeriodEditRequests.ts');
+    expect(recurringServicePeriodEditSurfaces).toContain('`boundary_adjustment`');
+    expect(recurringServicePeriodEditSurfaces).toContain('`skip`');
+    expect(recurringServicePeriodEditSurfaces).toContain('`defer`');
+    expect(recurringServicePeriodEditSurfaces).toContain('## Success Response');
+    expect(recurringServicePeriodEditSurfaces).toContain('`supersededRecord`');
+    expect(recurringServicePeriodEditSurfaces).toContain('`editedRecord`');
+    expect(recurringServicePeriodEditSurfaces).toContain('explicit `provenance`');
+    expect(recurringServicePeriodEditSurfaces).toContain('## Validation Feedback');
+    expect(recurringServicePeriodEditSurfaces).toContain('`continuity_gap_before`');
+    expect(recurringServicePeriodEditSurfaces).toContain('`missing_deferred_invoice_window`');
+    expect(recurringServicePeriodEditSurfaces).toContain('`unknown_validation_error`');
+    expect(recurringServicePeriodEditSurfaces).toContain('## Deliberate Boundary');
+    expect(recurringServicePeriodEditSurfaces).toContain('repository/controller wiring for loading `recordId` targets from the database');
+    expect(recurringServicePeriodEditSurfaces).toContain('Those remain sequenced behind `F253-F259`.');
+  });
+
+  it('T302: UI state affordances differentiate generated, edited, skipped, locked, billed, and superseded periods', () => {
+    expect(recurringServicePeriodUiStates).toContain('# Recurring Service-Period UI States');
+    expect(recurringServicePeriodUiStates).toContain('## State Affordance Contract');
+    expect(recurringServicePeriodUiStates).toContain('`IRecurringServicePeriodDisplayState`');
+    expect(recurringServicePeriodUiStates).toContain('shared/billingClients/recurringServicePeriodDisplayState.ts');
+    expect(recurringServicePeriodUiStates).toContain('## Required Distinctions');
+    expect(recurringServicePeriodUiStates).toContain('`generated` -> `Generated`');
+    expect(recurringServicePeriodUiStates).toContain('`edited` -> `Edited`');
+    expect(recurringServicePeriodUiStates).toContain('`skipped` -> `Skipped`');
+    expect(recurringServicePeriodUiStates).toContain('`locked` -> `Locked`');
+    expect(recurringServicePeriodUiStates).toContain('`billed` -> `Billed`');
+    expect(recurringServicePeriodUiStates).toContain('`superseded` -> `Superseded`');
+    expect(recurringServicePeriodUiStates).toContain('## Tone And Detail Guidance');
+    expect(recurringServicePeriodUiStates).toContain('`edited` uses `accent`');
+    expect(recurringServicePeriodUiStates).toContain('`billed` uses `success`');
+    expect(recurringServicePeriodUiStates).toContain('`reasonLabel` is additive and comes from provenance');
+    expect(recurringServicePeriodUiStates).toContain('## Deliberate Boundary');
+    expect(recurringServicePeriodUiStates).toContain('Those remain sequenced behind `F253-F259`.');
+  });
+
+  it('T303: governance surfaces define permissions and audit requirements for viewing and mutating persisted service periods', () => {
+    expect(recurringServicePeriodGovernance).toContain('# Recurring Service-Period Governance');
+    expect(recurringServicePeriodGovernance).toContain('## Governance Contract');
+    expect(recurringServicePeriodGovernance).toContain('`IRecurringServicePeriodGovernanceRequirement`');
+    expect(recurringServicePeriodGovernance).toContain('shared/billingClients/recurringServicePeriodGovernance.ts');
+    expect(recurringServicePeriodGovernance).toContain('`view`');
+    expect(recurringServicePeriodGovernance).toContain('`edit_boundaries`');
+    expect(recurringServicePeriodGovernance).toContain('`regenerate`');
+    expect(recurringServicePeriodGovernance).toContain('`invoice_linkage_repair`');
+    expect(recurringServicePeriodGovernance).toContain('## Permission Keys');
+    expect(recurringServicePeriodGovernance).toContain('`billing.recurring_service_periods.view`');
+    expect(recurringServicePeriodGovernance).toContain('`billing.recurring_service_periods.correct_history`');
+    expect(recurringServicePeriodGovernance).toContain('## Audit Requirements');
+    expect(recurringServicePeriodGovernance).toContain('`recurring_service_period.boundary_adjusted`');
+    expect(recurringServicePeriodGovernance).toContain('`recurring_service_period.invoice_linkage_repaired`');
+    expect(recurringServicePeriodGovernance).toContain('`auditRequired = false`');
+    expect(recurringServicePeriodGovernance).toContain('## Lifecycle-Aware Decisions');
+    expect(recurringServicePeriodGovernance).toContain('locked and billed rows reject edit, skip, defer, and regenerate');
+    expect(recurringServicePeriodGovernance).toContain('locked and billed rows still allow `invoice_linkage_repair` and `archive`');
+    expect(recurringServicePeriodGovernance).toContain('## Deliberate Boundary');
+    expect(recurringServicePeriodGovernance).toContain('Those remain sequenced behind `F254-F259`.');
+  });
+
+  it('T304 and T305: regeneration triggers classify contract-line, assignment, cadence-owner, and billing-schedule edits explicitly', () => {
+    expect(recurringServicePeriodRegenerationTriggers).toContain('# Recurring Service-Period Regeneration Triggers');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('## Trigger Classification Contract');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('`IRecurringServicePeriodRegenerationTriggerInput`');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('`IRecurringServicePeriodRegenerationDecision`');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('shared/billingClients/recurringServicePeriodRegenerationTriggers.ts');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('## Trigger Families');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('### Contract-Line Edits');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('`triggerKind = contract_line_edit`');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('Pure pricing edits do not regenerate persisted periods.');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('### Contract-Assignment Edits');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('`regenerationReasonCode = activity_window_changed`');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('### Cadence-Owner Changes');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('`scope = replace_schedule_identity`');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('### Billing-Schedule Changes');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('`scope = client_cadence_dependents`');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('Contract-cadence obligations remain out of scope for this trigger');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('## Safety Invariants');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('preserve user-edited future overrides');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('preserve billed history');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('## Deliberate Boundary');
+    expect(recurringServicePeriodRegenerationTriggers).toContain('Live trigger wiring and DB-backed regeneration flow remain sequenced behind `F255-F259`.');
+  });
+
+  it('T306: source rules, materialized overrides, and corrective ledger state stay distinguishable after edits', () => {
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('# Recurring Service-Period Source Versus Override Boundary');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('## Authority Boundary Contract');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('`IRecurringServicePeriodAuthorityBoundary`');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('shared/billingClients/recurringServicePeriodAuthorityBoundary.ts');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('## Source-Rule Subjects');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('`cadence_owner`');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('`futureEffect = regenerate_unedited_future`');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('## Materialized Override Subjects');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('`service_period_boundary`');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('`futureEffect = supersede_current_revision`');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('## Ledger-State Subjects');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('`invoice_linkage`');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('`changeChannel = corrective_flow`');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('## Practical Product Rule');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('source-rule change: the obligation itself changed');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('materialized override: billing staff explicitly edited, skipped, or deferred one future period');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('corrective history flow: support or finance repaired billed-history linkage');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('## Deliberate Boundary');
+    expect(recurringServicePeriodSourceOverrideBoundary).toContain('Those remain sequenced behind `F256-F266`.');
   });
 
   it('documents the architecture thesis and system-surface matrix in the PRD and appendix', () => {

@@ -163,12 +163,29 @@ export {
   validateRecurringServicePeriodEditContinuity,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodEditValidation';
 export {
+  applyRecurringServicePeriodEditRequest,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodEditRequests';
+export {
+  getRecurringServicePeriodDisplayState,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodDisplayState';
+export {
+  getRecurringServicePeriodGovernanceRequirement,
+  listRecurringServicePeriodGovernanceRequirements,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodGovernance';
+export {
+  getRecurringServicePeriodAuthorityBoundary,
+  listRecurringServicePeriodAuthorityBoundaries,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodAuthorityBoundary';
+export {
   buildRecurringServicePeriodListingQuery,
   listRecurringServicePeriodRecords,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodListing';
 export {
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
+export {
+  resolveRecurringServicePeriodRegenerationDecision,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodRegenerationTriggers';
 export {
   applyRecurringServicePeriodInvoiceLinkage,
   hasRecurringServicePeriodInvoiceLinkage,
@@ -202,10 +219,40 @@ export type {
   UnsupportedRecurringServicePeriodV1EditOperation,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodEditCapabilities';
 export type {
+  ApplyRecurringServicePeriodEditRequestInput,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodEditRequests';
+export type {
   IRecurringServicePeriodEditContinuityValidation,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodEditValidation';
 export type {
+  IRecurringServicePeriodDisplayState,
+  IRecurringServicePeriodGovernanceRequirement,
+  IRecurringServicePeriodAuthorityBoundary,
+  IRecurringServicePeriodRegenerationDecision,
+  IRecurringServicePeriodRegenerationTriggerInput,
+  RecurringServicePeriodAuditEvent,
+  RecurringServicePeriodAuthorityChangeChannel,
+  RecurringServicePeriodAuthorityFutureEffect,
+  RecurringServicePeriodAuthorityLayer,
+  RecurringServicePeriodAuthoritySubject,
+  RecurringServicePeriodGovernanceAction,
+  RecurringServicePeriodPermissionKey,
+  RecurringServicePeriodDisplayTone,
+  RecurringServicePeriodRegenerationScope,
+  RecurringServicePeriodRegenerationTriggerKind,
+  RecurringServicePeriodRegenerationTriggerSource,
+} from '@alga-psa/types';
+export type {
+  IRecurringServicePeriodEditFailure,
+  IRecurringServicePeriodEditRequest,
+  IRecurringServicePeriodEditRequestContext,
+  IRecurringServicePeriodEditResponse,
+  IRecurringServicePeriodEditSuccess,
+  IRecurringServicePeriodEditValidationIssue,
   IRecurringServicePeriodListingQuery,
+  RecurringServicePeriodEditRequestOperation,
+  RecurringServicePeriodEditValidationField,
+  RecurringServicePeriodEditValidationIssueCode,
   RecurringServicePeriodListingState,
 } from '@alga-psa/types';
 export type {

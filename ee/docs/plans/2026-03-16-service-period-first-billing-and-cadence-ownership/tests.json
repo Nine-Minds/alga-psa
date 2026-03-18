@@ -2593,6 +2593,14 @@
     ]
   },
   {
+    "id": "T349",
+    "description": "Edit transport surfaces return explicit persisted-record provenance on success and structured validation feedback on failure before dashboard editing lands",
+    "implemented": true,
+    "featureIds": [
+      "F251"
+    ]
+  },
+  {
     "id": "T292",
     "description": "Invoice generation selects due persisted service periods rather than deriving schedule boundaries on demand",
     "implemented": false,
@@ -2682,7 +2690,7 @@
   {
     "id": "T302",
     "description": "Service-period UI states clearly differentiate generated, edited, skipped, locked, billed, and superseded periods",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F252"
     ]
@@ -2690,7 +2698,7 @@
   {
     "id": "T303",
     "description": "Permissions and audit logs cover viewing, editing, skipping, regenerating, and correcting persisted service periods",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F253"
     ]
@@ -2698,7 +2706,7 @@
   {
     "id": "T304",
     "description": "Contract-line edits trigger persisted service-period regeneration according to the documented rules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F254"
     ]
@@ -2706,7 +2714,7 @@
   {
     "id": "T305",
     "description": "Billing schedule changes trigger persisted service-period regeneration according to the documented rules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F254"
     ]
@@ -2714,7 +2722,7 @@
   {
     "id": "T306",
     "description": "The boundary between source recurrence rules and service-period overrides remains understandable and queryable after edits",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F255"
     ]

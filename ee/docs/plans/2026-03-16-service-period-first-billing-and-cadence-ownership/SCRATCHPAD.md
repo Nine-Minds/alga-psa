@@ -41,6 +41,54 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Regeneration-trigger classification is now explicit, which closes `F254`, `T304`, and `T305`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodRegenerationTriggerInput`, `IRecurringServicePeriodRegenerationDecision`, explicit trigger sources/kinds, and regeneration scopes so later jobs and repositories do not need to infer whether a source edit should rebuild future persisted rows
+  - `shared/billingClients/recurringServicePeriodRegenerationTriggers.ts` now classifies the first v1 trigger families directly: recurrence-shaping contract-line edits use `source_rule_changed`, assignment activity-window edits use `activity_window_changed`, cadence-owner changes use `cadence_owner_changed` plus `replace_schedule_identity`, and client billing-schedule edits use `billing_schedule_changed` scoped to `client_cadence_dependents`
+  - the same helper now makes the non-trigger boundary explicit: pricing-only edits do not regenerate persisted periods because they affect future billing amounts rather than future service-period or invoice-window identity
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_REGENERATION_TRIGGERS.md` now documents those trigger families, the preserve-edits/preserve-billed-history safety invariants, and the deliberate boundary with later live repository/job wiring
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodRegenerationTriggers.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) The source-rule versus override cut line is now queryable, which closes `F255` and `T306`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodAuthorityBoundary` plus explicit authority layers, change channels, future effects, and authority subjects so later UI/API/runtime work can answer whether a concern belongs to source cadence rules, a materialized override, or corrective ledger state
+  - `shared/billingClients/recurringServicePeriodAuthorityBoundary.ts` now centralizes that answer: cadence owner, billing frequency, due position, and activity windows remain `source_rule`; service-period/invoice-window edits plus skip/defer remain `materialized_override`; lifecycle state, invoice linkage, and provenance remain `ledger_state`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_SOURCE_OVERRIDE_BOUNDARY.md` now documents the practical product rule explicitly: future movement should be explainable as either a source-rule change, an explicit future-row override, or a corrective history flow
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodAuthorityBoundary.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Persisted-period governance now has one shared permission and audit-policy contract, which closes `F253` and `T303`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines governance actions, permission keys, audit events, and `IRecurringServicePeriodGovernanceRequirement`, so future controllers and dashboard actions do not need to invent their own authorization/audit vocabulary for viewing, editing, skipping, regenerating, or correcting service periods
+  - `shared/billingClients/recurringServicePeriodGovernance.ts` now combines lifecycle-aware mutation legality with explicit governance metadata: `view` remains separately permissioned and non-audited by default, while edit/skip/defer/regenerate/correction flows all carry explicit audit-event names even when a lifecycle state still blocks the mutation
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_GOVERNANCE.md` now documents that boundary explicitly and keeps real role assignment, audit payload schemas, and controller/database wiring deferred to later passes
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodGovernance.domain.test.ts src/test/unit/billing/recurringServicePeriodDisplayState.domain.test.ts src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Persisted-period lifecycle states now have one shared UI-affordance contract, which closes `F252` and `T302`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodDisplayState` and shared display tones so future dashboard rows and badges can consume one stable presentation contract instead of inventing local label semantics
+  - `shared/billingClients/recurringServicePeriodDisplayState.ts` now maps lifecycle plus provenance into explicit UI state metadata: `Generated`, `Edited`, `Skipped`, `Locked`, `Billed`, `Superseded`, and `Archived`, with operational detail copy and additive provenance-driven `reasonLabel` strings such as `Deferred to a later invoice window`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_UI_STATES.md` now documents the badge/detail contract and its deliberate boundary with later permissions, audit identity, and concrete dashboard-layout work
+  - `RECURRING_SERVICE_PERIOD_EDIT_SURFACES.md` was tightened in the same checkpoint so `F251` no longer claims state badges are still deferred behind `F252`
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodDisplayState.domain.test.ts src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Future persisted-period edits now have an explicit UI/API transport contract, which closes `F251` and adds/closes `T349` while intentionally leaving `T295` and `T301` for later persisted-editing screens and broader state affordances:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodEditRequest`, `IRecurringServicePeriodEditRequestContext`, `IRecurringServicePeriodEditResponse`, and structured validation issue codes/fields so future controllers and dashboard forms have one typed request/response seam for `boundary_adjustment`, `skip`, and `defer`
+  - `shared/billingClients/recurringServicePeriodEditRequests.ts` now dispatches those transport requests onto the existing edit primitives and returns explicit success payloads with `supersededRecord`, `editedRecord`, and `provenance`, while mapping lower-level validation failures into structured issues such as `missing_deferred_invoice_window`, `continuity_gap_before`, and `record_mismatch`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_SURFACES.md` now documents that boundary explicitly: request contract, success response, validation issue surface, and the deliberate deferral of repository/controller wiring, dashboard state badges, and permission/audit policy to `F252-F259`
+  - `tests.json` now adds `T349` because the original `T301` also depends on the later billing-staff editing surfaces and state affordances in `F252`; the new test locks the shared transport contract itself without pretending the dashboard or controllers already exist
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) Future persisted-period listing now has an explicit query contract, which closes `F250` and adds/closes `T348` while intentionally leaving `T300` for later UI/dashboard surfaces:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodListingQuery` plus the default listing lifecycle-state set `generated|edited|skipped|locked`, making future-ledger inspection a first-class read contract instead of a side effect of due selection
   - `shared/billingClients/recurringServicePeriodListing.ts` now defines the first future-listing helper: it filters by tenant, `asOf`, optional schedule/cadence/due-position/charge-family scope, excludes billed/superseded/archived rows by default, and keeps deterministic chronological ordering

@@ -2252,7 +2252,7 @@
   {
     "id": "F251",
     "description": "Define UI and API surfaces for editing future persisted service periods with explicit provenance and validation feedback",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "UI and downstream-consumer requirements"
@@ -2261,7 +2261,7 @@
   {
     "id": "F252",
     "description": "Define UI affordances that show whether a persisted future service period is generated, edited, skipped, locked, billed, or superseded",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "UI and downstream-consumer requirements"
@@ -2270,7 +2270,7 @@
   {
     "id": "F253",
     "description": "Define permissions and audit requirements for viewing, editing, skipping, regenerating, and correcting persisted service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Read-model and post-persist lifecycle requirements"
@@ -2279,7 +2279,7 @@
   {
     "id": "F254",
     "description": "Define service-period regeneration triggers for contract-line edits, contract assignment edits, cadence-owner changes, and billing schedule changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Authoring-path and storage-reconciliation requirements"
@@ -2288,7 +2288,7 @@
   {
     "id": "F255",
     "description": "Define the cut line between source recurrence rules and materialized service-period overrides so product semantics stay understandable",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Architecture Thesis"
