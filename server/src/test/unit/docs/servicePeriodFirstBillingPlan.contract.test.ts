@@ -18,6 +18,7 @@ const cutoverSequence = read('CUTOVER_SEQUENCE.md');
 const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
 const persistedServicePeriodRecord = read('PERSISTED_SERVICE_PERIOD_RECORD.md');
 const prd = read('PRD.md');
+const recurringServicePeriodGenerationHorizon = read('RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
 const recurringServicePeriodProvenance = read('RECURRING_SERVICE_PERIOD_PROVENANCE.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
@@ -311,6 +312,18 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodProvenance).toContain('`billing_schedule_changed`');
     expect(recurringServicePeriodProvenance).toContain('shared/billingClients/recurringServicePeriodProvenance.ts');
     expect(persistedServicePeriodRecord).toContain('RECURRING_SERVICE_PERIOD_PROVENANCE.md');
+  });
+
+  it('T285: documents the v1 generation horizon, replenishment threshold, and continuity policy for future persisted service periods', () => {
+    expect(recurringServicePeriodGenerationHorizon).toContain('# Recurring Service-Period Generation Horizon');
+    expect(recurringServicePeriodGenerationHorizon).toContain('target future coverage window: `180` days');
+    expect(recurringServicePeriodGenerationHorizon).toContain('low-water replenishment threshold: `45` days');
+    expect(recurringServicePeriodGenerationHorizon).toContain('initial materialization or backfill should keep generating');
+    expect(recurringServicePeriodGenerationHorizon).toContain('steady-state maintenance should replenish');
+    expect(recurringServicePeriodGenerationHorizon).toContain('## Continuity Rule');
+    expect(recurringServicePeriodGenerationHorizon).toContain('`gap`');
+    expect(recurringServicePeriodGenerationHorizon).toContain('`overlap`');
+    expect(recurringServicePeriodGenerationHorizon).toContain('shared/billingClients/recurringServicePeriodGenerationHorizon.ts');
   });
 
   it('T250: the recurrence field source-of-truth matrix matches the authoritative storage model and compatibility seams', () => {

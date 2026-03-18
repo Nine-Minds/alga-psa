@@ -2108,7 +2108,7 @@
   {
     "id": "F235",
     "description": "Define the generation horizon and replenishment policy for future persisted recurring service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Implementation Sequence"

@@ -41,6 +41,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The v1 generation-horizon policy is now explicit, which closes `F235` and `T285`:
+  - `shared/billingClients/recurringServicePeriodGenerationHorizon.ts` now defines the first operational horizon contract for persisted recurring periods: initial materialization/backfill targets `180` days of future coverage, steady-state replenishment triggers at the `45`-day low-water mark, and continuity issues are surfaced explicitly instead of being silently treated as ordinary replenishment
+  - the same helper now makes the continuity invariant executable before ledger-writing code lands: `findRecurringServicePeriodContinuityIssues(...)` detects `gap` and `overlap` states under the canonical half-open model, while `assessRecurringServicePeriodGenerationCoverage(...)` reports whether the current future ledger both meets the target horizon and has fallen low enough to require replenishment
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md` now documents the target horizon, low-water threshold, whole-period overshoot rule, and the explicit boundary that continuity repair is separate from ordinary replenishment
+  - `server/src/test/unit/billing/recurringServicePeriodGenerationHorizon.domain.test.ts` now locks the helper behavior directly, while `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks the new horizon artifact so the executable helper and the plan policy stay aligned
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodGenerationHorizon.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) The persisted-service-period provenance model is now explicit, which closes `F234` and `T284`:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now turns `IRecurringServicePeriodRecordProvenance` into a discriminated union with explicit reason-code catalogs for `generated`, `user_edited`, `regenerated`, and `repair`, so later materialization/edit/regeneration work no longer depends on a loose optional-string bag for provenance semantics
   - `shared/billingClients/recurringServicePeriodProvenance.ts` now provides the reusable v1 helper layer: `isRecurringServicePeriodProvenanceReasonCode(...)`, `isRecurringServicePeriodProvenanceDivergent(...)`, and `validateRecurringServicePeriodProvenance(...)` make the required-versus-optional field rules executable before repositories and UI flows start writing these records for real

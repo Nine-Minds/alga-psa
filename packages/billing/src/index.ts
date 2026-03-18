@@ -115,6 +115,13 @@ export {
   generateSemiAnnualContractCadenceServicePeriods,
 } from '@alga-psa/shared/billingClients/contractCadenceServicePeriods';
 export {
+  assessRecurringServicePeriodGenerationCoverage,
+  DEFAULT_RECURRING_SERVICE_PERIOD_GENERATION_HORIZON_DAYS,
+  DEFAULT_RECURRING_SERVICE_PERIOD_REPLENISHMENT_THRESHOLD_DAYS,
+  findRecurringServicePeriodContinuityIssues,
+  resolveRecurringServicePeriodGenerationHorizon,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodGenerationHorizon';
+export {
   isRecurringServicePeriodProvenanceDivergent,
   isRecurringServicePeriodProvenanceReasonCode,
   validateRecurringServicePeriodProvenance,

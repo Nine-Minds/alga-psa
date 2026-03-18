@@ -2489,7 +2489,7 @@
   {
     "id": "T285",
     "description": "Generation horizon replenishes future persisted service periods without creating overlaps or gaps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F235"
     ]
