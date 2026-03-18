@@ -1865,7 +1865,7 @@
   {
     "id": "F208",
     "description": "Define template-derived contract editing semantics after clone so future template edits do not create ambiguity about recurring cadence ownership on live lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "Risks"

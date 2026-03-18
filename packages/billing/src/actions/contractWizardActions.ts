@@ -1301,6 +1301,8 @@ export const createClientContractFromWizard = withAuth(async (
       po_amount: submission.po_amount ?? null,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
+      // Keep template provenance for draft/review flows, but live recurring timing
+      // semantics are copied onto contract_lines and stay independent after clone.
       template_contract_id: submission.template_id ?? null,
     };
 

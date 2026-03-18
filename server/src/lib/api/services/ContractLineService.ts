@@ -950,6 +950,9 @@ export class ContractLineService extends BaseService<IContractLine> {
 
       // Renewed or replacement assignments must create a fresh line identity so
       // historical recurring detail periods stay attached to the superseded line.
+      // The template link stays as provenance on the assignment/response, but
+      // recurring cadence fields are copied onto the live line and do not keep
+      // following future template edits.
       const newContractLineId = uuidv4();
       const contractLineData = this.addCreateAuditFields({
         contract_line_id: newContractLineId,

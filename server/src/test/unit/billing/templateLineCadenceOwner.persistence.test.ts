@@ -159,4 +159,65 @@ describe('template line cadence_owner persistence', () => {
       }),
     });
   });
+
+  it('T237: cloned live contract lines keep their copied recurring cadence semantics even if the source template changes later', async () => {
+    const { knex, state } = createFakeKnex({
+      contract_templates: [
+        {
+          tenant: 'tenant-1',
+          template_id: 'template-1',
+        },
+      ],
+      contract_template_lines: [
+        {
+          tenant: 'tenant-1',
+          template_id: 'template-1',
+          template_line_id: 'template-line-1',
+          template_line_name: 'Template Fixed Line',
+          description: null,
+          billing_frequency: 'monthly',
+          line_type: 'Fixed',
+          service_category: null,
+          is_active: true,
+          enable_overtime: false,
+          overtime_rate: null,
+          overtime_threshold: null,
+          enable_after_hours_rate: false,
+          after_hours_multiplier: null,
+          minimum_billable_time: null,
+          round_up_to_nearest: null,
+          custom_rate: null,
+          display_order: 0,
+          billing_timing: 'advance',
+          cadence_owner: 'contract',
+          created_at: '2026-03-17T00:00:00.000Z',
+        },
+      ],
+      contract_template_line_fixed_config: [],
+      contract_template_line_terms: [],
+      contract_template_line_services: [],
+      contract_lines: [],
+    });
+
+    await addContractLine(knex, 'tenant-1', 'contract-live-1', 'template-line-1');
+
+    const clonedLine = state.rows.contract_lines[0];
+    expect(clonedLine).toMatchObject({
+      contract_id: 'contract-live-1',
+      cadence_owner: 'contract',
+      billing_timing: 'advance',
+    });
+
+    state.rows.contract_template_lines[0] = {
+      ...state.rows.contract_template_lines[0],
+      cadence_owner: 'client',
+      billing_timing: 'arrears',
+    };
+
+    expect(clonedLine).toMatchObject({
+      contract_id: 'contract-live-1',
+      cadence_owner: 'contract',
+      billing_timing: 'advance',
+    });
+  });
 });

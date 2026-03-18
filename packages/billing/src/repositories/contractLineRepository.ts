@@ -291,7 +291,9 @@ async function cloneTemplateLineToContract(
     enableProration: templateFixedConfig?.enable_proration,
   });
 
-  // Insert directly into contract_lines with all values (terms columns are now inline)
+  // Template-derived live lines copy recurring timing at clone time.
+  // Later template edits are provenance only and must not retroactively rewrite
+  // cadence_owner or billing_timing on already-created contract lines.
   await trx('contract_lines').insert({
     tenant,
     contract_line_id: newContractLineId,

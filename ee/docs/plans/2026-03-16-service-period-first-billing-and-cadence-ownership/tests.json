@@ -2051,7 +2051,7 @@
   {
     "id": "T237",
     "description": "Post-clone contract editing remains independent from template edits with no recurring-cadence ambiguity",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F208"
     ]
