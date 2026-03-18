@@ -1883,7 +1883,7 @@
   {
     "id": "F210",
     "description": "Define unsupported authoring combinations by line type, billing frequency, cadence owner, and timing mode with clear validation boundaries",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data model and API requirements",
       "Authoring-path and storage-reconciliation requirements"

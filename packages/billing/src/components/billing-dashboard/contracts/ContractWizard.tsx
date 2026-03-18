@@ -20,6 +20,7 @@ import {
 } from '@alga-psa/billing/actions/contractWizardActions';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getUnsupportedRecurringAuthoringCombinationMessage } from '@shared/billingClients/recurringAuthoringValidation';
 
 const STEPS = [
   'Contract Basics',
@@ -413,6 +414,45 @@ export function ContractWizard({
     };
   };
 
+  const getRecurringAuthoringValidationError = (): string | null => {
+    const combinations = [
+      wizardData.fixed_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Fixed',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.fixed_billing_frequency ?? wizardData.billing_frequency,
+          })
+        : null,
+      wizardData.product_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Product',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.billing_frequency,
+          })
+        : null,
+      wizardData.hourly_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Hourly',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.hourly_billing_frequency ?? wizardData.billing_frequency,
+          })
+        : null,
+      (wizardData.usage_services?.length ?? 0) > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Usage',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.usage_billing_frequency ?? wizardData.billing_frequency,
+          })
+        : null,
+    ];
+
+    return combinations.find((message): message is string => Boolean(message)) ?? null;
+  };
+
   const validateStep = (stepIndex: number): boolean => {
     setErrors((prev) => ({ ...prev, [stepIndex]: '' }));
 
@@ -505,6 +545,14 @@ export function ContractWizard({
           }));
           return false;
         }
+        const recurringAuthoringError = getRecurringAuthoringValidationError();
+        if (recurringAuthoringError) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: recurringAuthoringError,
+          }));
+          return false;
+        }
         return true;
       }
       default:
@@ -550,6 +598,15 @@ export function ContractWizard({
       return;
     }
 
+    const recurringAuthoringError = getRecurringAuthoringValidationError();
+    if (recurringAuthoringError) {
+      setErrors((prev) => ({
+        ...prev,
+        [currentStep]: recurringAuthoringError,
+      }));
+      return;
+    }
+
     setIsLoading(true);
     try {
       const submission = await buildSubmissionData();
@@ -591,6 +648,15 @@ export function ContractWizard({
         [currentStep]: 'Select a client before saving as draft',
       }));
       setCurrentStep(0);
+      return;
+    }
+
+    const recurringAuthoringError = getRecurringAuthoringValidationError();
+    if (recurringAuthoringError) {
+      setErrors((prev) => ({
+        ...prev,
+        [currentStep]: recurringAuthoringError,
+      }));
       return;
     }
 

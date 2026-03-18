@@ -2075,7 +2075,7 @@
   {
     "id": "T240",
     "description": "Unsupported authoring combinations fail early with clear validation by line type, cadence owner, timing mode, and billing frequency",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F210"
     ]

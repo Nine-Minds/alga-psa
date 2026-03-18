@@ -1329,6 +1329,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/tests/recurringAuthoringPreview.test.ts` now proves both first-invoice families directly: client-cadence advance/arrears copy and contract-cadence advance/arrears copy
   - `packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts` and `packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts` now lock the UI wiring so both authoring surfaces continue to render the shared preview contract
   - validation for this checkpoint used `cd server && npx vitest run ../packages/billing/tests/recurringAuthoringPreview.test.ts ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts --coverage.enabled false` plus `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Unsupported recurring authoring combinations now have one explicit early-validation boundary in the wizards, which closes `F210` and `T240`:
+  - `shared/billingClients/recurringAuthoringValidation.ts` now defines the shared unsupported-combination message contract across line type, cadence owner, billing timing, and billing frequency; during the current rollout it names the exact blocked combination instead of only saying contract cadence is generically unavailable
+  - `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx` now checks every present recurring family before finish/save-draft and surfaces the first unsupported combination message locally, so template-derived or resumed contract-cadence drafts fail before the action layer
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx` now applies that same boundary on the review/publish step, so template authoring surfaces reject unsupported contract-cadence combinations with the same detailed message contract used by the client wizard
+  - `packages/billing/tests/recurringAuthoringValidation.wiring.test.ts` now proves both the detailed shared message shape (`lineType`, `cadenceOwner`, `billingTiming`, `billingFrequency`) and the fact that both wizard flows import and invoke the shared validator before persistence
+  - validation for this checkpoint used `cd server && npx vitest run ../packages/billing/tests/recurringAuthoringValidation.wiring.test.ts --coverage.enabled false` plus `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 ## Links / References
 

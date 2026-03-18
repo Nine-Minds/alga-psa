@@ -11,6 +11,7 @@ import { TemplateHourlyServicesStep } from './steps/TemplateHourlyServicesStep';
 import { TemplateUsageBasedServicesStep } from './steps/TemplateUsageBasedServicesStep';
 import { TemplateReviewContractStep } from './steps/TemplateReviewContractStep';
 import { createContractTemplateFromWizard, ContractTemplateWizardSubmission, checkTemplateNameExists } from '@alga-psa/billing/actions/contractWizardActions';
+import { getUnsupportedRecurringAuthoringCombinationMessage } from '@shared/billingClients/recurringAuthoringValidation';
 
 const TEMPLATE_STEPS = [
   'Template Basics',
@@ -137,6 +138,45 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     }
   };
 
+  const getRecurringAuthoringValidationError = (): string | null => {
+    const combinations = [
+      wizardData.fixed_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Fixed',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.billing_frequency,
+          })
+        : null,
+      wizardData.product_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Product',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.billing_frequency,
+          })
+        : null,
+      wizardData.hourly_services.length > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Hourly',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.billing_frequency,
+          })
+        : null,
+      (wizardData.usage_services?.length ?? 0) > 0
+        ? getUnsupportedRecurringAuthoringCombinationMessage({
+            lineType: 'Usage',
+            cadenceOwner: wizardData.cadence_owner,
+            billingTiming: wizardData.billing_timing,
+            billingFrequency: wizardData.billing_frequency,
+          })
+        : null,
+    ];
+
+    return combinations.find((message): message is string => Boolean(message)) ?? null;
+  };
+
   const checkDuplicateTemplateName = async (name: string): Promise<boolean> => {
     if (!name?.trim()) {
       return false;
@@ -180,6 +220,11 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
 
         if (!hasServices) {
           setErrors((prev) => ({ ...prev, [stepIndex]: 'At least one service is required' }));
+          return false;
+        }
+        const recurringAuthoringError = getRecurringAuthoringValidationError();
+        if (recurringAuthoringError) {
+          setErrors((prev) => ({ ...prev, [stepIndex]: recurringAuthoringError }));
           return false;
         }
         return true;
