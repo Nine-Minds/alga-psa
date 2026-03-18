@@ -25,6 +25,7 @@ interface KanbanBoardProps {
   taskDependencies?: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
   taskTags?: Record<string, ITag[]>;
   taskDocumentCounts?: Map<string, number>;
+  taskCommentCounts?: Record<string, number>;
   allTaskTags?: ITag[];
   priorities?: (IPriority | IStandardPriority)[];
   projectTreeData?: any[];
@@ -102,6 +103,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   taskDependencies = {},
   taskTags = {},
   taskDocumentCounts = {},
+  taskCommentCounts = {},
   allTaskTags = [],
   priorities = [],
   projectTreeData,
@@ -192,6 +194,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             taskDependencies={taskDependencies}
             taskTags={taskTags}
             taskDocumentCounts={taskDocumentCounts instanceof Map ? Object.fromEntries(taskDocumentCounts.entries()) : {}}
+            taskCommentCounts={taskCommentCounts}
             priorities={priorities}
             statusIcon={statusIcon}
             backgroundColor={backgroundColor}

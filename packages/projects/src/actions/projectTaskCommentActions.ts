@@ -265,3 +265,29 @@ export const getTaskCommentCount = withAuth(async (
 
   return parseInt(result?.count as string) || 0;
 });
+
+/**
+ * Get comment counts for multiple tasks in a single query
+ */
+export const getTaskCommentCountsBatch = withAuth(async (
+  _user,
+  { tenant },
+  taskIds: string[]
+): Promise<Record<string, number>> => {
+  if (taskIds.length === 0) return {};
+
+  const { knex: db } = await createTenantKnex();
+
+  const results = await db('project_task_comments')
+    .whereIn('task_id', taskIds)
+    .where({ tenant })
+    .groupBy('task_id')
+    .select('task_id')
+    .count('* as count');
+
+  const counts: Record<string, number> = {};
+  for (const row of results) {
+    counts[row.task_id as string] = parseInt(row.count as string) || 0;
+  }
+  return counts;
+});
