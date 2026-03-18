@@ -12,6 +12,7 @@ import { Plus, X, Package } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { TemplateWizardData } from '../TemplateWizard';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
+import { getRecurringAuthoringPreview } from '../../recurringAuthoringPreview';
 
 interface TemplateFixedFeeServicesStepProps {
   data: TemplateWizardData;
@@ -49,6 +50,12 @@ export function TemplateFixedFeeServicesStep({
   data,
   updateData,
 }: TemplateFixedFeeServicesStepProps) {
+  const recurringPreview = getRecurringAuthoringPreview({
+    cadenceOwner: data.cadence_owner,
+    billingTiming: data.billing_timing,
+    enableProration: data.enable_proration,
+  });
+
   const handleAddService = () => {
     updateData({
       fixed_services: [
@@ -176,9 +183,7 @@ export function TemplateFixedFeeServicesStep({
               placeholder="Select billing timing"
             />
             <p className="text-xs text-[rgb(var(--color-text-400))]">
-              {data.billing_timing === 'advance'
-                ? 'The first invoice bills at the start of the first covered service period.'
-                : 'The first invoice bills after the first covered service period closes.'}
+              {recurringPreview.firstInvoiceSummary}
             </p>
           </div>
 
@@ -197,6 +202,14 @@ export function TemplateFixedFeeServicesStep({
               Use this when contracts created from the template should scale the recurring fee if service starts or ends inside a period.
             </p>
           </div>
+        </div>
+
+        <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-[rgb(var(--color-border-50))] space-y-2 text-sm">
+          <p><strong>Cadence Owner:</strong> {recurringPreview.cadenceOwnerLabel}</p>
+          <p>{recurringPreview.cadenceOwnerSummary}</p>
+          <p><strong>Billing Timing:</strong> {recurringPreview.billingTimingLabel}</p>
+          <p>{recurringPreview.billingTimingSummary}</p>
+          <p>{recurringPreview.partialPeriodSummary}</p>
         </div>
 
         <TemplateServicePreviewSection

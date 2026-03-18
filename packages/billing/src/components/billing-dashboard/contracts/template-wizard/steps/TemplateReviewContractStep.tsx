@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { BucketOverlayInput, TemplateWizardData } from '../TemplateWizard';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { getRecurringAuthoringPreview } from '../../recurringAuthoringPreview';
 
 interface TemplateReviewContractStepProps {
   data: TemplateWizardData;
@@ -13,6 +14,12 @@ interface TemplateReviewContractStepProps {
 export function TemplateReviewContractStep({
   data,
 }: TemplateReviewContractStepProps) {
+  const recurringPreview = getRecurringAuthoringPreview({
+    cadenceOwner: data.cadence_owner,
+    billingTiming: data.billing_timing,
+    enableProration: data.enable_proration,
+  });
+
   const formatBucketSummary = (
     overlay?: BucketOverlayInput | null,
     mode: 'hours' | 'usage' = 'hours',
@@ -103,6 +110,11 @@ export function TemplateReviewContractStep({
                     Partial-period adjustment:{' '}
                     {data.enable_proration ? 'Enabled' : 'Disabled'}
                   </span>
+                </div>
+                <div className="text-xs text-[rgb(var(--color-text-500))] space-y-1">
+                  <p>{recurringPreview.cadenceOwnerSummary}</p>
+                  <p>{recurringPreview.firstInvoiceSummary}</p>
+                  <p>{recurringPreview.partialPeriodSummary}</p>
                 </div>
                 {data.fixed_services.map((service, index) => (
                   <div key={`${service.service_id}-${index}`} className="border border-[rgb(var(--color-border-200))] rounded-md p-3 bg-[rgb(var(--color-border-50))]">

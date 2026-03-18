@@ -1874,7 +1874,7 @@
   {
     "id": "F209",
     "description": "Define authoring preview and explainer behavior for first invoice, proration replacement, and cadence-owner outcomes before the contract is saved",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Authoring-path and storage-reconciliation requirements"

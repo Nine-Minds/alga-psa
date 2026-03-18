@@ -21,6 +21,7 @@ import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { parse } from 'date-fns';
 import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
 import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 
 interface ReviewContractStepProps {
   data: ContractWizardData;
@@ -49,6 +50,11 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
   }, [data.client_id]);
 
   const currencyCode = data.currency_code || 'USD';
+  const recurringPreview = getRecurringAuthoringPreview({
+    cadenceOwner: data.cadence_owner,
+    billingTiming: data.billing_timing,
+    enableProration: data.enable_proration,
+  });
 
   const formatCurrency = (minorUnits: number | null | undefined) => {
     if (minorUnits == null) {
@@ -270,6 +276,14 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                 <p className="text-[rgb(var(--color-text-500))]">
                   Partial-Period Adjustment: {data.enable_proration ? 'Enabled' : 'Disabled'}
                 </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-[rgb(var(--color-status-success))] mt-0.5" />
+                <div className="text-[rgb(var(--color-text-500))] space-y-1">
+                  <p><strong>Cadence owner:</strong> {recurringPreview.cadenceOwnerLabel}</p>
+                  <p>{recurringPreview.firstInvoiceSummary}</p>
+                  <p>{recurringPreview.partialPeriodSummary}</p>
+                </div>
               </div>
               {data.fixed_billing_frequency && data.fixed_billing_frequency !== data.billing_frequency && (
                 <div className="flex items-center gap-2">

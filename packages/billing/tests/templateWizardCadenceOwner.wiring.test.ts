@@ -64,14 +64,17 @@ describe('template wizard cadence_owner wiring', () => {
 
     expect(fixedStepSource).toContain('Billing Timing');
     expect(fixedStepSource).toContain('Adjust for Partial Periods');
+    expect(fixedStepSource).toContain("import { getRecurringAuthoringPreview } from '../../recurringAuthoringPreview';");
     expect(fixedStepSource).toContain(
       "updateData({ billing_timing: value as TemplateWizardData['billing_timing'] })"
     );
     expect(fixedStepSource).toContain("updateData({ enable_proration: checked })");
-    expect(fixedStepSource).toContain('The first invoice bills at the start of the first covered service period.');
-    expect(fixedStepSource).toContain('The first invoice bills after the first covered service period closes.');
+    expect(fixedStepSource).toContain('recurringPreview.firstInvoiceSummary');
+    expect(fixedStepSource).toContain('recurringPreview.cadenceOwnerSummary');
+    expect(fixedStepSource).toContain('recurringPreview.partialPeriodSummary');
 
     expect(reviewSource).toContain('Partial-period adjustment:');
+    expect(reviewSource).toContain('recurringPreview.firstInvoiceSummary');
     expect(actionsSource).toContain('billingTiming: submission.billing_timing,');
   });
 });

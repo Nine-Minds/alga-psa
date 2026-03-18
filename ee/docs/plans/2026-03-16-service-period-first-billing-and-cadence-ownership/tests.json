@@ -2059,7 +2059,7 @@
   {
     "id": "T238",
     "description": "Authoring previews explain first invoice behavior correctly for client-cadence recurring lines",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F209"
     ]
@@ -2067,7 +2067,7 @@
   {
     "id": "T239",
     "description": "Authoring previews explain first invoice behavior correctly for contract-cadence recurring lines",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F209"
     ]
