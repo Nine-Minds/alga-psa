@@ -307,12 +307,19 @@
   background: rgb(var(--color-border-400) / 0.95);
 }
 
+.kanbanScrollbarThumb:focus-visible {
+  outline: 2px solid rgb(var(--color-primary-500));
+  outline-offset: 2px;
+  background: rgb(var(--color-border-400) / 0.95);
+}
+
 .kanbanScrollbarThumb:active {
   cursor: grabbing;
 }
 
 .kanbanScrollbarThumbStatic {
   background: rgb(var(--color-border-200) / 0.7);
+  pointer-events: none;
 }
 
 .kanbanContainer {

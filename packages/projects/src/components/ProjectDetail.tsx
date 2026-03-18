@@ -543,6 +543,7 @@ export default function ProjectDetail({
   const kanbanHeaderRef = useRef<HTMLDivElement>(null);
   const scrollbarTrackRef = useRef<HTMLDivElement>(null);
   const scrollbarThumbRef = useRef<HTMLDivElement>(null);
+  const dragAbortRef = useRef<AbortController | null>(null);
   const stickyStatusStripRef = useRef<HTMLDivElement>(null);
   const [kanbanHeaderHeight, setKanbanHeaderHeight] = useState(0);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -682,6 +683,7 @@ export default function ProjectDetail({
       thumb.style.width = '100%';
       thumb.style.transform = 'translateX(0)';
       thumb.classList.add(styles.kanbanScrollbarThumbStatic);
+      thumb.setAttribute('aria-valuenow', '0');
       return;
     }
 
@@ -689,6 +691,7 @@ export default function ProjectDetail({
     thumb.style.width = `${(geometry.thumbWidth / geometry.trackWidth) * 100}%`;
     thumb.style.transform = `translateX(${thumbOffset}px)`;
     thumb.classList.remove(styles.kanbanScrollbarThumbStatic);
+    thumb.setAttribute('aria-valuenow', String(Math.round((geometry.container.scrollLeft / geometry.scrollRange) * 100)));
   }, [getKanbanScrollbarGeometry]);
 
   const setKanbanScrollFromThumbOffset = useCallback((nextThumbOffset: number) => {
@@ -726,6 +729,12 @@ export default function ProjectDetail({
     const geometry = getKanbanScrollbarGeometry();
     if (!geometry || geometry.scrollRange === 0 || geometry.maxThumbOffset === 0) return;
 
+    // Abort any prior drag session still lingering
+    dragAbortRef.current?.abort();
+    const controller = new AbortController();
+    dragAbortRef.current = controller;
+    const { signal } = controller;
+
     const startClientX = event.clientX;
     const startScrollLeft = geometry.container.scrollLeft;
 
@@ -735,14 +744,44 @@ export default function ProjectDetail({
       geometry.container.scrollLeft = startScrollLeft + scrollDelta;
     };
 
-    const handlePointerUp = () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
+    const cleanUp = () => {
+      dragAbortRef.current = null;
+      controller.abort();
     };
 
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointermove', handlePointerMove, { signal });
+    window.addEventListener('pointerup', cleanUp, { signal });
+    window.addEventListener('pointercancel', cleanUp, { signal });
   }, [getKanbanScrollbarGeometry]);
+
+  const SCROLL_STEP = 60;
+
+  const handleKanbanScrollbarKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const container = kanbanBoardRef.current;
+    if (!container) return;
+
+    let handled = true;
+    switch (event.key) {
+      case 'ArrowLeft':
+        container.scrollLeft -= SCROLL_STEP;
+        break;
+      case 'ArrowRight':
+        container.scrollLeft += SCROLL_STEP;
+        break;
+      case 'Home':
+        container.scrollLeft = 0;
+        break;
+      case 'End':
+        container.scrollLeft = container.scrollWidth;
+        break;
+      default:
+        handled = false;
+    }
+
+    if (handled) {
+      event.preventDefault();
+    }
+  }, []);
 
   // Scrollbar metrics and sticky status strip: keep horizontal scroll positions in sync.
   useEffect(() => {
@@ -817,6 +856,9 @@ export default function ProjectDetail({
         ro.unobserve(observedBoard);
       }
       ro.disconnect();
+      // Clean up any in-flight drag listeners
+      dragAbortRef.current?.abort();
+      dragAbortRef.current = null;
     };
   }, [showStickyStatusNames, viewMode, kanbanZoomLevel, visibleKanbanStatuses.length, selectedPhase?.phase_id, isLoadingTasks, updateKanbanScrollbarThumb]);
 
@@ -2642,6 +2684,14 @@ export default function ProjectDetail({
                     ref={scrollbarThumbRef}
                     className={styles.kanbanScrollbarThumb}
                     onPointerDown={handleKanbanScrollbarThumbPointerDown}
+                    onKeyDown={handleKanbanScrollbarKeyDown}
+                    role="scrollbar"
+                    aria-controls="kanban-scroll-container"
+                    aria-orientation="horizontal"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={0}
+                    tabIndex={0}
                   />
                 </div>
               </div>
@@ -2694,7 +2744,7 @@ export default function ProjectDetail({
               </div>
             )}
             {/* Scrollable content area */}
-            <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
+            <div id="kanban-scroll-container" className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
               {renderContent()}
             </div>
           </div>
