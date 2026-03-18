@@ -1856,7 +1856,7 @@
   {
     "id": "F207",
     "description": "Update template-to-contract cloning so cadence-owner and recurring timing semantics propagate explicitly rather than through incidental field copies",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "Pass 6"

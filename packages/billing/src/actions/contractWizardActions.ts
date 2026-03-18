@@ -141,6 +141,7 @@ export type ClientContractWizardSubmission = {
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
   cadence_owner?: CadenceOwner;
+  billing_timing?: 'arrears' | 'advance';
   billing_frequency?: string;
   currency_code: string;
   end_date?: string;
@@ -166,6 +167,7 @@ export type ClientTemplateSnapshot = {
   description?: string | null;
   billing_frequency?: string | null;
   cadence_owner?: CadenceOwner;
+  billing_timing?: 'arrears' | 'advance';
   // currency_code removed - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from this template
   fixed_services?: ClientFixedServiceInput[];
@@ -1024,10 +1026,11 @@ export const createClientContractFromWizard = withAuth(async (
     let primaryContractLineId: string | undefined;
     let nextDisplayOrder = 0;
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
-    const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
-      cadenceOwner: submission.cadence_owner,
-      enableProration: submission.enable_proration,
-    });
+  const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    cadenceOwner: submission.cadence_owner,
+    billingTiming: submission.billing_timing,
+    enableProration: submission.enable_proration,
+  });
 
     if (filteredFixedServices.length > 0) {
       const createdFixedLine = await ContractLine.create(trx, {
@@ -1509,10 +1512,12 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
   let roundUpToNearest: number | undefined;
   let enableProration: boolean | undefined;
   let cadenceOwner: CadenceOwner = 'client';
+  let billingTiming: 'arrears' | 'advance' = 'arrears';
   let fixedBaseRateCents: number | undefined;
 
   for (const line of detailedLines) {
     cadenceOwner = line.cadence_owner ?? cadenceOwner;
+    billingTiming = line.billing_timing ?? billingTiming;
     const servicesWithConfig = await getTemplateLineServicesWithConfigurations(line.contract_line_id);
 
     if (line.contract_line_type === 'Fixed') {
@@ -1630,6 +1635,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
     description: template.template_description,
     billing_frequency: template.default_billing_frequency,
     cadence_owner: cadenceOwner,
+    billing_timing: billingTiming,
     // currency_code removed - templates are now currency-neutral
     fixed_services: fixedServices,
     product_services: productServices,
@@ -1652,6 +1658,7 @@ export type DraftContractWizardData = {
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
   cadence_owner?: CadenceOwner;
+  billing_timing?: 'arrears' | 'advance';
   description?: string;
   billing_frequency: string;
   currency_code: string;
@@ -1747,9 +1754,11 @@ export const getDraftContractForResume = withAuth(async (
   let hourlyBillingFrequency: string | undefined;
   let usageBillingFrequency: string | undefined;
   let cadenceOwner: CadenceOwner = 'client';
+  let billingTiming: 'arrears' | 'advance' = 'arrears';
 
   for (const line of detailedLines) {
     cadenceOwner = line.cadence_owner ?? cadenceOwner;
+    billingTiming = line.billing_timing ?? billingTiming;
     const servicesWithConfig = await getContractLineServicesWithConfigurations(line.contract_line_id);
 
     if (line.contract_line_type === 'Fixed') {
@@ -1904,6 +1913,7 @@ export const getDraftContractForResume = withAuth(async (
         ? clientContract.use_tenant_renewal_defaults
         : undefined,
     cadence_owner: cadenceOwner,
+    billing_timing: billingTiming,
     description: contract.contract_description ?? undefined,
     billing_frequency: contract.billing_frequency ?? 'monthly',
     currency_code: contract.currency_code ?? 'USD',

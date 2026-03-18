@@ -21,7 +21,7 @@ describe('contract wizard cadence_owner wiring', () => {
     expect(source).toContain('cadence_owner: cadenceOwner,');
   });
 
-  it('threads cadence_owner through wizard defaults, template snapshots, and fixed-fee UI copy', () => {
+  it('threads cadence_owner and billing_timing through wizard defaults, template snapshots, and fixed-fee UI copy', () => {
     const wizardSource = readFileSync(
       resolve(__dirname, '../src/components/billing-dashboard/contracts/ContractWizard.tsx'),
       'utf8'
@@ -35,8 +35,11 @@ describe('contract wizard cadence_owner wiring', () => {
     );
 
     expect(wizardSource).toContain("cadence_owner: 'client'");
+    expect(wizardSource).toContain("billing_timing: 'arrears'");
     expect(wizardSource).toContain('cadence_owner: snapshot.cadence_owner ?? prev.cadence_owner');
+    expect(wizardSource).toContain('billing_timing: snapshot.billing_timing ?? prev.billing_timing');
     expect(wizardSource).toContain("cadence_owner: wizardData.cadence_owner ?? 'client'");
+    expect(wizardSource).toContain("billing_timing: wizardData.billing_timing ?? 'arrears'");
     expect(fixedFeeStepSource).toContain('Invoice on client billing schedule');
     expect(fixedFeeStepSource).toContain('Invoice on contract anniversary');
     expect(fixedFeeStepSource).toContain(

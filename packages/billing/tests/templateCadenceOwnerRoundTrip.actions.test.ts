@@ -229,7 +229,7 @@ describe('template cadence owner roundtrip actions', () => {
     ]);
   });
 
-  it('T120: template snapshots and resumed drafts preserve cadence_owner defaults even when the recurring line is not fixed', async () => {
+  it('T120: template snapshots and resumed drafts preserve cadence_owner and billing_timing defaults even when the recurring line is not fixed', async () => {
     const {
       getContractTemplateSnapshotForClientWizard,
       getDraftContractForResume,
@@ -240,6 +240,7 @@ describe('template cadence owner roundtrip actions', () => {
       contract_name: 'Template Alpha',
       billing_frequency: 'monthly',
       cadence_owner: 'contract',
+      billing_timing: 'advance',
     });
 
     const draft = await getDraftContractForResume('contract-1');
@@ -248,6 +249,7 @@ describe('template cadence owner roundtrip actions', () => {
       billing_frequency: 'monthly',
       usage_billing_frequency: 'monthly',
       cadence_owner: 'contract',
+      billing_timing: 'advance',
       template_id: 'template-1',
     });
   });

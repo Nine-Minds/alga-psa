@@ -2043,7 +2043,7 @@
   {
     "id": "T236",
     "description": "Template-to-contract cloning propagates cadence-owner and recurring timing semantics explicitly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F207"
     ]
