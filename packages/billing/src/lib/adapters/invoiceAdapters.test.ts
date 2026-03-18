@@ -195,7 +195,7 @@ describe('mapDbInvoiceToWasmViewModel', () => {
     expect(mapped?.tenantClient).toBeNull();
   });
 
-  it('preserves canonical recurring detail periods for dashboard and portal preview rendering', () => {
+  it('T268: invoice rendering adapters produce stable output for invoices containing canonical recurring detail-backed charges', () => {
     const mapped = mapDbInvoiceToWasmViewModel({
       invoice_number: 'INV-603',
       invoice_date: '2026-02-06',

@@ -41,6 +41,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Portal invoice-detail omission/rendering policy and invoice adapter stability now have explicit checklist coverage, which close `T267` and `T268`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` now adds a dedicated `T267` assertion that the portal dialog intentionally renders canonical detail periods for recurring lines while omitting service-period UI for financial-only/manual rows and showing the explicit fallback copy instead
+  - `packages/billing/src/lib/adapters/invoiceAdapters.test.ts` now tags the existing canonical-detail preservation case as `T268`, locking the renderer-adapter contract that detail-backed invoice charges still map to one compatibility summary range plus the preserved detail list for downstream preview/rendering consumers
+  - focused validation for this checkpoint used:
+    - `cd packages/client-portal && npx vitest run src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx --coverage.enabled false`
+    - `cd server && npx vitest run ../packages/billing/src/lib/adapters/invoiceAdapters.test.ts --coverage.enabled false`
+
 - (2026-03-18) Invoice round-trip and adjacent reader/action seams now explicitly preserve canonical recurring detail periods, which close `T264`, `T265`, and `T266`:
   - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now proves the full round-trip the earlier DB suites implied but did not lock directly: `generateInvoice(...)` persists canonical `invoice_charge_details`, returns an invoice view with `recurring_detail_periods`, and `Invoice.getFullInvoiceById(...)` rereads the same canonical detail projection without degrading back to header-only timing
   - `server/src/test/unit/billing/invoiceQueries.recurringDetailRead.test.ts` now locks the dashboard/query action seam directly by asserting `getInvoiceLineItems(...)` passes through detail-backed charge rows unchanged, including `recurring_projection` and `recurring_detail_periods`

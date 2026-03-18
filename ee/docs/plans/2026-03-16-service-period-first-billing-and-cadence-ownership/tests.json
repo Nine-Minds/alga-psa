@@ -2323,7 +2323,7 @@
   {
     "id": "T267",
     "description": "Client-portal invoice detail dialogs intentionally render or omit canonical recurring detail periods according to policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F167",
       "F189"
@@ -2332,7 +2332,7 @@
   {
     "id": "T268",
     "description": "Invoice rendering adapters produce stable output for invoices containing canonical recurring detail-backed charges",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F166",
       "F178"

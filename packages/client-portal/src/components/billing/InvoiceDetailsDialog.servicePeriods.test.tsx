@@ -189,6 +189,36 @@ describe('InvoiceDetailsDialog recurring service periods', () => {
     expect(within(manualRow as HTMLElement).getByText('Financial-only line. No recurring service period.')).toBeInTheDocument();
   });
 
+  it('T267: client-portal invoice detail dialogs intentionally render or omit canonical recurring detail periods according to policy', async () => {
+    render(
+      <InvoiceDetailsDialog
+        invoiceId="inv-1"
+        isOpen={true}
+        onClose={() => {}}
+        formatCurrency={(amount) => `$${(amount / 100).toFixed(2)}`}
+        formatDate={(date) => String(date)}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Managed Firewall')).toBeInTheDocument();
+      expect(screen.getByText('Manual Credit')).toBeInTheDocument();
+    });
+
+    const recurringRow = screen.getByText('Managed Firewall').closest('tr');
+    expect(recurringRow).not.toBeNull();
+    expect(within(recurringRow as HTMLElement).getByText('Service Periods:')).toBeInTheDocument();
+    expect(within(recurringRow as HTMLElement).getAllByRole('listitem').map((node) => node.textContent)).toEqual([
+      '2026-01-01 - 2026-02-01',
+      '2026-02-01 - 2026-03-01',
+    ]);
+
+    const manualRow = screen.getByText('Manual Credit').closest('tr');
+    expect(manualRow).not.toBeNull();
+    expect(within(manualRow as HTMLElement).queryByText(/Service Period/)).not.toBeInTheDocument();
+    expect(within(manualRow as HTMLElement).getByText('Financial-only line. No recurring service period.')).toBeInTheDocument();
+  });
+
   it('keeps client- and contract-cadence recurring lines readable when one invoice mixes both canonical detail-backed shapes', async () => {
     render(
       <InvoiceDetailsDialog
