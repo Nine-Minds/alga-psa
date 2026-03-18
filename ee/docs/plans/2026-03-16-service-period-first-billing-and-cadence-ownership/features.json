@@ -1919,7 +1919,7 @@
   {
     "id": "F214",
     "description": "Normalize billing_timing defaults across all recurring write paths before layering cadence-owner defaults on top",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data model and API requirements",
       "Risks"

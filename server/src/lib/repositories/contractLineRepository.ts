@@ -235,6 +235,7 @@ export async function ensureTemplateLineSnapshot(
     .first();
 
   const targetTemplateLineId = existingTemplateLine ? uuidv4() : contractLineId;
+  const baseRecurringStorage = normalizeLiveRecurringStorage(baseLine);
 
   await knex('contract_template_lines').insert({
     tenant,
@@ -257,8 +258,8 @@ export async function ensureTemplateLineSnapshot(
     updated_at: now,
     custom_rate: customRate ?? baseLine.custom_rate ?? null,
     display_order: baseLine.display_order ?? 0,
-    billing_timing: baseLine.billing_timing ?? 'arrears',
-    cadence_owner: resolveCadenceOwner(baseLine.cadence_owner),
+    billing_timing: baseRecurringStorage.billing_timing,
+    cadence_owner: baseRecurringStorage.cadence_owner,
   });
 
   return targetTemplateLineId;
@@ -298,6 +299,11 @@ async function cloneTemplateLineToContract(
     billingCycleAlignment: templateFixedConfig?.billing_cycle_alignment,
     enableProration: templateFixedConfig?.enable_proration,
   });
+  const templateRecurringStorage = normalizeTemplateRecurringStorage({
+    billing_timing: templateLine.billing_timing,
+    terms_billing_timing: templateTerms?.billing_timing,
+    cadence_owner: templateLine.cadence_owner,
+  });
 
   // Template-derived live lines copy recurring timing at clone time.
   // Later template edits are provenance only and must not retroactively rewrite
@@ -325,8 +331,8 @@ async function cloneTemplateLineToContract(
     is_template: false,
     custom_rate: effectiveRate,
     display_order: templateLine.display_order ?? 0,
-    billing_timing: templateTerms?.billing_timing ?? templateLine.billing_timing ?? 'arrears',
-    cadence_owner: resolveCadenceOwner(templateLine.cadence_owner),
+    billing_timing: templateRecurringStorage.billing_timing,
+    cadence_owner: templateRecurringStorage.cadence_owner,
     enable_proration: templateFixedConfig?.enable_proration ?? false,
     billing_cycle_alignment: templateBillingCycleAlignment,
   });

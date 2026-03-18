@@ -24,6 +24,7 @@ import {
 } from 'server/src/lib/repositories/contractLineRepository';
 import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
 import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
+import { normalizeTemplateRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
 import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 
@@ -953,6 +954,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       // The template link stays as provenance on the assignment/response, but
       // recurring cadence fields are copied onto the live line and do not keep
       // following future template edits.
+      const templateRecurringStorage = normalizeTemplateRecurringStorage({
+        billing_timing: templateLine.billing_timing,
+        cadence_owner: templateLine.cadence_owner,
+      });
       const newContractLineId = uuidv4();
       const contractLineData = this.addCreateAuditFields({
         contract_line_id: newContractLineId,
@@ -962,8 +967,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         billing_frequency: templateLine.billing_frequency,
         contract_line_type: templateLine.contract_line_type,
         service_category: templateLine.service_category ?? data.service_category,
-        billing_timing: templateLine.billing_timing ?? 'arrears',
-        cadence_owner: templateLine.cadence_owner ?? 'client',
+        billing_timing: templateRecurringStorage.billing_timing,
+        cadence_owner: templateRecurringStorage.cadence_owner,
         is_active: data.is_active ?? true,
         is_custom: false,
         custom_rate: data.custom_rate ?? templateLine.custom_rate,

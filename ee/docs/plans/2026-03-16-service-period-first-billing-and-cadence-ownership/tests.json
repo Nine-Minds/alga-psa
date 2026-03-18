@@ -2108,7 +2108,7 @@
   {
     "id": "T244",
     "description": "billing_timing defaults are standardized across wizard, custom-line, preset, template, and repository write paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F214"
     ]

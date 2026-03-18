@@ -39,6 +39,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Billing-timing default normalization now runs through one shared policy across the remaining recurring write seams, which closes `F214` and `T244`:
+  - `packages/billing/src/actions/contractLineAction.ts` now uses `normalizeLiveRecurringStorage(...)` and `normalizeTemplateRecurringStorage(...)` for contract-line readback and template-line lookups, eliminating another pocket of hand-written `billing_timing ?? 'arrears'` logic at the action seam
+  - `packages/billing/src/repositories/contractLineRepository.ts` and `server/src/lib/repositories/contractLineRepository.ts` now normalize billing timing before template snapshot writes and before template-to-contract clone writes, so those repository-level propagation seams no longer bypass the shared recurring timing default
+  - `server/src/lib/api/services/ContractLineService.ts` now normalizes template-derived recurring cadence fields before writing a fresh live contract line during replacement/renewal assignment flows, which removes the last live service-layer template clone fallback that still hard-coded `arrears`
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now includes `T244`, locking the shared billing-timing default constant plus the fact that wizard, preset, contract-line action, repository, and server assignment write paths all reference the shared normalization helpers instead of inventing local defaults
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`, and `npx tsc --pretty false --noEmit -p server/tsconfig.json`; the server compile remains blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error
+
 - (2026-03-17) The recurrence storage contract is now explicit across live lines, template lines, presets, and shared readers, which closes `F211`, `F212`, `F213`, `F220`, `T241`, `T242`, `T243`, and `T250`:
   - `shared/billingClients/recurrenceStorageModel.ts` now defines one authoritative storage model for recurring cadence fields and one set of normalization helpers for live lines, template lines, and presets
   - `packages/billing/src/models/contractTemplate.ts`, `packages/billing/src/models/contractLinePreset.ts`, `packages/billing/src/repositories/contractLineRepository.ts`, `server/src/lib/repositories/contractLineRepository.ts`, and `shared/billingClients/contractLines.ts` now reuse that shared storage model instead of open-coding separate recurring defaults at each read seam
@@ -763,6 +770,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts` now locks both sides of the audit: company sync + mapping stay free of header-period assumptions, and export validation continues to preserve canonical service-period context without falling back to invoice-header billing dates
 
 ## Commands / Runbooks
+
+- (2026-03-17) Billing-timing default normalization validation:
+  - `npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not by the billing-timing normalization changes
 
 - (2026-03-17) Recurrence storage model validation:
   - `npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`

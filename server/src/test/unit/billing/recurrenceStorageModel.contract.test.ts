@@ -210,6 +210,51 @@ describe('recurrence storage model contracts', () => {
     expect(sharedReader).toContain('normalizeLiveRecurringStorage');
   });
 
+  it('T244: billing_timing defaults stay standardized across wizard, custom-line, preset, template, and repository write paths', () => {
+    const recurringAuthoringPolicy = fs.readFileSync(
+      path.join(repoRoot, 'shared/billingClients/recurringAuthoringPolicy.ts'),
+      'utf8',
+    );
+    const contractWizardActions = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/actions/contractWizardActions.ts'),
+      'utf8',
+    );
+    const contractLinePresetActions = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/actions/contractLinePresetActions.ts'),
+      'utf8',
+    );
+    const contractLineAction = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/actions/contractLineAction.ts'),
+      'utf8',
+    );
+    const packageRepository = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/repositories/contractLineRepository.ts'),
+      'utf8',
+    );
+    const serverRepository = fs.readFileSync(
+      path.join(repoRoot, 'server/src/lib/repositories/contractLineRepository.ts'),
+      'utf8',
+    );
+    const contractLineService = fs.readFileSync(
+      path.join(repoRoot, 'server/src/lib/api/services/ContractLineService.ts'),
+      'utf8',
+    );
+
+    expect(recurringAuthoringPolicy).toContain(
+      "export const DEFAULT_RECURRING_AUTHORING_BILLING_TIMING: RecurringBillingTiming = 'arrears';",
+    );
+    expect(contractWizardActions).toContain('resolveRecurringAuthoringPolicy({');
+    expect(contractLinePresetActions).toContain('resolveRecurringAuthoringPolicy({');
+    expect(contractLineAction).toContain('resolveRecurringAuthoringPolicy({');
+    expect(contractLineAction).toContain('normalizeTemplateRecurringStorage');
+    expect(contractLineAction).toContain('normalizeLiveRecurringStorage');
+    expect(packageRepository).toContain('normalizeTemplateRecurringStorage({');
+    expect(packageRepository).toContain('normalizeLiveRecurringStorage(baseLine)');
+    expect(serverRepository).toContain('normalizeTemplateRecurringStorage({');
+    expect(serverRepository).toContain('normalizeLiveRecurringStorage(baseLine)');
+    expect(contractLineService).toContain('normalizeTemplateRecurringStorage({');
+  });
+
   it('T242: template-line cadence_owner schema and backfill behavior stay correct for v1 template recurrence storage', async () => {
     const migrationPath = path.join(
       repoRoot,

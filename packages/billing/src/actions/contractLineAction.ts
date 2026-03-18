@@ -14,9 +14,10 @@ import { getAnalyticsAsync } from '../lib/authHelpers';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
 import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
-
-
-
+import {
+    normalizeLiveRecurringStorage,
+    normalizeTemplateRecurringStorage,
+} from '@shared/billingClients/recurrenceStorageModel';
 
 export const getContractLines = withAuth(async (
     user,
@@ -36,13 +37,7 @@ export const getContractLines = withAuth(async (
             }
 
             const plans = await ContractLine.getAll(trx);
-            // billing_timing is stored directly on contract_lines (added in migration 20251025120000)
-            // No need to query a separate terms table
-            const enrichedPlans = plans.map((plan) => ({
-                ...plan,
-                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-                cadence_owner: plan.cadence_owner ?? 'client',
-            }));
+            const enrichedPlans = plans.map((plan) => normalizeLiveRecurringStorage(plan));
 
             return enrichedPlans;
         });
@@ -94,8 +89,11 @@ export const getContractLineById = withAuth(async (
                     tenant,
                     display_order: templateLine.display_order ?? 0,
                     custom_rate: templateLine.custom_rate != null ? Number(templateLine.custom_rate) : null,
-                    billing_timing: (templateLine.billing_timing ?? templateTerms?.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-                    cadence_owner: templateLine.cadence_owner ?? 'client',
+                    ...normalizeTemplateRecurringStorage({
+                        billing_timing: templateLine.billing_timing,
+                        terms_billing_timing: templateTerms?.billing_timing,
+                        cadence_owner: templateLine.cadence_owner,
+                    }),
                     contract_line_type: templateLine.line_type ?? 'Fixed',
                     service_category: templateLine.service_category ?? null,
                     is_active: templateLine.is_active ?? true,
@@ -113,11 +111,7 @@ export const getContractLineById = withAuth(async (
             }
 
             // billing_timing is stored directly on contract_lines
-            return {
-                ...plan,
-                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-                cadence_owner: plan.cadence_owner ?? 'client',
-            };
+            return normalizeLiveRecurringStorage(plan);
         });
     } catch (error) {
         console.error(`Error fetching contract line with ID ${planId}:`, error);
@@ -161,11 +155,7 @@ export const createContractLine = withAuth(async (
                 billingTiming: recurringAuthoringPolicy.billingTiming,
             });
             const plan = await ContractLine.create(trx, safePlanData);
-            const enrichedPlan: IContractLine = {
-                ...plan,
-                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-                cadence_owner: plan.cadence_owner ?? 'client',
-            };
+            const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -234,13 +224,7 @@ export const updateContractLine = withAuth(async (
             // Proceed with the update using the potentially modified data
             // Ensure ContractLine.update handles empty updateData gracefully if all fields were removed
             const plan = await ContractLine.update(trx, planId, safeUpdateData);
-
-            // billing_timing is stored directly on contract_lines
-            const enrichedPlan: IContractLine = {
-                ...plan,
-                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-                cadence_owner: plan.cadence_owner ?? 'client',
-            };
+            const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
