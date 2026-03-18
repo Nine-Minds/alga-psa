@@ -46,6 +46,9 @@ const recurringServicePeriodPostMaterializationLifecycle = read('RECURRING_SERVI
 const recurringServicePeriodAuthoringPredictability = read('RECURRING_SERVICE_PERIOD_AUTHORING_PREDICTABILITY.md');
 const recurringServicePeriodEditGrouping = read('RECURRING_SERVICE_PERIOD_EDIT_GROUPING.md');
 const recurringServicePeriodExplanations = read('RECURRING_SERVICE_PERIOD_EXPLANATIONS.md');
+const recurringServicePeriodTroubleshooting = read('RECURRING_SERVICE_PERIOD_TROUBLESHOOTING.md');
+const richerServicePeriodEditingFollowOn = read('RICHER_SERVICE_PERIOD_EDITING_FOLLOW_ON.md');
+const crossDomainServicePeriodLedgerFollowOn = read('CROSS_DOMAIN_SERVICE_PERIOD_LEDGER_FOLLOW_ON.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
 const recurrenceStorageMatrix = read('RECURRENCE_STORAGE_MATRIX.md');
 const runbook = read('RUNBOOK.md');
@@ -450,6 +453,33 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodExplanations).toContain('lifecycle state');
     expect(recurringServicePeriodExplanations).toContain('provenance kind and reason code');
     expect(recurringServicePeriodExplanations).toContain('whether the final billed timing reflects an edited or deferred period');
+  });
+
+  it('T317: operator runbook is sufficient to diagnose service-period generation failures and override conflicts', () => {
+    expect(recurringServicePeriodTroubleshooting).toContain('# Recurring Service-Period Troubleshooting Runbook');
+    expect(recurringServicePeriodTroubleshooting).toContain('## Generation Failure Triage');
+    expect(recurringServicePeriodTroubleshooting).toContain('`recurring_service_periods`');
+    expect(recurringServicePeriodTroubleshooting).toContain('`missing_candidate`');
+    expect(recurringServicePeriodTroubleshooting).toContain('`invoice_linkage_repair`');
+    expect(recurringServicePeriodTroubleshooting).toContain('Do not delete canonical `invoice_charge_details` rows');
+  });
+
+  it('T318: advanced mass-edit or bulk schedule transform capabilities remain explicitly out of v1 unless the documented follow-on boundary is invoked', () => {
+    expect(richerServicePeriodEditingFollowOn).toContain('# Follow-on Boundary — Richer Service-Period Editing');
+    expect(richerServicePeriodEditingFollowOn).toContain('`boundary_adjustment`');
+    expect(richerServicePeriodEditingFollowOn).toContain('`skip`');
+    expect(richerServicePeriodEditingFollowOn).toContain('`defer`');
+    expect(richerServicePeriodEditingFollowOn).toContain('split one future period into multiple billable periods');
+    expect(richerServicePeriodEditingFollowOn).toContain('bulk or mass editing across many obligations at once');
+  });
+
+  it('T319: extending the materialized service-period ledger to time, usage, or other billing domains remains explicitly out of this recurring v1 plan', () => {
+    expect(crossDomainServicePeriodLedgerFollowOn).toContain('# Follow-on Boundary — Cross-Domain Service-Period Ledger Extension');
+    expect(crossDomainServicePeriodLedgerFollowOn).toContain('time-entry billing');
+    expect(crossDomainServicePeriodLedgerFollowOn).toContain('usage-record billing');
+    expect(crossDomainServicePeriodLedgerFollowOn).toContain('manual invoices, credits, or prepayment artifacts');
+    expect(crossDomainServicePeriodLedgerFollowOn).toContain('event-driven');
+    expect(crossDomainServicePeriodLedgerFollowOn).toContain('future materialization is stable');
   });
 
   it('T349: edit transport surfaces define request, provenance, and structured validation feedback before dashboard editing lands', () => {

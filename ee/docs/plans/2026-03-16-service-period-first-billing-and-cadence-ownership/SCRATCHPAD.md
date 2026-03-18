@@ -41,6 +41,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The final open plan-surface follow-ons are now explicit, which closes `F268`, `F269`, `F270`, `T317`, `T318`, and `T319`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_TROUBLESHOOTING.md` now gives operators one troubleshooting seam for generation failures, override conflicts, regeneration triage, and invoice-linkage repair without pretending those problems should be solved by ad hoc row mutation
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RICHER_SERVICE_PERIOD_EDITING_FOLLOW_ON.md` now fences richer editing out of recurring v1 explicitly: split/merge, bulk schedule transforms, and mass editing remain deferred until the narrow `boundary_adjustment|skip|defer` surface proves insufficient in production
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/CROSS_DOMAIN_SERVICE_PERIOD_LEDGER_FOLLOW_ON.md` now makes the cross-domain boundary explicit for the materialized ledger itself: time, usage, materials, manual invoices, credits, and prepayment artifacts do not quietly join the recurring ledger just because recurring v1 now has one
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks those three artifacts directly so the remaining out-of-scope boundaries stay deliberate instead of drifting back into implicit future work
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+
 - (2026-03-18) The first DB-backed persisted-ledger lifecycle validation now exists, which closes `F267` and `T316`:
   - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now carries `T316`, which persists real `recurring_service_periods` rows under the live schema, supersedes a generated row through an explicit boundary edit, regenerates a later future slot while preserving the edited row, and then links the billed edited revision to a real `invoice_charge_details` row
   - the integration checkpoint intentionally validates the staged-rollout ledger seam instead of claiming full edited-period invoice-generation cutover: the test proves database selection eligibility, supersession state, regenerated future continuity, and billed linkage persistence without depending on later runtime/UI passes that own edited-period invoice explanations

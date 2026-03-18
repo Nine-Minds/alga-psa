@@ -2405,7 +2405,7 @@
   {
     "id": "F268",
     "description": "Document an operator runbook for materialized service-period generation failures, override conflicts, and regeneration troubleshooting",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Pass 9"
@@ -2414,7 +2414,7 @@
   {
     "id": "F269",
     "description": "Capture a follow-on boundary for richer service-period editing such as mass editing, advanced split and merge workflows, or bulk schedule transforms if v1 keeps edits narrower",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Open Questions",
       "Materialized service-period requirements"
@@ -2423,7 +2423,7 @@
   {
     "id": "F270",
     "description": "Capture a follow-on boundary for extending the materialized service-period ledger to time, usage, or other non-recurring billing domains after recurring cutover succeeds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Open Questions",
       "Scope"

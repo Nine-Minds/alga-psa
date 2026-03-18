@@ -2764,7 +2764,7 @@
   {
     "id": "T311",
     "description": "Bucket or allowance semantics remain coherent when users edit, skip, or regenerate future persisted service periods",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F262"
     ]
@@ -2772,7 +2772,7 @@
   {
     "id": "T312",
     "description": "Billed-through, renewal, and replacement logic uses persisted service periods coherently after materialization",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F263"
     ]
@@ -2780,7 +2780,7 @@
   {
     "id": "T313",
     "description": "Template, preset, and new-line authoring still produce predictable future persisted service-period schedules after creation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F264"
     ]
@@ -2788,7 +2788,7 @@
   {
     "id": "T314",
     "description": "Editing future persisted service periods can move work across invoice windows and grouping responds according to policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F265"
     ]
@@ -2796,7 +2796,7 @@
   {
     "id": "T315",
     "description": "Client-facing explanations and support tooling surface service-period edits and provenance clearly enough to explain invoice outcomes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F266"
     ]
@@ -2812,7 +2812,7 @@
   {
     "id": "T317",
     "description": "Operator runbook is sufficient to diagnose service-period generation failures and override conflicts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F268"
     ]
@@ -2820,7 +2820,7 @@
   {
     "id": "T318",
     "description": "Advanced mass-edit or bulk schedule transform capabilities remain explicitly out of v1 unless the documented follow-on boundary is invoked",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F269"
     ]
@@ -2828,7 +2828,7 @@
   {
     "id": "T319",
     "description": "Extending the materialized service-period ledger to time, usage, or other billing domains remains explicitly out of this recurring v1 plan",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F270"
     ]
