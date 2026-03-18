@@ -41,6 +41,19 @@ export const DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES = [
 export type RecurringServicePeriodDueSelectionState =
   (typeof DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES)[number];
 
+export const DEFAULT_RECURRING_SERVICE_PERIOD_PARITY_COMPARISON_STATES = [
+  'generated',
+  'edited',
+  'locked',
+  'billed',
+] as const satisfies readonly RecurringServicePeriodLifecycleState[];
+export type RecurringServicePeriodParityComparisonState =
+  (typeof DEFAULT_RECURRING_SERVICE_PERIOD_PARITY_COMPARISON_STATES)[number];
+export type RecurringServicePeriodParityDriftKind =
+  | 'missing_persisted_period'
+  | 'unexpected_persisted_period'
+  | 'invoice_window_mismatch';
+
 export const RECURRING_SERVICE_PERIOD_PROVENANCE_KINDS = [
   'generated',
   'user_edited',
@@ -295,6 +308,27 @@ export interface IRecurringServicePeriodDueSelectionQuery {
   windowEnd: ISO8601String;
   lifecycleStates: RecurringServicePeriodDueSelectionState[];
   chargeFamilies?: RecurringChargeFamily[];
+}
+
+export interface IRecurringServicePeriodParityDrift {
+  kind: RecurringServicePeriodParityDriftKind;
+  scheduleKey: string;
+  periodKey: string;
+  obligationId: string;
+  cadenceOwner: CadenceOwner;
+  duePosition: DuePosition;
+  servicePeriodStart: ISO8601String;
+  servicePeriodEnd: ISO8601String;
+  derivedInvoiceWindowStart?: ISO8601String;
+  derivedInvoiceWindowEnd?: ISO8601String;
+  persistedInvoiceWindowStart?: ISO8601String;
+  persistedInvoiceWindowEnd?: ISO8601String;
+  persistedLifecycleState?: RecurringServicePeriodLifecycleState;
+}
+
+export interface IRecurringServicePeriodParityComparisonResult {
+  matches: boolean;
+  drifts: IRecurringServicePeriodParityDrift[];
 }
 
 export interface ICadenceBoundaryGeneratorInput {

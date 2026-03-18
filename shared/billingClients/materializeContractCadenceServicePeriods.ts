@@ -19,6 +19,10 @@ import {
   type IRecurringServicePeriodGenerationCoverageStatus,
   resolveRecurringServicePeriodGenerationHorizon,
 } from './recurringServicePeriodGenerationHorizon';
+import {
+  buildRecurringServicePeriodPeriodKey,
+  buildRecurringServicePeriodScheduleKey,
+} from './recurringServicePeriodKeys';
 
 type SupportedContractCadenceBillingCycle =
   Extract<BillingCycleType, 'monthly' | 'quarterly' | 'semi-annually' | 'annually'>;
@@ -57,17 +61,6 @@ function toRecordRange(period: Pick<IRecurringDateRange, 'start' | 'end'>): IRec
     end: toDateOnly(period.end),
     semantics: RECURRING_RANGE_SEMANTICS,
   };
-}
-
-function buildScheduleKey(
-  sourceObligation: IPersistedRecurringObligationRef,
-  duePosition: DuePosition,
-) {
-  return `schedule:${sourceObligation.tenant}:${sourceObligation.obligationType}:${sourceObligation.obligationId}:contract:${duePosition}`;
-}
-
-function buildPeriodKey(period: Pick<IRecurringDateRange, 'start' | 'end'>) {
-  return `period:${toDateOnly(period.start)}:${toDateOnly(period.end)}`;
 }
 
 function defaultRecordIdFactory(input: {
@@ -127,12 +120,18 @@ export function materializeContractCadenceServicePeriods(
     input,
     `${horizon.targetHorizonEnd}T00:00:00Z`,
   );
-  const scheduleKey = buildScheduleKey(input.sourceObligation, input.duePosition);
+  const scheduleKey = buildRecurringServicePeriodScheduleKey({
+    tenant: input.sourceObligation.tenant,
+    obligationType: input.sourceObligation.obligationType,
+    obligationId: input.sourceObligation.obligationId,
+    cadenceOwner: 'contract',
+    duePosition: input.duePosition,
+  });
   const monthsPerPeriod = resolveMonthsPerPeriod(input.billingCycle);
   const recordIdFactory = input.recordIdFactory ?? defaultRecordIdFactory;
 
   const records = servicePeriods.map((servicePeriod) => {
-    const periodKey = buildPeriodKey(servicePeriod);
+    const periodKey = buildRecurringServicePeriodPeriodKey(servicePeriod);
     const invoiceWindow = resolveContractCadenceInvoiceWindowForServicePeriod({
       servicePeriod,
       anchorDate: input.anchorDate,

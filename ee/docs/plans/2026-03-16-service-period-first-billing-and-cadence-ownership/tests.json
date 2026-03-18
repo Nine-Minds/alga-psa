@@ -2572,7 +2572,7 @@
   {
     "id": "T293",
     "description": "Parity comparison surfaces differences between legacy derived timing and persisted service-period schedules before cutover",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F243"
     ]

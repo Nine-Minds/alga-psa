@@ -19,6 +19,10 @@ import {
   resolveRecurringServicePeriodGenerationHorizon,
   type IRecurringServicePeriodGenerationCoverageStatus,
 } from './recurringServicePeriodGenerationHorizon';
+import {
+  buildRecurringServicePeriodPeriodKey,
+  buildRecurringServicePeriodScheduleKey,
+} from './recurringServicePeriodKeys';
 
 export interface MaterializeClientCadenceServicePeriodsInput {
   asOf: ISO8601String;
@@ -61,17 +65,6 @@ function toRecordRange(period: Pick<IRecurringDateRange, 'start' | 'end'>): IRec
     end: toDateOnly(period.end),
     semantics: RECURRING_RANGE_SEMANTICS,
   };
-}
-
-function buildScheduleKey(
-  sourceObligation: IPersistedRecurringObligationRef,
-  duePosition: DuePosition,
-) {
-  return `schedule:${sourceObligation.tenant}:${sourceObligation.obligationType}:${sourceObligation.obligationId}:client:${duePosition}`;
-}
-
-function buildPeriodKey(servicePeriod: IRecurringServicePeriod) {
-  return `period:${toDateOnly(servicePeriod.start)}:${toDateOnly(servicePeriod.end)}`;
 }
 
 function defaultRecordIdFactory(input: {
@@ -127,12 +120,18 @@ export function materializeClientCadenceServicePeriods(
     historicalCycles: input.historicalCycles,
   };
   const servicePeriods = generateClientCadenceServicePeriods(generationInput);
-  const scheduleKey = buildScheduleKey(input.sourceObligation, input.duePosition);
+  const scheduleKey = buildRecurringServicePeriodScheduleKey({
+    tenant: input.sourceObligation.tenant,
+    obligationType: input.sourceObligation.obligationType,
+    obligationId: input.sourceObligation.obligationId,
+    cadenceOwner: 'client',
+    duePosition: input.duePosition,
+  });
   const nextInvoiceWindowCache = new Map<string, IRecurringDateRange>();
   const recordIdFactory = input.recordIdFactory ?? defaultRecordIdFactory;
 
   const records = servicePeriods.map((servicePeriod) => {
-    const periodKey = buildPeriodKey(servicePeriod);
+    const periodKey = buildRecurringServicePeriodPeriodKey(servicePeriod);
     const invoiceWindow = input.duePosition === 'advance'
       ? toRecordRange(servicePeriod)
       : resolveNextInvoiceWindow(servicePeriod, generationInput, nextInvoiceWindowCache);

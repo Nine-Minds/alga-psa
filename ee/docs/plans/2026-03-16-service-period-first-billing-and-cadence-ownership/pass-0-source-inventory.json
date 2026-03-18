@@ -195,7 +195,8 @@
       "server/src/test/unit/contractReportActions.summary.servicePeriods.test.ts",
       "server/src/test/unit/invoiceWorkflowEvents.test.ts",
       "server/src/test/unit/migrations/recurringServicePeriodsMigration.test.ts",
-      "shared/billingClients/recurringRunExecutionIdentity.ts"
+      "shared/billingClients/recurringRunExecutionIdentity.ts",
+      "shared/billingClients/recurringServicePeriodParity.ts"
     ],
     "persistedDateFields": [
       "client_billing_cycles.start_date",

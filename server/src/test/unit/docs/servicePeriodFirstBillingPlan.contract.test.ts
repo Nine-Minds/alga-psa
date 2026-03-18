@@ -23,6 +23,7 @@ const recurringServicePeriodDueSelection = read('RECURRING_SERVICE_PERIOD_DUE_SE
 const recurringServicePeriodInvoiceLinkage = read('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
 const recurringServicePeriodImmutability = read('RECURRING_SERVICE_PERIOD_IMMUTABILITY.md');
+const recurringServicePeriodParityComparison = read('RECURRING_SERVICE_PERIOD_PARITY_COMPARISON.md');
 const recurringServicePeriodProvenance = read('RECURRING_SERVICE_PERIOD_PROVENANCE.md');
 const recurringServicePeriodRegeneration = read('RECURRING_SERVICE_PERIOD_REGENERATION.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
@@ -326,6 +327,19 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodDueSelection).toContain('## Ordering');
     expect(recurringServicePeriodDueSelection).toContain('shared/billingClients/recurringServicePeriodDueSelection.ts');
     expect(recurringServicePeriodDueSelection).toContain('`F256` is still the later pass');
+  });
+
+  it('documents persisted schedule parity comparison between legacy derived timing and materialized service-period schedules', () => {
+    expect(recurringServicePeriodParityComparison).toContain('# Recurring Service-Period Parity Comparison');
+    expect(recurringServicePeriodParityComparison).toContain('## Normalized Identity');
+    expect(recurringServicePeriodParityComparison).toContain('`scheduleKey`');
+    expect(recurringServicePeriodParityComparison).toContain('`periodKey`');
+    expect(recurringServicePeriodParityComparison).toContain('shared/billingClients/recurringServicePeriodKeys.ts');
+    expect(recurringServicePeriodParityComparison).toContain('## Drift Types');
+    expect(recurringServicePeriodParityComparison).toContain('`missing_persisted_period`');
+    expect(recurringServicePeriodParityComparison).toContain('`unexpected_persisted_period`');
+    expect(recurringServicePeriodParityComparison).toContain('`invoice_window_mismatch`');
+    expect(recurringServicePeriodParityComparison).toContain('shared/billingClients/recurringServicePeriodParity.ts');
   });
 
   it('T284: documents the persisted provenance model for generated, user-edited, regenerated, and repair rows', () => {

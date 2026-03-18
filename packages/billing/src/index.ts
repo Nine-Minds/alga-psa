@@ -52,6 +52,8 @@ export type {
   IRecurringCoverage,
   IRecurringDuePeriodSelection,
   IRecurringInvoiceDetailTiming,
+  IRecurringServicePeriodParityComparisonResult,
+  IRecurringServicePeriodParityDrift,
   IRecurringServicePeriodDueSelectionQuery,
   IRecurringServicePeriodInvoiceLinkage,
   IRecurringInvoiceWindow,
@@ -63,6 +65,8 @@ export type {
   IRepairRecurringServicePeriodRecordProvenance,
   IResolvedRecurringSettlement,
   IUserEditedRecurringServicePeriodRecordProvenance,
+  RecurringServicePeriodParityComparisonState,
+  RecurringServicePeriodParityDriftKind,
   RecurringServicePeriodDueSelectionState,
   RecurringServicePeriodProvenanceReasonCode,
   RecurringServicePeriodLifecycleState,
@@ -74,6 +78,7 @@ export type {
 
 // Re-export invoice constants
 export {
+  DEFAULT_RECURRING_SERVICE_PERIOD_PARITY_COMPARISON_STATES,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
   RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES,
   INVOICE_STATUS_METADATA,
@@ -146,6 +151,13 @@ export {
   applyRecurringServicePeriodInvoiceLinkage,
   hasRecurringServicePeriodInvoiceLinkage,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodInvoiceLinkage';
+export {
+  compareDerivedRecurringTimingToPersistedSchedule,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodParity';
+export {
+  buildRecurringServicePeriodPeriodKey,
+  buildRecurringServicePeriodScheduleKey,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 export {
   buildRecurringServicePeriodDueSelectionQuery,
   isRecurringServicePeriodRecordDue,

@@ -41,6 +41,16 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Persisted-schedule parity comparison is now explicit, which closes `F243` and `T293`:
+  - `shared/billingClients/recurringServicePeriodKeys.ts` now centralizes canonical `scheduleKey` and `periodKey` generation, and both materializers now use that helper so persisted schedule identity cannot drift from later comparison logic
+  - `shared/billingClients/recurringServicePeriodParity.ts` now defines the staged-cutover parity seam for materialized schedules: legacy derived selections normalize onto `scheduleKey + periodKey`, active persisted rows normalize onto the same key, and schedule parity reports only the rollout-significant drift kinds `missing_persisted_period`, `unexpected_persisted_period`, and `invoice_window_mismatch`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_PARITY_COMPARISON.md` now documents that this is schedule parity rather than invoice parity, and that `F256` still owns the later runtime cutover from derived timing to persisted-row selection
+  - `pass-0-source-inventory.json` was refreshed in the same checkpoint because the new parity helper became a live service-period reader; the docs contract suite now expects that helper in the persisted-reader inventory instead of silently drifting
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodParity.domain.test.ts src/test/unit/billing/materializeClientCadenceServicePeriods.domain.test.ts src/test/unit/billing/materializeContractCadenceServicePeriods.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) The persisted due-selection query contract is now explicit, which closes `F242` and adds/closes `T344` while intentionally leaving `T292` for `F256` runtime adoption:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodDueSelectionQuery` plus the default eligible lifecycle-state set `generated|edited|locked`, making the persisted-row selector contract explicit instead of leaving it as an implied future repository query
   - `shared/billingClients/recurringServicePeriodDueSelection.ts` now defines the v1 selector seam: callers must resolve `scheduleKeys[]` first, exact `[windowStart, windowEnd)` invoice-window matching is required, billed/linkage-bearing rows are excluded, and deterministic sort order is service-period start/end then obligation id then revision
@@ -935,6 +945,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Commands / Runbooks
 
+- (2026-03-18) Persisted service-period parity comparison validation:
+  - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodParity.domain.test.ts src/test/unit/billing/materializeClientCadenceServicePeriods.domain.test.ts src/test/unit/billing/materializeContractCadenceServicePeriods.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) Persisted service-period due-selection contract validation:
   - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
@@ -1563,14 +1578,17 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PERSISTED_SERVICE_PERIOD_RECORD.md`
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_DUE_SELECTION.md`
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_PARITY_COMPARISON.md`
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_LIFECYCLE.md`
 - Key runtime files:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts`
   - `server/migrations/20260318120000_create_recurring_service_periods.cjs`
   - `server/migrations/20260318143000_add_invoice_linkage_to_recurring_service_periods.cjs`
   - `shared/billingClients/recurringServicePeriodDueSelection.ts`
+  - `shared/billingClients/recurringServicePeriodKeys.ts`
   - `shared/billingClients/recurringServicePeriodLifecycle.ts`
   - `shared/billingClients/recurringServicePeriodInvoiceLinkage.ts`
+  - `shared/billingClients/recurringServicePeriodParity.ts`
   - `packages/billing/src/lib/billing/billingEngine.ts`
   - `packages/billing/src/lib/billing/recurringTiming.ts`
   - `shared/billingClients/createBillingCycles.ts`
@@ -1593,6 +1611,7 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts`
   - `server/src/test/unit/billing/recurringServicePeriodInvoiceLinkage.domain.test.ts`
   - `server/src/test/unit/billing/recurringServicePeriodLifecycle.domain.test.ts`
+  - `server/src/test/unit/billing/recurringServicePeriodParity.domain.test.ts`
   - `server/src/test/unit/migrations/recurringServicePeriodInvoiceLinkageMigration.test.ts`
   - `server/src/test/unit/migrations/recurringServicePeriodsMigration.test.ts`
   - `server/src/test/unit/billingEngine.test.ts`

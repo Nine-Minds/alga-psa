@@ -2180,7 +2180,7 @@
   {
     "id": "F243",
     "description": "Define parity comparison between legacy derived timing outputs and persisted service-period schedules during staged cutover",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Inventory and parity requirements",
       "Materialized service-period requirements"
