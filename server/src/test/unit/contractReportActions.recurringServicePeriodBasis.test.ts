@@ -37,6 +37,41 @@ function buildThenableQuery(result: any[]) {
   return builder;
 }
 
+function buildReportKnex(params: {
+  revenueFacts: any[];
+  assignments?: any[];
+  contractLines?: any[];
+}) {
+  const assignments = params.assignments ?? [
+    {
+      client_contract_id: 'cc-1',
+      client_id: 'client-1',
+      is_active: true,
+      start_date: '2025-01-01',
+      end_date: null,
+      contract_id: 'contract-1',
+      contract_name: 'Managed Services',
+      client_name: 'Acme Industries',
+    },
+  ];
+  const contractLines = params.contractLines ?? [
+    { contract_id: 'contract-1', custom_rate: 20000 },
+  ];
+
+  return vi.fn((table: string) => {
+    if (table === 'invoice_charges as ic') {
+      return buildThenableQuery(params.revenueFacts);
+    }
+    if (table === 'client_contracts as cc') {
+      return buildThenableQuery(assignments);
+    }
+    if (table === 'contract_lines as cl') {
+      return buildThenableQuery(contractLines);
+    }
+    throw new Error(`Unexpected table ${table}`);
+  });
+}
+
 describe('contractReportActions recurring service-period basis', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -128,5 +163,48 @@ describe('contractReportActions recurring service-period basis', () => {
       total_billed_ytd: 47000,
       status: 'active',
     });
+  });
+
+  it('T269: client-cadence report output stays parity-stable when recurring revenue facts move from invoice-date fallback to canonical detail periods', async () => {
+    const legacyFacts = [
+      {
+        item_id: 'charge-january-service',
+        client_contract_id: 'cc-1',
+        invoice_date: '2025-02-01',
+        net_amount: 12000,
+        item_detail_id: null,
+        service_period_end: null,
+        allocated_amount: null,
+      },
+    ];
+    const canonicalFacts = [
+      {
+        item_id: 'charge-january-service',
+        client_contract_id: 'cc-1',
+        invoice_date: '2025-02-01',
+        net_amount: 12000,
+        item_detail_id: 'detail-january-service',
+        service_period_end: '2025-01-31',
+        allocated_amount: null,
+      },
+    ];
+
+    createTenantKnex.mockResolvedValueOnce({ knex: buildReportKnex({ revenueFacts: legacyFacts }) });
+    const { getContractRevenueReport } = await import('@alga-psa/billing/actions/contractReportActions');
+    const legacyOutput = await getContractRevenueReport();
+
+    createTenantKnex.mockResolvedValueOnce({ knex: buildReportKnex({ revenueFacts: canonicalFacts }) });
+    const canonicalOutput = await getContractRevenueReport();
+
+    expect(canonicalOutput).toEqual(legacyOutput);
+    expect(canonicalOutput).toEqual([
+      {
+        contract_name: 'Managed Services',
+        client_name: 'Acme Industries',
+        monthly_recurring: 20000,
+        total_billed_ytd: 12000,
+        status: 'active',
+      },
+    ]);
   });
 });

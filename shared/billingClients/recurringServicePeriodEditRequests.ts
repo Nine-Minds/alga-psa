@@ -15,6 +15,11 @@ export interface ApplyRecurringServicePeriodEditRequestInput {
   request: IRecurringServicePeriodEditRequest;
   context: IRecurringServicePeriodEditRequestContext;
   siblingRecords?: IRecurringServicePeriodRecord[];
+  recordIdFactory?: (input: {
+    scheduleKey: string;
+    periodKey: string;
+    revision: number;
+  }) => string;
 }
 
 function failureResponse(input: {
@@ -199,6 +204,7 @@ export function applyRecurringServicePeriodEditRequest(
           sourceRuleVersion: input.context.sourceRuleVersion,
           sourceRunKey: input.context.sourceRunKey ?? null,
           siblingRecords: input.siblingRecords,
+          recordIdFactory: input.recordIdFactory,
           updatedServicePeriod: input.request.updatedServicePeriod,
           updatedInvoiceWindow: input.request.updatedInvoiceWindow,
           updatedActivityWindow: input.request.updatedActivityWindow,
@@ -219,6 +225,7 @@ export function applyRecurringServicePeriodEditRequest(
           sourceRuleVersion: input.context.sourceRuleVersion,
           sourceRunKey: input.context.sourceRunKey ?? null,
           siblingRecords: input.siblingRecords,
+          recordIdFactory: input.recordIdFactory,
           deferredInvoiceWindow: input.request.operation === 'defer'
             ? input.request.deferredInvoiceWindow
             : undefined,

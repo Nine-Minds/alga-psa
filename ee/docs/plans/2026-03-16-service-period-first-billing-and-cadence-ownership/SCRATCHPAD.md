@@ -41,6 +41,29 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) DB-backed persisted-ledger inspection/edit/runtime coverage now closes `T301`, `T320`, `T321`, `T322`, and `T328`, and exposed a real zero-dollar suppression bug on the live invoice path:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now proves billing staff can list future client-cadence persisted periods, edit a future row with explicit edited provenance, move due selection to a new invoice window without rewriting billed history, and skip the current due row while later persisted work remains selectable
+  - the integration fixtures had to align with two live contracts the earlier domain tests did not exercise directly:
+    - DB-backed `recurring_service_periods` date columns hydrate as `Date` objects, so the integration loader now normalizes service/invoice/activity ranges back to plain `YYYY-MM-DD` strings before feeding listing/edit/due-selection helpers
+    - live runtime selection keys persisted recurring obligations by the effective `contract_line_id` value exposed as `client_contract_line_id` in `BillingEngine`, so the runtime-facing DB tests now materialize obligation ids against `fixedLine.contractLineId` instead of the helper’s separate client-line alias
+  - `shared/billingClients/recurringServicePeriodEditRequests.ts` now accepts an optional `recordIdFactory`, which closes the remaining wrapper seam between the domain-level edit contract and the physical `recurring_service_periods.record_id uuid` schema
+  - `packages/billing/src/actions/invoiceGeneration.ts` now honors the real `suppress_zero_dollar_invoices` boolean instead of checking for an impossible `zero_dollar_invoice_handling === 'suppress'` enum value; `server/src/test/unit/billing/invoiceGeneration.emptyResult.test.ts` now locks the real schema contract instead of the impossible enum
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/unit/billing/invoiceGeneration.emptyResult.test.ts src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts src/test/integration/billingInvoiceTiming.integration.test.ts -t "T320|T301|T321|T322|T328|T295" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) DB-backed contract-cadence execution now explicitly covers both monthly and annual selector-window hydration, which closes `T276` and `T277`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now adds a dedicated monthly `T276` case that goes beyond the earlier selector-input sanity check: an 8th-anchored contract-cadence line now proves one contract-owned execution window yields one persisted invoice window and rereads through `Invoice.getFullInvoiceById(...)` with canonical recurring detail hydration intact
+  - the same integration file now adds `T277` for annual contract cadence, proving the same selector-input execution identity and detail-backed invoice hydration work when the contract-owned window spans `2025-03-08` through `2026-03-08` instead of a monthly boundary
+  - while landing those tests, the only correction needed was in the assertions, not runtime code: `Invoice.getFullInvoiceById(...)` does not expose invoice-header billing-window fields directly, so the test now checks header persistence via the existing DB reader and reserves the hydrated invoice view assertions for canonical recurring detail projection
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T276|T277" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) Report-output parity now explicitly covers the client-cadence no-drift case, which closes `T269`:
+  - `server/src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts` now runs `getContractRevenueReport()` against two equivalent client-cadence revenue fact shapes: one legacy invoice-date-only row and one canonical detail-backed row with the same within-year commercial outcome
+  - the new `T269` assertion matters because the existing report tests mostly covered intended semantic pivots at year boundaries; this one locks the parity requirement that detail-aware readers must not change report output when invoice-date fallback and canonical service-period interpretation are equivalent for the same client-cadence billing result
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts --coverage.enabled false`
+
 - (2026-03-18) Explicit edit-request save/validation responses now cover the missing persisted-period edit wrapper seam, which close `T295` and `T296`:
   - `server/src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts` now exercises `applyRecurringServicePeriodEditRequest(...)` directly instead of only the lower-level edit helpers, which is the first test seam that looks like the later UI/API edit surface in `F251`
   - the new `T295` case proves a boundary-adjustment request can succeed with an explicit edited revision and can also fail with structured `continuity_overlap_before` validation output when sibling context would make the edit invalid
@@ -1210,6 +1233,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts` now locks both sides of the audit: company sync + mapping stay free of header-period assumptions, and export validation continues to preserve canonical service-period context without falling back to invoice-header billing dates
 
 ## Commands / Runbooks
+
+- (2026-03-18) DB-backed contract-cadence monthly and annual validation:
+  - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T276|T277" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) Report-output client-cadence parity validation:
+  - `cd server && npx vitest run src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts --coverage.enabled false`
 
 - (2026-03-18) Persisted service-period parity comparison validation:
   - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodParity.domain.test.ts src/test/unit/billing/materializeClientCadenceServicePeriods.domain.test.ts src/test/unit/billing/materializeContractCadenceServicePeriods.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`

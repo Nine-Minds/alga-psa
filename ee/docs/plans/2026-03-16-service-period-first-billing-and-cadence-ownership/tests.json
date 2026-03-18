@@ -2341,7 +2341,7 @@
   {
     "id": "T269",
     "description": "Client-cadence parity validation still holds at the report-output level after detail-period-aware readers land",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112",
       "F191",
@@ -2405,7 +2405,7 @@
   {
     "id": "T276",
     "description": "DB-backed sanity: a monthly contract-cadence recurring line starting on the 8th completes scheduling, grouping, invoice generation, and hydration correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F151",
       "F156",
@@ -2416,7 +2416,7 @@
   {
     "id": "T277",
     "description": "DB-backed sanity: an annual contract-cadence recurring line completes scheduling, grouping, invoice generation, and hydration correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F151",
       "F156",
@@ -2681,7 +2681,7 @@
   {
     "id": "T301",
     "description": "Billing staff can edit future persisted service periods through documented APIs and UI flows with provenance preserved",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F251",
       "F252"
@@ -2836,7 +2836,7 @@
   {
     "id": "T320",
     "description": "DB-backed sanity: a user can inspect future persisted service periods for a client-cadence monthly recurring line before invoice generation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F236",
       "F250",
@@ -2846,7 +2846,7 @@
   {
     "id": "T321",
     "description": "DB-backed sanity: editing a future client-cadence service-period boundary affects due selection without rewriting billed history",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F245",
       "F242",
@@ -2856,7 +2856,7 @@
   {
     "id": "T322",
     "description": "DB-backed sanity: skipping a future service period prevents invoice generation for that period while preserving later continuity",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F246",
       "F242"
@@ -2913,7 +2913,7 @@
   {
     "id": "T328",
     "description": "DB-backed sanity: runtime no longer needs to derive live recurring periods on demand once persisted service-period selection is active",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F242",
       "F256"

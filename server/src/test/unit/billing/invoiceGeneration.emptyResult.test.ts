@@ -52,7 +52,8 @@ const mocks = vi.hoisted(() => {
       {
         client_id: 'client-1',
         tenant: 'tenant-1',
-        zero_dollar_invoice_handling: 'suppress',
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: true,
       },
     ],
     default_billing_settings: [],

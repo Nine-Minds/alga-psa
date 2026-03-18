@@ -1071,7 +1071,7 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   // zero-dollar invoices with real persisted billing content must be created so
   // canonical recurring detail rows and other financial artifacts are not lost.
   if (zeroDollarInvoice) {
-    if (settings.zero_dollar_invoice_handling === 'suppress' && !zeroDollarHasPersistableContent) {
+    if (settings.suppress_zero_dollar_invoices && !zeroDollarHasPersistableContent) {
       return null;
     }
 

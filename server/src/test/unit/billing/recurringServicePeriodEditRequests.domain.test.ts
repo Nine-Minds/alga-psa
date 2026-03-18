@@ -43,6 +43,7 @@ describe('recurring service period edit requests', () => {
         sourceRuleVersion: 'contract-line-1:v2',
         sourceRunKey: 'edit-request-success',
       },
+      recordIdFactory: () => 'rsp_edit_request_v2',
     });
 
     expect(success).toMatchObject({
@@ -62,6 +63,9 @@ describe('recurring service period edit requests', () => {
       },
       validationIssues: [],
     });
+    if (success.ok) {
+      expect(success.editedRecord.recordId).toBe('rsp_edit_request_v2');
+    }
 
     const invalid = applyRecurringServicePeriodEditRequest({
       record,
