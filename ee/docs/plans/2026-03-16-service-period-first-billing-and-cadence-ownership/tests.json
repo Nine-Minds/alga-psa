@@ -827,7 +827,7 @@
   {
     "id": "T100",
     "description": "Recurring timing changes do not break credit or prepayment integration tests that previously depended on client billing cycles alone",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077",
       "F078",
@@ -1095,7 +1095,7 @@
   {
     "id": "T127",
     "description": "Accounting export repository outputs stable service-period fields after cutover",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099",
       "F127"
@@ -1104,7 +1104,7 @@
   {
     "id": "T128",
     "description": "QuickBooks export adapters still map the intended recurring service date semantics after cutover",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099"
     ]
@@ -1112,7 +1112,7 @@
   {
     "id": "T129",
     "description": "Xero and CSV export adapters still map the intended recurring service date semantics after cutover",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099"
     ]
@@ -1208,7 +1208,7 @@
   {
     "id": "T139",
     "description": "Contract-cadence recurring product and license lines inherit the same contract-anniversary service-period model",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101",
       "F102",

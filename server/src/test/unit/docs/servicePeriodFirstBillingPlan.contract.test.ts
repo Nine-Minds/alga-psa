@@ -39,7 +39,13 @@ const recurringServicePeriodParityComparison = read('RECURRING_SERVICE_PERIOD_PA
 const recurringServicePeriodProvenance = read('RECURRING_SERVICE_PERIOD_PROVENANCE.md');
 const recurringServicePeriodRegeneration = read('RECURRING_SERVICE_PERIOD_REGENERATION.md');
 const recurringServicePeriodAdministrativeRepair = read('RECURRING_SERVICE_PERIOD_ADMIN_REPAIR.md');
+const recurringServicePeriodChargeFamilies = read('RECURRING_SERVICE_PERIOD_CHARGE_FAMILIES.md');
 const recurringServicePeriodCoexistence = read('RECURRING_SERVICE_PERIOD_COEXISTENCE.md');
+const recurringServicePeriodBucketSemantics = read('RECURRING_SERVICE_PERIOD_BUCKET_SEMANTICS.md');
+const recurringServicePeriodPostMaterializationLifecycle = read('RECURRING_SERVICE_PERIOD_POST_MATERIALIZATION_LIFECYCLE.md');
+const recurringServicePeriodAuthoringPredictability = read('RECURRING_SERVICE_PERIOD_AUTHORING_PREDICTABILITY.md');
+const recurringServicePeriodEditGrouping = read('RECURRING_SERVICE_PERIOD_EDIT_GROUPING.md');
+const recurringServicePeriodExplanations = read('RECURRING_SERVICE_PERIOD_EXPLANATIONS.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
 const recurrenceStorageMatrix = read('RECURRENCE_STORAGE_MATRIX.md');
 const runbook = read('RUNBOOK.md');
@@ -408,6 +414,42 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodCoexistence).toContain('## Migration And Regeneration Rule');
     expect(recurringServicePeriodCoexistence).toContain('backfill/materialization starts from the future billed-history boundary');
     expect(recurringServicePeriodCoexistence).toContain('historical invoice reads stay on the earlier dual-shape compatibility contract');
+  });
+
+  it('T311: bucket and allowance semantics remain tied to the active persisted period when future rows are edited or skipped', () => {
+    expect(recurringServicePeriodBucketSemantics).toContain('# Recurring Service-Period Bucket Semantics');
+    expect(recurringServicePeriodBucketSemantics).toContain('included allowance belongs to the active service period boundary');
+    expect(recurringServicePeriodBucketSemantics).toContain('skip removes that future allowance period from ordinary due selection');
+    expect(recurringServicePeriodBucketSemantics).toContain('defer moves the due invoice window for the edited period');
+    expect(recurringServicePeriodBucketSemantics).toContain('edited bucket periods remain preserved');
+  });
+
+  it('T312: billed-through, renewal, and replacement logic stay anchored to canonical linked periods after materialization', () => {
+    expect(recurringServicePeriodPostMaterializationLifecycle).toContain('# Recurring Service-Period Post-Materialization Lifecycle');
+    expect(recurringServicePeriodPostMaterializationLifecycle).toContain('linked billed periods advance billed-through boundaries');
+    expect(recurringServicePeriodPostMaterializationLifecycle).toContain('future persisted periods that may still be regenerated, superseded, or explicitly edited');
+    expect(recurringServicePeriodPostMaterializationLifecycle).toContain('billed linked periods remain historical truth');
+  });
+
+  it('T313: templates, presets, and new recurring lines keep predictable schedules after creation even when live future periods are edited later', () => {
+    expect(recurringServicePeriodAuthoringPredictability).toContain('# Recurring Service-Period Authoring Predictability');
+    expect(recurringServicePeriodAuthoringPredictability).toContain('future persisted service-period edits belong to that live line');
+    expect(recurringServicePeriodAuthoringPredictability).toContain('template or preset changes do not retroactively rewrite those future edits');
+    expect(recurringServicePeriodAuthoringPredictability).toContain('new lines created from the same preset or template get a fresh generated schedule');
+  });
+
+  it('T314: moving a future edited period across invoice windows changes due selection and grouping according to the edited active row', () => {
+    expect(recurringServicePeriodEditGrouping).toContain('# Recurring Service-Period Edit Grouping');
+    expect(recurringServicePeriodEditGrouping).toContain('Due selection uses the active persisted row’s `invoiceWindow`, not the source rule’s old window.');
+    expect(recurringServicePeriodEditGrouping).toContain('an edited row leaving its original invoice window is no longer selected there');
+    expect(recurringServicePeriodEditGrouping).toContain('grouping starts from the edited invoice-window identity');
+  });
+
+  it('T315: client-facing explanations and support tooling keep persisted service-period edits and provenance explainable', () => {
+    expect(recurringServicePeriodExplanations).toContain('# Recurring Service-Period Explanations');
+    expect(recurringServicePeriodExplanations).toContain('lifecycle state');
+    expect(recurringServicePeriodExplanations).toContain('provenance kind and reason code');
+    expect(recurringServicePeriodExplanations).toContain('whether the final billed timing reflects an edited or deferred period');
   });
 
   it('T349: edit transport surfaces define request, provenance, and structured validation feedback before dashboard editing lands', () => {

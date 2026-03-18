@@ -2342,7 +2342,7 @@
   {
     "id": "F261",
     "description": "Define how recurring product, license, and fixed charge families each map onto persisted service-period records without diverging lifecycle semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Runtime engine requirements"
@@ -2351,7 +2351,7 @@
   {
     "id": "F262",
     "description": "Define how bucket or allowance semantics interact with persisted service periods when users edit or skip future periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Dependent recurring behavior requirements"
@@ -2360,7 +2360,7 @@
   {
     "id": "F263",
     "description": "Define how materialized service periods affect billed-through, renewal, and replacement logic once due work no longer needs to be derived on demand",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Read-model and post-persist lifecycle requirements"
@@ -2369,7 +2369,7 @@
   {
     "id": "F264",
     "description": "Define how service-period editing interacts with contract templates, presets, and new recurring-line authoring so generated schedules remain predictable after creation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Authoring-path and storage-reconciliation requirements"
@@ -2378,7 +2378,7 @@
   {
     "id": "F265",
     "description": "Define how invoice grouping and due selection respond when users edit future service periods in ways that move work across invoice windows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Invoice and billing-flow requirements"
@@ -2387,7 +2387,7 @@
   {
     "id": "F266",
     "description": "Define how persisted service-period edits are surfaced in client-facing explanations, invoice detail provenance, and support tooling",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "UI and downstream-consumer requirements"
