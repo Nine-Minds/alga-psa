@@ -303,10 +303,104 @@ const updateInvoiceTemplateSchema = createUpdateSchema(createInvoiceTemplateSche
 // Invoice Operation Schemas
 // ============================================================================
 
-// Generate invoice schema
-const generateInvoiceSchema = z.object({
-  billing_cycle_id: uuidSchema
+const recurringExecutionWindowKindSchema = z.enum([
+  'billing_cycle_window',
+  'contract_cadence_window',
+]);
+
+const recurringCadenceOwnerSchema = z.enum(['client', 'contract']);
+
+const recurringExecutionWindowIdentitySchema = z.object({
+  kind: recurringExecutionWindowKindSchema,
+  identityKey: z.string().min(1),
+  cadenceOwner: recurringCadenceOwnerSchema,
+  clientId: uuidSchema.optional(),
+  billingCycleId: uuidSchema.nullable().optional(),
+  contractId: uuidSchema.nullable().optional(),
+  contractLineId: uuidSchema.nullable().optional(),
+  windowStart: isoDateSchema.nullable().optional(),
+  windowEnd: isoDateSchema.nullable().optional(),
 });
+
+const recurringDueSelectionInputSchema = z.object({
+  clientId: uuidSchema,
+  windowStart: isoDateSchema,
+  windowEnd: isoDateSchema,
+  billingCycleId: uuidSchema.nullable().optional(),
+  executionWindow: recurringExecutionWindowIdentitySchema,
+}).superRefine((value, ctx) => {
+  if (value.executionWindow.clientId && value.executionWindow.clientId !== value.clientId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'selector_input.executionWindow.clientId must match selector_input.clientId.',
+      path: ['executionWindow', 'clientId'],
+    });
+  }
+
+  if (value.executionWindow.windowStart && value.executionWindow.windowStart !== value.windowStart) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'selector_input.executionWindow.windowStart must match selector_input.windowStart.',
+      path: ['executionWindow', 'windowStart'],
+    });
+  }
+
+  if (value.executionWindow.windowEnd && value.executionWindow.windowEnd !== value.windowEnd) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'selector_input.executionWindow.windowEnd must match selector_input.windowEnd.',
+      path: ['executionWindow', 'windowEnd'],
+    });
+  }
+
+  if (value.executionWindow.kind === 'billing_cycle_window') {
+    if (!value.billingCycleId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'selector_input.billingCycleId is required for billing_cycle_window requests.',
+        path: ['billingCycleId'],
+      });
+    }
+
+    if (!value.executionWindow.billingCycleId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'selector_input.executionWindow.billingCycleId is required for billing_cycle_window requests.',
+        path: ['executionWindow', 'billingCycleId'],
+      });
+    }
+  }
+
+  if (
+    value.billingCycleId &&
+    value.executionWindow.billingCycleId &&
+    value.executionWindow.billingCycleId !== value.billingCycleId
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'selector_input.executionWindow.billingCycleId must match selector_input.billingCycleId.',
+      path: ['executionWindow', 'billingCycleId'],
+    });
+  }
+});
+
+const recurringInvoiceSelectionRequestSchema = z.object({
+  billing_cycle_id: uuidSchema.optional(),
+  selector_input: recurringDueSelectionInputSchema.optional(),
+}).superRefine((value, ctx) => {
+  const selectionCount = Number(Boolean(value.billing_cycle_id)) + Number(Boolean(value.selector_input));
+
+  if (selectionCount !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Provide exactly one of billing_cycle_id or selector_input.',
+      path: ['billing_cycle_id'],
+    });
+  }
+});
+
+// Generate invoice schema
+const generateInvoiceSchema = recurringInvoiceSelectionRequestSchema;
 
 // Generate invoice number schema
 const generateInvoiceNumberSchema = z.object({});
@@ -537,9 +631,7 @@ const updateRecurringInvoiceTemplateSchema = createUpdateSchema(createRecurringI
 // ============================================================================
 
 // Invoice preview request
-const invoicePreviewRequestSchema = z.object({
-  billing_cycle_id: uuidSchema
-});
+const invoicePreviewRequestSchema = recurringInvoiceSelectionRequestSchema;
 
 // Invoice preview response
 const invoicePreviewResponseSchema = z.union([

@@ -27,7 +27,13 @@ import {
 import { buildPaymentAppliedPayload, buildPaymentRecordedPayload, buildPaymentRefundedPayload } from './paymentWorkflowEvents';
 
 // Import existing service functions
-import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
+import {
+  generateInvoice,
+  generateInvoiceForSelectionInput,
+  generateInvoiceNumber,
+  previewInvoice,
+  previewInvoiceForSelectionInput,
+} from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
@@ -40,6 +46,7 @@ import {
   CreateInvoice,
   UpdateInvoice,
   ManualInvoiceRequest,
+  GenerateInvoice,
   FinalizeInvoice,
   SendInvoice,
   ApplyCredit,
@@ -56,7 +63,6 @@ import {
   CreateRecurringInvoiceTemplate,
   UpdateRecurringInvoiceTemplate,
   InvoicePreviewRequest,
-  InvoicePreviewResponse
 } from '../schemas/invoiceSchemas';
 
 import {
@@ -1595,8 +1601,18 @@ export class InvoiceService extends BaseService<IInvoice> {
   // Missing Methods - Stub Implementations  
   // ============================================================================
 
-  async generateFromBillingCycle(data: any, context: InvoiceServiceContext): Promise<IInvoice> {
-    throw new Error('generateFromBillingCycle not yet implemented');
+  async generateFromBillingCycle(data: GenerateInvoice, context: InvoiceServiceContext): Promise<IInvoice> {
+    await this.validatePermissions(context, 'invoice', 'create');
+
+    const invoice = data.selector_input
+      ? await generateInvoiceForSelectionInput(data.selector_input)
+      : await generateInvoice(data.billing_cycle_id!);
+
+    if (!invoice) {
+      throw new Error('Failed to generate invoice');
+    }
+
+    return invoice as unknown as IInvoice;
   }
 
   async generateManualInvoice(data: ManualInvoiceRequest, context: InvoiceServiceContext): Promise<IInvoice> {
@@ -1757,101 +1773,14 @@ export class InvoiceService extends BaseService<IInvoice> {
   /**
    * Generate invoice preview
    */
-  async generatePreview(data: InvoicePreviewRequest, context: ServiceContext): Promise<InvoicePreviewResponse> {
+  async generatePreview(data: InvoicePreviewRequest, context: ServiceContext): Promise<PreviewInvoiceResponse> {
     await this.validatePermissions(context, 'invoice', 'preview');
 
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      // Get billing cycle details
-      const billingCycle = await trx('client_billing_cycles')
-        .where({ cycle_id: data.billing_cycle_id, tenant: context.tenant })
-        .first();
+    if (data.selector_input) {
+      return previewInvoiceForSelectionInput(data.selector_input);
+    }
 
-      if (!billingCycle) {
-        return {
-          success: false,
-          error: 'Billing cycle not found'
-        };
-      }
-
-      // Get client details with location
-      const client = await trx('clients as c')
-        .leftJoin('client_locations as cl', function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
-        })
-        .select(
-          'c.*',
-          'cl.address_line1 as location_address'
-        )
-        .where({ 'c.client_id': billingCycle.client_id, 'c.tenant': context.tenant })
-        .first();
-
-      if (!client) {
-        return {
-          success: false,
-          error: 'Client not found'
-        };
-      }
-
-      // Get tenant client details with location
-      const tenantClient = await trx('clients as c')
-        .leftJoin('client_locations as cl', function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
-        })
-        .select(
-          'c.*',
-          'cl.address_line1 as location_address'
-        )
-        .where({ 'c.tenant': context.tenant, 'c.is_tenant_client': true })
-        .first();
-
-      // Generate preview data
-      const invoiceNumber = 'PREVIEW-' + Date.now();
-      const issueDate = new Date().toISOString().split('T')[0];
-      const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-      // Mock line items - would be calculated from billing cycle
-      const items = [
-        {
-          id: '1',
-          description: 'Service Fee',
-          quantity: 1,
-          unitPrice: 100,
-          total: 100
-        }
-      ];
-
-      const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-      const tax = Math.round(subtotal * 0.08);
-      const total = subtotal + tax;
-
-      return {
-        success: true,
-        data: {
-          invoiceNumber,
-          issueDate,
-          dueDate,
-          customer: {
-            name: client.client_name,
-            address: client.location_address || ''
-          },
-          tenantClient: tenantClient ? {
-            name: tenantClient.client_name,
-            address: tenantClient.location_address || '',
-            logoUrl: tenantClient.logo_url || null
-          } : null,
-          items,
-          subtotal,
-          tax,
-          total
-        }
-      };
-    });
+    return previewInvoice(data.billing_cycle_id!);
   }
 
   // ============================================================================
@@ -2125,7 +2054,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     return this.getStatistics(context, dateRange) as Promise<InvoiceAnalytics>;
   }
 
-  async previewInvoice(request: InvoicePreviewRequest, context: InvoiceServiceContext): Promise<InvoicePreviewResponse> {
+  async previewInvoice(request: InvoicePreviewRequest, context: InvoiceServiceContext): Promise<PreviewInvoiceResponse> {
     return this.generatePreview(request, context);
   }
 

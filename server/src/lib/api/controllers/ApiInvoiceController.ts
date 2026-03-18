@@ -178,7 +178,7 @@ export class ApiInvoiceController extends ApiBaseController {
   }
 
   /**
-   * Generate invoice from billing cycle
+   * Generate invoice from a recurring selector input or compatibility billing cycle
    */
   generateFromBillingCycle() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -195,10 +195,7 @@ export class ApiInvoiceController extends ApiBaseController {
           const body = await req.json();
           const data = generateInvoiceSchema.parse(body);
           
-          const invoice = await this.invoiceService.generateFromBillingCycle(
-            data.billing_cycle_id, 
-            apiRequest.context
-          );
+          const invoice = await this.invoiceService.generateFromBillingCycle(data, apiRequest.context);
           
           return createSuccessResponse(invoice, 201);
         });
