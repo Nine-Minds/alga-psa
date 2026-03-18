@@ -5,19 +5,19 @@ import type { RootStackParamList } from "../navigation/types";
 import { useTheme } from "../ui/ThemeContext";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
-import { createApiClient } from "../api";
+import { createApiClient, type ApiClient } from "../api";
 import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, toggleCommentReaction, updateTicketAssignment, updateTicketAttributes, updateTicketPriority, updateTicketStatus, type AggregatedReaction, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
 import React, { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { getCachedTicketDetail, invalidateTicketsListCache, setCachedTicketDetail } from "../cache/ticketsCache";
-import { getCachedTicketStatuses, setCachedTicketStatuses } from "../cache/referenceDataCache";
+import { getCachedTicketStatuses, setCachedTicketStatuses, getCachedTicketPriorities, setCachedTicketPriorities } from "../cache/referenceDataCache";
 import { Avatar } from "../ui/components/Avatar";
 import { Badge } from "../ui/components/Badge";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { getSecureJson, secureStorage, setSecureJson } from "../storage/secureStorage";
 import { getClientMetadataHeaders } from "../device/clientMetadata";
-import { createTimeEntry } from "../api/timeEntries";
+import { createTimeEntry, getServices, type ServiceOption } from "../api/timeEntries";
 import { formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { buildTicketWebUrl } from "../urls/hostedUrls";
 import { copyToClipboard } from "../clipboard/clipboard";
@@ -40,7 +40,7 @@ import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
 const MAX_COMMENT_LENGTH = 5000;
-const QA_LINK_URL = "https://example.com/mobile-rich-text-smoke";
+const QA_LINK_URL = __DEV__ ? "https://example.com/mobile-rich-text-smoke" : "";
 const QA_DESCRIPTION_JSON = {
   type: "doc",
   content: [
@@ -198,8 +198,10 @@ export function TicketDetailBody({
   const [watchUpdating, setWatchUpdating] = useState(false);
   const [watchError, setWatchError] = useState<string | null>(null);
   const [timeEntryOpen, setTimeEntryOpen] = useState(false);
-  const [timeEntryDurationMin, setTimeEntryDurationMin] = useState("15");
+  const [timeEntryStartTime, setTimeEntryStartTime] = useState("");
+  const [timeEntryEndTime, setTimeEntryEndTime] = useState("");
   const [timeEntryNotes, setTimeEntryNotes] = useState("");
+  const [timeEntryServiceId, setTimeEntryServiceId] = useState<string | null>(null);
   const [timeEntryUpdating, setTimeEntryUpdating] = useState(false);
   const [timeEntryError, setTimeEntryError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -381,7 +383,7 @@ export function TicketDetailBody({
         if (nextPlainText) {
           nextAttributes.description = serializedDescription;
         } else {
-          delete (nextAttributes as any).description;
+          delete nextAttributes.description;
         }
 
         const auditHeaders = await getClientMetadataHeaders();
@@ -516,7 +518,7 @@ export function TicketDetailBody({
             return {
               ...c,
               ...result.data.data,
-              created_by_name: (result.data.data as any).created_by_name ?? c.created_by_name,
+              created_by_name: result.data.data.created_by_name ?? c.created_by_name,
               comment_text: result.data.data.comment_text ?? c.comment_text,
               optimistic: false,
             };
@@ -626,8 +628,8 @@ export function TicketDetailBody({
             extractDescription(ticket) && isMalformedRichEditorContent(extractDescription(ticket) ?? ""),
           );
           const hasMalformedComment = comments.some((comment) => {
-            const kind = (comment as any).kind as TicketComment["kind"] | undefined;
-            const eventType = (comment as any).event_type as TicketComment["event_type"] | undefined;
+            const kind = comment.kind;
+            const eventType = comment.event_type;
             if (kind === "event" || typeof eventType === "string") return false;
             return isMalformedRichEditorContent(comment.comment_text);
           });
@@ -745,7 +747,7 @@ export function TicketDetailBody({
 
   const meUserId = session.user?.id;
   const isWatching = meUserId ? getWatcherUserIds(ticket).includes(meUserId) : false;
-  const assignedToId = (ticket as any).assigned_to as string | null | undefined;
+  const assignedToId = ticket.assigned_to;
   const isAssignedToMe = Boolean(meUserId && assignedToId && assignedToId === meUserId);
 
   const submitStatus = async (statusId: string) => {
@@ -766,6 +768,7 @@ export function TicketDetailBody({
       if (!res.ok) {
         if (res.error.kind === "http" && res.status === 409) {
           setPendingStatusId(null);
+          setStatusPickerOpen(false);
           setStatusUpdateError(t("detail.errors.statusConflict"));
           showToast({ message: t("detail.errors.statusConflictTitle"), tone: "info" });
           Alert.alert(
@@ -906,9 +909,9 @@ export function TicketDetailBody({
       const next: Record<string, unknown> = { ...base };
 
       if (nextIso === null) {
-        delete (next as any).due_date;
+        delete next.due_date;
       } else {
-        (next as any).due_date = nextIso;
+        next.due_date = nextIso;
       }
 
       const attributesToSend = Object.keys(next).length === 0 ? null : next;
@@ -980,9 +983,9 @@ export function TicketDetailBody({
 
       const nextAttrs: Record<string, unknown> = { ...base };
       if (nextIds.length > 0) {
-        (nextAttrs as any).watcher_user_ids = nextIds;
+        nextAttrs.watcher_user_ids = nextIds;
       } else {
-        delete (nextAttrs as any).watcher_user_ids;
+        delete nextAttrs.watcher_user_ids;
       }
 
       const auditHeaders = await getClientMetadataHeaders();
@@ -1016,8 +1019,17 @@ export function TicketDetailBody({
 
   const openTimeEntryModal = () => {
     setTimeEntryError(null);
-    setTimeEntryDurationMin("15");
+    const now = new Date();
+    const fifteenAgo = new Date(now.getTime() - 15 * 60_000);
+    const fmt = (d: Date) => {
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      return `${hh}:${mm}`;
+    };
+    setTimeEntryStartTime(fmt(fifteenAgo));
+    setTimeEntryEndTime(fmt(now));
     setTimeEntryNotes("");
+    setTimeEntryServiceId(null);
     setTimeEntryOpen(true);
   };
 
@@ -1025,23 +1037,41 @@ export function TicketDetailBody({
     if (!client || !session) return;
     if (timeEntryUpdating) return;
 
-    const duration = Number(timeEntryDurationMin.trim());
-    if (!Number.isFinite(duration) || duration <= 0) {
-      setTimeEntryError(t("timeEntry.errors.invalidDuration"));
+    if (!timeEntryServiceId) {
+      setTimeEntryError(t("timeEntry.errors.noService"));
       return;
     }
+
+    const parseTime = (hhmm: string): Date | null => {
+      const match = hhmm.trim().match(/^(\d{1,2}):(\d{2})$/);
+      if (!match) return null;
+      const d = new Date();
+      d.setHours(Number(match[1]), Number(match[2]), 0, 0);
+      return d;
+    };
+
+    const start = parseTime(timeEntryStartTime);
+    const end = parseTime(timeEntryEndTime);
+    if (!start || !end) {
+      setTimeEntryError(t("timeEntry.errors.invalidTime"));
+      return;
+    }
+    if (end <= start) {
+      setTimeEntryError(t("timeEntry.errors.endBeforeStart"));
+      return;
+    }
+
+    const durationMin = Math.round((end.getTime() - start.getTime()) / 60_000);
 
     setTimeEntryError(null);
     setTimeEntryUpdating(true);
     try {
-      const end = new Date();
-      const start = new Date(end.getTime() - Math.round(duration) * 60_000);
-
       const auditHeaders = await getClientMetadataHeaders();
       const res = await createTimeEntry(client, {
         apiKey: session.accessToken,
         work_item_type: "ticket",
         work_item_id: ticketId,
+        service_id: timeEntryServiceId,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         notes: timeEntryNotes.trim() || undefined,
@@ -1064,7 +1094,7 @@ export function TicketDetailBody({
       }
 
       setTimeEntryOpen(false);
-      Alert.alert(t("timeEntry.created"), t("timeEntry.createdMessage", { minutes: Math.round(duration) }));
+      showToast(t("timeEntry.createdMessage", { minutes: durationMin }));
     } finally {
       setTimeEntryUpdating(false);
     }
@@ -1143,7 +1173,7 @@ export function TicketDetailBody({
           {ticket.priority_name ? <Badge label={ticket.priority_name} tone="warning" /> : null}
         </View>
 
-        <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
 	          <ActionChip
 	            label={t("detail.changeStatus")}
 	            onPress={() => {
@@ -1173,7 +1203,6 @@ export function TicketDetailBody({
 	              })();
 	            }}
 	          />
-          <View style={{ width: spacing.sm }} />
           <ActionChip
             label={t("detail.changePriority")}
             onPress={() => {
@@ -1181,6 +1210,12 @@ export function TicketDetailBody({
                 if (!client || !session) return;
                 setPriorityPickerOpen(true);
                 if (priorityOptions.length > 0) return;
+                const tenantKey = session.tenantId ?? "unknownTenant";
+                const cached = getCachedTicketPriorities(tenantKey);
+                if (Array.isArray(cached) && cached.length > 0) {
+                  setPriorityOptions(cached as TicketPriority[]);
+                  return;
+                }
                 setPriorityOptionsLoading(true);
                 setPriorityOptionsError(null);
                 try {
@@ -1190,13 +1225,13 @@ export function TicketDetailBody({
                     return;
                   }
                   setPriorityOptions(res.data.data);
+                  setCachedTicketPriorities(tenantKey, res.data.data);
                 } finally {
                   setPriorityOptionsLoading(false);
                 }
               })();
             }}
           />
-          <View style={{ width: spacing.sm }} />
           <ActionChip
             label={t("detail.dueDate")}
             onPress={() => {
@@ -1205,7 +1240,6 @@ export function TicketDetailBody({
               setDueDateOpen(true);
             }}
           />
-          <View style={{ width: spacing.sm }} />
           <ActionChip
             label={isWatching ? t("detail.unwatch") : t("detail.watch")}
             loading={watchUpdating}
@@ -1214,14 +1248,12 @@ export function TicketDetailBody({
               void toggleWatch();
             }}
           />
-          <View style={{ width: spacing.sm }} />
           <ActionChip
             label={t("detail.addTime")}
             onPress={() => {
               openTimeEntryModal();
             }}
           />
-          <View style={{ width: spacing.sm }} />
           <ActionChip
             label={
               assignmentUpdating && assignmentAction === "assign"
@@ -1238,7 +1270,6 @@ export function TicketDetailBody({
           />
           {ticket.assigned_to_name ? (
             <>
-              <View style={{ width: spacing.sm }} />
               <ActionChip
                 label={assignmentUpdating && assignmentAction === "unassign" ? t("detail.unassigning") : t("detail.unassign")}
                 loading={assignmentUpdating && assignmentAction === "unassign"}
@@ -1358,10 +1389,16 @@ export function TicketDetailBody({
 
       <TimeEntryModal
         visible={timeEntryOpen}
-        durationMin={timeEntryDurationMin}
-        onChangeDurationMin={setTimeEntryDurationMin}
+        startTime={timeEntryStartTime}
+        onChangeStartTime={setTimeEntryStartTime}
+        endTime={timeEntryEndTime}
+        onChangeEndTime={setTimeEntryEndTime}
         notes={timeEntryNotes}
         onChangeNotes={setTimeEntryNotes}
+        serviceId={timeEntryServiceId}
+        onChangeServiceId={setTimeEntryServiceId}
+        client={client}
+        apiKey={session?.accessToken ?? null}
         updating={timeEntryUpdating}
         error={timeEntryError}
         onClose={() => setTimeEntryOpen(false)}
@@ -1373,7 +1410,7 @@ export function TicketDetailBody({
         loading={priorityOptionsLoading}
         error={priorityOptionsError}
         priorities={priorityOptions}
-        currentPriorityId={(ticket as any).priority_id ?? null}
+        currentPriorityId={ticket.priority_id ?? null}
         updating={priorityUpdating}
         updateError={priorityUpdateError}
         onSelect={(id) => void submitPriority(id)}
@@ -1525,22 +1562,149 @@ function DueDateModal({
   );
 }
 
+function parseHHMM(hhmm: string): { hours: number; minutes: number } | null {
+  const match = hhmm.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return { hours, minutes };
+}
+
+function toMinutesOfDay(hhmm: string): number | null {
+  const parsed = parseHHMM(hhmm);
+  return parsed ? parsed.hours * 60 + parsed.minutes : null;
+}
+
+function minutesToHHMM(totalMin: number): string {
+  const h = Math.floor(totalMin / 60) % 24;
+  const m = totalMin % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function TimeFields({
+  startTime,
+  endTime,
+  onChangeStartTime,
+  onChangeEndTime,
+  updating,
+  colors,
+  spacing,
+  typography,
+  t,
+}: {
+  startTime: string;
+  endTime: string;
+  onChangeStartTime: (v: string) => void;
+  onChangeEndTime: (v: string) => void;
+  updating: boolean;
+  colors: ReturnType<typeof useTheme>["colors"];
+  spacing: ReturnType<typeof useTheme>["spacing"];
+  typography: ReturnType<typeof useTheme>["typography"];
+  t: (key: string) => string;
+}) {
+  const startMin = toMinutesOfDay(startTime);
+  const endMin = toMinutesOfDay(endTime);
+  const durationMin = startMin !== null && endMin !== null && endMin > startMin
+    ? endMin - startMin
+    : null;
+  const durationStr = durationMin !== null ? String(durationMin) : "";
+
+  const handleDurationChange = (text: string) => {
+    const dur = Number(text);
+    if (!Number.isFinite(dur) || dur <= 0 || startMin === null) return;
+    onChangeEndTime(minutesToHHMM(startMin + dur));
+  };
+
+  const inputStyle = {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    color: colors.text,
+  };
+
+  return (
+    <View style={{ marginTop: spacing.lg }}>
+      <View style={{ flexDirection: "row", gap: spacing.md }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+            {t("timeEntry.startTimeLabel")}
+          </Text>
+          <TextInput
+            value={startTime}
+            onChangeText={onChangeStartTime}
+            placeholder="HH:MM"
+            placeholderTextColor={colors.placeholder}
+            keyboardType="numbers-and-punctuation"
+            editable={!updating}
+            style={inputStyle}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+            {t("timeEntry.endTimeLabel")}
+          </Text>
+          <TextInput
+            value={endTime}
+            onChangeText={onChangeEndTime}
+            placeholder="HH:MM"
+            placeholderTextColor={colors.placeholder}
+            keyboardType="numbers-and-punctuation"
+            editable={!updating}
+            style={inputStyle}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+            {t("timeEntry.durationLabel")}
+          </Text>
+          <TextInput
+            value={durationStr}
+            onChangeText={handleDurationChange}
+            placeholder={t("timeEntry.durationPlaceholder")}
+            placeholderTextColor={colors.placeholder}
+            keyboardType="number-pad"
+            editable={!updating}
+            style={inputStyle}
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function TimeEntryModal({
   visible,
-  durationMin,
-  onChangeDurationMin,
+  startTime,
+  onChangeStartTime,
+  endTime,
+  onChangeEndTime,
   notes,
   onChangeNotes,
+  serviceId,
+  onChangeServiceId,
+  client,
+  apiKey,
   updating,
   error,
   onSubmit,
   onClose,
 }: {
   visible: boolean;
-  durationMin: string;
-  onChangeDurationMin: (value: string) => void;
+  startTime: string;
+  onChangeStartTime: (value: string) => void;
+  endTime: string;
+  onChangeEndTime: (value: string) => void;
   notes: string;
   onChangeNotes: (value: string) => void;
+  serviceId: string | null;
+  onChangeServiceId: (value: string | null) => void;
+  client: ApiClient | null;
+  apiKey: string | null;
   updating: boolean;
   error: string | null;
   onSubmit: () => void;
@@ -1548,29 +1712,134 @@ function TimeEntryModal({
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
+  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [servicesError, setServicesError] = useState<string | null>(null);
+  const [servicePickerOpen, setServicePickerOpen] = useState(false);
+  const selectedServiceName = services.find((s) => s.service_id === serviceId)?.service_name ?? null;
+
+  useEffect(() => {
+    if (!visible || !client || !apiKey) return;
+    if (services.length > 0) return;
+    let canceled = false;
+    const run = async () => {
+      setServicesLoading(true);
+      setServicesError(null);
+      try {
+        const res = await getServices(client, { apiKey });
+        if (canceled) return;
+        if (!res.ok) {
+          setServicesError(t("timeEntry.errors.unableToLoadServices"));
+          return;
+        }
+        setServices(res.data.data);
+      } finally {
+        if (!canceled) setServicesLoading(false);
+      }
+    };
+    void run();
+    return () => { canceled = true; };
+  }, [apiKey, client, services.length, visible]);
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }}>
         <Text style={{ ...typography.title, color: colors.text }}>{t("timeEntry.title")}</Text>
-        <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
-          {t("timeEntry.durationLabel")}
+
+        <Text style={{ ...typography.caption, marginTop: spacing.lg, color: colors.textSecondary }}>
+          {t("timeEntry.serviceLabel")}
         </Text>
-        <TextInput
-          value={durationMin}
-          onChangeText={onChangeDurationMin}
-          keyboardType="number-pad"
-          placeholder={t("timeEntry.durationPlaceholder")}
-          editable={!updating}
-          style={{
-            marginTop: spacing.sm,
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.card,
-            color: colors.text,
-          }}
+        {servicesLoading ? (
+          <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.sm }}>
+            {t("timeEntry.loadingServices")}
+          </Text>
+        ) : servicesError ? (
+          <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+            {servicesError}
+          </Text>
+        ) : services.length > 0 ? (
+          <View style={{ marginTop: spacing.sm }}>
+            <Pressable
+              onPress={() => setServicePickerOpen((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={selectedServiceName ?? t("timeEntry.selectService")}
+              style={({ pressed }) => ({
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                opacity: pressed ? 0.9 : 1,
+              })}
+            >
+              <Text style={{ ...typography.body, color: selectedServiceName ? colors.text : colors.placeholder }}>
+                {selectedServiceName ?? t("timeEntry.selectService")}
+              </Text>
+              <Text style={{ ...typography.body, color: colors.textSecondary }}>
+                {servicePickerOpen ? "▲" : "▼"}
+              </Text>
+            </Pressable>
+            {servicePickerOpen ? (
+              <View style={{
+                marginTop: spacing.xs,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+                overflow: "hidden",
+                maxHeight: 200,
+              }}>
+                <ScrollView nestedScrollEnabled>
+                  {services.map((s, idx) => {
+                    const selected = serviceId === s.service_id;
+                    return (
+                      <Pressable
+                        key={s.service_id}
+                        onPress={() => {
+                          onChangeServiceId(s.service_id);
+                          setServicePickerOpen(false);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={s.service_name}
+                        style={({ pressed }) => ({
+                          paddingHorizontal: spacing.md,
+                          paddingVertical: spacing.sm,
+                          backgroundColor: selected ? colors.primary : "transparent",
+                          borderTopWidth: idx > 0 ? 1 : 0,
+                          borderTopColor: colors.border,
+                          opacity: pressed ? 0.9 : 1,
+                        })}
+                      >
+                        <Text style={{ ...typography.body, color: selected ? colors.textInverse : colors.text }}>
+                          {s.service_name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            ) : null}
+          </View>
+        ) : (
+          <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.sm }}>
+            {t("timeEntry.noServices")}
+          </Text>
+        )}
+
+        <TimeFields
+          startTime={startTime}
+          endTime={endTime}
+          onChangeStartTime={onChangeStartTime}
+          onChangeEndTime={onChangeEndTime}
+          updating={updating}
+          colors={colors}
+          spacing={spacing}
+          typography={typography}
+          t={(key: string) => t(key)}
         />
 
         <Text style={{ ...typography.caption, marginTop: spacing.lg, color: colors.textSecondary }}>
@@ -1581,6 +1850,7 @@ function TimeEntryModal({
           onChangeText={onChangeNotes}
           multiline
           placeholder={t("timeEntry.notesPlaceholder")}
+          placeholderTextColor={colors.placeholder}
           editable={!updating}
           style={{
             marginTop: spacing.sm,
@@ -1592,6 +1862,7 @@ function TimeEntryModal({
             borderColor: colors.border,
             backgroundColor: colors.card,
             color: colors.text,
+            textAlignVertical: "top",
           }}
         />
 
@@ -1610,15 +1881,16 @@ function TimeEntryModal({
           </Text>
         ) : null}
 
-        <View style={{ flex: 1 }} />
-        <PrimaryButton onPress={onSubmit} disabled={updating}>
-          {t("timeEntry.saveTimeEntry")}
-        </PrimaryButton>
-        <View style={{ height: spacing.sm }} />
-        <PrimaryButton onPress={onClose} disabled={updating}>
-          {t("common:cancel")}
-        </PrimaryButton>
-      </View>
+        <View style={{ marginTop: spacing.xl }}>
+          <PrimaryButton onPress={onSubmit} disabled={updating || !serviceId}>
+            {t("timeEntry.saveTimeEntry")}
+          </PrimaryButton>
+          <View style={{ height: spacing.sm }} />
+          <PrimaryButton onPress={onClose} disabled={updating}>
+            {t("common:cancel")}
+          </PrimaryButton>
+        </View>
+      </ScrollView>
     </Modal>
   );
 }
@@ -1905,7 +2177,7 @@ function TicketActions({
   const openInWebUrl = baseUrl ? buildTicketWebUrl(baseUrl, ticketId) : null;
 
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md, gap: spacing.sm }}>
       <ActionChip
         label={t("detail.copyNumber")}
         onPress={() => {
@@ -1915,7 +2187,6 @@ function TicketActions({
           })();
         }}
       />
-      <View style={{ width: spacing.sm }} />
       <ActionChip
         label={t("detail.copyId")}
         onPress={() => {
@@ -1927,7 +2198,6 @@ function TicketActions({
       />
       {openInWebUrl ? (
         <>
-          <View style={{ width: spacing.sm }} />
           <ActionChip
             label={t("detail.openInWeb")}
             onPress={() => {
@@ -1984,6 +2254,55 @@ function ActionChip({
 
 const QUICK_EMOJIS = ['👍', '👎', '❤️', '😂', '🎉', '👀'];
 
+const COMMENT_COLLAPSED_HEIGHT = 96;
+
+function ExpandableComment({
+  content,
+  loadingLabel,
+  onLinkPress,
+  colors,
+  typography,
+  spacing,
+  t,
+}: {
+  content: string;
+  loadingLabel: string;
+  onLinkPress?: (url: string) => void;
+  colors: ReturnType<typeof useTheme>["colors"];
+  typography: ReturnType<typeof useTheme>["typography"];
+  spacing: ReturnType<typeof useTheme>["spacing"];
+  t: (key: string) => string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const needsExpansion = contentHeight !== null && contentHeight > COMMENT_COLLAPSED_HEIGHT;
+
+  return (
+    <View style={{ marginTop: spacing.xs }}>
+      <TicketRichTextEditor
+        content={content}
+        editable={false}
+        height={expanded || !needsExpansion ? (contentHeight ?? COMMENT_COLLAPSED_HEIGHT) : COMMENT_COLLAPSED_HEIGHT}
+        scrollEnabled={false}
+        loadingLabel={loadingLabel}
+        onLinkPress={onLinkPress}
+        onContentHeight={({ height }) => setContentHeight(height)}
+      />
+      {needsExpansion ? (
+        <Pressable
+          onPress={() => setExpanded((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={expanded ? t("comments.seeLess") : t("comments.seeMore")}
+          style={{ paddingTop: spacing.xs }}
+        >
+          <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+            {expanded ? t("comments.seeLess") : t("comments.seeMore")}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
 
 export function CommentsSection({
   comments,
@@ -2126,12 +2445,12 @@ export function CommentsSection({
       ) : (
         <View style={{ marginTop: spacing.sm }}>
           {visible.map((c, idx) => {
-            const kind = (c as any).kind as TicketComment["kind"] | undefined;
-            const eventType = (c as any).event_type as TicketComment["event_type"] | undefined;
+            const kind = c.kind;
+            const eventType = c.event_type;
             const isSystemEvent = kind === "event" || typeof eventType === "string";
-            const isOptimistic = Boolean((c as any).optimistic);
+            const isOptimistic = Boolean(c.optimistic);
             const commentPlainText = extractPlainTextFromSerializedRichEditorContent(c.comment_text);
-            const eventText = ((c as any).event_text as string | undefined) ?? (eventType ? `${eventType}: ${commentPlainText}` : commentPlainText);
+            const eventText = c.event_text ?? (eventType ? `${eventType}: ${commentPlainText}` : commentPlainText);
             const badgeLabel = isSystemEvent ? t("comments.event") : isOptimistic ? t("comments.sending") : c.is_internal ? t("comments.internal") : t("comments.public");
             const accessibilityLabel = `${badgeLabel}. ${c.created_by_name ?? t("common:unknown")}. ${formatDateTimeWithRelative(c.created_at)}. ${
               isSystemEvent ? eventText : commentPlainText || t("comments.richComment")
@@ -2177,15 +2496,15 @@ export function CommentsSection({
                       {commentPlainText || "—"}
                     </Text>
                   ) : (
-                    <View style={{ marginTop: spacing.xs }}>
-                      <TicketRichTextEditor
-                        content={c.comment_text}
-                        editable={false}
-                        height={96}
-                        loadingLabel={t("comments.loadingComment")}
-                        onLinkPress={onLinkPress}
-                      />
-                    </View>
+                    <ExpandableComment
+                      content={c.comment_text}
+                      loadingLabel={t("comments.loadingComment")}
+                      onLinkPress={onLinkPress}
+                      colors={colors}
+                      typography={typography}
+                      spacing={spacing}
+                      t={(key: string) => t(key)}
+                    />
                   )
                 )}
                 {/* Reaction pills + add button */}
@@ -2426,36 +2745,33 @@ function stringOrDash(value: unknown): string {
 }
 
 export function extractDescription(ticket: TicketDetail): string | null {
-  const attrs = (ticket as any).attributes as unknown;
+  const attrs = ticket.attributes;
   if (!attrs || typeof attrs !== "object") return null;
-  const obj = attrs as Record<string, unknown>;
-  return typeof obj.description === "string" && obj.description.trim()
-    ? obj.description.trim()
+  return typeof attrs.description === "string" && attrs.description.trim()
+    ? attrs.description.trim()
     : null;
 }
 
 function getTicketAttributes(ticket: TicketDetail): Record<string, unknown> {
-  const attrs = (ticket as any).attributes as unknown;
+  const attrs = ticket.attributes;
   if (!attrs || typeof attrs !== "object") return {};
-  return { ...(attrs as Record<string, unknown>) };
+  return { ...attrs };
 }
 
 function getDueDateIso(ticket: TicketDetail): string | null {
-  const maybeColumn = (ticket as any).due_date as unknown;
-  if (typeof maybeColumn === "string" && maybeColumn.trim()) return maybeColumn;
+  if (typeof ticket.due_date === "string" && ticket.due_date.trim()) return ticket.due_date;
 
-  const attrs = (ticket as any).attributes as unknown;
+  const attrs = ticket.attributes;
   if (!attrs || typeof attrs !== "object") return null;
-  const due = (attrs as any).due_date as unknown;
-  return typeof due === "string" && due.trim() ? due : null;
+  return typeof attrs.due_date === "string" && attrs.due_date.trim() ? attrs.due_date : null;
 }
 
 function getWatcherUserIds(ticket: TicketDetail): string[] {
-  const attrs = (ticket as any).attributes as unknown;
+  const attrs = ticket.attributes;
   if (!attrs || typeof attrs !== "object") return [];
-  const raw = (attrs as any).watcher_user_ids as unknown;
+  const raw = attrs.watcher_user_ids;
   if (!Array.isArray(raw)) return [];
-  return raw.filter((v) => typeof v === "string" && v.trim()) as string[];
+  return raw.filter((v): v is string => typeof v === "string" && v.trim() !== "");
 }
 
 function isoToDateInput(iso: string | null): string | null {
