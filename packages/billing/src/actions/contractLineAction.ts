@@ -13,6 +13,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
+import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
 
 
 
@@ -149,11 +150,16 @@ export const createContractLine = withAuth(async (
 
             // Remove tenant field if present in planData to prevent override
             const { tenant: _, ...safePlanData } = planData;
-            assertSupportedCadenceOwnerDuringRollout({
-                cadenceOwner: safePlanData.cadence_owner ?? 'client',
-                billingTiming: safePlanData.billing_timing ?? 'arrears',
+            const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                cadenceOwner: safePlanData.cadence_owner,
+                billingTiming: safePlanData.billing_timing,
             });
-            delete safePlanData.billing_timing;
+            safePlanData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+            safePlanData.billing_timing = recurringAuthoringPolicy.billingTiming;
+            assertSupportedCadenceOwnerDuringRollout({
+                cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
+                billingTiming: recurringAuthoringPolicy.billingTiming,
+            });
             const plan = await ContractLine.create(trx, safePlanData);
             const enrichedPlan: IContractLine = {
                 ...plan,
@@ -206,9 +212,17 @@ export const updateContractLine = withAuth(async (
 
             // Remove tenant field if present in updateData to prevent override
             const { tenant: _, ...safeUpdateData } = updateData;
+            const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                cadenceOwner: safeUpdateData.cadence_owner,
+                fallbackCadenceOwner: existingPlan.cadence_owner,
+                billingTiming: safeUpdateData.billing_timing,
+                fallbackBillingTiming: existingPlan.billing_timing,
+            });
+            safeUpdateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+            safeUpdateData.billing_timing = recurringAuthoringPolicy.billingTiming;
             assertSupportedCadenceOwnerDuringRollout({
-                cadenceOwner: safeUpdateData.cadence_owner ?? null,
-                billingTiming: safeUpdateData.billing_timing ?? null,
+                cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
+                billingTiming: recurringAuthoringPolicy.billingTiming,
             });
 
             // If the plan is hourly, remove only the per-service hourly_rate field
@@ -216,7 +230,6 @@ export const updateContractLine = withAuth(async (
             if (existingPlan.contract_line_type === 'Hourly') {
                 delete safeUpdateData.hourly_rate;
             }
-            delete safeUpdateData.billing_timing;
 
             // Proceed with the update using the potentially modified data
             // Ensure ContractLine.update handles empty updateData gracefully if all fields were removed

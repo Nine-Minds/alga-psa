@@ -1802,7 +1802,7 @@
   {
     "id": "F201",
     "description": "Define one authoritative cadence-owner and timing-default policy across every recurring authoring path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "Data model and API requirements"
@@ -1811,7 +1811,7 @@
   {
     "id": "F202",
     "description": "Update contract-wizard write paths so cadence-owner and timing semantics persist consistently with the canonical recurring model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "UI and downstream-consumer requirements"
@@ -1820,7 +1820,7 @@
   {
     "id": "F203",
     "description": "Update contract-line dialog write paths so inline recurring edits persist cadence-owner and timing semantics consistently",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "UI and downstream-consumer requirements"
@@ -1829,7 +1829,7 @@
   {
     "id": "F204",
     "description": "Update custom recurring-line creation flows so cadence-owner and timing defaults match all other authoring paths",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "UI and downstream-consumer requirements"

@@ -142,7 +142,7 @@ describe('contract line cadence_owner action persistence', () => {
     });
   });
 
-  it('T106: createCustomContractLine persists explicit client cadence_owner and defaults missing values to client', async () => {
+  it('T106 and T233: createCustomContractLine persists explicit client cadence_owner and defaults missing cadence and timing values to the shared recurring authoring policy', async () => {
     const { createCustomContractLine } = await import('../src/actions/contractLinePresetActions');
 
     await createCustomContractLine('contract-1', {
@@ -150,13 +150,20 @@ describe('contract line cadence_owner action persistence', () => {
       contract_line_type: 'Fixed',
       billing_frequency: 'monthly',
       cadence_owner: 'client',
+      billing_timing: 'advance',
+      enable_proration: true,
       base_rate: 15000,
       services: [{ service_id: 'svc-1', quantity: 1 }],
     });
 
     expect(contractLineCreate.mock.calls[0]?.[1]).toMatchObject({
       cadence_owner: 'client',
+      billing_timing: 'advance',
       contract_line_name: 'Managed Services',
+    });
+    expect(fixedConfigUpsert.mock.calls[0]?.[0]).toMatchObject({
+      enable_proration: true,
+      billing_cycle_alignment: 'prorated',
     });
 
     await createCustomContractLine('contract-1', {
@@ -168,7 +175,12 @@ describe('contract line cadence_owner action persistence', () => {
 
     expect(contractLineCreate.mock.calls[1]?.[1]).toMatchObject({
       cadence_owner: 'client',
+      billing_timing: 'arrears',
       contract_line_name: 'Fallback Services',
+    });
+    expect(fixedConfigUpsert.mock.calls[1]?.[0]).toMatchObject({
+      enable_proration: false,
+      billing_cycle_alignment: 'start',
     });
   });
 
@@ -218,6 +230,7 @@ describe('contract line cadence_owner action persistence', () => {
       currentTrx,
       expect.objectContaining({
         cadence_owner: 'client',
+        billing_timing: 'advance',
         contract_line_name: 'Client Schedule Preset',
       })
     );

@@ -23,6 +23,7 @@ import {
   removeContractLine as repositoryRemoveContractLine,
 } from 'server/src/lib/repositories/contractLineRepository';
 import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
+import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
 import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 
@@ -278,14 +279,21 @@ export class ContractLineService extends BaseService<IContractLine> {
           billingCycleAlignment: (data as any).billing_cycle_alignment,
           enableProration,
         });
+        const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          cadenceOwner: data.cadence_owner ?? planData.cadence_owner,
+          billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
+          enableProration,
+          billingCycleAlignment: alignment,
+        });
 
         planData.custom_rate = data.contract_line_type === 'Fixed' ? baseRate : planData.custom_rate ?? null;
-        planData.enable_proration = enableProration;
-        planData.billing_cycle_alignment = alignment;
-        planData.cadence_owner = data.cadence_owner ?? planData.cadence_owner ?? 'client';
+        planData.enable_proration = recurringAuthoringPolicy.enableProration;
+        planData.billing_cycle_alignment = recurringAuthoringPolicy.billingCycleAlignment;
+        planData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+        planData.billing_timing = recurringAuthoringPolicy.billingTiming;
         assertSupportedCadenceOwnerDuringRollout({
-          cadenceOwner: planData.cadence_owner,
-          billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
+          cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
+          billingTiming: recurringAuthoringPolicy.billingTiming,
         });
 
         delete (planData as any).base_rate;
@@ -322,10 +330,17 @@ export class ContractLineService extends BaseService<IContractLine> {
         
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
-        updateData.cadence_owner = data.cadence_owner ?? resolveCadenceOwner(existingPlan.cadence_owner);
-        assertSupportedCadenceOwnerDuringRollout({
-          cadenceOwner: updateData.cadence_owner,
+        const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          cadenceOwner: data.cadence_owner,
+          fallbackCadenceOwner: resolveCadenceOwner(existingPlan.cadence_owner),
           billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
+          fallbackBillingTiming: existingPlan.billing_timing,
+        });
+        updateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+        updateData.billing_timing = recurringAuthoringPolicy.billingTiming;
+        assertSupportedCadenceOwnerDuringRollout({
+          cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
+          billingTiming: recurringAuthoringPolicy.billingTiming,
         });
         
         // Handle plan type specific logic
@@ -371,10 +386,17 @@ export class ContractLineService extends BaseService<IContractLine> {
         
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
-        updateData.cadence_owner = data.cadence_owner ?? resolveCadenceOwner(existingPlan.cadence_owner);
-        assertSupportedCadenceOwnerDuringRollout({
-          cadenceOwner: updateData.cadence_owner,
+        const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          cadenceOwner: data.cadence_owner,
+          fallbackCadenceOwner: resolveCadenceOwner(existingPlan.cadence_owner),
           billingTiming: data.billing_timing,
+          fallbackBillingTiming: existingPlan.billing_timing,
+        });
+        updateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+        updateData.billing_timing = recurringAuthoringPolicy.billingTiming;
+        assertSupportedCadenceOwnerDuringRollout({
+          cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
+          billingTiming: recurringAuthoringPolicy.billingTiming,
         });
         
         // Handle plan type specific logic

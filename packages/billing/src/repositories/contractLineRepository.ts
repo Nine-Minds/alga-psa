@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import type { IContractLine, IContractLineMapping } from '@alga-psa/types';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
+import { resolveRecurringAuthoringPolicy } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 
 export type DetailedContractLine = IContractLineMapping & {
@@ -513,15 +514,21 @@ export async function updateContractLine(
   if (template) {
     const existingTemplateLine = await knex('contract_template_lines')
       .where({ tenant, template_id: contractId, template_line_id: contractLineId })
-      .first(['cadence_owner']);
+      .first(['cadence_owner', 'billing_timing']);
+    const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      cadenceOwner: payload.cadence_owner,
+      fallbackCadenceOwner: existingTemplateLine?.cadence_owner,
+      billingTiming: payload.billing_timing,
+      fallbackBillingTiming: existingTemplateLine?.billing_timing,
+    });
 
     await knex('contract_template_lines')
       .where({ tenant, template_id: contractId, template_line_id: contractLineId })
       .update({
         custom_rate: payload.custom_rate ?? null,
         display_order: payload.display_order ?? undefined,
-        billing_timing: payload.billing_timing ?? undefined,
-        cadence_owner: resolveCadenceOwner(payload.cadence_owner ?? existingTemplateLine?.cadence_owner),
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         updated_at: knex.fn.now(),
       });
 
@@ -542,15 +549,21 @@ export async function updateContractLine(
 
   const existingLine = await knex('contract_lines')
     .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
-    .first(['cadence_owner']);
+    .first(['cadence_owner', 'billing_timing']);
+  const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    cadenceOwner: payload.cadence_owner,
+    fallbackCadenceOwner: existingLine?.cadence_owner,
+    billingTiming: payload.billing_timing,
+    fallbackBillingTiming: existingLine?.billing_timing,
+  });
 
   await knex('contract_lines')
     .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
     .update({
       custom_rate: payload.custom_rate ?? null,
       display_order: payload.display_order ?? undefined,
-      billing_timing: payload.billing_timing ?? undefined,
-      cadence_owner: resolveCadenceOwner(payload.cadence_owner ?? existingLine?.cadence_owner),
+      billing_timing: recurringAuthoringPolicy.billingTiming,
+      cadence_owner: recurringAuthoringPolicy.cadenceOwner,
       updated_at: knex.fn.now(),
     });
 

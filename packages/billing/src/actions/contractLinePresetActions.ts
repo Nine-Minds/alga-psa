@@ -12,6 +12,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
+import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
 
 
 
@@ -321,6 +322,17 @@ export const copyPresetToContractLine = withAuth(async (
                 overrides: overrides
             });
 
+            const presetFixedConfig =
+                preset.contract_line_type === 'Fixed'
+                    ? await ContractLinePresetFixedConfig.getByPresetId(trx, presetId)
+                    : null;
+            const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                cadenceOwner: overrides?.cadence_owner ?? preset.cadence_owner,
+                billingTiming: preset.billing_timing,
+                enableProration: presetFixedConfig?.enable_proration,
+                billingCycleAlignment: presetFixedConfig?.billing_cycle_alignment,
+            });
+
             // 2. Create the contract line
             // Use override if provided, otherwise use preset value, otherwise use default
             const minBillableTime = overrides?.minimum_billable_time !== undefined
@@ -339,7 +351,8 @@ export const copyPresetToContractLine = withAuth(async (
                 contract_line_name: preset.preset_name,
                 contract_line_type: preset.contract_line_type,
                 billing_frequency: preset.billing_frequency,
-                cadence_owner: overrides?.cadence_owner ?? preset.cadence_owner ?? 'client',
+                billing_timing: recurringAuthoringPolicy.billingTiming,
+                cadence_owner: recurringAuthoringPolicy.cadenceOwner,
                 service_category: undefined, // Presets don't have service_category
                 is_custom: false, // Contract lines created from presets are not custom
                 // Add hourly-specific fields if this is an hourly contract line
@@ -349,7 +362,8 @@ export const copyPresetToContractLine = withAuth(async (
                 } : {}),
             };
             assertSupportedCadenceOwnerDuringRollout({
-                cadenceOwner: contractLineData.cadence_owner ?? 'client',
+                cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
+                billingTiming: recurringAuthoringPolicy.billingTiming,
             });
 
             const contractLine = await ContractLine.create(trx, contractLineData);
@@ -489,13 +503,12 @@ export const copyPresetToContractLine = withAuth(async (
 
             // 5. Copy type-specific config
             if (preset.contract_line_type === 'Fixed') {
-                const presetFixedConfig = await ContractLinePresetFixedConfig.getByPresetId(trx, presetId);
                 if (presetFixedConfig) {
                     const fixedConfigData: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'> = {
                         contract_line_id: contractLineId,
                         base_rate: overrides?.base_rate !== undefined ? overrides.base_rate : presetFixedConfig.base_rate,
-                        enable_proration: presetFixedConfig.enable_proration,
-                        billing_cycle_alignment: presetFixedConfig.billing_cycle_alignment,
+                        enable_proration: recurringAuthoringPolicy.enableProration,
+                        billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
                         tenant: tenantId
                     };
                     const fixedConfigModel = new ContractLineFixedConfig(trx, tenantId);
@@ -595,13 +608,18 @@ export const createCustomContractLine = withAuth(async (
             const roundUpToNearest = input.contract_line_type === 'Hourly'
                 ? (input.round_up_to_nearest ?? 15)
                 : undefined;
+            const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                cadenceOwner: input.cadence_owner,
+                billingTiming: input.billing_timing,
+                enableProration: input.enable_proration,
+            });
 
             const contractLineData: Omit<IContractLine, 'contract_line_id' | 'tenant' | 'created_at' | 'updated_at'> = {
                 contract_line_name: input.contract_line_name,
                 contract_line_type: input.contract_line_type,
                 billing_frequency: input.billing_frequency,
-                billing_timing: input.billing_timing ?? 'advance',
-                cadence_owner: input.cadence_owner ?? 'client',
+                billing_timing: recurringAuthoringPolicy.billingTiming,
+                cadence_owner: recurringAuthoringPolicy.cadenceOwner,
                 service_category: undefined,
                 is_custom: true,  // Mark as custom since it's not from a preset
                 ...(input.contract_line_type === 'Hourly' ? {
@@ -610,8 +628,8 @@ export const createCustomContractLine = withAuth(async (
                 } : {}),
             };
             assertSupportedCadenceOwnerDuringRollout({
-                cadenceOwner: contractLineData.cadence_owner ?? 'client',
-                billingTiming: contractLineData.billing_timing ?? 'advance',
+                cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
+                billingTiming: recurringAuthoringPolicy.billingTiming,
             });
 
             const contractLine = await ContractLine.create(trx, contractLineData);
@@ -718,8 +736,8 @@ export const createCustomContractLine = withAuth(async (
                 const fixedConfigData: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'> = {
                     contract_line_id: contractLineId,
                     base_rate: input.base_rate ?? null,
-                    enable_proration: input.enable_proration ?? false,
-                    billing_cycle_alignment: 'start',
+                    enable_proration: recurringAuthoringPolicy.enableProration,
+                    billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
                     tenant: tenantId
                 };
                 const fixedConfigModel = new ContractLineFixedConfig(trx, tenantId);

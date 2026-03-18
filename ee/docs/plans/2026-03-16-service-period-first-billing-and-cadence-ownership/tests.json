@@ -1999,7 +1999,7 @@
   {
     "id": "T231",
     "description": "Contract wizard writes cadence-owner and timing defaults consistently with the canonical authoring policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201",
       "F202"
@@ -2008,7 +2008,7 @@
   {
     "id": "T232",
     "description": "Inline contract-line editing writes cadence-owner and timing defaults consistently with the canonical authoring policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201",
       "F203"
@@ -2017,7 +2017,7 @@
   {
     "id": "T233",
     "description": "Custom recurring-line creation writes cadence-owner and timing defaults consistently with the canonical authoring policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201",
       "F204"

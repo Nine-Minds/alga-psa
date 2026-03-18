@@ -39,6 +39,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Recurring authoring defaults now have one shared policy source instead of per-path fallbacks, which closes `F201`, `F202`, `F203`, `F204`, `T231`, `T232`, and `T233`:
+  - `shared/billingClients/recurringAuthoringPolicy.ts` now defines the authoritative v1 authoring defaults: cadence owner defaults to `client`, recurring billing timing defaults to `arrears`, touched writes preserve stored cadence/timing when omitted, and fixed-line legacy alignment derives through the existing compatibility helper instead of ad hoc inline branches
+  - `packages/billing/src/models/contractLine.ts` no longer silently drops `billing_timing` on create/update, so contract-wizard-created and custom recurring lines now persist the same timing semantics they author instead of relying on reader-side arrears fallbacks
+  - `packages/billing/src/actions/contractWizardActions.ts` now resolves one shared recurring authoring policy per submission and uses it across fixed, product, hourly, and usage line creation plus fixed-config alignment writes
+  - `packages/billing/src/actions/contractLinePresetActions.ts` now uses the same shared policy for preset-to-contract copies and custom recurring-line creation, which fixes the old custom-line mismatch where missing `billing_timing` defaulted to `advance` and fixed `enable_proration` still wrote `billing_cycle_alignment: start`
+  - `packages/billing/src/repositories/contractLineRepository.ts`, `server/src/lib/repositories/contractLineRepository.ts`, `packages/billing/src/actions/contractLineAction.ts`, and `server/src/lib/api/services/ContractLineService.ts` now preserve or normalize cadence/timing fields through the same helper on touched writes, reducing live authoring-path drift before the later template/preset cleanup features land
+  - `packages/billing/tests/fixedContractLineConfiguration.recurringAuthoring.wiring.test.ts` now locks the live fixed-line edit seam directly: the inline editor must keep cadence owner on `updateContractLine(...)`, keep billing timing on `upsertContractLineTerms(...)`, and depend on the updated action-layer normalization instead of silently dropping touched timing fields
+  - `packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx` now defaults new custom recurring lines to `arrears`, matching the rest of the recurring authoring surfaces instead of preselecting a divergent timing mode in the UI
+
 - (2026-03-17) External tax import and reconciliation consumers now have explicit service-period-first guardrails, which closes `F200` and `T229`:
   - `packages/billing/src/services/externalTaxImportService.ts` now states the intended policy inline at both import and reconciliation seams: external tax behavior remains invoice- and charge-tax-driven, while canonical recurring service periods stay explanatory context rather than tax allocation or reconciliation inputs
   - `packages/billing/src/services/accountingExportService.ts` now states the complementary post-export rule inline: automatic external-tax import deduplicates by invoice id and must not fan out one invoice into multiple import attempts just because export lines carry multiple canonical recurring periods
@@ -734,6 +743,17 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts` now locks both sides of the audit: company sync + mapping stay free of header-period assumptions, and export validation continues to preserve canonical service-period context without falling back to invoice-header billing dates
 
 ## Commands / Runbooks
+
+- (2026-03-17) Recurring authoring policy validation:
+  - `npx vitest run src/test/unit/billing/recurringAuthoringPolicy.domain.test.ts src/test/unit/api/contractLineService.cadenceOwnerCompatibility.wiring.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/contractLineCadenceOwnerCompatibility.repository.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the workspace alias config for package billing tests
+  - `npx vitest run ../packages/billing/tests/fixedContractLineConfiguration.recurringAuthoring.wiring.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not on the recurring authoring policy changes
 
 - (2026-03-17) Reporting date-basis policy validation:
   - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`

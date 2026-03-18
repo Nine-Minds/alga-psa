@@ -16,6 +16,7 @@ import {
   computeContractRenewalUpcoming,
 } from '@shared/workflow/streams/domainEventBuilders/contractEventBuilders';
 import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
+import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
 
 
 import ContractLine from '../models/contractLine';
@@ -351,6 +352,10 @@ export const createContractTemplateFromWizard = withAuth(async (
     let primaryContractLineId: string | undefined;
     let nextDisplayOrder = 0;
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
+    const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      cadenceOwner: submission.cadence_owner,
+      enableProration: submission.enable_proration,
+    });
 
     const recordTemplateMapping = async (lineId: string, customRate?: number | null) => {
       const effectiveLineId = await ensureTemplateLineSnapshot(
@@ -381,7 +386,8 @@ export const createContractTemplateFromWizard = withAuth(async (
       const createdFixedLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Fixed Fee`,
         billing_frequency: submission.billing_frequency ?? 'monthly',
-        cadence_owner: submission.cadence_owner ?? 'client',
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Fixed',
@@ -405,15 +411,13 @@ export const createContractTemplateFromWizard = withAuth(async (
       const templateLineId = await recordTemplateMapping(planId, null);
 
       const fixedBaseRateCents = submission.fixed_base_rate ?? 0;
-      const enableProrationFlag = Boolean(submission.enable_proration);
-
       // Insert into contract_template_line_fixed_config (not contract_line_fixed_config)
       await trx('contract_template_line_fixed_config').insert({
         tenant,
         template_line_id: templateLineId,
         base_rate: fixedBaseRateCents,  // Already in cents from frontend
-        enable_proration: enableProrationFlag,
-        billing_cycle_alignment: enableProrationFlag ? 'prorated' : 'start',
+        enable_proration: recurringAuthoringPolicy.enableProration,
+        billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
         created_at: nowIso,
         updated_at: nowIso,
       });
@@ -468,7 +472,8 @@ export const createContractTemplateFromWizard = withAuth(async (
       const createdProductsLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Products`,
         billing_frequency: submission.billing_frequency ?? 'monthly',
-        cadence_owner: submission.cadence_owner ?? 'client',
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Fixed',
@@ -487,8 +492,8 @@ export const createContractTemplateFromWizard = withAuth(async (
         tenant,
         template_line_id: templateLineId,
         base_rate: 0,
-        enable_proration: false,
-        billing_cycle_alignment: 'start',
+        enable_proration: recurringAuthoringPolicy.enableProration,
+        billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
         created_at: nowIso,
         updated_at: nowIso,
       });
@@ -524,7 +529,8 @@ export const createContractTemplateFromWizard = withAuth(async (
       const createdHourlyLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Hourly`,
         billing_frequency: submission.billing_frequency ?? 'monthly',
-        cadence_owner: submission.cadence_owner ?? 'client',
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
@@ -605,7 +611,8 @@ export const createContractTemplateFromWizard = withAuth(async (
       const createdUsageLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Usage`,
         billing_frequency: submission.billing_frequency ?? 'monthly',
-        cadence_owner: submission.cadence_owner ?? 'client',
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Usage',
@@ -1015,6 +1022,10 @@ export const createClientContractFromWizard = withAuth(async (
     let primaryContractLineId: string | undefined;
     let nextDisplayOrder = 0;
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
+    const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      cadenceOwner: submission.cadence_owner,
+      enableProration: submission.enable_proration,
+    });
 
     if (filteredFixedServices.length > 0) {
       const createdFixedLine = await ContractLine.create(trx, {
@@ -1034,8 +1045,8 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
-        billing_timing: 'arrears',
-        cadence_owner: submission.cadence_owner ?? 'client',
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
       } as any);
       const planId = createdFixedLine.contract_line_id!;
@@ -1085,8 +1096,8 @@ export const createClientContractFromWizard = withAuth(async (
       await fixedConfigModel.upsert({
         contract_line_id: planId,
         base_rate: submission.fixed_base_rate ?? 0,  // Already in cents from frontend
-        enable_proration: submission.enable_proration,
-        billing_cycle_alignment: submission.enable_proration ? 'prorated' : 'start',
+        enable_proration: recurringAuthoringPolicy.enableProration,
+        billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
         tenant,
       });
 
@@ -1103,8 +1114,8 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
-        billing_timing: 'arrears',
-        cadence_owner: submission.cadence_owner ?? 'client',
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
       } as any);
       const productsLineId = createdProductsLine.contract_line_id!;
@@ -1140,8 +1151,8 @@ export const createClientContractFromWizard = withAuth(async (
       await fixedConfigModel.upsert({
         contract_line_id: productsLineId,
         base_rate: 0,
-        enable_proration: submission.enable_proration,
-        billing_cycle_alignment: submission.enable_proration ? 'prorated' : 'start',
+        enable_proration: recurringAuthoringPolicy.enableProration,
+        billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
         tenant,
       });
 
@@ -1160,8 +1171,8 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
-        billing_timing: 'arrears',
-        cadence_owner: submission.cadence_owner ?? 'client',
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
       } as any);
       const hourlyPlanId = createdHourlyLine.contract_line_id!;
@@ -1214,8 +1225,8 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
-        billing_timing: 'arrears',
-        cadence_owner: submission.cadence_owner ?? 'client',
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
       } as any);
       const usagePlanId = createdUsageLine.contract_line_id!;

@@ -70,7 +70,7 @@ function createFakeKnex(rows: QueryState['rows']) {
 }
 
 describe('contract line cadence_owner repository compatibility', () => {
-  it('T108: repository readers and writer results default missing cadence_owner to client for legacy live rows', async () => {
+  it('T108: repository readers and writer results preserve authoritative cadence and timing defaults for legacy live rows', async () => {
     const { knex, updates } = createFakeKnex({
       contract_templates: [],
       contract_lines: [
@@ -121,7 +121,7 @@ describe('contract line cadence_owner repository compatibility', () => {
       payload: {
         custom_rate: 125,
         display_order: undefined,
-        billing_timing: undefined,
+        billing_timing: 'arrears',
         cadence_owner: 'client',
         updated_at: 'now()',
       },

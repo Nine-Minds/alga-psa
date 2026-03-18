@@ -34,7 +34,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
-  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('advance');
+  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
 
   // Fixed plan state
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
@@ -221,7 +221,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     setPlanName('');
     setPlanType(null);
     setBillingFrequency('monthly');
-    setBillingTiming('advance');
+    setBillingTiming('arrears');
     setBaseRate(undefined);
     setBaseRateInput('');
     setEnableProration(false);

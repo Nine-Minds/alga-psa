@@ -2,12 +2,20 @@
 import { Knex } from 'knex';
 import type { IContractLinePreset } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
+import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
 
-function normalizeContractLinePreset<T extends Partial<IContractLinePreset>>(preset: T): T & Pick<IContractLinePreset, 'cadence_owner'> {
+function normalizeContractLinePreset<T extends Partial<IContractLinePreset>>(
+  preset: T,
+): T & Pick<IContractLinePreset, 'cadence_owner' | 'billing_timing'> {
+  const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    cadenceOwner: preset.cadence_owner,
+    billingTiming: preset.billing_timing,
+  });
+
   return {
     ...preset,
-    cadence_owner: resolveCadenceOwner(preset.cadence_owner),
+    cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+    billing_timing: recurringAuthoringPolicy.billingTiming,
   };
 }
 
@@ -54,9 +62,14 @@ const ContractLinePreset = {
     tenant: string,
     preset: Omit<IContractLinePreset, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>
   ): Promise<IContractLinePreset> => {
+    const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      cadenceOwner: preset.cadence_owner,
+      billingTiming: preset.billing_timing,
+    });
     const presetWithId = {
       ...preset,
-      cadence_owner: resolveCadenceOwner(preset.cadence_owner),
+      cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+      billing_timing: recurringAuthoringPolicy.billingTiming,
       preset_id: uuidv4(),
       tenant
     };
@@ -88,9 +101,16 @@ const ContractLinePreset = {
 
       // Remove tenant from update data to prevent modification
       const { tenant: _, preset_id: __, ...dataToUpdate } = updateData;
+      const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+        cadenceOwner: dataToUpdate.cadence_owner,
+        fallbackCadenceOwner: existingPreset.cadence_owner,
+        billingTiming: dataToUpdate.billing_timing,
+        fallbackBillingTiming: existingPreset.billing_timing,
+      });
       const updatePayload = {
         ...dataToUpdate,
-        cadence_owner: resolveCadenceOwner(dataToUpdate.cadence_owner ?? existingPreset.cadence_owner),
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        billing_timing: recurringAuthoringPolicy.billingTiming,
       };
 
       const [updatedPreset] = await knexOrTrx<IContractLinePreset>('contract_line_presets')
