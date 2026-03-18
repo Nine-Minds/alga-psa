@@ -41,6 +41,16 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Future persisted-period listing now has an explicit query contract, which closes `F250` and adds/closes `T348` while intentionally leaving `T300` for later UI/dashboard surfaces:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodListingQuery` plus the default listing lifecycle-state set `generated|edited|skipped|locked`, making future-ledger inspection a first-class read contract instead of a side effect of due selection
+  - `shared/billingClients/recurringServicePeriodListing.ts` now defines the first future-listing helper: it filters by tenant, `asOf`, optional schedule/cadence/due-position/charge-family scope, excludes billed/superseded/archived rows by default, and keeps deterministic chronological ordering
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_LISTING.md` now documents that listing is intentionally independent from invoice generation and due selection, so later API and dashboard work can build on one shared read seam
+  - `tests.json` now adds `T348` because the original `T300` also depends on later billing-staff UI surfaces in `F257`; the new test locks the listing contract itself without pretending the dashboard already exists
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodListing.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
 - (2026-03-18) Regeneration conflicts against preserved user edits are now explicit, which closes `F249` and `T299`:
   - `shared/billingClients/regenerateRecurringServicePeriods.ts` now returns additive `conflicts` metadata instead of silently discarding disagreements when preserved override rows no longer match regenerated source candidates
   - the first v1 conflict kinds are `missing_candidate`, `service_period_mismatch`, `invoice_window_mismatch`, and `activity_window_mismatch`, which keeps preserved edits active while making the disagreement queryable for later operator tooling

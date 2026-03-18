@@ -2585,6 +2585,14 @@
     ]
   },
   {
+    "id": "T348",
+    "description": "Future persisted service periods have an explicit listing query independent from due selection or invoice generation",
+    "implemented": true,
+    "featureIds": [
+      "F250"
+    ]
+  },
+  {
     "id": "T292",
     "description": "Invoice generation selects due persisted service periods rather than deriving schedule boundaries on demand",
     "implemented": false,

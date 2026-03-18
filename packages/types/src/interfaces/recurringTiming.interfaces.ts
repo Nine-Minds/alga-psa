@@ -41,6 +41,15 @@ export const DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES = [
 export type RecurringServicePeriodDueSelectionState =
   (typeof DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES)[number];
 
+export const DEFAULT_RECURRING_SERVICE_PERIOD_LISTING_STATES = [
+  'generated',
+  'edited',
+  'skipped',
+  'locked',
+] as const satisfies readonly RecurringServicePeriodLifecycleState[];
+export type RecurringServicePeriodListingState =
+  (typeof DEFAULT_RECURRING_SERVICE_PERIOD_LISTING_STATES)[number];
+
 export const DEFAULT_RECURRING_SERVICE_PERIOD_PARITY_COMPARISON_STATES = [
   'generated',
   'edited',
@@ -307,6 +316,16 @@ export interface IRecurringServicePeriodDueSelectionQuery {
   windowStart: ISO8601String;
   windowEnd: ISO8601String;
   lifecycleStates: RecurringServicePeriodDueSelectionState[];
+  chargeFamilies?: RecurringChargeFamily[];
+}
+
+export interface IRecurringServicePeriodListingQuery {
+  tenant: string;
+  asOf: ISO8601String;
+  scheduleKeys?: string[];
+  cadenceOwner?: CadenceOwner;
+  duePosition?: DuePosition;
+  lifecycleStates: RecurringServicePeriodListingState[];
   chargeFamilies?: RecurringChargeFamily[];
 }
 

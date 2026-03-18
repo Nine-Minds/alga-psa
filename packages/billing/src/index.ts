@@ -163,6 +163,10 @@ export {
   validateRecurringServicePeriodEditContinuity,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodEditValidation';
 export {
+  buildRecurringServicePeriodListingQuery,
+  listRecurringServicePeriodRecords,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodListing';
+export {
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
 export {
@@ -200,6 +204,10 @@ export type {
 export type {
   IRecurringServicePeriodEditContinuityValidation,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodEditValidation';
+export type {
+  IRecurringServicePeriodListingQuery,
+  RecurringServicePeriodListingState,
+} from '@alga-psa/types';
 export type {
   IRecurringServicePeriodRegenerationConflict,
   IRecurringServicePeriodRegenerationPlan,

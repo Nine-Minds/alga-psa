@@ -23,6 +23,7 @@ const recurringServicePeriodBackfill = read('RECURRING_SERVICE_PERIOD_BACKFILL.m
 const recurringServicePeriodEditOperations = read('RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md');
 const recurringServicePeriodEditValidation = read('RECURRING_SERVICE_PERIOD_EDIT_VALIDATION.md');
 const recurringServicePeriodEditConflicts = read('RECURRING_SERVICE_PERIOD_EDIT_CONFLICTS.md');
+const recurringServicePeriodListing = read('RECURRING_SERVICE_PERIOD_LISTING.md');
 const recurringServicePeriodDueSelection = read('RECURRING_SERVICE_PERIOD_DUE_SELECTION.md');
 const recurringServicePeriodInvoiceLinkage = read('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
@@ -332,6 +333,18 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodEditConflicts).toContain('`invoice_window_mismatch`');
     expect(recurringServicePeriodEditConflicts).toContain('`activity_window_mismatch`');
     expect(recurringServicePeriodEditConflicts).toContain('preserved user edits remain active');
+  });
+
+  it('T348: future persisted service periods have an explicit listing query independent from due selection', () => {
+    expect(recurringServicePeriodListing).toContain('# Recurring Service-Period Listing');
+    expect(recurringServicePeriodListing).toContain('## Listing Query');
+    expect(recurringServicePeriodListing).toContain('`IRecurringServicePeriodListingQuery`');
+    expect(recurringServicePeriodListing).toContain('shared/billingClients/recurringServicePeriodListing.ts');
+    expect(recurringServicePeriodListing).toContain('## Default Listing Scope');
+    expect(recurringServicePeriodListing).toContain('`generated`');
+    expect(recurringServicePeriodListing).toContain('`skipped`');
+    expect(recurringServicePeriodListing).toContain('servicePeriod.end > asOf');
+    expect(recurringServicePeriodListing).toContain('billing staff can inspect future intent even when a row is skipped or not currently due');
   });
 
   it('documents the architecture thesis and system-surface matrix in the PRD and appendix', () => {

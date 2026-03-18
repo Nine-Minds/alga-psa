@@ -2243,7 +2243,7 @@
   {
     "id": "F250",
     "description": "Define UI and API surfaces for listing persisted future service periods independently of invoice generation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "UI and downstream-consumer requirements"
