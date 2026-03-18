@@ -118,8 +118,8 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
     >
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-            <Search className="h-4 w-4 text-gray-500" />
+          <div className="flex items-center gap-2 text-sm font-semibold text-[rgb(var(--color-text-800))]">
+            <Search className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
             Quick Ask
           </div>
           <div className="flex items-center gap-3">
@@ -132,7 +132,7 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
               <span
                 className={[
                   'text-xs font-bold tracking-wide',
-                  yoloEnabled ? 'text-destructive' : 'text-gray-600',
+                  yoloEnabled ? 'text-destructive' : 'text-[rgb(var(--color-text-600))]',
                 ].join(' ')}
               >
                 YOLO
@@ -169,9 +169,9 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
         </div>
 
         {!expanded ? (
-          <div className="rounded-xl border border-gray-200 bg-gray-50 shadow-sm overflow-hidden">
+          <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] shadow-sm overflow-hidden">
             <div className="flex items-start gap-3 px-4 py-3">
-              <Search className="h-5 w-5 text-gray-400 mt-1" />
+              <Search className="h-5 w-5 text-[rgb(var(--color-text-400))] mt-1" />
               <textarea
                 ref={draftRef}
                 value={draft}
@@ -179,12 +179,12 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
                 onKeyDown={handleDraftKeyDown}
                 rows={2}
                 placeholder="Ask a quick question…"
-                className="flex-1 resize-none bg-transparent text-base text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                className="flex-1 resize-none bg-transparent text-base text-[rgb(var(--color-text-900))] placeholder:text-[rgb(var(--color-text-400))] focus:outline-none"
                 aria-label="Quick Ask input"
               />
             </div>
-            <div className="flex items-center justify-between border-t border-gray-100 bg-white px-4 py-2">
-              <div className="text-xs text-gray-500">{hintText}</div>
+            <div className="flex items-center justify-between border-t border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] px-4 py-2">
+              <div className="text-xs text-[rgb(var(--color-text-500))]">{hintText}</div>
               <Button
                 id="quick-ask-submit"
                 size="sm"
@@ -196,13 +196,13 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden min-h-[520px]">
-            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 text-xs text-gray-600 flex items-center justify-between">
+          <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm overflow-hidden min-h-[520px]">
+            <div className="px-4 py-3 border-b border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] text-xs text-[rgb(var(--color-text-600))] flex items-center justify-between">
               <span>Ask follow-ups below. This chat will be saved like sidebar chat.</span>
               {!activeChatId ? (
-                <span className="text-gray-400">Starting session…</span>
+                <span className="text-[rgb(var(--color-text-400))]">Starting session…</span>
               ) : (
-                <span className="text-gray-400">Session: {activeChatId}</span>
+                <span className="text-[rgb(var(--color-text-400))]">Session: {activeChatId}</span>
               )}
             </div>
             <div className="px-3 py-3">
