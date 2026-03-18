@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -33,6 +33,7 @@ import {
   WEEKDAY_OPTIONS,
   type RecurringBuilderState,
 } from './workflowScheduleRecurrence';
+import WorkflowScheduleTimezonePicker from './WorkflowScheduleTimezonePicker';
 
 type JsonSchema = {
   type?: string | string[];
@@ -1043,12 +1044,11 @@ export default function WorkflowScheduleDialog({
                   </div>
                 )}
 
-                <Input
+                <WorkflowScheduleTimezonePicker
                   id="schedule-dialog-timezone"
                   label="Timezone"
                   value={timezone}
-                  onChange={(event) => setTimezone(event.target.value)}
-                  placeholder="America/New_York"
+                  onValueChange={setTimezone}
                 />
               </div>
             )}
@@ -1108,8 +1108,20 @@ export default function WorkflowScheduleDialog({
                   )}
                 </div>
               ) : (
-                <div className="rounded border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground">
-                  No payload schema is available for this workflow yet.
+                <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-full bg-[rgb(var(--color-background-100))] p-1.5 text-[rgb(var(--color-text-500))]">
+                      <Info className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                        No payload schema is available for this workflow yet.
+                      </div>
+                      <div className="text-sm text-[rgb(var(--color-text-600))]">
+                        Form fields will appear here once this workflow publishes a pinned payload schema.
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

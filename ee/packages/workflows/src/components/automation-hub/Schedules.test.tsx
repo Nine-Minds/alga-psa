@@ -346,6 +346,29 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
   )
 }));
 
+vi.mock('@alga-psa/ui/components/TimezonePicker', () => ({
+  default: ({
+    value,
+    onValueChange,
+  }: {
+    value: string;
+    onValueChange: (value: string) => void;
+  }) => (
+    <label>
+      Browse all time zones
+      <select
+        aria-label="Browse all time zones"
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
+      >
+        <option value="UTC">UTC</option>
+        <option value="America/New_York">America/New_York</option>
+        <option value="America/Chicago">America/Chicago</option>
+      </select>
+    </label>
+  )
+}));
+
 vi.mock('@alga-psa/ui/components/Switch', () => ({
   Switch: ({
     checked,
@@ -590,6 +613,41 @@ describe('Schedules', () => {
     expect(screen.getByLabelText('Time')).toBeInTheDocument();
     expect(screen.getByLabelText('Timezone')).toBeInTheDocument();
     expect(screen.getByText(/runs every day at/i)).toBeInTheDocument();
+  });
+
+  it('keeps UTC in the common timezone dropdown for new recurring schedules', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+
+    expect(screen.getByLabelText('Timezone')).toHaveValue('UTC');
+    expect(screen.queryByLabelText('Custom timezone')).not.toBeInTheDocument();
+  });
+
+  it('updates the recurrence summary when a custom timezone is entered', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(screen.getByLabelText('Timezone'), { target: { value: '__custom__' } });
+    fireEvent.change(screen.getByLabelText('Custom timezone'), { target: { value: 'Pacific/Niue' } });
+
+    expect(screen.getByText('Runs every day at 9:00 AM Pacific/Niue')).toBeInTheDocument();
+  });
+
+  it('updates the recurrence summary when a non-common timezone is chosen from browse all', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(screen.getByLabelText('Timezone'), { target: { value: '__browse_all__' } });
+    fireEvent.change(screen.getByLabelText('Browse all time zones'), { target: { value: 'America/Chicago' } });
+
+    expect(screen.getByText('Runs every day at 9:00 AM America/Chicago')).toBeInTheDocument();
   });
 
   it('creates a recurring schedule from the builder and saves the generated cron string', async () => {
