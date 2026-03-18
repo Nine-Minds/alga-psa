@@ -29,6 +29,7 @@ const ContractTemplateModel = {
     }
 
     const lines = await knex('contract_template_lines as lines')
+      // Legacy template terms remain readable as a fallback only while older rows coexist.
       .leftJoin('contract_template_line_terms as terms', function joinTerms() {
         this.on('terms.template_line_id', '=', 'lines.template_line_id')
           .andOn('terms.tenant', '=', 'lines.tenant');

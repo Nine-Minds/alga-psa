@@ -391,6 +391,38 @@ describe('recurrence storage model contracts', () => {
     ).toEqual([]);
   });
 
+  it('T248: documentation and models no longer describe superseded term-storage tables or assumptions as authoritative', () => {
+    const storageMatrix = fs.readFileSync(
+      path.join(
+        repoRoot,
+        'ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRENCE_STORAGE_MATRIX.md',
+      ),
+      'utf8',
+    );
+    const contractLineAction = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/actions/contractLineAction.ts'),
+      'utf8',
+    );
+    const contractTemplateModel = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/models/contractTemplate.ts'),
+      'utf8',
+    );
+    const packageRepository = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/repositories/contractLineRepository.ts'),
+      'utf8',
+    );
+    const serverRepository = fs.readFileSync(
+      path.join(repoRoot, 'server/src/lib/repositories/contractLineRepository.ts'),
+      'utf8',
+    );
+
+    expect(storageMatrix).toContain('legacy read compatibility only');
+    expect(contractLineAction).toContain('authoritative template storage surface');
+    expect(contractTemplateModel).toContain('fallback only while older rows coexist');
+    expect(packageRepository).toContain('staged compatibility fallback only');
+    expect(serverRepository).toContain('staged compatibility fallback only');
+  });
+
   it('T242: template-line cadence_owner schema and backfill behavior stay correct for v1 template recurrence storage', async () => {
     const migrationPath = path.join(
       repoRoot,

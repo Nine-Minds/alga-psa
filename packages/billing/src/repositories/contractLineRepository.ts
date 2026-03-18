@@ -92,6 +92,7 @@ export async function fetchDetailedContractLines(
 
   if (template) {
     const rows = await knex('contract_template_lines as lines')
+      // Legacy template terms remain a read fallback only while historical rows are normalized.
       .leftJoin('contract_template_line_terms as terms', function joinTemplateTerms() {
         this.on('terms.template_line_id', '=', 'lines.template_line_id').andOn('terms.tenant', '=', 'lines.tenant');
       })
@@ -286,7 +287,7 @@ async function cloneTemplateLineToContract(
     .where({ tenant, template_line_id: templateLineId })
     .first();
 
-  // Query template terms to get any overridden values
+  // Template terms remain a staged compatibility fallback only.
   const templateTerms = await trx('contract_template_line_terms')
     .where({ tenant, template_line_id: templateLineId })
     .first();

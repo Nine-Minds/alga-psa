@@ -1955,7 +1955,7 @@
   {
     "id": "F218",
     "description": "Remove stale documentation and model references to dropped term-storage tables or superseded recurrence-storage assumptions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "Cleanup requirements"

@@ -39,6 +39,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Stale term-storage references are now described as compatibility only instead of authoritative recurrence storage, which closes `F218` and `T248`:
+  - `packages/billing/src/actions/contractLineAction.ts` now says directly that `contract_template_lines.billing_timing` is authoritative and `contract_template_line_terms` survives only as a legacy shadow read/write during staged rollout
+  - `packages/billing/src/models/contractTemplate.ts`, `packages/billing/src/repositories/contractLineRepository.ts`, and `server/src/lib/repositories/contractLineRepository.ts` now describe `contract_template_line_terms` joins as compatibility fallbacks, which removes the remaining model/repository comments that could be read as treating the terms table as the live source of truth
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now includes `T248`, locking the authoritative-versus-fallback wording against `RECURRENCE_STORAGE_MATRIX.md` and those source comments
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`, and `npx tsc --pretty false --noEmit -p server/tsconfig.json`; the server compile remains blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error
+
 - (2026-03-17) Stale dropped recurrence-table reads are now explicitly fenced off instead of being left implicit, which closes `F217` and `T247`:
   - a fresh source inventory across `packages/billing/src` and `server/src/lib` shows no live reads or joins against the removed recurrence tables `contract_line_terms`, `contract_line_mappings`, or `contract_template_line_mappings`
   - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now includes `T247`, which locks that absence directly while also documenting that `contract_template_line_terms.billing_timing` remains the one intentional template compatibility fallback listed in `AUTHORITATIVE_RECURRENCE_STORAGE_MODEL`

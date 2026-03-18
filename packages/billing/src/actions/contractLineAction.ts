@@ -77,6 +77,8 @@ export const getContractLineById = withAuth(async (
                 .first();
 
             if (templateLine) {
+                // Legacy template-terms fallback remains readable during staged rollout,
+                // but template_line.billing_timing is now the authoritative write target.
                 const templateTerms = await trx('contract_template_line_terms')
                     .where({ tenant, template_line_id: planId })
                     .first();
@@ -285,7 +287,8 @@ export const upsertContractLineTerms = withAuth(async (
                 updated_at: trx.fn.now(),
             });
 
-        // Also update contract_template_line_terms if this is a template line
+        // Keep the legacy template-terms shadow write in sync during staged rollout.
+        // contract_template_lines.billing_timing remains the authoritative template storage surface.
         await trx('contract_template_line_terms')
             .where({ tenant, template_line_id: contractLineId })
             .update({

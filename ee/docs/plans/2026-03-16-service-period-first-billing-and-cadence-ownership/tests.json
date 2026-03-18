@@ -2141,7 +2141,7 @@
   {
     "id": "T248",
     "description": "Documentation and models no longer describe superseded recurrence-storage tables or assumptions as authoritative",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F218"
     ]
