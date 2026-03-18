@@ -78,6 +78,12 @@ export type TicketMobileEditorWebToNativeMessage =
       };
     }
   | {
+      type: "content-height";
+      payload: {
+        height: number;
+      };
+    }
+  | {
       type: "response";
       payload: {
         requestId: string;

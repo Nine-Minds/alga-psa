@@ -82,6 +82,10 @@ const html = `<!doctype html>
         margin: 0 0 8px;
       }
 
+      .ProseMirror > *:last-child {
+        margin-bottom: 0;
+      }
+
       .ProseMirror ul,
       .ProseMirror ol {
         padding-left: 20px;

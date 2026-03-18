@@ -91,6 +91,12 @@ const webToNativeMessageSchema = z.discriminatedUnion('type', [
     }),
   }),
   z.object({
+    type: z.literal('content-height'),
+    payload: z.object({
+      height: z.number(),
+    }),
+  }),
+  z.object({
     type: z.literal('response'),
     payload: z.object({
       requestId: z.string().min(1),

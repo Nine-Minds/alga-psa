@@ -24,6 +24,7 @@ export type TicketMobileEditorBridgeClientOptions = {
   onReady?: (payload: { format: "blocknote" | "prosemirror"; editable: boolean }) => void;
   onStateChange?: (payload: TicketMobileEditorStatePayload) => void;
   onContentChange?: (payload: { html: string; json: unknown }) => void;
+  onContentHeight?: (payload: { height: number }) => void;
   onError?: (payload: { code: string; message: string; requestId?: string }) => void;
 };
 
@@ -57,6 +58,7 @@ export function parseTicketMobileEditorWebToNativeMessage(
     case "editor-ready":
     case "state-change":
     case "content-change":
+    case "content-height":
     case "response":
     case "error":
       return decoded as TicketMobileEditorWebToNativeMessage;
@@ -84,6 +86,8 @@ export class TicketMobileEditorBridgeClient {
 
   private readonly onContentChange?: TicketMobileEditorBridgeClientOptions["onContentChange"];
 
+  private readonly onContentHeight?: TicketMobileEditorBridgeClientOptions["onContentHeight"];
+
   private readonly onError?: TicketMobileEditorBridgeClientOptions["onError"];
 
   constructor(options: TicketMobileEditorBridgeClientOptions) {
@@ -94,6 +98,7 @@ export class TicketMobileEditorBridgeClient {
     this.onReady = options.onReady;
     this.onStateChange = options.onStateChange;
     this.onContentChange = options.onContentChange;
+    this.onContentHeight = options.onContentHeight;
     this.onError = options.onError;
   }
 
@@ -140,6 +145,9 @@ export class TicketMobileEditorBridgeClient {
         break;
       case "content-change":
         this.onContentChange?.(message.payload);
+        break;
+      case "content-height":
+        this.onContentHeight?.(message.payload);
         break;
       case "response":
         this.resolvePendingRequest(message.payload.requestId, message.payload.request, message.payload.value);
