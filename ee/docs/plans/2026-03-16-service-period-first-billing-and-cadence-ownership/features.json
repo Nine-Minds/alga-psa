@@ -2126,7 +2126,7 @@
   {
     "id": "F237",
     "description": "Generate persisted contract-cadence service periods from recurring obligations once contract-owned cadence is enabled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 2",
       "Pass 8"

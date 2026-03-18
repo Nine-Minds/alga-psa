@@ -2514,7 +2514,7 @@
   {
     "id": "T287",
     "description": "Contract-cadence recurring lines materialize future service periods correctly once contract-owned cadence is enabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F237"
     ]

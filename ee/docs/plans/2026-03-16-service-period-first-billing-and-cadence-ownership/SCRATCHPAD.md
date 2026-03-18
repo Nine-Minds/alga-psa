@@ -41,6 +41,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The first contract-cadence materialization helper now exists, which closes `F237` and `T287`:
+  - `shared/billingClients/materializeContractCadenceServicePeriods.ts` now wraps the existing contract-anniversary generators and `resolveContractCadenceInvoiceWindowForServicePeriod(...)`, producing persisted future record candidates for contract-owned recurring obligations without waiting for later invoice-selection cutover work
+  - the helper keeps contract-owned timing explicit at the persisted-record seam: schedule keys are `contract` owned, timing metadata preserves the anniversary anchor, `advance` invoice windows match the contract-owned service period, and `arrears` invoice windows land on the next contract-owned window after the covered period ends
+  - `server/src/test/unit/billing/materializeContractCadenceServicePeriods.domain.test.ts` now locks the monthly contract-owned materialization path directly for both advance and arrears, proving the additive record shape instead of only re-testing raw boundary generation
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/materializeContractCadenceServicePeriods.domain.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) The first client-cadence materialization helper now exists, which closes `F236` and adds/closes `T343` while intentionally leaving `T286` for `F244` backfill/no-billed-history rules:
   - `shared/billingClients/materializeClientCadenceServicePeriods.ts` now composes the existing client-cadence boundary generator with the new horizon policy and the persisted-record contract, producing additive future record candidates for client-owned recurring obligations instead of only ephemeral runtime periods
   - the helper preserves parity semantics instead of inventing new date math: service-period boundaries still come from `generateClientCadenceServicePeriods(...)`, `advance` invoice windows stay aligned to the same period, `arrears` invoice windows resolve to the next client-cadence window, and generated rows use the explicit `generated` provenance plus the shared persisted-record identity vocabulary
