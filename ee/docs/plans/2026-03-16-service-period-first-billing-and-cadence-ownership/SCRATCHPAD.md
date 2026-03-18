@@ -41,6 +41,17 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Billing-staff operational inspection now has an explicit shared view contract, which closes `F257` and `T300`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodOperationalView`, `IRecurringServicePeriodOperationalViewSummary`, and `IRecurringServicePeriodOperationalViewRow`, so upcoming-period inspection has one typed read model instead of every later dashboard surface inventing its own row contract
+  - `shared/billingClients/recurringServicePeriodOperationalView.ts` now projects the existing future-listing query and display-state contract into one operational view: deterministic upcoming rows, lifecycle-aware display badges, and summary counts for generated versus exception rows (`edited|skipped|locked`) before invoice generation
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_OPERATIONAL_VIEWS.md` now documents the intended upcoming-period inspection seam and `RECURRING_SERVICE_PERIOD_LISTING.md` was tightened so the earlier listing pass no longer falsely implies this operational-view layer is still deferred
+  - `server/src/test/unit/billing/recurringServicePeriodOperationalView.domain.test.ts` now proves the shared view excludes billed history by default while still surfacing generated and skipped future rows with summary counts, and `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks the new artifact directly
+  - `pass-0-source-inventory.json` was refreshed in the same checkpoint because the runtime-persisted selection test added another persisted-period reader reference and the docs contract suite intentionally keeps that inventory source-backed
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodOperationalView.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) Live recurring runtime now consumes persisted service-period selections before falling back to legacy derivation, which closes `F256`, `T292`, and `T307`:
   - `packages/billing/src/actions/invoiceGeneration.ts` now marks due recurring selections as `recurringTimingSelectionSource: 'persisted'` for both billing-cycle-backed invoice windows and selector-input execution windows, so invoice generation stops treating due-period lookup as advisory metadata and instead passes it as the authoritative runtime schedule input
   - `packages/billing/src/lib/billing/billingEngine.ts` now attempts to load due rows directly from `recurring_service_periods` when selecting recurring timing for a billing window, converts those rows into runtime selections for fixed, product, and license charge paths, and only falls back to legacy derived timing when the persisted ledger has not been materialized yet or the relation is absent during staged rollout

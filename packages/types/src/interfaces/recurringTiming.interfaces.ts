@@ -536,6 +536,36 @@ export interface IRecurringServicePeriodDisplayState {
   reasonLabel?: string | null;
 }
 
+export interface IRecurringServicePeriodOperationalViewRow {
+  recordId: string;
+  scheduleKey: string;
+  revision: number;
+  cadenceOwner: CadenceOwner;
+  duePosition: DuePosition;
+  sourceObligation: IRecurringServicePeriodRecord['sourceObligation'];
+  chargeFamily: IRecurringServicePeriodRecord['sourceObligation']['chargeFamily'];
+  servicePeriod: IRecurringServicePeriodRecord['servicePeriod'];
+  invoiceWindow: IRecurringServicePeriodRecord['invoiceWindow'];
+  activityWindow: IRecurringServicePeriodRecord['activityWindow'];
+  displayState: IRecurringServicePeriodDisplayState;
+  isException: boolean;
+}
+
+export interface IRecurringServicePeriodOperationalViewSummary {
+  totalRows: number;
+  exceptionRows: number;
+  generatedRows: number;
+  editedRows: number;
+  skippedRows: number;
+  lockedRows: number;
+}
+
+export interface IRecurringServicePeriodOperationalView {
+  query: IRecurringServicePeriodListingQuery;
+  summary: IRecurringServicePeriodOperationalViewSummary;
+  rows: IRecurringServicePeriodOperationalViewRow[];
+}
+
 export interface IRecurringServicePeriodGovernanceRequirement {
   action: RecurringServicePeriodGovernanceAction;
   permissionKey: RecurringServicePeriodPermissionKey;

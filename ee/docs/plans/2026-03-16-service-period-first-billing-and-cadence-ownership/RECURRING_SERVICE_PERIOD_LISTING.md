@@ -45,8 +45,8 @@ That keeps listing separate from due selection:
 
 This checkpoint still does not define:
 
-- API controllers or dashboard screens that call the listing query
+- concrete React screens or API controllers that call the listing query directly
 - edit workflows on top of the listing results
 - audit/history views that include billed, superseded, or archived rows by default
 
-Those remain sequenced behind `F251-F257`.
+`F257` now defines the shared operational-view projection on top of this listing seam, while concrete screens and controller wiring remain sequenced behind later passes.

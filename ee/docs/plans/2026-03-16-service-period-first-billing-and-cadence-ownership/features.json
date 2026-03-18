@@ -2306,7 +2306,7 @@
   {
     "id": "F257",
     "description": "Define dashboard and operational views that let billing staff inspect upcoming materialized service periods before invoice generation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "UI and downstream-consumer requirements"

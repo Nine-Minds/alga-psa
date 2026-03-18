@@ -29,6 +29,7 @@ const recurringServicePeriodUiStates = read('RECURRING_SERVICE_PERIOD_UI_STATES.
 const recurringServicePeriodEditValidation = read('RECURRING_SERVICE_PERIOD_EDIT_VALIDATION.md');
 const recurringServicePeriodEditConflicts = read('RECURRING_SERVICE_PERIOD_EDIT_CONFLICTS.md');
 const recurringServicePeriodListing = read('RECURRING_SERVICE_PERIOD_LISTING.md');
+const recurringServicePeriodOperationalViews = read('RECURRING_SERVICE_PERIOD_OPERATIONAL_VIEWS.md');
 const recurringServicePeriodDueSelection = read('RECURRING_SERVICE_PERIOD_DUE_SELECTION.md');
 const recurringServicePeriodInvoiceLinkage = read('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
@@ -350,6 +351,21 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodListing).toContain('`skipped`');
     expect(recurringServicePeriodListing).toContain('servicePeriod.end > asOf');
     expect(recurringServicePeriodListing).toContain('billing staff can inspect future intent even when a row is skipped or not currently due');
+  });
+
+  it('T300: billing staff operational views can inspect upcoming persisted service periods before invoice generation', () => {
+    expect(recurringServicePeriodOperationalViews).toContain('# Recurring Service-Period Operational Views');
+    expect(recurringServicePeriodOperationalViews).toContain('## Shared View Contract');
+    expect(recurringServicePeriodOperationalViews).toContain('`IRecurringServicePeriodOperationalView`');
+    expect(recurringServicePeriodOperationalViews).toContain('shared/billingClients/recurringServicePeriodOperationalView.ts');
+    expect(recurringServicePeriodOperationalViews).toContain('## Required Upcoming Rows');
+    expect(recurringServicePeriodOperationalViews).toContain('source obligation reference');
+    expect(recurringServicePeriodOperationalViews).toContain('invoice-window boundaries');
+    expect(recurringServicePeriodOperationalViews).toContain('display-state label, tone, detail, and optional reason label');
+    expect(recurringServicePeriodOperationalViews).toContain('## Default Operational Summary');
+    expect(recurringServicePeriodOperationalViews).toContain('`exceptionRows`');
+    expect(recurringServicePeriodOperationalViews).toContain('edited`, `skipped`, or `locked` state');
+    expect(recurringServicePeriodOperationalViews).toContain('before invoice generation');
   });
 
   it('T349: edit transport surfaces define request, provenance, and structured validation feedback before dashboard editing lands', () => {

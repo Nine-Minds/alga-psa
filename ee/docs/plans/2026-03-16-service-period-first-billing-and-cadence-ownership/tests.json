@@ -2672,7 +2672,7 @@
   {
     "id": "T300",
     "description": "Billing staff can list future persisted service periods independently of invoice generation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F250",
       "F257"

@@ -181,6 +181,9 @@ export {
   listRecurringServicePeriodRecords,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodListing';
 export {
+  buildRecurringServicePeriodOperationalView,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodOperationalView';
+export {
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
 export {
