@@ -2,8 +2,6 @@
   "cycles": [
     "@alga-psa/analytics -> @alga-psa/tenancy -> @alga-psa/workflows",
     "@alga-psa/clients -> @alga-psa/workflows -> @alga-psa/projects",
-    "@alga-psa/documents -> @alga-psa/tags",
-    "@alga-psa/documents -> @alga-psa/workflows -> @alga-psa/tags",
     "@alga-psa/notifications -> @alga-psa/workflows",
     "@alga-psa/projects -> @alga-psa/workflows",
     "@alga-psa/scheduling -> @alga-psa/workflows",
