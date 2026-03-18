@@ -4,32 +4,17 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom';
 import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown, Eye, FileVideo } from 'lucide-react';
 import type { IDocument } from '@alga-psa/types';
-import {
-  getDocumentsByEntity,
-  removeDocumentAssociations,
-  ensureEntityFolders
-} from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { Button } from '@alga-psa/ui/components/Button';
-import DocumentUpload from '@alga-psa/documents/components/DocumentUpload';
-import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from '@alga-psa/ui/components/Input';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
-import {
-  getBlockContent,
-  updateBlockContent,
-  createBlockDocument
-} from '@alga-psa/documents/actions/documentBlockContentActions';
-import { updateDocument } from '@alga-psa/documents/actions/documentActions';
-import { downloadDocumentInBrowser } from '@alga-psa/documents/actions';
-import { downloadDocument } from '@alga-psa/documents/lib/documentUtils';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
-import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
   type: "paragraph",
@@ -83,6 +68,21 @@ export default function TaskDocumentsSimple({
   onPendingDocumentsChange,
   onDocumentAdded
 }: TaskDocumentsSimpleProps) {
+  const {
+    getDocumentsByEntity,
+    removeDocumentAssociations,
+    ensureEntityFolders,
+    getBlockContent,
+    updateBlockContent,
+    createBlockDocument,
+    updateDocument,
+    downloadDocumentInBrowser,
+    downloadDocument,
+    renderDocumentUpload,
+    renderDocumentSelector,
+    renderFolderSelectorModal,
+  } = useDocumentsCrossFeature();
+
   // Pending mode is active when we don't have a taskId yet (task creation)
   const isPendingMode = !taskId;
 
@@ -585,13 +585,13 @@ export default function TaskDocumentsSimple({
           <>
             {showUpload && currentUser && (
           <div className="p-3 border border-gray-200 rounded-md bg-gray-50">
-            <DocumentUpload
-              id="task-document-upload"
-              userId={currentUser.user_id}
-              entityId={isPendingMode ? undefined : taskId}
-              entityType={isPendingMode ? undefined : "project_task"}
-              folderPath={isPendingMode ? null : undefined}
-              onUploadComplete={async (result) => {
+            {renderDocumentUpload({
+              id: "task-document-upload",
+              userId: currentUser.user_id,
+              entityId: isPendingMode ? undefined : taskId,
+              entityType: isPendingMode ? undefined : "project_task",
+              folderPath: isPendingMode ? null : undefined,
+              onUploadComplete: async (result: any) => {
                 setShowUpload(false);
                 if (result?.success && result.document) {
                   toast.success('Document uploaded successfully');
@@ -617,9 +617,9 @@ export default function TaskDocumentsSimple({
                     await handleDocumentMutation();
                   }
                 }
-              }}
-              onCancel={() => setShowUpload(false)}
-            />
+              },
+              onCancel: () => setShowUpload(false),
+            })}
           </div>
         )}
 
@@ -723,13 +723,12 @@ export default function TaskDocumentsSimple({
       </div>
 
       {/* Document selector modal */}
-      {showSelector && (
-        <DocumentSelector
-          id="task-document-selector"
-          entityId={isPendingMode ? undefined : taskId}
-          entityType={isPendingMode ? undefined : "project_task"}
-          excludeDocumentIds={isPendingMode ? pendingDocuments?.map(d => d.document_id) : undefined}
-          onDocumentsSelected={async (selectedDocs?: IDocument[]) => {
+      {showSelector && renderDocumentSelector({
+          id: "task-document-selector",
+          entityId: isPendingMode ? undefined : taskId,
+          entityType: isPendingMode ? undefined : "project_task",
+          excludeDocumentIds: isPendingMode ? pendingDocuments?.map(d => d.document_id) : undefined,
+          onDocumentsSelected: async (selectedDocs?: IDocument[]) => {
             setShowSelector(false);
             if (isPendingMode && selectedDocs && selectedDocs.length > 0) {
               // In pending mode, add selected documents to pending list
@@ -756,11 +755,10 @@ export default function TaskDocumentsSimple({
               }
               await handleDocumentMutation();
             }
-          }}
-          isOpen={showSelector}
-          onClose={() => setShowSelector(false)}
-        />
-      )}
+          },
+          isOpen: showSelector,
+          onClose: () => setShowSelector(false),
+      })}
 
       {/* Document viewer/editor drawer */}
       <Drawer
@@ -970,15 +968,15 @@ export default function TaskDocumentsSimple({
       )}
 
       {/* Folder Selector Modal */}
-      <FolderSelectorModal
-        isOpen={showFolderModal}
-        onClose={() => setShowFolderModal(false)}
-        onSelectFolder={handleFolderSelected}
-        title="Select Folder for New Document"
-        description="Choose where to save this new document"
-        entityId={isPendingMode ? undefined : taskId}
-        entityType={isPendingMode ? undefined : "project_task"}
-      />
+      {renderFolderSelectorModal({
+        isOpen: showFolderModal,
+        onClose: () => setShowFolderModal(false),
+        onSelectFolder: handleFolderSelected,
+        title: "Select Folder for New Document",
+        description: "Choose where to save this new document",
+        entityId: isPendingMode ? undefined : taskId,
+        entityType: isPendingMode ? undefined : "project_task",
+      })}
 
       {/* Delete confirmation dialog */}
       <ConfirmationDialog
