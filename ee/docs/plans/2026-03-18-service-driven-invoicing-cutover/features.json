@@ -42,7 +42,7 @@
   { "id": "F041", "description": "Add a selector-input invoice preview action alongside the legacy `previewInvoice(billing_cycle_id)` wrapper.", "implemented": true },
   { "id": "F042", "description": "Add a selector-input PO-overage action alongside the legacy `getPurchaseOrderOverageForBillingCycle(...)` wrapper.", "implemented": true },
   { "id": "F043", "description": "Refactor invoice preview internals so preview generation reuses selector-input billing calculation rather than client-billing-cycle lookup logic.", "implemented": true },
-  { "id": "F044", "description": "Refactor recurring invoice generation APIs so selector-input execution is a first-class request contract, not an internal-only path.", "implemented": false },
+  { "id": "F044", "description": "Refactor recurring invoice generation APIs so selector-input execution is a first-class request contract, not an internal-only path.", "implemented": true },
   { "id": "F045", "description": "Update recurring invoice bridge-id handling so preview/generate APIs tolerate nullable `billing_cycle_id` without losing duplicate detection or diagnostics.", "implemented": false },
   { "id": "F046", "description": "Return service-period-aware failure details from preview/generate actions so the UI can explain selector-input errors accurately.", "implemented": true },
   { "id": "F047", "description": "Ensure preview view models preserve canonical service-period detail rows regardless of cadence source.", "implemented": true },
