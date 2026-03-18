@@ -39,6 +39,16 @@ const invoiceStatusSchema = z.enum([
   'partially_applied'
 ]);
 
+const recurringExecutionWindowKindSchema = z.enum([
+  'billing_cycle_window',
+  'contract_cadence_window',
+]);
+
+const recurringCadenceSourceSchema = z.enum([
+  'client_schedule',
+  'contract_anniversary',
+]);
+
 // Discount type enum
 const discountTypeSchema = z.enum(['percentage', 'fixed']);
 
@@ -181,11 +191,17 @@ const baseInvoiceSchema = z.object({
   invoice_number: z.string().min(1).max(50),
   finalized_at: invoiceDateSchema.optional(),
   credit_applied: monetaryAmountSchema.default(0),
-  billing_cycle_id: uuidSchema.optional(),
+  billing_cycle_id: uuidSchema.nullable().optional(),
   is_manual: z.boolean().default(false),
   is_prepayment: z.boolean().default(false),
   billing_period_start: invoiceDateSchema.optional(),
-  billing_period_end: invoiceDateSchema.optional()
+  billing_period_end: invoiceDateSchema.optional(),
+  recurring_execution_window_kind: recurringExecutionWindowKindSchema.nullable().optional(),
+  recurring_cadence_source: recurringCadenceSourceSchema.nullable().optional(),
+  recurring_service_period_start: z.string().datetime().nullable().optional(),
+  recurring_service_period_end: z.string().datetime().nullable().optional(),
+  recurring_invoice_window_start: z.string().datetime().nullable().optional(),
+  recurring_invoice_window_end: z.string().datetime().nullable().optional(),
 });
 
 // Create invoice schema
@@ -244,8 +260,14 @@ const invoiceViewModelSchema = z.object({
   custom_fields: z.record(z.any()).optional(),
   finalized_at: z.string().optional(),
   credit_applied: z.number().default(0),
-  billing_cycle_id: uuidSchema.optional(),
-  is_manual: z.boolean().default(false)
+  billing_cycle_id: uuidSchema.nullable().optional(),
+  is_manual: z.boolean().default(false),
+  recurring_execution_window_kind: recurringExecutionWindowKindSchema.nullable().optional(),
+  recurring_cadence_source: recurringCadenceSourceSchema.nullable().optional(),
+  recurring_service_period_start: z.string().datetime().nullable().optional(),
+  recurring_service_period_end: z.string().datetime().nullable().optional(),
+  recurring_invoice_window_start: z.string().datetime().nullable().optional(),
+  recurring_invoice_window_end: z.string().datetime().nullable().optional(),
 });
 
 // ============================================================================
@@ -302,11 +324,6 @@ const updateInvoiceTemplateSchema = createUpdateSchema(createInvoiceTemplateSche
 // ============================================================================
 // Invoice Operation Schemas
 // ============================================================================
-
-const recurringExecutionWindowKindSchema = z.enum([
-  'billing_cycle_window',
-  'contract_cadence_window',
-]);
 
 const recurringCadenceOwnerSchema = z.enum(['client', 'contract']);
 
@@ -514,7 +531,9 @@ const invoiceFilterSchema = baseFilterSchema
   .merge(invoiceTypeFilterSchema)
   .extend({
     invoice_number: z.string().optional(),
-    billing_cycle_id: uuidSchema.optional()
+    billing_cycle_id: uuidSchema.optional(),
+    execution_window_kind: recurringExecutionWindowKindSchema.optional(),
+    cadence_source: recurringCadenceSourceSchema.optional(),
   });
 
 // Invoice list query schema

@@ -5,6 +5,8 @@ import type { InvoiceTemplateAst } from '../lib/invoice-template-ast';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
+export type InvoiceRecurringExecutionWindowKind = 'billing_cycle_window' | 'contract_cadence_window';
+export type InvoiceRecurringCadenceSource = 'client_schedule' | 'contract_anniversary';
 
 // Derived tax import state used for UI + workflow gating (separate from invoice status).
 export type TaxImportState = 'not_required' | 'pending' | 'complete';
@@ -45,6 +47,12 @@ export interface IInvoice extends TenantEntity {
   invoice_items?: IInvoiceCharge[];
   /** Source of tax calculation: internal (Alga), external (accounting package), pending_external (awaiting import) */
   tax_source?: TaxSource;
+  recurring_execution_window_kind?: InvoiceRecurringExecutionWindowKind | null;
+  recurring_cadence_source?: InvoiceRecurringCadenceSource | null;
+  recurring_service_period_start?: ISO8601String | null;
+  recurring_service_period_end?: ISO8601String | null;
+  recurring_invoice_window_start?: ISO8601String | null;
+  recurring_invoice_window_end?: ISO8601String | null;
 }
 
 export interface NetAmountItem {
@@ -444,4 +452,10 @@ export interface InvoiceViewModel {
   billing_cycle_id?: string;
   is_manual: boolean;
   tax_source?: 'internal' | 'external' | 'pending_external';
+  recurring_execution_window_kind?: InvoiceRecurringExecutionWindowKind | null;
+  recurring_cadence_source?: InvoiceRecurringCadenceSource | null;
+  recurring_service_period_start?: ISO8601String | null;
+  recurring_service_period_end?: ISO8601String | null;
+  recurring_invoice_window_start?: ISO8601String | null;
+  recurring_invoice_window_end?: ISO8601String | null;
 }

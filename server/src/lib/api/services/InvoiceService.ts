@@ -180,6 +180,20 @@ export class InvoiceService extends BaseService<IInvoice> {
     return summarizeInvoiceRecurringProvenance(charges);
   }
 
+  private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
+    return trx('recurring_service_periods as rsp')
+      .where('rsp.tenant', context.tenant)
+      .whereNotNull('rsp.invoice_id')
+      .select('rsp.invoice_id')
+      .min('rsp.service_period_start as recurring_service_period_start')
+      .max('rsp.service_period_end as recurring_service_period_end')
+      .min('rsp.invoice_window_start as recurring_invoice_window_start')
+      .max('rsp.invoice_window_end as recurring_invoice_window_end')
+      .max('rsp.cadence_owner as recurring_cadence_owner')
+      .groupBy('rsp.invoice_id')
+      .as('recurring_invoice_summary');
+  }
+
   // ============================================================================
   // CRUD Operations
   // ============================================================================
@@ -260,9 +274,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       query.orderBy(`invoices.${sortField}`, sortOrder);
       query.limit(limit).offset(offset);
 
-      // Get total count - use a separate query without SELECT columns to avoid GROUP BY issues
-      const countQuery = trx('invoices')
-        .where('invoices.tenant', context.tenant);
+      // Get total count using the same recurring summary join so execution-window filters stay consistent.
+      const countQuery = this.buildBaseQuery(trx, context)
+        .clearSelect()
+        .clearOrder();
 
       if (filters) {
         this.applyInvoiceFilters(countQuery, filters);
@@ -270,7 +285,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       const [data, [{ count }]] = await Promise.all([
         query,
-        countQuery.count('* as count')
+        countQuery.countDistinct('invoices.invoice_id as count')
       ]);
 
       // Add HATEOAS links
@@ -1788,12 +1803,33 @@ export class InvoiceService extends BaseService<IInvoice> {
   // ============================================================================
 
   protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
+    const recurringInvoiceSummary = this.buildRecurringInvoiceSummaryQuery(trx, context);
+
     return trx('invoices')
+      .leftJoin(recurringInvoiceSummary, 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id')
       .where('invoices.tenant', context.tenant)
       .select(
         'invoices.*',
         trx.raw('COALESCE(invoices.credit_applied, 0) as credit_applied'),
-        trx.raw('(invoices.total_amount - COALESCE(invoices.credit_applied, 0)) as balance_due')
+        trx.raw('(invoices.total_amount - COALESCE(invoices.credit_applied, 0)) as balance_due'),
+        'recurring_invoice_summary.recurring_service_period_start',
+        'recurring_invoice_summary.recurring_service_period_end',
+        'recurring_invoice_summary.recurring_invoice_window_start',
+        'recurring_invoice_summary.recurring_invoice_window_end',
+        trx.raw(`
+          CASE
+            WHEN recurring_invoice_summary.recurring_cadence_owner = 'contract' THEN 'contract_cadence_window'
+            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' OR invoices.billing_cycle_id IS NOT NULL THEN 'billing_cycle_window'
+            ELSE NULL
+          END as recurring_execution_window_kind
+        `),
+        trx.raw(`
+          CASE
+            WHEN recurring_invoice_summary.recurring_cadence_owner = 'contract' THEN 'contract_anniversary'
+            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' OR invoices.billing_cycle_id IS NOT NULL THEN 'client_schedule'
+            ELSE NULL
+          END as recurring_cadence_source
+        `)
       );
   }
 
@@ -1852,6 +1888,26 @@ export class InvoiceService extends BaseService<IInvoice> {
           break;
         case 'billing_cycle_id':
           query.where('invoices.billing_cycle_id', value);
+          break;
+        case 'execution_window_kind':
+          if (value === 'contract_cadence_window') {
+            query.where('recurring_invoice_summary.recurring_cadence_owner', 'contract');
+          } else if (value === 'billing_cycle_window') {
+            query.where(function () {
+              this.where('recurring_invoice_summary.recurring_cadence_owner', 'client')
+                .orWhereNotNull('invoices.billing_cycle_id');
+            });
+          }
+          break;
+        case 'cadence_source':
+          if (value === 'contract_anniversary') {
+            query.where('recurring_invoice_summary.recurring_cadence_owner', 'contract');
+          } else if (value === 'client_schedule') {
+            query.where(function () {
+              this.where('recurring_invoice_summary.recurring_cadence_owner', 'client')
+                .orWhereNotNull('invoices.billing_cycle_id');
+            });
+          }
           break;
         case 'has_credit_applied':
           if (value) {
