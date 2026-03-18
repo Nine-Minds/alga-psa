@@ -104,6 +104,12 @@ export {
   resolveContractCadenceAnchorDate,
   generateSemiAnnualContractCadenceServicePeriods,
 } from '@alga-psa/shared/billingClients/contractCadenceServicePeriods';
+export {
+  canTransitionRecurringServicePeriodState,
+  isRecurringServicePeriodStateTerminal,
+  RECURRING_SERVICE_PERIOD_LIFECYCLE_TRANSITIONS,
+  RECURRING_SERVICE_PERIOD_TERMINAL_STATES,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodLifecycle';
 export type {
   AccountingAdapterType,
   ExternalCompanyRecord,

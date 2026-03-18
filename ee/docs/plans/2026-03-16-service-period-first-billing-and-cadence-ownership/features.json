@@ -2090,7 +2090,7 @@
   {
     "id": "F233",
     "description": "Define the service-period lifecycle state model, including generated, edited, skipped, locked, billed, superseded, and archived states as applicable",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Acceptance Criteria"

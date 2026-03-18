@@ -89,7 +89,7 @@ The persisted record must carry both `provenance` and `lifecycleState`.
 - `superseded`
 - `archived`
 
-`F233` will define transition legality between those states. `F234` will define when `reasonCode`, `sourceRunKey`, and `supersedesRecordId` are required versus optional.
+`F233` now defines transition legality in `RECURRING_SERVICE_PERIOD_LIFECYCLE.md`. `F234` will define when `reasonCode`, `sourceRunKey`, and `supersedesRecordId` are required versus optional.
 
 ## F232 Physical Schema Landing
 

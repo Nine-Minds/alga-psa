@@ -2473,7 +2473,7 @@
   {
     "id": "T283",
     "description": "Generated, edited, skipped, locked, billed, and superseded lifecycle states transition according to the documented model",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F233"
     ]

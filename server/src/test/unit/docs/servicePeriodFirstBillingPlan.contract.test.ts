@@ -18,6 +18,7 @@ const cutoverSequence = read('CUTOVER_SEQUENCE.md');
 const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
 const persistedServicePeriodRecord = read('PERSISTED_SERVICE_PERIOD_RECORD.md');
 const prd = read('PRD.md');
+const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
 const recurrenceStorageMatrix = read('RECURRENCE_STORAGE_MATRIX.md');
 const runbook = read('RUNBOOK.md');
@@ -277,6 +278,23 @@ describe('service-period-first billing plan artifacts', () => {
     expect(persistedServicePeriodRecord).toContain('RecurringServicePeriodProvenanceKind');
     expect(persistedServicePeriodRecord).toContain('F232');
     expect(persistedServicePeriodRecord).toContain('F233-F255');
+  });
+
+  it('documents the recurring service-period lifecycle states, allowed transitions, and terminal-state policy', () => {
+    expect(recurringServicePeriodLifecycle).toContain('# Recurring Service-Period Lifecycle');
+    expect(recurringServicePeriodLifecycle).toContain('## State Meanings');
+    expect(recurringServicePeriodLifecycle).toContain('`generated`');
+    expect(recurringServicePeriodLifecycle).toContain('`edited`');
+    expect(recurringServicePeriodLifecycle).toContain('`skipped`');
+    expect(recurringServicePeriodLifecycle).toContain('`locked`');
+    expect(recurringServicePeriodLifecycle).toContain('`billed`');
+    expect(recurringServicePeriodLifecycle).toContain('`superseded`');
+    expect(recurringServicePeriodLifecycle).toContain('`archived`');
+    expect(recurringServicePeriodLifecycle).toContain('## Allowed Transitions');
+    expect(recurringServicePeriodLifecycle).toContain('generated -> edited | skipped | locked | billed | superseded | archived');
+    expect(recurringServicePeriodLifecycle).toContain('billed -> archived');
+    expect(recurringServicePeriodLifecycle).toContain('## Terminal States');
+    expect(recurringServicePeriodLifecycle).toContain('shared/billingClients/recurringServicePeriodLifecycle.ts');
   });
 
   it('T250: the recurrence field source-of-truth matrix matches the authoritative storage model and compatibility seams', () => {

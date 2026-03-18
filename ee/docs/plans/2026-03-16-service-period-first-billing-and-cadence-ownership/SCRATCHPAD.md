@@ -41,6 +41,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The persisted-period lifecycle model is now explicit, which closes `F233` and `T283`:
+  - `shared/billingClients/recurringServicePeriodLifecycle.ts` now defines the authoritative v1 state machine for persisted service-period records, including the allowed transition map, terminal-state set, and reusable `canTransitionRecurringServicePeriodState(...)` / `isRecurringServicePeriodStateTerminal(...)` helpers
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_LIFECYCLE.md` now documents the state meanings, conservative allowed transitions, terminal-state policy, and v1 invariants so later edit/regeneration/billing-linkage work has one lifecycle baseline instead of ad hoc state semantics
+  - `packages/billing/src/index.ts` now re-exports the lifecycle helpers/constants from the billing package surface so downstream consumers can adopt the same transition contract without reaching into shared internals directly
+  - `server/src/test/unit/billing/recurringServicePeriodLifecycle.domain.test.ts` now locks the transition map directly, while `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks the lifecycle artifact so the documented state model and the executable helper cannot drift apart quietly
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodLifecycle.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) The physical persisted-ledger table now exists, which closes `F232`, closes `T282`, and adds/closes `T342`:
   - `server/migrations/20260318120000_create_recurring_service_periods.cjs` now creates `recurring_service_periods` as the first physical ledger table for materialized recurring periods, flattening the `F231` record contract into row columns for identity, obligation linkage, cadence ownership, service/invoice boundaries, activity clipping, provenance, and audit timestamps
   - the migration now enforces the first integrity boundary directly in the database: check constraints cover cadence owner, due position, lifecycle state, obligation type, charge family, provenance kind, positive revision numbers, valid `[start, end)` service/invoice windows, valid optional activity-window clipping, and `supersedes_record_id <> record_id`
@@ -853,6 +862,10 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Commands / Runbooks
 
+- (2026-03-18) Persisted service-period lifecycle validation:
+  - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodLifecycle.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) Persisted service-period schema validation:
   - `cd server && npx vitest run src/test/unit/migrations/recurringServicePeriodsMigration.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
@@ -1465,9 +1478,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/pass-0-source-inventory.json`
 - Materialized-ledger artifacts:
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PERSISTED_SERVICE_PERIOD_RECORD.md`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_LIFECYCLE.md`
 - Key runtime files:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts`
   - `server/migrations/20260318120000_create_recurring_service_periods.cjs`
+  - `shared/billingClients/recurringServicePeriodLifecycle.ts`
   - `packages/billing/src/lib/billing/billingEngine.ts`
   - `packages/billing/src/lib/billing/recurringTiming.ts`
   - `shared/billingClients/createBillingCycles.ts`
@@ -1487,6 +1502,7 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/test/integration/billingInvoiceTiming.integration.test.ts`
   - `server/src/test/infrastructure/billing/invoices/*`
   - `server/src/test/infrastructure/billing/credits/*`
+  - `server/src/test/unit/billing/recurringServicePeriodLifecycle.domain.test.ts`
   - `server/src/test/unit/migrations/recurringServicePeriodsMigration.test.ts`
   - `server/src/test/unit/billingEngine.test.ts`
   - `server/src/test/unit/billing/billingEngine.timing.test.ts`
