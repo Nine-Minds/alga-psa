@@ -15,13 +15,16 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import type { ColumnDefinition, DeletionValidationResult } from '@alga-psa/types';
 import type { WorkflowScheduleStateRecord } from '@alga-psa/workflows/persistence';
 import {
-  deleteWorkflowScheduleAction,
+  createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
+  deleteWorkflowScheduleAction as deleteWorkflowScheduleActionDefault,
+  getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
   listWorkflowDefinitionsPagedAction,
-  listWorkflowSchedulesAction,
-  pauseWorkflowScheduleAction,
-  resumeWorkflowScheduleAction
+  listWorkflowSchedulesAction as listWorkflowSchedulesActionDefault,
+  pauseWorkflowScheduleAction as pauseWorkflowScheduleActionDefault,
+  resumeWorkflowScheduleAction as resumeWorkflowScheduleActionDefault,
+  updateWorkflowScheduleAction as updateWorkflowScheduleActionDefault
 } from '@alga-psa/workflows/actions';
-import WorkflowScheduleDialog from './WorkflowScheduleDialog';
+import WorkflowScheduleDialog, { type WorkflowScheduleDialogActions } from './WorkflowScheduleDialog';
 
 type WorkflowOption = {
   workflow_id: string;
@@ -34,6 +37,16 @@ type WorkflowScheduleListItem = WorkflowScheduleStateRecord & {
 
 type StatusFilter = 'all' | 'enabled' | 'paused' | 'failed' | 'completed' | 'disabled';
 type TriggerFilter = 'all' | 'schedule' | 'recurring';
+export type WorkflowSchedulesActions = WorkflowScheduleDialogActions & {
+  deleteWorkflowScheduleAction: typeof deleteWorkflowScheduleActionDefault;
+  listWorkflowSchedulesAction: typeof listWorkflowSchedulesActionDefault;
+  pauseWorkflowScheduleAction: typeof pauseWorkflowScheduleActionDefault;
+  resumeWorkflowScheduleAction: typeof resumeWorkflowScheduleActionDefault;
+};
+
+type SchedulesProps = {
+  scheduleActions?: WorkflowSchedulesActions;
+};
 
 const SCHEDULE_SEARCH_PARAM = 'scheduleSearch';
 const SCHEDULE_STATUS_PARAM = 'scheduleStatus';
@@ -69,7 +82,19 @@ const formatRelativeTimestamp = (value?: string | null): string => {
   return formatDistanceToNow(date, { addSuffix: true });
 };
 
-export default function Schedules() {
+const defaultScheduleActions: WorkflowSchedulesActions = {
+  createWorkflowScheduleAction: createWorkflowScheduleActionDefault,
+  deleteWorkflowScheduleAction: deleteWorkflowScheduleActionDefault,
+  getWorkflowScheduleAction: getWorkflowScheduleActionDefault,
+  listWorkflowSchedulesAction: listWorkflowSchedulesActionDefault,
+  pauseWorkflowScheduleAction: pauseWorkflowScheduleActionDefault,
+  resumeWorkflowScheduleAction: resumeWorkflowScheduleActionDefault,
+  updateWorkflowScheduleAction: updateWorkflowScheduleActionDefault,
+};
+
+export default function Schedules({
+  scheduleActions = defaultScheduleActions
+}: SchedulesProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const didUnmount = useRef(false);
@@ -138,7 +163,7 @@ export default function Schedules() {
       setIsLoading(true);
       setError(null);
       try {
-        const result = await listWorkflowSchedulesAction({
+        const result = await scheduleActions.listWorkflowSchedulesAction({
           workflowId: workflowFilter || undefined,
           status: statusFilter,
           triggerType: triggerFilter,
@@ -163,14 +188,14 @@ export default function Schedules() {
     return () => {
       didUnmount.current = true;
     };
-  }, [refreshKey, searchTerm, statusFilter, triggerFilter, workflowFilter]);
+  }, [refreshKey, scheduleActions, searchTerm, statusFilter, triggerFilter, workflowFilter]);
 
   const handlePauseResume = async (schedule: WorkflowScheduleListItem) => {
     try {
       if (schedule.enabled && schedule.status !== 'paused') {
-        await pauseWorkflowScheduleAction({ scheduleId: schedule.id });
+        await scheduleActions.pauseWorkflowScheduleAction({ scheduleId: schedule.id });
       } else {
-        await resumeWorkflowScheduleAction({ scheduleId: schedule.id });
+        await scheduleActions.resumeWorkflowScheduleAction({ scheduleId: schedule.id });
       }
       setRefreshKey((value) => value + 1);
     } catch (actionError) {
@@ -365,7 +390,7 @@ export default function Schedules() {
     if (!scheduleToDelete) return;
     setIsDeleting(true);
     try {
-      await deleteWorkflowScheduleAction({ scheduleId: scheduleToDelete.id });
+      await scheduleActions.deleteWorkflowScheduleAction({ scheduleId: scheduleToDelete.id });
       setIsDeleteDialogOpen(false);
       setScheduleToDelete(null);
       setRefreshKey((value) => value + 1);
@@ -471,6 +496,7 @@ export default function Schedules() {
         mode={dialogMode}
         scheduleId={activeScheduleId}
         initialWorkflowId={workflowFilter || undefined}
+        scheduleActions={scheduleActions}
         onClose={() => setIsDialogOpen(false)}
         onSaved={() => setRefreshKey((value) => value + 1)}
       />

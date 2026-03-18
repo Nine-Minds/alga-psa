@@ -88,7 +88,6 @@ const throwHttpError = (status: number, message: string): never => {
 
 const validateTimeTriggerTimezone = (timezone: string): boolean => {
   try {
-    // eslint-disable-next-line no-new
     new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(new Date());
     return true;
   } catch {

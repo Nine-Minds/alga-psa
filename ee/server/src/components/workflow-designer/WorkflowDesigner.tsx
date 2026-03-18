@@ -47,7 +47,7 @@ import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/EventsCatalogV2';
-import Schedules from '@alga-psa/workflows/components/automation-hub/Schedules';
+import WorkflowSchedules from './WorkflowSchedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
@@ -4438,7 +4438,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   );
   const schedulesContent = (
     <div className="h-full min-h-0 overflow-y-auto px-6 py-4">
-      <Schedules />
+      <WorkflowSchedules />
     </div>
   );
   const isControlPanelMode = mode === 'control-panel';
