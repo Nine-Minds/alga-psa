@@ -28,6 +28,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) The engine already supports selector-input recurring execution windows and can distinguish `billing_cycle_window` vs `contract_cadence_window`, so this plan should reuse that runtime path rather than invent another execution model.
 - (2026-03-18) Existing shared helpers in `shared/billingClients/recurringRunExecutionIdentity.ts` already provide deterministic execution identity, selection key, and retry key semantics. The new due-work builder can wrap those helpers rather than duplicating key-generation logic.
 - (2026-03-18) `server/src/test/test-utils/recurringTimingFixtures.ts` already has a persisted recurring service-period record fixture builder, which makes it straightforward to add contract-cadence due-work tests without standing up DB fixtures yet.
+- (2026-03-18) A due-work reader can safely merge persisted service-period rows with compatibility `client_billing_cycles` rows by deduping on `executionIdentityKey`, letting persisted canonical rows win while still surfacing legacy client-cadence work when no canonical row exists.
+- (2026-03-18) The current persisted-reader implementation can resolve `contract_line` and `client_contract_line` obligations directly from `recurring_service_periods`; other obligation types remain outside this first reader cut and therefore continue to rely on compatibility/fallback behavior.
+- (2026-03-18) `shared/billingClients/backfillRecurringServicePeriods.ts` was already present and exported through `packages/billing/src/index.ts`; the missing work for `F014` was plan-specific validation that the zero-existing-records case is covered explicitly.
 
 ## Commands / Runbooks
 
@@ -40,6 +43,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Service-Driven Invoicing Cutover" --slug service-driven-invoicing-cutover`
 - (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringDueWork.domain.test.ts src/test/unit/billing/recurringTiming.domain.test.ts` (from `server/`; passed)
 - (2026-03-18) `pnpm exec tsc --noEmit -p tsconfig.json` (from `server/`; broad compile did not return promptly during this checkpoint, so relied on targeted unit coverage instead)
+- (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringDueWork.domain.test.ts src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts src/test/unit/billing/recurringTiming.domain.test.ts` (from `server/`; passed)
+- (2026-03-18) `pnpm exec tsc --noEmit -p tsconfig.json` (from `packages/billing/`; passed after fixing one implicit-`any` in `billingAndTax.ts`)
 
 ## Links / References
 
@@ -58,11 +63,18 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - [recurringDueWork.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/shared/billingClients/recurringDueWork.ts)
   - [recurringTiming.interfaces.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/types/src/interfaces/recurringTiming.interfaces.ts)
   - [recurringDueWork.domain.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringDueWork.domain.test.ts)
+  - [billingAndTax.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/billingAndTax.ts)
+  - [recurringServicePeriodDueSelection.domain.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts)
+  - [backfillRecurringServicePeriods.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/shared/billingClients/backfillRecurringServicePeriods.ts)
+  - [recurringServicePeriodBackfill.domain.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringServicePeriodBackfill.domain.test.ts)
 
 ## Completed Checkpoints
 
 - (2026-03-18) Completed `F001`, `F002`, `F005`, `F006`, and `F007` by adding `IRecurringDueWorkRow` plus `buildClientScheduleDueWorkRow(...)` / `buildServicePeriodRecurringDueWorkRow(...)`. The builders now normalize row identity, cadence-source metadata, service-period labels, invoice-window labels, and contract context on top of the existing recurring execution-window identity helpers.
 - (2026-03-18) Completed `T001` through `T005` with focused server-side unit coverage proving stable client/contract execution identities and the new display/context fields on due-work rows.
+- (2026-03-18) Completed `F003`, `F004`, `F008`, `F009`, `F010`, `F011`, `F012`, and `F013` by adding `getAvailableRecurringDueWork(...)` in `billingAndTax.ts`. The reader now pulls ready persisted rows from `recurring_service_periods`, carries schedule/period keys and due-state metadata into due-work rows, allows unbridged contract-cadence windows, and merges compatibility billing-cycle rows underneath canonical rows by execution identity.
+- (2026-03-18) Completed `T006`, `T007`, and `T008` with unit coverage for billed/archived/superseded suppression and compatibility-row merge behavior when canonical persisted rows are absent.
+- (2026-03-18) Completed `F014` / `T013` by validating the pre-existing `backfillRecurringServicePeriods(...)` support with an explicit zero-existing-records test. Active recurring obligations can now be asserted to backfill into future generated service-period rows before the UI depends on them.
 
 ## Open Questions
 

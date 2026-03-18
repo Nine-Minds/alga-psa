@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildClientScheduleDueWorkRow,
+  mergeRecurringDueWorkRows,
   buildServicePeriodRecurringDueWorkRow,
 } from '@alga-psa/shared/billingClients/recurringDueWork';
 import { buildRecurringServicePeriodRecord } from '../../test-utils/recurringTimingFixtures';
@@ -144,5 +145,51 @@ describe('recurring due-work row builder', () => {
     expect(row.contractLineId).toBe('line-1');
     expect(row.contractName).toBe('Main Support Agreement');
     expect(row.contractLineName).toBe('Managed Services');
+  });
+
+  it('T008: includes a compatibility client-cadence row when no persisted recurring service-period row exists yet', () => {
+    const compatibilityRow = buildClientScheduleDueWorkRow({
+      clientId: 'client-1',
+      clientName: 'Acme Co',
+      billingCycleId: 'cycle-2025-02',
+      servicePeriodStart: '2025-02-01',
+      servicePeriodEnd: '2025-03-01',
+    });
+    const persistedContractRow = buildServicePeriodRecurringDueWorkRow({
+      clientId: 'client-1',
+      clientName: 'Acme Co',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      record: buildRecurringServicePeriodRecord({
+        cadenceOwner: 'contract',
+        duePosition: 'arrears',
+        sourceObligation: {
+          tenant: 'tenant-1',
+          obligationId: 'line-1',
+          obligationType: 'contract_line',
+          chargeFamily: 'fixed',
+        },
+        invoiceWindow: {
+          start: '2025-03-08',
+          end: '2025-04-08',
+          semantics: 'half_open',
+        },
+        servicePeriod: {
+          start: '2025-02-08',
+          end: '2025-03-08',
+          semantics: 'half_open',
+        },
+      }),
+    });
+
+    const merged = mergeRecurringDueWorkRows({
+      persistedRows: [persistedContractRow],
+      compatibilityRows: [compatibilityRow],
+    });
+
+    expect(merged.map((row) => row.executionIdentityKey)).toEqual([
+      persistedContractRow.executionIdentityKey,
+      compatibilityRow.executionIdentityKey,
+    ]);
   });
 });

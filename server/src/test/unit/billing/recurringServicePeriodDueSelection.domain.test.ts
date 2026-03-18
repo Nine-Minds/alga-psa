@@ -133,4 +133,73 @@ describe('recurring service period due selection', () => {
       contractProduct,
     ]);
   });
+
+  it('T006: due-work selection excludes billed recurring service periods from the ready-to-invoice reader', () => {
+    const selectorInput = buildBillingCycleDueSelectionInput({
+      clientId: 'client-1',
+      billingCycleId: 'cycle-1',
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+    });
+    const query = buildRecurringServicePeriodDueSelectionQuery({
+      tenant: 'tenant-1',
+      scheduleKeys: ['schedule:a'],
+      selectorInput,
+    });
+
+    const selected = selectDueRecurringServicePeriodRecords([
+      buildRecurringServicePeriodRecord({
+        recordId: 'rsp_ready',
+        scheduleKey: 'schedule:a',
+        lifecycleState: 'generated',
+        invoiceWindow: { start: '2025-02-01', end: '2025-03-01', semantics: 'half_open' },
+      }),
+      buildRecurringServicePeriodRecord({
+        recordId: 'rsp_billed',
+        scheduleKey: 'schedule:a',
+        lifecycleState: 'billed',
+        invoiceWindow: { start: '2025-02-01', end: '2025-03-01', semantics: 'half_open' },
+        invoiceLinkage: buildRecurringServicePeriodInvoiceLinkage(),
+      }),
+    ], query);
+
+    expect(selected.map((record) => record.recordId)).toEqual(['rsp_ready']);
+  });
+
+  it('T007: due-work selection excludes archived and superseded recurring service periods from the ready-to-invoice reader', () => {
+    const selectorInput = buildBillingCycleDueSelectionInput({
+      clientId: 'client-1',
+      billingCycleId: 'cycle-1',
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+    });
+    const query = buildRecurringServicePeriodDueSelectionQuery({
+      tenant: 'tenant-1',
+      scheduleKeys: ['schedule:a'],
+      selectorInput,
+    });
+
+    const selected = selectDueRecurringServicePeriodRecords([
+      buildRecurringServicePeriodRecord({
+        recordId: 'rsp_ready',
+        scheduleKey: 'schedule:a',
+        lifecycleState: 'generated',
+        invoiceWindow: { start: '2025-02-01', end: '2025-03-01', semantics: 'half_open' },
+      }),
+      buildRecurringServicePeriodRecord({
+        recordId: 'rsp_archived',
+        scheduleKey: 'schedule:a',
+        lifecycleState: 'archived',
+        invoiceWindow: { start: '2025-02-01', end: '2025-03-01', semantics: 'half_open' },
+      }),
+      buildRecurringServicePeriodRecord({
+        recordId: 'rsp_superseded',
+        scheduleKey: 'schedule:a',
+        lifecycleState: 'superseded',
+        invoiceWindow: { start: '2025-02-01', end: '2025-03-01', semantics: 'half_open' },
+      }),
+    ], query);
+
+    expect(selected.map((record) => record.recordId)).toEqual(['rsp_ready']);
+  });
 });

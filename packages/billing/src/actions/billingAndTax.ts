@@ -14,10 +14,24 @@ import {
     ITimeBasedCharge,
     IFixedPriceCharge,
     BillingCycleType,
-    IClientContractLineCycle
+    IClientContractLineCycle,
+    IRecurringDueWorkRow,
 } from '@alga-psa/types';
+import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { ITaxCalculationResult } from '@alga-psa/types';
+import {
+    buildClientScheduleDueWorkRow,
+    buildRecurringDueWorkRow,
+    mergeRecurringDueWorkRows,
+} from '@alga-psa/shared/billingClients/recurringDueWork';
+import {
+    buildBillingCycleDueSelectionInput,
+    buildContractCadenceDueSelectionInput,
+} from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
+
+const POSTGRES_UNDEFINED_TABLE = '42P01';
+const POSTGRES_UNDEFINED_COLUMN = '42703';
 
 // Types for paginated billing periods
 export interface BillingPeriodWithMeta extends IClientContractLineCycle {
@@ -46,6 +60,297 @@ export interface PaginatedBillingPeriodsResult {
     page: number;
     pageSize: number;
     totalPages: number;
+}
+
+export interface FetchRecurringDueWorkOptions extends FetchBillingPeriodsOptions {}
+
+export interface PaginatedRecurringDueWorkResult {
+    rows: IRecurringDueWorkRow[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+}
+
+interface PersistedRecurringDueWorkDbRow {
+    record_id: string;
+    schedule_key: string;
+    period_key: string;
+    lifecycle_state: string;
+    cadence_owner: 'client' | 'contract';
+    service_period_start: ISO8601String;
+    service_period_end: ISO8601String;
+    invoice_window_start: ISO8601String;
+    invoice_window_end: ISO8601String;
+    client_id: string;
+    client_name: string;
+    billing_cycle_id?: string | null;
+    contract_id?: string | null;
+    contract_name?: string | null;
+    contract_line_id?: string | null;
+    contract_line_name?: string | null;
+}
+
+function isMissingRecurringDueWorkRelation(error: unknown): boolean {
+    return Boolean(
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        ((((error as { code?: string }).code) === POSTGRES_UNDEFINED_TABLE) ||
+            (((error as { code?: string }).code) === POSTGRES_UNDEFINED_COLUMN))
+    );
+}
+
+function applyBillingPeriodSearchAndDateFilters(
+    query: Knex.QueryBuilder,
+    options: Pick<FetchBillingPeriodsOptions, 'searchTerm' | 'dateRange'>,
+    params: {
+        clientNameColumn: string;
+        dateColumn: string;
+    },
+) {
+    const { searchTerm = '', dateRange } = options;
+
+    if (searchTerm.trim()) {
+        const searchPattern = `%${searchTerm.trim().toLowerCase()}%`;
+        query.whereRaw(`LOWER(${params.clientNameColumn}) LIKE ?`, [searchPattern]);
+    }
+
+    if (dateRange?.from) {
+        query.whereRaw(`DATE(${params.dateColumn}) >= ?`, [dateRange.from]);
+    }
+    if (dateRange?.to) {
+        query.whereRaw(`DATE(${params.dateColumn}) <= ?`, [dateRange.to]);
+    }
+
+    return query;
+}
+
+function buildAvailableBillingPeriodsBaseQuery(
+    trx: Knex.Transaction,
+    tenant: string,
+    options: FetchBillingPeriodsOptions,
+) {
+    const query = trx('client_billing_cycles as cbc')
+        .join('clients as c', function () {
+            this.on('c.client_id', '=', 'cbc.client_id')
+                .andOn('c.tenant', '=', 'cbc.tenant');
+        })
+        .leftJoin('invoices as i', function () {
+            this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
+                .andOn('i.tenant', '=', 'cbc.tenant');
+        })
+        .where('cbc.tenant', tenant)
+        .whereNotNull('cbc.period_end_date')
+        .whereNull('i.invoice_id');
+
+    return applyBillingPeriodSearchAndDateFilters(query, options, {
+        clientNameColumn: 'c.client_name',
+        dateColumn: 'cbc.period_end_date',
+    });
+}
+
+async function fetchAvailableBillingPeriodsUnpaginated(
+    trx: Knex.Transaction,
+    tenant: string,
+    options: FetchBillingPeriodsOptions,
+): Promise<BillingPeriodWithMeta[]> {
+    const currentDate = toISODate(Temporal.Now.plainDateISO());
+    const currentPlainDate = toPlainDate(currentDate);
+
+    const periods = await buildAvailableBillingPeriodsBaseQuery(trx, tenant, options)
+        .select(
+            'cbc.client_id',
+            'c.client_name',
+            'cbc.billing_cycle_id',
+            'cbc.billing_cycle',
+            'cbc.period_start_date',
+            'cbc.period_end_date',
+            'cbc.effective_date',
+            'cbc.tenant'
+        )
+        .orderBy('cbc.period_end_date', 'desc')
+        .orderBy('cbc.period_start_date', 'desc')
+        .orderBy('cbc.billing_cycle_id', 'asc');
+
+    return periods.map((period: any): BillingPeriodWithMeta => {
+        if (!period.period_start_date || !period.period_end_date) {
+            return {
+                ...period,
+                can_generate: false,
+                is_early: false
+            };
+        }
+
+        try {
+            const periodEndDate = toPlainDate(period.period_end_date);
+            return {
+                ...period,
+                can_generate: true,
+                is_early: Temporal.PlainDate.compare(periodEndDate, currentPlainDate) > 0
+            };
+        } catch (error) {
+            return {
+                ...period,
+                can_generate: false,
+                is_early: false
+            };
+        }
+    });
+}
+
+async function fetchPersistedRecurringDueWorkDbRows(
+    trx: Knex.Transaction,
+    tenant: string,
+    options: FetchRecurringDueWorkOptions,
+): Promise<PersistedRecurringDueWorkDbRow[]> {
+    const dueStates = [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES];
+
+    const contractLineRowsQuery = trx('recurring_service_periods as rsp')
+        .join('contract_lines as cl', function () {
+            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
+                .andOn('cl.tenant', '=', 'rsp.tenant');
+        })
+        .join('contracts as ct', function () {
+            this.on('ct.contract_id', '=', 'cl.contract_id')
+                .andOn('ct.tenant', '=', 'cl.tenant');
+        })
+        .join('clients as c', function () {
+            this.on('c.client_id', '=', 'ct.owner_client_id')
+                .andOn('c.tenant', '=', 'ct.tenant');
+        })
+        .leftJoin('client_billing_cycles as cbc', function () {
+            this.on('cbc.client_id', '=', 'c.client_id')
+                .andOn('cbc.tenant', '=', 'rsp.tenant')
+                .andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
+                .andOn('cbc.period_end_date', '=', 'rsp.invoice_window_end');
+        })
+        .where('rsp.tenant', tenant)
+        .where('rsp.obligation_type', 'contract_line')
+        .whereIn('rsp.lifecycle_state', dueStates)
+        .whereNull('rsp.invoice_charge_detail_id')
+        .select(
+            'rsp.record_id',
+            'rsp.schedule_key',
+            'rsp.period_key',
+            'rsp.lifecycle_state',
+            'rsp.cadence_owner',
+            'rsp.service_period_start',
+            'rsp.service_period_end',
+            'rsp.invoice_window_start',
+            'rsp.invoice_window_end',
+            'c.client_id',
+            'c.client_name',
+            'cbc.billing_cycle_id',
+            'ct.contract_id',
+            'ct.contract_name',
+            'cl.contract_line_id',
+            'cl.contract_line_name',
+        );
+
+    applyBillingPeriodSearchAndDateFilters(contractLineRowsQuery, options, {
+        clientNameColumn: 'c.client_name',
+        dateColumn: 'rsp.invoice_window_end',
+    });
+
+    const clientContractLineRowsQuery = trx('recurring_service_periods as rsp')
+        .join('client_contract_lines as ccl', function () {
+            this.on('ccl.client_contract_line_id', '=', 'rsp.obligation_id')
+                .andOn('ccl.tenant', '=', 'rsp.tenant');
+        })
+        .join('clients as c', function () {
+            this.on('c.client_id', '=', 'ccl.client_id')
+                .andOn('c.tenant', '=', 'ccl.tenant');
+        })
+        .leftJoin('client_contracts as cc', function () {
+            this.on('cc.client_contract_id', '=', 'ccl.client_contract_id')
+                .andOn('cc.tenant', '=', 'ccl.tenant');
+        })
+        .leftJoin('contract_lines as cl', function () {
+            this.on('cl.contract_line_id', '=', 'ccl.contract_line_id')
+                .andOn('cl.tenant', '=', 'ccl.tenant');
+        })
+        .leftJoin('contracts as ct', function () {
+            this.on('ct.contract_id', '=', trx.raw('coalesce(ccl.contract_id, cc.contract_id)'))
+                .andOn('ct.tenant', '=', 'rsp.tenant');
+        })
+        .leftJoin('client_billing_cycles as cbc', function () {
+            this.on('cbc.client_id', '=', 'ccl.client_id')
+                .andOn('cbc.tenant', '=', 'rsp.tenant')
+                .andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
+                .andOn('cbc.period_end_date', '=', 'rsp.invoice_window_end');
+        })
+        .where('rsp.tenant', tenant)
+        .where('rsp.obligation_type', 'client_contract_line')
+        .whereIn('rsp.lifecycle_state', dueStates)
+        .whereNull('rsp.invoice_charge_detail_id')
+        .select(
+            'rsp.record_id',
+            'rsp.schedule_key',
+            'rsp.period_key',
+            'rsp.lifecycle_state',
+            'rsp.cadence_owner',
+            'rsp.service_period_start',
+            'rsp.service_period_end',
+            'rsp.invoice_window_start',
+            'rsp.invoice_window_end',
+            'c.client_id',
+            'c.client_name',
+            'cbc.billing_cycle_id',
+            'ct.contract_id',
+            'ct.contract_name',
+            trx.raw('coalesce(cl.contract_line_id, ccl.contract_line_id) as contract_line_id'),
+            trx.raw('coalesce(cl.contract_line_name, ccl.contract_line_name) as contract_line_name'),
+        );
+
+    applyBillingPeriodSearchAndDateFilters(clientContractLineRowsQuery, options, {
+        clientNameColumn: 'c.client_name',
+        dateColumn: 'rsp.invoice_window_end',
+    });
+
+    const [contractLineRows, clientContractLineRows] = await Promise.all([
+        contractLineRowsQuery,
+        clientContractLineRowsQuery,
+    ]);
+
+    return [...contractLineRows, ...clientContractLineRows] as PersistedRecurringDueWorkDbRow[];
+}
+
+function mapPersistedRecurringDueWorkDbRowsToRows(
+    rows: PersistedRecurringDueWorkDbRow[],
+    asOf: ISO8601String,
+): IRecurringDueWorkRow[] {
+    return rows.map((row) => {
+        const selectorInput = row.cadence_owner === 'contract'
+            ? buildContractCadenceDueSelectionInput({
+                clientId: row.client_id,
+                contractId: row.contract_id ?? null,
+                contractLineId: row.contract_line_id ?? null,
+                windowStart: row.invoice_window_start,
+                windowEnd: row.invoice_window_end,
+            })
+            : buildBillingCycleDueSelectionInput({
+                clientId: row.client_id,
+                billingCycleId: row.billing_cycle_id as string,
+                windowStart: row.invoice_window_start,
+                windowEnd: row.invoice_window_end,
+            });
+
+        return buildRecurringDueWorkRow({
+            selectorInput,
+            cadenceSource: row.cadence_owner === 'contract' ? 'contract_anniversary' : 'client_schedule',
+            servicePeriodStart: row.service_period_start,
+            servicePeriodEnd: row.service_period_end,
+            clientName: row.client_name,
+            asOf,
+            scheduleKey: row.schedule_key,
+            periodKey: row.period_key,
+            recordId: row.record_id,
+            lifecycleState: row.lifecycle_state as IRecurringDueWorkRow['lifecycleState'],
+            contractName: row.contract_name ?? null,
+            contractLineName: row.contract_line_name ?? null,
+        });
+    });
 }
 
 // Type Guards
@@ -249,6 +554,75 @@ export const getAvailableBillingPeriods = withAuth(async (
     } catch (_error) {
         console.error('Error in getAvailableBillingPeriods:', _error);
         throw _error;
+    }
+});
+
+export const getAvailableRecurringDueWork = withAuth(async (
+    user,
+    { tenant },
+    options: FetchRecurringDueWorkOptions = {},
+): Promise<PaginatedRecurringDueWorkResult> => {
+    const {
+        page = 1,
+        pageSize = 10,
+    } = options;
+    const { knex } = await createTenantKnex();
+    const asOf = toISODate(Temporal.Now.plainDateISO());
+
+    try {
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const compatibilityPeriods = await fetchAvailableBillingPeriodsUnpaginated(
+                trx,
+                tenant,
+                options,
+            );
+            const compatibilityRows = compatibilityPeriods.map((period) =>
+                buildClientScheduleDueWorkRow({
+                    clientId: period.client_id,
+                    clientName: period.client_name,
+                    billingCycleId: period.billing_cycle_id as string,
+                    servicePeriodStart: period.period_start_date,
+                    servicePeriodEnd: period.period_end_date,
+                    invoiceWindowStart: period.period_start_date,
+                    invoiceWindowEnd: period.period_end_date,
+                    asOf,
+                    canGenerate: period.can_generate,
+                }),
+            );
+
+            let persistedRows: IRecurringDueWorkRow[] = [];
+            try {
+                const persistedDbRows = await fetchPersistedRecurringDueWorkDbRows(
+                    trx,
+                    tenant,
+                    options,
+                );
+                persistedRows = mapPersistedRecurringDueWorkDbRowsToRows(persistedDbRows, asOf);
+            } catch (error) {
+                if (!isMissingRecurringDueWorkRelation(error)) {
+                    throw error;
+                }
+            }
+
+            const mergedRows = mergeRecurringDueWorkRows({
+                persistedRows,
+                compatibilityRows,
+            });
+            const total = mergedRows.length;
+            const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+            const offset = (page - 1) * pageSize;
+
+            return {
+                rows: mergedRows.slice(offset, offset + pageSize),
+                total,
+                page,
+                pageSize,
+                totalPages,
+            };
+        });
+    } catch (error) {
+        console.error('Error in getAvailableRecurringDueWork:', error);
+        throw error;
     }
 });
 

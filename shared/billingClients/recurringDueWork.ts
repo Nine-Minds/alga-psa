@@ -132,6 +132,45 @@ export function buildRecurringDueWorkRow(
   return buildBaseRecurringDueWorkRow(input);
 }
 
+export function sortRecurringDueWorkRows(rows: IRecurringDueWorkRow[]): IRecurringDueWorkRow[] {
+  return [...rows].sort((left, right) => {
+    if (left.invoiceWindowEnd !== right.invoiceWindowEnd) {
+      return right.invoiceWindowEnd.localeCompare(left.invoiceWindowEnd);
+    }
+    if (left.invoiceWindowStart !== right.invoiceWindowStart) {
+      return right.invoiceWindowStart.localeCompare(left.invoiceWindowStart);
+    }
+    if (left.servicePeriodEnd !== right.servicePeriodEnd) {
+      return right.servicePeriodEnd.localeCompare(left.servicePeriodEnd);
+    }
+    if (left.servicePeriodStart !== right.servicePeriodStart) {
+      return right.servicePeriodStart.localeCompare(left.servicePeriodStart);
+    }
+    if ((left.clientName ?? '') !== (right.clientName ?? '')) {
+      return (left.clientName ?? '').localeCompare(right.clientName ?? '');
+    }
+
+    return left.executionIdentityKey.localeCompare(right.executionIdentityKey);
+  });
+}
+
+export function mergeRecurringDueWorkRows(input: {
+  persistedRows: IRecurringDueWorkRow[];
+  compatibilityRows: IRecurringDueWorkRow[];
+}): IRecurringDueWorkRow[] {
+  const rowsByExecutionIdentity = new Map<string, IRecurringDueWorkRow>();
+
+  for (const row of input.compatibilityRows) {
+    rowsByExecutionIdentity.set(row.executionIdentityKey, row);
+  }
+
+  for (const row of input.persistedRows) {
+    rowsByExecutionIdentity.set(row.executionIdentityKey, row);
+  }
+
+  return sortRecurringDueWorkRows(Array.from(rowsByExecutionIdentity.values()));
+}
+
 export function buildClientScheduleDueWorkRow(
   input: ClientScheduleDueWorkWindowInput,
 ): IRecurringDueWorkRow {

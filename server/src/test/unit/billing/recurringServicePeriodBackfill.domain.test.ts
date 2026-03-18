@@ -9,6 +9,50 @@ import {
 } from '../../test-utils/recurringTimingFixtures';
 
 describe('recurring service period backfill', () => {
+  it('T013: recurring service-period backfill creates future active records for active recurring obligations with no existing rows', () => {
+    const sourceObligation = buildPersistedRecurringObligationRef({
+      obligationId: 'line-backfill-new',
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    });
+    const materialized = materializeClientCadenceServicePeriods({
+      asOf: '2026-03-18T00:00:00Z',
+      materializedAt: '2026-03-18T12:00:00.000Z',
+      billingCycle: 'monthly',
+      anchorSettings: { dayOfMonth: 10 },
+      sourceObligation,
+      duePosition: 'advance',
+      sourceRuleVersion: 'contract-line-backfill-new:v1',
+      sourceRunKey: 'materialize-2026-03-18',
+    });
+
+    const backfillPlan = backfillRecurringServicePeriods({
+      candidateRecords: materialized.records,
+      existingRecords: [],
+      backfilledAt: '2026-03-18T12:30:00.000Z',
+      sourceRuleVersion: 'contract-line-backfill-new:v1',
+      sourceRunKey: 'backfill-2026-03-18',
+    });
+
+    expect(backfillPlan.historicalBoundaryEnd).toBeNull();
+    expect(backfillPlan.retainedRecords).toEqual([]);
+    expect(backfillPlan.skippedHistoricalCandidates).toEqual([]);
+    expect(backfillPlan.realignedRecords).toEqual([]);
+    expect(backfillPlan.supersededRecords).toEqual([]);
+    expect(backfillPlan.backfilledRecords).toHaveLength(materialized.records.length);
+    expect(backfillPlan.activeRecords).toHaveLength(materialized.records.length);
+    expect(backfillPlan.activeRecords[0]).toMatchObject({
+      scheduleKey: materialized.scheduleKey,
+      lifecycleState: 'generated',
+      provenance: {
+        kind: 'generated',
+        reasonCode: 'backfill_materialization',
+        sourceRuleVersion: 'contract-line-backfill-new:v1',
+        sourceRunKey: 'backfill-2026-03-18',
+      },
+    });
+  });
+
   it('T286: existing client-cadence recurring lines backfill persisted future service periods without altering billed history', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'line-1',
