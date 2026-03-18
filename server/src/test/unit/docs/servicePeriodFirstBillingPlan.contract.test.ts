@@ -38,6 +38,8 @@ const recurringServicePeriodImmutability = read('RECURRING_SERVICE_PERIOD_IMMUTA
 const recurringServicePeriodParityComparison = read('RECURRING_SERVICE_PERIOD_PARITY_COMPARISON.md');
 const recurringServicePeriodProvenance = read('RECURRING_SERVICE_PERIOD_PROVENANCE.md');
 const recurringServicePeriodRegeneration = read('RECURRING_SERVICE_PERIOD_REGENERATION.md');
+const recurringServicePeriodAdministrativeRepair = read('RECURRING_SERVICE_PERIOD_ADMIN_REPAIR.md');
+const recurringServicePeriodCoexistence = read('RECURRING_SERVICE_PERIOD_COEXISTENCE.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
 const recurrenceStorageMatrix = read('RECURRENCE_STORAGE_MATRIX.md');
 const runbook = read('RUNBOOK.md');
@@ -380,6 +382,32 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodAuthoringPreview).toContain('contract-cadence previews use the contract-cadence materialization helper');
     expect(recurringServicePeriodAuthoringPreview).toContain('the preview rows are explanatory examples, not persisted ledger records');
     expect(recurringServicePeriodAuthoringPreview).toContain('before save instead of appearing only after contract creation');
+  });
+
+  it('T309: administrative regeneration and repair flows are defined for missing, drifted, or mislinked future persisted periods', () => {
+    expect(recurringServicePeriodAdministrativeRepair).toContain('# Recurring Service-Period Administrative Repair');
+    expect(recurringServicePeriodAdministrativeRepair).toContain('## Supported Administrative Repair Modes');
+    expect(recurringServicePeriodAdministrativeRepair).toContain('restore missing future generated rows');
+    expect(recurringServicePeriodAdministrativeRepair).toContain('realign future untouched generated rows to current source cadence');
+    expect(recurringServicePeriodAdministrativeRepair).toContain('repair incorrect invoice linkage on locked or billed rows');
+    expect(recurringServicePeriodAdministrativeRepair).toContain('## Safety Rules');
+    expect(recurringServicePeriodAdministrativeRepair).toContain('billed history stays immutable except for the already-named corrective flow `invoice_linkage_repair`');
+    expect(recurringServicePeriodAdministrativeRepair).toContain('missing future periods are restored as generated rows; they do not rewrite historical invoices');
+    expect(recurringServicePeriodAdministrativeRepair).toContain('## Diagnosis To Repair Mapping');
+    expect(recurringServicePeriodAdministrativeRepair).toContain('missing future coverage -> restore missing generated rows ahead of the horizon boundary');
+  });
+
+  it('T310: historical invoices without persisted service-period rows coexist explicitly with future schedules that have them', () => {
+    expect(recurringServicePeriodCoexistence).toContain('# Recurring Service-Period Coexistence');
+    expect(recurringServicePeriodCoexistence).toContain('## Historical Versus Future Boundary');
+    expect(recurringServicePeriodCoexistence).toContain('historical invoices may have no persisted recurring service-period records');
+    expect(recurringServicePeriodCoexistence).toContain('the system does not backfill historical invoices into synthetic persisted future-period rows');
+    expect(recurringServicePeriodCoexistence).toContain('## Reader Behavior During Coexistence');
+    expect(recurringServicePeriodCoexistence).toContain('historical invoice-header or flat-row fallback timing when canonical detail periods do not exist');
+    expect(recurringServicePeriodCoexistence).toContain('future persisted schedule rows that have not yet produced an invoice');
+    expect(recurringServicePeriodCoexistence).toContain('## Migration And Regeneration Rule');
+    expect(recurringServicePeriodCoexistence).toContain('backfill/materialization starts from the future billed-history boundary');
+    expect(recurringServicePeriodCoexistence).toContain('historical invoice reads stay on the earlier dual-shape compatibility contract');
   });
 
   it('T349: edit transport surfaces define request, provenance, and structured validation feedback before dashboard editing lands', () => {

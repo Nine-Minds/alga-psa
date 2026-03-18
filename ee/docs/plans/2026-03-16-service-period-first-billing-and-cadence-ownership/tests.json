@@ -2747,7 +2747,7 @@
   {
     "id": "T309",
     "description": "Administrative regeneration or repair flows can restore missing or corrupt future persisted service periods safely",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F259",
       "F268"
@@ -2756,7 +2756,7 @@
   {
     "id": "T310",
     "description": "Historical invoices without persisted service-period records coexist correctly with future schedules that have them",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F260"
     ]

@@ -2324,7 +2324,7 @@
   {
     "id": "F259",
     "description": "Define import, repair, or administrative regeneration flows for persisted service periods when data drift or failed generation occurs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Pass 9"
@@ -2333,7 +2333,7 @@
   {
     "id": "F260",
     "description": "Define migration and coexistence rules for tenants that will have historical invoices without persisted period records and future schedules with them",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Read-model and post-persist lifecycle requirements"

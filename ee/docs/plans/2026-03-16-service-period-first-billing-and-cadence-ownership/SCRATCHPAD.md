@@ -41,6 +41,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Administrative repair and coexistence posture are now explicit, which closes `F259`, `F260`, `T309`, and `T310`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_ADMIN_REPAIR.md` now defines the first narrow operator repair modes for missing future rows, drifted untouched generated rows, and incorrect billed-history linkage, while preserving the earlier immutability and conflict rules
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_COEXISTENCE.md` now makes the historical-versus-future boundary explicit: future schedules can materialize persisted rows while historical invoices still rely on the dual-shape invoice reader contract, and no synthetic historical backfill is implied
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks both artifacts directly so later repair or migration work cannot silently reopen historical rewrite assumptions or blur schedule drift with invoice-linkage correction
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+
 - (2026-03-18) Pre-save authoring previews now show illustrative future materialized periods, which closes `F258` and `T308`:
   - `packages/billing/src/components/billing-dashboard/contracts/recurringAuthoringPreview.ts` now generates `materializedPeriods[]` alongside the existing cadence-owner, first-invoice, and partial-period explainer copy; the preview rows are illustrative, but they come from the same client-cadence and contract-cadence materialization helpers used elsewhere instead of ad hoc sample text
   - the fixed-fee contract wizard step, contract review step, template fixed-fee step, and template review step now all thread billing frequency into that helper and render the illustrative future service periods plus invoice windows, so staff can see the service-period-first model before the recurring line is saved
