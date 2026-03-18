@@ -328,6 +328,8 @@ export type PreviewInvoiceResponse = {
 } | {
   success: false;
   error: string;
+  executionIdentityKey?: string;
+  billingCycleId?: string | null;
 };
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending' | 'prepayment' | 'partially_applied';

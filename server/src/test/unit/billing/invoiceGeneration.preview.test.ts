@@ -227,7 +227,12 @@ vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => (
   },
 }));
 
-const { previewInvoice, previewInvoiceForSelectionInput, getPurchaseOrderOverageForSelectionInput } = await import(
+const {
+  previewInvoice,
+  previewInvoiceForSelectionInput,
+  getPurchaseOrderOverageForSelectionInput,
+  generateInvoiceForSelectionInput,
+} = await import(
   '../../../../../packages/billing/src/actions/invoiceGeneration'
 );
 
@@ -384,9 +389,11 @@ describe('invoice preview recurring timing', () => {
       }),
     );
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: false,
       error: 'Permission denied: Cannot preview invoices',
+      executionIdentityKey: 'contract_cadence_window:contract:client-1:contract-1:line-1:2025-02-08:2025-03-08',
+      billingCycleId: null,
     });
     expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).not.toHaveBeenCalled();
   });
@@ -515,7 +522,7 @@ describe('invoice preview recurring timing', () => {
   });
 
   it('T045: selector-input PO-overage action computes overage correctly for a contract-cadence execution window', async () => {
-    mocks.calculateBilling.mockResolvedValueOnce({
+    mocks.calculateBillingForExecutionWindow.mockResolvedValueOnce({
       charges: [
         {
           type: 'product',
@@ -570,6 +577,89 @@ describe('invoice preview recurring timing', () => {
       remaining_cents: 2500,
       invoice_total_cents: 4200,
       overage_cents: 1700,
+    });
+  });
+
+  it('T048/T049: selector-input preview and generate validation failures include execution identity for unbridged recurring windows', async () => {
+    mocks.validateClientBillingEmail.mockResolvedValueOnce({
+      valid: false,
+      error: 'Billing email is required before generating recurring invoices.',
+    });
+    mocks.validateClientBillingEmail.mockResolvedValueOnce({
+      valid: false,
+      error: 'Billing email is required before generating recurring invoices.',
+    });
+
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const previewResult = await previewInvoiceForSelectionInput(selectorInput);
+
+    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
+      message: 'Billing email is required before generating recurring invoices.',
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+      billingCycleId: null,
+    });
+
+    expect(previewResult).toMatchObject({
+      success: false,
+      error: 'Billing email is required before generating recurring invoices.',
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+      billingCycleId: null,
+    });
+  });
+
+  it('T050: selector-input recurring generation still enforces PO-required contract validation', async () => {
+    mocks.calculateBillingForExecutionWindow.mockResolvedValueOnce({
+      charges: [
+        {
+          type: 'product',
+          serviceId: 'service-1',
+          serviceName: 'Managed Router',
+          quantity: 1,
+          rate: 4000,
+          total: 4000,
+          tax_amount: 200,
+          tax_rate: 5,
+          tax_region: 'US-NY',
+          is_taxable: true,
+          servicePeriodStart: '2025-01-01',
+          servicePeriodEnd: '2025-02-01',
+          billingTiming: 'arrears',
+          client_contract_id: 'contract-1',
+          contract_name: 'Zenith Annual Support',
+        },
+      ],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 4000,
+      finalAmount: 4000,
+      currency_code: 'USD',
+    });
+    mocks.getClientContractPurchaseOrderContext.mockResolvedValueOnce({
+      po_number: null,
+      po_amount: null,
+      po_required: true,
+    });
+
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
+      message:
+        'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.',
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+      billingCycleId: null,
     });
   });
 });
