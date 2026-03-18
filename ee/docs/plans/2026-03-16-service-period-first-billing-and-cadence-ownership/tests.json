@@ -2569,6 +2569,22 @@
     ]
   },
   {
+    "id": "T346",
+    "description": "Skip and defer create explicit superseding revisions with preserved service-period provenance before broader continuity validation lands",
+    "implemented": true,
+    "featureIds": [
+      "F246"
+    ]
+  },
+  {
+    "id": "T347",
+    "description": "Split and merge remain explicitly unsupported v1 edit operations while boundary adjustment, skip, and defer stay available",
+    "implemented": true,
+    "featureIds": [
+      "F247"
+    ]
+  },
+  {
     "id": "T292",
     "description": "Invoice generation selects due persisted service periods rather than deriving schedule boundaries on demand",
     "implemented": false,

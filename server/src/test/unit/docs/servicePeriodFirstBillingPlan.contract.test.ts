@@ -276,9 +276,9 @@ describe('service-period-first billing plan artifacts', () => {
     expect(persistedServicePeriodRecord).toContain('already billed historical coverage stays authoritative on invoice detail history');
   });
 
-  it('T345: boundary adjustment is defined as the minimal v1 edit operation before continuity and UI passes land', () => {
+  it('T345: boundary adjustment remains part of the minimal v1 edit surface before continuity and UI passes land', () => {
     expect(recurringServicePeriodEditOperations).toContain('# Recurring Service-Period Edit Operations');
-    expect(recurringServicePeriodEditOperations).toContain('## Minimal Supported Operation');
+    expect(recurringServicePeriodEditOperations).toContain('## Minimal Supported Operations');
     expect(recurringServicePeriodEditOperations).toContain('`boundary_adjustment`');
     expect(recurringServicePeriodEditOperations).toContain('shared/billingClients/editRecurringServicePeriodBoundaries.ts');
     expect(recurringServicePeriodEditOperations).toContain('## Revision And Provenance Rule');
@@ -288,6 +288,24 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodEditOperations).toContain('`activity_window_adjustment`');
     expect(recurringServicePeriodEditOperations).toContain('## Minimal Local Validation');
     expect(recurringServicePeriodEditOperations).toContain('billed or locked rows remain non-editable in place');
+  });
+
+  it('T346: skip and defer are defined as explicit superseding revisions rather than in-place state toggles', () => {
+    expect(recurringServicePeriodEditOperations).toContain('`skip`');
+    expect(recurringServicePeriodEditOperations).toContain('`defer`');
+    expect(recurringServicePeriodEditOperations).toContain('shared/billingClients/skipOrDeferRecurringServicePeriod.ts');
+    expect(recurringServicePeriodEditOperations).toContain('`lifecycleState = skipped`');
+    expect(recurringServicePeriodEditOperations).toContain('`reasonCode = skip`');
+    expect(recurringServicePeriodEditOperations).toContain('`reasonCode = defer`');
+    expect(recurringServicePeriodEditOperations).toContain('defer must supply a new invoice window');
+  });
+
+  it('T347: split and merge remain explicitly unsupported in v1', () => {
+    expect(recurringServicePeriodEditOperations).toContain('## Unsupported In V1');
+    expect(recurringServicePeriodEditOperations).toContain('Split and merge are explicitly not supported in v1.');
+    expect(recurringServicePeriodEditOperations).toContain('shared/billingClients/recurringServicePeriodEditCapabilities.ts');
+    expect(recurringServicePeriodEditOperations).toContain('supported v1 edit operations are `boundary_adjustment`, `skip`, and `defer`');
+    expect(recurringServicePeriodEditOperations).toContain('`split` and `merge` fail fast as unsupported v1 operations');
   });
 
   it('documents the architecture thesis and system-surface matrix in the PRD and appendix', () => {

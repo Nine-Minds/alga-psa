@@ -151,6 +151,15 @@ export {
   editRecurringServicePeriodBoundaries,
 } from '@alga-psa/shared/billingClients/editRecurringServicePeriodBoundaries';
 export {
+  skipOrDeferRecurringServicePeriod,
+} from '@alga-psa/shared/billingClients/skipOrDeferRecurringServicePeriod';
+export {
+  assertRecurringServicePeriodV1EditOperationSupported,
+  isRecurringServicePeriodV1EditOperationSupported,
+  RECURRING_SERVICE_PERIOD_SUPPORTED_EDIT_OPERATIONS,
+  RECURRING_SERVICE_PERIOD_UNSUPPORTED_V1_EDIT_OPERATIONS,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodEditCapabilities';
+export {
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
 export {
@@ -177,6 +186,14 @@ export type {
   EditRecurringServicePeriodBoundariesInput,
   IRecurringServicePeriodBoundaryEditResult,
 } from '@alga-psa/shared/billingClients/editRecurringServicePeriodBoundaries';
+export type {
+  IRecurringServicePeriodDispositionEditResult,
+  SkipOrDeferRecurringServicePeriodInput,
+} from '@alga-psa/shared/billingClients/skipOrDeferRecurringServicePeriod';
+export type {
+  SupportedRecurringServicePeriodEditOperation,
+  UnsupportedRecurringServicePeriodV1EditOperation,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodEditCapabilities';
 export type {
   IRecurringServicePeriodRegenerationPlan,
   RegenerateRecurringServicePeriodsInput,

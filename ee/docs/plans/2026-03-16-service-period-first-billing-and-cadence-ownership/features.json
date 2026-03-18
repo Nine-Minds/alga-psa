@@ -2207,7 +2207,7 @@
   {
     "id": "F246",
     "description": "Define and implement skip or defer operations for future persisted service periods",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "UI and downstream-consumer requirements"
@@ -2216,7 +2216,7 @@
   {
     "id": "F247",
     "description": "Define whether split and merge operations for future persisted service periods are supported in v1 and how they behave if supported",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Open Questions"

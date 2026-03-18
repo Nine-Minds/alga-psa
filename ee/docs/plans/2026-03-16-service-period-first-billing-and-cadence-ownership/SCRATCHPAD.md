@@ -41,6 +41,25 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Split and merge are now explicitly fenced out of v1, which closes `F247` and adds/closes `T347` while intentionally leaving `T297` for any later advanced-edit pass:
+  - `shared/billingClients/recurringServicePeriodEditCapabilities.ts` now makes the v1 edit surface executable instead of leaving it as docs only: supported operations are `boundary_adjustment`, `skip`, and `defer`, while `split` and `merge` fail fast as unsupported v1 operations
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md` now carries an explicit `Unsupported In V1` section so later UI/API work cannot quietly assume split/merge support before a deliberate follow-on pass exists
+  - `tests.json` now adds `T347` because the original `T297` also depends on the later continuity semantics in `F248`; the new test locks the v1 non-support decision directly
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodEditCapabilities.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-18) Skip and defer are now explicit persisted-period edit operations, which closes `F246` and adds/closes `T346` while intentionally leaving `T296` for the later continuity pass:
+  - `shared/billingClients/skipOrDeferRecurringServicePeriod.ts` now defines the first explicit disposition edits for future persisted rows: skip creates a superseding `skipped` revision with `reasonCode = skip`, while defer creates a superseding `edited` revision with `reasonCode = defer` and an explicitly moved invoice window
+  - the helper deliberately stays narrower than the later neighbor-aware validation work: it reuses the existing mutation guard, requires a new deferred invoice window instead of silently reusing the prior one, and keeps service-period continuity / invoice-linkage interplay for `F248`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md` now documents `boundary_adjustment`, `skip`, and `defer` together as the minimal v1 edit surface, while split/merge and UI/API editing remain sequenced later
+  - `tests.json` now adds `T346` because the original `T296` also depends on the later overlap/gap validation pass in `F248`; the new test locks the explicit skip/defer revision semantics without claiming broader continuity validation already exists
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodDisposition.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
 - (2026-03-18) The minimal v1 boundary-adjustment edit operation is now explicit, which closes `F245` and adds/closes `T345` while intentionally leaving `T295` for the later continuity + UI passes:
   - `shared/billingClients/editRecurringServicePeriodBoundaries.ts` now defines the first explicit edit primitive for persisted service periods: mutable future rows can be superseded by a new `edited` revision, `provenance.kind = user_edited`, and the helper infers `boundary_adjustment`, `invoice_window_adjustment`, or `activity_window_adjustment` reason codes instead of hiding edits behind source-rule changes
   - the helper stays intentionally narrow at this pass: it reuses the existing immutability guard, validates only local half-open boundary integrity plus in-period activity clipping, rejects no-op edits, and does not yet attempt neighbor continuity or transport-surface validation that belongs to `F248` and `F251`
