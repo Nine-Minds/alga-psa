@@ -11,12 +11,12 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Search, Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
-import type { IClientContractLineCycle, PreviewInvoiceResponse } from '@alga-psa/types';
-import { getPurchaseOrderOverageForBillingCycle, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import type { IClientContractLineCycle, IRecurringDueWorkRow } from '@alga-psa/types';
+import { getPurchaseOrderOverageForBillingCycle, previewInvoiceForSelectionInput } from '@alga-psa/billing/actions/invoiceGeneration';
 import { generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
 import { getInvoicedBillingCyclesPaginated, removeBillingCycle, hardDeleteBillingCycle } from '@alga-psa/billing/actions/billingCycleActions';
-import { getAvailableBillingPeriods, type BillingPeriodDateRange } from '@alga-psa/billing/actions/billingAndTax';
+import { getAvailableRecurringDueWork, type BillingPeriodDateRange } from '@alga-psa/billing/actions/billingAndTax';
 import type { ISO8601String } from '@alga-psa/types';
 import { Dialog, DialogContent, DialogFooter, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { formatCurrency } from '@alga-psa/core';
@@ -38,7 +38,9 @@ interface AutomaticInvoicesProps {
   refreshTrigger?: number;
 }
 
-interface Period extends IClientContractLineCycle {
+type ReadyPeriod = IRecurringDueWorkRow;
+
+interface InvoicedPeriod extends IClientContractLineCycle {
   client_name: string;
   can_generate: boolean;
   billing_cycle_id?: string;
@@ -86,7 +88,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     from: undefined,
     to: undefined,
   }));
-  const [invoicedPeriods, setInvoicedPeriods] = useState<Period[]>([]);
+  const [invoicedPeriods, setInvoicedPeriods] = useState<InvoicedPeriod[]>([]);
   const [invoicedCurrentPage, setInvoicedCurrentPage] = useState(1);
   const [invoicedPageSize, setInvoicedPageSize] = useState(10);
   const [totalInvoicedPeriods, setTotalInvoicedPeriods] = useState(0);
@@ -111,12 +113,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [isGeneratingFromPreview, setIsGeneratingFromPreview] = useState(false); // Loading state for generate from preview
   const [poOverageDialogState, setPoOverageDialogState] = useState<{
     isOpen: boolean;
-    billingCycleIds: string[];
-    overageByBillingCycleId: Record<string, { clientName: string; overageCents: number; poNumber: string | null }>;
+    executionIdentityKeys: string[];
+    overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null }>;
   }>({
     isOpen: false,
-    billingCycleIds: [],
-    overageByBillingCycleId: {},
+    executionIdentityKeys: [],
+    overageByExecutionIdentityKey: {},
   });
   const [poOverageSingleConfirm, setPoOverageSingleConfirm] = useState<{
     isOpen: boolean;
@@ -140,7 +142,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   } | null>(null);
 
   // Server-side pagination state for "Ready to Invoice"
-  const [periods, setPeriods] = useState<Period[]>([]);
+  const [periods, setPeriods] = useState<ReadyPeriod[]>([]);
   const [totalPeriods, setTotalPeriods] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
@@ -187,7 +189,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       setLoadError(null);
       try {
         const dateRangeFilter = buildDateRangeFilter(appliedDateRange);
-        const result = await getAvailableBillingPeriods({
+        const result = await getAvailableRecurringDueWork({
           page: currentReadyPage,
           pageSize: pageSize,
           searchTerm: debouncedClientFilter,
@@ -196,7 +198,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         if (!isMounted) return;
 
-        setPeriods(result.periods as Period[]);
+        setPeriods(result.rows as ReadyPeriod[]);
         setTotalPeriods(result.total);
         initialLoadDone.current = true;
 
@@ -225,6 +227,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // For server-side pagination, filteredPeriods is just periods
   const filteredPeriods = periods;
+  const selectedReadyPeriods = filteredPeriods.filter((period) =>
+    selectedPeriods.has(period.executionIdentityKey),
+  );
+  const selectedPreviewPeriod = selectedReadyPeriods.length === 1 ? selectedReadyPeriods[0] : null;
 
   // Debounce invoiced search term
   useEffect(() => {
@@ -258,7 +264,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         if (!isMounted) return;
 
-        setInvoicedPeriods(result.cycles.map((cycle): Period => ({
+        setInvoicedPeriods(result.cycles.map((cycle): InvoicedPeriod => ({
           ...cycle,
           can_generate: false // Already invoiced periods can't be generated again
         })));
@@ -299,34 +305,56 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       const validIds = filteredPeriods
-        .filter(p => p.can_generate)
-        .map((p): string | undefined => p.billing_cycle_id)
-        .filter((id): id is string => id !== undefined);
+        .filter((period) => period.canGenerate)
+        .map((period) => period.executionIdentityKey);
       setSelectedPeriods(new Set(validIds));
     } else {
       setSelectedPeriods(new Set());
     }
   };
 
-  const handleSelectPeriod = (billingCycleId: string | undefined, event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!billingCycleId) return;
+  const handleSelectPeriod = (executionIdentityKey: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!executionIdentityKey) return;
 
     const newSelected = new Set(selectedPeriods);
     if (event.target.checked) {
-      newSelected.add(billingCycleId);
+      newSelected.add(executionIdentityKey);
     } else {
-      newSelected.delete(billingCycleId);
+      newSelected.delete(executionIdentityKey);
     }
     setSelectedPeriods(newSelected);
   };
 
-  const handlePreviewInvoice = async (billingCycleId: string) => {
+  const buildRecurringRunTarget = (period: ReadyPeriod) => {
+    if (period.hasBillingCycleBridge && period.billingCycleId) {
+      return {
+        billingCycleId: period.billingCycleId,
+        executionWindow: period.executionWindow,
+      };
+    }
+
+    return {
+      selectorInput: period.selectorInput,
+      executionWindow: period.executionWindow,
+    };
+  };
+
+  const resolveFailurePeriod = (failure: {
+    billingCycleId?: string | null;
+    executionIdentityKey?: string;
+  }) =>
+    periods.find((period) =>
+      (failure.executionIdentityKey && period.executionIdentityKey === failure.executionIdentityKey)
+      || (failure.billingCycleId && period.billingCycleId === failure.billingCycleId),
+    );
+
+  const handlePreviewInvoice = async (period: ReadyPeriod) => {
     setIsPreviewLoading(true);
     setErrors({}); // Clear previous errors
-    const response = await previewInvoice(billingCycleId);
+    const response = await previewInvoiceForSelectionInput(period.selectorInput);
     if (response.success) {
       // No cast needed now, types should match directly
-      setPreviewState({ data: response.data, billingCycleId: billingCycleId });
+      setPreviewState({ data: response.data, billingCycleId: period.billingCycleId ?? null });
       setShowPreviewDialog(true);
     } else {
       setPreviewState({ data: null, billingCycleId: null }); // Clear preview state on error
@@ -340,8 +368,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const handleGenerateInvoices = async () => {
-    const billingCycleIds = Array.from(selectedPeriods);
-    if (billingCycleIds.length === 0) {
+    const selectedExecutionPeriods = periods.filter((period) =>
+      selectedPeriods.has(period.executionIdentityKey),
+    );
+    if (selectedExecutionPeriods.length === 0) {
       return;
     }
 
@@ -350,48 +380,55 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     try {
       const overageResults = await Promise.all(
-        billingCycleIds.map(async (id) => {
+        selectedExecutionPeriods
+          .filter((period) => Boolean(period.billingCycleId))
+          .map(async (period) => {
           try {
-            const overage = await getPurchaseOrderOverageForBillingCycle(id);
-            return { id, overage };
+            const overage = await getPurchaseOrderOverageForBillingCycle(period.billingCycleId as string);
+            return { period, overage };
           } catch (err) {
             // If overage analysis fails, treat as "no overage warning" and let generation surface errors normally.
-            return { id, overage: null as any };
+            return { period, overage: null as any };
           }
-        })
+        }),
       );
 
-      const overageByBillingCycleId: Record<string, { clientName: string; overageCents: number; poNumber: string | null }> = {};
+      const overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null }> = {};
       for (const result of overageResults) {
         const overage = result.overage;
         if (!overage || overage.overage_cents <= 0) {
           continue;
         }
 
-        const period = periods.find((p) => p.billing_cycle_id === result.id);
-        const clientName = period?.client_name || result.id;
-        overageByBillingCycleId[result.id] = {
+        const clientName = result.period.clientName || result.period.executionIdentityKey;
+        overageByExecutionIdentityKey[result.period.executionIdentityKey] = {
           clientName,
           overageCents: overage.overage_cents,
           poNumber: overage.po_number ?? null,
         };
       }
 
-      const overageIds = Object.keys(overageByBillingCycleId);
+      const overageIds = Object.keys(overageByExecutionIdentityKey);
       if (overageIds.length > 0) {
         setPoOverageDialogState({
           isOpen: true,
-          billingCycleIds,
-          overageByBillingCycleId,
+          executionIdentityKeys: selectedExecutionPeriods.map((period) => period.executionIdentityKey),
+          overageByExecutionIdentityKey,
         });
         return;
       }
 
-      const runResult = await generateInvoicesAsRecurringBillingRun({ billingCycleIds });
+      const runResult = await generateInvoicesAsRecurringBillingRun({
+        targets: selectedExecutionPeriods.map(buildRecurringRunTarget),
+      });
       const newErrors: { [key: string]: string } = {};
       for (const failure of runResult.failures) {
-        const period = periods.find((p) => p.billing_cycle_id === failure.billingCycleId);
-        const clientName = period?.client_name || failure.billingCycleId;
+        const period = resolveFailurePeriod(failure);
+        const clientName =
+          period?.clientName ??
+          failure.billingCycleId ??
+          failure.executionIdentityKey ??
+          'Recurring billing window';
         newErrors[clientName] = failure.errorMessage;
       }
 
@@ -410,20 +447,25 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const handlePoOverageBatchDecision = async (decisionValue?: string) => {
     const decision = (decisionValue ?? 'allow') as 'allow' | 'skip';
-    const { billingCycleIds, overageByBillingCycleId } = poOverageDialogState;
+    const { executionIdentityKeys, overageByExecutionIdentityKey } = poOverageDialogState;
 
-    setPoOverageDialogState({ isOpen: false, billingCycleIds: [], overageByBillingCycleId: {} });
+    setPoOverageDialogState({ isOpen: false, executionIdentityKeys: [], overageByExecutionIdentityKey: {} });
     setIsGenerating(true);
     setErrors({});
 
     try {
       const newErrors: { [key: string]: string } = {};
-      const overageIds = new Set(Object.keys(overageByBillingCycleId));
+      const overageIds = new Set(Object.keys(overageByExecutionIdentityKey));
+      const selectedExecutionPeriods = periods.filter((period) =>
+        executionIdentityKeys.includes(period.executionIdentityKey),
+      );
       const toGenerate =
-        decision === 'skip' ? billingCycleIds.filter((id) => !overageIds.has(id)) : billingCycleIds;
+        decision === 'skip'
+          ? selectedExecutionPeriods.filter((period) => !overageIds.has(period.executionIdentityKey))
+          : selectedExecutionPeriods;
 
       if (decision === 'skip') {
-        for (const [, info] of Object.entries(overageByBillingCycleId)) {
+        for (const [, info] of Object.entries(overageByExecutionIdentityKey)) {
           newErrors[info.clientName] =
             `Skipped due to PO overage (${info.poNumber ? `PO ${info.poNumber}` : 'PO'}): ` +
             `over by ${formatCurrency(info.overageCents)}.`;
@@ -431,12 +473,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       }
 
       const runResult = await generateInvoicesAsRecurringBillingRun({
-        billingCycleIds: toGenerate,
+        targets: toGenerate.map(buildRecurringRunTarget),
         allowPoOverage: decision === 'allow',
       });
       for (const failure of runResult.failures) {
-        const period = periods.find((p) => p.billing_cycle_id === failure.billingCycleId);
-        const clientName = period?.client_name || failure.billingCycleId;
+        const period = resolveFailurePeriod(failure);
+        const clientName =
+          period?.clientName ??
+          failure.billingCycleId ??
+          failure.executionIdentityKey ??
+          'Recurring billing window';
         newErrors[clientName] = failure.errorMessage;
       }
 
@@ -614,11 +660,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 id='preview-selected-button'
                 variant="outline"
                 onClick={() => {
-                  if (selectedPeriods.size === 1) {
-                    handlePreviewInvoice(Array.from(selectedPeriods)[0]);
+                  if (selectedPreviewPeriod) {
+                    handlePreviewInvoice(selectedPreviewPeriod);
                   }
                 }}
-                disabled={selectedPeriods.size !== 1 || isPreviewLoading}
+                disabled={
+                  selectedPeriods.size !== 1
+                  || isPreviewLoading
+                }
               >
                 <Eye className="h-4 w-4 mr-2" />
                 {isPreviewLoading ? 'Loading...' : 'Preview Selected'}
@@ -638,7 +687,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <div className="flex items-end gap-4 mb-4">
             <DateRangePicker
               id="billing-period-date-range"
-              label="Period end date range"
+              label="Invoice window end date range"
               value={pendingDateRange}
               onChange={(range) => setPendingDateRange(range)}
             />
@@ -698,57 +747,89 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             columns={[
               {
                 title: (
-                  <Checkbox
+                    <Checkbox
                     id="select-all"
-                    checked={filteredPeriods.length > 0 && selectedPeriods.size === filteredPeriods.filter(p => p.can_generate).length}
+                    checked={filteredPeriods.length > 0 && selectedPeriods.size === filteredPeriods.filter((period) => period.canGenerate).length}
                     onChange={handleSelectAll}
-                    disabled={!filteredPeriods.some(p => p.can_generate)}
+                    disabled={!filteredPeriods.some((period) => period.canGenerate)}
                   />
                 ),
-                dataIndex: 'billing_cycle_id',
-                render: (_: unknown, record: Period) => record.can_generate ? (
+                dataIndex: 'executionIdentityKey',
+                render: (_: unknown, record: ReadyPeriod) => record.canGenerate ? (
                   <Checkbox
-                    id={`select-${record.billing_cycle_id}`}
-                    checked={selectedPeriods.has(record.billing_cycle_id || '')}
+                    id={`select-${record.executionIdentityKey}`}
+                    checked={selectedPeriods.has(record.executionIdentityKey)}
                     // Stop propagation to prevent row click when clicking checkbox
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                       event.stopPropagation();
-                      handleSelectPeriod(record.billing_cycle_id, event);
+                      handleSelectPeriod(record.executionIdentityKey, event);
                     }}
                     onClick={(e) => e.stopPropagation()} // Also stop propagation on click
                   />
                 ) : null
               },
-              { title: 'Client', dataIndex: 'client_name' },
               {
-                title: 'Billing Cycle',
-                dataIndex: 'billing_cycle'
+                title: 'Client',
+                dataIndex: 'clientName',
+                render: (_: unknown, record: ReadyPeriod) => record.clientName ?? 'Unknown client',
               },
               {
-                title: 'Period Start',
-                dataIndex: 'period_start_date',
-                render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
+                title: 'Cadence Source',
+                dataIndex: 'cadenceSource',
+                render: (_: unknown, record: ReadyPeriod) => (
+                  <div className="space-y-1">
+                    <Badge variant="outline">
+                      {record.cadenceSource === 'contract_anniversary' ? 'Contract anniversary' : 'Client schedule'}
+                    </Badge>
+                    <div className="text-xs text-muted-foreground">
+                      {record.dueState === 'early' ? 'Early' : 'Due'}
+                    </div>
+                  </div>
+                ),
               },
               {
-                title: 'Period End',
-                dataIndex: 'period_end_date',
-                render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
+                title: 'Service Period',
+                dataIndex: 'servicePeriodLabel',
+                render: (_: unknown, record: ReadyPeriod) => record.servicePeriodLabel,
+              },
+              {
+                title: 'Invoice Window',
+                dataIndex: 'invoiceWindowLabel',
+                render: (_: unknown, record: ReadyPeriod) => record.invoiceWindowLabel,
+              },
+              {
+                title: 'Contract Context',
+                dataIndex: 'contractName',
+                render: (_: unknown, record: ReadyPeriod) => {
+                  if (!record.contractName && !record.contractLineName) {
+                    return <span className="text-muted-foreground">No contract context</span>;
+                  }
+
+                  return (
+                    <div className="space-y-1">
+                      {record.contractName ? <div>{record.contractName}</div> : null}
+                      {record.contractLineName ? (
+                        <div className="text-xs text-muted-foreground">{record.contractLineName}</div>
+                      ) : null}
+                    </div>
+                  );
+                },
               },
               {
                 title: 'Actions', // Renamed from Status
-                dataIndex: 'billing_cycle_id', // Use ID for actions
-                render: (_: unknown, record: Period) => {
+                dataIndex: 'executionIdentityKey',
+                render: (_: unknown, record: ReadyPeriod) => {
                   // Only show actions if it's a valid, generatable period
-                  if (!record.billing_cycle_id || !record.can_generate) {
+                  if (!record.billingCycleId || !record.canGenerate) {
                     return null; // Or some placeholder if needed
                   }
                   return (
                     // Centered the content horizontally
                     <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}> {/* Stop row click propagation */}
-                      {record.is_early && (
+                      {record.isEarly && (
                         <Tooltip
                           content={
-                            <p>Warning: Current billing cycle hasn't ended yet (ends {toPlainDate(record.period_end_date).toLocaleString()})</p>
+                            <p>Warning: Current invoice window hasn't ended yet (ends {toPlainDate(record.invoiceWindowEnd).toLocaleString()})</p>
                           }
                           side="top" // Pass side prop to custom component
                           className="max-w-xs" // Pass className for content styling
@@ -761,7 +842,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button id={`actions-trigger-${record.billing_cycle_id}`} variant="ghost" className="h-8 w-8 p-0">
+                          <Button id={`actions-trigger-${record.billingCycleId}`} variant="ghost" className="h-8 w-8 p-0">
                             <span className="sr-only">Open menu</span>
                             <MoreVertical className="h-4 w-4" />
                           </Button>
@@ -778,14 +859,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           {/* <DropdownMenuSeparator /> */}
                           {/* Delete Option Moved Here */}
                           <DropdownMenuItem
-                            id={`delete-billing-cycle-${record.billing_cycle_id}`}
+                            id={`delete-billing-cycle-${record.billingCycleId}`}
                             className="text-destructive focus:text-destructive focus:bg-destructive/10"
                             onSelect={(e) => e.preventDefault()} // Prevent closing dropdown immediately
                             onClick={() => {
                               setSelectedCycleToDelete({
-                                id: record.billing_cycle_id || '',
-                                client: record.client_name,
-                                period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
+                                id: record.billingCycleId || '',
+                                client: record.clientName || 'Unknown client',
+                                period: `${toPlainDate(record.invoiceWindowStart).toLocaleString()} - ${toPlainDate(record.invoiceWindowEnd).toLocaleString()}`
                               });
                               setShowDeleteDialog(true); // Open the confirmation dialog
                             }}
@@ -844,7 +925,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               {
                 title: 'Actions',
                 dataIndex: 'billing_cycle_id',
-                render: (_: unknown, record: Period) => (
+                render: (_: unknown, record: InvoicedPeriod) => (
                   <div className="flex justify-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -1070,7 +1151,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             id="generate-invoice-from-preview-button"
             onClick={handleGenerateFromPreview}
             // Disable if there's an error, no data, or generation is in progress
-            disabled={!!errors.preview || !previewState.data || isGeneratingFromPreview || isPreviewLoading}
+            disabled={
+              !!errors.preview
+              || !previewState.data
+              || !previewState.billingCycleId
+              || isGeneratingFromPreview
+              || isPreviewLoading
+            }
           >
             {isGeneratingFromPreview ? 'Generating...' : 'Generate Invoice'}
           </Button>
@@ -1099,7 +1186,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         id="po-overage-batch-decision"
         isOpen={poOverageDialogState.isOpen}
         onClose={() =>
-          setPoOverageDialogState({ isOpen: false, billingCycleIds: [], overageByBillingCycleId: {} })
+          setPoOverageDialogState({ isOpen: false, executionIdentityKeys: [], overageByExecutionIdentityKey: {} })
         }
         title="Purchase Order Limit Overages"
         message={
@@ -1108,7 +1195,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               One or more invoices would exceed a Purchase Order authorized amount. What do you want to do?
             </p>
             <ul className="list-disc pl-5">
-              {Object.entries(poOverageDialogState.overageByBillingCycleId).map(([id, info]) => (
+              {Object.entries(poOverageDialogState.overageByExecutionIdentityKey).map(([id, info]) => (
                 <li key={id}>
                   {info.clientName}: over by {formatCurrency(info.overageCents)}
                   {info.poNumber ? ` (PO ${info.poNumber})` : ''}

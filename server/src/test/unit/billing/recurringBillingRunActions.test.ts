@@ -7,6 +7,7 @@ import {
 const mocks = vi.hoisted(() => ({
   getCurrentUserAsync: vi.fn(),
   generateInvoice: vi.fn(),
+  generateInvoiceForSelectionInput: vi.fn(),
   publishWorkflowEvent: vi.fn(),
   getAvailableBillingPeriods: vi.fn(),
   buildRecurringBillingRunStartedPayload: vi.fn((input) => input),
@@ -20,6 +21,10 @@ vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
 
 vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => ({
   generateInvoice: mocks.generateInvoice,
+  generateInvoiceForSelectionInput: mocks.generateInvoiceForSelectionInput,
+}));
+
+vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration.constants', () => ({
   DUPLICATE_RECURRING_INVOICE_CODE: 'DUPLICATE_RECURRING_INVOICE',
 }));
 
@@ -49,6 +54,7 @@ describe('recurring billing run actions', () => {
       tenant: 'tenant-1',
     });
     mocks.generateInvoice.mockResolvedValue({ invoice_id: 'invoice-1' });
+    mocks.generateInvoiceForSelectionInput.mockResolvedValue({ invoice_id: 'invoice-1' });
     mocks.publishWorkflowEvent.mockResolvedValue(undefined);
     mocks.getAvailableBillingPeriods.mockResolvedValue({
       periods: [],
@@ -197,7 +203,6 @@ describe('recurring billing run actions', () => {
     const firstResult = await generateInvoicesAsRecurringBillingRun({
       targets: [
         {
-          billingCycleId: 'cycle-2',
           executionWindow: buildContractCadenceExecutionWindow({
             clientId: 'client-1',
             contractId: 'contract-1',
@@ -205,6 +210,18 @@ describe('recurring billing run actions', () => {
             windowStart: '2025-02-08',
             windowEnd: '2025-03-08',
           }),
+          selectorInput: {
+            clientId: 'client-1',
+            windowStart: '2025-02-08',
+            windowEnd: '2025-03-08',
+            executionWindow: buildContractCadenceExecutionWindow({
+              clientId: 'client-1',
+              contractId: 'contract-1',
+              contractLineId: 'line-1',
+              windowStart: '2025-02-08',
+              windowEnd: '2025-03-08',
+            }),
+          },
         },
         {
           billingCycleId: 'cycle-1',
@@ -229,7 +246,6 @@ describe('recurring billing run actions', () => {
           }),
         },
         {
-          billingCycleId: 'cycle-2',
           executionWindow: buildContractCadenceExecutionWindow({
             clientId: 'client-1',
             contractId: 'contract-1',
@@ -237,6 +253,18 @@ describe('recurring billing run actions', () => {
             windowStart: '2025-02-08',
             windowEnd: '2025-03-08',
           }),
+          selectorInput: {
+            clientId: 'client-1',
+            windowStart: '2025-02-08',
+            windowEnd: '2025-03-08',
+            executionWindow: buildContractCadenceExecutionWindow({
+              clientId: 'client-1',
+              contractId: 'contract-1',
+              contractLineId: 'line-1',
+              windowStart: '2025-02-08',
+              windowEnd: '2025-03-08',
+            }),
+          },
         },
       ],
     });
@@ -246,6 +274,49 @@ describe('recurring billing run actions', () => {
     expect(firstResult.retryKey).toBe(secondResult.retryKey);
     expect(firstResult.selectionKey).toContain('billing_cycle_window:client:client-1:cycle-1:2025-02-01:2025-03-01');
     expect(firstResult.selectionKey).toContain('contract_cadence_window:contract:client-1:contract-1:line-1:2025-02-08:2025-03-08');
+  });
+
+  it('uses selector-input execution for contract cadence targets without a billing-cycle bridge', async () => {
+    const contractExecutionWindow = buildContractCadenceExecutionWindow({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const result = await generateInvoicesAsRecurringBillingRun({
+      targets: [
+        {
+          executionWindow: contractExecutionWindow,
+          selectorInput: {
+            clientId: 'client-1',
+            windowStart: '2025-02-08',
+            windowEnd: '2025-03-08',
+            executionWindow: contractExecutionWindow,
+          },
+        },
+      ],
+    });
+
+    expect(mocks.generateInvoice).not.toHaveBeenCalled();
+    expect(mocks.generateInvoiceForSelectionInput).toHaveBeenCalledWith(
+      {
+        clientId: 'client-1',
+        windowStart: '2025-02-08',
+        windowEnd: '2025-03-08',
+        executionWindow: contractExecutionWindow,
+      },
+      { allowPoOverage: undefined },
+    );
+    expect(mocks.buildRecurringBillingRunStartedPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectionMode: 'due_service_periods',
+        windowIdentity: 'contract_cadence_window',
+        executionWindowKinds: ['contract_cadence_window'],
+      }),
+    );
+    expect(result.invoicesCreated).toBe(1);
   });
 
   it('T186: client-cadence due-work selection stays deterministic from persisted billing-period windows even when current anchors differ later', async () => {

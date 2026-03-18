@@ -3,58 +3,33 @@
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getCurrentUserAsync } from '../lib/authHelpers';
-import { DUPLICATE_RECURRING_INVOICE_CODE, generateInvoice } from './invoiceGeneration';
+import {
+  generateInvoice,
+  generateInvoiceForSelectionInput,
+} from './invoiceGeneration';
+import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
 import {
   buildRecurringRunSelectionIdentity,
-  buildBillingCycleDueSelectionInput,
   buildClientBillingCycleExecutionWindow,
   listRecurringRunExecutionWindowKinds,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
-import type {
-  IRecurringDueSelectionInput,
-  IRecurringRunExecutionWindowIdentity,
-  RecurringRunExecutionWindowKind,
-} from '@alga-psa/types';
 import {
   getAvailableBillingPeriods,
-  type BillingPeriodWithMeta,
   type FetchBillingPeriodsOptions,
 } from './billingAndTax';
+import {
+  mapClientCadenceBillingPeriodsToRecurringRunTargets,
+  type ClientCadenceRecurringRunTarget,
+  type RecurringBillingRunInvoiceFailure,
+  type RecurringBillingRunResult,
+  type RecurringBillingRunTarget,
+} from './recurringBillingRunActions.shared';
 import {
   buildRecurringBillingRunCompletedPayload,
   buildRecurringBillingRunFailedPayload,
   buildRecurringBillingRunStartedPayload,
+  type RecurringBillingRunWindowIdentity,
 } from '@shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders';
-
-export type RecurringBillingRunInvoiceFailure = {
-  billingCycleId: string;
-  executionIdentityKey?: string;
-  executionWindowKind?: RecurringRunExecutionWindowKind;
-  errorMessage: string;
-};
-
-export type RecurringBillingRunTarget = {
-  billingCycleId: string;
-  executionWindow: IRecurringRunExecutionWindowIdentity;
-};
-
-export type ClientCadenceRecurringRunTarget = RecurringBillingRunTarget & {
-  clientId: string;
-  clientName: string;
-  selectorInput: IRecurringDueSelectionInput;
-  periodStart: string;
-  periodEnd: string;
-  isEarly: boolean;
-};
-
-export type RecurringBillingRunResult = {
-  runId: string;
-  selectionKey: string;
-  retryKey: string;
-  invoicesCreated: number;
-  failedCount: number;
-  failures: RecurringBillingRunInvoiceFailure[];
-};
 
 function normalizeRecurringBillingRunTargets(params: {
   billingCycleIds?: string[];
@@ -62,7 +37,10 @@ function normalizeRecurringBillingRunTargets(params: {
 }): RecurringBillingRunTarget[] {
   if (params.targets?.length) {
     return params.targets.filter(
-      (target) => Boolean(target?.billingCycleId && target.executionWindow?.identityKey),
+      (target) => Boolean(
+        target?.executionWindow?.identityKey &&
+          (target?.billingCycleId || target?.selectorInput),
+      ),
     );
   }
 
@@ -74,37 +52,12 @@ function normalizeRecurringBillingRunTargets(params: {
     }));
 }
 
-export function mapClientCadenceBillingPeriodsToRecurringRunTargets(
-  periods: BillingPeriodWithMeta[],
-): ClientCadenceRecurringRunTarget[] {
-  return periods
-    .filter((period) => Boolean(period.can_generate && period.billing_cycle_id))
-    .map((period) => {
-      const billingCycleId = period.billing_cycle_id as string;
-      const selectorInput = buildBillingCycleDueSelectionInput({
-        clientId: period.client_id,
-        billingCycleId,
-        windowStart: period.period_start_date,
-        windowEnd: period.period_end_date,
-      });
-
-      return {
-        billingCycleId,
-        executionWindow: selectorInput.executionWindow,
-        selectorInput,
-        clientId: period.client_id,
-        clientName: period.client_name,
-        periodStart: period.period_start_date,
-        periodEnd: period.period_end_date,
-        isEarly: Boolean(period.is_early),
-      };
-    })
-    .sort((left, right) => {
-      if (left.periodStart !== right.periodStart) {
-        return left.periodStart.localeCompare(right.periodStart);
-      }
-      return left.billingCycleId.localeCompare(right.billingCycleId);
-    });
+function resolveRecurringBillingRunWindowIdentity(
+  executionWindowKinds: ReturnType<typeof listRecurringRunExecutionWindowKinds>,
+): RecurringBillingRunWindowIdentity {
+  return executionWindowKinds.length === 1 && executionWindowKinds[0] === 'contract_cadence_window'
+    ? 'contract_cadence_window'
+    : 'billing_cycle_window';
 }
 
 export async function selectClientCadenceRecurringRunTargets(
@@ -157,6 +110,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
   const executionWindowKinds = listRecurringRunExecutionWindowKinds(
     targets.map((target) => target.executionWindow),
   );
+  const windowIdentity = resolveRecurringBillingRunWindowIdentity(executionWindowKinds);
   const selectionIdentity = buildRecurringRunSelectionIdentity(
     targets.map((target) => target.executionWindow),
   );
@@ -171,7 +125,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
       selectionKey: selectionIdentity.selectionKey,
       retryKey: selectionIdentity.retryKey,
       selectionMode: 'due_service_periods',
-      windowIdentity: 'billing_cycle_window',
+      windowIdentity,
       executionWindowKinds,
     }),
     ctx: {
@@ -188,9 +142,21 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
 
   try {
     for (const target of targets) {
-      const { billingCycleId, executionWindow } = target;
+      const { billingCycleId, executionWindow, selectorInput } = target;
       try {
-        const invoice = await generateInvoice(billingCycleId, { allowPoOverage: params.allowPoOverage });
+        const invoice = selectorInput
+          ? await generateInvoiceForSelectionInput(selectorInput, {
+              allowPoOverage: params.allowPoOverage,
+            })
+          : billingCycleId
+            ? await generateInvoice(billingCycleId, {
+                allowPoOverage: params.allowPoOverage,
+              })
+            : (() => {
+                throw new Error(
+                  `Recurring execution window ${executionWindow.identityKey} is missing both billingCycleId and selectorInput`,
+                );
+              })();
         if (invoice) {
           invoicesCreated += 1;
         }
@@ -219,7 +185,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
         invoicesCreated,
         failedCount: failures.length,
         selectionMode: 'due_service_periods',
-        windowIdentity: 'billing_cycle_window',
+        windowIdentity,
         executionWindowKinds,
       }),
       ctx: {
@@ -254,7 +220,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
         selectionKey: selectionIdentity.selectionKey,
         retryKey: selectionIdentity.retryKey,
         selectionMode: 'due_service_periods',
-        windowIdentity: 'billing_cycle_window',
+        windowIdentity,
         executionWindowKinds,
       }),
       ctx: {

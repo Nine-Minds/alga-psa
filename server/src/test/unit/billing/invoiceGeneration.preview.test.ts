@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  buildBillingCycleDueSelectionInput,
+  buildContractCadenceDueSelectionInput,
+} from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 type Row = Record<string, any>;
 
@@ -85,6 +89,7 @@ const mocks = vi.hoisted(() => {
   const getClientDefaultTaxRegionCode = vi.fn(async () => 'US-NY');
   const getClientLogoUrl = vi.fn(async () => null);
   const getClientContractPurchaseOrderContext = vi.fn(async () => ({ po_number: null }));
+  const hasPermission = vi.fn(() => true);
   const selectDueRecurringServicePeriodsForBillingWindow = vi.fn(async () => ({
     'contract-line-1': {
       duePosition: 'arrears',
@@ -130,8 +135,10 @@ const mocks = vi.hoisted(() => {
     getClientDefaultTaxRegionCode,
     getClientLogoUrl,
     getClientContractPurchaseOrderContext,
+    hasPermission,
     selectDueRecurringServicePeriodsForBillingWindow,
     calculateBilling,
+    calculateBillingForExecutionWindow: vi.fn(async (...args: any[]) => calculateBilling(...args)),
   };
 });
 
@@ -156,7 +163,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: vi.fn(() => true),
+  hasPermission: mocks.hasPermission,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -196,16 +203,18 @@ vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => (
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;
+    calculateBillingForExecutionWindow = mocks.calculateBillingForExecutionWindow;
   },
 }));
 
-const { previewInvoice } = await import(
+const { previewInvoice, previewInvoiceForSelectionInput } = await import(
   '../../../../../packages/billing/src/actions/invoiceGeneration'
 );
 
 describe('invoice preview recurring timing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.hasPermission.mockReturnValue(true);
   });
 
   it('T076: one-cycle invoice preview uses canonical service periods and still matches expected recurring totals', async () => {
@@ -334,6 +343,106 @@ describe('invoice preview recurring timing', () => {
                 billingTiming: 'advance',
               },
             ],
+          }),
+        ],
+      }),
+    });
+  });
+
+  it('T041: selector-input preview action validates invoice permissions the same way as the billing-cycle wrapper', async () => {
+    mocks.hasPermission.mockReturnValue(false);
+
+    const result = await previewInvoiceForSelectionInput(
+      buildContractCadenceDueSelectionInput({
+        clientId: 'client-1',
+        contractId: 'contract-1',
+        contractLineId: 'line-1',
+        windowStart: '2025-02-08',
+        windowEnd: '2025-03-08',
+      }),
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Permission denied: Cannot preview invoices',
+    });
+    expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).not.toHaveBeenCalled();
+  });
+
+  it('T042: selector-input preview action returns the same recurring service-period details as billing-cycle preview for an equivalent client-cadence row', async () => {
+    const selectorInput = buildBillingCycleDueSelectionInput({
+      clientId: 'client-1',
+      billingCycleId: 'cycle-1',
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+    });
+
+    const legacyResult = await previewInvoice('cycle-1');
+    const selectorResult = await previewInvoiceForSelectionInput(selectorInput);
+
+    expect(selectorResult).toEqual({
+      success: true,
+      data: expect.objectContaining({
+        dueDate: legacyResult.success ? legacyResult.data.dueDate : undefined,
+        subtotal: legacyResult.success ? legacyResult.data.subtotal : undefined,
+        tax: legacyResult.success ? legacyResult.data.tax : undefined,
+        total: legacyResult.success ? legacyResult.data.total : undefined,
+        items: [
+          expect.objectContaining({
+            description: 'Managed Router',
+            servicePeriodStart: '2025-01-01',
+            servicePeriodEnd: '2025-02-01',
+            billingTiming: 'arrears',
+          }),
+        ],
+      }),
+    });
+  });
+
+  it('T043: selector-input preview action returns correct recurring service-period details for a contract-cadence row with no billing-cycle bridge', async () => {
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const result = await previewInvoiceForSelectionInput(selectorInput);
+
+    expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).toHaveBeenCalledWith(
+      'client-1',
+      '2025-02-08',
+      '2025-03-08',
+      selectorInput.executionWindow.identityKey,
+    );
+    expect(mocks.calculateBillingForExecutionWindow).toHaveBeenCalledWith(
+      'client-1',
+      '2025-02-08',
+      '2025-03-08',
+      {
+        recurringTimingSelections: {
+          'contract-line-1': {
+            duePosition: 'arrears',
+            servicePeriodStart: '2025-01-01',
+            servicePeriodEnd: '2025-02-01',
+            servicePeriodStartExclusive: '2025-01-01',
+            servicePeriodEndExclusive: '2025-02-01',
+            coverageRatio: 1,
+          },
+        },
+        recurringTimingSelectionSource: 'persisted',
+      },
+    );
+    expect(result).toEqual({
+      success: true,
+      data: expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            description: 'Managed Router',
+            servicePeriodStart: '2025-01-01',
+            servicePeriodEnd: '2025-02-01',
+            billingTiming: 'arrears',
           }),
         ],
       }),

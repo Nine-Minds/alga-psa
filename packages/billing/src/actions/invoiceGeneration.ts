@@ -54,6 +54,7 @@ import {
   buildBillingCycleDueSelectionInput,
   buildRecurringRunSelectionIdentity as buildSelectionIdentity,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
+import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 
@@ -320,7 +321,7 @@ const RECURRING_COMPARISON_CHARGE_TYPES = new Set<IBillingCharge['type']>([
   'bucket',
 ]);
 
-export function getRecurringBillingComparisonMode(): RecurringBillingComparisonMode {
+function getRecurringBillingComparisonMode(): RecurringBillingComparisonMode {
   return process.env.RECURRING_BILLING_COMPARISON_MODE === 'legacy-vs-canonical'
     ? 'legacy-vs-canonical'
     : 'off';
@@ -425,7 +426,6 @@ async function runRecurringBillingComparisonMode(input: {
 }
 
 export type PurchaseOrderOverageDecision = 'allow' | 'skip';
-export const DUPLICATE_RECURRING_INVOICE_CODE = 'DUPLICATE_RECURRING_INVOICE';
 
 export type PurchaseOrderOverageResult = {
   client_contract_id: string;
@@ -655,6 +655,182 @@ async function adaptToWasmViewModel(
   };
 }
 
+export const previewInvoiceForSelectionInput = withAuth(async (
+  user,
+  { tenant },
+  selectorInput: IRecurringDueSelectionInput,
+): Promise<PreviewInvoiceResponse> => {
+  const { knex } = await createTenantKnex();
+
+  try {
+    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+      throw new Error('Permission denied: Cannot preview invoices');
+    }
+
+    const client_id = selectorInput.clientId;
+    const cycleEnd = selectorInput.windowEnd;
+    const previewInvoiceKey =
+      resolveRecurringInvoiceBridgeId(selectorInput) ?? selectorInput.executionWindow.identityKey;
+
+    const clientForValidation = await knex('clients')
+      .where({ client_id, tenant })
+      .select('client_name')
+      .first();
+
+    if (clientForValidation) {
+      const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
+      if (!emailValidation.valid) {
+        return { success: false, error: emailValidation.error! };
+      }
+    }
+
+    const billingEngine = new BillingEngine();
+    const billingResult = await calculateBillingForSelectionInput({
+      billingEngine,
+      selectorInput,
+    });
+
+    if (billingResult.error) {
+      return { success: false, error: billingResult.error };
+    }
+
+    if (billingResult.charges.length === 0) {
+      return {
+        success: false,
+        error: 'Nothing to bill'
+      };
+    }
+
+    const client = await getClientDetails(knex, tenant, client_id);
+    const due_date = await getDueDate(client_id, cycleEnd);
+    const chargesByContractGroup: { [key: string]: IBillingCharge[] } = {};
+    const nonContractAssociatedCharges: IBillingCharge[] = [];
+
+    for (const charge of billingResult.charges) {
+      if (charge.client_contract_id && charge.contract_name) {
+        const contractKey = charge.contract_name;
+        if (!chargesByContractGroup[contractKey]) {
+          chargesByContractGroup[contractKey] = [];
+        }
+        chargesByContractGroup[contractKey].push(charge);
+      } else {
+        nonContractAssociatedCharges.push(charge);
+      }
+    }
+
+    const invoiceItems: IInvoiceCharge[] = [];
+
+    nonContractAssociatedCharges.forEach(charge => {
+      const recurringSummary = resolvePreviewRecurringSummary(charge);
+      invoiceItems.push({
+        item_id: 'preview-' + uuidv4(),
+        invoice_id: `preview-${previewInvoiceKey}`,
+        service_id: charge.serviceId,
+        description: charge.serviceName || 'Charge',
+        quantity: getChargeQuantity(charge),
+        unit_price: getChargeUnitPrice(charge),
+        total_price: charge.total,
+        tax_amount: charge.tax_amount || 0,
+        tax_rate: charge.tax_rate || 0,
+        tax_region: charge.tax_region || '',
+        net_amount: charge.total - (charge.tax_amount || 0),
+        is_manual: false,
+        rate: charge.rate,
+        service_period_start: recurringSummary.servicePeriodStart,
+        service_period_end: recurringSummary.servicePeriodEnd,
+        billing_timing: recurringSummary.billingTiming,
+        recurring_detail_periods: recurringSummary.recurringDetailPeriods?.map((period) => ({
+          service_period_start: period.servicePeriodStart ?? null,
+          service_period_end: period.servicePeriodEnd ?? null,
+          billing_timing: period.billingTiming ?? null,
+        })),
+      });
+    });
+
+    for (const [contractKey, charges] of Object.entries(chargesByContractGroup)) {
+      const contractGroupName = contractKey;
+      const clientContractGroupId = charges[0].client_contract_id;
+      const contractGroupHeaderId = 'preview-' + uuidv4();
+      invoiceItems.push({
+        item_id: contractGroupHeaderId,
+        invoice_id: `preview-${previewInvoiceKey}`,
+        description: `Contract: ${contractGroupName}`,
+        quantity: 1,
+        unit_price: 0,
+        total_price: 0,
+        net_amount: 0,
+        tax_amount: 0,
+        tax_rate: 0,
+        is_manual: false,
+        is_bundle_header: true,
+        client_contract_id: clientContractGroupId,
+        contract_name: contractGroupName,
+        rate: 0
+      });
+
+      charges.forEach(charge => {
+        const recurringSummary = resolvePreviewRecurringSummary(charge);
+        let description = charge.serviceName;
+        if (isBucketCharge(charge)) {
+          const hoursIncluded = charge.hoursUsed - charge.overageHours;
+          const currencySymbol = getCurrencySymbol(billingResult.currency_code || 'USD');
+          if (charge.overageHours > 0) {
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ ${currencySymbol}${(charge.overageRate / 100).toFixed(2)}/hr)`;
+          } else {
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
+          }
+        }
+
+        invoiceItems.push({
+          item_id: 'preview-' + uuidv4(),
+          invoice_id: `preview-${previewInvoiceKey}`,
+          service_id: charge.serviceId,
+          description: description,
+          quantity: getChargeQuantity(charge),
+          unit_price: getChargeUnitPrice(charge),
+          total_price: charge.total,
+          tax_amount: charge.tax_amount || 0,
+          tax_rate: charge.tax_rate || 0,
+          tax_region: charge.tax_region || '',
+          net_amount: charge.total - (charge.tax_amount || 0),
+          is_manual: false,
+          client_contract_id: clientContractGroupId,
+          contract_name: contractGroupName,
+          parent_item_id: contractGroupHeaderId,
+          rate: charge.rate,
+          service_period_start: recurringSummary.servicePeriodStart,
+          service_period_end: recurringSummary.servicePeriodEnd,
+          billing_timing: recurringSummary.billingTiming,
+          recurring_detail_periods: recurringSummary.recurringDetailPeriods?.map((period) => ({
+            service_period_start: period.servicePeriodStart ?? null,
+            service_period_end: period.servicePeriodEnd ?? null,
+            billing_timing: period.billingTiming ?? null,
+          })),
+        });
+      });
+    }
+
+    const previewTax = await calculatePreviewTax(billingResult.charges, client_id, cycleEnd, client?.tax_region || '');
+    const previewData = await adaptToWasmViewModel(
+      billingResult,
+      client,
+      invoiceItems,
+      due_date,
+      previewTax,
+      tenant,
+    );
+
+    return {
+      success: true,
+      data: previewData
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'An error occurred while previewing the invoice'
+    };
+  }
+});
 
 export const previewInvoice = withAuth(async (
   user,

@@ -25,6 +25,7 @@ import { RECURRING_RANGE_SEMANTICS } from '@alga-psa/types';
 import {
   buildClientBillingCycleExecutionWindow as buildClientExecutionWindow,
   buildContractCadenceExecutionWindow as buildContractExecutionWindow,
+  buildRecurringRunSelectionIdentity as buildSelectionIdentity,
   listRecurringRunExecutionWindowKinds as listExecutionWindowKinds,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import {
@@ -203,6 +204,30 @@ describe('recurring timing shared domain', () => {
       'billing_cycle_window',
       'contract_cadence_window',
     ]);
+  });
+
+  it('T023: duplicate-prevention identity remains deterministic for a contract-cadence execution window with no billing-cycle bridge', () => {
+    const contractWindow = buildContractExecutionWindow({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const firstIdentity = buildSelectionIdentity([contractWindow]);
+    const secondIdentity = buildSelectionIdentity([contractWindow, contractWindow]);
+
+    expect(firstIdentity).toEqual({
+      executionIdentityKeys: [
+        'contract_cadence_window:contract:client-1:contract-1:line-1:2025-02-08:2025-03-08',
+      ],
+      selectionKey:
+        'recurring-run-selection:contract_cadence_window:contract:client-1:contract-1:line-1:2025-02-08:2025-03-08',
+      retryKey:
+        'recurring-run-retry:contract_cadence_window:contract:client-1:contract-1:line-1:2025-02-08:2025-03-08',
+    });
+    expect(secondIdentity).toEqual(firstIdentity);
   });
 
   it('T188: due service periods split into separate invoice candidates when grouping would violate the single-contract invoice invariant', () => {

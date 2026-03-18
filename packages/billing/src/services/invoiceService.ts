@@ -128,7 +128,7 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
 
   const configRow = await configBuilder
     .where({ tenant, config_id: configId })
-    .first<{ contract_line_id: string }>('contract_line_id');
+    .first('contract_line_id') as { contract_line_id?: string } | undefined;
 
   if (!configRow?.contract_line_id) {
     return 0;

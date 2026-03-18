@@ -4,6 +4,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { buildClientScheduleDueWorkRow } from '@alga-psa/shared/billingClients/recurringDueWork';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
@@ -89,35 +90,29 @@ const { default: AutomaticInvoices } = await import('../../../../../packages/bil
 
 function createPeriods() {
   return [
-    {
-      client_id: 'client-1',
-      client_name: 'Alpha Co',
-      billing_cycle_id: 'cycle-1',
-      billing_cycle: 'monthly',
-      period_start_date: '2025-01-01T00:00:00Z',
-      period_end_date: '2025-02-01T00:00:00Z',
-      effective_date: '2025-01-01T00:00:00Z',
-      tenant: 'tenant-1',
-      can_generate: true,
-      is_early: false,
-    },
-    {
-      client_id: 'client-2',
-      client_name: 'Beta Co',
-      billing_cycle_id: 'cycle-2',
-      billing_cycle: 'monthly',
-      period_start_date: '2025-01-01T00:00:00Z',
-      period_end_date: '2025-02-01T00:00:00Z',
-      effective_date: '2025-01-01T00:00:00Z',
-      tenant: 'tenant-1',
-      can_generate: true,
-      is_early: false,
-    },
+    buildClientScheduleDueWorkRow({
+      clientId: 'client-1',
+      clientName: 'Alpha Co',
+      billingCycleId: 'cycle-1',
+      servicePeriodStart: '2025-01-01',
+      servicePeriodEnd: '2025-02-01',
+      invoiceWindowStart: '2025-01-01',
+      invoiceWindowEnd: '2025-02-01',
+    }),
+    buildClientScheduleDueWorkRow({
+      clientId: 'client-2',
+      clientName: 'Beta Co',
+      billingCycleId: 'cycle-2',
+      servicePeriodStart: '2025-01-01',
+      servicePeriodEnd: '2025-02-01',
+      invoiceWindowStart: '2025-01-01',
+      invoiceWindowEnd: '2025-02-01',
+    }),
   ] as any;
 }
 
 describe('Contract PO UI flows', () => {
-  const previewInvoiceMock = vi.spyOn(invoiceGenerationActions, 'previewInvoice');
+  const previewInvoiceForSelectionInputMock = vi.spyOn(invoiceGenerationActions, 'previewInvoiceForSelectionInput');
   const getPurchaseOrderOverageForBillingCycleMock = vi.spyOn(
     invoiceGenerationActions,
     'getPurchaseOrderOverageForBillingCycle'
@@ -129,16 +124,16 @@ describe('Contract PO UI flows', () => {
   const getInvoicedBillingCyclesPaginatedMock = vi.spyOn(billingCycleActions, 'getInvoicedBillingCyclesPaginated');
   const removeBillingCycleMock = vi.spyOn(billingCycleActions, 'removeBillingCycle');
   const hardDeleteBillingCycleMock = vi.spyOn(billingCycleActions, 'hardDeleteBillingCycle');
-  const getAvailableBillingPeriodsMock = vi.spyOn(billingAndTaxActions, 'getAvailableBillingPeriods');
+  const getAvailableRecurringDueWorkMock = vi.spyOn(billingAndTaxActions, 'getAvailableRecurringDueWork');
 
   beforeEach(() => {
-    previewInvoiceMock.mockReset();
+    previewInvoiceForSelectionInputMock.mockReset();
     getPurchaseOrderOverageForBillingCycleMock.mockReset();
     generateInvoicesAsRecurringBillingRunMock.mockReset();
     getInvoicedBillingCyclesPaginatedMock.mockReset();
     removeBillingCycleMock.mockReset();
     hardDeleteBillingCycleMock.mockReset();
-    getAvailableBillingPeriodsMock.mockReset();
+    getAvailableRecurringDueWorkMock.mockReset();
 
     // Mock paginated invoiced cycles (empty)
     getInvoicedBillingCyclesPaginatedMock.mockResolvedValue({
@@ -149,13 +144,14 @@ describe('Contract PO UI flows', () => {
       totalPages: 0
     });
     // Mock paginated available billing periods with test data
-    getAvailableBillingPeriodsMock.mockResolvedValue({
-      periods: createPeriods(),
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      rows: createPeriods(),
+      materializationGaps: [],
       total: 2,
       page: 1,
       pageSize: 10,
-        totalPages: 1
-      });
+      totalPages: 1
+    });
     generateInvoicesAsRecurringBillingRunMock.mockResolvedValue({
       runId: 'run-1',
       invoicesCreated: 0,
@@ -175,7 +171,7 @@ describe('Contract PO UI flows', () => {
 
     // Wait for data to load
     await waitFor(() => {
-      expect(getAvailableBillingPeriodsMock).toHaveBeenCalled();
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
     });
 
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!
@@ -195,7 +191,10 @@ describe('Contract PO UI flows', () => {
       expect(getPurchaseOrderOverageForBillingCycleMock).toHaveBeenCalledTimes(2);
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        billingCycleIds: ['cycle-1', 'cycle-2'],
+        targets: [
+          expect.objectContaining({ billingCycleId: 'cycle-1' }),
+          expect.objectContaining({ billingCycleId: 'cycle-2' }),
+        ],
       });
     });
 
@@ -214,7 +213,7 @@ describe('Contract PO UI flows', () => {
 
     // Wait for data to load
     await waitFor(() => {
-      expect(getAvailableBillingPeriodsMock).toHaveBeenCalled();
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
     });
 
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!
@@ -241,7 +240,7 @@ describe('Contract PO UI flows', () => {
     await waitFor(() => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        billingCycleIds: ['cycle-2'],
+        targets: [expect.objectContaining({ billingCycleId: 'cycle-2' })],
         allowPoOverage: false,
       });
     });
@@ -253,7 +252,7 @@ describe('Contract PO UI flows', () => {
 
   it('T006: single invoice requires explicit override confirmation to proceed on overage', async () => {
     getPurchaseOrderOverageForBillingCycleMock.mockResolvedValue({ overage_cents: 2500, po_number: 'PO-OVR' });
-    previewInvoiceMock.mockResolvedValue({
+    previewInvoiceForSelectionInputMock.mockResolvedValue({
       success: true,
       data: {
         invoiceNumber: 'INV-TEST',
@@ -273,7 +272,7 @@ describe('Contract PO UI flows', () => {
 
     // Wait for data to load
     await waitFor(() => {
-      expect(getAvailableBillingPeriodsMock).toHaveBeenCalled();
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
     });
 
     const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!
