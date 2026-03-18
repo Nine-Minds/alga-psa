@@ -2132,7 +2132,7 @@
   {
     "id": "T247",
     "description": "Dropped recurrence-related tables are no longer joined or read by live models before service-period-first work begins",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F217",
       "F221"

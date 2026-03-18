@@ -1946,7 +1946,7 @@
   {
     "id": "F217",
     "description": "Remove stale joins or reads against dropped recurrence-related tables before service-period-first implementation assumes a clean storage baseline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "Cleanup requirements"

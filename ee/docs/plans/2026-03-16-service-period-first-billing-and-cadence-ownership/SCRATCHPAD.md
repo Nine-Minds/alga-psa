@@ -39,6 +39,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Stale dropped recurrence-table reads are now explicitly fenced off instead of being left implicit, which closes `F217` and `T247`:
+  - a fresh source inventory across `packages/billing/src` and `server/src/lib` shows no live reads or joins against the removed recurrence tables `contract_line_terms`, `contract_line_mappings`, or `contract_template_line_mappings`
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now includes `T247`, which locks that absence directly while also documenting that `contract_template_line_terms.billing_timing` remains the one intentional template compatibility fallback listed in `AUTHORITATIVE_RECURRENCE_STORAGE_MODEL`
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`, and `npx tsc --pretty false --noEmit -p server/tsconfig.json`; the server compile remains blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error
+
 - (2026-03-17) Mapping and repository write paths no longer silently drop recurring cadence fields, which closes `F216` and `T246`:
   - `packages/billing/src/actions/contractLineMappingActions.ts` now normalizes template snapshots with `normalizeLiveRecurringStorage(...)` and carries both `billing_timing` and `cadence_owner` through template-line updates, so mapping writes stop preserving only cadence owner while dropping timing
   - `packages/billing/src/models/contractLineMapping.ts` now treats billing timing as part of the mapping contract on both live and template rows: reads select `billing_timing`, live updates resolve cadence owner plus timing through `resolveRecurringAuthoringPolicy(...)`, and template fallbacks return the updated timing field instead of silently omitting it

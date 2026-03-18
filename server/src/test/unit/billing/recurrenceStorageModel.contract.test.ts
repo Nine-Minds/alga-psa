@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -12,6 +13,23 @@ import {
 } from '@shared/billingClients/recurrenceStorageModel';
 
 const repoRoot = path.resolve(import.meta.dirname, '../../../../..');
+
+function rgFiles(pattern: string, ...paths: string[]) {
+  try {
+    return execFileSync('rg', ['-l', pattern, ...paths], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    })
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+  } catch (error: any) {
+    if (error?.status === 1) {
+      return [];
+    }
+    throw error;
+  }
+}
 
 type CadenceOwnerRow = {
   cadence_owner?: 'client' | 'contract' | null;
@@ -357,6 +375,20 @@ describe('recurrence storage model contracts', () => {
     expect(serverRepository).toContain('return row ? normalizeLiveRecurringStorage(row) : undefined;');
     expect(serverRepository).toContain('fallbackBillingTiming: existingTemplateLine?.billing_timing,');
     expect(serverRepository).toContain('fallbackBillingTiming: existingLine?.billing_timing,');
+  });
+
+  it('T247: dropped recurrence-related tables are no longer joined or read by live models before service-period-first work begins', () => {
+    expect(AUTHORITATIVE_RECURRENCE_STORAGE_MODEL.templateLines.compatibilityFallbacks).toContain(
+      'contract_template_line_terms.billing_timing',
+    );
+
+    expect(
+      rgFiles(
+        'contract_line_terms|contract_line_mappings|contract_template_line_mappings',
+        'packages/billing/src',
+        'server/src/lib',
+      ),
+    ).toEqual([]);
   });
 
   it('T242: template-line cadence_owner schema and backfill behavior stay correct for v1 template recurrence storage', async () => {
