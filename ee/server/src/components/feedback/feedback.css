@@ -37,20 +37,21 @@
 }
 
 .feedback-input {
-  border: 0.2rem solid #9452ff;
+  border: 0.2rem solid rgb(var(--color-primary-500));
   border-radius: 0.5rem;
   padding: 0.5rem;
   width: 100%;
-  background-color: #e8dbfb;
+  background-color: rgb(var(--color-primary-50));
+  color: rgb(var(--color-text-900));
   max-Height: 10rem;
 }
 
 .feedback-input::placeholder {
-  color: #9452ff;
+  color: rgb(var(--color-primary-500));
 }
 
 .feedback-input:focus {
-  outline-color: #9452ff;
+  outline-color: rgb(var(--color-primary-500));
 }
 
 .feedback-btn-container {
