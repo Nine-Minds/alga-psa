@@ -1559,7 +1559,7 @@
   {
     "id": "T179",
     "description": "Plan scratchpad and PRD explicitly capture the system-wide blast radius and recursive decomposition instead of only engine-level goals",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F150"
@@ -1568,7 +1568,7 @@
   {
     "id": "T180",
     "description": "Plan artifacts remain valid after expansion and keep enough granularity to manage a multi-pass implementation safely",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F150"
     ]
@@ -2436,7 +2436,7 @@
   {
     "id": "T279",
     "description": "Plan artifacts remain valid after the second decomposition pass and preserve feature-to-subsystem traceability at implementation-grade depth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F150",
       "F220"
@@ -2445,7 +2445,7 @@
   {
     "id": "T280",
     "description": "The expanded plan now carries hundreds of implementation-grade features and tests across runtime, storage, APIs, UI, and downstream consumers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F150",
       "F220",

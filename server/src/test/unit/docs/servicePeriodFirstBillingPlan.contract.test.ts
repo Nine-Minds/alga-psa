@@ -52,6 +52,9 @@ const crossDomainServicePeriodLedgerFollowOn = read('CROSS_DOMAIN_SERVICE_PERIOD
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
 const recurrenceStorageMatrix = read('RECURRENCE_STORAGE_MATRIX.md');
 const runbook = read('RUNBOOK.md');
+const scratchpad = read('SCRATCHPAD.md');
+const featureChecklist = JSON.parse(read('features.json')) as Array<{ id: string; implemented: boolean }>;
+const testChecklist = JSON.parse(read('tests.json')) as Array<{ id: string; implemented: boolean }>;
 const contractReportActionsSource = fs.readFileSync(
   path.join(repoRoot, 'packages', 'billing', 'src', 'actions', 'contractReportActions.ts'),
   'utf8'
@@ -480,6 +483,32 @@ describe('service-period-first billing plan artifacts', () => {
     expect(crossDomainServicePeriodLedgerFollowOn).toContain('manual invoices, credits, or prepayment artifacts');
     expect(crossDomainServicePeriodLedgerFollowOn).toContain('event-driven');
     expect(crossDomainServicePeriodLedgerFollowOn).toContain('future materialization is stable');
+  });
+
+  it('T179 and T180: PRD and scratchpad preserve the expanded blast radius and recursive decomposition at implementation-grade depth', () => {
+    expect(prd).toContain('system-wide recurring-billing normalization');
+    expect(prd).toContain('reporting and accounting exports');
+    expect(prd).toContain('Specify the entire blast radius at implementation depth');
+    expect(prd).toContain('parity first');
+    expect(prd).toContain('new option second');
+    expect(prd).toContain('cleanup last');
+
+    expect(scratchpad).toContain('The plan must explicitly cover invoice generation, invoice detail consumers, credits/prepayment/negative invoice behavior, APIs/models/repos, templates/wizards/forms, portal/report/export surfaces, migrations/defaulting, and post-cutover cleanup.');
+    expect(scratchpad).toContain('Use recursive top-down decomposition for the feature/test lists');
+    expect(scratchpad).toContain('Second-pass agent critique showed the plan still needed dedicated categories');
+  });
+
+  it('T279 and T280: checklist artifacts retain implementation-grade breadth and traceable tail coverage after decomposition', () => {
+    expect(featureChecklist).toHaveLength(270);
+    expect(testChecklist).toHaveLength(349);
+    expect(featureChecklist.at(-1)?.id).toBe('F270');
+    expect(testChecklist.at(-1)?.id).toBe('T332');
+    expect(featureChecklist.some((item) => item.id === 'F150' && item.implemented)).toBe(true);
+    expect(featureChecklist.some((item) => item.id === 'F220' && item.implemented)).toBe(true);
+    expect(featureChecklist.some((item) => item.id === 'F224' && item.implemented)).toBe(true);
+    expect(testChecklist.some((item) => item.id === 'T170' && item.implemented)).toBe(true);
+    expect(testChecklist.some((item) => item.id === 'T250' && item.implemented)).toBe(true);
+    expect(testChecklist.some((item) => item.id === 'T253' && item.implemented)).toBe(true);
   });
 
   it('T349: edit transport surfaces define request, provenance, and structured validation feedback before dashboard editing lands', () => {

@@ -41,6 +41,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Plan-integrity coverage now closes `T179`, `T180`, `T279`, and `T280`:
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now reads `SCRATCHPAD.md`, `features.json`, and `tests.json` directly so the docs contract suite can assert both the qualitative replan posture and the quantitative checklist breadth instead of relying on memory or manual review
+  - the new assertions lock the system-wide PRD blast radius, the scratchpad’s explicit recursive decomposition and second-pass critique, and the current implementation-grade checklist size/tail contract (`270` features through `F270`, `349` tests through `T332`)
+  - this keeps the plan itself executable as a rollout artifact: if a later edit accidentally collapses the scope back toward billing-engine-only thinking or silently truncates the checklist, the docs suite now fails immediately
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+
 - (2026-03-18) DB-backed contract-cadence and mixed-cadence billing sanity now closes `T140`, `T175`, and `T176`:
   - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now lets the existing selector-input contract-cadence integration explicitly claim the contract-owned detail-persistence and mid-month monthly execution checks under one DB-backed seam: `T140/T175/T252`
   - that same file now adds a dedicated mixed-cadence grouping integration which inserts one client-cadence persisted row plus one contract-cadence persisted row on the same `[2025-01-01, 2025-02-01)` window, runs `generateInvoice(cycleId)`, and proves both detail rows land on a single invoice candidate when the documented grouping rules allow it
