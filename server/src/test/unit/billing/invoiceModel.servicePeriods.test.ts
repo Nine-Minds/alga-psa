@@ -309,6 +309,81 @@ describe('invoice model recurring service-period projection', () => {
     });
   });
 
+  it('T200: hydrated recurring charges expose canonical detail periods as authoritative while parent period fields stay summary metadata', async () => {
+    const knex = createMockKnex({
+      invoices: [
+        {
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          client_id: 'client-1',
+          credit_applied: 0,
+          total_amount: 10000,
+        },
+      ],
+      invoice_charges: [
+        {
+          item_id: 'recurring-1',
+          invoice_id: 'invoice-1',
+          tenant: 'tenant-1',
+          service_id: 'service-1',
+          description: 'Managed Services Bundle',
+          quantity: 1,
+          unit_price: 10000,
+          total_price: 10000,
+          tax_amount: 0,
+          net_amount: 10000,
+          is_manual: false,
+          // Legacy/header-like grouping values that should be replaced by canonical detail hydration.
+          service_period_start: '2024-12-15T00:00:00.000Z',
+          service_period_end: '2025-02-15T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+      invoice_charge_details: [
+        {
+          item_id: 'recurring-1',
+          tenant: 'tenant-1',
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+        {
+          item_id: 'recurring-1',
+          tenant: 'tenant-1',
+          service_period_start: '2025-02-01T00:00:00.000Z',
+          service_period_end: '2025-03-01T00:00:00.000Z',
+          billing_timing: 'advance',
+        },
+      ],
+    });
+
+    const invoice = await Invoice.getById(knex, 'tenant-1', 'invoice-1');
+    const recurringCharge = invoice?.invoice_charges?.[0];
+
+    expect(recurringCharge?.recurring_projection).toEqual({
+      source: 'canonical_detail_rows',
+      detail_period_count: 2,
+      parent_period_projection: 'summary_range',
+      parent_billing_timing_projection: 'uniform_detail_value_or_null',
+      detail_billing_timing_shape: 'mixed',
+    });
+    expect(recurringCharge?.recurring_detail_periods).toEqual([
+      {
+        service_period_start: '2025-01-01T00:00:00.000Z',
+        service_period_end: '2025-02-01T00:00:00.000Z',
+        billing_timing: 'arrears',
+      },
+      {
+        service_period_start: '2025-02-01T00:00:00.000Z',
+        service_period_end: '2025-03-01T00:00:00.000Z',
+        billing_timing: 'advance',
+      },
+    ]);
+    expect(recurringCharge?.service_period_start).toBe('2025-01-01T00:00:00.000Z');
+    expect(recurringCharge?.service_period_end).toBe('2025-03-01T00:00:00.000Z');
+    expect(recurringCharge?.billing_timing).toBeNull();
+  });
+
   it('T192: historical flat invoices without canonical detail rows still hydrate without synthesized recurring detail metadata', async () => {
     const knex = createMockKnex({
       invoices: [

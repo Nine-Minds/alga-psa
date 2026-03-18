@@ -41,6 +41,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Hydrated/manual invoice coexistence coverage now closes `T200` and `T212`:
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now seeds a recurring parent charge with intentionally stale header-like `service_period_*` / `billing_timing` values plus two canonical detail rows, then proves `Invoice.getById(...)` replaces the parent values with the detail-backed summary range and mixed-timing projection
+  - the assertion that matters for downstream consumers is now explicit: `recurring_projection.source = canonical_detail_rows` and `recurring_detail_periods[]` remain authoritative, while parent `service_period_start|service_period_end|billing_timing` are only the compatibility summary surface after hydration
+  - `server/src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts` now proves manual adjustments and targeted manual discounts can be added alongside an existing recurring charge without mutating that recurring charge’s canonical period fields or stamping period fields onto the manual rows
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts --coverage.enabled false`
+
 - (2026-03-18) DB-backed credit reconciliation coverage now closes `T177` without relying on the older negative-invoice infrastructure harness:
   - `server/src/test/integration/billing/creditReconciliation.integration.test.ts` now seeds a negative-invoice credit issuance plus a later credit application against a positive invoice in the live DB schema, then runs `validateCreditTrackingRemainingAmounts(...)` against those persisted rows
   - the test deliberately uses canonical recurring timing at the reader seam instead of the old header-only assumption: it seeds `invoice_charge_details.service_period_start|service_period_end|billing_timing`, and its mocked `Invoice.getById(...)` projects those detail periods back onto parent charge rows before reconciliation metadata is summarized

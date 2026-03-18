@@ -1737,7 +1737,7 @@
   {
     "id": "T200",
     "description": "Invoice consumers can distinguish authoritative recurring detail periods from header grouping metadata after hydration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F161",
       "F163",
@@ -1835,7 +1835,7 @@
   {
     "id": "T212",
     "description": "Manual and recurring charges can coexist on one invoice without corrupting canonical recurring detail semantics",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F181",
       "F177"

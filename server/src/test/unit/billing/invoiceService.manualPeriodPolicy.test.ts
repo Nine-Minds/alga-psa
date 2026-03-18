@@ -147,4 +147,77 @@ describe('manual invoice service-period policy', () => {
     expect(inserts.invoice_charges[0]).not.toHaveProperty('service_period_end');
     expect(inserts.invoice_charges[0]).not.toHaveProperty('billing_timing');
   });
+
+  it('T212: manual and recurring charges can coexist on one invoice without corrupting canonical recurring detail semantics', async () => {
+    const existingRecurringCharge = {
+      item_id: 'recurring-1',
+      invoice_id: 'invoice-1',
+      tenant: 'tenant-1',
+      net_amount: 10000,
+      service_period_start: '2025-01-01T00:00:00.000Z',
+      service_period_end: '2025-02-01T00:00:00.000Z',
+      billing_timing: 'arrears',
+    };
+    const { tx, inserts } = createMockTx([existingRecurringCharge]);
+
+    const subtotal = await persistManualInvoiceCharges(
+      tx,
+      'invoice-1',
+      [
+        {
+          description: 'One-time onsite surcharge',
+          quantity: 1,
+          rate: 2500,
+          is_discount: false,
+        },
+        {
+          description: 'Recurring-line courtesy credit',
+          quantity: 1,
+          rate: 0,
+          is_discount: true,
+          discount_type: 'percentage',
+          discount_percentage: 10,
+          applies_to_item_id: 'recurring-1',
+        },
+      ] as any,
+      {
+        client_id: 'client-1',
+        region_code: 'US-WA',
+      },
+      {
+        user: {
+          id: 'user-1',
+        },
+      } as any,
+      'tenant-1',
+    );
+
+    expect(subtotal).toBe(1500);
+    expect(existingRecurringCharge).toMatchObject({
+      service_period_start: '2025-01-01T00:00:00.000Z',
+      service_period_end: '2025-02-01T00:00:00.000Z',
+      billing_timing: 'arrears',
+    });
+    expect(inserts.invoice_charges).toEqual([
+      expect.objectContaining({
+        description: 'One-time onsite surcharge',
+        is_manual: true,
+        is_discount: false,
+        net_amount: 2500,
+      }),
+      expect.objectContaining({
+        description: 'Recurring-line courtesy credit',
+        is_manual: true,
+        is_discount: true,
+        applies_to_item_id: 'recurring-1',
+        net_amount: -1000,
+      }),
+    ]);
+    expect(inserts.invoice_charges[0]).not.toHaveProperty('service_period_start');
+    expect(inserts.invoice_charges[0]).not.toHaveProperty('service_period_end');
+    expect(inserts.invoice_charges[0]).not.toHaveProperty('billing_timing');
+    expect(inserts.invoice_charges[1]).not.toHaveProperty('service_period_start');
+    expect(inserts.invoice_charges[1]).not.toHaveProperty('service_period_end');
+    expect(inserts.invoice_charges[1]).not.toHaveProperty('billing_timing');
+  });
 });
