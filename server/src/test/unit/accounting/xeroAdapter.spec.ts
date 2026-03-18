@@ -403,6 +403,122 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     });
   });
 
+  it('T274: Xero adapter preserves mixed-cadence recurring service periods line-by-line inside one exported invoice', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([
+      {
+        ...baseLine,
+        line_id: 'line-client-cadence',
+        invoice_charge_id: 'charge-client-cadence',
+        service_period_start: '2025-02-01T00:00:00.000Z',
+        service_period_end: '2025-03-01T00:00:00.000Z',
+        payload: {
+          service_period_source: 'canonical_detail_periods',
+          cadence_owner: 'client'
+        }
+      },
+      {
+        ...baseLine,
+        line_id: 'line-contract-cadence',
+        invoice_charge_id: 'charge-contract-cadence',
+        amount_cents: 9_500,
+        service_period_start: '2025-02-08T00:00:00.000Z',
+        service_period_end: '2025-03-08T00:00:00.000Z',
+        payload: {
+          service_period_source: 'canonical_detail_periods',
+          cadence_owner: 'contract'
+        }
+      }
+    ]);
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-274',
+            invoice_date: '2025-02-10',
+            due_date: '2025-02-25',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          'charge-client-cadence',
+          {
+            item_id: 'charge-client-cadence',
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-client-cadence',
+            description: 'Client cadence managed services',
+            quantity: 1,
+            unit_price: 12_345,
+            total_price: 12_345,
+            tax_amount: 1_235,
+            tax_region: 'tax-region'
+          }
+        ],
+        [
+          'charge-contract-cadence',
+          {
+            item_id: 'charge-contract-cadence',
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-contract-cadence',
+            description: 'Contract cadence backup',
+            quantity: 1,
+            unit_price: 9_500,
+            total_price: 9_500,
+            tax_amount: 950,
+            tax_region: 'tax-region'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [
+          CLIENT_ID,
+          {
+            client_id: CLIENT_ID,
+            client_name: 'Acme Corp',
+            billing_email: 'billing@example.com'
+          }
+        ]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-1',
+            integration_type: 'xero',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-contact-1',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    const result = await adapter.transform(context);
+    const invoice = (result.documents[0]?.payload as Record<string, any>).invoice;
+    expect(invoice.lines).toHaveLength(2);
+    expect(invoice.lines[0]).toMatchObject({
+      servicePeriodStart: '2025-02-01T00:00:00.000Z',
+      servicePeriodEnd: '2025-03-01T00:00:00.000Z'
+    });
+    expect(invoice.lines[1]).toMatchObject({
+      servicePeriodStart: '2025-02-08T00:00:00.000Z',
+      servicePeriodEnd: '2025-03-08T00:00:00.000Z'
+    });
+  });
+
   it('delivers payloads conforming to Xero POST expectations', async () => {
     const adapter = new XeroAdapter();
     const context = buildContext([baseLine]);

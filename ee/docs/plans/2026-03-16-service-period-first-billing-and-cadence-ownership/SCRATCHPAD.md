@@ -41,6 +41,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Mixed-cadence export-adapter service-period behavior is now explicit, which closes `T274`:
+  - `server/src/test/unit/accounting/quickBooksOnlineAdapter.spec.ts` now adds a focused mixed-cadence invoice case proving QuickBooks preserves each exported line’s own service date even when the same invoice contains both client- and contract-cadence canonical recurring rows
+  - `server/src/test/unit/accounting/xeroAdapter.spec.ts` now adds the corresponding Xero case, proving line-level `servicePeriodStart` / `servicePeriodEnd` values remain distinct per recurring line instead of flattening mixed cadence work into one shared range
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/accounting/quickBooksOnlineAdapter.spec.ts src/test/unit/accounting/xeroAdapter.spec.ts --coverage.enabled false`
+
 - (2026-03-18) Portal invoice-detail omission/rendering policy and invoice adapter stability now have explicit checklist coverage, which close `T267` and `T268`:
   - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` now adds a dedicated `T267` assertion that the portal dialog intentionally renders canonical detail periods for recurring lines while omitting service-period UI for financial-only/manual rows and showing the explicit fallback copy instead
   - `packages/billing/src/lib/adapters/invoiceAdapters.test.ts` now tags the existing canonical-detail preservation case as `T268`, locking the renderer-adapter contract that detail-backed invoice charges still map to one compatibility summary range plus the preserved detail list for downstream preview/rendering consumers

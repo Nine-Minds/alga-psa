@@ -2386,7 +2386,7 @@
   {
     "id": "T274",
     "description": "QuickBooks and Xero adapter behaviors remain correct for mixed-cadence recurring invoices with canonical detail periods",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F198",
       "F199"
