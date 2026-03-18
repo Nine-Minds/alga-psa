@@ -2117,7 +2117,7 @@
   {
     "id": "F236",
     "description": "Generate persisted client-cadence service periods from existing recurring obligations under parity rules before invoice cutover",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Pass 2",
       "Pass 3"

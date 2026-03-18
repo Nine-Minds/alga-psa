@@ -122,6 +122,13 @@ export {
   resolveRecurringServicePeriodGenerationHorizon,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodGenerationHorizon';
 export {
+  materializeClientCadenceServicePeriods,
+} from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
+export type {
+  IClientCadenceMaterializedServicePeriodPlan,
+  MaterializeClientCadenceServicePeriodsInput,
+} from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
+export {
   isRecurringServicePeriodProvenanceDivergent,
   isRecurringServicePeriodProvenanceReasonCode,
   validateRecurringServicePeriodProvenance,

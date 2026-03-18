@@ -41,6 +41,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The first client-cadence materialization helper now exists, which closes `F236` and adds/closes `T343` while intentionally leaving `T286` for `F244` backfill/no-billed-history rules:
+  - `shared/billingClients/materializeClientCadenceServicePeriods.ts` now composes the existing client-cadence boundary generator with the new horizon policy and the persisted-record contract, producing additive future record candidates for client-owned recurring obligations instead of only ephemeral runtime periods
+  - the helper preserves parity semantics instead of inventing new date math: service-period boundaries still come from `generateClientCadenceServicePeriods(...)`, `advance` invoice windows stay aligned to the same period, `arrears` invoice windows resolve to the next client-cadence window, and generated rows use the explicit `generated` provenance plus the shared persisted-record identity vocabulary
+  - `server/src/test/unit/billing/materializeClientCadenceServicePeriods.domain.test.ts` now locks both advance and arrears mapping behavior directly, including schedule keys, canonical invoice-window mapping, generated provenance, and horizon coverage
+  - `tests.json` now adds `T343` because the original `T286` also covers the later `F244` backfill rule about not mutating billed history; that acceptance surface is still intentionally open until the dedicated backfill semantics land
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/materializeClientCadenceServicePeriods.domain.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) The v1 generation-horizon policy is now explicit, which closes `F235` and `T285`:
   - `shared/billingClients/recurringServicePeriodGenerationHorizon.ts` now defines the first operational horizon contract for persisted recurring periods: initial materialization/backfill targets `180` days of future coverage, steady-state replenishment triggers at the `45`-day low-water mark, and continuity issues are surfaced explicitly instead of being silently treated as ordinary replenishment
   - the same helper now makes the continuity invariant executable before ledger-writing code lands: `findRecurringServicePeriodContinuityIssues(...)` detects `gap` and `overlap` states under the canonical half-open model, while `assessRecurringServicePeriodGenerationCoverage(...)` reports whether the current future ledger both meets the target horizon and has fallen low enough to require replenishment

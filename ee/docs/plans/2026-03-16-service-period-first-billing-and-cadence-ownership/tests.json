@@ -2504,6 +2504,14 @@
     ]
   },
   {
+    "id": "T343",
+    "description": "Client-cadence materialization turns generated service periods into persisted future record candidates with canonical invoice-window mapping",
+    "implemented": true,
+    "featureIds": [
+      "F236"
+    ]
+  },
+  {
     "id": "T287",
     "description": "Contract-cadence recurring lines materialize future service periods correctly once contract-owned cadence is enabled",
     "implemented": false,
