@@ -2261,7 +2261,7 @@
   {
     "id": "T260",
     "description": "DB-backed sanity: mixed historical and canonical invoices remain queryable through the same invoice APIs during staged rollout",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F164",
       "F169",

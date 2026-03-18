@@ -26,10 +26,28 @@ import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 
 type InvoiceChargeDetailPeriodRow = {
   item_id: string;
-  service_period_start?: string | null;
-  service_period_end?: string | null;
+  service_period_start?: string | Date | null;
+  service_period_end?: string | Date | null;
   billing_timing?: 'arrears' | 'advance' | null;
 };
+
+function normalizeRecurringDetailPeriodDate(
+  value: string | Date | null | undefined
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return null;
+}
 
 function sortInvoiceChargesForDisplay(charges: IInvoiceCharge[]): IInvoiceCharge[] {
   return charges
@@ -79,8 +97,8 @@ function attachCanonicalRecurringDetailPeriods(
 
     const recurringDetailPeriods: IInvoiceChargeRecurringDetailPeriod[] = chargeDetailRows
       .map((detailRow) => ({
-        service_period_start: detailRow.service_period_start ?? null,
-        service_period_end: detailRow.service_period_end ?? null,
+        service_period_start: normalizeRecurringDetailPeriodDate(detailRow.service_period_start),
+        service_period_end: normalizeRecurringDetailPeriodDate(detailRow.service_period_end),
         billing_timing: detailRow.billing_timing ?? null,
       }))
       .sort((left, right) => {
@@ -91,11 +109,11 @@ function attachCanonicalRecurringDetailPeriods(
       });
 
     const servicePeriodStarts = chargeDetailRows
-      .map((detailRow) => detailRow.service_period_start)
+      .map((detailRow) => normalizeRecurringDetailPeriodDate(detailRow.service_period_start))
       .filter((value): value is string => typeof value === 'string' && value.length > 0)
       .sort();
     const servicePeriodEnds = chargeDetailRows
-      .map((detailRow) => detailRow.service_period_end)
+      .map((detailRow) => normalizeRecurringDetailPeriodDate(detailRow.service_period_end))
       .filter((value): value is string => typeof value === 'string' && value.length > 0)
       .sort();
     const billingTimings = Array.from(

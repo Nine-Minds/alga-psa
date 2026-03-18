@@ -41,6 +41,15 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) DB-backed invoice API coexistence now closes `T260` and fixes a live recurring-detail hydration bug:
+  - `server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts` now seeds one historical flat invoice plus one canonical detail-backed invoice in the live schema, then proves `InvoiceService.getById(...)` can read both through the same staged-rollout API seam without forcing the historical invoice to synthesize recurring detail metadata
+  - while landing that test, `packages/billing/src/models/invoice.ts` needed a production fix: DB-backed `invoice_charge_details.service_period_*` values may arrive as `Date` objects, and the old summary projection only handled strings, which left parent `service_period_start|service_period_end` null for canonical rows in real integrations even though the detail periods existed
+  - the model now normalizes recurring detail dates before building both `recurring_detail_periods[]` and the parent summary range, so DB-backed readers match the unit-test contract instead of depending on driver-specific value shapes
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/api/invoiceService.recurringDetailProjection.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts --hookTimeout 600000 --coverage.enabled false`
+
 - (2026-03-18) Hydrated/manual invoice coexistence coverage now closes `T200` and `T212`:
   - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now seeds a recurring parent charge with intentionally stale header-like `service_period_*` / `billing_timing` values plus two canonical detail rows, then proves `Invoice.getById(...)` replaces the parent values with the detail-backed summary range and mixed-timing projection
   - the assertion that matters for downstream consumers is now explicit: `recurring_projection.source = canonical_detail_rows` and `recurring_detail_periods[]` remain authoritative, while parent `service_period_start|service_period_end|billing_timing` are only the compatibility summary surface after hydration
