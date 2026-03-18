@@ -2553,6 +2553,14 @@
     ]
   },
   {
+    "id": "T344",
+    "description": "Persisted due-selection query contract filters eligible unlinked service-period records by schedule key, exact invoice window, and lifecycle state before runtime cutover",
+    "implemented": true,
+    "featureIds": [
+      "F242"
+    ]
+  },
+  {
     "id": "T292",
     "description": "Invoice generation selects due persisted service periods rather than deriving schedule boundaries on demand",
     "implemented": false,

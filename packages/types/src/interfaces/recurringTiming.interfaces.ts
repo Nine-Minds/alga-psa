@@ -33,6 +33,14 @@ export const RECURRING_SERVICE_PERIOD_LIFECYCLE_STATES = [
 export type RecurringServicePeriodLifecycleState =
   (typeof RECURRING_SERVICE_PERIOD_LIFECYCLE_STATES)[number];
 
+export const DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES = [
+  'generated',
+  'edited',
+  'locked',
+] as const satisfies readonly RecurringServicePeriodLifecycleState[];
+export type RecurringServicePeriodDueSelectionState =
+  (typeof DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES)[number];
+
 export const RECURRING_SERVICE_PERIOD_PROVENANCE_KINDS = [
   'generated',
   'user_edited',
@@ -276,6 +284,17 @@ export interface IRecurringDueSelectionInput {
   windowEnd: ISO8601String;
   billingCycleId?: string | null;
   executionWindow: IRecurringRunExecutionWindowIdentity;
+}
+
+export interface IRecurringServicePeriodDueSelectionQuery {
+  tenant: string;
+  cadenceOwner: CadenceOwner;
+  executionWindow: IRecurringRunExecutionWindowIdentity;
+  scheduleKeys: string[];
+  windowStart: ISO8601String;
+  windowEnd: ISO8601String;
+  lifecycleStates: RecurringServicePeriodDueSelectionState[];
+  chargeFamilies?: RecurringChargeFamily[];
 }
 
 export interface ICadenceBoundaryGeneratorInput {

@@ -19,6 +19,7 @@ const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
 const persistedServicePeriodRecord = read('PERSISTED_SERVICE_PERIOD_RECORD.md');
 const prd = read('PRD.md');
 const recurringServicePeriodGenerationHorizon = read('RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md');
+const recurringServicePeriodDueSelection = read('RECURRING_SERVICE_PERIOD_DUE_SELECTION.md');
 const recurringServicePeriodInvoiceLinkage = read('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
 const recurringServicePeriodImmutability = read('RECURRING_SERVICE_PERIOD_IMMUTABILITY.md');
@@ -313,6 +314,18 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodInvoiceLinkage).toContain('shared/billingClients/recurringServicePeriodInvoiceLinkage.ts');
     expect(recurringServicePeriodInvoiceLinkage).toContain('server/migrations/20260318143000_add_invoice_linkage_to_recurring_service_periods.cjs');
     expect(persistedServicePeriodRecord).toContain('RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md');
+  });
+
+  it('documents the persisted recurring service-period due-selection query contract and its runtime-cutover boundary', () => {
+    expect(recurringServicePeriodDueSelection).toContain('# Recurring Service-Period Due Selection');
+    expect(recurringServicePeriodDueSelection).toContain('## Query Inputs');
+    expect(recurringServicePeriodDueSelection).toContain('resolved `scheduleKeys[]` scope');
+    expect(recurringServicePeriodDueSelection).toContain('## Eligibility Rules');
+    expect(recurringServicePeriodDueSelection).toContain('only `generated`, `edited`, and `locked` rows are eligible by default');
+    expect(recurringServicePeriodDueSelection).toContain('rows with existing `invoiceLinkage` are excluded');
+    expect(recurringServicePeriodDueSelection).toContain('## Ordering');
+    expect(recurringServicePeriodDueSelection).toContain('shared/billingClients/recurringServicePeriodDueSelection.ts');
+    expect(recurringServicePeriodDueSelection).toContain('`F256` is still the later pass');
   });
 
   it('T284: documents the persisted provenance model for generated, user-edited, regenerated, and repair rows', () => {

@@ -52,6 +52,7 @@ export type {
   IRecurringCoverage,
   IRecurringDuePeriodSelection,
   IRecurringInvoiceDetailTiming,
+  IRecurringServicePeriodDueSelectionQuery,
   IRecurringServicePeriodInvoiceLinkage,
   IRecurringInvoiceWindow,
   IRecurringObligationRef,
@@ -62,6 +63,7 @@ export type {
   IRepairRecurringServicePeriodRecordProvenance,
   IResolvedRecurringSettlement,
   IUserEditedRecurringServicePeriodRecordProvenance,
+  RecurringServicePeriodDueSelectionState,
   RecurringServicePeriodProvenanceReasonCode,
   RecurringServicePeriodLifecycleState,
   RecurringServicePeriodProvenanceKind,
@@ -72,6 +74,7 @@ export type {
 
 // Re-export invoice constants
 export {
+  DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
   RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES,
   INVOICE_STATUS_METADATA,
   INVOICE_STATUS_DISPLAY_ORDER,
@@ -143,6 +146,11 @@ export {
   applyRecurringServicePeriodInvoiceLinkage,
   hasRecurringServicePeriodInvoiceLinkage,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodInvoiceLinkage';
+export {
+  buildRecurringServicePeriodDueSelectionQuery,
+  isRecurringServicePeriodRecordDue,
+  selectDueRecurringServicePeriodRecords,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodDueSelection';
 export type {
   IRecurringServicePeriodRegenerationPlan,
   RegenerateRecurringServicePeriodsInput,

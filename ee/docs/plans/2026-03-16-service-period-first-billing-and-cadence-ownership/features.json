@@ -2171,7 +2171,7 @@
   {
     "id": "F242",
     "description": "Define the due-selection query contract so invoice generation reads due persisted service periods rather than deriving periods on demand",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Invoice and billing-flow requirements"
