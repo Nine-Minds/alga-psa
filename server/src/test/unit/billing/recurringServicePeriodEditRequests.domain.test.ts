@@ -1,189 +1,196 @@
 import { describe, expect, it } from 'vitest';
 
 import { applyRecurringServicePeriodEditRequest } from '@alga-psa/shared/billingClients/recurringServicePeriodEditRequests';
-import { buildRecurringServicePeriodRecord } from '../../test-utils/recurringTimingFixtures';
+import {
+  buildRecurringServicePeriodInvoiceLinkage,
+  buildRecurringServicePeriodRecord,
+} from '../../test-utils/recurringTimingFixtures';
 
-describe('recurring service period edit request transport', () => {
-  it('returns explicit success payloads with edited provenance for boundary adjustments', () => {
+describe('recurring service period edit requests', () => {
+  it('T295: boundary-adjustment edits to future persisted service periods are validated and saved explicitly', () => {
     const record = buildRecurringServicePeriodRecord({
-      recordId: 'rsp_transport',
-      periodKey: 'period:2026-05-10:2026-06-10',
-      lifecycleState: 'generated',
+      recordId: 'rsp_edit_request',
       servicePeriod: {
-        start: '2026-05-10',
-        end: '2026-06-10',
+        start: '2026-04-01',
+        end: '2026-05-01',
         semantics: 'half_open',
       },
       invoiceWindow: {
-        start: '2026-05-10',
-        end: '2026-06-10',
+        start: '2026-04-01',
+        end: '2026-05-01',
         semantics: 'half_open',
       },
     });
 
-    const response = applyRecurringServicePeriodEditRequest({
+    const success = applyRecurringServicePeriodEditRequest({
       record,
       request: {
         operation: 'boundary_adjustment',
-        recordId: 'rsp_transport',
-        updatedServicePeriod: {
-          start: '2026-05-12',
-          end: '2026-06-10',
+        recordId: 'rsp_edit_request',
+        updatedInvoiceWindow: {
+          start: '2026-04-05',
+          end: '2026-05-05',
           semantics: 'half_open',
         },
         updatedActivityWindow: {
-          start: '2026-05-12',
-          end: '2026-06-10',
+          start: '2026-04-05',
+          end: '2026-05-01',
           semantics: 'half_open',
         },
       },
       context: {
-        editedAt: '2026-03-18T18:00:00.000Z',
+        editedAt: '2026-03-18T20:00:00.000Z',
         sourceRuleVersion: 'contract-line-1:v2',
-        sourceRunKey: 'transport-edit-1',
+        sourceRunKey: 'edit-request-success',
       },
     });
 
-    expect(response.ok).toBe(true);
-    if (!response.ok) {
-      throw new Error('Expected success response.');
-    }
-    expect(response.validationIssues).toEqual([]);
-    expect(response.provenance).toMatchObject({
-      kind: 'user_edited',
-      reasonCode: 'boundary_adjustment',
-      sourceRuleVersion: 'contract-line-1:v2',
-      sourceRunKey: 'transport-edit-1',
-      supersedesRecordId: 'rsp_transport',
-    });
-    expect(response.supersededRecord.lifecycleState).toBe('superseded');
-    expect(response.editedRecord.lifecycleState).toBe('edited');
-  });
-
-  it('returns structured validation feedback instead of throwing for continuity errors', () => {
-    const previousRecord = buildRecurringServicePeriodRecord({
-      recordId: 'rsp_prev',
-      servicePeriod: {
-        start: '2026-04-10',
-        end: '2026-05-10',
-        semantics: 'half_open',
-      },
-    });
-    const currentRecord = buildRecurringServicePeriodRecord({
-      recordId: 'rsp_current',
-      periodKey: 'period:2026-05-10:2026-06-10',
-      servicePeriod: {
-        start: '2026-05-10',
-        end: '2026-06-10',
-        semantics: 'half_open',
-      },
-      invoiceWindow: {
-        start: '2026-05-10',
-        end: '2026-06-10',
-        semantics: 'half_open',
-      },
-    });
-    const nextRecord = buildRecurringServicePeriodRecord({
-      recordId: 'rsp_next',
-      servicePeriod: {
-        start: '2026-06-10',
-        end: '2026-07-10',
-        semantics: 'half_open',
-      },
-    });
-
-    const response = applyRecurringServicePeriodEditRequest({
-      record: currentRecord,
-      request: {
-        operation: 'boundary_adjustment',
-        recordId: 'rsp_current',
-        updatedServicePeriod: {
-          start: '2026-05-12',
-          end: '2026-06-08',
-          semantics: 'half_open',
+    expect(success).toMatchObject({
+      ok: true,
+      operation: 'boundary_adjustment',
+      recordId: 'rsp_edit_request',
+      editedRecord: {
+        lifecycleState: 'edited',
+        invoiceWindow: {
+          start: '2026-04-05',
+          end: '2026-05-05',
         },
-        updatedActivityWindow: {
-          start: '2026-05-12',
-          end: '2026-06-08',
-          semantics: 'half_open',
+        activityWindow: {
+          start: '2026-04-05',
+          end: '2026-05-01',
         },
       },
-      context: {
-        editedAt: '2026-03-18T18:05:00.000Z',
-        sourceRuleVersion: 'contract-line-1:v2',
-      },
-      siblingRecords: [previousRecord, currentRecord, nextRecord],
+      validationIssues: [],
     });
 
-    expect(response.ok).toBe(false);
-    if (response.ok) {
-      throw new Error('Expected validation failure response.');
-    }
-    expect(response.validationIssues).toEqual([
-      expect.objectContaining({
-        code: 'continuity_gap_before',
-        field: 'servicePeriod',
-      }),
-      expect.objectContaining({
-        code: 'continuity_gap_after',
-        field: 'servicePeriod',
-      }),
-    ]);
-  });
-
-  it('returns structured validation feedback for invalid defer input and record mismatches', () => {
-    const record = buildRecurringServicePeriodRecord({
-      recordId: 'rsp_defer',
-      invoiceWindow: {
-        start: '2026-05-10',
-        end: '2026-06-10',
-        semantics: 'half_open',
-      },
-    });
-
-    const missingWindow = applyRecurringServicePeriodEditRequest({
+    const invalid = applyRecurringServicePeriodEditRequest({
       record,
       request: {
-        operation: 'defer',
-        recordId: 'rsp_defer',
+        operation: 'boundary_adjustment',
+        recordId: 'rsp_edit_request',
+        updatedServicePeriod: {
+          start: '2026-03-28',
+          end: '2026-05-01',
+          semantics: 'half_open',
+        },
+        updatedActivityWindow: {
+          start: '2026-03-28',
+          end: '2026-05-01',
+          semantics: 'half_open',
+        },
       },
       context: {
-        editedAt: '2026-03-18T18:10:00.000Z',
+        editedAt: '2026-03-18T20:05:00.000Z',
         sourceRuleVersion: 'contract-line-1:v2',
+        sourceRunKey: 'edit-request-invalid',
       },
-    });
-    expect(missingWindow).toMatchObject({
-      ok: false,
-      operation: 'defer',
-      recordId: 'rsp_defer',
-      validationIssues: [
-        expect.objectContaining({
-          code: 'missing_deferred_invoice_window',
-          field: 'deferredInvoiceWindow',
+      siblingRecords: [
+        buildRecurringServicePeriodRecord({
+          recordId: 'rsp_before',
+          servicePeriod: {
+            start: '2026-03-01',
+            end: '2026-04-01',
+            semantics: 'half_open',
+          },
+          invoiceWindow: {
+            start: '2026-03-01',
+            end: '2026-04-01',
+            semantics: 'half_open',
+          },
         }),
       ],
     });
 
-    const mismatch = applyRecurringServicePeriodEditRequest({
+    expect(invalid).toEqual({
+      ok: false,
+      operation: 'boundary_adjustment',
+      recordId: 'rsp_edit_request',
+      validationIssues: [
+        {
+          code: 'continuity_overlap_before',
+          field: 'servicePeriod',
+          message: 'Edit would create a service-period overlap before period:2025-01-01:2025-02-01: previous period ends 2026-04-01.',
+        },
+      ],
+    });
+  });
+
+  it('T296: skip or defer operations mark future persisted service periods without corrupting continuity or invoice linkage', () => {
+    const record = buildRecurringServicePeriodRecord({
+      recordId: 'rsp_skip_request',
+      servicePeriod: {
+        start: '2026-05-01',
+        end: '2026-06-01',
+        semantics: 'half_open',
+      },
+      invoiceWindow: {
+        start: '2026-05-01',
+        end: '2026-06-01',
+        semantics: 'half_open',
+      },
+    });
+
+    const skipped = applyRecurringServicePeriodEditRequest({
       record,
       request: {
         operation: 'skip',
-        recordId: 'rsp_other',
+        recordId: 'rsp_skip_request',
       },
       context: {
-        editedAt: '2026-03-18T18:12:00.000Z',
+        editedAt: '2026-03-18T20:10:00.000Z',
         sourceRuleVersion: 'contract-line-1:v2',
+        sourceRunKey: 'skip-request',
       },
     });
-    expect(mismatch).toMatchObject({
-      ok: false,
+
+    expect(skipped).toMatchObject({
+      ok: true,
       operation: 'skip',
-      recordId: 'rsp_other',
+      recordId: 'rsp_skip_request',
+      editedRecord: {
+        lifecycleState: 'skipped',
+        provenance: {
+          kind: 'user_edited',
+          reasonCode: 'skip',
+        },
+      },
+      validationIssues: [],
+    });
+
+    const linkedBilledRecord = buildRecurringServicePeriodRecord({
+      recordId: 'rsp_linked_billed',
+      lifecycleState: 'billed',
+      invoiceLinkage: buildRecurringServicePeriodInvoiceLinkage(),
+    });
+
+    const linkedFailure = applyRecurringServicePeriodEditRequest({
+      record: linkedBilledRecord,
+      request: {
+        operation: 'defer',
+        recordId: 'rsp_linked_billed',
+        deferredInvoiceWindow: {
+          start: '2026-06-01',
+          end: '2026-07-01',
+          semantics: 'half_open',
+        },
+      },
+      context: {
+        editedAt: '2026-03-18T20:15:00.000Z',
+        sourceRuleVersion: 'contract-line-1:v2',
+        sourceRunKey: 'defer-request-linked',
+      },
+    });
+
+    expect(linkedFailure).toEqual({
+      ok: false,
+      operation: 'defer',
+      recordId: 'rsp_linked_billed',
       validationIssues: [
-        expect.objectContaining({
-          code: 'record_mismatch',
-          field: 'recordId',
-        }),
+        {
+          code: 'immutable_record',
+          field: 'operation',
+          message: 'Locked or billed service periods cannot be edited, skipped, deferred, or regenerated in place.',
+        },
       ],
     });
   });

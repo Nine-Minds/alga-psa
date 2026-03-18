@@ -41,6 +41,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Explicit edit-request save/validation responses now cover the missing persisted-period edit wrapper seam, which close `T295` and `T296`:
+  - `server/src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts` now exercises `applyRecurringServicePeriodEditRequest(...)` directly instead of only the lower-level edit helpers, which is the first test seam that looks like the later UI/API edit surface in `F251`
+  - the new `T295` case proves a boundary-adjustment request can succeed with an explicit edited revision and can also fail with structured `continuity_overlap_before` validation output when sibling context would make the edit invalid
+  - the new `T296` case proves skip requests return explicit superseding state while billed, invoice-linked rows fail fast through the wrapper with `immutable_record` instead of pretending defer/repair flows may mutate linked history in place
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts --coverage.enabled false`
+
 - (2026-03-18) Mixed-cadence export-adapter service-period behavior is now explicit, which closes `T274`:
   - `server/src/test/unit/accounting/quickBooksOnlineAdapter.spec.ts` now adds a focused mixed-cadence invoice case proving QuickBooks preserves each exported line’s own service date even when the same invoice contains both client- and contract-cadence canonical recurring rows
   - `server/src/test/unit/accounting/xeroAdapter.spec.ts` now adds the corresponding Xero case, proving line-level `servicePeriodStart` / `servicePeriodEnd` values remain distinct per recurring line instead of flattening mixed cadence work into one shared range

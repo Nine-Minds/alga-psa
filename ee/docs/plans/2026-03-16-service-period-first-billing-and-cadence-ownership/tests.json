@@ -2628,7 +2628,7 @@
   {
     "id": "T295",
     "description": "Boundary-adjustment edits to future persisted service periods are validated and saved explicitly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F245",
       "F248",
@@ -2638,7 +2638,7 @@
   {
     "id": "T296",
     "description": "Skip or defer operations mark future persisted service periods without corrupting continuity or invoice linkage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F246",
       "F248"
