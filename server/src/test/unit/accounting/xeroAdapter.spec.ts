@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { XeroAdapter } from '@alga-psa/billing/services';
+import { XeroAdapter } from '../../../../../packages/billing/src/adapters/accounting/xeroAdapter';
 import { AccountingExportAdapterContext } from '@alga-psa/types';
-import { AccountingMappingResolver } from '@alga-psa/billing';
+import { AccountingMappingResolver } from '../../../../../packages/billing/src/services/accountingMappingResolver';
 import { XeroClientService } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import * as dbModule from 'server/src/lib/db';
 
@@ -289,6 +289,118 @@ describe('XeroAdapter – spec validation scaffolding', () => {
       { name: 'PST', rate: 7, amountCents: 700 }
     ]);
     expect(invoice.lineAmountType).toBe('Exclusive');
+  });
+
+  it('carries canonical service-period ranges through Xero line payloads and keeps null fallbacks periodless', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([
+      {
+        ...baseLine,
+        line_id: 'line-range',
+        invoice_charge_id: 'charge-range',
+        service_period_start: '2025-01-01T00:00:00.000Z',
+        service_period_end: '2025-03-01T00:00:00.000Z',
+        payload: {
+          service_period_source: 'canonical_detail_periods'
+        }
+      },
+      {
+        ...baseLine,
+        line_id: 'line-financial',
+        invoice_charge_id: 'charge-financial',
+        amount_cents: 4_000,
+        payload: {
+          service_period_source: 'financial_document_fallback'
+        }
+      }
+    ]);
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-3001',
+            invoice_date: '2025-03-01',
+            due_date: '2025-03-15',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          'charge-range',
+          {
+            item_id: 'charge-range',
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-range',
+            description: 'Managed services',
+            quantity: 1,
+            unit_price: 12_345,
+            total_price: 12_345,
+            tax_amount: 1_235,
+            tax_region: 'tax-region'
+          }
+        ],
+        [
+          'charge-financial',
+          {
+            item_id: 'charge-financial',
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-financial',
+            description: 'Credit adjustment',
+            quantity: 1,
+            unit_price: 4_000,
+            total_price: 4_000,
+            tax_amount: 0,
+            tax_region: null
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [
+          CLIENT_ID,
+          {
+            client_id: CLIENT_ID,
+            client_name: 'Acme Corp',
+            billing_email: 'billing@example.com'
+          }
+        ]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-1',
+            integration_type: 'xero',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-contact-1',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    const result = await adapter.transform(context);
+    const invoice = (result.documents[0]?.payload as Record<string, any>).invoice;
+    expect(invoice.lines).toHaveLength(2);
+    expect(invoice.lines[0]).toMatchObject({
+      servicePeriodStart: '2025-01-01T00:00:00.000Z',
+      servicePeriodEnd: '2025-03-01T00:00:00.000Z'
+    });
+    expect(invoice.lines[1]).toMatchObject({
+      servicePeriodStart: null,
+      servicePeriodEnd: null
+    });
   });
 
   it('delivers payloads conforming to Xero POST expectations', async () => {

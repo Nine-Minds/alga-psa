@@ -1966,7 +1966,7 @@
   {
     "id": "T227",
     "description": "QuickBooks export mapping handles recurring ranges, single dates, and null-period fallbacks according to the documented adapter policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F198"
     ]
@@ -1974,7 +1974,7 @@
   {
     "id": "T228",
     "description": "Xero export mapping handles recurring ranges, description flattening, and null-period fallbacks according to the documented adapter policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F199"
     ]

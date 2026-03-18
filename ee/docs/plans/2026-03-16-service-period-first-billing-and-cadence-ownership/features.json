@@ -1775,7 +1775,7 @@
   {
     "id": "F198",
     "description": "Define QuickBooks adapter rules for canonical recurring period ranges, single service dates, and null-period fallbacks",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Acceptance Criteria"
@@ -1784,7 +1784,7 @@
   {
     "id": "F199",
     "description": "Define Xero adapter rules for canonical recurring period ranges, description flattening, and null-period fallbacks",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI and downstream-consumer requirements",
       "Acceptance Criteria"

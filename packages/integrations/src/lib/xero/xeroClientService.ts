@@ -1044,20 +1044,33 @@ function pruneUndefined<T extends Record<string, unknown>>(input: T): T {
 
 function buildLineDescription(line: XeroInvoiceLinePayload): string | undefined {
   const base = line.description ?? undefined;
-  if (!line.servicePeriodStart && !line.servicePeriodEnd) {
+  const servicePeriodStart = formatDate(line.servicePeriodStart) ?? line.servicePeriodStart ?? null;
+  const servicePeriodEnd = formatDate(line.servicePeriodEnd) ?? line.servicePeriodEnd ?? null;
+
+  if (!servicePeriodStart && !servicePeriodEnd) {
     return base;
   }
 
   const parts = [base].filter(Boolean) as string[];
-  const servicePeriod: string[] = [];
-  if (line.servicePeriodStart) {
-    servicePeriod.push(`From ${line.servicePeriodStart}`);
-  }
-  if (line.servicePeriodEnd) {
-    servicePeriod.push(`To ${line.servicePeriodEnd}`);
-  }
-  if (servicePeriod.length > 0) {
-    parts.push(servicePeriod.join(' '));
-  }
+  parts.push(buildServicePeriodDescription(servicePeriodStart, servicePeriodEnd));
   return parts.join(' — ');
+}
+
+function buildServicePeriodDescription(
+  servicePeriodStart: string | null,
+  servicePeriodEnd: string | null
+): string {
+  if (servicePeriodStart && servicePeriodEnd) {
+    if (servicePeriodStart === servicePeriodEnd) {
+      return `Service date: ${servicePeriodStart}`;
+    }
+
+    return `Service period: ${servicePeriodStart} to ${servicePeriodEnd}`;
+  }
+
+  if (servicePeriodStart) {
+    return `Service period starts: ${servicePeriodStart}`;
+  }
+
+  return `Service period ends: ${servicePeriodEnd}`;
 }

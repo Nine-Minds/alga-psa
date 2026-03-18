@@ -33,6 +33,28 @@ export function buildXeroInvoiceReference(baseReference: string, poNumber?: stri
   return reference.length > 255 ? reference.slice(0, 255) : reference;
 }
 
+function resolveXeroLineServicePeriod(
+  line: AccountingExportAdapterContext['lines'][number]
+): {
+  servicePeriodStart: string | null;
+  servicePeriodEnd: string | null;
+} {
+  if (line.payload?.service_period_source === 'financial_document_fallback') {
+    return {
+      servicePeriodStart: null,
+      servicePeriodEnd: null
+    };
+  }
+
+  // Xero can represent both boundaries, so keep the compatibility summary range on the
+  // line payload and let the downstream client flatten that range into description copy
+  // only when the external API cannot represent the period semantics directly.
+  return {
+    servicePeriodStart: line.service_period_start ?? null,
+    servicePeriodEnd: line.service_period_end ?? null
+  };
+}
+
 type DbInvoice = {
   invoice_id: string;
   invoice_number?: string | null;
@@ -276,6 +298,8 @@ export class XeroAdapter implements AccountingExportAdapter {
         const unitAmountCents =
           typeof charge.unit_price === 'number' ? Math.round(charge.unit_price) : null;
 
+        const servicePeriod = resolveXeroLineServicePeriod(line);
+
         const payload: XeroInvoiceLinePayload = {
           lineId: line.line_id,
           amountCents: Math.round(line.amount_cents),
@@ -292,8 +316,8 @@ export class XeroAdapter implements AccountingExportAdapter {
           taxAmountCents,
           taxComponents: taxComponents ?? null,
           tracking: tracking ?? null,
-          servicePeriodStart: line.service_period_start ?? null,
-          servicePeriodEnd: line.service_period_end ?? null
+          servicePeriodStart: servicePeriod.servicePeriodStart,
+          servicePeriodEnd: servicePeriod.servicePeriodEnd
         };
 
         lineItems.push(payload);
