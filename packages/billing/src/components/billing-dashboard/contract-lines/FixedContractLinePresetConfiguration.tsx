@@ -29,6 +29,16 @@ interface FixedPresetConfigurationProps {
 }
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
+const BILLING_TIMING_OPTIONS = [
+  {
+    value: 'arrears',
+    label: 'Arrears – invoice after the period closes',
+  },
+  {
+    value: 'advance',
+    label: 'Advance – invoice at the start of the period',
+  },
+] as const;
 
 export function FixedPresetConfiguration({
   presetId,
@@ -44,6 +54,7 @@ export function FixedPresetConfiguration({
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType>('Fixed');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
+  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [baseRateInput, setBaseRateInput] = useState<string>('');
   const [enableProration, setEnableProration] = useState<boolean>(false);
@@ -68,6 +79,7 @@ export function FixedPresetConfiguration({
         setPlanName(fetchedPlan.preset_name);
         setBillingFrequency(fetchedPlan.billing_frequency);
         setPlanType(fetchedPlan.contract_line_type as PlanType);
+        setBillingTiming(fetchedPlan.billing_timing ?? 'arrears');
 
         // Fetch fixed config
         if (fetchedPlan.preset_id) {
@@ -120,6 +132,8 @@ export function FixedPresetConfiguration({
         preset_name: planName,
         billing_frequency: billingFrequency,
         contract_line_type: planType!,
+        billing_timing: billingTiming,
+        cadence_owner: plan?.cadence_owner ?? 'client',
         tenant,
       };
 
@@ -280,12 +294,38 @@ export function FixedPresetConfiguration({
                     checked={enableProration}
                     onCheckedChange={(checked) => {
                       setEnableProration(checked);
+                      setBillingCycleAlignment((currentAlignment) =>
+                        checked
+                          ? currentAlignment === 'start'
+                            ? 'prorated'
+                            : currentAlignment
+                          : 'start',
+                      );
                       markDirty();
                     }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Enable this when the recurring fee should scale to the covered portion of a service period if the contract starts or ends inside that period.
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="billing-timing">Billing Timing</Label>
+                <CustomSelect
+                  id="billing-timing"
+                  value={billingTiming}
+                  onValueChange={(value) => {
+                    setBillingTiming(value as 'arrears' | 'advance');
+                    markDirty();
+                  }}
+                  options={BILLING_TIMING_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                  placeholder="Select billing timing"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  This preset defaults to client-schedule cadence during the current rollout. Billing timing still controls whether the copied recurring line bills at the start or end of each covered period.
                 </p>
               </div>
             </div>

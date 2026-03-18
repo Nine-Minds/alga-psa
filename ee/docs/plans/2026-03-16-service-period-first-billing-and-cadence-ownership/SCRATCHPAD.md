@@ -39,6 +39,12 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) Preset authoring/editing now persists the same recurring timing defaults that preset reuse was already replaying, which closes `F205` and `T234`:
+  - `packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx` now persists explicit preset recurrence defaults instead of dropping them at the modal save seam: fixed presets write `billing_timing`, preset creates/updates write `cadence_owner: 'client'` during the current rollout, and fixed preset config writes now preserve the active partial-period alignment instead of hard-coding `start`
+  - the preset create/edit modal now promotes the hidden fixed-config compatibility alignment from `start` to `prorated` when `Adjust for Partial Periods` is enabled on a preset that did not already carry a more specific stored alignment, matching the partial-period policy used elsewhere
+  - `packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLinePresetConfiguration.tsx` now exposes `Billing Timing` on the main fixed preset edit surface, rehydrates stored `billing_timing`, and persists that value plus explicit client cadence metadata when preset basics are saved
+  - focused coverage now lives in `packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts` and `packages/billing/tests/contractLinePresetRecurringAuthoring.wiring.test.ts`; the action test now proves preset reuse replays stored advance timing plus partial-period defaults onto the created contract line, while the wiring test locks the create/edit UI payload seams where timing fields had previously been omitted
+
 - (2026-03-17) Recurring authoring defaults now have one shared policy source instead of per-path fallbacks, which closes `F201`, `F202`, `F203`, `F204`, `T231`, `T232`, and `T233`:
   - `shared/billingClients/recurringAuthoringPolicy.ts` now defines the authoritative v1 authoring defaults: cadence owner defaults to `client`, recurring billing timing defaults to `arrears`, touched writes preserve stored cadence/timing when omitted, and fixed-line legacy alignment derives through the existing compatibility helper instead of ad hoc inline branches
   - `packages/billing/src/models/contractLine.ts` no longer silently drops `billing_timing` on create/update, so contract-wizard-created and custom recurring lines now persist the same timing semantics they author instead of relying on reader-side arrears fallbacks
@@ -743,6 +749,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts` now locks both sides of the audit: company sync + mapping stay free of header-period assumptions, and export validation continues to preserve canonical service-period context without falling back to invoice-header billing dates
 
 ## Commands / Runbooks
+
+- (2026-03-17) Preset recurring authoring validation:
+  - `npx vitest run ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/contractLinePresetRecurringAuthoring.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
 
 - (2026-03-17) Recurring authoring policy validation:
   - `npx vitest run src/test/unit/billing/recurringAuthoringPolicy.domain.test.ts src/test/unit/api/contractLineService.cadenceOwnerCompatibility.wiring.test.ts --coverage.enabled false`

@@ -2026,7 +2026,7 @@
   {
     "id": "T234",
     "description": "Preset creation, editing, and reuse preserve canonical recurring cadence semantics across create-time propagation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F205"
     ]

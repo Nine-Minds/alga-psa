@@ -1838,7 +1838,7 @@
   {
     "id": "F205",
     "description": "Update preset creation, preset editing, and preset reuse flows so they persist and replay canonical recurring cadence semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "Data model and API requirements"

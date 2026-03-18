@@ -279,6 +279,8 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         preset_name: planName,
         billing_frequency: billingFrequency,
         contract_line_type: planType!,
+        billing_timing: planType === 'Fixed' ? billingTiming : 'arrears',
+        cadence_owner: 'client',
         tenant,
         // Add hourly-specific fields if this is an hourly preset
         ...(planType === 'Hourly' ? {
@@ -307,7 +309,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
           await updateContractLinePresetFixedConfig(savedPresetId, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
-            billing_cycle_alignment: 'start',
+            billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start',
           });
 
           // Save Fixed services
@@ -1217,6 +1219,13 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                           checked={enableProration}
                           onCheckedChange={(checked) => {
                             setEnableProration(checked);
+                            setBillingCycleAlignment((currentAlignment) =>
+                              checked
+                                ? currentAlignment === 'start'
+                                  ? 'prorated'
+                                  : currentAlignment
+                                : 'start',
+                            );
                             markDirty();
                           }}
                         />

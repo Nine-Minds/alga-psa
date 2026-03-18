@@ -237,6 +237,44 @@ describe('contract line cadence_owner action persistence', () => {
     expect(presetFixedConfigGetByPresetId).toHaveBeenLastCalledWith(currentTrx, 'preset-2');
   });
 
+  it('T234: preset reuse replays stored recurring timing and partial-period defaults onto the created contract line', async () => {
+    const { copyPresetToContractLine } = await import('../src/actions/contractLinePresetActions');
+
+    presetFindById.mockResolvedValueOnce({
+      preset_id: 'preset-recurring',
+      preset_name: 'Advance Managed Services',
+      contract_line_type: 'Fixed',
+      billing_frequency: 'monthly',
+      billing_timing: 'advance',
+      cadence_owner: 'client',
+      minimum_billable_time: null,
+      round_up_to_nearest: null,
+    });
+    presetFixedConfigGetByPresetId.mockResolvedValueOnce({
+      base_rate: 12500,
+      enable_proration: true,
+      billing_cycle_alignment: 'prorated',
+    });
+
+    await copyPresetToContractLine('contract-1', 'preset-recurring');
+
+    expect(contractLineCreate).toHaveBeenLastCalledWith(
+      currentTrx,
+      expect.objectContaining({
+        contract_line_name: 'Advance Managed Services',
+        cadence_owner: 'client',
+        billing_timing: 'advance',
+      }),
+    );
+    expect(fixedConfigUpsert).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        base_rate: 12500,
+        enable_proration: true,
+        billing_cycle_alignment: 'prorated',
+      }),
+    );
+  });
+
   it('T143: action-layer contract line creation paths reject staged mixed-cadence writes during rollout', async () => {
     const { createCustomContractLine, copyPresetToContractLine } = await import('../src/actions/contractLinePresetActions');
 
