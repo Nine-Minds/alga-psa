@@ -1094,7 +1094,7 @@ export function TicketDetailBody({
       }
 
       setTimeEntryOpen(false);
-      showToast(t("timeEntry.createdMessage", { minutes: durationMin }));
+      showToast({ message: t("timeEntry.createdMessage", { minutes: durationMin }), tone: "info" });
     } finally {
       setTimeEntryUpdating(false);
     }
