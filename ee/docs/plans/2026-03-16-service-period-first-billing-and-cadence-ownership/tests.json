@@ -2083,7 +2083,7 @@
   {
     "id": "T241",
     "description": "The recurrence-storage model is internally consistent across live contract lines, template lines, presets, and shared interfaces",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F211",
       "F220"
@@ -2092,7 +2092,7 @@
   {
     "id": "T242",
     "description": "Template-line cadence_owner schema and backfill behavior are correct wherever template recurrence semantics are supported",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F212"
     ]
@@ -2100,7 +2100,7 @@
   {
     "id": "T243",
     "description": "Preset-backed recurrence defaults carry cadence_owner semantics correctly through backfill or create-time propagation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F213"
     ]
@@ -2157,7 +2157,7 @@
   {
     "id": "T250",
     "description": "The documented recurrence field source-of-truth matrix matches actual table, repository, action, and API behavior",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F220"
     ]

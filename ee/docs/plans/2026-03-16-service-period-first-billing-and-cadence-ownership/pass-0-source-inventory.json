@@ -12,6 +12,7 @@
   },
   "timingControls": {
     "resolveServicePeriodRefs": [
+      "packages/billing/src/services/accountingExportInvoiceSelector.ts",
       "server/src/test/integration/billingInvoiceTiming.integration.test.ts",
       "server/src/test/unit/billing/billingEngine.cleanupSource.test.ts",
       "server/src/test/unit/billing/billingEngine.licenseTiming.test.ts",
@@ -44,6 +45,8 @@
       "packages/billing/tests/contractLineCadenceOwnerCompatibility.repository.test.ts",
       "packages/billing/tests/contractLineMappingRecurringTiming.wiring.test.ts",
       "packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts",
+      "packages/billing/tests/contractLinePresetRecurringAuthoring.wiring.test.ts",
+      "packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts",
       "packages/billing/tests/fixedContractLineConfiguration.cadenceOwner.ui.test.tsx",
       "packages/billing/tests/templateCadenceOwnerRoundTrip.actions.test.ts",
       "packages/types/src/interfaces/billing.interfaces.ts",
@@ -75,7 +78,8 @@
       "server/src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts",
       "server/src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts",
       "server/src/test/unit/billingEngine.test.ts",
-      "server/test-utils/billingTestHelpers.ts"
+      "server/test-utils/billingTestHelpers.ts",
+      "shared/billingClients/recurrenceStorageModel.ts"
     ]
   },
   "periodFieldInventory": {
@@ -149,13 +153,18 @@
       "server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts",
       "server/src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts",
       "server/src/test/integration/accounting/batchLifecycle.integration.test.ts",
+      "server/src/test/integration/accounting/exportDashboard.integration.test.ts",
       "server/src/test/integration/accounting/invoiceSelection.integration.test.ts",
       "server/src/test/integration/accounting/servicePeriodProjectionValidation.integration.test.ts",
       "server/src/test/integration/accounting/xeroLiveExport.integration.test.ts",
       "server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts",
       "server/src/test/integration/billingInvoiceTiming.integration.test.ts",
       "server/src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts",
+      "server/src/test/unit/accounting/accountingExportService.replay.servicePeriods.test.ts",
+      "server/src/test/unit/accounting/externalTaxConsumers.servicePeriods.test.ts",
+      "server/src/test/unit/accounting/quickBooksOnlineAdapter.spec.ts",
       "server/src/test/unit/accounting/xeroAdapter.spec.ts",
+      "server/src/test/unit/accounting/xeroClientService.spec.ts",
       "server/src/test/unit/api/invoiceResponseSchema.compatibility.test.ts",
       "server/src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts",
       "server/src/test/unit/api/invoiceService.recurringDetailProjection.test.ts",

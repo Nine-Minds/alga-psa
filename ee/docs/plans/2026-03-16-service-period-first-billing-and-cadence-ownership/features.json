@@ -1892,7 +1892,7 @@
   {
     "id": "F211",
     "description": "Reconcile the authoritative recurrence-storage model across live contract lines, template lines, preset-backed flows, and shared billing interfaces",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "Data model and API requirements"
@@ -1901,7 +1901,7 @@
   {
     "id": "F212",
     "description": "Add cadence_owner schema and backfill coverage for template-line storage surfaces if template authoring supports canonical recurrence semantics in v1",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data model and API requirements",
       "Authoring-path and storage-reconciliation requirements"
@@ -1910,7 +1910,7 @@
   {
     "id": "F213",
     "description": "Add cadence_owner schema and backfill coverage for preset-backed or shared recurrence-default surfaces where those defaults must survive create-time propagation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data model and API requirements",
       "Authoring-path and storage-reconciliation requirements"
@@ -1973,7 +1973,7 @@
   {
     "id": "F220",
     "description": "Document a source-of-truth matrix for every recurrence field across tables, repositories, actions, APIs, and UI surfaces",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Authoring-path and storage-reconciliation requirements",
       "Acceptance Criteria"

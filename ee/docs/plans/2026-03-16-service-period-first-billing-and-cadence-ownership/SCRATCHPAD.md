@@ -39,6 +39,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) The recurrence storage contract is now explicit across live lines, template lines, presets, and shared readers, which closes `F211`, `F212`, `F213`, `F220`, `T241`, `T242`, `T243`, and `T250`:
+  - `shared/billingClients/recurrenceStorageModel.ts` now defines one authoritative storage model for recurring cadence fields and one set of normalization helpers for live lines, template lines, and presets
+  - `packages/billing/src/models/contractTemplate.ts`, `packages/billing/src/models/contractLinePreset.ts`, `packages/billing/src/repositories/contractLineRepository.ts`, `server/src/lib/repositories/contractLineRepository.ts`, and `shared/billingClients/contractLines.ts` now reuse that shared storage model instead of open-coding separate recurring defaults at each read seam
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRENCE_STORAGE_MATRIX.md` now names the authoritative table for each recurrence field, the fixed-config compatibility split for partial-period fields, and the shared interface shapes that project those fields
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now locks the new shared model plus template/preset cadence-owner migration backfills, while `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now enforces the new storage matrix artifact and `pass-0-source-inventory.json` was refreshed so the docs contract stays aligned with live source references
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`, and `npx tsc --pretty false --noEmit -p server/tsconfig.json`; the server compile remains blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error
+
 - (2026-03-17) Template fixed-line authoring now captures recurring timing and first-invoice semantics explicitly instead of silently defaulting everything to arrears/no-adjustment, which closes `F206` and `T235`:
   - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx` now carries `billing_timing` and `enable_proration` in template wizard state, defaults them to `arrears` / `false`, and includes both fields in `ContractTemplateWizardSubmission`
   - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.tsx` now lets authors choose fixed-line `Billing Timing`, toggle `Adjust for Partial Periods`, and see first-invoice explainer copy directly in the template authoring step alongside the existing cadence-owner chooser
@@ -757,6 +764,13 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Commands / Runbooks
 
+- (2026-03-17) Recurrence storage model validation:
+  - `npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not by the recurrence-storage-model changes
+
 - (2026-03-17) Template recurring authoring validation:
   - `npx vitest run ../packages/billing/tests/templateWizardBucketOverlay.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
     - run from `server/` so Vitest uses the workspace alias config for package billing tests
@@ -1350,6 +1364,7 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `shared/billingClients/createBillingCycles.ts`
   - `shared/billingClients/clientCadenceServicePeriods.ts`
   - `shared/billingClients/contractCadenceServicePeriods.ts`
+  - `shared/billingClients/recurrenceStorageModel.ts`
   - `shared/billingClients/recurringTiming.ts`
   - `packages/billing/src/actions/invoiceGeneration.ts`
   - `packages/billing/src/actions/recurringBillingRunActions.ts`

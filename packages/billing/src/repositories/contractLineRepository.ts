@@ -5,6 +5,10 @@ import type { IContractLine, IContractLineMapping } from '@alga-psa/types';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { resolveRecurringAuthoringPolicy } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
+import {
+  normalizeLiveRecurringStorage,
+  normalizeTemplateRecurringStorage,
+} from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 
 export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
@@ -26,15 +30,16 @@ async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contra
 }
 
 function mapContractLineRow(row: any): IContractLineMapping {
+  const recurringStorage = normalizeLiveRecurringStorage(row);
   return {
-    tenant: row.tenant,
-    contract_id: row.contract_id,
-    contract_line_id: row.contract_line_id,
-    display_order: row.display_order ?? 0,
-    custom_rate: row.custom_rate ?? null,
-    billing_timing: row.billing_timing ?? 'arrears',
-    cadence_owner: resolveCadenceOwner(row.cadence_owner),
-    created_at: row.created_at,
+    tenant: recurringStorage.tenant,
+    contract_id: recurringStorage.contract_id,
+    contract_line_id: recurringStorage.contract_line_id,
+    display_order: recurringStorage.display_order ?? 0,
+    custom_rate: recurringStorage.custom_rate ?? null,
+    billing_timing: recurringStorage.billing_timing,
+    cadence_owner: recurringStorage.cadence_owner,
+    created_at: recurringStorage.created_at,
   };
 }
 
@@ -114,12 +119,13 @@ export async function fetchDetailedContractLines(
       .orderBy('lines.display_order', 'asc');
 
     return rows.map((row: any) => ({
-      ...mapContractLineRow({
-        ...row,
-        custom_rate:
-          row.custom_rate ?? (row.default_rate != null ? Number(row.default_rate) : null),
-        billing_timing: row.billing_timing ?? row.terms_billing_timing ?? 'arrears',
-      }),
+      ...mapContractLineRow(
+        normalizeTemplateRecurringStorage({
+          ...row,
+          custom_rate:
+            row.custom_rate ?? (row.default_rate != null ? Number(row.default_rate) : null),
+        }),
+      ),
       contract_line_name: row.contract_line_name,
       contract_line_type: row.contract_line_type,
       billing_frequency: row.billing_frequency,
@@ -157,14 +163,15 @@ export async function fetchDetailedContractLines(
     .orderBy('cl.display_order', 'asc');
 
   return rows.map((row: any) => ({
-    ...mapContractLineRow({
-      ...row,
-      custom_rate: row.custom_rate ?? null,
-      billing_timing: row.billing_timing ?? 'arrears',
-    }),
-    contract_line_name: row.contract_line_name,
-    contract_line_type: row.contract_line_type,
-    billing_frequency: row.billing_frequency,
+      ...mapContractLineRow(
+        normalizeLiveRecurringStorage({
+          ...row,
+          custom_rate: row.custom_rate ?? null,
+        }),
+      ),
+      contract_line_name: row.contract_line_name,
+      contract_line_type: row.contract_line_type,
+      billing_frequency: row.billing_frequency,
     rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
     enable_proration: row.enable_proration ?? false,
     billing_cycle_alignment: row.billing_cycle_alignment ?? 'start',

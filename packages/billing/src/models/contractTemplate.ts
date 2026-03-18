@@ -1,5 +1,6 @@
 import { createTenantKnex } from '@alga-psa/db';
 import type { IContractTemplate, IContractTemplateWithLines } from '@alga-psa/types';
+import { normalizeTemplateRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
 
 const ContractTemplateModel = {
   async getAll(tenantId: string): Promise<IContractTemplate[]> {
@@ -51,13 +52,14 @@ const ContractTemplateModel = {
         'terms.billing_timing as terms_billing_timing',
       ]);
 
-    const normalizedLines = lines.map((line) => ({
-      ...line,
-      custom_rate: line.custom_rate != null ? Number(line.custom_rate) : null,
-      display_order: line.display_order ?? 0,
-      billing_timing: line.billing_timing ?? line.terms_billing_timing ?? 'arrears',
-      cadence_owner: line.cadence_owner ?? 'client',
-    }));
+    const normalizedLines = lines.map((line) => {
+      const recurringStorage = normalizeTemplateRecurringStorage(line);
+      return {
+        ...recurringStorage,
+        custom_rate: line.custom_rate != null ? Number(line.custom_rate) : null,
+        display_order: line.display_order ?? 0,
+      };
+    });
 
     return { ...template, lines: normalizedLines };
   },

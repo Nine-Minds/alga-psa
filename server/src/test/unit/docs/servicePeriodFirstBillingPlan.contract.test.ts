@@ -17,6 +17,7 @@ const appendix = read('PASS0_RECURRING_TIMING_APPENDIX.md');
 const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
 const prd = read('PRD.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
+const recurrenceStorageMatrix = read('RECURRENCE_STORAGE_MATRIX.md');
 const runbook = read('RUNBOOK.md');
 const contractReportActionsSource = fs.readFileSync(
   path.join(repoRoot, 'packages', 'billing', 'src', 'actions', 'contractReportActions.ts'),
@@ -238,6 +239,17 @@ describe('service-period-first billing plan artifacts', () => {
     expect(appendix).toContain('Accounting exports');
     expect(appendix).toContain('Portal / reporting / downstream readers');
     expect(appendix).toContain('Migration / cleanup');
+  });
+
+  it('T250: the recurrence field source-of-truth matrix matches the authoritative storage model and compatibility seams', () => {
+    expect(recurrenceStorageMatrix).toContain('# Recurrence Storage Matrix');
+    expect(recurrenceStorageMatrix).toContain('`contract_lines.billing_timing`');
+    expect(recurrenceStorageMatrix).toContain('`contract_template_lines.billing_timing`');
+    expect(recurrenceStorageMatrix).toContain('`contract_line_presets.billing_timing`');
+    expect(recurrenceStorageMatrix).toContain('`contract_template_line_terms.billing_timing` is legacy read compatibility only');
+    expect(recurrenceStorageMatrix).toContain('`contract_template_line_fixed_config.enable_proration`');
+    expect(recurrenceStorageMatrix).toContain('`contract_line_preset_fixed_config.enable_proration`');
+    expect(recurrenceStorageMatrix).toContain('Readers may fall back for staged compatibility, but writes must target the authoritative storage surface');
   });
 
   it('T160: runbook covers parity checks, mixed-cadence troubleshooting, and rollback posture with executable commands', () => {

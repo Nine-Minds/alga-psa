@@ -3,20 +3,12 @@ import { Knex } from 'knex';
 import type { IContractLinePreset } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
+import { normalizePresetRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
 
 function normalizeContractLinePreset<T extends Partial<IContractLinePreset>>(
   preset: T,
 ): T & Pick<IContractLinePreset, 'cadence_owner' | 'billing_timing'> {
-  const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
-    cadenceOwner: preset.cadence_owner,
-    billingTiming: preset.billing_timing,
-  });
-
-  return {
-    ...preset,
-    cadence_owner: recurringAuthoringPolicy.cadenceOwner,
-    billing_timing: recurringAuthoringPolicy.billingTiming,
-  };
+  return normalizePresetRecurringStorage(preset);
 }
 
 const ContractLinePreset = {
