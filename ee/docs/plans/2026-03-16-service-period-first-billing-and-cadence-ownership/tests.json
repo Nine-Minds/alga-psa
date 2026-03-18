@@ -2271,7 +2271,7 @@
   {
     "id": "T261",
     "description": "Mixed cadence due work still respects the documented single-contract invoice invariant during grouping",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F157",
       "F109"
@@ -2280,7 +2280,7 @@
   {
     "id": "T262",
     "description": "PO-required and non-PO recurring charges split according to policy even when their due service periods coincide",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F158"
     ]
@@ -2288,7 +2288,7 @@
   {
     "id": "T263",
     "description": "Currency or tax-source grouping constraints force invoice splits according to policy when due work would otherwise combine",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F159"
     ]

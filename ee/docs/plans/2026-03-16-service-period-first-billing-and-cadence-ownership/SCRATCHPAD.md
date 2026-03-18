@@ -41,6 +41,18 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Mixed-cadence grouping now explicitly defends the single-contract split invariant, which closes `T261`:
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now adds the missing mixed-cadence grouping assertion directly at the shared domain seam: a client-cadence selection and a contract-cadence selection may share the same invoice-window identity, but they still split into separate invoice candidates when `clientContractId` differs
+  - the new test intentionally locks the policy boundary already implied by `T141` and `T188`: cadence owner remains explainability metadata inside each grouped candidate, while `single_contract` remains the actual split reason when coincident due work spans different contracts
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+
+- (2026-03-18) Purchase-order and financial grouping constraints now have their remaining explicit unit guards, which close `T262` and `T263`:
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now adds the narrow policy-specific cases that the earlier generic grouping tests did not spell out: a PO-required line and a non-PO line split inside the same invoice window under `purchase_order_scope`, and same-contract due work with only currency or tax-source differences splits under `financial_constraint` without needing export-shape drift
+  - this keeps the grouping contract readable at the domain seam before any broader runtime or DB-backed grouping work lands: PO scope and financial scope remain independent split axes layered on top of the same invoice-window identity
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+
 - (2026-03-18) DB-backed invoice API coexistence now closes `T260` and fixes a live recurring-detail hydration bug:
   - `server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts` now seeds one historical flat invoice plus one canonical detail-backed invoice in the live schema, then proves `InvoiceService.getById(...)` can read both through the same staged-rollout API seam without forcing the historical invoice to synthesize recurring detail metadata
   - while landing that test, `packages/billing/src/models/invoice.ts` needed a production fix: DB-backed `invoice_charge_details.service_period_*` values may arrive as `Date` objects, and the old summary projection only handled strings, which left parent `service_period_start|service_period_end` null for canonical rows in real integrations even though the detail periods existed

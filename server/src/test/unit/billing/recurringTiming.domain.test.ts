@@ -255,6 +255,67 @@ describe('recurring timing shared domain', () => {
     ]);
   });
 
+  it('T261: mixed cadence due work still respects the documented single-contract invoice invariant during grouping', () => {
+    const sameWindow = buildInvoiceWindow({
+      start: '2025-02-01',
+      end: '2025-03-01',
+      duePosition: 'advance',
+      windowId: 'feb-2025',
+    });
+
+    const grouped = groupDueServicePeriodsForInvoiceCandidates([
+      {
+        clientContractId: 'contract-a',
+        servicePeriod: buildServicePeriod({
+          cadenceOwner: 'client',
+          start: '2025-02-01',
+          end: '2025-03-01',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'client-line' }),
+        }),
+        invoiceWindow: {
+          ...sameWindow,
+          cadenceOwner: 'client',
+        },
+      },
+      {
+        clientContractId: 'contract-b',
+        servicePeriod: buildServicePeriod({
+          cadenceOwner: 'contract',
+          start: '2025-02-01',
+          end: '2025-03-01',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'contract-line' }),
+        }),
+        invoiceWindow: {
+          ...sameWindow,
+          cadenceOwner: 'contract',
+        },
+      },
+    ]);
+
+    expect(grouped.map((group) => ({
+      groupKey: group.groupKey,
+      clientContractId: group.clientContractId,
+      cadenceOwners: group.cadenceOwners,
+      splitReasons: group.splitReasons,
+      obligationIds: group.dueSelections.map((selection) => selection.servicePeriod.sourceObligation.obligationId),
+    }))).toEqual([
+      {
+        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:__no_currency__:__no_tax_source__:__no_export_shape__',
+        clientContractId: 'contract-a',
+        cadenceOwners: ['client'],
+        splitReasons: ['single_contract'],
+        obligationIds: ['client-line'],
+      },
+      {
+        groupKey: '2025-02-01:2025-03-01:contract-b:__no_po_scope__:__no_currency__:__no_tax_source__:__no_export_shape__',
+        clientContractId: 'contract-b',
+        cadenceOwners: ['contract'],
+        splitReasons: ['single_contract'],
+        obligationIds: ['contract-line'],
+      },
+    ]);
+  });
+
   it('T189: due service periods split into separate invoices when purchase-order scope differs inside the same due window', () => {
     const sameWindow = buildInvoiceWindow({
       start: '2025-02-01',
@@ -356,6 +417,139 @@ describe('recurring timing shared domain', () => {
         taxSource: 'external',
         exportShapeKey: 'xero',
         splitReasons: ['financial_constraint'],
+      },
+    ]);
+  });
+
+  it('T262: PO-required and non-PO recurring charges still split according to policy even when their due service periods coincide', () => {
+    const sameWindow = buildInvoiceWindow({
+      start: '2025-02-01',
+      end: '2025-03-01',
+      duePosition: 'advance',
+      windowId: 'feb-2025',
+    });
+
+    const grouped = groupDueServicePeriodsForInvoiceCandidates([
+      {
+        clientContractId: 'contract-a',
+        purchaseOrderScopeKey: 'po-required',
+        servicePeriod: buildServicePeriod({
+          start: '2025-02-01',
+          end: '2025-03-01',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'po-line' }),
+        }),
+        invoiceWindow: sameWindow,
+      },
+      {
+        clientContractId: 'contract-a',
+        servicePeriod: buildServicePeriod({
+          start: '2025-02-01',
+          end: '2025-03-01',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'no-po-line' }),
+        }),
+        invoiceWindow: sameWindow,
+      },
+    ]);
+
+    expect(grouped.map((group) => ({
+      groupKey: group.groupKey,
+      purchaseOrderScopeKey: group.purchaseOrderScopeKey,
+      splitReasons: group.splitReasons,
+      obligationIds: group.dueSelections.map((selection) => selection.servicePeriod.sourceObligation.obligationId),
+    }))).toEqual([
+      {
+        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:__no_currency__:__no_tax_source__:__no_export_shape__',
+        purchaseOrderScopeKey: null,
+        splitReasons: ['purchase_order_scope'],
+        obligationIds: ['no-po-line'],
+      },
+      {
+        groupKey: '2025-02-01:2025-03-01:contract-a:po-required:__no_currency__:__no_tax_source__:__no_export_shape__',
+        purchaseOrderScopeKey: 'po-required',
+        splitReasons: ['purchase_order_scope'],
+        obligationIds: ['po-line'],
+      },
+    ]);
+  });
+
+  it('T263: currency or tax-source grouping constraints force invoice splits according to policy when due work would otherwise combine', () => {
+    const sameWindow = buildInvoiceWindow({
+      start: '2025-02-01',
+      end: '2025-03-01',
+      duePosition: 'advance',
+      windowId: 'feb-2025',
+    });
+
+    const grouped = groupDueServicePeriodsForInvoiceCandidates([
+      {
+        clientContractId: 'contract-a',
+        currencyCode: 'USD',
+        taxSource: 'internal',
+        exportShapeKey: 'qbo',
+        servicePeriod: buildServicePeriod({
+          start: '2025-02-01',
+          end: '2025-03-01',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'usd-internal-line' }),
+        }),
+        invoiceWindow: sameWindow,
+      },
+      {
+        clientContractId: 'contract-a',
+        currencyCode: 'EUR',
+        taxSource: 'internal',
+        exportShapeKey: 'qbo',
+        servicePeriod: buildServicePeriod({
+          start: '2025-02-01',
+          end: '2025-03-01',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'eur-internal-line' }),
+        }),
+        invoiceWindow: sameWindow,
+      },
+      {
+        clientContractId: 'contract-a',
+        currencyCode: 'USD',
+        taxSource: 'external',
+        exportShapeKey: 'qbo',
+        servicePeriod: buildServicePeriod({
+          start: '2025-02-01',
+          end: '2025-03-01',
+          sourceObligation: buildRecurringObligationRef({ obligationId: 'usd-external-line' }),
+        }),
+        invoiceWindow: sameWindow,
+      },
+    ]);
+
+    expect(grouped.map((group) => ({
+      groupKey: group.groupKey,
+      currencyCode: group.currencyCode,
+      taxSource: group.taxSource,
+      exportShapeKey: group.exportShapeKey,
+      splitReasons: group.splitReasons,
+      obligationIds: group.dueSelections.map((selection) => selection.servicePeriod.sourceObligation.obligationId),
+    }))).toEqual([
+      {
+        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:USD:internal:qbo',
+        currencyCode: 'USD',
+        taxSource: 'internal',
+        exportShapeKey: 'qbo',
+        splitReasons: ['financial_constraint'],
+        obligationIds: ['usd-internal-line'],
+      },
+      {
+        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:EUR:internal:qbo',
+        currencyCode: 'EUR',
+        taxSource: 'internal',
+        exportShapeKey: 'qbo',
+        splitReasons: ['financial_constraint'],
+        obligationIds: ['eur-internal-line'],
+      },
+      {
+        groupKey: '2025-02-01:2025-03-01:contract-a:__no_po_scope__:USD:external:qbo',
+        currencyCode: 'USD',
+        taxSource: 'external',
+        exportShapeKey: 'qbo',
+        splitReasons: ['financial_constraint'],
+        obligationIds: ['usd-external-line'],
       },
     ]);
   });
