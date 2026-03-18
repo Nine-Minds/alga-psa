@@ -360,6 +360,10 @@ export interface IRecurringRunExecutionWindowIdentity {
   windowEnd?: ISO8601String | null;
 }
 
+export type RecurringDueWorkCadenceSource = 'client_schedule' | 'contract_anniversary';
+
+export type RecurringDueWorkState = 'due' | 'early';
+
 export interface IPersistedRecurringObligationRef extends IRecurringObligationRef {
   tenant: string;
 }
@@ -469,6 +473,39 @@ export interface IRecurringDueSelectionInput {
   windowEnd: ISO8601String;
   billingCycleId?: string | null;
   executionWindow: IRecurringRunExecutionWindowIdentity;
+}
+
+export interface IRecurringDueWorkRow {
+  rowKey: string;
+  executionIdentityKey: string;
+  selectionKey: string;
+  retryKey: string;
+  selectorInput: IRecurringDueSelectionInput;
+  executionWindow: IRecurringRunExecutionWindowIdentity;
+  executionWindowKind: RecurringRunExecutionWindowKind;
+  cadenceOwner: CadenceOwner;
+  cadenceSource: RecurringDueWorkCadenceSource;
+  dueState: RecurringDueWorkState;
+  isEarly: boolean;
+  canGenerate: boolean;
+  clientId: string;
+  clientName?: string | null;
+  billingCycleId?: string | null;
+  hasBillingCycleBridge: boolean;
+  servicePeriodStart: ISO8601String;
+  servicePeriodEnd: ISO8601String;
+  servicePeriodLabel: string;
+  invoiceWindowStart: ISO8601String;
+  invoiceWindowEnd: ISO8601String;
+  invoiceWindowLabel: string;
+  scheduleKey?: string | null;
+  periodKey?: string | null;
+  recordId?: string | null;
+  lifecycleState?: RecurringServicePeriodLifecycleState | null;
+  contractId?: string | null;
+  contractLineId?: string | null;
+  contractName?: string | null;
+  contractLineName?: string | null;
 }
 
 export interface IRecurringServicePeriodDueSelectionQuery {
