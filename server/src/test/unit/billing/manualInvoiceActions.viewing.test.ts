@@ -63,6 +63,20 @@ const mocks = vi.hoisted(() => {
         service_period_start: '2025-01-01T00:00:00.000Z',
         service_period_end: '2025-02-01T00:00:00.000Z',
         billing_timing: 'arrears',
+        recurring_projection: {
+          source: 'canonical_detail_rows',
+          detail_period_count: 1,
+          parent_period_projection: 'summary_range',
+          parent_billing_timing_projection: 'uniform_detail_value_or_null',
+          detail_billing_timing_shape: 'uniform',
+        },
+        recurring_detail_periods: [
+          {
+            service_period_start: '2025-01-01T00:00:00.000Z',
+            service_period_end: '2025-02-01T00:00:00.000Z',
+            billing_timing: 'arrears',
+          },
+        ],
       },
       {
         item_id: 'manual-1',
@@ -172,5 +186,43 @@ describe('manual invoice edit and viewing compatibility', () => {
       service_period_end: '2025-02-01T00:00:00.000Z',
       billing_timing: 'arrears',
     });
+  });
+
+  it('T266: manual invoice actions remain stable when operating on invoices that also contain canonical recurring detail-backed charges', async () => {
+    const result = await updateManualInvoice('invoice-1', {
+      clientId: 'client-1',
+      items: [
+        {
+          service_id: 'service-1',
+          quantity: 1,
+          description: 'Manual adjustment',
+          rate: 1500,
+        },
+      ],
+      currency_code: 'USD',
+    });
+
+    expect(mocks.persistManualInvoiceCharges).toHaveBeenCalledTimes(1);
+    expect(mocks.recalculateInvoice).toHaveBeenCalledWith('invoice-1');
+
+    const recurringCharge = result.invoice_charges.find((charge: any) => charge.item_id === 'recurring-1');
+    const manualCharge = result.invoice_charges.find((charge: any) => charge.item_id === 'manual-1');
+
+    expect(recurringCharge).toMatchObject({
+      recurring_projection: {
+        source: 'canonical_detail_rows',
+        detail_period_count: 1,
+      },
+      recurring_detail_periods: [
+        {
+          service_period_start: '2025-01-01T00:00:00.000Z',
+          service_period_end: '2025-02-01T00:00:00.000Z',
+          billing_timing: 'arrears',
+        },
+      ],
+    });
+    expect(manualCharge).not.toHaveProperty('recurring_detail_periods');
+    expect(manualCharge).not.toHaveProperty('service_period_start');
+    expect(manualCharge).not.toHaveProperty('service_period_end');
   });
 });

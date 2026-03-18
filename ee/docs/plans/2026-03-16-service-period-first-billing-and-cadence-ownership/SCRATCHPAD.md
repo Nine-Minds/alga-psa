@@ -41,6 +41,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) Invoice round-trip and adjacent reader/action seams now explicitly preserve canonical recurring detail periods, which close `T264`, `T265`, and `T266`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now proves the full round-trip the earlier DB suites implied but did not lock directly: `generateInvoice(...)` persists canonical `invoice_charge_details`, returns an invoice view with `recurring_detail_periods`, and `Invoice.getFullInvoiceById(...)` rereads the same canonical detail projection without degrading back to header-only timing
+  - `server/src/test/unit/billing/invoiceQueries.recurringDetailRead.test.ts` now locks the dashboard/query action seam directly by asserting `getInvoiceLineItems(...)` passes through detail-backed charge rows unchanged, including `recurring_projection` and `recurring_detail_periods`
+  - `server/src/test/unit/billing/manualInvoiceActions.viewing.test.ts` now makes the mixed-manual/recurring coexistence surface explicit: manual invoice updates can reread an invoice that still contains canonical recurring detail-backed charges, and those recurring detail rows survive while the manual row stays periodless
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/invoiceQueries.recurringDetailRead.test.ts src/test/unit/billing/manualInvoiceActions.viewing.test.ts --coverage.enabled false`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t \"T264\" --hookTimeout 600000 --coverage.enabled false`
+
 - (2026-03-18) Mixed-cadence grouping now explicitly defends the single-contract split invariant, which closes `T261`:
   - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now adds the missing mixed-cadence grouping assertion directly at the shared domain seam: a client-cadence selection and a contract-cadence selection may share the same invoice-window identity, but they still split into separate invoice candidates when `clientContractId` differs
   - the new test intentionally locks the policy boundary already implied by `T141` and `T188`: cadence owner remains explainability metadata inside each grouped candidate, while `single_contract` remains the actual split reason when coincident due work spans different contracts

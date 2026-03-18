@@ -14,6 +14,7 @@ import {
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
 import { BillingEngine } from '@alga-psa/billing/services';
+import Invoice from '@alga-psa/billing/models/invoice';
 import type { IRecurringServicePeriodRecord } from '@alga-psa/types';
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
@@ -882,6 +883,69 @@ it('T176: DB-backed mixed cadence-owner billing groups same-window due work into
   expect(normalizeDateValue(detailByService.get(clientCadenceLine.serviceId)?.service_period_end)).toBe(currentPeriodEnd);
   expect(normalizeDateValue(detailByService.get(contractCadenceLine.serviceId)?.service_period_start)).toBe(currentPeriodStart);
   expect(normalizeDateValue(detailByService.get(contractCadenceLine.serviceId)?.service_period_end)).toBe(currentPeriodEnd);
+}, HOOK_TIMEOUT);
+
+it('T264: generateInvoice to persistence to getFullInvoiceById round-trips canonical recurring detail periods correctly', async () => {
+  setupCommonMocks({ tenantId, userId: 'invoice-roundtrip-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    currentPeriodStart,
+    currentPeriodEnd,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Invoice Roundtrip Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Invoice Roundtrip Service',
+    planName: 'Invoice Roundtrip Plan',
+    baseRateCents: 17500,
+    startDate: '2024-12-01',
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+
+  const generatedInvoice = await generateInvoice(cycleId);
+  expect(generatedInvoice).toBeTruthy();
+
+  const rereadInvoice = await Invoice.getFullInvoiceById(db, tenantId, generatedInvoice!.invoice_id);
+  const detailRows = await getInvoiceDetailRows(generatedInvoice!.invoice_id);
+  const expectedPeriods = detailRows.map((row) => ({
+      service_period_start: normalizeDateValue(row.service_period_start),
+      service_period_end: normalizeDateValue(row.service_period_end),
+      billing_timing: row.billing_timing,
+    }));
+
+  expect(expectedPeriods).toEqual([
+    {
+      service_period_start: currentPeriodStart,
+      service_period_end: currentPeriodEnd,
+      billing_timing: 'advance',
+    },
+  ]);
+
+  for (const invoiceView of [generatedInvoice, rereadInvoice]) {
+    expect(invoiceView?.invoice_charges).toHaveLength(1);
+    const recurringCharge = invoiceView?.invoice_charges?.[0];
+    expect(recurringCharge).toBeTruthy();
+    expect(recurringCharge?.recurring_detail_periods?.map((period) => ({
+      service_period_start: normalizeDateValue(period.service_period_start),
+      service_period_end: normalizeDateValue(period.service_period_end),
+      billing_timing: period.billing_timing,
+    }))).toEqual(expectedPeriods);
+    expect(normalizeDateValue(recurringCharge?.service_period_start)).toBe(currentPeriodStart);
+    expect(normalizeDateValue(recurringCharge?.service_period_end)).toBe(currentPeriodEnd);
+    expect(recurringCharge?.recurring_projection).toMatchObject({
+      source: 'canonical_detail_rows',
+      detail_period_count: 1,
+    });
+  }
 }, HOOK_TIMEOUT);
 
 it('T316: DB-backed persisted service-period generation, editing, regeneration, and invoice linkage remain coherent under staged rollout', async () => {

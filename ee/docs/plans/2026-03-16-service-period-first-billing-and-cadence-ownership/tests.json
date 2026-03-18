@@ -2296,7 +2296,7 @@
   {
     "id": "T264",
     "description": "generateInvoice to persistence to getFullInvoiceById round-trips canonical recurring detail periods correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F162",
       "F163"
@@ -2305,7 +2305,7 @@
   {
     "id": "T265",
     "description": "Invoice query actions preserve canonical recurring detail periods through dashboard-level invoice reads",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163",
       "F178"
@@ -2314,7 +2314,7 @@
   {
     "id": "T266",
     "description": "Manual invoice actions remain stable when operating on invoices that also contain canonical recurring detail-backed charges",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F177",
       "F181"
