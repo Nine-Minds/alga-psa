@@ -145,6 +145,7 @@ export const buildRecurringServicePeriodRecord = (
     provenance: {
       kind: 'generated',
       sourceRuleVersion: `${sourceObligation.obligationId}:v1`,
+      reasonCode: 'initial_materialization',
       sourceRunKey: 'materialize-2026-03-18',
     },
     createdAt: '2026-03-18T10:00:00.000Z',

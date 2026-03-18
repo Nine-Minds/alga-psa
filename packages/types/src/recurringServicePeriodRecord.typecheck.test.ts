@@ -1,16 +1,19 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import type {
+  GeneratedRecurringServicePeriodReasonCode,
   IPersistedRecurringObligationRef,
   IRecurringServicePeriodRecord,
   IRecurringServicePeriodRecordProvenance,
   RecurringServicePeriodLifecycleState,
   RecurringServicePeriodProvenanceKind,
+  UserEditedRecurringServicePeriodReasonCode,
 } from '@alga-psa/types';
 import {
   RECURRING_RANGE_SEMANTICS,
   RECURRING_SERVICE_PERIOD_LIFECYCLE_STATES,
   RECURRING_SERVICE_PERIOD_PROVENANCE_KINDS,
+  RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES,
 } from '@alga-psa/types';
 
 describe('persisted recurring service-period record typing', () => {
@@ -30,9 +33,15 @@ describe('persisted recurring service-period record typing', () => {
       'regenerated',
       'repair',
     ]);
+    expect(RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES.generated).toEqual([
+      'initial_materialization',
+      'backfill_materialization',
+    ]);
 
     const lifecycleState: RecurringServicePeriodLifecycleState = 'generated';
     const provenanceKind: RecurringServicePeriodProvenanceKind = 'generated';
+    const generatedReasonCode: GeneratedRecurringServicePeriodReasonCode = 'initial_materialization';
+    const editedReasonCode: UserEditedRecurringServicePeriodReasonCode = 'boundary_adjustment';
 
     const sourceObligation: IPersistedRecurringObligationRef = {
       tenant: 'tenant-1',
@@ -44,6 +53,7 @@ describe('persisted recurring service-period record typing', () => {
     const provenance: IRecurringServicePeriodRecordProvenance = {
       kind: provenanceKind,
       sourceRuleVersion: 'contract-line-1:v1',
+      reasonCode: generatedReasonCode,
       sourceRunKey: 'materialize-2026-03-18',
     };
 
@@ -83,9 +93,11 @@ describe('persisted recurring service-period record typing', () => {
 
     expect(record.scheduleKey).toContain('contract-line-1');
     expect(record.provenance.kind).toBe('generated');
+    expect(record.provenance.reasonCode).toBe('initial_materialization');
     expect(record.lifecycleState).toBe('generated');
     expect(record.servicePeriod.semantics).toBe(RECURRING_RANGE_SEMANTICS);
     expect(record.sourceObligation.tenant).toBe('tenant-1');
+    expect(editedReasonCode).toBe('boundary_adjustment');
 
     expectTypeOf<IRecurringServicePeriodRecord['sourceObligation']>().toEqualTypeOf<IPersistedRecurringObligationRef>();
     expectTypeOf<IRecurringServicePeriodRecord['lifecycleState']>().toEqualTypeOf<RecurringServicePeriodLifecycleState>();

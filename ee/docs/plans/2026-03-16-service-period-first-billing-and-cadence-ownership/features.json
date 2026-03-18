@@ -2099,7 +2099,7 @@
   {
     "id": "F234",
     "description": "Define the persisted provenance model that distinguishes generated periods from user-edited periods and records why a period differs from source cadence rules",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "UI and downstream-consumer requirements"

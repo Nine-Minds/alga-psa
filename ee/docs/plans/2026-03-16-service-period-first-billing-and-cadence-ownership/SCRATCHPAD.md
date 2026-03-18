@@ -41,6 +41,16 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The persisted-service-period provenance model is now explicit, which closes `F234` and `T284`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now turns `IRecurringServicePeriodRecordProvenance` into a discriminated union with explicit reason-code catalogs for `generated`, `user_edited`, `regenerated`, and `repair`, so later materialization/edit/regeneration work no longer depends on a loose optional-string bag for provenance semantics
+  - `shared/billingClients/recurringServicePeriodProvenance.ts` now provides the reusable v1 helper layer: `isRecurringServicePeriodProvenanceReasonCode(...)`, `isRecurringServicePeriodProvenanceDivergent(...)`, and `validateRecurringServicePeriodProvenance(...)` make the required-versus-optional field rules executable before repositories and UI flows start writing these records for real
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_PROVENANCE.md` now documents the provenance kinds, required-field matrix, reason-code catalog, and the operational meaning of divergence from untouched cadence rules; `PERSISTED_SERVICE_PERIOD_RECORD.md` now points at that artifact instead of leaving provenance requirements as future tense
+  - `server/src/test/unit/billing/recurringServicePeriodProvenance.domain.test.ts` now locks the shared helper/domain behavior directly, while `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` locks the new provenance artifact so the typed helper and the plan language cannot drift apart quietly
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodProvenance.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-18) The persisted-period lifecycle model is now explicit, which closes `F233` and `T283`:
   - `shared/billingClients/recurringServicePeriodLifecycle.ts` now defines the authoritative v1 state machine for persisted service-period records, including the allowed transition map, terminal-state set, and reusable `canTransitionRecurringServicePeriodState(...)` / `isRecurringServicePeriodStateTerminal(...)` helpers
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_LIFECYCLE.md` now documents the state meanings, conservative allowed transitions, terminal-state policy, and v1 invariants so later edit/regeneration/billing-linkage work has one lifecycle baseline instead of ad hoc state semantics

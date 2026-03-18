@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`F231` defines the authoritative logical record contract for materialized recurring service periods before the physical table/index work in `F232`, lifecycle-transition rules in `F233`, and deeper provenance semantics in `F234`.
+`F231` defines the authoritative logical record contract for materialized recurring service periods before the physical table/index work in `F232`, lifecycle-transition rules in `F233`, and the explicit provenance contract now documented in `RECURRING_SERVICE_PERIOD_PROVENANCE.md` for `F234`.
 
 This artifact is intentionally logical first:
 
@@ -89,7 +89,7 @@ The persisted record must carry both `provenance` and `lifecycleState`.
 - `superseded`
 - `archived`
 
-`F233` now defines transition legality in `RECURRING_SERVICE_PERIOD_LIFECYCLE.md`. `F234` will define when `reasonCode`, `sourceRunKey`, and `supersedesRecordId` are required versus optional.
+`F233` now defines transition legality in `RECURRING_SERVICE_PERIOD_LIFECYCLE.md`. `F234` now defines the typed reason-code catalog plus the required-versus-optional posture for `reasonCode`, `sourceRunKey`, and `supersedesRecordId` in `RECURRING_SERVICE_PERIOD_PROVENANCE.md`.
 
 ## F232 Physical Schema Landing
 

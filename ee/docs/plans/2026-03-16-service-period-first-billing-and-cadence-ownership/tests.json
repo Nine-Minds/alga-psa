@@ -2481,7 +2481,7 @@
   {
     "id": "T284",
     "description": "Persisted provenance records distinguish generated periods from user-edited periods and retain the reason for divergence",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F234"
     ]

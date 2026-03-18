@@ -43,8 +43,10 @@ export type {
 export type {
   CadenceOwner,
   DuePosition,
+  GeneratedRecurringServicePeriodReasonCode,
   ICadenceBoundaryGenerator,
   ICadenceBoundaryGeneratorInput,
+  IGeneratedRecurringServicePeriodRecordProvenance,
   IPersistedRecurringObligationRef,
   IRecurringActivityWindow,
   IRecurringCoverage,
@@ -52,16 +54,24 @@ export type {
   IRecurringInvoiceDetailTiming,
   IRecurringInvoiceWindow,
   IRecurringObligationRef,
+  IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
   IRecurringServicePeriodRecordProvenance,
+  IRegeneratedRecurringServicePeriodRecordProvenance,
+  IRepairRecurringServicePeriodRecordProvenance,
   IResolvedRecurringSettlement,
-  IRecurringServicePeriod,
+  IUserEditedRecurringServicePeriodRecordProvenance,
+  RecurringServicePeriodProvenanceReasonCode,
   RecurringServicePeriodLifecycleState,
   RecurringServicePeriodProvenanceKind,
+  RegeneratedRecurringServicePeriodReasonCode,
+  RepairRecurringServicePeriodReasonCode,
+  UserEditedRecurringServicePeriodReasonCode,
 } from '@alga-psa/types';
 
 // Re-export invoice constants
 export {
+  RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES,
   INVOICE_STATUS_METADATA,
   INVOICE_STATUS_DISPLAY_ORDER,
   DEFAULT_ACCOUNTING_EXPORT_STATUSES,
@@ -104,6 +114,11 @@ export {
   resolveContractCadenceAnchorDate,
   generateSemiAnnualContractCadenceServicePeriods,
 } from '@alga-psa/shared/billingClients/contractCadenceServicePeriods';
+export {
+  isRecurringServicePeriodProvenanceDivergent,
+  isRecurringServicePeriodProvenanceReasonCode,
+  validateRecurringServicePeriodProvenance,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodProvenance';
 export {
   canTransitionRecurringServicePeriodState,
   isRecurringServicePeriodStateTerminal,

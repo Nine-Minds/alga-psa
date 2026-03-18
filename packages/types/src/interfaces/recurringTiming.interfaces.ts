@@ -42,6 +42,46 @@ export const RECURRING_SERVICE_PERIOD_PROVENANCE_KINDS = [
 export type RecurringServicePeriodProvenanceKind =
   (typeof RECURRING_SERVICE_PERIOD_PROVENANCE_KINDS)[number];
 
+export const RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES = {
+  generated: [
+    'initial_materialization',
+    'backfill_materialization',
+  ],
+  user_edited: [
+    'boundary_adjustment',
+    'invoice_window_adjustment',
+    'activity_window_adjustment',
+    'skip',
+    'defer',
+  ],
+  regenerated: [
+    'source_rule_changed',
+    'billing_schedule_changed',
+    'cadence_owner_changed',
+    'activity_window_changed',
+    'backfill_realignment',
+  ],
+  repair: [
+    'integrity_repair',
+    'invoice_linkage_repair',
+    'admin_correction',
+  ],
+} as const satisfies Record<RecurringServicePeriodProvenanceKind, readonly string[]>;
+
+export type GeneratedRecurringServicePeriodReasonCode =
+  (typeof RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES.generated)[number];
+export type UserEditedRecurringServicePeriodReasonCode =
+  (typeof RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES.user_edited)[number];
+export type RegeneratedRecurringServicePeriodReasonCode =
+  (typeof RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES.regenerated)[number];
+export type RepairRecurringServicePeriodReasonCode =
+  (typeof RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES.repair)[number];
+export type RecurringServicePeriodProvenanceReasonCode =
+  | GeneratedRecurringServicePeriodReasonCode
+  | UserEditedRecurringServicePeriodReasonCode
+  | RegeneratedRecurringServicePeriodReasonCode
+  | RepairRecurringServicePeriodReasonCode;
+
 export interface IRecurringObligationRef {
   tenant?: string;
   obligationId: string;
@@ -152,13 +192,56 @@ export interface IPersistedRecurringObligationRef extends IRecurringObligationRe
   tenant: string;
 }
 
-export interface IRecurringServicePeriodRecordProvenance {
-  kind: RecurringServicePeriodProvenanceKind;
+interface IRecurringServicePeriodRecordProvenanceBase<
+  TKind extends RecurringServicePeriodProvenanceKind,
+  TReasonCode extends RecurringServicePeriodProvenanceReasonCode,
+> {
+  kind: TKind;
   sourceRuleVersion: string;
-  reasonCode?: string | null;
+  reasonCode: TReasonCode;
+}
+
+export interface IGeneratedRecurringServicePeriodRecordProvenance
+  extends IRecurringServicePeriodRecordProvenanceBase<
+    'generated',
+    GeneratedRecurringServicePeriodReasonCode
+  > {
+  sourceRunKey: string;
+  supersedesRecordId?: null;
+}
+
+export interface IUserEditedRecurringServicePeriodRecordProvenance
+  extends IRecurringServicePeriodRecordProvenanceBase<
+    'user_edited',
+    UserEditedRecurringServicePeriodReasonCode
+  > {
+  sourceRunKey?: string | null;
+  supersedesRecordId: string;
+}
+
+export interface IRegeneratedRecurringServicePeriodRecordProvenance
+  extends IRecurringServicePeriodRecordProvenanceBase<
+    'regenerated',
+    RegeneratedRecurringServicePeriodReasonCode
+  > {
+  sourceRunKey: string;
+  supersedesRecordId: string;
+}
+
+export interface IRepairRecurringServicePeriodRecordProvenance
+  extends IRecurringServicePeriodRecordProvenanceBase<
+    'repair',
+    RepairRecurringServicePeriodReasonCode
+  > {
   sourceRunKey?: string | null;
   supersedesRecordId?: string | null;
 }
+
+export type IRecurringServicePeriodRecordProvenance =
+  | IGeneratedRecurringServicePeriodRecordProvenance
+  | IUserEditedRecurringServicePeriodRecordProvenance
+  | IRegeneratedRecurringServicePeriodRecordProvenance
+  | IRepairRecurringServicePeriodRecordProvenance;
 
 export interface IRecurringServicePeriodRecord {
   kind: 'persisted_service_period_record';

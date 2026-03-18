@@ -19,6 +19,7 @@ const featureSubsystemMap = read('FEATURE_SUBSYSTEM_MAP.md');
 const persistedServicePeriodRecord = read('PERSISTED_SERVICE_PERIOD_RECORD.md');
 const prd = read('PRD.md');
 const recurringServicePeriodLifecycle = read('RECURRING_SERVICE_PERIOD_LIFECYCLE.md');
+const recurringServicePeriodProvenance = read('RECURRING_SERVICE_PERIOD_PROVENANCE.md');
 const reportingDateBasis = read('REPORTING_DATE_BASIS.md');
 const recurrenceStorageMatrix = read('RECURRENCE_STORAGE_MATRIX.md');
 const runbook = read('RUNBOOK.md');
@@ -295,6 +296,21 @@ describe('service-period-first billing plan artifacts', () => {
     expect(recurringServicePeriodLifecycle).toContain('billed -> archived');
     expect(recurringServicePeriodLifecycle).toContain('## Terminal States');
     expect(recurringServicePeriodLifecycle).toContain('shared/billingClients/recurringServicePeriodLifecycle.ts');
+  });
+
+  it('T284: documents the persisted provenance model for generated, user-edited, regenerated, and repair rows', () => {
+    expect(recurringServicePeriodProvenance).toContain('# Recurring Service-Period Provenance');
+    expect(recurringServicePeriodProvenance).toContain('## Provenance Kinds');
+    expect(recurringServicePeriodProvenance).toContain('| `generated` |');
+    expect(recurringServicePeriodProvenance).toContain('| `user_edited` |');
+    expect(recurringServicePeriodProvenance).toContain('| `regenerated` |');
+    expect(recurringServicePeriodProvenance).toContain('| `repair` |');
+    expect(recurringServicePeriodProvenance).toContain('## Field Requirements By Kind');
+    expect(recurringServicePeriodProvenance).toContain('Generated provenance requires sourceRunKey');
+    expect(recurringServicePeriodProvenance).toContain('`boundary_adjustment`');
+    expect(recurringServicePeriodProvenance).toContain('`billing_schedule_changed`');
+    expect(recurringServicePeriodProvenance).toContain('shared/billingClients/recurringServicePeriodProvenance.ts');
+    expect(persistedServicePeriodRecord).toContain('RECURRING_SERVICE_PERIOD_PROVENANCE.md');
   });
 
   it('T250: the recurrence field source-of-truth matrix matches the authoritative storage model and compatibility seams', () => {
