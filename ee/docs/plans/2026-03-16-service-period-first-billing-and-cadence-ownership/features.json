@@ -1793,7 +1793,7 @@
   {
     "id": "F200",
     "description": "Define internal tax, external tax import, and reconciliation consumer behavior when canonical recurring detail periods become available",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Dependent recurring behavior requirements",
       "UI and downstream-consumer requirements"

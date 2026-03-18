@@ -466,7 +466,10 @@ export class AccountingExportService {
       return;
     }
 
-    // Extract unique invoice IDs from the exported lines
+    // Automatic post-export tax import is invoice-centric. Canonical recurring
+    // service-period detail on export lines can explain coverage, but it must not
+    // fan one invoice out into multiple tax-import attempts.
+    // Extract unique invoice IDs from the exported lines.
     const invoiceIds = [...new Set(
       context.lines
         .filter(line => line.invoice_id)

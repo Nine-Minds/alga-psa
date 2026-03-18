@@ -1982,7 +1982,7 @@
   {
     "id": "T229",
     "description": "Internal and external tax reconciliation consumers use the documented date semantics after recurring detail periods become available",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F200"
     ]

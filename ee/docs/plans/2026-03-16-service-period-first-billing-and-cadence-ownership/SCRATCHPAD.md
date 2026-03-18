@@ -39,6 +39,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-17) External tax import and reconciliation consumers now have explicit service-period-first guardrails, which closes `F200` and `T229`:
+  - `packages/billing/src/services/externalTaxImportService.ts` now states the intended policy inline at both import and reconciliation seams: external tax behavior remains invoice- and charge-tax-driven, while canonical recurring service periods stay explanatory context rather than tax allocation or reconciliation inputs
+  - `packages/billing/src/services/accountingExportService.ts` now states the complementary post-export rule inline: automatic external-tax import deduplicates by invoice id and must not fan out one invoice into multiple import attempts just because export lines carry multiple canonical recurring periods
+  - `server/src/test/unit/accounting/externalTaxConsumers.servicePeriods.test.ts` now proves both behaviors directly:
+    - `reconcileTaxDifferences(...)` reads only invoice and `invoice_charges` tax fields and would fail if it tried to query `invoice_charge_details`
+    - `importExternalTaxAfterDelivery(...)` imports once per unique invoice even when the export context contains multiple canonical recurring detail-backed lines for the same invoice
+  - validation for this checkpoint used `cd server && npx vitest run src/test/unit/accounting/externalTaxConsumers.servicePeriods.test.ts --coverage.enabled false` plus `npx tsc --noEmit -p packages/billing/tsconfig.json`
+
 - (2026-03-17) QuickBooks and Xero export adapters now have explicit recurring-period projection policies, which closes `F198`, `F199`, `T227`, and `T228`:
   - `packages/billing/src/adapters/accounting/quickBooksOnlineAdapter.ts` now routes line-date selection through an explicit helper: QuickBooks can export only one service date, so canonical recurring ranges pin to the first covered day, end-only fallback lines use the surviving boundary, and `financial_document_fallback` lines intentionally omit `SalesItemLineDetail.ServiceDate`
   - `server/src/test/unit/accounting/quickBooksOnlineAdapter.spec.ts` now proves both sides of that QuickBooks contract: canonical recurring ranges export `2025-01-01` as the service date, while financial-only fallback rows omit it entirely
