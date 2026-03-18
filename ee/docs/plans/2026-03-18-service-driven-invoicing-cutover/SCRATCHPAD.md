@@ -33,6 +33,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) `shared/billingClients/backfillRecurringServicePeriods.ts` was already present and exported through `packages/billing/src/index.ts`; the missing work for `F014` was plan-specific validation that the zero-existing-records case is covered explicitly.
 - (2026-03-18) `shared/billingClients/recurringServicePeriodGenerationHorizon.ts` already models target horizon vs replenishment threshold coverage. The remaining gap for `F015` was explicit plan-level test coverage proving we report below-target horizon state before the low-water replenishment trigger trips.
 - (2026-03-18) `shared/billingClients/regenerateRecurringServicePeriods.ts` and the existing `billingInvoiceTiming.integration.test.ts` staged-rollout scenario already implement regeneration semantics for untouched future rows while preserving edited/billed history. The remaining gap for `F016` was explicit unit coverage of the combined edited+billed override case in one regeneration pass.
+- (2026-03-18) Action-level integration coverage for `getAvailableRecurringDueWork(...)` is practical with a fake transaction/query-builder harness because the reader logic is mostly SQL filtering/merging over server actions. This gives deterministic coverage for mixed-row sorting, pagination, search, and invoice-window date filtering without requiring the unavailable local Postgres harness.
 
 ## Commands / Runbooks
 
@@ -50,6 +51,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringServicePeriodGenerationHorizon.domain.test.ts` (from `server/`; passed)
 - (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringServicePeriodRegeneration.domain.test.ts src/test/unit/billing/recurringServicePeriodRegenerationConflict.domain.test.ts src/test/unit/billing/recurringServicePeriodGenerationHorizon.domain.test.ts` (from `server/`; passed)
 - (2026-03-18) `pnpm exec vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T316/T323/T324/T327"` (from `server/`; blocked in this environment because Postgres on `127.0.0.1:5438` refused connections)
+- (2026-03-18) `pnpm exec vitest run src/test/unit/billing/recurringDueWorkReader.integration.test.ts` (from `server/`; passed)
 
 ## Links / References
 
@@ -82,6 +84,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) Completed `F014` / `T013` by validating the pre-existing `backfillRecurringServicePeriods(...)` support with an explicit zero-existing-records test. Active recurring obligations can now be asserted to backfill into future generated service-period rows before the UI depends on them.
 - (2026-03-18) Completed `F015` / `T014` by validating the pre-existing generation-horizon coverage model with an explicit replenishment test. The system now has plan-specific proof that future service periods can be assessed against both the target horizon and the lower replenishment threshold without conflating those two states.
 - (2026-03-18) Completed `F016` / `T015` by validating the pre-existing regeneration planner with an explicit edited-plus-billed override preservation test. Future untouched rows can now be regenerated while edited and billed slots remain preserved rather than being silently overwritten.
+- (2026-03-18) Completed `T009` through `T012` with an action-level due-work reader harness that exercises the real `getAvailableRecurringDueWork(...)` logic. Mixed client/contract rows now have explicit coverage for deterministic ordering, pagination stability, search by client name without a billing-cycle bridge, and invoice-window-based date filtering.
 
 ## Open Questions
 
