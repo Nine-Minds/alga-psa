@@ -22,7 +22,9 @@
     },
     "playInternal": {
       "android": {
-        "track": "internal"
+        "track": "internal",
+        "releaseStatus": "draft",
+        "serviceAccountKeyPath": "./google-service-account.json"
       }
     }
   }

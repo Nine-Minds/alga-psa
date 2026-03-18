@@ -1107,6 +1107,7 @@ export function TicketDetailBody({
             style={{ flex: 1, backgroundColor: colors.background }}
             contentContainerStyle={{ padding: spacing.lg }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+            keyboardShouldPersistTaps="handled"
           >
         {error ? (
           <View

@@ -181,6 +181,11 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
           callbacksRef.current.onStateChange?.(payload);
         },
         onContentChange(payload) {
+          // Update lastContentRef so the content prop effect doesn't
+          // push the same content back into the editor (which would
+          // destroy cursor position and strip trailing whitespace).
+          const serialized = JSON.stringify(payload.json);
+          lastContentRef.current = serialized;
           callbacksRef.current.onContentChange?.(payload);
         },
         onContentHeight(payload) {
