@@ -182,7 +182,7 @@ vi.mock('@alga-psa/workflows/components/automation-hub/EventsCatalogV2', () => (
   default: () => <div data-testid="workflow-events-catalog-smoke" />
 }));
 
-vi.mock('@alga-psa/workflows/components/automation-hub/Schedules', () => ({
+vi.mock('../WorkflowSchedules', () => ({
   default: () => <div data-testid="workflow-schedules-smoke" />
 }));
 

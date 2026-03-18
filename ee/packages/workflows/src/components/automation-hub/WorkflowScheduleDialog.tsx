@@ -17,12 +17,12 @@ import {
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import {
-  createWorkflowScheduleAction,
-  getWorkflowScheduleAction,
+  createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
+  getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
   getWorkflowSchemaAction,
   listWorkflowDefinitionsPagedAction,
   listWorkflowSchemaRefsAction,
-  updateWorkflowScheduleAction
+  updateWorkflowScheduleAction as updateWorkflowScheduleActionDefault
 } from '@alga-psa/workflows/actions';
 import {
   buildCronFromRecurringBuilder,
@@ -76,6 +76,19 @@ type WorkflowScheduleDialogProps = {
   initialWorkflowId?: string | null;
   onClose: () => void;
   onSaved: () => void;
+  scheduleActions?: WorkflowScheduleDialogActions;
+};
+
+export type WorkflowScheduleDialogActions = {
+  createWorkflowScheduleAction: typeof createWorkflowScheduleActionDefault;
+  getWorkflowScheduleAction: typeof getWorkflowScheduleActionDefault;
+  updateWorkflowScheduleAction: typeof updateWorkflowScheduleActionDefault;
+};
+
+const defaultScheduleActions: WorkflowScheduleDialogActions = {
+  createWorkflowScheduleAction: createWorkflowScheduleActionDefault,
+  getWorkflowScheduleAction: getWorkflowScheduleActionDefault,
+  updateWorkflowScheduleAction: updateWorkflowScheduleActionDefault,
 };
 
 const resolveSchemaRef = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
@@ -241,7 +254,8 @@ export default function WorkflowScheduleDialog({
   scheduleId,
   initialWorkflowId,
   onClose,
-  onSaved
+  onSaved,
+  scheduleActions = defaultScheduleActions
 }: WorkflowScheduleDialogProps) {
   const [workflowOptions, setWorkflowOptions] = useState<WorkflowOption[]>([]);
   const [availableSchemaRefs, setAvailableSchemaRefs] = useState<Set<string>>(new Set());
@@ -326,7 +340,7 @@ export default function WorkflowScheduleDialog({
       const loadSchedule = async () => {
         setIsLoadingSchedule(true);
         try {
-          const schedule = await getWorkflowScheduleAction({ scheduleId });
+          const schedule = await scheduleActions.getWorkflowScheduleAction({ scheduleId });
           if (cancelled) return;
           setSelectedWorkflowId(schedule.workflow_id);
           setScheduleName(schedule.name ?? '');
@@ -382,7 +396,7 @@ export default function WorkflowScheduleDialog({
     setPayloadTouched(false);
     setIsLoadingSchedule(false);
     return undefined;
-  }, [initialWorkflowId, isOpen, mode, scheduleId]);
+  }, [initialWorkflowId, isOpen, mode, scheduleActions, scheduleId]);
 
   useEffect(() => {
     if (!isOpen || !selectedWorkflow?.payload_schema_ref || workflowEligibilityMessage) {
@@ -773,14 +787,14 @@ export default function WorkflowScheduleDialog({
       } as const;
 
       const result = mode === 'edit' && scheduleId
-        ? await updateWorkflowScheduleAction({
+        ? await scheduleActions.updateWorkflowScheduleAction({
           scheduleId,
           ...common,
           runAt: triggerType === 'schedule' ? toIsoString(runAt) : undefined,
           cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
           timezone: triggerType === 'recurring' ? timezone.trim() : undefined
         })
-        : await createWorkflowScheduleAction({
+        : await scheduleActions.createWorkflowScheduleAction({
           ...common,
           runAt: triggerType === 'schedule' ? toIsoString(runAt) : undefined,
           cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,

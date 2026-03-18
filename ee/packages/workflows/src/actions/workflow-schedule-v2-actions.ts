@@ -27,7 +27,6 @@ import {
   updateExternalWorkflowScheduleState,
   type DesiredWorkflowSchedule
 } from '../lib/workflowScheduleLifecycle';
-import { registerWorkflowScheduleJobRunner } from '../lib/jobRunnerProvider';
 import {
   CreateWorkflowScheduleInput,
   DeleteWorkflowScheduleInput,
@@ -51,7 +50,6 @@ type WorkflowScheduleMutationSuccess = {
 };
 
 let payloadSchemasInitialized = false;
-let workflowScheduleJobRunnerRegistered = false;
 
 const ensureWorkflowPayloadSchemasRegistered = (): void => {
   if (payloadSchemasInitialized) return;
@@ -71,17 +69,6 @@ const ensureWorkflowPayloadSchemasRegistered = (): void => {
   }
 
   payloadSchemasInitialized = true;
-};
-
-const ensureWorkflowScheduleJobRunnerRegistered = (): void => {
-  if (workflowScheduleJobRunnerRegistered) return;
-
-  registerWorkflowScheduleJobRunner(async () => {
-    const { initializeJobRunner } = await import('server/src/lib/jobs/initializeJobRunner');
-    return initializeJobRunner();
-  });
-
-  workflowScheduleJobRunnerRegistered = true;
 };
 
 const isValidationFailure = <TSuccess>(
@@ -380,8 +367,6 @@ async function mutateWorkflowSchedule(
   input: CreateWorkflowScheduleInputShape | UpdateWorkflowScheduleInputShape,
   existingScheduleId?: string
 ): Promise<WorkflowScheduleMutationSuccess | WorkflowScheduleValidationFailure> {
-  ensureWorkflowScheduleJobRunnerRegistered();
-
   const desired = buildDesiredScheduleFromInput(input);
   if (isValidationFailure(desired)) {
     return desired;
