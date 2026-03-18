@@ -452,6 +452,84 @@ it('T171: DB-backed monthly client-cadence recurring fixed invoice generation st
   expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(currentPeriodEnd);
 }, HOOK_TIMEOUT);
 
+it('T019: billed recurring service periods link back to invoice charge detail rows after client-cadence invoice creation', async () => {
+  setupCommonMocks({ tenantId, userId: 'client-linkage-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    currentPeriodStart,
+    currentPeriodEnd,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Client Linkage Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Client Linkage Service',
+    planName: 'Client Linkage Plan',
+    baseRateCents: 18500,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+
+  const materializationPlan = materializeClientCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T18:10:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: fixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-client-linkage',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+
+  await upsertRecurringServicePeriodRecord(materializationPlan.records[0]);
+
+  const generatedInvoice = await generateInvoice(cycleId);
+  expect(generatedInvoice).toBeTruthy();
+
+  const detailRows = await getInvoiceDetailRows(generatedInvoice!.invoice_id);
+  expect(detailRows).toHaveLength(1);
+
+  const billedRow = await db('recurring_service_periods')
+    .where({ tenant: tenantId, record_id: materializationPlan.records[0].recordId })
+    .first([
+      'record_id',
+      'lifecycle_state',
+      'invoice_id',
+      'invoice_charge_id',
+      'invoice_charge_detail_id',
+      'invoice_linked_at',
+      'service_period_start',
+      'service_period_end',
+    ]);
+
+  expect(billedRow).toMatchObject({
+    record_id: materializationPlan.records[0].recordId,
+    lifecycle_state: 'billed',
+    invoice_id: generatedInvoice!.invoice_id,
+    invoice_charge_id: detailRows[0].item_id,
+    invoice_charge_detail_id: detailRows[0].item_detail_id,
+  });
+  expect(normalizeTimestampValue(billedRow?.invoice_linked_at)).toBeTruthy();
+  expect(normalizeDateValue(billedRow?.service_period_start)).toBe(materializationPlan.records[0].servicePeriod.start);
+  expect(normalizeDateValue(billedRow?.service_period_end)).toBe(materializationPlan.records[0].servicePeriod.end);
+}, HOOK_TIMEOUT);
+
 it('T172: DB-backed quarterly client-cadence recurring fixed invoice generation still succeeds on canonical service periods after cutover', async () => {
   setupCommonMocks({ tenantId, userId: 'quarterly-sanity-user', permissionCheck: () => true });
 
@@ -794,6 +872,93 @@ it('T140/T175/T252: DB-backed monthly contract-cadence billing persists contract
   });
   expect(normalizeDateValue(detailRows[0]?.service_period_start)).toBe(currentPeriodStart);
   expect(normalizeDateValue(detailRows[0]?.service_period_end)).toBe(currentPeriodEnd);
+}, HOOK_TIMEOUT);
+
+it('T020: billed recurring service periods link back to invoice charge detail rows after contract-cadence invoice creation', async () => {
+  setupCommonMocks({ tenantId, userId: 'contract-linkage-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    currentPeriodStart,
+    currentPeriodEnd,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Contract Linkage Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-01-08',
+    currentPeriodStart: '2025-02-08',
+    nextPeriodStart: '2025-03-08',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Contract Linkage Service',
+    planName: 'Contract Linkage Plan',
+    baseRateCents: 22500,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+
+  const materializationPlan = materializeContractCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T18:20:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: `${currentPeriodStart}T00:00:00Z`,
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: fixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-contract-linkage',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+
+  await upsertRecurringServicePeriodRecord(materializationPlan.records[0]);
+
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: contextLike.clientId,
+    contractId: fixedLine.contractId,
+    contractLineId: fixedLine.contractLineId,
+    windowStart: `${currentPeriodStart}T00:00:00Z`,
+    windowEnd: `${nextPeriodStart}T00:00:00Z`,
+  });
+
+  const generatedInvoice = await generateInvoiceForSelectionInput(selectorInput);
+  expect(generatedInvoice).toBeTruthy();
+  expect(generatedInvoice?.billing_cycle_id ?? null).toBeNull();
+
+  const detailRows = await getInvoiceDetailRows(generatedInvoice!.invoice_id);
+  expect(detailRows).toHaveLength(1);
+
+  const billedRow = await db('recurring_service_periods')
+    .where({ tenant: tenantId, record_id: materializationPlan.records[0].recordId })
+    .first([
+      'record_id',
+      'lifecycle_state',
+      'invoice_id',
+      'invoice_charge_id',
+      'invoice_charge_detail_id',
+      'invoice_linked_at',
+      'service_period_start',
+      'service_period_end',
+    ]);
+
+  expect(billedRow).toMatchObject({
+    record_id: materializationPlan.records[0].recordId,
+    lifecycle_state: 'billed',
+    invoice_id: generatedInvoice!.invoice_id,
+    invoice_charge_id: detailRows[0].item_id,
+    invoice_charge_detail_id: detailRows[0].item_detail_id,
+  });
+  expect(normalizeTimestampValue(billedRow?.invoice_linked_at)).toBeTruthy();
+  expect(normalizeDateValue(billedRow?.service_period_start)).toBe(materializationPlan.records[0].servicePeriod.start);
+  expect(normalizeDateValue(billedRow?.service_period_end)).toBe(materializationPlan.records[0].servicePeriod.end);
 }, HOOK_TIMEOUT);
 
 it('T276: DB-backed monthly contract-cadence scheduling, grouping, invoice generation, and hydration stay coherent for an 8th-anchored line', async () => {
@@ -2279,6 +2444,8 @@ async function getInvoiceDetailRows(invoiceId: string) {
     .where('ii.invoice_id', invoiceId)
     .andWhere('iid.tenant', tenantId)
     .select([
+      'iid.item_id',
+      'iid.item_detail_id',
       'iid.service_id',
       'iid.service_period_start',
       'iid.service_period_end',
