@@ -13,8 +13,6 @@ import {
   maybeExtractRawMimeFromEmailData,
   sanitizeGeneratedFileName,
 } from './inboundEmailArtifactHelpers';
-import { generateDocumentPreviews } from '@alga-psa/documents/lib/documentPreviewGenerator';
-import { runWithTenant } from '@alga-psa/db';
 
 const STALE_PROCESSING_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -469,35 +467,6 @@ async function persistDocumentForBuffer(args: {
           updated_at: now,
         });
     });
-
-    // Generate previews for the uploaded document (best-effort, never fails the persist)
-    try {
-      const doc = {
-        document_id: documentId,
-        file_id: fileId,
-        mime_type: args.mimeType,
-        created_by: args.systemUserId,
-        tenant: args.tenantId,
-      };
-      await runWithTenant(args.tenantId, async () => {
-        const previewResult = await generateDocumentPreviews(doc as any, args.buffer);
-        if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
-          await args.knex('documents')
-            .where({ document_id: documentId, tenant: args.tenantId })
-            .update({
-              thumbnail_file_id: previewResult.thumbnail_file_id,
-              preview_file_id: previewResult.preview_file_id,
-              preview_generated_at: previewResult.preview_generated_at,
-              updated_at: new Date(),
-            });
-        }
-      });
-    } catch (previewErr: any) {
-      console.error(
-        `[persistDocumentForBuffer] Preview generation failed for ${documentId}:`,
-        previewErr?.message || previewErr
-      );
-    }
 
     return { success: true, documentId, fileId };
   } catch (dbErr: any) {

@@ -38,10 +38,6 @@
       "import": "./src/handlers/*.ts",
       "types": "./src/handlers/*.ts"
     },
-    "./lib/documentPreviewGenerator": {
-      "import": "./src/lib/documentPreviewGenerator.ts",
-      "types": "./src/lib/documentPreviewGenerator.ts"
-    },
     "./lib/documentUtils": {
       "import": "./src/lib/documentUtils.ts",
       "types": "./src/lib/documentUtils.ts"

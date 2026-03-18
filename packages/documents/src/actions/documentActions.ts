@@ -2333,8 +2333,8 @@ export const uploadDocument = withAuth(async (
               updated_at: new Date(),
             });
           // Update the returned document object so the caller has preview IDs
-          document.thumbnail_file_id = previewResult.thumbnail_file_id;
-          document.preview_file_id = previewResult.preview_file_id;
+          document.thumbnail_file_id = previewResult.thumbnail_file_id ?? undefined;
+          document.preview_file_id = previewResult.preview_file_id ?? undefined;
           console.log(`[uploadDocument] Preview generation completed for document ${document.document_id}`);
         }
       } catch (error) {
