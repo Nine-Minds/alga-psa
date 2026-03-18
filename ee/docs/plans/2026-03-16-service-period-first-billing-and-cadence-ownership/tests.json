@@ -1922,6 +1922,14 @@
     ]
   },
   {
+    "id": "T342",
+    "description": "Persisted recurring service-period migration creates schedule lookup, obligation-state, and due-selection indexes alongside the physical ledger table",
+    "implemented": true,
+    "featureIds": [
+      "F232"
+    ]
+  },
+  {
     "id": "T220",
     "description": "Financial artifacts with missing canonical period metadata follow the documented fallback and failure-handling behavior",
     "implemented": true,
@@ -2457,7 +2465,7 @@
   {
     "id": "T282",
     "description": "Database constraints prevent invalid persisted service-period records from being written",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F232"
     ]

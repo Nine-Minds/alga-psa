@@ -91,6 +91,47 @@ The persisted record must carry both `provenance` and `lifecycleState`.
 
 `F233` will define transition legality between those states. `F234` will define when `reasonCode`, `sourceRunKey`, and `supersedesRecordId` are required versus optional.
 
+## F232 Physical Schema Landing
+
+`F232` lands the first physical table as `server/migrations/20260318120000_create_recurring_service_periods.cjs`.
+
+The first physical table is `recurring_service_periods`, with the logical record contract flattened into columns for:
+
+- record identity
+  - `record_id`
+  - `schedule_key`
+  - `period_key`
+  - `revision`
+- obligation linkage and cadence
+  - `obligation_id`
+  - `obligation_type`
+  - `charge_family`
+  - `cadence_owner`
+  - `due_position`
+  - `lifecycle_state`
+- boundaries
+  - `service_period_start`
+  - `service_period_end`
+  - `invoice_window_start`
+  - `invoice_window_end`
+  - `activity_window_start`
+  - `activity_window_end`
+- provenance
+  - `provenance_kind`
+  - `source_rule_version`
+  - `reason_code`
+  - `source_run_key`
+  - `supersedes_record_id`
+
+The initial index and constraint posture is:
+
+- primary key on `(tenant, record_id)`
+- unique key on `(tenant, schedule_key, period_key, revision)`
+- lookup index on `(tenant, schedule_key, service_period_start)`
+- obligation-state scan index on `(tenant, obligation_id, lifecycle_state)`
+- due-selection index on `(tenant, lifecycle_state, invoice_window_start, invoice_window_end)`
+- check constraints for every current enum-like field plus boundary ordering and valid optional activity-window clipping
+
 ## Deliberate Non-Goals For F231
 
 This checkpoint does not yet define:

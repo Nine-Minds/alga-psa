@@ -140,6 +140,7 @@
       "packages/types/src/lib/invoice-renderer/types.ts",
       "server/migrations/20251025120000_add_billing_timing_metadata.cjs",
       "server/migrations/20251026121500_create_accounting_export_tables.cjs",
+      "server/migrations/20260318120000_create_recurring_service_periods.cjs",
       "server/src/interfaces/billing.interfaces.ts",
       "server/src/interfaces/invoice.interfaces.ts",
       "server/src/lib/api/controllers/ApiAccountingExportController.ts",
@@ -193,6 +194,7 @@
       "server/src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts",
       "server/src/test/unit/contractReportActions.summary.servicePeriods.test.ts",
       "server/src/test/unit/invoiceWorkflowEvents.test.ts",
+      "server/src/test/unit/migrations/recurringServicePeriodsMigration.test.ts",
       "shared/billingClients/recurringRunExecutionIdentity.ts"
     ],
     "persistedDateFields": [

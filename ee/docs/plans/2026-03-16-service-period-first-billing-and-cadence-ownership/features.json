@@ -2081,7 +2081,7 @@
   {
     "id": "F232",
     "description": "Add database schema, indexes, and integrity constraints for persisted recurring service-period records",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Data model and API requirements"

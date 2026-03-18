@@ -41,6 +41,17 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) The physical persisted-ledger table now exists, which closes `F232`, closes `T282`, and adds/closes `T342`:
+  - `server/migrations/20260318120000_create_recurring_service_periods.cjs` now creates `recurring_service_periods` as the first physical ledger table for materialized recurring periods, flattening the `F231` record contract into row columns for identity, obligation linkage, cadence ownership, service/invoice boundaries, activity clipping, provenance, and audit timestamps
+  - the migration now enforces the first integrity boundary directly in the database: check constraints cover cadence owner, due position, lifecycle state, obligation type, charge family, provenance kind, positive revision numbers, valid `[start, end)` service/invoice windows, valid optional activity-window clipping, and `supersedes_record_id <> record_id`
+  - the migration also adds the first lookup posture for later materialization/runtime work: a unique revision key on `(tenant, schedule_key, period_key, revision)` plus tenant-scoped indexes for schedule lookup, obligation-state scans, and due selection by invoice window
+  - `server/src/test/unit/migrations/recurringServicePeriodsMigration.test.ts` now executes the migration against a fake schema contract so the table shape, constraints, and index names are locked directly instead of being left as migration prose
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PERSISTED_SERVICE_PERIOD_RECORD.md` now documents the physical `recurring_service_periods` landing and `pass-0-source-inventory.json` was refreshed because the docs contract inventory intentionally tracks all live `service_period_*` references, including the new migration and migration test
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/migrations/recurringServicePeriodsMigration.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+      - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not by the recurring-service-period migration
+
 - (2026-03-18) The first materialized-ledger checkpoint now has one authoritative logical record contract, which closes `F231` and adds/closes `T341`:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IPersistedRecurringObligationRef`, `IRecurringServicePeriodRecordProvenance`, `IRecurringServicePeriodRecord`, `RecurringServicePeriodLifecycleState`, and `RecurringServicePeriodProvenanceKind`, so future schema/runtime work can target one shared persisted-record vocabulary instead of inventing ad hoc shapes
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PERSISTED_SERVICE_PERIOD_RECORD.md` now defines the logical record shape explicitly: `recordId`, `scheduleKey`, `periodKey`, `revision`, obligation linkage, cadence ownership, `[start, end)` service/invoice boundaries, provenance, and lifecycle state, while also naming the follow-on boundaries for `F232`, `F233`, and later invoice-linkage/runtime adoption work
@@ -842,6 +853,11 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Commands / Runbooks
 
+- (2026-03-18) Persisted service-period schema validation:
+  - `cd server && npx vitest run src/test/unit/migrations/recurringServicePeriodsMigration.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not by the recurring-service-period migration
+
 - (2026-03-18) Persisted service-period record contract validation:
   - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
   - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
@@ -1451,6 +1467,7 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PERSISTED_SERVICE_PERIOD_RECORD.md`
 - Key runtime files:
   - `packages/types/src/interfaces/recurringTiming.interfaces.ts`
+  - `server/migrations/20260318120000_create_recurring_service_periods.cjs`
   - `packages/billing/src/lib/billing/billingEngine.ts`
   - `packages/billing/src/lib/billing/recurringTiming.ts`
   - `shared/billingClients/createBillingCycles.ts`
@@ -1470,6 +1487,7 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
   - `server/src/test/integration/billingInvoiceTiming.integration.test.ts`
   - `server/src/test/infrastructure/billing/invoices/*`
   - `server/src/test/infrastructure/billing/credits/*`
+  - `server/src/test/unit/migrations/recurringServicePeriodsMigration.test.ts`
   - `server/src/test/unit/billingEngine.test.ts`
   - `server/src/test/unit/billing/billingEngine.timing.test.ts`
 
