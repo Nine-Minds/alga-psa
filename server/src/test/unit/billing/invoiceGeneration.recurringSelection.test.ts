@@ -4,7 +4,9 @@ import {
   calculateBillingForInvoiceWindow,
   calculateBillingForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
-import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
+import {
+  buildBillingCycleDueSelectionInput,
+} from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 const originalComparisonMode = process.env.RECURRING_BILLING_COMPARISON_MODE;
 
@@ -18,7 +20,7 @@ afterEach(() => {
 });
 
 describe('invoice generation recurring selection', () => {
-  it('T071: invoice generation selects due recurring service periods before billing calculation', async () => {
+  it('T071 and T292: invoice generation selects due persisted service periods before billing calculation and passes them as authoritative runtime selections', async () => {
     const recurringTimingSelections = {
       'contract-line-1': {
         duePosition: 'arrears',
@@ -43,6 +45,7 @@ describe('invoice generation recurring selection', () => {
         .fn()
         .mockResolvedValue(recurringTimingSelections),
       calculateBilling: vi.fn().mockResolvedValue(billingResult),
+      calculateBillingForExecutionWindow: vi.fn().mockResolvedValue(billingResult),
     } as any;
 
     const result = await calculateBillingForInvoiceWindow({
@@ -61,7 +64,10 @@ describe('invoice generation recurring selection', () => {
       '2025-02-01',
       '2025-03-01',
       'cycle-1',
-      { recurringTimingSelections },
+      {
+        recurringTimingSelections,
+        recurringTimingSelectionSource: 'persisted',
+      },
     );
     expect(
       billingEngine.selectDueRecurringServicePeriodsForBillingWindow.mock
@@ -89,10 +95,9 @@ describe('invoice generation recurring selection', () => {
       finalAmount: 0,
       currency_code: 'USD',
     };
-    const selectorInput = buildContractCadenceDueSelectionInput({
+    const selectorInput = buildBillingCycleDueSelectionInput({
       clientId: 'client-1',
-      contractId: 'contract-1',
-      contractLineId: 'line-1',
+      billingCycleId: 'cycle-1',
       windowStart: '2025-02-08',
       windowEnd: '2025-03-08',
     });
@@ -101,6 +106,7 @@ describe('invoice generation recurring selection', () => {
         .fn()
         .mockResolvedValue(recurringTimingSelections),
       calculateBilling: vi.fn().mockResolvedValue(billingResult),
+      calculateBillingForExecutionWindow: vi.fn().mockResolvedValue(billingResult),
     } as any;
 
     const result = await calculateBillingForSelectionInput({
@@ -114,15 +120,19 @@ describe('invoice generation recurring selection', () => {
       'client-1',
       '2025-02-08',
       '2025-03-08',
-      selectorInput.executionWindow.identityKey,
+      'cycle-1',
     );
     expect(billingEngine.calculateBilling).toHaveBeenCalledWith(
       'client-1',
       '2025-02-08',
       '2025-03-08',
-      selectorInput.executionWindow.identityKey,
-      { recurringTimingSelections },
+      'cycle-1',
+      {
+        recurringTimingSelections,
+        recurringTimingSelectionSource: 'persisted',
+      },
     );
+    expect(billingEngine.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
     expect(result).toBe(billingResult);
   });
 
@@ -184,6 +194,10 @@ describe('invoice generation recurring selection', () => {
         .fn()
         .mockResolvedValueOnce(canonicalBillingResult)
         .mockResolvedValueOnce(legacyBillingResult),
+      calculateBillingForExecutionWindow: vi
+        .fn()
+        .mockResolvedValueOnce(canonicalBillingResult)
+        .mockResolvedValueOnce(legacyBillingResult),
     } as any;
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -201,7 +215,10 @@ describe('invoice generation recurring selection', () => {
       '2025-02-01',
       '2025-03-01',
       'cycle-1',
-      { recurringTimingSelections },
+      {
+        recurringTimingSelections,
+        recurringTimingSelectionSource: 'persisted',
+      },
     );
     expect(billingEngine.calculateBilling).toHaveBeenNthCalledWith(
       2,
@@ -258,10 +275,9 @@ describe('invoice generation recurring selection', () => {
       finalAmount: 125,
       currency_code: 'USD',
     };
-    const selectorInput = buildContractCadenceDueSelectionInput({
+    const selectorInput = buildBillingCycleDueSelectionInput({
       clientId: 'client-1',
-      contractId: 'contract-1',
-      contractLineId: 'line-1',
+      billingCycleId: 'cycle-1',
       windowStart: '2025-02-08',
       windowEnd: '2025-03-08',
     });
@@ -270,6 +286,10 @@ describe('invoice generation recurring selection', () => {
         .fn()
         .mockResolvedValue(recurringTimingSelections),
       calculateBilling: vi
+        .fn()
+        .mockResolvedValueOnce(canonicalBillingResult)
+        .mockResolvedValueOnce(legacyBillingResult),
+      calculateBillingForExecutionWindow: vi
         .fn()
         .mockResolvedValueOnce(canonicalBillingResult)
         .mockResolvedValueOnce(legacyBillingResult),
@@ -284,10 +304,10 @@ describe('invoice generation recurring selection', () => {
     expect(warnSpy).toHaveBeenCalledWith(
       '[recurring-billing-comparison] Drift detected between canonical and legacy-style invoice-window billing results.',
       expect.objectContaining({
-        billingCycleId: selectorInput.executionWindow.identityKey,
+        billingCycleId: 'cycle-1',
         selectionKey: expect.stringContaining('recurring-run-selection:'),
         executionIdentityKeys: [selectorInput.executionWindow.identityKey],
-        executionWindowKinds: ['contract_cadence_window'],
+        executionWindowKinds: ['billing_cycle_window'],
       }),
     );
   });
@@ -395,6 +415,10 @@ describe('invoice generation recurring selection', () => {
         .fn()
         .mockResolvedValueOnce(canonicalBillingResult)
         .mockResolvedValueOnce(legacyBillingResult),
+      calculateBillingForExecutionWindow: vi
+        .fn()
+        .mockResolvedValueOnce(canonicalBillingResult)
+        .mockResolvedValueOnce(legacyBillingResult),
     } as any;
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -464,6 +488,7 @@ describe('invoice generation recurring selection', () => {
         .fn()
         .mockResolvedValue(recurringTimingSelections),
       calculateBilling: vi.fn().mockResolvedValue(billingResult),
+      calculateBillingForExecutionWindow: vi.fn().mockResolvedValue(billingResult),
     } as any;
 
     const result = await calculateBillingForInvoiceWindow({
@@ -482,7 +507,10 @@ describe('invoice generation recurring selection', () => {
       '2025-02-01',
       '2025-03-01',
       'cycle-1',
-      { recurringTimingSelections },
+      {
+        recurringTimingSelections,
+        recurringTimingSelectionSource: 'persisted',
+      },
     );
     expect(result.charges.map((charge: any) => charge.type)).toEqual([
       'fixed',

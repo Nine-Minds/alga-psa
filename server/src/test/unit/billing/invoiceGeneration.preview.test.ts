@@ -230,6 +230,7 @@ describe('invoice preview recurring timing', () => {
             coverageRatio: 1,
           },
         },
+        recurringTimingSelectionSource: 'persisted',
       },
     );
     expect(result).toEqual({

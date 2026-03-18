@@ -2297,7 +2297,7 @@
   {
     "id": "F256",
     "description": "Refactor recurring billing runtime to consume persisted service-period records as the authoritative schedule instead of deriving periods on demand in live paths",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Materialized service-period requirements",
       "Runtime engine requirements"

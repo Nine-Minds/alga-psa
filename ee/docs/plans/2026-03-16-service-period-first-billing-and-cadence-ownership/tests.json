@@ -2603,7 +2603,7 @@
   {
     "id": "T292",
     "description": "Invoice generation selects due persisted service periods rather than deriving schedule boundaries on demand",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F242",
       "F256"
@@ -2730,7 +2730,7 @@
   {
     "id": "T307",
     "description": "Fixed, product, and license recurring runtime all consume persisted service-period records consistently",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F256",
       "F261"

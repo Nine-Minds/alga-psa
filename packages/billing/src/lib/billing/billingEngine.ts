@@ -21,7 +21,9 @@ import {
   ILicenseCharge,
   IClientContractLineCycle,
   IRecurringServicePeriod,
+  IRecurringServicePeriodRecord,
   BillingCycleType,
+  DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
   RECURRING_RANGE_SEMANTICS,
 } from "@alga-psa/types";
 import {
@@ -38,6 +40,7 @@ import type { ISO8601String, IClient } from "@alga-psa/types";
 import { toPlainDate, toISODate, toISOTimestamp, getCurrencySymbol } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
 import {
+  calculateServicePeriodCoverage,
   resolveCadenceOwner,
   resolveRecurringSettlementsForInvoiceWindow,
 } from "@alga-psa/shared/billingClients/recurringTiming";
@@ -86,12 +89,20 @@ type RecurringChargeTimingSelections = Record<
 
 type CalculateBillingOptions = {
   recurringTimingSelections?: RecurringChargeTimingSelections;
+  recurringTimingSelectionSource?: "derived" | "persisted";
 };
+
+type PersistedRecurringTimingSelectionRecord = Pick<
+  IRecurringServicePeriodRecord,
+  "sourceObligation" | "cadenceOwner" | "duePosition" | "servicePeriod" | "activityWindow"
+>;
 
 type ContractCadenceGenerator = typeof generateMonthlyContractCadenceServicePeriods;
 
 const RECURRING_TIMING_ROLLOUT_GUARD_PREFIX =
   "Recurring timing rollout guard blocked mixed legacy/canonical timing state";
+const POSTGRES_UNDEFINED_TABLE = "42P01";
+const POSTGRES_UNDEFINED_COLUMN = "42703";
 
 export class BillingEngine {
   private knex: Knex;
@@ -144,6 +155,16 @@ export class BillingEngine {
         this.knex = previousKnex;
       }
     });
+  }
+
+  private isMissingPersistedServicePeriodRelation(error: unknown): boolean {
+    return Boolean(
+      error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (((error as { code?: string }).code === POSTGRES_UNDEFINED_TABLE) ||
+          ((error as { code?: string }).code === POSTGRES_UNDEFINED_COLUMN)),
+    );
   }
 
   private getNextBillingDateForCycle(
@@ -349,12 +370,113 @@ export class BillingEngine {
       };
       const { clientContractLines, billingCycle } =
         await this.getClientContractLinesAndCycle(clientId, billingPeriod);
+      const persistedSelections =
+        await this.loadPersistedRecurringTimingSelections(
+          billingPeriod,
+          clientContractLines,
+        );
+
+      if (persistedSelections) {
+        return persistedSelections;
+      }
+
       return this.buildRecurringTimingSelections(
         billingPeriod,
         clientContractLines,
         billingCycle,
       );
     });
+  }
+
+  private async loadPersistedRecurringTimingSelections(
+    billingPeriod: IBillingPeriod,
+    clientContractLines: IClientContractLine[],
+  ): Promise<RecurringChargeTimingSelections | null> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const eligibleLineIds = [...new Set(
+      clientContractLines
+        .filter((line) => this.isRecurringTimingEligibleContractLine(line))
+        .map((line) => line.client_contract_line_id),
+    )];
+
+    if (eligibleLineIds.length === 0) {
+      return {};
+    }
+
+    try {
+      const dueRows = await this.knex("recurring_service_periods")
+        .where({ tenant: this.tenant })
+        .whereIn("obligation_id", eligibleLineIds)
+        .whereIn("obligation_type", ["contract_line", "client_contract_line"])
+        .whereIn(
+          "lifecycle_state",
+          [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES],
+        )
+        .where("invoice_window_start", billingPeriod.startDate)
+        .where("invoice_window_end", billingPeriod.endDate)
+        .whereNull("invoice_charge_detail_id")
+        .orderBy("obligation_id", "asc")
+        .orderBy("service_period_start", "asc")
+        .orderBy("revision", "asc")
+        .select(
+          "obligation_id",
+          "obligation_type",
+          "charge_family",
+          "cadence_owner",
+          "due_position",
+          "service_period_start",
+          "service_period_end",
+          "activity_window_start",
+          "activity_window_end",
+        );
+
+      if (dueRows.length === 0) {
+        const existingMaterializedRow = await this.knex("recurring_service_periods")
+          .where({ tenant: this.tenant })
+          .whereIn("obligation_id", eligibleLineIds)
+          .whereIn("obligation_type", ["contract_line", "client_contract_line"])
+          .whereNotIn("lifecycle_state", ["archived", "superseded"])
+          .first("record_id");
+
+        return existingMaterializedRow ? {} : null;
+      }
+
+      return this.buildRecurringTimingSelectionsFromPersistedRecords(
+        dueRows.map((row) => ({
+          sourceObligation: {
+            tenant: this.tenant!,
+            obligationId: row.obligation_id,
+            obligationType: row.obligation_type,
+            chargeFamily: row.charge_family,
+          },
+          cadenceOwner: row.cadence_owner,
+          duePosition: row.due_position,
+          servicePeriod: {
+            start: toISODate(toPlainDate(row.service_period_start)),
+            end: toISODate(toPlainDate(row.service_period_end)),
+            semantics: RECURRING_RANGE_SEMANTICS,
+          },
+          activityWindow:
+            row.activity_window_start && row.activity_window_end
+              ? {
+                  start: toISODate(toPlainDate(row.activity_window_start)),
+                  end: toISODate(toPlainDate(row.activity_window_end)),
+                  semantics: RECURRING_RANGE_SEMANTICS,
+                }
+              : null,
+        })),
+      );
+    } catch (error) {
+      if (this.isMissingPersistedServicePeriodRelation(error)) {
+        return null;
+      }
+
+      throw error;
+    }
   }
 
   private async calculateBillingInternal(
@@ -569,17 +691,25 @@ export class BillingEngine {
       `[BillingEngine] Resolved billing currency: ${billingCurrency}`,
     );
 
-    const canonicalRecurringTimingSelections = this.buildRecurringTimingSelections(
-      billingPeriod,
-      clientContractLines,
-      cycle,
-    );
     const recurringTimingSelections = options.recurringTimingSelections
-      ? this.assertRecurringTimingSelectionsMatchCanonical(
-          canonicalRecurringTimingSelections,
-          options.recurringTimingSelections,
-        )
-      : canonicalRecurringTimingSelections;
+      ? options.recurringTimingSelectionSource === "persisted"
+        ? this.assertPersistedRecurringTimingSelectionsReferenceEligibleLines(
+            clientContractLines,
+            options.recurringTimingSelections,
+          )
+        : this.assertRecurringTimingSelectionsMatchCanonical(
+            this.buildRecurringTimingSelections(
+              billingPeriod,
+              clientContractLines,
+              cycle,
+            ),
+            options.recurringTimingSelections,
+          )
+      : this.buildRecurringTimingSelections(
+          billingPeriod,
+          clientContractLines,
+          cycle,
+        );
 
     const materialCharges = await this.calculateMaterialCharges(
       clientId,
@@ -627,6 +757,7 @@ export class BillingEngine {
           clientContractLine,
           cycle,
           recurringTimingSelections[clientContractLine.client_contract_line_id],
+          options.recurringTimingSelectionSource,
         ),
         this.calculateTimeBasedCharges(
           clientId,
@@ -649,6 +780,7 @@ export class BillingEngine {
           clientContractLine,
           cycle,
           recurringTimingSelections[clientContractLine.client_contract_line_id],
+          options.recurringTimingSelectionSource,
         ),
         this.calculateLicenseCharges(
           clientId,
@@ -656,6 +788,7 @@ export class BillingEngine {
           clientContractLine,
           cycle,
           recurringTimingSelections[clientContractLine.client_contract_line_id],
+          options.recurringTimingSelectionSource,
         ),
       ]);
 
@@ -1024,6 +1157,7 @@ export class BillingEngine {
     clientContractLine: IClientContractLine,
     billingCycle?: string,
     recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<IFixedPriceCharge[]> {
     // Note: Fixed plan rates are stored as dollars (decimal) in the database,
     // but need to be converted to cents (integer) for consistency with other monetary values in the system.
@@ -1041,6 +1175,7 @@ export class BillingEngine {
       clientContractLine,
       resolvedBillingCycle,
       recurringTimingSelection,
+      recurringTimingSelectionSource,
     );
     if (!timingResolution) {
       return [];
@@ -1759,12 +1894,14 @@ export class BillingEngine {
     clientContractLine: IClientContractLine,
     billingCycle: string,
     recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): ResolvedRecurringChargeTiming | null {
     return this.resolveRecurringChargeTiming(
       billingPeriod,
       clientContractLine,
       billingCycle,
       recurringTimingSelection,
+      recurringTimingSelectionSource,
     );
   }
 
@@ -1773,9 +1910,13 @@ export class BillingEngine {
     clientContractLine: IClientContractLine,
     billingCycle: string,
     recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): ResolvedRecurringChargeTiming | null {
     if (recurringTimingSelection) {
       return recurringTimingSelection;
+    }
+    if (recurringTimingSelectionSource === "persisted") {
+      return null;
     }
     return this.buildRecurringChargeTimingSelection(
       billingPeriod,
@@ -1810,6 +1951,85 @@ export class BillingEngine {
     }
 
     return recurringTimingSelections;
+  }
+
+  private buildRecurringTimingSelectionsFromPersistedRecords(
+    records: PersistedRecurringTimingSelectionRecord[],
+  ): RecurringChargeTimingSelections {
+    const recurringTimingSelections: RecurringChargeTimingSelections = {};
+
+    for (const record of records) {
+      const lineId = record.sourceObligation.obligationId;
+      if (recurringTimingSelections[lineId]) {
+        throw new Error(
+          `${RECURRING_TIMING_ROLLOUT_GUARD_PREFIX}: ${lineId}: multiple persisted due periods matched one runtime obligation`,
+        );
+      }
+
+      const coveragePeriod = record.activityWindow?.start && record.activityWindow?.end
+        ? {
+            start: record.activityWindow.start,
+            end: record.activityWindow.end,
+          }
+        : {
+            start: record.servicePeriod.start,
+            end: record.servicePeriod.end,
+          };
+
+      const coverage = calculateServicePeriodCoverage(
+        {
+          kind: "service_period",
+          cadenceOwner: record.cadenceOwner,
+          duePosition: record.duePosition,
+          sourceObligation: record.sourceObligation,
+          start: record.servicePeriod.start,
+          end: record.servicePeriod.end,
+          semantics: RECURRING_RANGE_SEMANTICS,
+        },
+        coveragePeriod,
+      );
+
+      recurringTimingSelections[lineId] = {
+        duePosition: record.duePosition,
+        servicePeriodStart: toISODate(toPlainDate(coverage.coveredPeriod.start)),
+        servicePeriodEnd: toISODate(
+          toPlainDate(coverage.coveredPeriod.end).subtract({ days: 1 }),
+        ),
+        servicePeriodStartExclusive: toISODate(
+          toPlainDate(coverage.coveredPeriod.start),
+        ),
+        servicePeriodEndExclusive: toISODate(
+          toPlainDate(coverage.coveredPeriod.end),
+        ),
+        coverageRatio: coverage.coverageRatio,
+      };
+    }
+
+    return recurringTimingSelections;
+  }
+
+  private assertPersistedRecurringTimingSelectionsReferenceEligibleLines(
+    clientContractLines: IClientContractLine[],
+    providedSelections: RecurringChargeTimingSelections,
+  ): RecurringChargeTimingSelections {
+    const eligibleLineIds = new Set(
+      clientContractLines
+        .filter((line) => this.isRecurringTimingEligibleContractLine(line))
+        .map((line) => line.client_contract_line_id),
+    );
+    const unexpectedSelections = Object.keys(providedSelections)
+      .filter((lineId) => !eligibleLineIds.has(lineId))
+      .sort();
+
+    if (unexpectedSelections.length > 0) {
+      throw new Error(
+        `${RECURRING_TIMING_ROLLOUT_GUARD_PREFIX}: ${unexpectedSelections
+          .map((lineId) => `${lineId}: unexpected persisted selection`)
+          .join("; ")}`,
+      );
+    }
+
+    return providedSelections;
   }
 
   private assertRecurringTimingSelectionsMatchCanonical(
@@ -2679,6 +2899,7 @@ export class BillingEngine {
     billingCycle: string | undefined,
     chargeType: "product" | "license",
     recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<Array<IProductCharge | ILicenseCharge>> {
     await this.initKnex();
     if (!this.tenant) {
@@ -2695,6 +2916,7 @@ export class BillingEngine {
       clientContractLine,
       resolvedBillingCycle,
       recurringTimingSelection,
+      recurringTimingSelectionSource,
     );
     if (!timingResolution) {
       return [];
@@ -2888,6 +3110,7 @@ export class BillingEngine {
     clientContractLine: IClientContractLine,
     billingCycle?: string,
     recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<IProductCharge[]> {
     return (await this.calculateRecurringQuantityCharges(
       clientId,
@@ -2896,6 +3119,7 @@ export class BillingEngine {
       billingCycle,
       "product",
       recurringTimingSelection,
+      recurringTimingSelectionSource,
     )) as IProductCharge[];
   }
 
@@ -2905,6 +3129,7 @@ export class BillingEngine {
     clientContractLine: IClientContractLine,
     billingCycle?: string,
     recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<ILicenseCharge[]> {
     return (await this.calculateRecurringQuantityCharges(
       clientId,
@@ -2913,6 +3138,7 @@ export class BillingEngine {
       billingCycle,
       "license",
       recurringTimingSelection,
+      recurringTimingSelectionSource,
     )) as ILicenseCharge[];
   }
 

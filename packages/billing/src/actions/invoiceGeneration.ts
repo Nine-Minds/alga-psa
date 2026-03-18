@@ -279,13 +279,19 @@ export async function calculateBillingForSelectionInput(input: {
         input.selectorInput.windowStart,
         input.selectorInput.windowEnd,
         billingCycleBridgeId,
-        { recurringTimingSelections },
+        {
+          recurringTimingSelections,
+          recurringTimingSelectionSource: 'persisted',
+        },
       )
     : await input.billingEngine.calculateBillingForExecutionWindow(
         input.selectorInput.clientId,
         input.selectorInput.windowStart,
         input.selectorInput.windowEnd,
-        { recurringTimingSelections },
+        {
+          recurringTimingSelections,
+          recurringTimingSelectionSource: 'persisted',
+        },
       );
 
   await runRecurringBillingComparisonMode({

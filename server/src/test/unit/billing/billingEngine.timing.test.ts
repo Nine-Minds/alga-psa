@@ -367,10 +367,9 @@ describe("BillingEngine billing timing", () => {
           },
         },
       ),
-    ).resolves.toMatchObject({
-      error:
-        "Recurring timing rollout guard blocked mixed legacy/canonical timing state: product-line: missing canonical selection",
-    });
+    ).rejects.toThrow(
+      "Recurring timing rollout guard blocked mixed legacy/canonical timing state: product-line: missing canonical selection",
+    );
 
     expect((engine as any).calculateFixedPriceCharges).not.toHaveBeenCalled();
     expect((engine as any).calculateProductCharges).not.toHaveBeenCalled();
@@ -419,10 +418,9 @@ describe("BillingEngine billing timing", () => {
           },
         },
       ),
-    ).resolves.toMatchObject({
-      error:
-        "Recurring timing rollout guard blocked mixed legacy/canonical timing state: recurring-line: selection diverged from canonical timing",
-    });
+    ).rejects.toThrow(
+      "Recurring timing rollout guard blocked mixed legacy/canonical timing state: recurring-line: selection diverged from canonical timing",
+    );
 
     expect((engine as any).calculateFixedPriceCharges).not.toHaveBeenCalled();
     expect((engine as any).calculateProductCharges).not.toHaveBeenCalled();

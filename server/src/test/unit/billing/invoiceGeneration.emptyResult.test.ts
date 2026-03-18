@@ -188,7 +188,10 @@ describe('invoice generation empty recurring selections', () => {
       '2025-02-01T00:00:00.000Z',
       '2025-03-01T00:00:00.000Z',
       'cycle-1',
-      { recurringTimingSelections: {} },
+      {
+        recurringTimingSelections: {},
+        recurringTimingSelectionSource: 'persisted',
+      },
     );
     expect(result).toBeNull();
     expect(mocks.getFullInvoiceById).not.toHaveBeenCalled();
