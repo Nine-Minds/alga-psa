@@ -25,6 +25,7 @@ const DEFAULT_AST = {
   version: 1,
   metadata: {
     templateName: 'Standard Quote Default',
+    printSettings: { paperPreset: 'Letter', marginMm: 10.58 },
   },
   bindings: buildBindings(),
   layout: {
@@ -92,6 +93,7 @@ const DETAILED_AST = {
   version: 1,
   metadata: {
     templateName: 'Standard Quote Detailed',
+    printSettings: { paperPreset: 'Letter', marginMm: 10.58 },
   },
   bindings: buildBindings(),
   layout: {

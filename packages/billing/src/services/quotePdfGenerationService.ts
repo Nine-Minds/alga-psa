@@ -8,6 +8,7 @@ import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { getFileStoreModelAsync, getStorageProviderFactoryAsync } from '../lib/documentsHelpers';
 import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { evaluateInvoiceTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { resolveInvoicePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { getStandardQuoteTemplateAstByCode } from '../lib/quote-template-ast/standardTemplates';
 import { resolveQuoteTemplateAst } from '../lib/quote-template-ast/templateSelection';
@@ -23,6 +24,7 @@ interface QuotePDFGenerationOptions {
 interface QuoteTemplatePreview {
   html: string;
   css: string;
+  templateAst: InvoiceTemplateAst | null;
 }
 
 interface QuotePDFStoreOptions extends QuotePDFGenerationOptions {
@@ -38,8 +40,8 @@ export class QuotePDFGenerationService {
   }
 
   async generatePDF(options: QuotePDFGenerationOptions): Promise<Buffer> {
-    const htmlContent = await this.getQuoteHtml(options);
-    return this.generatePDFBuffer(htmlContent);
+    const { html, templateAst } = await this.getQuoteHtmlWithAst(options);
+    return this.generatePDFBuffer(html, templateAst);
   }
 
   async renderPreview(options: QuotePDFGenerationOptions): Promise<QuoteTemplatePreview> {
@@ -76,13 +78,14 @@ export class QuotePDFGenerationService {
     });
   }
 
-  private async getQuoteHtml(options: QuotePDFGenerationOptions): Promise<string> {
+  private async getQuoteHtmlWithAst(options: QuotePDFGenerationOptions): Promise<{ html: string; templateAst: InvoiceTemplateAst | null }> {
     const rendered = await this.renderQuoteTemplate(options);
-    return `<!doctype html><html><head><meta charset=\"utf-8\" /><style>${rendered.css}</style></head><body>${rendered.html}</body></html>`;
+    const fullHtml = `<!doctype html><html><head><meta charset=\"utf-8\" /><style>${rendered.css}</style></head><body>${rendered.html}</body></html>`;
+    return { html: fullHtml, templateAst: rendered.templateAst };
   }
 
   private async renderQuoteTemplate(options: QuotePDFGenerationOptions): Promise<QuoteTemplatePreview> {
-    return runWithTenant(this.tenant, async () => {
+    return runWithTenant<QuoteTemplatePreview>(this.tenant, async () => {
       const { knex } = await createTenantKnex();
       const quoteViewModel = await mapDbQuoteToViewModel(knex, this.tenant, options.quoteId);
 
@@ -103,21 +106,20 @@ export class QuotePDFGenerationService {
         templateAst,
         quoteViewModel as unknown as Record<string, unknown>
       );
-      return renderEvaluatedInvoiceTemplateAst(templateAst, evaluation);
+      const rendered = await renderEvaluatedInvoiceTemplateAst(templateAst, evaluation);
+      return { html: rendered.html, css: rendered.css, templateAst };
     });
   }
 
-  private async generatePDFBuffer(htmlContent: string): Promise<Buffer> {
+  private async generatePDFBuffer(htmlContent: string, templateAst: InvoiceTemplateAst | null): Promise<Buffer> {
+    const printOptions = resolveInvoicePdfPrintOptionsFromAst(templateAst);
     const browser = await browserPoolService.getBrowser();
     let page: Page | null = null;
 
     try {
       page = await browser.newPage();
       await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-      });
+      const pdfBuffer = await page.pdf(printOptions);
       return Buffer.from(pdfBuffer);
     } finally {
       if (page) {

@@ -1,5 +1,5 @@
 import type { InvoiceTemplateAst } from '@alga-psa/types';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import { DEFAULT_INVOICE_PRINT_SETTINGS, INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 import { buildQuoteTemplateBindings } from './bindings';
 
@@ -11,6 +11,7 @@ const buildStandardQuoteDefaultAst = (): InvoiceTemplateAst => ({
   version: INVOICE_TEMPLATE_AST_VERSION,
   metadata: {
     templateName: 'Standard Quote Default',
+    printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
   bindings: buildQuoteTemplateBindings(),
   layout: {
@@ -86,6 +87,7 @@ const buildStandardQuoteDetailedAst = (): InvoiceTemplateAst => ({
   version: INVOICE_TEMPLATE_AST_VERSION,
   metadata: {
     templateName: 'Standard Quote Detailed',
+    printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
   bindings: buildQuoteTemplateBindings(),
   layout: {
