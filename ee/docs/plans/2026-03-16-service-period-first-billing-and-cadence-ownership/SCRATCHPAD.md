@@ -41,6 +41,14 @@ This scratchpad was expanded on `2026-03-17` after concluding that the first dra
 
 ## Discoveries / Constraints
 
+- (2026-03-18) DB-backed contract-cadence and mixed-cadence billing sanity now closes `T140`, `T175`, and `T176`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now lets the existing selector-input contract-cadence integration explicitly claim the contract-owned detail-persistence and mid-month monthly execution checks under one DB-backed seam: `T140/T175/T252`
+  - that same file now adds a dedicated mixed-cadence grouping integration which inserts one client-cadence persisted row plus one contract-cadence persisted row on the same `[2025-01-01, 2025-02-01)` window, runs `generateInvoice(cycleId)`, and proves both detail rows land on a single invoice candidate when the documented grouping rules allow it
+  - the mixed-cadence fixture needed an explicit horizon pairing of `targetHorizonDays: 32` with `replenishmentThresholdDays: 15`; the materializers reject a low-water threshold equal to or above the horizon target
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T140/T175/T252" --hookTimeout 600000 --coverage.enabled false`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T176" --hookTimeout 600000 --coverage.enabled false`
+
 - (2026-03-18) The final open plan-surface follow-ons are now explicit, which closes `F268`, `F269`, `F270`, `T317`, `T318`, and `T319`:
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_TROUBLESHOOTING.md` now gives operators one troubleshooting seam for generation failures, override conflicts, regeneration triage, and invoice-linkage repair without pretending those problems should be solved by ad hoc row mutation
   - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RICHER_SERVICE_PERIOD_EDITING_FOLLOW_ON.md` now fences richer editing out of recurring v1 explicitly: split/merge, bulk schedule transforms, and mass editing remain deferred until the narrow `boundary_adjustment|skip|defer` surface proves insufficient in production

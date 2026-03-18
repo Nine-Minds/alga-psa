@@ -1219,7 +1219,7 @@
   {
     "id": "T140",
     "description": "Contract-cadence recurring invoice detail rows persist contract-owned service-period boundaries correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101",
       "F125"
@@ -1520,7 +1520,7 @@
   {
     "id": "T175",
     "description": "DB-backed sanity: contract-cadence monthly recurring billing succeeds for a contract starting mid-month",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101",
       "F118"
@@ -1529,7 +1529,7 @@
   {
     "id": "T176",
     "description": "DB-backed sanity: mixed cadence-owner client billing follows documented grouping rules in an integration scenario",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108",
       "F109",
