@@ -9,6 +9,7 @@ import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ActivityDrawerProvider } from "@alga-psa/workflows/components";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
@@ -27,6 +28,7 @@ interface DefaultLayoutProps {
 }
 
 export default function DefaultLayout({ children, initialSidebarCollapsed = false }: DefaultLayoutProps) {
+  const { t } = useTranslation('msp/core');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -481,16 +483,30 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
           onConfirm={confirmInterruptAction}
           title={
             pendingInterruptKind === 'navigate'
-              ? 'Leave page and cancel AI response?'
-              : 'Close chat and cancel AI response?'
+              ? t('dialogs.aiInterrupt.navigate.title', { defaultValue: 'Leave page and cancel AI response?' })
+              : t('dialogs.aiInterrupt.closeChat.title', { defaultValue: 'Close chat and cancel AI response?' })
           }
           message={
             pendingInterruptKind === 'navigate'
-              ? 'An AI response or tool action is still in progress. Leaving this page now will cancel it.'
-              : 'An AI response or tool action is still in progress. Closing the chat now will cancel it.'
+              ? t('dialogs.aiInterrupt.navigate.message', {
+                  defaultValue:
+                    'An AI response or tool action is still in progress. Leaving this page now will cancel it.',
+                })
+              : t('dialogs.aiInterrupt.closeChat.message', {
+                  defaultValue:
+                    'An AI response or tool action is still in progress. Closing the chat now will cancel it.',
+                })
           }
-          confirmLabel={pendingInterruptKind === 'navigate' ? 'Leave page' : 'Close chat'}
-          cancelLabel={pendingInterruptKind === 'navigate' ? 'Stay on page' : 'Keep chat open'}
+          confirmLabel={
+            pendingInterruptKind === 'navigate'
+              ? t('dialogs.aiInterrupt.navigate.confirm', { defaultValue: 'Leave page' })
+              : t('dialogs.aiInterrupt.closeChat.confirm', { defaultValue: 'Close chat' })
+          }
+          cancelLabel={
+            pendingInterruptKind === 'navigate'
+              ? t('dialogs.aiInterrupt.navigate.cancel', { defaultValue: 'Stay on page' })
+              : t('dialogs.aiInterrupt.closeChat.cancel', { defaultValue: 'Keep chat open' })
+          }
         />
         <DrawerOutlet />
       </MspQuickAddClientProvider>

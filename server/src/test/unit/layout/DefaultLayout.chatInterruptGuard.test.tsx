@@ -12,12 +12,38 @@ import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 const routerPush = vi.fn();
 const mockCancelHandler = vi.fn();
 let sidebarIsInterruptible = false;
+const translations: Record<string, string> = {
+  'dialogs.aiInterrupt.navigate.title': 'Quitter la page et annuler la reponse IA ?',
+  'dialogs.aiInterrupt.navigate.message':
+    'Une reponse IA ou une action d outil est toujours en cours. Quitter cette page va l annuler.',
+  'dialogs.aiInterrupt.navigate.confirm': 'Quitter la page',
+  'dialogs.aiInterrupt.navigate.cancel': 'Rester sur la page',
+  'dialogs.aiInterrupt.closeChat.title': 'Fermer le chat et annuler la reponse IA ?',
+  'dialogs.aiInterrupt.closeChat.message':
+    'Une reponse IA ou une action d outil est toujours en cours. Fermer le chat va l annuler.',
+  'dialogs.aiInterrupt.closeChat.confirm': 'Fermer le chat',
+  'dialogs.aiInterrupt.closeChat.cancel': 'Garder le chat ouvert',
+};
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/msp/dashboard',
   useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({
     push: routerPush,
+  }),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: string | { defaultValue?: string }) => {
+      if (translations[key]) {
+        return translations[key];
+      }
+      if (typeof options === 'string') {
+        return options;
+      }
+      return options?.defaultValue ?? key;
+    },
   }),
 }));
 
@@ -78,6 +104,10 @@ vi.mock('@alga-psa/workflows/components', () => ({
 
 vi.mock('@alga-psa/msp-composition/scheduling', () => ({
   MspSchedulingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider', () => ({
+  MspSchedulingCrossFeatureProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@alga-psa/msp-composition/projects', () => ({
@@ -191,10 +221,11 @@ describe('DefaultLayout AI interrupt guard', () => {
     });
 
     expect(await screen.findByTestId('interrupt-confirmation')).toBeInTheDocument();
-    expect(screen.getByText('Close chat and cancel AI response?')).toBeInTheDocument();
+    expect(screen.getByText('Fermer le chat et annuler la reponse IA ?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Garder le chat ouvert' })).toBeInTheDocument();
     expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fermer le chat' }));
 
     await waitFor(() => {
       expect(mockCancelHandler).toHaveBeenCalledTimes(1);
@@ -224,10 +255,11 @@ describe('DefaultLayout AI interrupt guard', () => {
     fireEvent.click(screen.getByText('Go to tickets'));
 
     expect(await screen.findByTestId('interrupt-confirmation')).toBeInTheDocument();
-    expect(screen.getByText('Leave page and cancel AI response?')).toBeInTheDocument();
+    expect(screen.getByText('Quitter la page et annuler la reponse IA ?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rester sur la page' })).toBeInTheDocument();
     expect(routerPush).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Leave page' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Quitter la page' }));
 
     await waitFor(() => {
       expect(mockCancelHandler).toHaveBeenCalledTimes(1);

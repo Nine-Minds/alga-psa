@@ -176,19 +176,19 @@
   {
     "id": "T030",
     "description": "DefaultLayout.tsx: AI interrupt dialog shows translated title when pendingInterruptKind is 'navigate'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
     "id": "T031",
     "description": "DefaultLayout.tsx: AI interrupt dialog shows translated title when pendingInterruptKind is 'close-sidebar'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
     "id": "T032",
     "description": "DefaultLayout.tsx: AI interrupt dialog confirm/cancel buttons are translated for both kinds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {

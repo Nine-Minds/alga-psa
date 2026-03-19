@@ -103,6 +103,8 @@ export default defineConfig({
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tickets/src/$1') },
       { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../packages/jobs/src/index.ts') },
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
+      { find: /^@alga-psa\/teams$/, replacement: path.resolve(__dirname, '../packages/teams/src/index.ts') },
+      { find: /^@alga-psa\/teams\/(.*)$/, replacement: path.resolve(__dirname, '../packages/teams/src/$1') },
       { find: /^@alga-psa\/product-extension-actions$/, replacement: path.resolve(__dirname, '../packages/product-extension-actions/oss/entry.ts') },
       { find: /^@alga-psa\/tags$/, replacement: path.resolve(__dirname, '../packages/tags/src/index.ts') },
       { find: /^@alga-psa\/tags\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tags/src/$1') },

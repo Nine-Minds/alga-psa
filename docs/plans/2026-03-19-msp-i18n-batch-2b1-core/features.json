@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "DefaultLayout.tsx: add useTranslation('msp/core') and translate AI chat interrupt dialog (4 title/message/confirm/cancel pairs)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {

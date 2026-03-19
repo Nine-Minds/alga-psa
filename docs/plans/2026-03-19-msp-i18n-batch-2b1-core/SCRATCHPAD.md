@@ -41,6 +41,8 @@
 - (2026-03-19) Added `server/src/test/unit/layout/Sidebar.i18n.test.tsx` with a lightweight tooltip/collapse mock to verify translated open-state labels, collapsed tooltip labels, section titles in settings and billing modes, and the English fallback path when translations are unavailable.
 - (2026-03-19) Completed `F013-F019` and `T019-T029` in `Header.tsx`. Quick Create, Job Activity, breadcrumb root/current label lookup, tenant badge interpolation, and existing user-menu fallback strings now all read through `useTranslation('msp/core')` with English defaults so the pre-i18n flag-off path stays stable.
 - (2026-03-19) Added `server/src/test/unit/layout/Header.i18n.test.tsx` and updated `server/vitest.config.ts` aliases to cover `@alga-psa/jobs`. The header tests verify translated quick-create labels/descriptions, job activity strings, breadcrumb translation from menu translation keys, and the tenant badge `{{tenant}}` interpolation path.
+- (2026-03-19) Completed `F020` and `T030-T032` in `DefaultLayout.tsx` by translating both AI interruption dialog variants through `msp/core` keys with English defaults. Reused `server/src/test/unit/layout/DefaultLayout.chatInterruptGuard.test.tsx` for translated title/confirm/cancel assertions instead of creating a duplicate harness.
+- (2026-03-19) Extended the DefaultLayout test harness with a direct mock for `@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider` so the unit test stays isolated from deeper ticket/document cross-feature imports while still exercising the interrupt guard behavior.
 
 ## Commands / Runbooks
 
