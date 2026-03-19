@@ -102,6 +102,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) DB-backed verification for `billingInvoiceTiming.integration.test.ts` could not run locally because PostgreSQL was unavailable on `127.0.0.1:5438` / `::1:5438`. The targeted tests were skipped before any test body executed.
 - (2026-03-18) Recurring preview/generation diagnostics now emit only `executionIdentityKey` for live recurring failures. `billingCycleId` still exists as passive persistence or read-side metadata, but it is no longer part of the recurring preview/generate error contract.
 - (2026-03-18) Invoice API list/detail contracts now distinguish client recurring invoices as `client_cadence_window`, not `billing_cycle_window`. `billing_cycle_id` remains available on invoice DTOs only as optional historical metadata or explicit include-side context, not as the recurring classifier.
+- (2026-03-18) `recurring_projection` was dead compatibility metadata in the clean runtime paths. Canonical recurring reads now key directly off `recurring_detail_periods`; only the already-dirty `billingInvoiceTiming.integration.test.ts` still references the removed field and was intentionally left untouched until that file is clean.
 
 ## Commands / Runbooks
 
@@ -119,6 +120,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T321|T322/T328" --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.duplicate.test.ts src/test/unit/billing/invoiceGeneration.duplicate.static.test.ts src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts src/test/unit/billing/invoiceGeneration.emptyResult.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/api/invoiceRecurringList.contract.test.ts src/test/unit/api/invoiceRecurringSelectorInput.schema.test.ts src/test/unit/api/invoiceService.recurringSelectorInput.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/api/invoiceService.recurringDetailProjection.test.ts src/test/unit/api/invoiceResponseSchema.compatibility.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/invoiceQueries.recurringDetailRead.test.ts src/test/unit/billing/manualInvoiceActions.viewing.test.ts src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts src/test/unit/invoiceWorkflowEvents.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts src/test/integration/accounting/invoiceSelection.integration.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -145,6 +149,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T009 implemented with a static contract test for the shared recurring type file plus domain/UI/job coverage proving client-cadence and contract-cadence shared builders still work after the bridge fields were removed.
 - (2026-03-18) F030 implemented by removing `billingCycleId` from recurring preview/generation error payloads and duplicate errors so live recurring diagnostics key only on canonical `executionIdentityKey`.
 - (2026-03-18) F031/F032/F033/F034 implemented by renaming client recurring invoice DTO execution-window kind to `client_cadence_window`, keeping `billing_cycle_id` only as optional metadata, and cutting `InvoiceService` list/detail projection plus filter classification over to canonical recurring summary data without any `invoices.billing_cycle_id` fallback.
+- (2026-03-18) F035/F036 implemented by removing `recurring_projection` from invoice charge types, schema contracts, invoice model hydration, and workflow-event provenance so canonical recurring detail reads depend only on `recurring_detail_periods` plus summary parent period fields.
+- (2026-03-18) T010 implemented with a UI regression proving `AutomaticInvoices` can render, preview, and generate a client-cadence row whose `billingCycleId` metadata is null while still sending canonical selector-input targets.
 
 ## Links / References
 

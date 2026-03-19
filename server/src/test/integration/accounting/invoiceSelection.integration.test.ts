@@ -862,12 +862,7 @@ describe('Accounting export invoice selection integration', () => {
 
     expect(canonicalByDescription.get('Client cadence recurring line')).toMatchObject({
       item_id: clientChargeId,
-      billing_timing: 'advance',
-      recurring_projection: {
-        source: 'canonical_detail_rows',
-        detail_period_count: 1,
-        detail_billing_timing_shape: 'uniform'
-      }
+      billing_timing: 'advance'
     });
     expect(
       toDateOnly(canonicalByDescription.get('Client cadence recurring line')?.service_period_start)
@@ -875,6 +870,7 @@ describe('Accounting export invoice selection integration', () => {
     expect(
       toDateOnly(canonicalByDescription.get('Client cadence recurring line')?.service_period_end)
     ).toBe('2025-03-01');
+    expect(canonicalByDescription.get('Client cadence recurring line')).not.toHaveProperty('recurring_projection');
     expect(
       canonicalByDescription.get('Client cadence recurring line')?.recurring_detail_periods?.map((period) => ({
         service_period_start: toDateOnly(period.service_period_start),
@@ -891,12 +887,7 @@ describe('Accounting export invoice selection integration', () => {
 
     expect(canonicalByDescription.get('Contract cadence recurring line')).toMatchObject({
       item_id: contractChargeId,
-      billing_timing: 'advance',
-      recurring_projection: {
-        source: 'canonical_detail_rows',
-        detail_period_count: 1,
-        detail_billing_timing_shape: 'uniform'
-      }
+      billing_timing: 'advance'
     });
     expect(
       toDateOnly(canonicalByDescription.get('Contract cadence recurring line')?.service_period_start)
@@ -904,6 +895,7 @@ describe('Accounting export invoice selection integration', () => {
     expect(
       toDateOnly(canonicalByDescription.get('Contract cadence recurring line')?.service_period_end)
     ).toBe('2025-03-08');
+    expect(canonicalByDescription.get('Contract cadence recurring line')).not.toHaveProperty('recurring_projection');
     expect(
       canonicalByDescription.get('Contract cadence recurring line')?.recurring_detail_periods?.map((period) => ({
         service_period_start: toDateOnly(period.service_period_start),

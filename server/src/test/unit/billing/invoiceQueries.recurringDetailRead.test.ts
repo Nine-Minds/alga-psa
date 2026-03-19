@@ -54,13 +54,6 @@ describe('invoiceQueries recurring detail reads', () => {
         service_period_start: '2025-01-01T00:00:00.000Z',
         service_period_end: '2025-03-01T00:00:00.000Z',
         billing_timing: null,
-        recurring_projection: {
-          source: 'canonical_detail_rows',
-          detail_period_count: 2,
-          parent_period_projection: 'summary_range',
-          parent_billing_timing_projection: 'uniform_detail_value_or_null',
-          detail_billing_timing_shape: 'mixed',
-        },
         recurring_detail_periods: [
           {
             service_period_start: '2025-01-01T00:00:00.000Z',

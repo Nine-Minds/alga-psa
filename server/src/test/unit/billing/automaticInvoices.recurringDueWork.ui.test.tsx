@@ -92,11 +92,11 @@ const { default: AutomaticInvoices } = await import(
   '../../../../../packages/billing/src/components/billing-dashboard/AutomaticInvoices'
 );
 
-function createClientRow() {
+function createClientRow(options: { billingCycleId?: string | null } = {}) {
   return buildServicePeriodRecurringDueWorkRow({
     clientId: 'client-1',
     clientName: 'Acme Co',
-    billingCycleId: 'cycle-2025-03',
+    billingCycleId: options.billingCycleId === undefined ? 'cycle-2025-03' : options.billingCycleId,
     record: buildRecurringServicePeriodRecord({
       cadenceOwner: 'client',
       duePosition: 'advance',
@@ -325,6 +325,57 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     expect(screen.getByText('Client schedule')).toBeInTheDocument();
     expect(screen.getAllByText('2025-03-01 to 2025-04-01').length).toBeGreaterThan(0);
+  });
+
+  it('T010: AutomaticInvoices can render and act on a client-cadence recurring row whose bridge metadata is null', async () => {
+    const clientRow = createClientRow({ billingCycleId: null });
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      rows: [clientRow],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Client schedule')).toBeInTheDocument();
+    expect(screen.getByText('No billing cycle bridge')).toBeInTheDocument();
+    expect(clientRow.billingCycleId).toBeNull();
+    expect(clientRow.selectorInput.billingCycleId).toBeUndefined();
+
+    fireEvent.click(document.getElementById(`select-${clientRow.executionIdentityKey}`)!);
+    fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
+
+    await waitFor(() => {
+      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith(clientRow.selectorInput);
+      expect(screen.getByText('Client Details')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Close Preview/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+    );
+
+    await waitFor(() => {
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        targets: [
+          expect.objectContaining({
+            selectorInput: clientRow.selectorInput,
+            executionWindow: clientRow.executionWindow,
+          }),
+        ],
+      });
+    });
+
+    const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
+    expect(generateCall?.[0]?.targets?.[0]?.billingCycleId).toBeUndefined();
+    expect(generateCall?.[0]?.targets?.[0]?.selectorInput?.billingCycleId).toBeUndefined();
   });
 
   it('T091: client-cadence ready rows use canonical selector input while still preserving passive billing-cycle metadata for the table', async () => {

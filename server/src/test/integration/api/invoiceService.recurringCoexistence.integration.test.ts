@@ -190,15 +190,9 @@ describe('InvoiceService recurring coexistence integration', () => {
       item_id: canonicalChargeId,
       description: 'Canonical recurring line',
       billing_timing: 'arrears',
-      recurring_projection: {
-        source: 'canonical_detail_rows',
-        detail_period_count: 1,
-        parent_period_projection: 'summary_range',
-        parent_billing_timing_projection: 'uniform_detail_value_or_null',
-        detail_billing_timing_shape: 'uniform',
-      },
     });
     expect(Number(canonicalInvoice?.line_items?.[0]?.total_price)).toBe(100);
+    expect(canonicalInvoice?.line_items?.[0]).not.toHaveProperty('recurring_projection');
     expect(toDateOnly(canonicalInvoice?.line_items?.[0]?.service_period_start)).toBe('2025-02-01');
     expect(toDateOnly(canonicalInvoice?.line_items?.[0]?.service_period_end)).toBe('2025-03-01');
     expect(

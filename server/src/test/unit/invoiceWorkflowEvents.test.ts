@@ -43,7 +43,6 @@ describe('invoice workflow event payload builders', () => {
         service_period_start: '2026-01-01T00:00:00.000Z',
         service_period_end: '2026-03-01T00:00:00.000Z',
         billing_timing: null,
-        recurring_projection: { source: 'canonical_detail_rows' },
         recurring_detail_periods: [
           {
             service_period_start: '2026-01-01T00:00:00.000Z',

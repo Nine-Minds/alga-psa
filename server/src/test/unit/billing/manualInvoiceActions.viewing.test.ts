@@ -63,13 +63,6 @@ const mocks = vi.hoisted(() => {
         service_period_start: '2025-01-01T00:00:00.000Z',
         service_period_end: '2025-02-01T00:00:00.000Z',
         billing_timing: 'arrears',
-        recurring_projection: {
-          source: 'canonical_detail_rows',
-          detail_period_count: 1,
-          parent_period_projection: 'summary_range',
-          parent_billing_timing_projection: 'uniform_detail_value_or_null',
-          detail_billing_timing_shape: 'uniform',
-        },
         recurring_detail_periods: [
           {
             service_period_start: '2025-01-01T00:00:00.000Z',
@@ -209,10 +202,6 @@ describe('manual invoice edit and viewing compatibility', () => {
     const manualCharge = result.invoice_charges.find((charge: any) => charge.item_id === 'manual-1');
 
     expect(recurringCharge).toMatchObject({
-      recurring_projection: {
-        source: 'canonical_detail_rows',
-        detail_period_count: 1,
-      },
       recurring_detail_periods: [
         {
           service_period_start: '2025-01-01T00:00:00.000Z',
@@ -221,6 +210,7 @@ describe('manual invoice edit and viewing compatibility', () => {
         },
       ],
     });
+    expect(recurringCharge).not.toHaveProperty('recurring_projection');
     expect(manualCharge).not.toHaveProperty('recurring_detail_periods');
     expect(manualCharge).not.toHaveProperty('service_period_start');
     expect(manualCharge).not.toHaveProperty('service_period_end');

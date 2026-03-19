@@ -287,13 +287,6 @@ describe('invoice model recurring service-period projection', () => {
       service_period_start: '2025-01-01T00:00:00.000Z',
       service_period_end: '2025-03-01T00:00:00.000Z',
       billing_timing: null,
-      recurring_projection: {
-        source: 'canonical_detail_rows',
-        detail_period_count: 2,
-        parent_period_projection: 'summary_range',
-        parent_billing_timing_projection: 'uniform_detail_value_or_null',
-        detail_billing_timing_shape: 'mixed',
-      },
       recurring_detail_periods: [
         {
           service_period_start: '2025-01-01T00:00:00.000Z',
@@ -307,6 +300,7 @@ describe('invoice model recurring service-period projection', () => {
         },
       ],
     });
+    expect(recurringCharge).not.toHaveProperty('recurring_projection');
   });
 
   it('T200: hydrated recurring charges expose canonical detail periods as authoritative while parent period fields stay summary metadata', async () => {
@@ -360,13 +354,6 @@ describe('invoice model recurring service-period projection', () => {
     const invoice = await Invoice.getById(knex, 'tenant-1', 'invoice-1');
     const recurringCharge = invoice?.invoice_charges?.[0];
 
-    expect(recurringCharge?.recurring_projection).toEqual({
-      source: 'canonical_detail_rows',
-      detail_period_count: 2,
-      parent_period_projection: 'summary_range',
-      parent_billing_timing_projection: 'uniform_detail_value_or_null',
-      detail_billing_timing_shape: 'mixed',
-    });
     expect(recurringCharge?.recurring_detail_periods).toEqual([
       {
         service_period_start: '2025-01-01T00:00:00.000Z',
@@ -382,6 +369,7 @@ describe('invoice model recurring service-period projection', () => {
     expect(recurringCharge?.service_period_start).toBe('2025-01-01T00:00:00.000Z');
     expect(recurringCharge?.service_period_end).toBe('2025-03-01T00:00:00.000Z');
     expect(recurringCharge?.billing_timing).toBeNull();
+    expect(recurringCharge).not.toHaveProperty('recurring_projection');
   });
 
   it('T192: historical flat invoices without canonical detail rows still hydrate without synthesized recurring detail metadata', async () => {
@@ -423,7 +411,6 @@ describe('invoice model recurring service-period projection', () => {
       total_price: 5000,
     });
     expect(legacyCharge).not.toHaveProperty('recurring_detail_periods');
-    expect(legacyCharge).not.toHaveProperty('recurring_projection');
     expect(legacyCharge).not.toHaveProperty('service_period_start');
     expect(legacyCharge).not.toHaveProperty('service_period_end');
     expect(legacyCharge).not.toHaveProperty('billing_timing');

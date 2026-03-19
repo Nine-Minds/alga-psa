@@ -71,22 +71,6 @@ export interface IInvoiceChargeRecurringDetailPeriod {
   billing_timing?: 'arrears' | 'advance' | null;
 }
 
-/**
- * Compatibility contract for recurring invoice reads that hydrate canonical detail rows onto a parent charge.
- *
- * When this object is present:
- * - `recurring_detail_periods` is the authoritative canonical period list for the charge
- * - parent `service_period_start` / `service_period_end` is the summary range spanning those detail rows
- * - parent `billing_timing` is populated only when every detail row shares the same timing value
- */
-export interface IInvoiceChargeRecurringProjection {
-  source: 'canonical_detail_rows';
-  detail_period_count: number;
-  parent_period_projection: 'summary_range';
-  parent_billing_timing_projection: 'uniform_detail_value_or_null';
-  detail_billing_timing_shape: 'none' | 'uniform' | 'mixed';
-}
-
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
@@ -94,13 +78,13 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   service_period_start?: ISO8601String | null;
   service_period_end?: ISO8601String | null;
   billing_timing?: 'arrears' | 'advance' | null;
-  /** Absent on historical flat invoices or non-recurring rows that have no canonical detail-period backing. */
-  recurring_detail_periods?: IInvoiceChargeRecurringDetailPeriod[];
   /**
-   * Present only when canonical recurring detail rows were hydrated.
-   * When absent, readers must preserve any parent-level period fields as legacy fallback and must not invent detail rows.
+   * Canonical recurring detail periods linked to this charge.
+   * When present, these rows are authoritative and the parent service-period
+   * fields are summary values derived from them.
+   * Historical flat invoices and non-recurring charges omit this field.
    */
-  recurring_projection?: IInvoiceChargeRecurringProjection | null;
+  recurring_detail_periods?: IInvoiceChargeRecurringDetailPeriod[];
   service_item_kind?: 'service' | 'product';
   service_sku?: string | null;
   service_name?: string | null;

@@ -15,7 +15,6 @@ import type {
   IInvoice,
   IInvoiceCharge,
   IInvoiceChargeRecurringDetailPeriod,
-  IInvoiceChargeRecurringProjection,
   IInvoiceTemplate,
   ICustomField,
   IConditionalRule,
@@ -123,22 +122,12 @@ function attachCanonicalRecurringDetailPeriods(
           .filter((value): value is 'arrears' | 'advance' => value === 'arrears' || value === 'advance')
       )
     );
-    const recurringProjection: IInvoiceChargeRecurringProjection = {
-      source: 'canonical_detail_rows',
-      detail_period_count: recurringDetailPeriods.length,
-      parent_period_projection: 'summary_range',
-      parent_billing_timing_projection: 'uniform_detail_value_or_null',
-      detail_billing_timing_shape:
-        billingTimings.length === 0 ? 'none' : billingTimings.length === 1 ? 'uniform' : 'mixed',
-    };
-
     return {
       ...charge,
       service_period_start: servicePeriodStarts[0] ?? null,
       service_period_end: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null,
       billing_timing: billingTimings.length === 1 ? billingTimings[0] : null,
       recurring_detail_periods: recurringDetailPeriods,
-      recurring_projection: recurringProjection,
     };
   });
 }

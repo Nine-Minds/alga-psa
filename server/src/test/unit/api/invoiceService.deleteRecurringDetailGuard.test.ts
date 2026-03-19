@@ -84,7 +84,6 @@ describe('InvoiceService delete recurring detail safeguards', () => {
     vi.mocked(InvoiceModel.getInvoiceCharges).mockResolvedValue([
       {
         item_id: 'charge-1',
-        recurring_projection: { source: 'canonical_detail_rows' },
         recurring_detail_periods: [
           {
             service_period_start: '2025-01-01T00:00:00.000Z',

@@ -12,7 +12,7 @@ const itemId = '33333333-3333-4333-8333-333333333333';
 const serviceId = '44444444-4444-4444-8444-444444444444';
 
 describe('invoice response schema compatibility', () => {
-  it('T198: legacy flat invoice payloads and canonical detail-backed invoice payloads both remain API-schema compatible', () => {
+  it('T198: legacy flat invoice payloads and canonical detail-backed invoice payloads both remain API-schema compatible without recurring_projection metadata', () => {
     const legacyFlatInvoice = invoiceResponseSchema.safeParse({
       invoice_id: invoiceId,
       client_id: '55555555-5555-4555-8555-555555555555',
@@ -85,13 +85,6 @@ describe('invoice response schema compatibility', () => {
           service_period_start: '2026-01-01T00:00:00.000Z',
           service_period_end: '2026-03-01T00:00:00.000Z',
           billing_timing: null,
-          recurring_projection: {
-            source: 'canonical_detail_rows',
-            detail_period_count: 2,
-            parent_period_projection: 'summary_range',
-            parent_billing_timing_projection: 'uniform_detail_value_or_null',
-            detail_billing_timing_shape: 'mixed',
-          },
           recurring_detail_periods: [
             {
               service_period_start: '2026-01-01T00:00:00.000Z',
@@ -108,11 +101,11 @@ describe('invoice response schema compatibility', () => {
       ],
     });
 
-    const invalidHalfMigratedCharge = invoiceItemResponseSchema.safeParse({
+    const invalidEmptyDetailCharge = invoiceItemResponseSchema.safeParse({
       item_id: itemId,
       invoice_id: invoiceId,
       service_id: serviceId,
-      description: 'Half-migrated recurring line',
+      description: 'Empty recurring detail line',
       quantity: 1,
       unit_price: 10000,
       total_price: 10000,
@@ -123,13 +116,7 @@ describe('invoice response schema compatibility', () => {
       tenant: tenantId,
       created_at: '2026-03-17T00:00:00.000Z',
       updated_at: '2026-03-17T00:00:00.000Z',
-      recurring_detail_periods: [
-        {
-          service_period_start: '2026-01-01T00:00:00.000Z',
-          service_period_end: '2026-02-01T00:00:00.000Z',
-          billing_timing: 'arrears',
-        },
-      ],
+      recurring_detail_periods: [],
     });
 
     const financialCanonicalCharge = financialInvoiceItemResponseSchema.safeParse({
@@ -150,13 +137,6 @@ describe('invoice response schema compatibility', () => {
       service_period_start: '2026-01-01T00:00:00.000Z',
       service_period_end: '2026-03-01T00:00:00.000Z',
       billing_timing: null,
-      recurring_projection: {
-        source: 'canonical_detail_rows',
-        detail_period_count: 2,
-        parent_period_projection: 'summary_range',
-        parent_billing_timing_projection: 'uniform_detail_value_or_null',
-        detail_billing_timing_shape: 'mixed',
-      },
       recurring_detail_periods: [
         {
           service_period_start: '2026-01-01T00:00:00.000Z',
@@ -173,10 +153,13 @@ describe('invoice response schema compatibility', () => {
 
     expect(legacyFlatInvoice.success).toBe(true);
     expect(canonicalDetailBackedInvoice.success).toBe(true);
-    expect(invalidHalfMigratedCharge.success).toBe(false);
+    expect(invalidEmptyDetailCharge.success).toBe(false);
     expect(financialCanonicalCharge.success).toBe(true);
-    expect(invalidHalfMigratedCharge.error?.issues[0]?.message).toBe(
-      'Legacy flat invoice charges must not expose recurring_detail_periods without recurring_projection.'
+    if (canonicalDetailBackedInvoice.success) {
+      expect(canonicalDetailBackedInvoice.data.invoice_charges?.[0]).not.toHaveProperty('recurring_projection');
+    }
+    expect(invalidEmptyDetailCharge.error?.issues[0]?.message).toBe(
+      'Canonical recurring invoice charges must omit recurring_detail_periods when no detail rows exist.'
     );
   });
 });

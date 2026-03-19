@@ -7,9 +7,6 @@ export interface InvoiceRecurringChargeLike {
   service_period_start?: string | null;
   service_period_end?: string | null;
   billing_timing?: 'arrears' | 'advance' | null;
-  recurring_projection?: {
-    source: 'canonical_detail_rows';
-  } | null;
   recurring_detail_periods?: Array<{
     service_period_start?: string | null;
     service_period_end?: string | null;
@@ -47,7 +44,6 @@ export function summarizeInvoiceRecurringProvenance(
   const canonicalDetailPeriods = charges
     .filter(
       (charge) =>
-        charge.recurring_projection?.source === 'canonical_detail_rows' &&
         Array.isArray(charge.recurring_detail_periods) &&
         charge.recurring_detail_periods.length > 0
     )
@@ -63,7 +59,9 @@ export function summarizeInvoiceRecurringProvenance(
   if (canonicalDetailPeriods.length > 0) {
     return {
       authoritativePeriodSource: 'canonical_detail_rows',
-      detailBackedChargeCount: charges.filter((charge) => charge.recurring_projection?.source === 'canonical_detail_rows').length,
+      detailBackedChargeCount: charges.filter(
+        (charge) => Array.isArray(charge.recurring_detail_periods) && charge.recurring_detail_periods.length > 0
+      ).length,
       detailPeriodCount: canonicalDetailPeriods.length,
       summaryServicePeriodStart: canonicalDetailPeriods[0]?.service_period_start ?? null,
       summaryServicePeriodEnd: canonicalDetailPeriods[canonicalDetailPeriods.length - 1]?.service_period_end ?? null,
