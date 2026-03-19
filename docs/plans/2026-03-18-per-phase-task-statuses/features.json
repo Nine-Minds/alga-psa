@@ -230,7 +230,7 @@
   {
     "id": "F039",
     "description": "ProjectTaskStatusEditor and ProjectTaskStatusSelector handle phase statuses when creating project from template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.3"]
   },
   {
