@@ -141,6 +141,9 @@ export const getClientProjectTasks = withAuth(async (
     .leftJoin('statuses as s', function() {
       this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
     })
+    .leftJoin('standard_statuses as ss', function() {
+      this.on('psm.standard_status_id', 'ss.standard_status_id').andOn('psm.tenant', 'ss.tenant');
+    })
     .leftJoin('priorities as pri', function() {
       this.on('pt.priority_id', 'pri.priority_id').andOn('pt.tenant', 'pri.tenant');
     })
@@ -158,8 +161,8 @@ export const getClientProjectTasks = withAuth(async (
   query = query.select(
     'psm.custom_name',
     'psm.display_order',
-    's.name as status_name',
-    's.is_closed',
+    knex.raw('COALESCE(s.name, ss.name) as status_name'),
+    knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
     's.color as status_color'
   );
 
