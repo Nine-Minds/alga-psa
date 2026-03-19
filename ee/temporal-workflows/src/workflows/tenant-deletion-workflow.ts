@@ -206,19 +206,27 @@ export async function tenantDeletionWorkflow(
       }
     }
 
-    // Step 2.7: Send cancellation confirmation emails to all tenant users
-    state.step = 'sending_cancellation_email';
-    log.info('Sending cancellation confirmation emails', { tenantId: input.tenantId });
-    try {
-      const emailResult = await sendCancellationConfirmationEmail(input.tenantId, state.tenantName || 'your organization');
-      log.info('Cancellation emails sent', {
-        sent: emailResult.emailsSent,
-        failed: emailResult.emailsFailed,
-      });
-    } catch (emailError) {
-      // Email failure should not block the deletion workflow
-      log.warn('Failed to send cancellation confirmation emails (continuing with deletion)', {
-        error: emailError instanceof Error ? emailError.message : 'Unknown error',
+    // Step 2.7: Send deactivation email — only for extension-triggered deletions.
+    // User-initiated cancellations (stripe_webhook) already received a "request received" email
+    // at the time they clicked Cancel, so we don't email them again weeks later.
+    if (input.triggerSource === 'nineminds_extension') {
+      state.step = 'sending_cancellation_email';
+      log.info('Sending deactivation email (extension-triggered)', { tenantId: input.tenantId });
+      try {
+        const emailResult = await sendCancellationConfirmationEmail(input.tenantId, state.tenantName || 'your organization');
+        log.info('Deactivation email sent', {
+          sent: emailResult.emailsSent,
+          failed: emailResult.emailsFailed,
+        });
+      } catch (emailError) {
+        // Email failure should not block the deletion workflow
+        log.warn('Failed to send deactivation email (continuing with deletion)', {
+          error: emailError instanceof Error ? emailError.message : 'Unknown error',
+        });
+      }
+    } else {
+      log.info('Skipping deactivation email (user already notified at cancellation time)', {
+        triggerSource: input.triggerSource,
       });
     }
 

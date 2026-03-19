@@ -6,6 +6,7 @@ import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { getStripeService } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
 import logger from '@alga-psa/core/logger';
+import { sendCancellationRequestEmail } from '@alga-psa/email/sendCancellationRequestEmail';
 import {
   IGetSubscriptionInfoResponse,
   IGetPaymentMethodResponse,
@@ -756,15 +757,41 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
         updated_at: knex.fn.now(),
       });
 
+    const cancelAtDate = new Date(updatedSubscription.cancel_at * 1000).toISOString();
+
     logger.info(
       `[cancelSubscriptionAction][tenant=${session.user.tenant}] Subscription ${subscription.stripe_subscription_external_id} set to cancel at period end`
     );
+
+    // Send cancellation request received email (fire-and-forget, don't block the response)
+    try {
+      const tenant = await knex('tenants')
+        .select('email', 'client_name', 'company_name')
+        .where({ tenant: session.user.tenant })
+        .first();
+
+      if (tenant?.email) {
+        const tenantName = tenant.company_name || tenant.client_name || 'your organization';
+        await sendCancellationRequestEmail({
+          tenantName,
+          recipientName: tenant.client_name || tenantName,
+          recipientEmail: tenant.email,
+          cancelAtDate,
+        });
+        logger.info(
+          `[cancelSubscriptionAction][tenant=${session.user.tenant}] Cancellation request email sent to ${tenant.email}`
+        );
+      }
+    } catch (emailError) {
+      // Don't fail the cancellation if email fails
+      logger.warn('[cancelSubscriptionAction] Failed to send cancellation request email:', emailError);
+    }
 
     return {
       success: true,
       data: {
         subscription_id: subscription.stripe_subscription_external_id,
-        cancel_at: new Date(updatedSubscription.cancel_at * 1000).toISOString(),
+        cancel_at: cancelAtDate,
       },
     };
   } catch (error) {

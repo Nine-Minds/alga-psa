@@ -12,6 +12,7 @@ export interface EmailServiceInterface {
 
 export interface EmailParams {
   to: string | string[];
+  from?: string;
   subject: string;
   html?: string;
   text?: string;
@@ -202,7 +203,7 @@ export class ResendEmailService implements EmailServiceInterface {
     try {
       // Prepare Resend email data
       const emailData = {
-        from: `${this.defaultFromName} <${this.defaultFromAddress}>`,
+        from: params.from || `${this.defaultFromName} <${this.defaultFromAddress}>`,
         to: validEmails,
         subject: params.subject,
         html: params.html,
