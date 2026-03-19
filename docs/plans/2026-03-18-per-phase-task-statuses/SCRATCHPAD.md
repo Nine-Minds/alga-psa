@@ -86,6 +86,7 @@
 - (2026-03-18) Implemented `F022` by deriving kanban counts from a lookup of the currently effective phase statuses, sorting visible columns by `display_order`, and ignoring tasks whose mapping IDs are not part of the selected phase’s effective status set.
 - (2026-03-18) Implemented `F023` with a minimal prop-boundary change: `ProjectDetail.tsx` now passes `visibleKanbanStatuses` into `KanbanBoard`, so the board renders from the selected phase’s effective status columns directly.
 - (2026-03-18) Implemented `F024` by making `TaskEdit` and `TaskQuickAdd` fetch phase-effective statuses for their active phase, including same-project phase switches. That ensures `TaskStatusSelect` receives the correct status list via props even when the editor phase differs from the surrounding view state.
+- (2026-03-18) Implemented `F025` in `ProjectTaskStatusSettings` with a scope selector at the top of the panel. `Project Defaults` is the first option, followed by each project phase loaded from `getProjectMetadata(projectId)`.
 
 ### Key Files — Client Portal
 - `packages/client-portal/src/components/projects/ProjectDetailView.tsx` — orchestrator
