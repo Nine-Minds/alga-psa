@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "moveTaskToPhase(): same-project cross-phase moves resolve status — same name in target → keep it",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4.1"]
   },
   {

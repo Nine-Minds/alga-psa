@@ -68,6 +68,7 @@
 - (2026-03-18) Implemented `F013` by adding `copyProjectStatusesToPhase(projectId, phaseId)`. It validates phase ownership, treats an already-customized phase as idempotent, and copies only project-default mappings (`phase_id IS NULL`) into the phase while preserving ordering, visibility, and status references.
 - (2026-03-18) Implemented `F014` by adding `removePhaseStatuses(phaseId)` and remapping affected tasks before deletion. The replacement rule already follows the PRD’s status-resolution order: same name first, then first target status with the same open/closed state, then final fallback to the first default status.
 - (2026-03-18) Implemented `F015` by extending the public `getProjectTaskStatuses()` action and its internal helpers with optional `phaseId`, switching them onto `ProjectModel.getEffectiveStatusMappings()`, and carrying `phase_id` into the returned `ProjectStatus` DTOs.
+- (2026-03-18) Implemented `F016` in `moveTaskToPhase()` by splitting same-project cross-phase moves from the existing cross-project branch, fetching target phase-effective mappings, and preserving intent via same-name matches when the original mapping ID is not valid in the destination phase.
 
 ### Key Files — MSP UI
 - `packages/projects/src/components/ProjectDetail.tsx` — orchestrator, passes statuses to KanbanBoard (L2401-2406), phase selection (L186), task filtering (L346-425)
