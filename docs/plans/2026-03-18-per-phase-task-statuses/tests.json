@@ -44,7 +44,7 @@
   {
     "id": "TB07",
     "description": "MSP Kanban and task UI: ProjectDetail fetches phase-effective statuses on phase switch; status columns update; task counts and completed counts use phase-effective statuses; KanbanBoard renders correct column count; TaskStatusSelect dropdown matches phase statuses",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021", "F022", "F023", "F024"],
     "covers": ["T034", "T035", "T036", "T037", "T038"]
   },
