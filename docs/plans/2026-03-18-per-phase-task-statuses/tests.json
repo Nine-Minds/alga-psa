@@ -16,7 +16,7 @@
   {
     "id": "TB03",
     "description": "Effective status resolution: returns phase-specific statuses when configured; falls back to project defaults (phase_id IS NULL) when phase has none; returns project defaults for null/undefined phaseId; never mixes phase and project statuses; tenant isolation in all queries",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F008", "F009"],
     "covers": ["T009", "T010", "T011", "T012", "T013", "T014", "T060"]
   },
