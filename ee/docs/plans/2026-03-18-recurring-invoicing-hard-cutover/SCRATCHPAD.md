@@ -21,6 +21,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Direct `selector_input` preview/generate requests must normalize and validate against persisted `recurring_service_periods`; treating the caller-provided window as trusted input leaves a gap where mutated windows can bypass canonical service-period authority.
 - (2026-03-18) Client billing schedule edits should regenerate future client-cadence `recurring_service_periods` after the last billed boundary while leaving `client_billing_cycles` available only for schedule administration and historical context.
 - (2026-03-18) Bucket allowance periods should resolve from canonical `recurring_service_periods` for both client cadence and contract cadence; `client_billing_cycles` should not determine bucket rollover windows once recurring service periods exist.
+- (2026-03-18) Hourly and usage recurring charge queries should always use canonical service-period bounds when a persisted recurring selection is present, even if the invoice window is later or shifted metadata.
 
 ## Agent Findings
 
@@ -114,6 +115,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - Bucket recurring-period slice completed:
   - Updated [bucketUsageService.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/services/bucketUsageService.ts) so current and previous bucket allowance periods resolve from canonical `recurring_service_periods` by obligation and schedule key, with no live `client_billing_cycles` lookup in the recurring bucket path.
   - Replaced the old client-cycle-based unit coverage in [bucketUsageService.periods.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/bucketUsageService.periods.test.ts) with client-cadence and contract-cadence tests that prove rollover uses canonical recurring service periods and never touches `client_billing_cycles`.
+- Hourly/usage service-window verification slice completed:
+  - Confirmed [billingEngine.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/lib/billing/billingEngine.ts) already uses `servicePeriodStartExclusive` / `servicePeriodEndExclusive` to query `time_entries` and `usage_tracking` for persisted recurring selections; no product-code change was required for the hard-cutover behavior.
+  - Extended [billingEngine.endExclusiveQueries.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/billingEngine.endExclusiveQueries.test.ts) with persisted-recurring hourly and usage regressions proving canonical service windows still drive the queries when they differ from the invoice window.
 
 ## Discoveries / Constraints
 
@@ -143,6 +147,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) The DB-backed schedule-management suite now imports action files directly instead of `@alga-psa/billing/actions`, because the broader action index pulls optional jobs infrastructure that is not resolvable in this isolated test harness.
 - (2026-03-18) DB-backed verification for `clientBillingCycleAnchors.test.ts` is currently blocked locally because PostgreSQL is unavailable on `127.0.0.1:5438` / `::1:5438`. The rewritten tests load and compile, but the shared test context aborts before any test body executes.
 - (2026-03-18) `bucketUsageService.ts` no longer queries `client_billing_cycles` on the recurring bucket path. Bucket period resolution now derives current and rollover windows from `recurring_service_periods` and falls back to plan-anchor arithmetic only when no canonical service period exists.
+- (2026-03-18) `billingEngine.ts` already had the correct service-window behavior for hourly and usage recurring execution. `F056` was completed by locking that behavior with explicit persisted-selection query regressions instead of changing runtime logic.
 
 ## Commands / Runbooks
 
@@ -175,6 +180,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/billing/updateClientBillingSchedule.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/bucketUsageService.periods.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/billingEngine.endExclusiveQueries.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -220,6 +226,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T052/T053 implemented with focused unit coverage for schedule-driven `recurring_service_periods` regeneration plus a DB-backed schedule suite rewrite that now asserts preserved client-cycle administration and canonical recurring regeneration semantics, although the DB-backed run is currently blocked locally by the missing PostgreSQL test instance.
 - (2026-03-18) F055 implemented by deriving bucket allowance periods and rollover lookups from canonical `recurring_service_periods` schedule windows instead of preferring `client_billing_cycles`.
 - (2026-03-18) T054/T055 implemented with client-cadence and contract-cadence bucket-service unit coverage proving recurring bucket resolution uses canonical service periods and never hits `client_billing_cycles`.
+- (2026-03-18) F056 confirmed by locking the existing billing-engine behavior that filters hourly `time_entries` and usage `usage_tracking` against canonical persisted service windows rather than invoice-window or client-cycle boundaries.
+- (2026-03-18) T056/T057 implemented with focused billing-engine regressions proving persisted recurring hourly and usage execution still query inside the canonical service window when it differs from the invoice window.
 
 ## Links / References
 
