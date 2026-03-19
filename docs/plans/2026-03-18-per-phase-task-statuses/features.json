@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Action: getProjectStatusMappings() accepts optional phaseId and filters accordingly",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.3"]
   },
   {
