@@ -74,6 +74,81 @@ async function resolveProjectStatusInfo(
   return { status: row.status_name, isClosed: Boolean(row.is_closed) };
 }
 
+type ProjectStatusMappingDetails = IProjectStatusMapping & {
+  status_name: string;
+  is_closed: boolean;
+};
+
+async function getScopedProjectStatusMappings(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectId: string,
+  phaseId?: string | null
+): Promise<ProjectStatusMappingDetails[]> {
+  const query = trx('project_status_mappings as psm')
+    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+    })
+    .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
+    .select(
+      'psm.*',
+      trx.raw('COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'),
+      trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    );
+
+  if (phaseId) {
+    query.andWhere('psm.phase_id', phaseId);
+  } else {
+    query.whereNull('psm.phase_id');
+  }
+
+  return query.orderBy('psm.display_order');
+}
+
+async function getEffectiveProjectStatusMappings(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectId: string,
+  phaseId?: string | null
+): Promise<ProjectStatusMappingDetails[]> {
+  if (!phaseId) {
+    return getScopedProjectStatusMappings(trx, tenant, projectId);
+  }
+
+  const phaseMappings = await getScopedProjectStatusMappings(trx, tenant, projectId, phaseId);
+  if (phaseMappings.length > 0) {
+    return phaseMappings;
+  }
+
+  return getScopedProjectStatusMappings(trx, tenant, projectId);
+}
+
+async function getProjectStatusMappingDetails(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectStatusMappingId: string
+): Promise<ProjectStatusMappingDetails | null> {
+  const row = await trx('project_status_mappings as psm')
+    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+    })
+    .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
+    .select(
+      'psm.*',
+      trx.raw('COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'),
+      trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    )
+    .first<ProjectStatusMappingDetails>();
+
+  return row ?? null;
+}
+
 function resolveTaskBlockRelation(params: {
   dependencyType: DependencyType;
   predecessorTaskId: string;
@@ -1029,6 +1104,40 @@ export const moveTaskToPhase = withAuth(async (
                     }
 
                     finalStatusMappingId = equivalentMapping.project_status_mapping_id;
+                }
+            } else if (currentPhase.project_id === newPhase.project_id && currentPhase.phase_id !== newPhase.phase_id && !newStatusMappingId) {
+                const currentMapping = await getProjectStatusMappingDetails(trx, tenant, existingTask.project_status_mapping_id);
+                if (!currentMapping) {
+                    throw new Error('Current status mapping not found');
+                }
+
+                const targetPhaseMappings = await getEffectiveProjectStatusMappings(
+                    trx,
+                    tenant,
+                    newPhase.project_id,
+                    newPhase.phase_id
+                );
+
+                if (targetPhaseMappings.length === 0) {
+                    throw new Error('No valid status mappings found in target phase');
+                }
+
+                const existingTargetMapping = targetPhaseMappings.find((mapping) =>
+                    mapping.project_status_mapping_id === currentMapping.project_status_mapping_id
+                );
+
+                if (existingTargetMapping) {
+                    finalStatusMappingId = existingTargetMapping.project_status_mapping_id;
+                } else {
+                    const sameNameMapping = targetPhaseMappings.find((mapping) =>
+                        mapping.status_name === currentMapping.status_name
+                    );
+
+                    if (sameNameMapping) {
+                        finalStatusMappingId = sameNameMapping.project_status_mapping_id;
+                    } else {
+                        finalStatusMappingId = targetPhaseMappings[0].project_status_mapping_id;
+                    }
                 }
             }
 
