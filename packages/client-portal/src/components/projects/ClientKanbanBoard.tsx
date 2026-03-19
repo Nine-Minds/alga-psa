@@ -422,6 +422,10 @@ export default function ClientKanbanBoard({
   const dateLocale = getDateFnsLocale(i18n.language);
   const showPhases = config.show_phases ?? false;
   const showPhaseCompletion = config.show_phase_completion ?? false;
+  const orderedStatuses = React.useMemo(
+    () => [...statuses].sort((a, b) => a.display_order - b.display_order),
+    [statuses]
+  );
 
   // Filter tasks by selected phase for display in columns
   const phaseTasks = selectedPhaseId
@@ -449,7 +453,7 @@ export default function ClientKanbanBoard({
     );
   }
 
-  if (statuses.length === 0) {
+  if (orderedStatuses.length === 0) {
     return (
       <div className="text-center py-8 text-[rgb(var(--color-text-500))]">
         {t('tasks.noTasks', 'No tasks to display')}
@@ -480,7 +484,7 @@ export default function ClientKanbanBoard({
 
       {/* Right Pane - Kanban Columns */}
       <div className="flex-1 flex gap-4 overflow-x-auto pb-4">
-        {statuses.map((status, index) => {
+        {orderedStatuses.map((status, index) => {
           const statusTasks = tasksByStatus[status.project_status_mapping_id] || [];
           const statusColor = status.color || fallbackColors[index % fallbackColors.length];
 
