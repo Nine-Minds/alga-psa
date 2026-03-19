@@ -37,18 +37,113 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
 
+export interface ProjectListFilters {
+  searchQuery?: string;
+  status?: 'all' | 'active' | 'inactive';
+  clientId?: string;
+  contactId?: string;
+  managerId?: string;
+  tags?: string[];
+  deadlineType?: 'before' | 'after' | 'on' | 'between';
+  deadlineDate?: string; // ISO date string
+  deadlineEndDate?: string; // ISO date string for 'between'
+  page?: number;
+  pageSize?: number;
+}
+
+function buildURLFromFilters(filters: ProjectListFilters): string {
+  const params = new URLSearchParams();
+
+  if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
+  if (filters.status && filters.status !== 'active') params.set('status', filters.status);
+  if (filters.clientId) params.set('clientId', filters.clientId);
+  if (filters.contactId) params.set('contactId', filters.contactId);
+  if (filters.managerId) params.set('managerId', filters.managerId);
+  if (filters.tags && filters.tags.length > 0) {
+    const encodedTags = filters.tags.map(tag => encodeURIComponent(String(tag)));
+    params.set('tags', encodedTags.join(','));
+  }
+  if (filters.deadlineType) {
+    params.set('deadlineType', filters.deadlineType);
+    if (filters.deadlineDate) params.set('deadlineDate', filters.deadlineDate);
+    if (filters.deadlineEndDate) params.set('deadlineEndDate', filters.deadlineEndDate);
+  }
+  if (filters.page && filters.page !== 1) params.set('page', String(filters.page));
+  if (filters.pageSize && filters.pageSize !== 10) params.set('pageSize', String(filters.pageSize));
+
+  return params.toString() ? `/msp/projects?${params.toString()}` : '/msp/projects';
+}
+
+function parseFiltersFromSearch(search: string): ProjectListFilters {
+  const params = new URLSearchParams(search);
+  const filters: ProjectListFilters = {};
+
+  const searchQuery = params.get('searchQuery');
+  if (searchQuery) filters.searchQuery = searchQuery;
+
+  const status = params.get('status');
+  if (status === 'all' || status === 'active' || status === 'inactive') {
+    filters.status = status;
+  }
+
+  const clientId = params.get('clientId');
+  if (clientId) filters.clientId = clientId;
+
+  const contactId = params.get('contactId');
+  if (contactId) filters.contactId = contactId;
+
+  const managerId = params.get('managerId');
+  if (managerId) filters.managerId = managerId;
+
+  const tagsRaw = params.get('tags');
+  if (tagsRaw) {
+    const decoded = tagsRaw
+      .split(',')
+      .map(tag => decodeURIComponent(tag).trim())
+      .filter(tag => tag.length > 0);
+    if (decoded.length > 0) filters.tags = decoded;
+  }
+
+  const deadlineType = params.get('deadlineType');
+  if (deadlineType === 'before' || deadlineType === 'after' || deadlineType === 'on' || deadlineType === 'between') {
+    filters.deadlineType = deadlineType;
+    const deadlineDate = params.get('deadlineDate');
+    if (deadlineDate) filters.deadlineDate = deadlineDate;
+    const deadlineEndDate = params.get('deadlineEndDate');
+    if (deadlineEndDate) filters.deadlineEndDate = deadlineEndDate;
+  }
+
+  const page = Number.parseInt(params.get('page') || '', 10);
+  if (Number.isFinite(page) && page > 0) filters.page = page;
+
+  const pageSize = Number.parseInt(params.get('pageSize') || '', 10);
+  if (Number.isFinite(pageSize) && pageSize > 0) filters.pageSize = pageSize;
+
+  return filters;
+}
+
 interface ProjectsProps {
   initialProjects: IProject[];
   clients: IClient[];
+  initialFilters?: Partial<ProjectListFilters>;
 }
 
-export default function Projects({ initialProjects, clients }: ProjectsProps) {
+export default function Projects({ initialProjects, clients, initialFilters }: ProjectsProps) {
   const { getAllContacts, getContactByContactNameId, renderQuickAddContact, renderClientDetails } = useClientIntegration();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['project']);
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
+  // Build initial deadline filter from URL params
+  const initialDeadline = useMemo((): DeadlineFilterValue | undefined => {
+    if (!initialFilters?.deadlineType) return undefined;
+    const result: DeadlineFilterValue = { type: initialFilters.deadlineType };
+    if (initialFilters.deadlineDate) result.date = new Date(initialFilters.deadlineDate);
+    if (initialFilters.deadlineEndDate) result.endDate = new Date(initialFilters.deadlineEndDate);
+    return result;
+  }, [initialFilters?.deadlineType, initialFilters?.deadlineDate, initialFilters?.deadlineEndDate]);
+
+  const [searchTerm, setSearchTerm] = useState(initialFilters?.searchQuery || '');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>(initialFilters?.status || 'active');
   const [projects, setProjects] = useState<IProject[]>(initialProjects);
 
   // Sync state when initialProjects changes (e.g., from router.refresh())
@@ -64,33 +159,138 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const { openDrawer, closeDrawer } = useDrawer();
   const clientDrawer = useClientDrawer();
-  
+
   // Tag-related state
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialFilters?.tags || []);
   const projectTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
-  
+
   // New filter states
-  const [filterClientId, setFilterClientId] = useState<string | null>(null);
-  const [filterContactId, setFilterContactId] = useState<string | null>(null);
+  const [filterClientId, setFilterClientId] = useState<string | null>(initialFilters?.clientId || null);
+  const [filterContactId, setFilterContactId] = useState<string | null>(initialFilters?.contactId || null);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
-  const [filterManagerId, setFilterManagerId] = useState<string | null>(null);
-  const [filterDeadline, setFilterDeadline] = useState<DeadlineFilterValue | undefined>(undefined);
+  const [filterManagerId, setFilterManagerId] = useState<string | null>(initialFilters?.managerId || null);
+  const [filterDeadline, setFilterDeadline] = useState<DeadlineFilterValue | undefined>(initialDeadline);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientClientTypeFilter, setClientClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-  
+
   // Data for pickers
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
-  
+
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
   // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(initialFilters?.page || 1);
+  const [pageSize, setPageSize] = useState(initialFilters?.pageSize || 10);
+
+  // Ref to track last applied URL search string (prevents duplicate updates)
+  const lastAppliedSearchRef = useRef<string>('');
+  const isSyncingFromHistoryRef = useRef(false);
+
+  // Sync filter state to URL
+  const updateURLWithFilters = useCallback(() => {
+    if (isSyncingFromHistoryRef.current) return;
+
+    const filters: ProjectListFilters = {};
+    if (searchTerm) filters.searchQuery = searchTerm;
+    if (filterStatus !== 'active') filters.status = filterStatus;
+    if (filterClientId) filters.clientId = filterClientId;
+    if (filterContactId) filters.contactId = filterContactId;
+    if (filterManagerId) filters.managerId = filterManagerId;
+    if (selectedTags.length > 0) filters.tags = selectedTags;
+    if (filterDeadline?.type) {
+      filters.deadlineType = filterDeadline.type;
+      if (filterDeadline.date) filters.deadlineDate = filterDeadline.date.toISOString().split('T')[0];
+      if (filterDeadline.endDate) filters.deadlineEndDate = filterDeadline.endDate.toISOString().split('T')[0];
+    }
+    if (currentPage !== 1) filters.page = currentPage;
+    if (pageSize !== 10) filters.pageSize = pageSize;
+
+    const newURL = buildURLFromFilters(filters);
+    const newSearch = newURL.includes('?') ? newURL.slice(newURL.indexOf('?')) : '';
+    window.history.replaceState(null, '', newURL);
+    lastAppliedSearchRef.current = newSearch;
+  }, [searchTerm, filterStatus, filterClientId, filterContactId, filterManagerId, selectedTags, filterDeadline, currentPage, pageSize]);
+
+  // Update URL whenever filters change (debounced for search term)
+  const urlUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (urlUpdateTimeoutRef.current) clearTimeout(urlUpdateTimeoutRef.current);
+    urlUpdateTimeoutRef.current = setTimeout(() => {
+      updateURLWithFilters();
+    }, 300);
+    return () => {
+      if (urlUpdateTimeoutRef.current) clearTimeout(urlUpdateTimeoutRef.current);
+    };
+  }, [updateURLWithFilters]);
+
+  // Sync from URL on browser back/forward navigation
+  const syncFromUrl = useCallback((search: string) => {
+    const normalizedSearch = search || '';
+    if (normalizedSearch === lastAppliedSearchRef.current || isSyncingFromHistoryRef.current) {
+      return;
+    }
+
+    isSyncingFromHistoryRef.current = true;
+    try {
+      const parsed = parseFiltersFromSearch(normalizedSearch);
+      setSearchTerm(parsed.searchQuery || '');
+      setFilterStatus(parsed.status || 'active');
+      setFilterClientId(parsed.clientId || null);
+      setFilterContactId(parsed.contactId || null);
+      setFilterManagerId(parsed.managerId || null);
+      setSelectedTags(parsed.tags || []);
+      if (parsed.deadlineType) {
+        const deadline: DeadlineFilterValue = { type: parsed.deadlineType };
+        if (parsed.deadlineDate) deadline.date = new Date(parsed.deadlineDate);
+        if (parsed.deadlineEndDate) deadline.endDate = new Date(parsed.deadlineEndDate);
+        setFilterDeadline(deadline);
+      } else {
+        setFilterDeadline(undefined);
+      }
+      setCurrentPage(parsed.page || 1);
+      setPageSize(parsed.pageSize || 10);
+      lastAppliedSearchRef.current = normalizedSearch;
+    } finally {
+      isSyncingFromHistoryRef.current = false;
+    }
+  }, []);
+
+  // Listen for popstate (back/forward) and pageshow (bfcache restore) events
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // On mount, sync from URL if it has search params.
+    // This handles the case where Next.js restores a cached page on back navigation
+    // but the URL still has filter params from replaceState.
+    const currentSearch = window.location.search;
+    if (currentSearch) {
+      syncFromUrl(currentSearch);
+    } else {
+      lastAppliedSearchRef.current = currentSearch;
+    }
+
+    const handlePopState = () => {
+      syncFromUrl(window.location.search);
+    };
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        lastAppliedSearchRef.current = '__pageshow__';
+        syncFromUrl(window.location.search);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('pageshow', handlePageShow);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, [syncFromUrl]);
 
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {
