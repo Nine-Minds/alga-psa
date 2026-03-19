@@ -36,6 +36,7 @@ interface KanbanBoardProps {
   searchCaseSensitive?: boolean;
   searchWholeWord?: boolean;
   zoomLevel?: number;
+  hideHeader?: boolean;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -113,6 +114,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   searchCaseSensitive = false,
   searchWholeWord = false,
   zoomLevel = 50,
+  hideHeader = false,
   onDrop,
   onDragOver,
   onAddCard,
@@ -206,6 +208,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             columnWidth={columnWidth}
             cardGap={cardGap}
             zoomLevel={zoomLevel}
+            hideHeader={hideHeader}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onAddCard={onAddCard}

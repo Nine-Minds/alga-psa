@@ -5,7 +5,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IProjectStatusMapping, IStatus } from '@alga-psa/types';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+
 import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
 
 function resolveReplacementStatusMapping(
@@ -84,17 +84,6 @@ export const addStatusToProject = withAuth(async (
         is_visible: statusData.is_visible ?? true
       })
       .returning('*');
-
-    // Publish event
-    await publishEvent({
-      eventType: 'PROJECT_STATUS_ADDED',
-      payload: {
-        tenantId: tenant,
-        projectId,
-        mappingId: mapping.project_status_mapping_id,
-        phaseId: mapping.phase_id ?? undefined,
-      }
-    });
 
     return mapping;
   });
@@ -268,28 +257,33 @@ export const updateProjectStatusMapping = withAuth(async (
     .where({ project_status_mapping_id: mappingId, tenant })
     .update(updates);
 
-  // Publish event
-  await publishEvent({
-    eventType: 'PROJECT_STATUS_UPDATED',
-    payload: {
-      tenantId: tenant,
-      projectId: existingMapping.project_id,
-      mappingId,
-      phaseId: existingMapping.phase_id ?? undefined,
-      updates
-    }
-  });
 });
 
 /**
- * Delete a project status mapping
+ * Get the number of tasks assigned to a status mapping.
+ */
+export const getStatusMappingTaskCount = withAuth(async (
+  _user,
+  { tenant },
+  mappingId: string
+): Promise<number> => {
+  const { knex } = await createTenantKnex();
+  const result = await knex('project_tasks')
+    .where({ project_status_mapping_id: mappingId, tenant })
+    .count('* as count')
+    .first();
+  return parseInt(result?.count as string) || 0;
+});
+
+/**
+ * Delete a project status mapping, optionally moving tasks to another status first.
  */
 export const deleteProjectStatusMapping = withAuth(async (
   user,
   { tenant },
-  mappingId: string
+  mappingId: string,
+  moveTasksToMappingId?: string
 ): Promise<void> => {
-  // RBAC check
   if (!await hasPermission(user, 'project', 'update')) {
     throw new Error('Permission denied: Cannot update project');
   }
@@ -297,7 +291,6 @@ export const deleteProjectStatusMapping = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    // Get mapping info
     const mapping = await trx('project_status_mappings')
       .where({ project_status_mapping_id: mappingId, tenant })
       .first();
@@ -306,44 +299,46 @@ export const deleteProjectStatusMapping = withAuth(async (
       throw new Error('Status mapping not found');
     }
 
-    // Validate: Check if any tasks assigned to this status
-    const taskCount = await trx('project_tasks')
-      .where({ project_status_mapping_id: mappingId, tenant })
-      .count('* as count')
-      .first();
+    // Move tasks if a target mapping is provided
+    if (moveTasksToMappingId) {
+      await trx('project_tasks')
+        .where({ project_status_mapping_id: mappingId, tenant })
+        .update({ project_status_mapping_id: moveTasksToMappingId });
+    } else {
+      // Check for orphaned tasks
+      const taskCount = await trx('project_tasks')
+        .where({ project_status_mapping_id: mappingId, tenant })
+        .count('* as count')
+        .first();
 
-    if (parseInt(taskCount?.count as string) > 0) {
-      throw new Error(
-        `Cannot delete status with ${taskCount?.count} assigned tasks. ` +
-        `Please move tasks to another status first.`
-      );
+      if (parseInt(taskCount?.count as string) > 0) {
+        throw new Error(
+          `Cannot delete status with ${taskCount?.count} assigned tasks. ` +
+          `Please move tasks to another status first.`
+        );
+      }
     }
 
-    // Validate: Must have at least 1 status remaining
-    const remainingCount = await trx('project_status_mappings')
+    // Validate: Must have at least 1 status remaining in the same scope
+    const remainingQuery = trx('project_status_mappings')
       .where({ project_id: mapping.project_id, tenant })
-      .count('* as count')
-      .first();
+      .whereNot({ project_status_mapping_id: mappingId });
 
-    if (parseInt(remainingCount?.count as string) <= 1) {
+    if (mapping.phase_id) {
+      remainingQuery.where({ phase_id: mapping.phase_id });
+    } else {
+      remainingQuery.whereNull('phase_id');
+    }
+
+    const remainingCount = await remainingQuery.count('* as count').first();
+
+    if (parseInt(remainingCount?.count as string) < 1) {
       throw new Error('Cannot delete the last status in a project');
     }
 
-    // Delete
     await trx('project_status_mappings')
       .where({ project_status_mapping_id: mappingId, tenant })
       .del();
-
-    // Publish event
-    await publishEvent({
-      eventType: 'PROJECT_STATUS_DELETED',
-      payload: {
-        tenantId: tenant,
-        projectId: mapping.project_id,
-        mappingId,
-        phaseId: mapping.phase_id ?? undefined,
-      }
-    });
   });
 });
 
@@ -382,16 +377,6 @@ export const reorderProjectStatuses = withAuth(async (
       await query.update({ display_order });
     }
 
-    // Publish event
-    await publishEvent({
-      eventType: 'PROJECT_STATUSES_REORDERED',
-      payload: {
-        tenantId: tenant,
-        projectId,
-        phaseId: phaseId ?? undefined,
-        statusOrder
-      }
-    });
   });
 });
 

@@ -163,7 +163,7 @@ export const getClientProjectTasks = withAuth(async (
     'psm.display_order',
     knex.raw('COALESCE(s.name, ss.name) as status_name'),
     knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
-    knex.raw('COALESCE(s.color, ss.color) as status_color')
+    knex.raw('s.color as status_color')
   );
 
   // Join assigned_to if requested
@@ -432,7 +432,7 @@ export const getClientProjectStatuses = withAuth(async (
         'psm.display_order',
         knex.raw('COALESCE(s.name, ss.name) as status_name'),
         knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
-        knex.raw('COALESCE(s.color, ss.color) as color')
+        knex.raw('s.color as color')
       )
       .orderBy('psm.display_order');
 

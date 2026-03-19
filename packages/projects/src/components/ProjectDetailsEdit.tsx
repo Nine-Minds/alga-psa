@@ -23,7 +23,7 @@ import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
+import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
@@ -426,9 +426,8 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           </div>
 
           <div>
-            <ProjectTaskStatusEditor
+            <ProjectTaskStatusSettings
               projectId={project.project_id}
-              onChange={() => setHasChanges(true)}
             />
           </div>
 

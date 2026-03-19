@@ -198,6 +198,7 @@ export default function ProjectDetail({
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
+  const [statusVersion, setStatusVersion] = useState(0);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<ProjectStatus | null>(null);
@@ -308,7 +309,7 @@ export default function ProjectDetail({
 
     fetchStatusesForPhase();
     return () => { stale = true; };
-  }, [initialStatuses, project.project_id, selectedPhase?.phase_id]);
+  }, [initialStatuses, project.project_id, selectedPhase?.phase_id, statusVersion]);
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -585,6 +586,23 @@ export default function ProjectDetail({
     column: null
   });
   const phasesContainerRef = useRef<HTMLDivElement>(null);
+  const pageContainerRef = useRef<HTMLDivElement>(null);
+
+  // Dynamically set min-height on pageContainer so it fills exactly the remaining
+  // viewport, eliminating the dead-zone scroll caused by a static min-height: 100vh.
+  useEffect(() => {
+    const el = pageContainerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      el.style.minHeight = `calc(100dvh - ${top}px)`;
+    };
+
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -1132,7 +1150,7 @@ export default function ProjectDetail({
 
     fetchPhaseTasks();
     return () => { stale = true; };
-  }, [selectedPhase?.phase_id]);
+  }, [selectedPhase?.phase_id, statusVersion]);
 
   // Fetch avatar URLs for task resources (additional agents)
   useEffect(() => {
@@ -2645,6 +2663,7 @@ export default function ProjectDetail({
             searchCaseSensitive={searchCaseSensitive}
             searchWholeWord={searchWholeWord}
             zoomLevel={kanbanZoomLevel}
+            hideHeader={showStickyStatusNames}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onAddCard={handleAddCard}
@@ -2665,9 +2684,9 @@ export default function ProjectDetail({
   };
 
   return (
-    <div className={styles.pageContainer}>
+    <div ref={pageContainerRef} className={styles.pageContainer}>
       <Toaster position="top-right" />
-      <div 
+      <div
         className={styles.mainContent}
         onDragOver={handleDragOver}
       >
@@ -2693,6 +2712,7 @@ export default function ProjectDetail({
               <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
                 <ProjectPhases
                   phases={projectPhases}
+                  projectId={project.project_id}
                   selectedPhase={selectedPhase}
                   isAddingTask={isAddingTask}
                   editingPhaseId={editingPhaseId}
@@ -2727,6 +2747,7 @@ export default function ProjectDetail({
                   onDrop={handlePhaseDropZone}
                   onDragStart={handlePhaseDragStart}
                   onDragEnd={handlePhaseDragEnd}
+                  onStatusesChanged={() => setStatusVersion(v => v + 1)}
                   onImport={() => setShowImportDialog(true)}
                 />
               </div>

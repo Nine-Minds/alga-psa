@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, Trash2, GripVertical, Circle } from 'lucide-react';
@@ -32,6 +33,7 @@ export function TemplateStatusColumnsStep({
   isLoadingStatuses,
   onStatusCreated,
 }: TemplateStatusColumnsStepProps) {
+  const { t } = useTranslation(['features/projects', 'common']);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
   const [selectedScope, setSelectedScope] = useState<string>(TEMPLATE_DEFAULT_SCOPE);
@@ -223,25 +225,25 @@ export function TemplateStatusColumnsStep({
 
   const selectedScopeLabel = selectedPhaseTempId
     ? data.phases.find((phase) => phase.temp_id === selectedPhaseTempId)?.phase_name || 'Phase'
-    : 'Template Defaults';
+    : t('templates.statuses.template_defaults');
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Status Columns</h3>
-        <p className="text-sm text-gray-600">
-          Define the status columns that will appear on your project board. These represent
-          the workflow stages for tasks.
+        <h3 className="text-lg font-semibold">{t('settings.statuses.project.title')}</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          {t('templates.statuses.manage_description')}
         </p>
       </div>
 
+      {data.phases.length > 0 && (
       <div className="space-y-2">
-        <Label>Status Scope</Label>
+        <Label>{t('settings.statuses.scope_label')}</Label>
         <CustomSelect
           value={selectedScope}
           onValueChange={setSelectedScope}
           options={[
-            { value: TEMPLATE_DEFAULT_SCOPE, label: 'Template Defaults' },
+            { value: TEMPLATE_DEFAULT_SCOPE, label: t('templates.statuses.template_defaults') },
             ...data.phases
               .sort((a, b) => a.order_number - b.order_number)
               .map((phase) => ({
@@ -251,39 +253,34 @@ export function TemplateStatusColumnsStep({
           ]}
         />
       </div>
+      )}
 
       {selectedPhaseTempId && (
-        <div className="rounded-lg border bg-gray-50 px-4 py-3 text-sm text-gray-600">
-          {isUsingTemplateDefaults ? (
-            <div className="space-y-3">
-              <p>
-                <span className="font-medium text-gray-900">{selectedScopeLabel}</span> is using
-                the template defaults. Copy them into this phase to configure a separate workflow.
-              </p>
-              <Button
-                id="wizard-copy-default-statuses"
-                size="sm"
-                onClick={copyDefaultsToPhase}
-                disabled={defaultStatusMappings.length === 0}
-              >
-                Copy Template Defaults
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3">
-              <p>
-                Editing custom statuses for{' '}
-                <span className="font-medium text-gray-900">{selectedScopeLabel}</span>.
-              </p>
-              <Button
-                id="wizard-use-default-statuses"
-                variant="outline"
-                size="sm"
-                onClick={resetPhaseToDefaults}
-              >
-                Use Template Defaults
-              </Button>
-            </div>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Button
+              variant={isUsingTemplateDefaults ? 'default' : 'outline'}
+              size="sm"
+              onClick={resetPhaseToDefaults}
+              disabled={isUsingTemplateDefaults}
+              id="wizard-use-default-statuses"
+            >
+              {t('settings.statuses.use_project_defaults')}
+            </Button>
+            <Button
+              variant={!isUsingTemplateDefaults ? 'default' : 'outline'}
+              size="sm"
+              onClick={copyDefaultsToPhase}
+              disabled={hasPhaseSpecificStatuses || defaultStatusMappings.length === 0}
+              id="wizard-copy-default-statuses"
+            >
+              {t('settings.statuses.custom_statuses')}
+            </Button>
+          </div>
+          {isUsingTemplateDefaults && (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t('settings.statuses.phase_uses_defaults')}
+            </p>
           )}
         </div>
       )}
@@ -292,7 +289,7 @@ export function TemplateStatusColumnsStep({
         {sortedMappings.length === 0 ? (
           <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
             <Circle className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-600 mb-4">No status columns added yet</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">{t('templates.statuses.empty')}</p>
             <div className="flex justify-center gap-2">
               {availableStatuses.length > 0 ? (
                 <CustomSelect
@@ -303,17 +300,17 @@ export function TemplateStatusColumnsStep({
                     }
                   }}
                   options={[
-                    { value: '', label: 'Select a status to add...' },
+                    { value: '', label: t('templates.statuses.select_placeholder') },
                     ...availableStatuses.map((status) => ({
                       value: status.status_id,
-                      label: `${status.name}${status.is_closed ? ' (Closed)' : ''}`,
+                      label: `${status.name}${status.is_closed ? ` (${t('settings.statuses.closed')})` : ''}`,
                     })),
                   ]}
                   disabled={isLoadingStatuses || !editableMappings}
                   className="w-64"
                 />
               ) : (
-                <p className="text-sm text-gray-500">No statuses available</p>
+                <p className="text-sm text-gray-500">{t('templates.statuses.all_in_use')}</p>
               )}
               <Button
                 id="add-new-status-empty"
@@ -322,7 +319,7 @@ export function TemplateStatusColumnsStep({
                 disabled={!editableMappings}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Create New
+                {t('templates.statuses.create_new')}
               </Button>
             </div>
           </div>
@@ -397,10 +394,10 @@ export function TemplateStatusColumnsStep({
                         })
                       }
                       options={[
-                        { value: '', label: 'Select a status...' },
+                        { value: '', label: t('templates.statuses.select_placeholder') },
                         ...availableOptions.map((status) => ({
                           value: status.status_id,
-                          label: `${status.name}${status.is_closed ? ' (Closed)' : ''}`,
+                          label: `${status.name}${status.is_closed ? ` (${t('settings.statuses.closed')})` : ''}`,
                         })),
                       ]}
                       disabled={isLoadingStatuses || !editableMappings}
@@ -428,7 +425,7 @@ export function TemplateStatusColumnsStep({
                 disabled={isLoadingStatuses || !editableMappings}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add Column
+                {t('templates.statuses.add_title')}
               </Button>
               <Button
                 id="add-new-status"
@@ -437,7 +434,7 @@ export function TemplateStatusColumnsStep({
                 disabled={!editableMappings}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Create New Status
+                {t('templates.statuses.create_new')}
               </Button>
             </div>
           </>

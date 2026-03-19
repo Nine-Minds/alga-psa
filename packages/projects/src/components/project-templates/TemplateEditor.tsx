@@ -77,6 +77,10 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { TemplateTaskForm } from './TemplateTaskForm';
 import { TemplateStatusManager } from './TemplateStatusManager';
+import {
+  getEffectiveTemplateStatusMappings,
+  hasTemplatePhaseStatusMappings,
+} from '../../lib/templateStatusMappingUtils';
 import TemplateTaskListView from './TemplateTaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import KanbanZoomControl, { calculateCardGap, calculateColumnWidth, calculateZoomScales } from '../KanbanZoomControl';
@@ -943,7 +947,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   // ============================================================
 
   const sortedPhases = [...phases].sort((a, b) => (a.order_key || '').localeCompare(b.order_key || ''));
-  const sortedStatusMappings = [...statusMappings].sort((a, b) => a.display_order - b.display_order);
+  const sortedStatusMappings = useMemo(
+    () => getEffectiveTemplateStatusMappings(statusMappings, selectedPhase?.template_phase_id),
+    [statusMappings, selectedPhase?.template_phase_id]
+  );
 
   // Compute task counts per phase
   const phaseTaskCounts = useMemo(() => {
@@ -1053,8 +1060,18 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           phases={phases}
           statusMappings={statusMappings}
           availableStatuses={availableStatuses}
+          taskCountByMapping={statusTaskCounts}
           onStatusAdded={handleStatusAdded}
-          onStatusRemoved={handleStatusRemoved}
+          onStatusRemoved={(mappingId, moveTasksToMappingId) => {
+            if (moveTasksToMappingId) {
+              setTasks(prev => prev.map(task =>
+                task.template_status_mapping_id === mappingId
+                  ? { ...task, template_status_mapping_id: moveTasksToMappingId }
+                  : task
+              ));
+            }
+            handleStatusRemoved(mappingId);
+          }}
           onPhaseStatusesRemoved={handlePhaseStatusesRemoved}
           onStatusReordered={handleStatusReordered}
         />
@@ -1357,6 +1374,33 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                     />
                                   </div>
                                 </div>
+                              </div>
+                              {/* Status columns indicator */}
+                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                                <Tooltip content={`Status columns: ${
+                                  hasTemplatePhaseStatusMappings(statusMappings, phase.template_phase_id)
+                                    ? `Custom (${statusMappings.filter(m => m.template_phase_id === phase.template_phase_id).length} statuses)`
+                                    : 'Template defaults'
+                                }`}>
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                    <Columns3 className="w-3.5 h-3.5 shrink-0" />
+                                    <span>
+                                      {hasTemplatePhaseStatusMappings(statusMappings, phase.template_phase_id)
+                                        ? `Custom (${statusMappings.filter(m => m.template_phase_id === phase.template_phase_id).length} statuses)`
+                                        : 'Template defaults'}
+                                    </span>
+                                  </div>
+                                </Tooltip>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowStatusManager(true);
+                                  }}
+                                  className="text-xs text-primary hover:underline shrink-0"
+                                >
+                                  Configure
+                                </button>
                               </div>
                               <div className="flex justify-end gap-2 mt-3">
                                 <Button
@@ -1675,6 +1719,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                               columnWidth={kanbanColumnWidth}
                               cardGap={kanbanCardGap}
                               zoomLevel={kanbanZoomLevel}
+                              hideHeader={showStickyStatusNames}
                             />
                           );
                         })}
@@ -1728,6 +1773,7 @@ interface TemplateStatusColumnProps {
   columnWidth?: number;
   cardGap?: number;
   zoomLevel?: number;
+  hideHeader?: boolean;
 }
 
 function TemplateStatusColumn({
@@ -1758,6 +1804,7 @@ function TemplateStatusColumn({
   columnWidth = 350,
   cardGap = 8,
   zoomLevel = 50,
+  hideHeader = false,
 }: TemplateStatusColumnProps) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -1843,43 +1890,45 @@ function TemplateStatusColumn({
       onDrop={handleDrop}
     >
       {/* Status Column Header */}
-      <div className={`font-bold ${zoomLevel <= 30 ? 'text-xs p-2' : 'text-sm p-3'} rounded-t-lg`}>
-        <div className="flex items-center justify-between gap-2">
-          <div
-            className={`${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} flex items-center min-w-0 flex-1 shadow-sm`}
-            style={{
-              backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
-              borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.40),
-            }}
-          >
-            <span className="flex-shrink-0">{statusIcon}</span>
-            <span className={`${zoomLevel <= 30 ? 'ml-1.5 text-xs leading-tight' : 'ml-2'} truncate`}>
-              {displayName}
-            </span>
-          </div>
-          <div className={`${styles.statusHeader} flex-shrink-0 flex items-center`}>
-            <Button
-              id={`add-task-${statusMapping.template_status_mapping_id}`}
-              variant="default"
-              size="sm"
-              onClick={() => onAddTask(statusMapping.template_status_mapping_id)}
-              tooltipText="Add Task"
-              className={zoomLevel <= 30 ? '!w-5 !h-5 !p-0 !min-w-0' : '!w-6 !h-6 !p-0 !min-w-0'}
-            >
-              <Plus className={zoomLevel <= 30 ? 'w-3 h-3 text-white' : 'w-4 h-4 text-white'} />
-            </Button>
-            <span
-              className={`${zoomLevel <= 30 ? 'text-[10px] px-1.5' : 'text-xs px-2'} font-medium py-0.5 rounded-full`}
+      {!hideHeader && (
+        <div className={`font-bold ${zoomLevel <= 30 ? 'text-xs p-2' : 'text-sm p-3'} rounded-t-lg`}>
+          <div className="flex items-center justify-between gap-2">
+            <div
+              className={`${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} flex items-center min-w-0 flex-1 shadow-sm`}
               style={{
                 backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
-                color: isDark ? lightenColor(statusColor, 0.40) : statusColor
+                borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.40),
               }}
             >
-              {sortedTasks.length}
-            </span>
+              <span className="flex-shrink-0">{statusIcon}</span>
+              <span className={`${zoomLevel <= 30 ? 'ml-1.5 text-xs leading-tight' : 'ml-2'} truncate`}>
+                {displayName}
+              </span>
+            </div>
+            <div className={`${styles.statusHeader} flex-shrink-0 flex items-center`}>
+              <Button
+                id={`add-task-${statusMapping.template_status_mapping_id}`}
+                variant="default"
+                size="sm"
+                onClick={() => onAddTask(statusMapping.template_status_mapping_id)}
+                tooltipText="Add Task"
+                className={zoomLevel <= 30 ? '!w-5 !h-5 !p-0 !min-w-0' : '!w-6 !h-6 !p-0 !min-w-0'}
+              >
+                <Plus className={zoomLevel <= 30 ? 'w-3 h-3 text-white' : 'w-4 h-4 text-white'} />
+              </Button>
+              <span
+                className={`${zoomLevel <= 30 ? 'text-[10px] px-1.5' : 'text-xs px-2'} font-medium py-0.5 rounded-full`}
+                style={{
+                  backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
+                  color: isDark ? lightenColor(statusColor, 0.40) : statusColor
+                }}
+              >
+                {sortedTasks.length}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Tasks in this status */}
       <div
