@@ -246,9 +246,11 @@ function mapApiPathToHandlerRoute(path: string): string {
  * Call the WASM handler via the extension proxy.
  * This is the proper pattern: UI -> postMessage -> iframeBridge -> ext-proxy -> Runner -> WASM handler
  *
- * Since the iframeBridge always uses POST, we encode the intended action in the body.
- * The handler uses the __action field to determine the operation for paths that support
- * multiple operations (like /reports/:id which can be GET, PUT, or DELETE).
+ * The deployed iframeBridge always sends POST regardless of the method field in postMessage.
+ * We use two mechanisms to convey the intended HTTP method:
+ * 1. __method query param: The ext-proxy reads this and overrides the POST method before
+ *    forwarding to the runner. This ensures the WASM handler sees the correct HTTP method.
+ * 2. __action body field: Legacy disambiguation for operations on the same path.
  */
 async function proxyApiCall<T>(
   route: string,
@@ -257,6 +259,14 @@ async function proxyApiCall<T>(
   // Map the internal API path to the WASM handler route
   const handlerRoute = mapApiPathToHandlerRoute(route);
   const method = options?.method?.toUpperCase() || 'GET';
+
+  // Append __method override to the query string so the ext-proxy converts
+  // the POST (forced by iframeBridge) into the intended HTTP method.
+  let finalRoute = handlerRoute;
+  if (method !== 'POST') {
+    const separator = handlerRoute.includes('?') ? '&' : '?';
+    finalRoute = `${handlerRoute}${separator}__method=${method}`;
+  }
 
   // Build the body with __action field for non-GET methods
   let bodyData: Record<string, unknown> | undefined;
@@ -290,10 +300,10 @@ async function proxyApiCall<T>(
     payload = new TextEncoder().encode(bodyJson);
   }
 
-  console.log('[Extension] Calling proxy:', { route, handlerRoute, method, hasBody: !!payload });
+  console.log('[Extension] Calling proxy:', { route, handlerRoute: finalRoute, method, hasBody: !!payload });
 
   try {
-    const result = await bridge.callProxy<T>(handlerRoute, payload, { method });
+    const result = await bridge.callProxy<T>(finalRoute, payload, { method });
     console.log('[Extension] Proxy response:', result);
     return result;
   } catch (error) {
