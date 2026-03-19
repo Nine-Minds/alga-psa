@@ -339,6 +339,56 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.queryByText('Delete Cycle')).toBeNull();
   });
 
+  it('T066: missing recurring materialization is presented as an explicit repair action instead of a fallback-ready invoice row', async () => {
+    getAvailableRecurringDueWorkMock.mockResolvedValueOnce({
+      rows: [],
+      materializationGaps: [
+        {
+          executionIdentityKey: 'client_schedule:client-1:schedule:tenant-1:client_contract_line:line-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
+          selectionKey: 'client_schedule:client-1:schedule:tenant-1:client_contract_line:line-1:client:advance:period:2025-03-01:2025-04-01',
+          clientId: 'client-1',
+          clientName: 'Acme Co',
+          scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+          periodKey: 'period:2025-03-01:2025-04-01',
+          billingCycleId: 'cycle-2025-03',
+          invoiceWindowStart: '2025-03-01',
+          invoiceWindowEnd: '2025-04-01',
+          servicePeriodStart: '2025-03-01',
+          servicePeriodEnd: '2025-04-01',
+          reason: 'missing_service_period_materialization' as const,
+          detail: 'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+        },
+      ],
+      total: 0,
+      page: 1,
+      pageSize: 10,
+      totalPages: 0,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    const gapPanel = await screen.findByTestId('recurring-materialization-gap-panel');
+    const gapEntry = within(gapPanel).getByTestId(
+      'recurring-materialization-gap-client_schedule:client-1:schedule:tenant-1:client_contract_line:line-1:client:advance:period:2025-03-01:2025-04-01',
+    );
+    const readyTable = screen.getByTestId('automatic-invoices-table');
+
+    expect(within(gapPanel).getByText('Recurring service period repair required')).toBeInTheDocument();
+    expect(within(gapEntry).getByText('Acme Co')).toBeInTheDocument();
+    expect(
+      within(gapEntry).getByText(
+        'Repair the canonical service-period records instead of generating a compatibility invoice row.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(readyTable).queryByText('Acme Co')).not.toBeInTheDocument();
+
+    const repairLink = within(gapEntry).getByRole('link', { name: 'Review Service Periods' });
+    expect(repairLink).toHaveAttribute(
+      'href',
+      '/msp/billing?tab=service-periods&scheduleKey=schedule%3Atenant-1%3Aclient_contract_line%3Aline-1%3Aclient%3Aadvance',
+    );
+  });
+
   it('T010: AutomaticInvoices can render and act on a client-cadence recurring row whose bridge metadata is null', async () => {
     const clientRow = createClientRow({ billingCycleId: null });
     getAvailableRecurringDueWorkMock.mockResolvedValue({

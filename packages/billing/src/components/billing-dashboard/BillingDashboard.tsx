@@ -12,6 +12,7 @@ import ContractLinesOverview from './contract-lines/ContractLinesOverview';
 import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import BillingCycles from './BillingCycles';
+import RecurringServicePeriodsTab from './RecurringServicePeriodsTab';
 import TaxRates from './TaxRates';
 import UsageTracking from './UsageTracking';
 import TemplatesTab from './contracts/TemplatesTab';
@@ -184,6 +185,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
         <Tabs.Content value="billing-cycles">
           <BillingCycles />
+        </Tabs.Content>
+
+        <Tabs.Content value="service-periods">
+          <RecurringServicePeriodsTab initialScheduleKey={searchParams?.get('scheduleKey') ?? undefined} />
         </Tabs.Content>
 
         <Tabs.Content value="usage-tracking">

@@ -24,7 +24,11 @@ import {
   hardDeleteRecurringInvoice,
   type RecurringInvoiceHistoryRow,
 } from '@alga-psa/billing/actions/billingCycleActions';
-import { getAvailableRecurringDueWork, type BillingPeriodDateRange } from '@alga-psa/billing/actions/billingAndTax';
+import {
+  getAvailableRecurringDueWork,
+  type BillingPeriodDateRange,
+  type RecurringDueWorkMaterializationGap,
+} from '@alga-psa/billing/actions/billingAndTax';
 import { Dialog, DialogContent, DialogFooter, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { formatCurrency } from '@alga-psa/core';
 // Added imports for DropdownMenu
@@ -68,6 +72,9 @@ const buildDateRangeFilter = (range: DateRange): BillingPeriodDateRange | undefi
 
   return { from, to };
 };
+
+const buildServicePeriodRepairHref = (scheduleKey: string) =>
+  `/msp/billing?tab=service-periods&scheduleKey=${encodeURIComponent(scheduleKey)}`;
 
 const hasRecurringBillingCycleBridge = (record: { billingCycleId?: string | null }) =>
   Boolean(record.billingCycleId);
@@ -156,6 +163,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // Server-side pagination state for "Ready to Invoice"
   const [periods, setPeriods] = useState<ReadyPeriod[]>([]);
+  const [materializationGaps, setMaterializationGaps] = useState<RecurringDueWorkMaterializationGap[]>([]);
   const [totalPeriods, setTotalPeriods] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
@@ -212,6 +220,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         if (!isMounted) return;
 
         setPeriods(result.rows as ReadyPeriod[]);
+        setMaterializationGaps(result.materializationGaps ?? []);
         setTotalPeriods(result.total);
         initialLoadDone.current = true;
 
@@ -224,6 +233,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       } catch (error) {
         console.error('Error loading billing periods:', error);
         if (isMounted) {
+          setMaterializationGaps([]);
           setLoadError('Failed to load billing periods. Please try again.');
         }
       }
@@ -784,6 +794,60 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               </AlertDescription>
             </Alert>
           )}
+
+          {materializationGaps.length > 0 ? (
+            <Alert className="mb-4 border-warning/40 bg-warning/5" data-testid="recurring-materialization-gap-panel">
+              <AlertDescription>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-semibold">Recurring service period repair required</h4>
+                      <p className="text-sm text-muted-foreground">
+                        These client-cadence windows are missing persisted recurring service periods, so they are blocked from ready-to-invoice work until the canonical schedule is repaired.
+                      </p>
+                    </div>
+                    <ul className="space-y-3">
+                      {materializationGaps.map((gap) => (
+                        <li
+                          key={gap.selectionKey}
+                          className="rounded-md border border-warning/30 bg-background/80 px-3 py-3"
+                          data-testid={`recurring-materialization-gap-${gap.selectionKey}`}
+                        >
+                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div className="space-y-1 text-sm">
+                              <div className="font-medium">{gap.clientName ?? 'Unknown client'}</div>
+                              <div className="text-muted-foreground">{gap.detail}</div>
+                              <div>
+                                Service period: {gap.servicePeriodStart} to {gap.servicePeriodEnd}
+                              </div>
+                              <div>
+                                Invoice window: {gap.invoiceWindowStart} to {gap.invoiceWindowEnd}
+                              </div>
+                              <div className="break-all text-xs text-muted-foreground">
+                                Schedule key: {gap.scheduleKey}
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-start gap-2">
+                              <a
+                                href={buildServicePeriodRepairHref(gap.scheduleKey)}
+                                className="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+                              >
+                                Review Service Periods
+                              </a>
+                              <span className="text-xs text-muted-foreground">
+                                Repair the canonical service-period records instead of generating a compatibility invoice row.
+                              </span>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           <DataTable
             id="automatic-invoices-table"
