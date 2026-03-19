@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "AddStatusDialog: accepts optional phaseId and passes it to addStatusToProject()",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.6"]
   },
   {
