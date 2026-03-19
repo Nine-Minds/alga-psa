@@ -449,11 +449,16 @@ export default function ProjectDetail({
     return tasks;
   }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
 
+  const phaseStatusLookup = useMemo(
+    () => new Map(projectStatuses.map((status) => [status.project_status_mapping_id, status])),
+    [projectStatuses]
+  );
+
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
-      projectStatuses.find(status => status.project_status_mapping_id === task.project_status_mapping_id)?.is_closed === true
+      phaseStatusLookup.get(task.project_status_mapping_id)?.is_closed === true
     ).length;
-  }, [filteredTasks, projectStatuses]);
+  }, [filteredTasks, phaseStatusLookup]);
 
   // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
   useEffect(() => {
@@ -612,16 +617,21 @@ export default function ProjectDetail({
 
   const kanbanColumnWidth = useMemo(() => calculateColumnWidth(kanbanZoomLevel), [kanbanZoomLevel]);
   const visibleKanbanStatuses = useMemo(
-    () => projectStatuses.filter((status) => status.is_visible),
+    () => projectStatuses
+      .filter((status) => status.is_visible)
+      .sort((a, b) => a.display_order - b.display_order),
     [projectStatuses]
   );
   const statusTaskCounts = useMemo(() => {
     return filteredTasks.reduce<Record<string, number>>((counts, task) => {
       const statusId = task.project_status_mapping_id;
+      if (!phaseStatusLookup.has(statusId)) {
+        return counts;
+      }
       counts[statusId] = (counts[statusId] ?? 0) + 1;
       return counts;
     }, {});
-  }, [filteredTasks]);
+  }, [filteredTasks, phaseStatusLookup]);
 
   const getStatusStripStyles = useCallback((status: ProjectStatus, index: number) => {
     if (status.color) {

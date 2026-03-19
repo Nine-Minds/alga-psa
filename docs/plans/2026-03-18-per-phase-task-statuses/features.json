@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "ProjectDetail.tsx: visibleKanbanStatuses, statusTaskCounts, and completedTasksCount use phase-effective statuses",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.4", "FR-6.5"]
   },
   {
