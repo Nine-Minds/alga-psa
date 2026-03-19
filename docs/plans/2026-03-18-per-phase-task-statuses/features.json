@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "CE migration: add nullable phase_id UUID column to project_status_mappings with FK to project_phases(phase_id) ON DELETE CASCADE",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.1"]
   },
   {
