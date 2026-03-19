@@ -895,15 +895,46 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     );
   };
 
-  const handleStatusReordered = (orderedMappingIds: string[]) => {
+  const handlePhaseStatusesRemoved = (templatePhaseId: string) => {
+    const removedMappingIds = statusMappings
+      .filter((mapping) => mapping.template_phase_id === templatePhaseId)
+      .map((mapping) => mapping.template_status_mapping_id);
+
+    setStatusMappings((prev) =>
+      prev.filter((mapping) => mapping.template_phase_id !== templatePhaseId)
+    );
+    setTasks((prev) =>
+      prev.map((task) =>
+        removedMappingIds.includes(task.template_status_mapping_id || '')
+          ? { ...task, template_status_mapping_id: undefined }
+          : task
+      )
+    );
+  };
+
+  const handleStatusReordered = (
+    orderedMappingIds: string[],
+    templatePhaseId?: string | null
+  ) => {
     setStatusMappings((prev) => {
       const mappingMap = new Map(prev.map((m) => [m.template_status_mapping_id, m]));
-      return orderedMappingIds
+      const reorderedScopeMappings = orderedMappingIds
         .map((id, index) => {
           const mapping = mappingMap.get(id);
           return mapping ? { ...mapping, display_order: index } : null;
         })
         .filter((m): m is IProjectTemplateStatusMapping => m !== null);
+
+      const reorderedIds = new Set(orderedMappingIds);
+      const untouchedMappings = prev.filter((mapping) => {
+        const isSameScope = templatePhaseId
+          ? mapping.template_phase_id === templatePhaseId
+          : !mapping.template_phase_id;
+
+        return !isSameScope && !reorderedIds.has(mapping.template_status_mapping_id);
+      });
+
+      return [...untouchedMappings, ...reorderedScopeMappings];
     });
   };
 
@@ -1019,10 +1050,12 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           open={showStatusManager}
           onClose={() => setShowStatusManager(false)}
           templateId={template.template_id}
+          phases={phases}
           statusMappings={statusMappings}
           availableStatuses={availableStatuses}
           onStatusAdded={handleStatusAdded}
           onStatusRemoved={handleStatusRemoved}
+          onPhaseStatusesRemoved={handlePhaseStatusesRemoved}
           onStatusReordered={handleStatusReordered}
         />
       )}

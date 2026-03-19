@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, Trash, GripVertical, Circle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { IProjectTemplateStatusMapping } from '@alga-psa/types';
+import { IProjectTemplatePhase, IProjectTemplateStatusMapping } from '@alga-psa/types';
 import {
   addTemplateStatusMapping,
+  copyTemplateStatusesToPhase,
   removeTemplateStatusMapping,
+  removeTemplatePhaseStatuses,
   reorderTemplateStatusMappings,
 } from '../../actions/projectTemplateActions';
 import { createTenantProjectStatus } from '../../actions/projectTaskStatusActions';
@@ -17,26 +19,36 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import type { IStatus } from '@alga-psa/types';
+import {
+  getEffectiveTemplateStatusMappings,
+  getTemplateDefaultStatusMappings,
+  getTemplatePhaseStatusMappings,
+  TEMPLATE_DEFAULT_SCOPE,
+} from '../../lib/templateStatusMappingUtils';
 
 interface TemplateStatusManagerProps {
   open: boolean;
   onClose: () => void;
   templateId: string;
+  phases: IProjectTemplatePhase[];
   statusMappings: IProjectTemplateStatusMapping[];
   availableStatuses: Array<{ status_id: string; name: string; color?: string; is_closed?: boolean }>;
   onStatusAdded: (mapping: IProjectTemplateStatusMapping) => void;
   onStatusRemoved: (mappingId: string) => void;
-  onStatusReordered: (orderedMappingIds: string[]) => void;
+  onPhaseStatusesRemoved?: (templatePhaseId: string) => void;
+  onStatusReordered: (orderedMappingIds: string[], templatePhaseId?: string | null) => void;
 }
 
 export function TemplateStatusManager({
   open,
   onClose,
   templateId,
+  phases,
   statusMappings,
   availableStatuses,
   onStatusAdded,
   onStatusRemoved,
+  onPhaseStatusesRemoved,
   onStatusReordered,
 }: TemplateStatusManagerProps) {
   const [selectedStatusId, setSelectedStatusId] = useState('');
@@ -45,21 +57,50 @@ export function TemplateStatusManager({
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
   const [localAvailableStatuses, setLocalAvailableStatuses] = useState(availableStatuses);
   const [removeConfirmation, setRemoveConfirmation] = useState<string | null>(null);
+  const [resetToDefaultsConfirmation, setResetToDefaultsConfirmation] = useState(false);
+  const [selectedScope, setSelectedScope] = useState<string>(TEMPLATE_DEFAULT_SCOPE);
 
-  // Get IDs of statuses already in the template
-  const usedStatusIds = new Set(statusMappings.map((m) => m.status_id).filter(Boolean));
+  useEffect(() => {
+    setLocalAvailableStatuses(availableStatuses);
+  }, [availableStatuses]);
 
-  // Filter available statuses to exclude already-used ones
+  const selectedTemplatePhaseId = selectedScope === TEMPLATE_DEFAULT_SCOPE ? null : selectedScope;
+  const defaultStatusMappings = useMemo(
+    () => getTemplateDefaultStatusMappings(statusMappings),
+    [statusMappings]
+  );
+  const phaseStatusMappings = useMemo(
+    () => getTemplatePhaseStatusMappings(statusMappings, selectedTemplatePhaseId),
+    [selectedTemplatePhaseId, statusMappings]
+  );
+  const hasPhaseSpecificStatuses = selectedTemplatePhaseId !== null && phaseStatusMappings.length > 0;
+  const isUsingTemplateDefaults = selectedTemplatePhaseId !== null && !hasPhaseSpecificStatuses;
+  const editableMappings = hasPhaseSpecificStatuses || selectedTemplatePhaseId === null;
+  const sortedMappings = useMemo(
+    () => getEffectiveTemplateStatusMappings(statusMappings, selectedTemplatePhaseId),
+    [selectedTemplatePhaseId, statusMappings]
+  );
+
+  const usedStatusIds = new Set(
+    (hasPhaseSpecificStatuses ? phaseStatusMappings : defaultStatusMappings)
+      .map((mapping) => mapping.status_id)
+      .filter(Boolean)
+  );
   const unusedStatuses = localAvailableStatuses.filter((s) => !usedStatusIds.has(s.status_id));
-
-  const sortedMappings = [...statusMappings].sort((a, b) => a.display_order - b.display_order);
+  const selectedScopeLabel = selectedTemplatePhaseId
+    ? phases.find((phase) => phase.template_phase_id === selectedTemplatePhaseId)?.phase_name || 'Phase'
+    : 'Template Defaults';
 
   const handleAddStatus = async () => {
-    if (!selectedStatusId) return;
+    if (!selectedStatusId || !editableMappings) return;
 
     setIsAdding(true);
     try {
-      const newMapping = await addTemplateStatusMapping(templateId, { status_id: selectedStatusId });
+      const newMapping = await addTemplateStatusMapping(
+        templateId,
+        { status_id: selectedStatusId },
+        selectedTemplatePhaseId
+      );
       onStatusAdded(newMapping);
       setSelectedStatusId('');
       toast.success('Status column added');
@@ -99,7 +140,7 @@ export function TemplateStatusManager({
 
     // Update display order
     const orderedIds = items.map((m) => m.template_status_mapping_id);
-    onStatusReordered(orderedIds);
+    onStatusReordered(orderedIds, selectedTemplatePhaseId);
     setDraggedIndex(targetIndex);
   };
 
@@ -108,11 +149,41 @@ export function TemplateStatusManager({
 
     try {
       const orderedIds = sortedMappings.map((m) => m.template_status_mapping_id);
-      await reorderTemplateStatusMappings(templateId, orderedIds);
+      await reorderTemplateStatusMappings(templateId, orderedIds, selectedTemplatePhaseId);
     } catch (error) {
       handleError(error, 'Failed to reorder status columns');
     } finally {
       setDraggedIndex(null);
+    }
+  };
+
+  const handleCopyDefaultsToPhase = async () => {
+    if (!selectedTemplatePhaseId) {
+      return;
+    }
+
+    try {
+      const copiedMappings = await copyTemplateStatusesToPhase(templateId, selectedTemplatePhaseId);
+      copiedMappings.forEach((mapping) => onStatusAdded(mapping));
+      toast.success('Template defaults copied to phase');
+    } catch (error) {
+      handleError(error, 'Failed to copy template defaults');
+    }
+  };
+
+  const handleResetPhaseToDefaults = async () => {
+    if (!selectedTemplatePhaseId) {
+      return;
+    }
+
+    try {
+      await removeTemplatePhaseStatuses(templateId, selectedTemplatePhaseId);
+      onPhaseStatusesRemoved?.(selectedTemplatePhaseId);
+      toast.success('Phase reverted to template defaults');
+    } catch (error) {
+      handleError(error, 'Failed to revert phase statuses');
+    } finally {
+      setResetToDefaultsConfirmation(false);
     }
   };
 
@@ -128,10 +199,18 @@ export function TemplateStatusManager({
       },
     ]);
 
+    if (!editableMappings) {
+      return;
+    }
+
     // Auto-add to template
     setIsAdding(true);
     try {
-      const newMapping = await addTemplateStatusMapping(templateId, { status_id: newStatus.status_id });
+      const newMapping = await addTemplateStatusMapping(
+        templateId,
+        { status_id: newStatus.status_id },
+        selectedTemplatePhaseId
+      );
       onStatusAdded(newMapping);
       toast.success('Status column added');
     } catch (error) {
@@ -143,6 +222,18 @@ export function TemplateStatusManager({
 
   return (
     <>
+      {resetToDefaultsConfirmation && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setResetToDefaultsConfirmation(false)}
+          onConfirm={handleResetPhaseToDefaults}
+          title="Use Template Defaults"
+          message="Remove this phase's custom status columns and fall back to the template defaults?"
+          confirmLabel="Use Defaults"
+          cancelLabel="Cancel"
+        />
+      )}
+
       {removeConfirmation && (
         <ConfirmationDialog
           isOpen={true}
@@ -168,6 +259,57 @@ export function TemplateStatusManager({
               Define the status columns (workflow stages) for tasks in this template. Drag to reorder.
             </p>
 
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Status Scope</label>
+              <CustomSelect
+                value={selectedScope}
+                onValueChange={setSelectedScope}
+                options={[
+                  { value: TEMPLATE_DEFAULT_SCOPE, label: 'Template Defaults' },
+                  ...phases.map((phase) => ({
+                    value: phase.template_phase_id,
+                    label: phase.phase_name,
+                  })),
+                ]}
+              />
+            </div>
+
+            {selectedTemplatePhaseId && (
+              <div className="rounded-lg border bg-gray-50 px-3 py-3 text-sm text-gray-600">
+                {isUsingTemplateDefaults ? (
+                  <div className="space-y-3">
+                    <p>
+                      <span className="font-medium text-gray-900">{selectedScopeLabel}</span> is
+                      using the template defaults. Copy them into this phase to customize this
+                      workflow independently.
+                    </p>
+                    <Button
+                      id="copy-template-default-statuses"
+                      size="sm"
+                      onClick={handleCopyDefaultsToPhase}
+                    >
+                      Copy Template Defaults
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-3">
+                    <p>
+                      Editing custom statuses for{' '}
+                      <span className="font-medium text-gray-900">{selectedScopeLabel}</span>.
+                    </p>
+                    <Button
+                      id="use-template-default-statuses"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setResetToDefaultsConfirmation(true)}
+                    >
+                      Use Template Defaults
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Current Status Columns */}
             <div className="space-y-2">
               {sortedMappings.length === 0 ? (
@@ -180,15 +322,15 @@ export function TemplateStatusManager({
                 sortedMappings.map((mapping, index) => (
                   <div
                     key={mapping.template_status_mapping_id}
-                    draggable
-                    onDragStart={() => handleDragStart(index)}
-                    onDragOver={(e) => handleDragOver(e, index)}
-                    onDragEnd={handleDragEnd}
+                    draggable={editableMappings}
+                    onDragStart={() => editableMappings && handleDragStart(index)}
+                    onDragOver={(e) => editableMappings && handleDragOver(e, index)}
+                    onDragEnd={editableMappings ? handleDragEnd : undefined}
                     className={`flex items-center gap-3 p-3 bg-white border rounded-lg ${
                       draggedIndex === index ? 'opacity-50' : ''
                     }`}
                   >
-                    <div className="cursor-grab">
+                    <div className={`cursor-grab ${!editableMappings ? 'opacity-40' : ''}`}>
                       <GripVertical className="w-4 h-4 text-gray-400" />
                     </div>
                     <Circle
@@ -205,8 +347,14 @@ export function TemplateStatusManager({
                       variant="ghost"
                       size="sm"
                       onClick={() => setRemoveConfirmation(mapping.template_status_mapping_id)}
-                      disabled={sortedMappings.length <= 1}
-                      title={sortedMappings.length <= 1 ? 'Cannot remove last status column' : 'Remove'}
+                      disabled={!editableMappings || sortedMappings.length <= 1}
+                      title={
+                        !editableMappings
+                          ? 'Copy template defaults into this phase before editing'
+                          : sortedMappings.length <= 1
+                            ? 'Cannot remove last status column'
+                            : 'Remove'
+                      }
                     >
                       <Trash className="w-4 h-4 text-destructive" />
                     </Button>
@@ -231,13 +379,13 @@ export function TemplateStatusManager({
                           label: `${s.name}${s.is_closed ? ' (Closed)' : ''}`,
                         })),
                       ]}
-                      disabled={isAdding}
+                      disabled={isAdding || !editableMappings}
                       className="flex-1"
                     />
                     <Button
                       id="add-existing-status"
                       onClick={handleAddStatus}
-                      disabled={!selectedStatusId || isAdding}
+                      disabled={!selectedStatusId || isAdding || !editableMappings}
                     >
                       {isAdding ? 'Adding...' : 'Add'}
                     </Button>
@@ -249,6 +397,7 @@ export function TemplateStatusManager({
                   id="create-new-status"
                   variant="outline"
                   onClick={() => setShowQuickAddStatus(true)}
+                  disabled={!editableMappings}
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Create New

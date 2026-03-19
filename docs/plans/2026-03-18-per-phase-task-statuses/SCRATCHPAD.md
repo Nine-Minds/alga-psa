@@ -108,6 +108,8 @@
 - `packages/projects/src/components/project-templates/wizard-steps/TemplateStatusColumnsStep.tsx`
 
 - (2026-03-18) Implemented `F033` by threading optional `template_phase_id` into the template status-mapping interfaces and wizard type definitions. The schema column from `F003` is now representable in runtime objects and wizard state.
+- (2026-03-18) Implemented `F034` by adding a scope selector to `TemplateStatusManager` with `Template Defaults` plus every template phase. The manager now resolves effective statuses per selected phase, can copy template defaults into a phase, can revert a phase back to template defaults, and scopes add/reorder operations by `template_phase_id` in `projectTemplateActions.ts`.
+- (2026-03-18) Supporting work for `F034`: `createTemplateFromProject()`, `duplicateTemplate()`, and `applyTemplate()` now preserve phase-scoped template/project status mappings through `template_phase_id` and `phase_id` when those maps already exist. This keeps template editor scope changes coherent with later template application.
 
 ### Key Files — Import / Events
 - `packages/types/src/interfaces/phaseTaskImport.interfaces.ts` — IImportReferenceData
