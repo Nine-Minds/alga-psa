@@ -72,6 +72,7 @@ const routes: Route[] = [
   // Notifications
   { pattern: /^\/notifications\/resolve-recipients$/, handler: handleResolveRecipients },
   { pattern: /^\/notifications\/([0-9a-f-]+)\/stats$/, handler: handleNotificationStats },
+  { pattern: /^\/notifications\/([0-9a-f-]+)\/reads$/, handler: handleNotificationReads },
   { pattern: /^\/notifications\/([0-9a-f-]+)$/, handler: handleNotificationById },
   { pattern: /^\/notifications$/, handler: handleNotifications },
   // Health check
@@ -487,6 +488,13 @@ async function handleNotificationStats(_request: ExecuteRequest, host: HostBindi
   const id = params.param0;
   await safeLog(host, 'info', `[nineminds-control-panel] fetching notification stats id=${id} via uiProxy`);
   const result = await callPlatformApi(host, `/api/v1/platform-notifications/${id}/stats`);
+  return jsonResponse(result.data, { status: result.status });
+}
+
+async function handleNotificationReads(_request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const id = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] fetching notification reads id=${id} via uiProxy`);
+  const result = await callPlatformApi(host, `/api/v1/platform-notifications/${id}/reads`);
   return jsonResponse(result.data, { status: result.status });
 }
 

@@ -14,6 +14,7 @@ import {
   LoadingIndicator,
   Tabs,
   Switch,
+  Checkbox,
   DropdownMenu,
   Drawer,
   TextArea,
@@ -6313,9 +6314,22 @@ interface PlatformNotification {
 
 interface NotificationStats {
   notification_id: string;
+  total_recipients: number;
   total_dismissed: number;
   total_detail_viewed: number;
-  reads_by_tenant: Array<{ tenant: string; tenant_name: string | null; dismissed: number; detail_viewed: number }>;
+  reads_by_tenant: Array<{ tenant: string; tenant_name: string | null; total: number; dismissed: number; detail_viewed: number }>;
+}
+
+interface NotificationRecipientRead {
+  user_id: string;
+  tenant: string;
+  tenant_name: string | null;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  matched_at: string | null;
+  dismissed_at: string | null;
+  detail_viewed_at: string | null;
 }
 
 interface ResolvedRecipient {
@@ -6329,12 +6343,144 @@ interface ResolvedRecipient {
   user_type: string;
 }
 
+// ── Expandable per-notification stats row ──
+function NotificationStatsExpander({ notificationId }: { notificationId: string }) {
+  const [stats, setStats] = useState<NotificationStats | null>(null);
+  const [reads, setReads] = useState<NotificationRecipientRead[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'summary' | 'users'>('summary');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const [statsRes, readsRes] = await Promise.all([
+        callNotificationApi<NotificationStats>(`/${notificationId}/stats`),
+        callNotificationApi<NotificationRecipientRead[]>(`/${notificationId}/reads`),
+      ]);
+      if (statsRes.success && statsRes.data) setStats(statsRes.data);
+      if (readsRes.success && readsRes.data) setReads(readsRes.data);
+      setLoading(false);
+    };
+    fetchData();
+  }, [notificationId]);
+
+  if (loading) return <LoadingIndicator size="sm" text="Loading stats..." />;
+  if (!stats) return <Text tone="muted">No stats available</Text>;
+
+  const filteredReads = reads?.filter(r =>
+    !search || `${r.first_name} ${r.last_name} ${r.email} ${r.tenant_name}`.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  const noAction = filteredReads.filter(r => !r.dismissed_at && !r.detail_viewed_at).length;
+  const dismissed = filteredReads.filter(r => r.dismissed_at && !r.detail_viewed_at).length;
+  const viewed = filteredReads.filter(r => r.detail_viewed_at).length;
+
+  return (
+    <div style={{ padding: '0.75rem 1rem', background: 'var(--alga-muted, #f8fafc)', borderRadius: '0.375rem' }}>
+      {/* Summary cards */}
+      <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.75rem' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{stats.total_recipients}</div>
+          <Text tone="muted" style={{ fontSize: '0.75rem' }}>Recipients</Text>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--alga-primary, #9855ee)' }}>{stats.total_detail_viewed}</div>
+          <Text tone="muted" style={{ fontSize: '0.75rem' }}>Viewed Details</Text>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{stats.total_dismissed}</div>
+          <Text tone="muted" style={{ fontSize: '0.75rem' }}>Dismissed</Text>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--alga-muted-fg, #666)' }}>{noAction}</div>
+          <Text tone="muted" style={{ fontSize: '0.75rem' }}>No Action</Text>
+        </div>
+      </div>
+
+      {/* Tab toggle */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+        <Button size="sm" variant={tab === 'summary' ? 'default' : 'outline'} onClick={() => setTab('summary')}>By Tenant</Button>
+        <Button size="sm" variant={tab === 'users' ? 'default' : 'outline'} onClick={() => setTab('users')}>Per User</Button>
+        {tab === 'users' && (
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filter by name, email, tenant..."
+            style={{ marginLeft: 'auto', width: '250px' }}
+          />
+        )}
+      </div>
+
+      {tab === 'summary' && stats.reads_by_tenant.length > 0 && (
+        <div style={{ maxHeight: '250px', overflow: 'auto' }}>
+          <DataTable
+            columns={[
+              { key: 'tenant_name', header: 'Tenant', render: (row) => row.tenant_name || row.tenant.slice(0, 8) },
+              { key: 'total', header: 'Recipients' },
+              { key: 'detail_viewed', header: 'Viewed Details' },
+              { key: 'dismissed', header: 'Dismissed' },
+            ] as Column<(typeof stats.reads_by_tenant)[0]>[]}
+            data={stats.reads_by_tenant}
+          />
+        </div>
+      )}
+
+      {tab === 'users' && (
+        <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid var(--alga-muted, #e2e8f0)', borderRadius: '0.375rem', background: 'var(--alga-card-bg, white)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--alga-muted, #e2e8f0)', position: 'sticky', top: 0, background: 'var(--alga-card-bg, white)' }}>
+                <th style={{ padding: '0.5rem', textAlign: 'left' }}>User</th>
+                <th style={{ padding: '0.5rem', textAlign: 'left' }}>Tenant</th>
+                <th style={{ padding: '0.5rem', textAlign: 'left' }}>Status</th>
+                <th style={{ padding: '0.5rem', textAlign: 'left' }}>Dismissed</th>
+                <th style={{ padding: '0.5rem', textAlign: 'left' }}>Viewed Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredReads.map(r => {
+                const hasViewed = !!r.detail_viewed_at;
+                const hasDismissed = !!r.dismissed_at;
+                return (
+                  <tr key={r.user_id} style={{ borderBottom: '1px solid var(--alga-muted, #e2e8f0)' }}>
+                    <td style={{ padding: '0.4rem 0.5rem' }}>
+                      <div style={{ fontWeight: 500 }}>{r.first_name} {r.last_name}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--alga-muted-fg, #666)' }}>{r.email}</div>
+                    </td>
+                    <td style={{ padding: '0.4rem 0.5rem' }}>{r.tenant_name || r.tenant.slice(0, 8)}</td>
+                    <td style={{ padding: '0.4rem 0.5rem' }}>
+                      {hasViewed ? <Badge tone="success">Viewed</Badge>
+                        : hasDismissed ? <Badge tone="warning">Dismissed</Badge>
+                        : <Badge tone="muted">Pending</Badge>}
+                    </td>
+                    <td style={{ padding: '0.4rem 0.5rem', color: hasDismissed ? 'inherit' : 'var(--alga-muted-fg, #999)' }}>
+                      {hasDismissed ? new Date(r.dismissed_at!).toLocaleString() : '—'}
+                    </td>
+                    <td style={{ padding: '0.4rem 0.5rem', color: hasViewed ? 'inherit' : 'var(--alga-muted-fg, #999)' }}>
+                      {hasViewed ? new Date(r.detail_viewed_at!).toLocaleString() : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredReads.length === 0 && (
+                <tr><td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>No recipients found</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NotificationsView() {
   const [view, setView] = useState<'list' | 'create' | 'edit'>('list');
   const [notifications, setNotifications] = useState<PlatformNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingNotification, setEditingNotification] = useState<PlatformNotification | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -6358,77 +6504,6 @@ function NotificationsView() {
     return <NotificationEditor notification={editingNotification} onBack={() => { setView('list'); setEditingNotification(null); fetchNotifications(); }} />;
   }
 
-  // ── List view ──
-  const columns: Column<PlatformNotification>[] = [
-    {
-      title: 'Title',
-      dataIndex: 'title',
-      render: (_, row) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>{row.title}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg, #666)' }}>
-            {row.banner_content.length > 80 ? row.banner_content.slice(0, 80) + '...' : row.banner_content}
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Variant',
-      dataIndex: 'variant',
-      render: (_, row) => {
-        const toneMap: Record<string, string> = { destructive: 'danger', warning: 'warning', info: 'info', success: 'success', default: 'muted' };
-        const tone = toneMap[row.variant] || 'info';
-        return <Badge tone={tone as any}>{row.variant}</Badge>;
-      },
-    },
-    {
-      title: 'Audience',
-      dataIndex: 'target_audience',
-      render: (_, row) => {
-        const f = row.target_audience?.filters || {};
-        const parts: string[] = [];
-        if (f.roles?.length) parts.push(`Roles: ${f.roles.join(', ')}`);
-        if (f.tenant_ids?.length) parts.push(`${f.tenant_ids.length} tenant(s)`);
-        if (f.user_types?.length) parts.push(`Types: ${f.user_types.join(', ')}`);
-        const excluded = row.target_audience?.excluded_user_ids?.length || 0;
-        const count = row.target_audience?.resolved_user_count;
-        return (
-          <div style={{ fontSize: '0.8rem' }}>
-            {parts.length > 0 ? parts.join(' · ') : 'All users'}
-            {count != null && <span style={{ color: 'var(--alga-muted-fg, #666)' }}> ({count} users{excluded > 0 ? `, ${excluded} excluded` : ''})</span>}
-          </div>
-        );
-      },
-    },
-    {
-      title: 'Status',
-      dataIndex: 'is_active',
-      render: (_, row) => {
-        const now = new Date();
-        const started = new Date(row.starts_at) <= now;
-        const expired = row.expires_at && new Date(row.expires_at) <= now;
-        if (!row.is_active) return <Badge tone="danger">Inactive</Badge>;
-        if (expired) return <Badge tone="warning">Expired</Badge>;
-        if (!started) return <Badge tone="info">Scheduled</Badge>;
-        return <Badge tone="success">Active</Badge>;
-      },
-    },
-    {
-      title: 'Created',
-      dataIndex: 'created_at',
-      render: (_, row) => new Date(row.created_at).toLocaleDateString(),
-    },
-    {
-      title: '',
-      dataIndex: 'notification_id',
-      render: (_, row) => (
-        <Button size="sm" variant="outline" onClick={() => { setEditingNotification(row); setView('edit'); }}>
-          Edit
-        </Button>
-      ),
-    },
-  ];
-
   return (
     <div style={{ padding: '1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -6444,7 +6519,83 @@ function NotificationsView() {
       {loading ? (
         <LoadingIndicator size="sm" text="Loading notifications..." />
       ) : (
-        <DataTable columns={columns} data={notifications} pagination={true} pageSize={10} />
+        <div>
+          {notifications.map(n => {
+            const isExpanded = expandedId === n.notification_id;
+            const now = new Date();
+            const started = new Date(n.starts_at) <= now;
+            const expired = n.expires_at && new Date(n.expires_at) <= now;
+            const statusBadge = !n.is_active
+              ? <Badge tone="danger">Inactive</Badge>
+              : expired ? <Badge tone="warning">Expired</Badge>
+              : !started ? <Badge tone="info">Scheduled</Badge>
+              : <Badge tone="success">Active</Badge>;
+            const toneMap: Record<string, string> = { destructive: 'danger', warning: 'warning', info: 'info', success: 'success', default: 'muted' };
+            const f = n.target_audience?.filters || {};
+            const audienceParts: string[] = [];
+            if (f.roles?.length) audienceParts.push(`Roles: ${f.roles.join(', ')}`);
+            if (f.tenant_ids?.length) audienceParts.push(`${f.tenant_ids.length} tenant(s)`);
+            if (f.user_types?.length) audienceParts.push(`Types: ${f.user_types.join(', ')}`);
+            const count = n.target_audience?.resolved_user_count;
+
+            return (
+              <div key={n.notification_id} style={{
+                border: '1px solid var(--alga-muted, #e2e8f0)',
+                borderRadius: '0.5rem',
+                marginBottom: '0.5rem',
+                overflow: 'hidden',
+              }}>
+                {/* Row */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto auto auto auto auto',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    cursor: 'pointer',
+                    background: isExpanded ? 'var(--alga-muted, #f8fafc)' : 'var(--alga-card-bg, white)',
+                  }}
+                  onClick={() => setExpandedId(isExpanded ? null : n.notification_id)}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{n.title}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg, #666)' }}>
+                      {n.banner_content.length > 80 ? n.banner_content.slice(0, 80) + '...' : n.banner_content}
+                    </div>
+                  </div>
+                  <Badge tone={(toneMap[n.variant] || 'info') as any}>{n.variant}</Badge>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--alga-muted-fg, #666)' }}>
+                    {audienceParts.length > 0 ? audienceParts.join(' · ') : 'All'}
+                    {count != null && <span> ({count})</span>}
+                  </div>
+                  {statusBadge}
+                  <Text tone="muted" style={{ fontSize: '0.8rem' }}>{new Date(n.created_at).toLocaleDateString()}</Text>
+                  <div style={{ display: 'flex', gap: '0.25rem' }}>
+                    <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setEditingNotification(n); setView('edit'); }}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : n.notification_id); }}>
+                      {isExpanded ? '▲' : '▼'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Expanded stats */}
+                {isExpanded && (
+                  <div style={{ borderTop: '1px solid var(--alga-muted, #e2e8f0)', padding: '0.75rem 1rem' }}>
+                    <NotificationStatsExpander notificationId={n.notification_id} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {notifications.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--alga-muted-fg, #666)' }}>
+              No notifications yet. Click "Create Notification" to get started.
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -6790,17 +6941,15 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
             <Label>User Types</Label>
             <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.25rem' }}>
               {userTypeOptions.map(opt => (
-                <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={filterUserTypes.includes(opt.value)}
-                    onChange={(e) => {
-                      if (e.target.checked) setFilterUserTypes([...filterUserTypes, opt.value]);
-                      else setFilterUserTypes(filterUserTypes.filter(t => t !== opt.value));
-                    }}
-                  />
-                  {opt.label}
-                </label>
+                <Checkbox
+                  key={opt.value}
+                  label={opt.label}
+                  checked={filterUserTypes.includes(opt.value)}
+                  onChange={(e) => {
+                    if (e.target.checked) setFilterUserTypes([...filterUserTypes, opt.value]);
+                    else setFilterUserTypes(filterUserTypes.filter(t => t !== opt.value));
+                  }}
+                />
               ))}
             </div>
           </div>
@@ -6819,17 +6968,15 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', fontWeight: 600 }}>
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={(e) => {
-                      if (e.target.checked) setExcludedUserIds(new Set());
-                      else setExcludedUserIds(new Set(recipients.map(r => r.user_id)));
-                    }}
-                  />
-                  Select All
-                </label>
+                <Checkbox
+                  label="Select All"
+                  checked={allSelected}
+                  onChange={(e) => {
+                    if (e.target.checked) setExcludedUserIds(new Set());
+                    else setExcludedUserIds(new Set(recipients.map(r => r.user_id)));
+                  }}
+                  style={{ fontWeight: 600 }}
+                />
                 <Text tone="muted">{selectedCount} of {recipients.length} users selected</Text>
               </div>
               <Input
@@ -6855,8 +7002,7 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
                   {filteredRecipients.map(r => (
                     <tr key={r.user_id} style={{ borderBottom: '1px solid var(--alga-muted, #e2e8f0)' }}>
                       <td style={{ padding: '0.4rem 0.5rem' }}>
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={!excludedUserIds.has(r.user_id)}
                           onChange={(e) => {
                             const next = new Set(excludedUserIds);
@@ -6899,9 +7045,9 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
           {stats.reads_by_tenant.length > 0 && (
             <DataTable
               columns={[
-                { title: 'Tenant', dataIndex: 'tenant_name', render: (_, row) => row.tenant_name || row.tenant.slice(0, 8) },
-                { title: 'Dismissed', dataIndex: 'dismissed' },
-                { title: 'Detail Viewed', dataIndex: 'detail_viewed' },
+                { key: 'tenant_name', header: 'Tenant', render: (row) => row.tenant_name || row.tenant.slice(0, 8) },
+                { key: 'dismissed', header: 'Dismissed' },
+                { key: 'detail_viewed', header: 'Detail Viewed' },
               ] as Column<(typeof stats.reads_by_tenant)[0]>[]}
               data={stats.reads_by_tenant}
             />
