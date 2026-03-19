@@ -41,6 +41,7 @@ const Chat = {
               select m.content
               from messages m
               where m.chat_id = chats.id
+              and m.tenant = chats.tenant
               order by m.message_order desc nulls last, m.id desc
               limit 1
             ) as preview_text`
@@ -97,10 +98,10 @@ const Chat = {
 
   deleteForUser: async (id: string, userId: string): Promise<boolean> => {
     try {
-      const { knex: db } = await createTenantKnex();
+      const { knex: db, tenant } = await createTenantKnex();
       const deleted = await db.transaction(async (trx) => {
         const chat = await trx<IChat>('chats')
-          .select('id')
+          .select('id', 'tenant')
           .where({ id, user_id: userId })
           .first();
 
@@ -108,8 +109,16 @@ const Chat = {
           return false;
         }
 
-        await trx('messages').where({ chat_id: id }).del();
-        await trx<IChat>('chats').where({ id }).del();
+        const scopedTenant = chat.tenant ?? tenant ?? undefined;
+        const messageDeleteFilter = scopedTenant
+          ? { chat_id: id, tenant: scopedTenant }
+          : { chat_id: id };
+        const chatDeleteFilter = scopedTenant
+          ? { id, tenant: scopedTenant }
+          : { id };
+
+        await trx('messages').where(messageDeleteFilter).del();
+        await trx<IChat>('chats').where(chatDeleteFilter).del();
         return true;
       });
 
