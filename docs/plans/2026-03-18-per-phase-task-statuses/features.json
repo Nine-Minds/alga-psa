@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "CE migration: add nullable template_phase_id UUID column to project_template_status_mappings with FK to project_template_phases(template_phase_id) ON DELETE CASCADE",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.4"]
   },
   {
