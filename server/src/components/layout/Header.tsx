@@ -23,6 +23,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { NotificationBell } from '@alga-psa/notifications/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { menuItems, bottomMenuItems, MenuItem } from '@/config/menuConfig';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -45,6 +46,10 @@ interface HeaderProps {
 
 interface QuickCreateOption {
   id: string;
+  labelKey: string;
+  labelDefault: string;
+  descriptionKey: string;
+  descriptionDefault: string;
   label: string;
   description: string;
   type: QuickCreateType;
@@ -53,50 +58,85 @@ interface QuickCreateOption {
 const quickCreateOptions: QuickCreateOption[] = [
   {
     id: 'create-ticket',
+    labelKey: 'header.quickCreate.options.ticket.label',
+    labelDefault: 'Ticket',
+    descriptionKey: 'header.quickCreate.options.ticket.description',
+    descriptionDefault: 'Create a new support ticket',
     label: 'Ticket',
     description: 'Create a new support ticket',
     type: 'ticket'
   },
   {
     id: 'create-client',
+    labelKey: 'header.quickCreate.options.client.label',
+    labelDefault: 'Client',
+    descriptionKey: 'header.quickCreate.options.client.description',
+    descriptionDefault: 'Add a new client to your system',
     label: 'Client',
     description: 'Add a new client to your system',
     type: 'client'
   },
   {
     id: 'create-contact',
+    labelKey: 'header.quickCreate.options.contact.label',
+    labelDefault: 'Contact',
+    descriptionKey: 'header.quickCreate.options.contact.description',
+    descriptionDefault: 'Add a new contact person',
     label: 'Contact',
     description: 'Add a new contact person',
     type: 'contact'
   },
   {
     id: 'create-project',
+    labelKey: 'header.quickCreate.options.project.label',
+    labelDefault: 'Project',
+    descriptionKey: 'header.quickCreate.options.project.description',
+    descriptionDefault: 'Start a new project',
     label: 'Project',
     description: 'Start a new project',
     type: 'project'
   },
   {
     id: 'create-asset',
+    labelKey: 'header.quickCreate.options.asset.label',
+    labelDefault: 'Asset',
+    descriptionKey: 'header.quickCreate.options.asset.description',
+    descriptionDefault: 'Add a new device to your workspace',
     label: 'Asset',
     description: 'Add a new device to your workspace',
     type: 'asset'
   },
   {
     id: 'create-service',
+    labelKey: 'header.quickCreate.options.service.label',
+    labelDefault: 'Service',
+    descriptionKey: 'header.quickCreate.options.service.description',
+    descriptionDefault: 'Add a new billable service',
     label: 'Service',
     description: 'Add a new billable service',
     type: 'service'
   },
   {
     id: 'create-product',
+    labelKey: 'header.quickCreate.options.product.label',
+    labelDefault: 'Product',
+    descriptionKey: 'header.quickCreate.options.product.description',
+    descriptionDefault: 'Add a new product to your catalog',
     label: 'Product',
     description: 'Add a new product to your catalog',
     type: 'product'
   }
 ];
 
-const getMenuItemNameByPath = (path: string | null | undefined): string => {
-  if (!path) return 'Dashboard';
+type HeaderTranslator = (key: string, options?: Record<string, unknown>) => string;
+
+const getMenuItemNameByPath = (
+  path: string | null | undefined,
+  t: HeaderTranslator,
+): string => {
+  if (!path) {
+    return t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
+  }
 
   const allMenuItems = [...menuItems, ...bottomMenuItems];
 
@@ -106,7 +146,9 @@ const getMenuItemNameByPath = (path: string | null | undefined): string => {
   const findMenuItem = (items: MenuItem[]): string | null => {
     for (const item of items) {
       if (item.href === topLevelPath || (item.href && path.startsWith(item.href))) {
-        return item.name;
+        return item.translationKey
+          ? t(item.translationKey, { defaultValue: item.name })
+          : item.name;
       }
       if (item.subItems) {
         const subItemName = findMenuItem(item.subItems);
@@ -116,10 +158,13 @@ const getMenuItemNameByPath = (path: string | null | undefined): string => {
     return null;
   };
 
-  return findMenuItem(allMenuItems) || 'Dashboard';
+  return findMenuItem(allMenuItems) || t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
 };
 
-const TenantBadge: React.FC<{ tenant?: string | null }> = ({ tenant }) => {
+const TenantBadge: React.FC<{
+  tenant?: string | null;
+  ariaLabel: string;
+}> = ({ tenant, ariaLabel }) => {
   if (!tenant) {
     return null;
   }
@@ -127,15 +172,20 @@ const TenantBadge: React.FC<{ tenant?: string | null }> = ({ tenant }) => {
   return (
     <span
       className="inline-flex items-center rounded-full bg-slate-100 dark:bg-[rgb(var(--color-border-100))] px-3 py-1 text-xs font-medium text-slate-700 dark:text-[rgb(var(--color-text-400))] border border-slate-200 dark:border-[rgb(var(--color-border-200))]"
-      aria-label={`Active tenant ${tenant}`}
+      aria-label={ariaLabel}
     >
       {tenant}
     </span>
   );
 };
 
-const QuickCreateMenu: React.FC = () => {
+const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
+  const translatedOptions = quickCreateOptions.map((option) => ({
+    ...option,
+    label: t(option.labelKey, { defaultValue: option.labelDefault }),
+    description: t(option.descriptionKey, { defaultValue: option.descriptionDefault }),
+  }));
 
   const handleQuickCreateSelect = (type: QuickCreateType) => {
     analytics.capture('ui.quick_create.select', { target: type });
@@ -151,17 +201,21 @@ const QuickCreateMenu: React.FC = () => {
             variant="ghost"
             size="sm"
             className="flex items-center gap-2"
-            aria-label="Open quick create"
+            aria-label={t('header.quickCreate.ariaLabel', { defaultValue: 'Open quick create' })}
           >
             <PlusCircle className="h-5 w-5" />
-            <span className="hidden lg:inline text-sm font-medium">Quick Create</span>
+            <span className="hidden lg:inline text-sm font-medium">
+              {t('header.quickCreate.title', { defaultValue: 'Quick Create' })}
+            </span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
           <div className="px-3 py-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Create</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              {t('header.quickCreate.heading', { defaultValue: 'Create' })}
+            </p>
           </div>
-          {quickCreateOptions.map((option) => (
+          {translatedOptions.map((option) => (
             <DropdownMenuItem
               key={option.id}
               id={`${option.id}-menu-item`}
@@ -187,7 +241,7 @@ const QuickCreateMenu: React.FC = () => {
 
 // NotificationMenu component removed - replaced with NotificationBell
 
-const JobActivityIndicator: React.FC = () => {
+const JobActivityIndicator: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const router = useRouter();
   const [metrics, setMetrics] = useState<JobMetrics | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -234,7 +288,7 @@ const JobActivityIndicator: React.FC = () => {
           id="job-activity-trigger"
           variant="ghost"
           size="icon"
-          aria-label="View background job activity"
+          aria-label={t('header.jobs.ariaLabel', { defaultValue: 'View background job activity' })}
           className="relative h-9 w-9"
         >
           <Activity className={`h-5 w-5 ${hasAttention ? 'text-amber-600' : 'text-gray-600'}`} />
@@ -245,21 +299,33 @@ const JobActivityIndicator: React.FC = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         <div className="px-3 py-2">
-          <p className="text-sm font-semibold text-gray-900">Background Jobs</p>
-          <p className="text-xs text-gray-500">Track imports, automation runs, and scheduled work.</p>
+          <p className="text-sm font-semibold text-gray-900">
+            {t('header.jobs.title', { defaultValue: 'Background Jobs' })}
+          </p>
+          <p className="text-xs text-gray-500">
+            {t('header.jobs.description', {
+              defaultValue: 'Track imports, automation runs, and scheduled work.',
+            })}
+          </p>
         </div>
         <DropdownMenuSeparator />
         <div className="px-3 py-2 space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Active jobs</span>
+            <span className="text-gray-600">
+              {t('header.jobs.active', { defaultValue: 'Active jobs' })}
+            </span>
             <span className="font-medium text-gray-900">{loading ? '—' : activeJobs}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Queued jobs</span>
+            <span className="text-gray-600">
+              {t('header.jobs.queued', { defaultValue: 'Queued jobs' })}
+            </span>
             <span className="font-medium text-gray-900">{loading ? '—' : metrics?.queued ?? 0}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Failed last 24h</span>
+            <span className="text-gray-600">
+              {t('header.jobs.failedLast24h', { defaultValue: 'Failed last 24h' })}
+            </span>
             <span className={`font-medium ${failedJobs > 0 ? 'text-amber-600' : 'text-gray-900'}`}>{loading ? '—' : failedJobs}</span>
           </div>
         </div>
@@ -271,7 +337,7 @@ const JobActivityIndicator: React.FC = () => {
             router.push('/msp/jobs');
           }}
         >
-          Open Job Center
+          {t('header.jobs.openJobCenter', { defaultValue: 'Open Job Center' })}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -284,6 +350,7 @@ export default function Header({
   rightSidebarOpen: _rightSidebarOpen,
   setRightSidebarOpen: _setRightSidebarOpen,
 }: HeaderProps) {
+  const { t } = useTranslation('msp/core');
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
   const router = useRouter();
@@ -320,15 +387,16 @@ export default function Header({
   };
 
   const getBreadcrumbItems = (path: string | null | undefined): { name: string; href: string }[] => {
+    const homeLabel = t('header.breadcrumb.home', { defaultValue: 'Home' });
     const breadcrumbs = [
       {
-        name: 'Home',
+        name: homeLabel,
         href: '/'
       }
     ];
 
     if (path && path !== '/') {
-      const menuName = getMenuItemNameByPath(path);
+      const menuName = getMenuItemNameByPath(path, t);
       breadcrumbs.push({
         name: menuName,
         href: '#'
@@ -339,7 +407,14 @@ export default function Header({
   };
 
   const pathname = usePathname();
-  const breadcrumbItems = useMemo(() => getBreadcrumbItems(pathname), [pathname]);
+  const breadcrumbItems = useMemo(() => getBreadcrumbItems(pathname), [pathname, t]);
+  const homeLabel = t('header.breadcrumb.home', { defaultValue: 'Home' });
+  const tenantBadgeAriaLabel = userData?.tenant
+    ? t('header.tenantBadge.ariaLabel', {
+        defaultValue: 'Active tenant {{tenant}}',
+        tenant: userData.tenant,
+      })
+    : '';
 
   return (
     <header className="flex items-center justify-between border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4 py-3 shadow-sm">
@@ -356,9 +431,10 @@ export default function Header({
                     prefetch={false}
                     href={item.href}
                     className="text-gray-500 hover:text-main-800 text-md transition-colors cursor-pointer"
-                    aria-label="Home"
+                    aria-label={homeLabel}
                   >
                     <Home className="w-5 h-5" />
+                    <span className="sr-only">{homeLabel}</span>
                   </Link>
                 ) : index === breadcrumbItems.length - 1 ? (
                   <span className="text-xl font-semibold text-main-800">
@@ -382,11 +458,11 @@ export default function Header({
       <div className="flex items-center gap-3">
         <PaymentFailedBanner />
         <TrialBanner />
-        <TenantBadge tenant={userData?.tenant} />
-        <QuickCreateMenu />
+        <TenantBadge tenant={userData?.tenant} ariaLabel={tenantBadgeAriaLabel} />
+        <QuickCreateMenu t={t} />
         <ThemeToggle />
         <NotificationBell />
-        <JobActivityIndicator />
+        <JobActivityIndicator t={t} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -418,9 +494,13 @@ export default function Header({
           <DropdownMenuContent align="end" className="min-w-[220px]">
             <div className="px-3 py-2">
               <p className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
-                {userData ? `${userData.first_name ?? ''} ${userData.last_name ?? ''}`.trim() : 'User'}
+                {userData
+                  ? `${userData.first_name ?? ''} ${userData.last_name ?? ''}`.trim()
+                  : t('header.userFallback', { defaultValue: 'User' })}
               </p>
-              <p className="text-xs text-[rgb(var(--color-text-500))]">Quick access to profile & account.</p>
+              <p className="text-xs text-[rgb(var(--color-text-500))]">
+                {t('header.quickAccess', { defaultValue: 'Quick access to profile & account.' })}
+              </p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -428,7 +508,7 @@ export default function Header({
               onSelect={() => router.push(userData?.user_type === 'client' ? '/client/profile' : '/msp/profile')}
             >
               <User className="mr-2 h-4 w-4" />
-              Profile
+              {t('header.profile', { defaultValue: 'Profile' })}
             </DropdownMenuItem>
             {canManageAccount && (
               <DropdownMenuItem
@@ -436,7 +516,7 @@ export default function Header({
                 onSelect={() => router.push('/msp/account')}
               >
                 <Settings className="mr-2 h-4 w-4" />
-                Account
+                {t('header.account', { defaultValue: 'Account' })}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
@@ -444,7 +524,7 @@ export default function Header({
               id="user-sign-out-menu-item"
               onSelect={handleSignOut}
             >
-              Sign out
+              {t('header.signOut', { defaultValue: 'Sign out' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

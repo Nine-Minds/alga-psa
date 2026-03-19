@@ -110,67 +110,67 @@
   {
     "id": "T019",
     "description": "Header.tsx: 'Quick Create' button text is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T020",
     "description": "Header.tsx: 'Open quick create' aria-label is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T021",
     "description": "Header.tsx: 'Create' dropdown heading is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T022",
     "description": "Header.tsx: all 7 quick-create option labels are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
     "id": "T023",
     "description": "Header.tsx: all 7 quick-create option descriptions are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
     "id": "T024",
     "description": "Header.tsx: 'Background Jobs' title is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T025",
     "description": "Header.tsx: 'Active jobs', 'Queued jobs', 'Failed last 24h' labels are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T026",
     "description": "Header.tsx: 'Open Job Center' menu item is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T027",
     "description": "Header.tsx: breadcrumb 'Home' text and aria-label are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
     "id": "T028",
     "description": "Header.tsx: breadcrumb shows translated nav item name (not English) when on a page with a menu match",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
     "id": "T029",
     "description": "Header.tsx: TenantBadge aria-label uses translated template with tenant name interpolation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {

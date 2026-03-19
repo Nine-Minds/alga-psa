@@ -74,43 +74,43 @@
   {
     "id": "F013",
     "description": "Header.tsx: add useTranslation('msp/core') hook",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3", "FR4", "FR5"]
   },
   {
     "id": "F014",
     "description": "Header.tsx QuickCreateMenu: translate 'Open quick create' aria-label, 'Quick Create' button text, 'Create' heading",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
     "id": "F015",
     "description": "Header.tsx QuickCreateMenu: translate 7 quick-create option labels and descriptions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
     "id": "F016",
     "description": "Header.tsx JobActivityIndicator: translate all 7 strings (aria-label, title, description, active/queued/failed labels, Open Job Center)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {
     "id": "F017",
     "description": "Header.tsx: translate breadcrumb 'Home' text and aria-label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
     "id": "F018",
     "description": "Header.tsx: translate 'Dashboard' fallback in getMenuItemNameByPath()",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
     "id": "F019",
     "description": "Header.tsx TenantBadge: translate 'Active tenant' aria-label with interpolation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
