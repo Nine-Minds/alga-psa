@@ -22,6 +22,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Client billing schedule edits should regenerate future client-cadence `recurring_service_periods` after the last billed boundary while leaving `client_billing_cycles` available only for schedule administration and historical context.
 - (2026-03-18) Bucket allowance periods should resolve from canonical `recurring_service_periods` for both client cadence and contract cadence; `client_billing_cycles` should not determine bucket rollover windows once recurring service periods exist.
 - (2026-03-18) Hourly and usage recurring charge queries should always use canonical service-period bounds when a persisted recurring selection is present, even if the invoice window is later or shifted metadata.
+- (2026-03-18) Live accounting export lines should emit canonical recurring detail periods when present and otherwise stay periodless financial documents; invoice-header billing periods remain historical read-side metadata only, not live recurring provenance.
 
 ## Agent Findings
 
@@ -72,6 +73,14 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
   - Added focused preview/generate regressions:
     - [invoiceGeneration.preview.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.preview.test.ts)
     - [invoiceGeneration.selectorInputGenerate.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts)
+- Accounting export service-period slice completed:
+  - Updated [accountingExportInvoiceSelector.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/services/accountingExportInvoiceSelector.ts) so live export lines only emit canonical recurring detail periods when invoice charge detail rows exist and otherwise fall back to periodless `financial_document_fallback` output instead of preserving invoice-header recurring provenance.
+  - Kept `invoice_header_fallback` confined to passive historical payload/read-side compatibility; live export selection no longer emits mixed canonical-vs-header recurring provenance.
+  - Added/updated focused tests:
+    - [accountingExportInvoiceSelector.servicePeriods.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts)
+    - [accountingExportInvoiceSelector.servicePeriods.wiring.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts)
+    - [authoritativeRecurringReaders.servicePeriods.wiring.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/tests/authoritativeRecurringReaders.servicePeriods.wiring.test.ts)
+    - [invoiceSelection.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/integration/accounting/invoiceSelection.integration.test.ts)
 
 - Billing UI/actions sweep:
   - `AutomaticInvoices`, due-work selection, recurring run target selection, history, reversal/delete, accounting export, and some authoring/storage helpers still preserve bridge-first recurring behavior.
@@ -123,17 +132,17 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 
 - (2026-03-18) The repo already had an in-progress service-driven runbook/test update in the worktree; the hard-cutover docs were added in separate files to avoid mixing coexistence guidance with the post-bridge model.
 - (2026-03-18) The due-work reader still needs later UI/run-action follow-up because some surfaces continue to use `billingCycleId` for row actions even though due-work identity is now canonical.
-- (2026-03-18) `invoiceModification.ts` still uses null/non-null `billing_cycle_id` to classify prepayment-style invoices, which will misclassify bridge-less recurring invoices.
+- (2026-03-18) `invoiceModification.ts` now classifies prepayment behavior from `is_prepayment` rather than null/non-null `billing_cycle_id`; historical rows that predate the explicit flag may still need later read-side or backfill consideration.
 - (2026-03-18) `billingAndTax.ts` now sources ready recurring work only from `recurring_service_periods`, but the separate repair-gap surface still needs downstream UI handling so operators can act on missing materialization without relying on compatibility rows.
 - (2026-03-18) recurring run selection, `AutomaticInvoices`, and recurring preview/generate API requests now use canonical selector-input targets, but shared type unions and some read-side/history surfaces still carry legacy `billing_cycle_id` or `billing_cycle_window` semantics.
 - (2026-03-18) `generateInvoice(...)`, `previewInvoice(...)`, and PO-overage selection now normalize legacy billing-cycle entrypoints onto canonical client-cadence selector input before duplicate detection or billing calculation. `billingCycleId` remains only as optional metadata on the normalized selector while request-shape cleanup is still pending.
 - (2026-03-18) recurring preview/generate API schemas now reject top-level `billing_cycle_id` and `billing_cycle_window` selector inputs. The remaining bridge-only fields live in shared type unions and read-side/history surfaces, not in recurring preview/generate request handling.
 - (2026-03-18) Legitimate client billing schedule administration still has separate schedule-specific schemas and actions (`financialSchemas.ts`, `billingScheduleActions.ts`, `billingCycleAnchorActions.ts`) after recurring preview/generate stopped accepting `billing_cycle_id`.
-- (2026-03-18) `billingCycleActions.ts` still frames recurring history and reversal as billing-cycle operations.
-- (2026-03-18) `InvoiceService.ts` still classifies recurring invoice rows via `invoices.billing_cycle_id` in some read paths.
+- (2026-03-18) Live recurring history now loads through recurring-invoice-first readers and action labels. A deprecated billing-cycle alias remains only to keep the already-dirty `billingInvoiceTiming.integration.test.ts` harness compiling until that separate worktree change is cleaned up.
+- (2026-03-18) `InvoiceService.ts` list/detail classification now uses canonical recurring summary data. `billing_cycle_id` remains only as optional historical metadata or explicit include-side context.
 - (2026-03-18) one API service path still appears to reference old cycle column names (`cycle_id`, `period_start`, `period_end`) and should be rechecked during cleanup.
-- (2026-03-18) bucket recurring logic still prefers `client_billing_cycles` as a resolution source.
-- (2026-03-18) accounting export still carries canonical-vs-fallback recurring provenance states.
+- (2026-03-18) Bucket recurring period resolution now derives from canonical `recurring_service_periods` windows and only falls back to plan-anchor arithmetic when no current service period exists.
+- (2026-03-18) Live accounting export selection no longer emits invoice-header recurring provenance. Canonical recurring detail rows remain authoritative, while invoices without canonical detail export as periodless financial documents; historical stored payloads may still carry older fallback metadata.
 - (2026-03-18) Shared recurring identity types now drop bridge-only `billingCycleId` and `hasBillingCycleBridge` fields, but read-side invoice history types still legitimately expose `billing_cycle_window` and bridge metadata for historical context.
 - (2026-03-18) `generateInvoiceHandler` and `scheduleRecurringWindowInvoiceGeneration` are now selector-input-only. The old `scheduleInvoiceGeneration(...)` helper is left as an explicit hard failure if something still tries to schedule recurring work from a raw `billingCycleId`.
 - (2026-03-18) DB-backed verification for `billingInvoiceTiming.integration.test.ts` could not run locally because PostgreSQL was unavailable on `127.0.0.1:5438` / `::1:5438`. The targeted tests were skipped before any test body executed.
@@ -148,6 +157,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) DB-backed verification for `clientBillingCycleAnchors.test.ts` is currently blocked locally because PostgreSQL is unavailable on `127.0.0.1:5438` / `::1:5438`. The rewritten tests load and compile, but the shared test context aborts before any test body executes.
 - (2026-03-18) `bucketUsageService.ts` no longer queries `client_billing_cycles` on the recurring bucket path. Bucket period resolution now derives current and rollover windows from `recurring_service_periods` and falls back to plan-anchor arithmetic only when no canonical service period exists.
 - (2026-03-18) `billingEngine.ts` already had the correct service-window behavior for hourly and usage recurring execution. `F056` was completed by locking that behavior with explicit persisted-selection query regressions instead of changing runtime logic.
+- (2026-03-18) DB-backed verification for `invoiceSelection.integration.test.ts` is also currently blocked locally because PostgreSQL is unavailable on `127.0.0.1:5438` / `::1:5438`. The updated coexistence assertions compile, but the shared test context aborts before any integration test body executes.
 
 ## Commands / Runbooks
 
@@ -181,6 +191,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/bucketUsageService.periods.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/billingEngine.endExclusiveQueries.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run ../packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts ../packages/billing/tests/authoritativeRecurringReaders.servicePeriods.wiring.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -228,6 +241,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T054/T055 implemented with client-cadence and contract-cadence bucket-service unit coverage proving recurring bucket resolution uses canonical service periods and never hits `client_billing_cycles`.
 - (2026-03-18) F056 confirmed by locking the existing billing-engine behavior that filters hourly `time_entries` and usage `usage_tracking` against canonical persisted service windows rather than invoice-window or client-cycle boundaries.
 - (2026-03-18) T056/T057 implemented with focused billing-engine regressions proving persisted recurring hourly and usage execution still query inside the canonical service window when it differs from the invoice window.
+- (2026-03-18) F057/F058/F059 implemented by cutting live accounting export selection over to canonical recurring detail periods only, removing invoice-header recurring provenance emission from the live selector, and treating invoices without canonical recurring detail as periodless financial documents.
+- (2026-03-18) T058/T059/T060/T061 implemented with integration, unit, and static coverage for client-cadence and contract-cadence canonical export periods plus the legacy no-detail case that now exports without live recurring fallback provenance.
 
 ## Links / References
 

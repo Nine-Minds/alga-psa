@@ -796,11 +796,11 @@ describe('Accounting export invoice selection integration', () => {
     const historicalExportLine = storedLines.find((line) => line.invoice_charge_id === historicalChargeId);
     expect(historicalExportLine).toMatchObject({
       invoice_id: historicalInvoiceId,
-      service_period_start: '2025-01-01T00:00:00.000Z',
-      service_period_end: '2025-02-01T00:00:00.000Z',
+      service_period_start: null,
+      service_period_end: null,
       payload: {
         invoice_number: 'INV-HIST-COEXIST',
-        service_period_source: 'invoice_header_fallback',
+        service_period_source: 'financial_document_fallback',
         recurring_detail_periods: null,
         transaction_ids: [historicalTransactionId]
       }

@@ -247,12 +247,12 @@ export class AccountingExportInvoiceSelector {
       const hasCanonicalDetailPeriods = recurringDetailPeriods.length > 0;
       const servicePeriodStart = hasCanonicalDetailPeriods
         ? recurringDetailPeriods[0]?.service_period_start ?? detailServicePeriodStarts[0] ?? null
-        : toIsoString(row.billing_period_start);
+        : null;
       const servicePeriodEnd = hasCanonicalDetailPeriods
         ? recurringDetailPeriods[recurringDetailPeriods.length - 1]?.service_period_end ??
           detailServicePeriodEnds[detailServicePeriodEnds.length - 1] ??
           null
-        : toIsoString(row.billing_period_end);
+        : null;
       const servicePeriodSource = resolveServicePeriodSource({
         hasCanonicalDetailPeriods,
         servicePeriodStart,
@@ -528,10 +528,6 @@ function resolveServicePeriodSource(params: {
 }): AccountingExportServicePeriodSource {
   if (params.hasCanonicalDetailPeriods) {
     return 'canonical_detail_periods';
-  }
-
-  if (params.servicePeriodStart || params.servicePeriodEnd) {
-    return 'invoice_header_fallback';
   }
 
   return 'financial_document_fallback';

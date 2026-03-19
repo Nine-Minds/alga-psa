@@ -31,7 +31,7 @@ function buildThenableQuery(result: any[]) {
 }
 
 describe('AccountingExportInvoiceSelector service-period behavior', () => {
-  it('prefers aggregated invoice charge detail periods over invoice header billing periods and keeps header fallback for legacy charges', async () => {
+  it('prefers canonical invoice charge detail periods and treats invoices without recurring detail as periodless financial documents', async () => {
     const previewRows = [
       {
         invoice_id: 'invoice-1',
@@ -136,9 +136,9 @@ describe('AccountingExportInvoiceSelector service-period behavior', () => {
     const legacyLine = preview.find((line) => line.chargeId === 'charge-legacy');
     expect(legacyLine).toMatchObject({
       invoiceId: 'invoice-2',
-      servicePeriodStart: '2025-02-10T00:00:00.000Z',
-      servicePeriodEnd: '2025-02-10T00:00:00.000Z',
-      servicePeriodSource: 'invoice_header_fallback',
+      servicePeriodStart: null,
+      servicePeriodEnd: null,
+      servicePeriodSource: 'financial_document_fallback',
       isManualInvoice: true,
       isManualCharge: true,
       transactionIds: ['txn-2'],

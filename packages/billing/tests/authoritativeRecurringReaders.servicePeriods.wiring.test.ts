@@ -24,14 +24,14 @@ describe('authoritative recurring readers service-period wiring', () => {
 
     expect(invoiceModelSource).toContain('if (!chargeDetailRows || chargeDetailRows.length === 0) {');
     expect(invoiceModelSource).toContain('Historical flat invoices stay parent-only when canonical detail rows do not exist.');
-    expect(invoiceModelSource).toContain("source: 'canonical_detail_rows'");
+    expect(invoiceModelSource).toContain('recurring_detail_periods: recurringDetailPeriods,');
     expect(invoiceModelSource).toContain('service_period_start: servicePeriodStarts[0] ?? null');
     expect(invoiceModelSource).toContain('service_period_end: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null');
 
     expect(exportSelectorSource).toContain('const hasCanonicalDetailPeriods = recurringDetailPeriods.length > 0;');
     expect(exportSelectorSource).toContain('? recurringDetailPeriods[0]?.service_period_start ?? detailServicePeriodStarts[0] ?? null');
-    expect(exportSelectorSource).toContain(': toIsoString(row.billing_period_start);');
+    expect(exportSelectorSource).toContain(': null;');
     expect(exportSelectorSource).toContain("? recurringDetailPeriods[recurringDetailPeriods.length - 1]?.service_period_end ??");
-    expect(exportSelectorSource).toContain(': toIsoString(row.billing_period_end);');
+    expect(exportSelectorSource).toContain(': null;');
   });
 });
