@@ -181,7 +181,13 @@ class IframeBridge {
           version: ENVELOPE_VERSION,
           type: 'apiproxy',
           request_id: requestId,
-          payload: { route, body: bodyBase64, method: options?.method },
+          payload: {
+            route,
+            body: bodyBase64,
+            // Only include method when non-POST to preserve backward compatibility
+            // with deployed iframeBridge versions
+            ...(options?.method && options.method !== 'POST' ? { method: options.method } : {}),
+          },
         },
         this.parentOrigin
       );
