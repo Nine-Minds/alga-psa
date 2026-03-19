@@ -22,6 +22,7 @@ spec:
     spec:
       chart: ./ee/helm/email-service
       interval: 10m
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: alga-appliance

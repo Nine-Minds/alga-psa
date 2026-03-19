@@ -23,6 +23,7 @@ spec:
     spec:
       chart: ./ee/helm/temporal-worker
       interval: 10m
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: alga-appliance

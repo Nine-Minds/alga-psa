@@ -21,6 +21,7 @@ spec:
     spec:
       chart: ./ee/helm/temporal
       interval: 10m
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: alga-appliance
