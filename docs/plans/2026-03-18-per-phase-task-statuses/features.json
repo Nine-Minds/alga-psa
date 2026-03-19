@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "ProjectTaskStatusSettings: toggling back to defaults shows confirmation dialog, then calls removePhaseStatuses",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.5"]
   },
   {
