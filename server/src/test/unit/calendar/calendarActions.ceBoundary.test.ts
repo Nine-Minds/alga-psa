@@ -40,7 +40,7 @@ describe('calendar action CE boundary', () => {
       getCalendarProvidersImpl: eeGetProviders,
     }));
 
-    const actionsModule = await import('@/lib/actions/calendarActions');
+    const actionsModule = await import('@alga-psa/integrations/actions/calendarActions');
     const result = await actionsModule.getCalendarProviders();
 
     expect(result).toEqual({
@@ -59,7 +59,7 @@ describe('calendar action CE boundary', () => {
       syncCalendarProviderImpl: eeSyncProvider,
     }));
 
-    const actionsModule = await import('@/lib/actions/calendarActions');
+    const actionsModule = await import('@alga-psa/integrations/actions/calendarActions');
     const result = await actionsModule.syncCalendarProvider('provider-1');
 
     expect(result).toEqual({

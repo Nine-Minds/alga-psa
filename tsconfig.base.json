@@ -81,6 +81,8 @@
       "@alga-psa/workflow-streams/*": ["packages/workflow-streams/src/streams/*"],
       "@alga-psa/workflows": ["ee/packages/workflows/src"],
       "@alga-psa/workflows/*": ["ee/packages/workflows/src/*"],
+      "@alga-psa/block-content": ["packages/block-content/src"],
+      "@alga-psa/block-content/*": ["packages/block-content/src/*"],
       "@alga-psa/formatting": ["packages/formatting/src"],
       "@alga-psa/formatting/*": ["packages/formatting/src/*"],
       "@alga-psa/documents": ["packages/documents/src"],

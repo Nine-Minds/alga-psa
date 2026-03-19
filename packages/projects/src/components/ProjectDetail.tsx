@@ -10,7 +10,7 @@ import { useDrawer } from "@alga-psa/ui";
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
-import { getDocumentCountsForEntities } from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
@@ -156,6 +156,7 @@ export default function ProjectDetail({
   onUrlUpdate
 }: ProjectDetailProps) {
   useTagPermissions(['project', 'project_task']);
+  const { getDocumentCountsForEntities } = useDocumentsCrossFeature();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
