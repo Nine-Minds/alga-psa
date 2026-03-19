@@ -10,8 +10,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
 import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
-import { getSlaPolicies } from '@alga-psa/sla/actions';
-import { ISlaPolicy } from '@alga-psa/sla/types';
+import type { ISlaPolicy } from '@alga-psa/types';
 import { BillingCycleType } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from '@alga-psa/validation';
@@ -205,7 +204,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   surveySummary = null
 }) => {
   const { t } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets, getSlaPolicies } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);

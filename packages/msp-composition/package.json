@@ -26,6 +26,10 @@
       "import": "./src/tickets/*.tsx",
       "types": "./src/tickets/*.tsx"
     },
+    "./tickets/registerSlaIntegration": {
+      "import": "./src/tickets/registerSlaIntegration.ts",
+      "types": "./src/tickets/registerSlaIntegration.ts"
+    },
     "./projects": {
       "import": "./src/projects/index.ts",
       "types": "./src/projects/index.ts"
@@ -78,6 +82,7 @@
     "@alga-psa/formatting": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/scheduling": "*",
+    "@alga-psa/sla": "*",
     "@alga-psa/surveys": "*",
     "@alga-psa/tickets": "*",
     "@alga-psa/types": "*",

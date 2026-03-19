@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import type { ITicket, ITicketCategory, IBoard, IUser, ITag, SurveyClientSatisfactionSummary } from '@alga-psa/types';
+import type { ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary } from '@alga-psa/types';
 
 export interface QuickAddTicketRenderProps {
   id?: string;
@@ -61,6 +61,7 @@ export interface ClientCrossFeatureCallbacks {
   renderClientAssets: (props: ClientAssetsRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
+  getSlaPolicies: () => Promise<ISlaPolicy[]>;
 }
 
 const ClientCrossFeatureContext = createContext<ClientCrossFeatureCallbacks | null>(null);
