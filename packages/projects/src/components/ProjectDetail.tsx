@@ -2818,46 +2818,32 @@ export default function ProjectDetail({
       </div>
 
       {(showQuickAdd && (currentPhase || selectedPhase)) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-3xl">
-            <Button
-              id="close-quick-add"
-              variant="ghost"
-              size="sm"
-              className="absolute top-2 right-2 p-1 h-auto w-auto text-gray-500 hover:text-gray-700"
-              onClick={handleCloseQuickAdd}
-              aria-label="Close"
-            >
-              ×
-            </Button>
-            {selectedTask ? (
-              <TaskEdit
-                task={selectedTask}
-                phase={currentPhase || selectedPhase!}
-                phases={projectPhases}
-                onClose={handleCloseQuickAdd}
-                onTaskUpdated={handleTaskUpdated}
-                projectStatuses={projectStatuses}
-                users={users}
-                projectTreeData={projectTreeData}
-                onCommentCountChange={handleCommentCountChange}
-              />
-            ) : (
-              <TaskQuickAdd
-                phase={currentPhase || selectedPhase!}
-                onClose={handleCloseQuickAdd}
-                onTaskAdded={handleAddTask}
-                onTaskUpdated={handleEmptyTaskUpdate}
-                projectStatuses={projectStatuses}
-                defaultStatus={defaultStatus || undefined}
-                onCancel={() => setIsAddingTask(false)}
-                users={users}
-                task={selectedTask || undefined}
-                projectTreeData={projectTreeData}
-              />
-            )}
-          </div>
-        </div>
+        selectedTask ? (
+          <TaskEdit
+            task={selectedTask}
+            phase={currentPhase || selectedPhase!}
+            phases={projectPhases}
+            onClose={handleCloseQuickAdd}
+            onTaskUpdated={handleTaskUpdated}
+            projectStatuses={projectStatuses}
+            users={users}
+            projectTreeData={projectTreeData}
+            onCommentCountChange={handleCommentCountChange}
+          />
+        ) : (
+          <TaskQuickAdd
+            phase={currentPhase || selectedPhase!}
+            onClose={handleCloseQuickAdd}
+            onTaskAdded={handleAddTask}
+            onTaskUpdated={handleEmptyTaskUpdate}
+            projectStatuses={projectStatuses}
+            defaultStatus={defaultStatus || undefined}
+            onCancel={() => setIsAddingTask(false)}
+            users={users}
+            task={selectedTask || undefined}
+            projectTreeData={projectTreeData}
+          />
+        )
       )}
 
       {showPhaseQuickAdd && (
