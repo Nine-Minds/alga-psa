@@ -18,6 +18,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Recurring invoice linkage should derive candidate obligations from canonical persisted detail metadata (`config_id`, service-period window, due position, invoice window) plus contract-line or assignment identity, never from invoice-header `billing_cycle_id`.
 - (2026-03-18) Prepayment classification should use explicit invoice-kind state (`is_prepayment`) rather than the absence of a recurring bridge field; bridge-less recurring invoices and prepayments are separate concepts.
 - (2026-03-18) Persisted recurring execution windows are already canonical recurring truth, so billing-engine validation for selector-input recurring runs must not round-trip back through `client_billing_cycles` or auto-create cycle rows just to validate the window.
+- (2026-03-18) Direct `selector_input` preview/generate requests must normalize and validate against persisted `recurring_service_periods`; treating the caller-provided window as trusted input leaves a gap where mutated windows can bypass canonical service-period authority.
 
 ## Agent Findings
 
@@ -63,6 +64,11 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
   - Added/updated focused tests:
     - [billingEngine.timing.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/billingEngine.timing.test.ts)
     - [billingEngine.recurringExecution.static.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/billingEngine.recurringExecution.static.test.ts)
+- Selector-input window-validation slice completed:
+  - Updated [invoiceGeneration.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/invoiceGeneration.ts) so `normalizeRecurringSelectorInput(...)` canonicalizes client-cadence and contract-cadence selector input by looking up persisted `recurring_service_periods`, rejects windows that do not match materialized service periods, and wraps generation-side normalization failures with execution-identity diagnostics.
+  - Added focused preview/generate regressions:
+    - [invoiceGeneration.preview.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.preview.test.ts)
+    - [invoiceGeneration.selectorInputGenerate.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts)
 
 - Billing UI/actions sweep:
   - `AutomaticInvoices`, due-work selection, recurring run target selection, history, reversal/delete, accounting export, and some authoring/storage helpers still preserve bridge-first recurring behavior.
@@ -151,6 +157,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/billingEngine.recurringExecution.static.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -189,6 +197,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T048 implemented with a static source guard proving invoice finalization no longer keys recurring or prepayment classification from null/non-null `billing_cycle_id`.
 - (2026-03-18) F049/F050/F051 implemented by making persisted recurring execution-window billing bypass cycle validation, loading contract lines directly for the execution window, and preventing selector-input recurring runs from auto-loading or auto-creating `client_billing_cycles` during live execution.
 - (2026-03-18) T051 implemented with static and unit coverage proving the billing engine’s persisted recurring path no longer routes through `getClientContractLinesAndCycle(...)`, `validateBillingPeriod(...)`, or `getBillingCycle(...)` to execute recurring work.
+- (2026-03-18) Added T089 because the original checklist lacked a focused validation test for direct selector-input windows drifting away from persisted recurring service periods; preview and generate both now reject that mismatch explicitly.
+- (2026-03-18) F052 implemented by normalizing client-cadence and contract-cadence selector input against persisted `recurring_service_periods`, so recurring preview/generate validate canonical service-period windows instead of trusting caller-supplied windows or legacy cycle semantics.
+- (2026-03-18) T089 implemented with preview/generate regressions proving selector-input recurring actions reject execution windows that do not match materialized recurring service periods and still surface canonical execution-identity diagnostics.
 
 ## Links / References
 

@@ -34,6 +34,28 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
   };
 }
 
+function buildContractCadenceServicePeriodRow(overrides: Row = {}): Row {
+  return {
+    record_id: 'rsp-contract-1',
+    tenant: 'tenant-1',
+    cadence_owner: 'contract',
+    obligation_type: 'contract_line',
+    obligation_id: 'line-1',
+    client_id: 'client-1',
+    contract_id: 'contract-1',
+    schedule_key: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+    period_key: 'period:2025-01-01:2025-02-01',
+    service_period_start: '2025-01-01',
+    service_period_end: '2025-02-01',
+    invoice_window_start: '2025-02-08',
+    invoice_window_end: '2025-03-08',
+    lifecycle_state: 'generated',
+    revision: 1,
+    invoice_id: null,
+    ...overrides,
+  };
+}
+
 function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
   let resultRows = [...rows];
 
@@ -289,6 +311,7 @@ describe('invoice preview recurring timing', () => {
       0,
       mocks.rowsByTable.recurring_service_periods.length,
       buildClientCadenceServicePeriodRow(),
+      buildContractCadenceServicePeriodRow(),
     );
     mocks.computePurchaseOrderOverage.mockImplementation(
       ({
@@ -619,6 +642,35 @@ describe('invoice preview recurring timing', () => {
         }),
       ]),
     );
+  });
+
+  it('rejects selector-input preview when the requested execution window does not match a persisted recurring service period', async () => {
+    mocks.rowsByTable.recurring_service_periods.splice(
+      0,
+      mocks.rowsByTable.recurring_service_periods.length,
+      buildClientCadenceServicePeriodRow(),
+      buildContractCadenceServicePeriodRow({
+        invoice_window_end: '2025-03-15',
+      }),
+    );
+
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const result = await previewInvoiceForSelectionInput(selectorInput);
+
+    expect(result).toMatchObject({
+      success: false,
+      error:
+        'Recurring service periods were not materialized for this recurring execution window.',
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    });
+    expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });
 
   it('T044: selector-input PO-overage action returns null when the preview spans no PO-governed client contract', async () => {

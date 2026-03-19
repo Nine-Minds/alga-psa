@@ -50,6 +50,7 @@
   { "id": "T049", "description": "Integration: billing engine executes a client-cadence recurring invoice without loading or creating `client_billing_cycles` as recurring truth.", "implemented": false, "featureIds": ["F049", "F050", "F051"] },
   { "id": "T050", "description": "Integration: billing engine executes a contract-cadence recurring invoice without consulting `client_billing_cycles`.", "implemented": false, "featureIds": ["F049", "F051"] },
   { "id": "T051", "description": "Static validation: billing engine no longer auto-creates or loads cycle rows to execute recurring work.", "implemented": true, "featureIds": ["F049", "F051"] },
+  { "id": "T089", "description": "Integration: selector-input recurring preview/generate rejects execution windows that do not match persisted recurring service periods.", "implemented": true, "featureIds": ["F052"] },
   { "id": "T052", "description": "Integration: client billing schedule change regenerates future recurring service periods beyond billed boundaries rather than defining future recurring work by mutating future cycle rows.", "implemented": false, "featureIds": ["F053"] },
   { "id": "T053", "description": "Static validation: client billing schedule management code remains available for legitimate client cadence administration.", "implemented": false, "featureIds": ["F054"] },
   { "id": "T054", "description": "Integration: bucket recurring period resolution follows canonical recurring service periods for client cadence.", "implemented": false, "featureIds": ["F055"] },

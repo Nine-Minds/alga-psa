@@ -52,6 +52,7 @@ import {
 } from '@alga-psa/billing/services/purchaseOrderService';
 import {
   buildClientCadenceDueSelectionInput,
+  buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
@@ -395,6 +396,116 @@ async function normalizeRecurringSelectorInput(params: {
   tenant: string;
   selectorInput: IRecurringDueSelectionInput;
 }): Promise<IRecurringDueSelectionInput> {
+  const normalizedWindowStart = normalizeRecurringWindowDate(
+    params.selectorInput.windowStart,
+  );
+  const normalizedWindowEnd = normalizeRecurringWindowDate(
+    params.selectorInput.windowEnd,
+  );
+
+  if (params.selectorInput.executionWindow.kind === 'client_cadence_window') {
+    const recurringServicePeriod = await withTransaction(
+      params.knex,
+      async (trx: Knex.Transaction) =>
+        trx('recurring_service_periods as rsp')
+          .join('client_contract_lines as ccl', function () {
+            this.on('ccl.client_contract_line_id', '=', 'rsp.obligation_id')
+              .andOn('ccl.tenant', '=', 'rsp.tenant');
+          })
+          .where({
+            'rsp.tenant': params.tenant,
+            'rsp.cadence_owner': 'client',
+            'rsp.obligation_type': 'client_contract_line',
+            'rsp.schedule_key': params.selectorInput.executionWindow.scheduleKey,
+            'rsp.period_key': params.selectorInput.executionWindow.periodKey,
+            'rsp.invoice_window_start': normalizedWindowStart,
+            'rsp.invoice_window_end': normalizedWindowEnd,
+            'ccl.client_id': params.selectorInput.clientId,
+          })
+          .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+          .orderBy('rsp.service_period_start', 'asc')
+          .orderBy('rsp.revision', 'asc')
+          .first('rsp.schedule_key', 'rsp.period_key'),
+    );
+
+    if (!recurringServicePeriod?.schedule_key || !recurringServicePeriod?.period_key) {
+      throw new Error(
+        'Recurring service periods were not materialized for this recurring execution window.',
+      );
+    }
+
+    return buildClientCadenceDueSelectionInput({
+      clientId: params.selectorInput.clientId,
+      scheduleKey: recurringServicePeriod.schedule_key,
+      periodKey: recurringServicePeriod.period_key,
+      windowStart: normalizedWindowStart,
+      windowEnd: normalizedWindowEnd,
+    });
+  }
+
+  if (params.selectorInput.executionWindow.kind === 'contract_cadence_window') {
+    const recurringServicePeriod = await withTransaction(
+      params.knex,
+      async (trx: Knex.Transaction) => {
+        const query = trx('recurring_service_periods as rsp')
+          .join('contract_lines as cl', function () {
+            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
+              .andOn('cl.tenant', '=', 'rsp.tenant');
+          })
+          .join('contracts as ct', function () {
+            this.on('ct.contract_id', '=', 'cl.contract_id')
+              .andOn('ct.tenant', '=', 'cl.tenant');
+          })
+          .join('clients as c', function () {
+            this.on('c.client_id', '=', 'ct.owner_client_id')
+              .andOn('c.tenant', '=', 'ct.tenant');
+          })
+          .where({
+            'rsp.tenant': params.tenant,
+            'rsp.cadence_owner': 'contract',
+            'rsp.obligation_type': 'contract_line',
+            'rsp.invoice_window_start': normalizedWindowStart,
+            'rsp.invoice_window_end': normalizedWindowEnd,
+            'c.client_id': params.selectorInput.clientId,
+          })
+          .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded']);
+
+        if (params.selectorInput.executionWindow.contractId) {
+          query.where({
+            'ct.contract_id': params.selectorInput.executionWindow.contractId,
+          });
+        }
+
+        if (params.selectorInput.executionWindow.contractLineId) {
+          query.where({
+            'rsp.obligation_id': params.selectorInput.executionWindow.contractLineId,
+          });
+        }
+
+        return query
+          .orderBy('rsp.service_period_start', 'asc')
+          .orderBy('rsp.revision', 'asc')
+          .first('rsp.obligation_id');
+      },
+    );
+
+    if (!recurringServicePeriod?.obligation_id) {
+      throw new Error(
+        'Recurring service periods were not materialized for this recurring execution window.',
+      );
+    }
+
+    return buildContractCadenceDueSelectionInput({
+      clientId: params.selectorInput.clientId,
+      contractId: params.selectorInput.executionWindow.contractId ?? null,
+      contractLineId:
+        params.selectorInput.executionWindow.contractLineId
+        ?? recurringServicePeriod.obligation_id,
+      windowStart: normalizedWindowStart,
+      windowEnd: normalizedWindowEnd,
+    });
+  }
+
   return params.selectorInput;
 }
 
@@ -1075,11 +1186,22 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   bridgeMetadata?: RecurringBridgeMetadata,
 ): Promise<InvoiceViewModel | null> => {
   const { knex } = await createTenantKnex();
-  const normalizedSelectorInput = await normalizeRecurringSelectorInput({
-    knex,
-    tenant,
-    selectorInput,
-  });
+  let normalizedSelectorInput = selectorInput;
+
+  try {
+    normalizedSelectorInput = await normalizeRecurringSelectorInput({
+      knex,
+      tenant,
+      selectorInput,
+    });
+  } catch (error) {
+    throw withRecurringWindowErrorContext(
+      error instanceof Error
+        ? error
+        : new Error('An error occurred while validating the recurring execution window.'),
+      selectorInput,
+    );
+  }
   const billing_cycle_id = resolveRecurringInvoiceBridgeId(bridgeMetadata);
   const executionIdentityKey = normalizedSelectorInput.executionWindow.identityKey;
   const client_id = normalizedSelectorInput.clientId;
