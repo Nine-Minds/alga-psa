@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "CE migration: add index on (tenant, project_id, phase_id) to project_status_mappings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.2"]
   },
   {

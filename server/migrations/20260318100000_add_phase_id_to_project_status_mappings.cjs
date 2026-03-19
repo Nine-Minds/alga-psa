@@ -1,6 +1,7 @@
 exports.up = async function(knex) {
   await knex.schema.alterTable('project_status_mappings', function(table) {
     table.uuid('phase_id').nullable();
+    table.index(['tenant', 'project_id', 'phase_id']);
   });
 
   await knex.schema.alterTable('project_status_mappings', function(table) {
@@ -18,6 +19,7 @@ exports.down = async function(knex) {
   });
 
   await knex.schema.alterTable('project_status_mappings', function(table) {
+    table.dropIndex(['tenant', 'project_id', 'phase_id']);
     table.dropColumn('phase_id');
   });
 };
