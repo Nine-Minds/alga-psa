@@ -542,7 +542,7 @@ describe('invoice preview recurring timing', () => {
     expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).not.toHaveBeenCalled();
   });
 
-  it('T094: compatibility billing-cycle preview wrapper preserves the invalid and unauthorized error shape', async () => {
+  it('T044: recurring preview/generation error contracts no longer expose billingCycleId as a primary diagnostic key', async () => {
     mocks.hasPermission.mockReturnValue(false);
 
     const unauthorizedResult = await previewInvoice('cycle-1');
@@ -775,7 +775,7 @@ describe('invoice preview recurring timing', () => {
     });
   });
 
-  it('T048/T049: selector-input preview and generate validation failures include execution identity for unbridged recurring windows', async () => {
+  it('T045: selector-input preview and generation validation failures map back to canonical execution-window identity only', async () => {
     mocks.validateClientBillingEmail.mockResolvedValueOnce({
       valid: false,
       error: 'Billing email is required before generating recurring invoices.',
@@ -795,16 +795,19 @@ describe('invoice preview recurring timing', () => {
 
     const previewResult = await previewInvoiceForSelectionInput(selectorInput);
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
-      message: 'Billing email is required before generating recurring invoices.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
-    });
+    const generationError = await generateInvoiceForSelectionInput(selectorInput).catch((error) => error);
 
     expect(previewResult).toMatchObject({
       success: false,
       error: 'Billing email is required before generating recurring invoices.',
       executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
+    expect(previewResult).not.toHaveProperty('billingCycleId');
+    expect(generationError).toMatchObject({
+      message: 'Billing email is required before generating recurring invoices.',
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    });
+    expect(generationError).not.toHaveProperty('billingCycleId');
   });
 
   it('T050: selector-input recurring generation still enforces PO-required contract validation', async () => {

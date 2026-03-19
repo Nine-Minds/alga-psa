@@ -53,7 +53,7 @@ function createFilterRecorder() {
 }
 
 describe('invoice recurring list contract', () => {
-  it('T066/T068: invoice list and single-item response contracts accept recurring execution metadata with nullable billing_cycle_id', () => {
+  it('T040/T041: invoice list and single-item response contracts keep recurring bridge metadata optional while accepting canonical execution metadata', () => {
     const contractRecurringInvoice = {
       invoice_id: '11111111-1111-4111-8111-111111111111',
       client_id: '22222222-2222-4222-8222-222222222222',
@@ -78,6 +78,8 @@ describe('invoice recurring list contract', () => {
       updated_at: '2026-03-18T00:00:00.000Z',
       tenant: '33333333-3333-4333-8333-333333333333',
     };
+    const bridgeFreeRecurringInvoice = { ...contractRecurringInvoice };
+    delete (bridgeFreeRecurringInvoice as any).billing_cycle_id;
     const clientRecurringInvoice = {
       ...contractRecurringInvoice,
       invoice_id: '44444444-4444-4444-8444-444444444444',
@@ -87,7 +89,7 @@ describe('invoice recurring list contract', () => {
     };
 
     const listParsed = invoiceListResponseSchema.safeParse({
-      data: [contractRecurringInvoice, clientRecurringInvoice],
+      data: [bridgeFreeRecurringInvoice, clientRecurringInvoice],
       pagination: {
         page: 1,
         limit: 25,

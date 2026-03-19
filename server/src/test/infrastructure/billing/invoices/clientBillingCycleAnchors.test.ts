@@ -418,7 +418,7 @@ describe('Client Billing Cycle Anchors', () => {
     expect(new Date(cycles[0].period_end_date).toISOString().slice(0, 10)).toBe('2025-07-10');
   });
 
-  it('changing anchor regenerates client-cadence recurring service periods after the billed boundary without mutating future client billing cycles', async () => {
+  it('T083/T086: changing anchor regenerates future client-cadence recurring service periods after the billed boundary while leaving client billing schedule records intact', async () => {
     const { db, client, clientId, tenantId } = context;
 
     await db('clients')
@@ -533,7 +533,7 @@ describe('Client Billing Cycle Anchors', () => {
     expect(regeneratedRow?.source_rule_version).toContain('client_schedule|monthly|dom:10');
   });
 
-  it('changing billing cycle type updates the client schedule and regenerates client-cadence recurring service periods without deactivating future client billing cycles', async () => {
+  it('T083/T086: changing billing cycle type updates the client schedule and regenerates client-cadence recurring service periods without deactivating future client billing cycles', async () => {
     const { db, clientId, tenantId } = context;
 
     await db('clients')
@@ -649,7 +649,7 @@ describe('Client Billing Cycle Anchors', () => {
     expect(regeneratedRow?.source_rule_version).toContain('client_schedule|quarterly|dom:10|moy:1');
   });
 
-  it('unified billing schedule update is atomic for client settings and regenerates client-cadence recurring service periods without mutating client billing cycles', async () => {
+  it('T083: unified billing schedule updates remain available for client cadence administration while recurring execution continues through regenerated service periods', async () => {
     const { db, clientId, tenantId } = context;
 
     await db('clients')

@@ -107,7 +107,7 @@ describe('invoice finalization kind classification', () => {
     mocks.getClientCredit.mockResolvedValue(0);
   });
 
-  it('uses the explicit prepayment flag to issue client credit during finalization', async () => {
+  it('T047: true prepayment invoice behavior still works after explicit invoice-kind classification is introduced', async () => {
     mocks.db.tables.invoices.push({
       invoice_id: 'invoice-prepayment',
       tenant: 'tenant-1',
@@ -131,7 +131,7 @@ describe('invoice finalization kind classification', () => {
     });
   });
 
-  it('does not misclassify a bridge-less recurring invoice as a prepayment when the explicit kind flag is false', async () => {
+  it('T046: invoice modification/finalization does not classify a bridge-less recurring invoice as a prepayment', async () => {
     mocks.db.tables.invoices.push({
       invoice_id: 'invoice-recurring',
       tenant: 'tenant-1',

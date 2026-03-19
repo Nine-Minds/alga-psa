@@ -425,11 +425,6 @@ export const reverseRecurringInvoice = withAuth(async (
   params: { invoiceId: string; billingCycleId?: string | null }
 ): Promise<void> => {
   await hardDeleteInvoice(params.invoiceId);
-
-  if (params.billingCycleId) {
-    const { knex } = await createTenantKnex();
-    await deactivateBillingCycleRecord(knex, tenant, params.billingCycleId);
-  }
 });
 
 export const hardDeleteRecurringInvoice = withAuth(async (
@@ -438,11 +433,6 @@ export const hardDeleteRecurringInvoice = withAuth(async (
   params: { invoiceId: string; billingCycleId?: string | null }
 ): Promise<void> => {
   await hardDeleteInvoice(params.invoiceId);
-
-  if (params.billingCycleId) {
-    const { knex } = await createTenantKnex();
-    await permanentlyDeleteBillingCycleRecord(knex, tenant, params.billingCycleId);
-  }
 });
 
 export const getInvoicedBillingCycles = withAuth(async (

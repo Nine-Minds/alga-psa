@@ -74,9 +74,9 @@
   { "id": "F073", "description": "Audit and clean package/shared interfaces so client billing cycle models are separated from recurring execution models.", "implemented": true },
   { "id": "F074", "description": "Define a deprecation posture for `invoices.billing_cycle_id` in recurring code, including whether it remains passive metadata or has a later removal path.", "implemented": true },
   { "id": "F075", "description": "Add a migration/read-side strategy for historically incomplete recurring linkage so live recurring logic can still drop the bridge assumptions.", "implemented": true },
-  { "id": "F076", "description": "Remove billing-cycle-specific recurring tests that only preserve replaced behaviors.", "implemented": false },
-  { "id": "F077", "description": "Add canonical recurring tests proving client-cadence recurring invoicing works entirely through service periods.", "implemented": false },
-  { "id": "F078", "description": "Add canonical recurring tests proving contract-cadence recurring invoicing remains bridge-free end to end.", "implemented": false },
-  { "id": "F079", "description": "Add regression coverage proving explicit invoice kind classification prevents bridge-less recurring invoices from being misclassified as prepayments.", "implemented": false },
+  { "id": "F076", "description": "Remove billing-cycle-specific recurring tests that only preserve replaced behaviors.", "implemented": true },
+  { "id": "F077", "description": "Add canonical recurring tests proving client-cadence recurring invoicing works entirely through service periods.", "implemented": true },
+  { "id": "F078", "description": "Add canonical recurring tests proving contract-cadence recurring invoicing remains bridge-free end to end.", "implemented": true },
+  { "id": "F079", "description": "Add regression coverage proving explicit invoice kind classification prevents bridge-less recurring invoices from being misclassified as prepayments.", "implemented": true },
   { "id": "F080", "description": "Add hard-cutover documentation and runbook guidance describing the final recurring model and the removed bridge assumptions.", "implemented": true }
 ]

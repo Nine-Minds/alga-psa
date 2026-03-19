@@ -10,7 +10,7 @@ vi.mock('@alga-psa/billing/models/invoice', () => ({
 }));
 
 describe('InvoiceService recurring detail projection', () => {
-  it('T193: API invoice readers reuse the canonical recurring detail contract without changing the invoice item payload shape', async () => {
+  it('T039: API invoice detail readers preserve canonical recurring periods without requiring billing-cycle metadata in the item payload', async () => {
     const service = new InvoiceService();
     const trx = {} as any;
     const context = { tenant: 'tenant-1', userId: 'user-1' } as any;

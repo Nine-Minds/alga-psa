@@ -253,8 +253,12 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       if ((options as any).include_billing_cycle) {
-        query = query.leftJoin('client_billing_cycles', 'invoices.billing_cycle_id', 'client_billing_cycles.cycle_id')
-          .select('client_billing_cycles.period_start', 'client_billing_cycles.period_end');
+        query = query
+          .leftJoin('client_billing_cycles', 'invoices.billing_cycle_id', 'client_billing_cycles.billing_cycle_id')
+          .select(
+            'client_billing_cycles.period_start_date as period_start',
+            'client_billing_cycles.period_end_date as period_end',
+          );
       }
 
       if ((options as any).include_tax_details) {
@@ -1976,7 +1980,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
   private async getBillingCycle(cycleId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
     return trx('client_billing_cycles')
-      .where({ cycle_id: cycleId, tenant: context.tenant })
+      .where({ billing_cycle_id: cycleId, tenant: context.tenant })
       .first();
   }
 

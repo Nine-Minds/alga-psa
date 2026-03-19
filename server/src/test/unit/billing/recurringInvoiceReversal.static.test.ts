@@ -13,22 +13,21 @@ const invoiceModificationPath = path.join(
 );
 
 describe('recurring invoice reversal flow', () => {
-  it('keeps recurring reverse/delete invoice-first and repairs canonical service-period linkage in invoice deletion', () => {
+  it('T033/T034/T085: recurring reverse/delete flows stay invoice-first and repair canonical service-period linkage without billing-cycle cleanup branches', () => {
     const billingCycleActionsSource = fs.readFileSync(billingCycleActionsPath, 'utf8');
     const invoiceModificationSource = fs.readFileSync(invoiceModificationPath, 'utf8');
 
-    const reverseStart = billingCycleActionsSource.indexOf('export const reverseRecurringInvoice');
-    const reverseHardDeleteIndex = billingCycleActionsSource.indexOf('await hardDeleteInvoice(params.invoiceId);', reverseStart);
-    const reverseBridgeIndex = billingCycleActionsSource.indexOf('if (params.billingCycleId)', reverseStart);
+    const reverseSection = billingCycleActionsSource
+      .split('export const reverseRecurringInvoice')[1]
+      .split('export const hardDeleteRecurringInvoice')[0];
+    const deleteSection = billingCycleActionsSource
+      .split('export const hardDeleteRecurringInvoice')[1]
+      .split('export const getInvoicedBillingCycles')[0];
 
-    const deleteStart = billingCycleActionsSource.indexOf('export const hardDeleteRecurringInvoice');
-    const deleteHardDeleteIndex = billingCycleActionsSource.indexOf('await hardDeleteInvoice(params.invoiceId);', deleteStart);
-    const deleteBridgeIndex = billingCycleActionsSource.indexOf('if (params.billingCycleId)', deleteStart);
-
-    expect(reverseHardDeleteIndex).toBeGreaterThan(reverseStart);
-    expect(reverseBridgeIndex).toBeGreaterThan(reverseHardDeleteIndex);
-    expect(deleteHardDeleteIndex).toBeGreaterThan(deleteStart);
-    expect(deleteBridgeIndex).toBeGreaterThan(deleteHardDeleteIndex);
+    expect(reverseSection).toContain('await hardDeleteInvoice(params.invoiceId);');
+    expect(reverseSection).not.toContain('params.billingCycleId');
+    expect(deleteSection).toContain('await hardDeleteInvoice(params.invoiceId);');
+    expect(deleteSection).not.toContain('params.billingCycleId');
     expect(invoiceModificationSource).toContain('await releaseRecurringServicePeriodInvoiceLinkageForInvoice(');
     expect(invoiceModificationSource).toContain("lifecycle_state: 'locked'");
     expect(invoiceModificationSource).toContain('invoice_id: null');
