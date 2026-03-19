@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "moveTaskToPhase(): no name match + source was open → first open status by display_order in target phase",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4.1"]
   },
   {
