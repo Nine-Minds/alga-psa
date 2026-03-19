@@ -11,22 +11,32 @@ const invoiceGenerationSource = fs.readFileSync(
 );
 
 describe('invoice generation duplicate source', () => {
-  it('T022: recurring duplicate detection checks canonical client and contract execution windows before any legacy billing-cycle fallback', () => {
+  it('T022: recurring duplicate detection relies only on canonical client and contract execution windows', () => {
+    const duplicateSourceStart = invoiceGenerationSource.indexOf(
+      'function buildDuplicateRecurringInvoiceError',
+    );
+    const duplicateSourceEnd = invoiceGenerationSource.indexOf(
+      '// TODO: Move to billingAndTax.ts',
+      duplicateSourceStart,
+    );
+    const duplicateSource = invoiceGenerationSource.slice(
+      duplicateSourceStart,
+      duplicateSourceEnd,
+    );
     const clientCadenceIndex = invoiceGenerationSource.indexOf(
       "executionWindow.kind === 'client_cadence_window'",
     );
     const contractCadenceIndex = invoiceGenerationSource.indexOf(
       "executionWindow.kind === 'contract_cadence_window'",
     );
-    const billingCycleFallbackIndex = invoiceGenerationSource.indexOf(
-      "executionWindow.kind === 'billing_cycle_window' && billingCycleId",
-    );
 
     expect(clientCadenceIndex).toBeGreaterThan(-1);
     expect(contractCadenceIndex).toBeGreaterThan(-1);
-    expect(billingCycleFallbackIndex).toBeGreaterThan(-1);
-    expect(clientCadenceIndex).toBeLessThan(billingCycleFallbackIndex);
-    expect(contractCadenceIndex).toBeLessThan(billingCycleFallbackIndex);
-    expect(invoiceGenerationSource).not.toContain("if (billingCycleId) {");
+    expect(duplicateSource).not.toContain(
+      "executionWindow.kind === 'billing_cycle_window'",
+    );
+    expect(duplicateSource).not.toContain(
+      'Invoice already exists for this billing cycle',
+    );
   });
 });

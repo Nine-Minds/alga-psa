@@ -9,6 +9,30 @@ function normalizeTableName(tableName: string) {
   return tableName.split(/\s+as\s+/i)[0].trim();
 }
 
+function normalizeColumn(column: string) {
+  return column.replace(/^.*\./, '').replace(/\s+as\s+.*$/i, '').trim();
+}
+
+function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
+  return {
+    record_id: 'rsp-client-1',
+    tenant: 'tenant-1',
+    cadence_owner: 'client',
+    obligation_type: 'client_contract_line',
+    client_id: 'client-1',
+    schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+    period_key: 'period:2025-01-01:2025-02-01',
+    service_period_start: '2025-01-01',
+    service_period_end: '2025-02-01',
+    invoice_window_start: '2025-02-01',
+    invoice_window_end: '2025-03-01',
+    lifecycle_state: 'generated',
+    revision: 1,
+    invoice_id: null,
+    ...overrides,
+  };
+}
+
 function createQueryBuilder(rows: Row[], tableName: string) {
   let resultRows = [...rows];
   let insertedRow: Row | null = null;
@@ -16,17 +40,23 @@ function createQueryBuilder(rows: Row[], tableName: string) {
   const builder: any = {
     where: vi.fn((criteria: Record<string, any>) => {
       resultRows = resultRows.filter((row) =>
-        Object.entries(criteria).every(([key, expected]) => row[key] === expected),
+        Object.entries(criteria).every(([key, expected]) => row[normalizeColumn(key)] === expected),
       );
       return builder;
     }),
     andWhere: vi.fn(() => builder),
     whereNotNull: vi.fn((column: string) => {
-      resultRows = resultRows.filter((row) => row[column] != null);
+      resultRows = resultRows.filter((row) => row[normalizeColumn(column)] != null);
+      return builder;
+    }),
+    whereNotIn: vi.fn((column: string, values: any[]) => {
+      resultRows = resultRows.filter((row) => !values.includes(row[normalizeColumn(column)]));
       return builder;
     }),
     select: vi.fn(() => builder),
     first: vi.fn(async () => resultRows[0]),
+    join: vi.fn(() => builder),
+    orderBy: vi.fn(() => builder),
     update: vi.fn(async () => 1),
     insert: vi.fn((payload: Row) => {
       insertedRow = {
@@ -68,7 +98,7 @@ const mocks = vi.hoisted(() => {
       },
     ],
     invoices: [],
-    recurring_service_periods: [],
+    recurring_service_periods: [buildClientCadenceServicePeriodRow()],
     client_billing_settings: [
       {
         client_id: 'client-1',
@@ -309,7 +339,11 @@ describe('selector-input recurring generation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.rowsByTable.invoices.length = 0;
-    mocks.rowsByTable.recurring_service_periods.length = 0;
+    mocks.rowsByTable.recurring_service_periods.splice(
+      0,
+      mocks.rowsByTable.recurring_service_periods.length,
+      buildClientCadenceServicePeriodRow(),
+    );
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
     mocks.calculateBilling.mockResolvedValue(mocks.clientBillingResult);
     mocks.calculateBillingForExecutionWindow.mockResolvedValue(mocks.contractBillingResult);
@@ -343,8 +377,8 @@ describe('selector-input recurring generation', () => {
 
     expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).toHaveBeenCalledWith(
       'client-1',
-      '2025-02-01T00:00:00.000Z',
-      '2025-03-01T00:00:00.000Z',
+      '2025-02-01',
+      '2025-03-01',
     );
     expect(mocks.calculateBillingForExecutionWindow).toHaveBeenCalled();
     expect(mocks.rowsByTable.invoices[0]?.billing_cycle_id).toBe('cycle-1');

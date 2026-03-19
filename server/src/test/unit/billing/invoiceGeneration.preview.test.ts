@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  buildBillingCycleDueSelectionInput,
+  buildClientCadenceDueSelectionInput,
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
@@ -12,6 +12,26 @@ function normalizeTableName(tableName: string): string {
 
 function normalizeColumn(column: string): string {
   return column.replace(/^.*\./, '').replace(/\s+as\s+.*$/i, '').trim();
+}
+
+function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
+  return {
+    record_id: 'rsp-client-1',
+    tenant: 'tenant-1',
+    cadence_owner: 'client',
+    obligation_type: 'client_contract_line',
+    client_id: 'client-1',
+    schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+    period_key: 'period:2025-01-01:2025-02-01',
+    service_period_start: '2025-01-01',
+    service_period_end: '2025-02-01',
+    invoice_window_start: '2025-02-01',
+    invoice_window_end: '2025-03-01',
+    lifecycle_state: 'generated',
+    revision: 1,
+    invoice_id: null,
+    ...overrides,
+  };
 }
 
 function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
@@ -28,9 +48,15 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       resultRows = resultRows.filter((row) => row[normalizeColumn(column)] != null);
       return builder;
     }),
+    whereNotIn: vi.fn((column: string, values: any[]) => {
+      resultRows = resultRows.filter((row) => !values.includes(row[normalizeColumn(column)]));
+      return builder;
+    }),
     select: vi.fn(() => builder),
     first: vi.fn(async () => resultRows[0]),
+    join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
+    orderBy: vi.fn(() => builder),
     raw,
     then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(resultRows).then(resolve, reject),
@@ -69,6 +95,7 @@ const mocks = vi.hoisted(() => {
         client_id: 'tenant-client-1',
       },
     ],
+    recurring_service_periods: [buildClientCadenceServicePeriodRow()],
   };
 
   const raw = vi.fn((sql: string) => sql);
@@ -148,6 +175,7 @@ const mocks = vi.hoisted(() => {
   }));
 
   return {
+    rowsByTable,
     createTenantKnex,
     withTransaction,
     getClientDetails,
@@ -257,6 +285,11 @@ describe('invoice preview recurring timing', () => {
     mocks.getClientLogoUrl.mockResolvedValue(null);
     mocks.getClientContractPurchaseOrderContext.mockResolvedValue({ po_number: null, po_amount: null });
     mocks.getPurchaseOrderConsumedCents.mockResolvedValue(0);
+    mocks.rowsByTable.recurring_service_periods.splice(
+      0,
+      mocks.rowsByTable.recurring_service_periods.length,
+      buildClientCadenceServicePeriodRow(),
+    );
     mocks.computePurchaseOrderOverage.mockImplementation(
       ({
         authorizedCents,
@@ -512,9 +545,10 @@ describe('invoice preview recurring timing', () => {
   });
 
   it('T042: selector-input preview action returns the same recurring service-period details as billing-cycle preview for an equivalent client-cadence row', async () => {
-    const selectorInput = buildBillingCycleDueSelectionInput({
+    const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      billingCycleId: 'cycle-1',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
     });

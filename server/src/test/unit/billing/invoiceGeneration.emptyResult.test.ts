@@ -10,6 +10,26 @@ function normalizeColumn(column: string): string {
   return column.replace(/^.*\./, '').replace(/\s+as\s+.*$/i, '').trim();
 }
 
+function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
+  return {
+    record_id: 'rsp-client-1',
+    tenant: 'tenant-1',
+    cadence_owner: 'client',
+    obligation_type: 'client_contract_line',
+    client_id: 'client-1',
+    schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+    period_key: 'period:2025-01-01:2025-02-01',
+    service_period_start: '2025-01-01',
+    service_period_end: '2025-02-01',
+    invoice_window_start: '2025-02-01',
+    invoice_window_end: '2025-03-01',
+    lifecycle_state: 'generated',
+    revision: 1,
+    invoice_id: null,
+    ...overrides,
+  };
+}
+
 function createQueryBuilder(rows: Row[]) {
   let resultRows = [...rows];
 
@@ -20,8 +40,18 @@ function createQueryBuilder(rows: Row[]) {
       );
       return builder;
     }),
+    whereNotNull: vi.fn((column: string) => {
+      resultRows = resultRows.filter((row) => row[normalizeColumn(column)] != null);
+      return builder;
+    }),
+    whereNotIn: vi.fn((column: string, values: any[]) => {
+      resultRows = resultRows.filter((row) => !values.includes(row[normalizeColumn(column)]));
+      return builder;
+    }),
     select: vi.fn(() => builder),
     first: vi.fn(async () => resultRows[0]),
+    join: vi.fn(() => builder),
+    orderBy: vi.fn(() => builder),
     raw: vi.fn((sql: string) => sql),
     then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(resultRows).then(resolve, reject),
@@ -48,6 +78,7 @@ const mocks = vi.hoisted(() => {
       },
     ],
     invoices: [],
+    recurring_service_periods: [buildClientCadenceServicePeriodRow()],
     client_billing_settings: [
       {
         client_id: 'client-1',
@@ -82,6 +113,7 @@ const mocks = vi.hoisted(() => {
   const getFullInvoiceById = vi.fn();
 
   return {
+    rowsByTable,
     createTenantKnex,
     withTransaction,
     validateClientBillingEmail,
@@ -173,6 +205,11 @@ const { generateInvoice } = await import(
 describe('invoice generation empty recurring selections', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.rowsByTable.recurring_service_periods.splice(
+      0,
+      mocks.rowsByTable.recurring_service_periods.length,
+      buildClientCadenceServicePeriodRow(),
+    );
   });
 
   it('T077: recurring invoice generation returns the empty-result path when no due recurring service periods exist', async () => {
@@ -182,13 +219,13 @@ describe('invoice generation empty recurring selections', () => {
       mocks.selectDueRecurringServicePeriodsForBillingWindow,
     ).toHaveBeenCalledWith(
       'client-1',
-      '2025-02-01T00:00:00.000Z',
-      '2025-03-01T00:00:00.000Z',
+      '2025-02-01',
+      '2025-03-01',
     );
     expect(mocks.calculateBillingForExecutionWindow).toHaveBeenCalledWith(
       'client-1',
-      '2025-02-01T00:00:00.000Z',
-      '2025-03-01T00:00:00.000Z',
+      '2025-02-01',
+      '2025-03-01',
       {
         recurringTimingSelections: {},
         recurringTimingSelectionSource: 'persisted',

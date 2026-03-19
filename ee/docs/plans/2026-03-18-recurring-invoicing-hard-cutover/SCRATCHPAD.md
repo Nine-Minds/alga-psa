@@ -89,7 +89,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) `invoiceModification.ts` still uses null/non-null `billing_cycle_id` to classify prepayment-style invoices, which will misclassify bridge-less recurring invoices.
 - (2026-03-18) `billingAndTax.ts` now sources ready recurring work only from `recurring_service_periods`, but the separate repair-gap surface still needs downstream UI handling so operators can act on missing materialization without relying on compatibility rows.
 - (2026-03-18) recurring run selection and `AutomaticInvoices` generation now use canonical selector-input targets, but preview/generate API contracts and shared type unions still carry legacy `billing_cycle_id` or `billing_cycle_window` semantics outside the run-action surface.
-- (2026-03-18) `calculateBillingForSelectionInput(...)` and selector-input duplicate detection are now canonical-first, but the compatibility `generateInvoice(...)` / `previewInvoice(...)` wrappers still materialize `billing_cycle_window` selector inputs until recurring API request-shape cleanup lands.
+- (2026-03-18) `generateInvoice(...)`, `previewInvoice(...)`, and PO-overage selection now normalize legacy billing-cycle entrypoints onto canonical client-cadence selector input before duplicate detection or billing calculation. `billingCycleId` remains only as optional metadata on the normalized selector while request-shape cleanup is still pending.
 - (2026-03-18) `billingCycleActions.ts` still frames recurring history and reversal as billing-cycle operations.
 - (2026-03-18) `InvoiceService.ts` still classifies recurring invoice rows via `invoices.billing_cycle_id` in some read paths.
 - (2026-03-18) one API service path still appears to reference old cycle column names (`cycle_id`, `period_start`, `period_end`) and should be rechecked during cleanup.
@@ -124,6 +124,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T007/T008/T023/T024/T026/T027/T028 implemented with unit, integration, static, and UI coverage for bridge-free execution identity keys, canonical recurring run selection, and selector-input-only recurring run execution.
 - (2026-03-18) F016 implemented by removing the billing-cycle-vs-execution-window branch from selector-input billing calculation helpers and using execution-window-first billing for recurring selector inputs and compatibility wrappers alike.
 - (2026-03-18) F017 implemented by deleting the rollout-era recurring comparison-mode branch from `invoiceGeneration.ts`.
+- (2026-03-18) F018/F019/F020 implemented by normalizing legacy billing-cycle preview/generate entrypoints onto canonical client-cadence selector identity, deleting the remaining `invoices.billing_cycle_id` duplicate fallback, and keeping rerun or retry behavior keyed off canonical execution identity even when `billing_cycle_id` is retained as passive metadata.
 - (2026-03-18) T020/T021/T022 implemented with client-cadence, contract-cadence, and static source coverage showing duplicate detection uses canonical recurring linkage before any legacy billing-cycle fallback.
 
 ## Links / References

@@ -52,6 +52,7 @@ import {
 } from '@alga-psa/billing/services/purchaseOrderService';
 import {
   buildBillingCycleDueSelectionInput,
+  buildClientCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
@@ -220,6 +221,10 @@ function resolveRecurringInvoiceBridgeId(selectorInput: IRecurringDueSelectionIn
   return selectorInput.billingCycleId ?? null;
 }
 
+function normalizeRecurringWindowDate(value: ISO8601String): ISO8601String {
+  return toISODate(toPlainDate(value));
+}
+
 function buildRecurringWindowErrorContext(selectorInput: IRecurringDueSelectionInput) {
   return {
     executionIdentityKey: selectorInput.executionWindow.identityKey,
@@ -251,12 +256,8 @@ function buildDuplicateRecurringInvoiceError(input: {
   invoiceId: string;
 }): Error {
   const billingCycleId = resolveRecurringInvoiceBridgeId(input.selectorInput);
-  const usesLegacyBillingCycleWindow =
-    input.selectorInput.executionWindow.kind === 'billing_cycle_window';
   const error = new Error(
-    usesLegacyBillingCycleWindow
-      ? 'Invoice already exists for this billing cycle'
-      : 'Invoice already exists for this recurring execution window',
+    'Invoice already exists for this recurring execution window',
   );
 
   Object.assign(error, {
@@ -317,21 +318,77 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     return linkedRow?.invoice_id ? { invoiceId: linkedRow.invoice_id } : null;
   }
 
-  const billingCycleId = resolveRecurringInvoiceBridgeId(params.selectorInput);
-  if (executionWindow.kind === 'billing_cycle_window' && billingCycleId) {
-    const invoice = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
-      return trx('invoices')
-        .where({
-          billing_cycle_id: billingCycleId,
-          tenant: params.tenant,
-        })
-        .first('invoice_id');
-    });
+  return null;
+}
 
-    return invoice?.invoice_id ? { invoiceId: invoice.invoice_id } : null;
+async function resolveCanonicalClientCadenceSelectorInput(params: {
+  knex: Knex;
+  tenant: string;
+  clientId: string;
+  windowStart: ISO8601String;
+  windowEnd: ISO8601String;
+  billingCycleId?: string | null;
+}): Promise<IRecurringDueSelectionInput> {
+  const normalizedWindowStart = normalizeRecurringWindowDate(params.windowStart);
+  const normalizedWindowEnd = normalizeRecurringWindowDate(params.windowEnd);
+
+  const recurringServicePeriod = await withTransaction(
+    params.knex,
+    async (trx: Knex.Transaction) =>
+      trx('recurring_service_periods as rsp')
+        .join('client_contract_lines as ccl', function () {
+          this.on('ccl.client_contract_line_id', '=', 'rsp.obligation_id')
+            .andOn('ccl.tenant', '=', 'rsp.tenant');
+        })
+        .where({
+          'rsp.tenant': params.tenant,
+          'rsp.cadence_owner': 'client',
+          'rsp.obligation_type': 'client_contract_line',
+          'ccl.client_id': params.clientId,
+          'rsp.invoice_window_start': normalizedWindowStart,
+          'rsp.invoice_window_end': normalizedWindowEnd,
+        })
+        .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+        .orderBy('rsp.service_period_start', 'asc')
+        .orderBy('rsp.revision', 'asc')
+        .first('rsp.schedule_key', 'rsp.period_key'),
+  );
+
+  if (!recurringServicePeriod?.schedule_key || !recurringServicePeriod?.period_key) {
+    throw new Error(
+      'Recurring service periods were not materialized for this client billing schedule window.',
+    );
   }
 
-  return null;
+  return {
+    ...buildClientCadenceDueSelectionInput({
+      clientId: params.clientId,
+      scheduleKey: recurringServicePeriod.schedule_key,
+      periodKey: recurringServicePeriod.period_key,
+      windowStart: normalizedWindowStart,
+      windowEnd: normalizedWindowEnd,
+    }),
+    billingCycleId: params.billingCycleId ?? null,
+  };
+}
+
+async function normalizeRecurringSelectorInput(params: {
+  knex: Knex;
+  tenant: string;
+  selectorInput: IRecurringDueSelectionInput;
+}): Promise<IRecurringDueSelectionInput> {
+  if (params.selectorInput.executionWindow.kind !== 'billing_cycle_window') {
+    return params.selectorInput;
+  }
+
+  return resolveCanonicalClientCadenceSelectorInput({
+    knex: params.knex,
+    tenant: params.tenant,
+    clientId: params.selectorInput.clientId,
+    windowStart: params.selectorInput.windowStart,
+    windowEnd: params.selectorInput.windowEnd,
+    billingCycleId: resolveRecurringInvoiceBridgeId(params.selectorInput),
+  });
 }
 
 // TODO: Move to billingAndTax.ts
@@ -413,7 +470,8 @@ async function getPurchaseOrderOverageForSelectionInputInternal(params: {
   tenant: string;
   selectorInput: IRecurringDueSelectionInput;
 }): Promise<PurchaseOrderOverageResult | null> {
-  const { knex, tenant, selectorInput } = params;
+  const { knex, tenant } = params;
+  const selectorInput = await normalizeRecurringSelectorInput(params);
   const client_id = selectorInput.clientId;
   const cycleEnd = selectorInput.windowEnd;
 
@@ -840,22 +898,28 @@ export const previewInvoiceForSelectionInput = withAuth(async (
   selectorInput: IRecurringDueSelectionInput,
 ): Promise<PreviewInvoiceResponse> => {
   const { knex } = await createTenantKnex();
+  let normalizedSelectorInput = selectorInput;
 
   try {
     if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
       throw new Error('Permission denied: Cannot preview invoices');
     }
+    normalizedSelectorInput = await normalizeRecurringSelectorInput({
+      knex,
+      tenant,
+      selectorInput,
+    });
     return {
       success: true,
       data: await buildPreviewInvoiceForSelectionInput({
         knex,
         tenant,
-        selectorInput,
+        selectorInput: normalizedSelectorInput,
       }),
     };
   } catch (error) {
     return buildPreviewInvoiceFailure(
-      selectorInput,
+      normalizedSelectorInput,
       error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
     );
   }
@@ -890,15 +954,32 @@ export const previewInvoice = withAuth(async (
       };
     }
 
-    const { client_id, effective_date } = billingCycle;
-    const cycleStart = toISODate(toPlainDate(effective_date));
-    const cycleEnd = await getNextBillingDate(client_id, effective_date);
+    const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
 
-    selectorInput = buildBillingCycleDueSelectionInput({
-      clientId: client_id,
-      billingCycleId: billing_cycle_id,
-      windowStart: cycleStart,
-      windowEnd: cycleEnd,
+    let cycleStart: ISO8601String;
+    let cycleEnd: ISO8601String;
+
+    if (period_start_date && period_end_date) {
+      cycleStart = normalizeRecurringWindowDate(period_start_date);
+      cycleEnd = normalizeRecurringWindowDate(period_end_date);
+    } else if (effective_date) {
+      cycleStart = normalizeRecurringWindowDate(effective_date);
+      cycleEnd = normalizeRecurringWindowDate(
+        await getNextBillingDate(client_id, cycleStart),
+      );
+    } else {
+      throw new Error('Invalid billing cycle dates');
+    }
+
+    selectorInput = await normalizeRecurringSelectorInput({
+      knex,
+      tenant,
+      selectorInput: buildBillingCycleDueSelectionInput({
+        clientId: client_id,
+        billingCycleId: billing_cycle_id,
+        windowStart: cycleStart,
+        windowEnd: cycleEnd,
+      }),
     });
 
     return {
@@ -956,31 +1037,29 @@ export const generateInvoice = withAuth(async (
   let cycleEnd: ISO8601String;
 
   if (period_start_date && period_end_date) {
-    // Use the billing cycle's period dates if provided, ensuring UTC format
-    cycleStart = toISOTimestamp(toPlainDate(period_start_date));
-    cycleEnd = toISOTimestamp(toPlainDate(period_end_date));
+    cycleStart = normalizeRecurringWindowDate(period_start_date);
+    cycleEnd = normalizeRecurringWindowDate(period_end_date);
   } else if (effective_date) {
-    // Calculate period dates from effective_date
-    // Format effective_date as UTC ISO8601
-    const effectiveDateUTC = toISOTimestamp(toPlainDate(effective_date));
-    cycleStart = effectiveDateUTC;
-    cycleEnd = await getNextBillingDate(client_id, effectiveDateUTC); // Uses temporary import
+    cycleStart = normalizeRecurringWindowDate(effective_date);
+    cycleEnd = normalizeRecurringWindowDate(
+      await getNextBillingDate(client_id, cycleStart),
+    );
   } else {
     throw new Error('Invalid billing cycle dates');
   }
 
-  return generateInvoiceForSelectionInput({
-    clientId: client_id,
-    billingCycleId: billing_cycle_id,
-    windowStart: cycleStart,
-    windowEnd: cycleEnd,
-    executionWindow: buildBillingCycleDueSelectionInput({
+  const selectorInput = await normalizeRecurringSelectorInput({
+    knex,
+    tenant,
+    selectorInput: buildBillingCycleDueSelectionInput({
       clientId: client_id,
       billingCycleId: billing_cycle_id,
       windowStart: cycleStart,
       windowEnd: cycleEnd,
-    }).executionWindow,
-  }, options);
+    }),
+  });
+
+  return generateInvoiceForSelectionInput(selectorInput, options);
 });
 
 export const generateInvoiceForSelectionInput = withAuth(async (
@@ -990,11 +1069,16 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   options: { allowPoOverage?: boolean } = {}
 ): Promise<InvoiceViewModel | null> => {
   const { knex } = await createTenantKnex();
-  const billing_cycle_id = resolveRecurringInvoiceBridgeId(selectorInput);
-  const executionIdentityKey = selectorInput.executionWindow.identityKey;
-  const client_id = selectorInput.clientId;
-  const cycleStart = selectorInput.windowStart;
-  const cycleEnd = selectorInput.windowEnd;
+  const normalizedSelectorInput = await normalizeRecurringSelectorInput({
+    knex,
+    tenant,
+    selectorInput,
+  });
+  const billing_cycle_id = resolveRecurringInvoiceBridgeId(normalizedSelectorInput);
+  const executionIdentityKey = normalizedSelectorInput.executionWindow.identityKey;
+  const client_id = normalizedSelectorInput.clientId;
+  const cycleStart = normalizedSelectorInput.windowStart;
+  const cycleEnd = normalizedSelectorInput.windowEnd;
 
   // Validate that the client has a billing email (required for online payments)
   const clientForValidation = await knex('clients')
@@ -1005,23 +1089,19 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   if (clientForValidation) {
     const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
     if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(new Error(emailValidation.error), selectorInput);
+      throw withRecurringWindowErrorContext(new Error(emailValidation.error), normalizedSelectorInput);
     }
   }
 
-  // Client-cadence runs can still use the persisted billing-cycle UUID as a
-  // fast duplicate bridge. Selector-input-only execution windows rely on the
-  // canonical recurring detail/billed-through guards instead of forcing a
-  // non-UUID execution identity into invoices.billing_cycle_id.
   const existingInvoice = await findExistingRecurringInvoiceForSelectionInput({
     knex,
     tenant,
-    selectorInput,
+    selectorInput: normalizedSelectorInput,
   });
 
   if (existingInvoice) {
     throw buildDuplicateRecurringInvoiceError({
-      selectorInput,
+      selectorInput: normalizedSelectorInput,
       invoiceId: existingInvoice.invoiceId,
     });
   }
@@ -1030,7 +1110,7 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   const billingResult = await calculateBillingForSelectionInput({
     billingEngine,
     selectorInput: {
-      ...selectorInput,
+      ...normalizedSelectorInput,
       clientId: client_id,
       windowStart: cycleStart,
       windowEnd: cycleEnd,
@@ -1038,7 +1118,7 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   });
 
   if (billingResult.error) {
-    throw withRecurringWindowErrorContext(new Error(billingResult.error), selectorInput);
+    throw withRecurringWindowErrorContext(new Error(billingResult.error), normalizedSelectorInput);
   }
 
   const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
@@ -1054,7 +1134,7 @@ export const generateInvoiceForSelectionInput = withAuth(async (
         new Error(
           'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.'
         ),
-        selectorInput,
+        normalizedSelectorInput,
       );
     }
 
