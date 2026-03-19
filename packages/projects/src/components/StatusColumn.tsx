@@ -23,6 +23,7 @@ interface StatusColumnProps {
   taskDependencies?: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
   taskTags?: Record<string, ITag[]>;
   taskDocumentCounts?: Record<string, number>;
+  taskCommentCounts?: Record<string, number>;
   priorities?: (IPriority | IStandardPriority)[];
   allTaskTagTexts?: string[];
   statusIcon: React.ReactNode;
@@ -68,6 +69,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   taskDependencies = {},
   taskTags = {},
   taskDocumentCounts = {},
+  taskCommentCounts = {},
   priorities = [],
   allTaskTagTexts = [],
   statusIcon,
@@ -394,6 +396,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               taskDependencies={taskDependencies[task.task_id]}
               taskTags={taskTags[task.task_id] || []}
               documentCount={taskDocumentCounts[task.task_id]}
+              commentCount={taskCommentCounts[task.task_id]}
               priority={taskPriority}
               isAnimating={animatingTasks.has(task.task_id)}
               searchQuery={searchQuery}

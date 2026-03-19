@@ -23,6 +23,7 @@ interface TaskEditProps {
   users: IUser[];
   inDrawer?: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
+  onCommentCountChange?: (taskId: string, count: number) => void;
 }
 
 export default function TaskEdit({
@@ -34,7 +35,8 @@ export default function TaskEdit({
   projectStatuses: initialStatuses,
   users,
   inDrawer = false,
-  projectTreeData = []
+  projectTreeData = [],
+  onCommentCountChange
 }: TaskEditProps): React.JSX.Element {
   const [statuses, setStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
   const [selectedPhaseStatuses, setSelectedPhaseStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
@@ -88,6 +90,7 @@ export default function TaskEdit({
           onPhaseChange={handlePhaseChange}
           inDrawer={inDrawer}
           projectTreeData={projectTreeData}
+          onCommentCountChange={onCommentCountChange}
         />
       </Suspense>
     </div>

@@ -11,6 +11,7 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
+import { getTaskCommentCountsBatch } from '../actions/projectTaskCommentActions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
@@ -343,6 +344,7 @@ export default function ProjectDetail({
   const [taskTags, setTaskTags] = useState<Record<string, ITag[]>>({});
   const [allTaskTags, setAllTaskTags] = useState<ITag[]>([]);
   const [taskDocumentCounts, setTaskDocumentCounts] = useState<Map<string, number>>(new Map());
+  const [taskCommentCounts, setTaskCommentCounts] = useState<Record<string, number>>({});
 
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
@@ -978,6 +980,13 @@ export default function ProjectDetail({
       [taskId]: tags
     }));
   };
+
+  const handleCommentCountChange = useCallback((taskId: string, count: number) => {
+    setTaskCommentCounts(prev => ({
+      ...prev,
+      [taskId]: count
+    }));
+  }, []);
   
   // Fetch project completion metrics, tree data, priorities, and task types in parallel
   useEffect(() => {
@@ -1255,6 +1264,32 @@ export default function ProjectDetail({
     };
 
     fetchDocumentCounts();
+    return () => { stale = true; };
+  }, [selectedPhase, phaseTaskIds]);
+
+  // Fetch comment counts once when phase tasks load
+  useEffect(() => {
+    let stale = false;
+    const fetchCommentCounts = async () => {
+      if (!selectedPhase || projectTasks.length === 0) {
+        setTaskCommentCounts({});
+        return;
+      }
+
+      try {
+        const taskIds = projectTasks.map(task => task.task_id);
+        const counts = await getTaskCommentCountsBatch(taskIds);
+        if (!stale) setTaskCommentCounts(counts);
+      } catch (error) {
+        if (!stale) {
+          console.error('Error fetching comment counts:', error);
+          toast.error('Failed to load comment counts');
+          setTaskCommentCounts({});
+        }
+      }
+    };
+
+    fetchCommentCounts();
     return () => { stale = true; };
   }, [selectedPhase, phaseTaskIds]);
 
@@ -2599,6 +2634,7 @@ export default function ProjectDetail({
             taskDependencies={phaseTaskDependencies}
             taskTags={taskTags}
             taskDocumentCounts={taskDocumentCounts}
+            taskCommentCounts={taskCommentCounts}
             allTaskTags={allTaskTags}
             priorities={priorities}
             projectTreeData={projectTreeData}
@@ -2804,6 +2840,7 @@ export default function ProjectDetail({
                 projectStatuses={projectStatuses}
                 users={users}
                 projectTreeData={projectTreeData}
+                onCommentCountChange={handleCommentCountChange}
               />
             ) : (
               <TaskQuickAdd
