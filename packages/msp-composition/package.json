@@ -26,6 +26,10 @@
       "import": "./src/tickets/*.tsx",
       "types": "./src/tickets/*.tsx"
     },
+    "./tickets/registerSlaIntegration": {
+      "import": "./src/tickets/registerSlaIntegration.ts",
+      "types": "./src/tickets/registerSlaIntegration.ts"
+    },
     "./projects": {
       "import": "./src/projects/index.ts",
       "types": "./src/projects/index.ts"
