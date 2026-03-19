@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -36,28 +36,7 @@ export default function TaskEdit({
   inDrawer = false,
   projectTreeData = []
 }: TaskEditProps): React.JSX.Element {
-  const [statuses, setStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
   const [selectedPhaseStatuses, setSelectedPhaseStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const projectStatuses = await getProjectTaskStatuses(phase.project_id, phase.phase_id);
-        setStatuses(projectStatuses);
-        setSelectedPhaseStatuses(projectStatuses);
-      } catch (error) {
-        console.error('Error fetching task details:', error);
-      }
-    };
-    fetchData();
-  }, [phase.phase_id, phase.project_id]);
-
-  useEffect(() => {
-    if (initialStatuses) {
-      setStatuses(initialStatuses);
-      setSelectedPhaseStatuses(initialStatuses);
-    }
-  }, [initialStatuses]);
 
   const handlePhaseChange = async (newPhaseId: string) => {
     if (!phases) return;
