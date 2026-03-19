@@ -1,0 +1,242 @@
+[
+  {
+    "id": "F001",
+    "description": "CE migration: add nullable phase_id UUID column to project_status_mappings with FK to project_phases(phase_id) ON DELETE CASCADE",
+    "implemented": false,
+    "prdRefs": ["FR-1.1"]
+  },
+  {
+    "id": "F002",
+    "description": "CE migration: add index on (tenant, project_id, phase_id) to project_status_mappings",
+    "implemented": false,
+    "prdRefs": ["FR-1.2"]
+  },
+  {
+    "id": "F003",
+    "description": "CE migration: add nullable template_phase_id UUID column to project_template_status_mappings with FK to project_template_phases(template_phase_id) ON DELETE CASCADE",
+    "implemented": false,
+    "prdRefs": ["FR-1.4"]
+  },
+  {
+    "id": "F004",
+    "description": "EE/Citus companion migration: FK constraints use composite keys (tenant, phase_id) and (tenant, template_phase_id) for distributed tables",
+    "implemented": false,
+    "prdRefs": ["FR-1.5"]
+  },
+  {
+    "id": "F005",
+    "description": "Add phase_id?: string to IProjectStatusMapping interface in packages/types and server/src/interfaces",
+    "implemented": false,
+    "prdRefs": ["FR-1.1"]
+  },
+  {
+    "id": "F006",
+    "description": "Add phase_id?: string to ProjectStatus type in packages/types and server/src/interfaces",
+    "implemented": false,
+    "prdRefs": ["FR-1.1"]
+  },
+  {
+    "id": "F007",
+    "description": "Model: getProjectStatusMappings() accepts optional phaseId param and filters by phase_id",
+    "implemented": false,
+    "prdRefs": ["FR-2.3"]
+  },
+  {
+    "id": "F008",
+    "description": "Model: new getEffectiveStatusMappings(knex, tenant, projectId, phaseId) returns phase statuses if configured, else project defaults (phase_id IS NULL)",
+    "implemented": false,
+    "prdRefs": ["FR-2.1", "FR-2.2"]
+  },
+  {
+    "id": "F009",
+    "description": "Model: getProjectTaskStatuses() threads phaseId through to use effective resolution",
+    "implemented": false,
+    "prdRefs": ["FR-2.3"]
+  },
+  {
+    "id": "F010",
+    "description": "Action: addStatusToProject() accepts optional phaseId and stores in mapping",
+    "implemented": false,
+    "prdRefs": ["FR-3.1"]
+  },
+  {
+    "id": "F011",
+    "description": "Action: getProjectStatusMappings() accepts optional phaseId and filters accordingly",
+    "implemented": false,
+    "prdRefs": ["FR-2.3"]
+  },
+  {
+    "id": "F012",
+    "description": "Action: reorderProjectStatuses() scopes reordering to phase if phaseId provided",
+    "implemented": false,
+    "prdRefs": ["FR-3.2"]
+  },
+  {
+    "id": "F013",
+    "description": "New action: copyProjectStatusesToPhase(projectId, phaseId) copies project defaults as phase-specific mappings",
+    "implemented": false,
+    "prdRefs": ["FR-3.3"]
+  },
+  {
+    "id": "F014",
+    "description": "New action: removePhaseStatuses(phaseId) deletes all phase-specific mappings, reverting to project defaults",
+    "implemented": false,
+    "prdRefs": ["FR-3.4"]
+  },
+  {
+    "id": "F015",
+    "description": "Action: getProjectTaskStatuses() in projectActions.ts accepts optional phaseId and uses effective resolution",
+    "implemented": false,
+    "prdRefs": ["FR-2.3"]
+  },
+  {
+    "id": "F016",
+    "description": "moveTaskToPhase(): same-project cross-phase moves resolve status — same name in target → keep it",
+    "implemented": false,
+    "prdRefs": ["FR-4.1"]
+  },
+  {
+    "id": "F017",
+    "description": "moveTaskToPhase(): no name match + source was open → first open status by display_order in target phase",
+    "implemented": false,
+    "prdRefs": ["FR-4.1"]
+  },
+  {
+    "id": "F018",
+    "description": "moveTaskToPhase(): no name match + source was closed → first closed status by display_order in target phase",
+    "implemented": false,
+    "prdRefs": ["FR-4.1"]
+  },
+  {
+    "id": "F019",
+    "description": "moveTaskToPhase(): cross-project moves continue to work as before",
+    "implemented": false,
+    "prdRefs": ["FR-4.2"]
+  },
+  {
+    "id": "F020",
+    "description": "Client portal: getClientProjectStatuses() accepts optional phaseId and uses effective resolution",
+    "implemented": false,
+    "prdRefs": ["FR-7.1"]
+  },
+  {
+    "id": "F021",
+    "description": "ProjectDetail.tsx: fetch phase-effective statuses when selectedPhase changes instead of project-wide statuses",
+    "implemented": false,
+    "prdRefs": ["FR-6.1"]
+  },
+  {
+    "id": "F022",
+    "description": "ProjectDetail.tsx: visibleKanbanStatuses, statusTaskCounts, and completedTasksCount use phase-effective statuses",
+    "implemented": false,
+    "prdRefs": ["FR-6.4", "FR-6.5"]
+  },
+  {
+    "id": "F023",
+    "description": "KanbanBoard renders columns from phase-effective statuses passed via props (minimal change)",
+    "implemented": false,
+    "prdRefs": ["FR-6.2"]
+  },
+  {
+    "id": "F024",
+    "description": "TaskStatusSelect shows effective statuses for the task's phase via props",
+    "implemented": false,
+    "prdRefs": ["FR-6.3"]
+  },
+  {
+    "id": "F025",
+    "description": "ProjectTaskStatusSettings: phase selector dropdown/tabs above status list with 'Project Defaults' as first option",
+    "implemented": false,
+    "prdRefs": ["FR-5.1", "FR-5.2"]
+  },
+  {
+    "id": "F026",
+    "description": "ProjectTaskStatusSettings: per-phase toggle 'Use project defaults' vs 'Custom statuses for this phase'",
+    "implemented": false,
+    "prdRefs": ["FR-5.3"]
+  },
+  {
+    "id": "F027",
+    "description": "ProjectTaskStatusSettings: toggling to custom offers 'Copy from project defaults' action via copyProjectStatusesToPhase",
+    "implemented": false,
+    "prdRefs": ["FR-5.4"]
+  },
+  {
+    "id": "F028",
+    "description": "ProjectTaskStatusSettings: toggling back to defaults shows confirmation dialog, then calls removePhaseStatuses",
+    "implemented": false,
+    "prdRefs": ["FR-5.5"]
+  },
+  {
+    "id": "F029",
+    "description": "AddStatusDialog: accepts optional phaseId and passes it to addStatusToProject()",
+    "implemented": false,
+    "prdRefs": ["FR-5.6"]
+  },
+  {
+    "id": "F030",
+    "description": "Client portal ProjectDetailView: fetch phase-effective statuses when phase selection changes",
+    "implemented": false,
+    "prdRefs": ["FR-7.2"]
+  },
+  {
+    "id": "F031",
+    "description": "Client portal ClientKanbanBoard: renders phase-specific status columns from props",
+    "implemented": false,
+    "prdRefs": ["FR-7.3"]
+  },
+  {
+    "id": "F032",
+    "description": "Client portal ClientTaskListView: groups tasks by phase-effective status groups",
+    "implemented": false,
+    "prdRefs": ["FR-7.4"]
+  },
+  {
+    "id": "F033",
+    "description": "Template: project_template_status_mappings supports template_phase_id for per-phase template statuses",
+    "implemented": false,
+    "prdRefs": ["FR-8.1"]
+  },
+  {
+    "id": "F034",
+    "description": "TemplateStatusManager: phase selector allows per-phase status configuration",
+    "implemented": false,
+    "prdRefs": ["FR-8.2"]
+  },
+  {
+    "id": "F035",
+    "description": "TemplateStatusColumnsStep (wizard): supports phase-aware status setup",
+    "implemented": false,
+    "prdRefs": ["FR-8.3"]
+  },
+  {
+    "id": "F036",
+    "description": "Project creation from template: copies phase-specific template status mappings to project_status_mappings with correct phase_id",
+    "implemented": false,
+    "prdRefs": ["FR-8.4"]
+  },
+  {
+    "id": "F037",
+    "description": "Phase task CSV import: IImportReferenceData.statusMappings resolves against phase-effective statuses",
+    "implemented": false,
+    "prdRefs": ["FR-9.1"]
+  },
+  {
+    "id": "F038",
+    "description": "Event payloads for PROJECT_STATUS_ADDED/UPDATED/DELETED/REORDERED include optional phaseId",
+    "implemented": false,
+    "prdRefs": ["FR-9.2"]
+  },
+  {
+    "id": "F039",
+    "description": "ProjectTaskStatusEditor and ProjectTaskStatusSelector handle phase statuses when creating project from template",
+    "implemented": false,
+    "prdRefs": ["FR-9.3"]
+  },
+  {
+    "id": "F040",
+    "description": "Backward compatibility: projects with no phase-specific statuses behave identically to before (all phases use project defaults)",
+    "implemented": false,
+    "prdRefs": ["NFR-1"]
+  }
+]
