@@ -1,0 +1,81 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { X } from 'lucide-react';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import {
+  getActivePlatformNotifications,
+  dismissPlatformNotification,
+} from '@enterprise/lib/platformNotifications/actions';
+
+type AlertVariant = 'default' | 'destructive' | 'success' | 'warning' | 'info';
+
+interface PlatformNotification {
+  notification_id: string;
+  title: string;
+  banner_content: string;
+  variant: string;
+}
+
+function toAlertVariant(variant: string): AlertVariant {
+  const valid: AlertVariant[] = ['default', 'destructive', 'success', 'warning', 'info'];
+  if (valid.includes(variant as AlertVariant)) return variant as AlertVariant;
+  return 'info';
+}
+
+export function PlatformNotificationBanner() {
+  const [notifications, setNotifications] = useState<PlatformNotification[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getActivePlatformNotifications().then((data) => {
+      if (!cancelled && Array.isArray(data)) {
+        setNotifications(data);
+      }
+    }).catch(() => {});
+
+    return () => { cancelled = true; };
+  }, []);
+
+  if (notifications.length === 0) return null;
+
+  const handleDismiss = async (notificationId: string) => {
+    setNotifications((prev) => prev.filter((n) => n.notification_id !== notificationId));
+    await dismissPlatformNotification(notificationId);
+  };
+
+  return (
+    <div className="mx-3 mt-2 flex flex-col gap-2">
+      {notifications.map((notification) => (
+        <Alert key={notification.notification_id} variant={toAlertVariant(notification.variant)}>
+          <AlertDescription>
+            <div className="flex items-center gap-3">
+              <div
+                className="flex-1 text-sm"
+                dangerouslySetInnerHTML={{ __html: notification.banner_content }}
+              />
+              <Link href={`/msp/platform-updates/${notification.notification_id}`} prefetch={false}>
+                <Button id={`platform-notif-learn-more-${notification.notification_id}`} size="sm" variant="outline" className="text-xs whitespace-nowrap">
+                  Learn More
+                </Button>
+              </Link>
+              <Button
+                id={`platform-notif-dismiss-${notification.notification_id}`}
+                variant="icon"
+                size="icon"
+                onClick={() => handleDismiss(notification.notification_id)}
+                aria-label="Dismiss notification"
+                className="flex-shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ))}
+    </div>
+  );
+}

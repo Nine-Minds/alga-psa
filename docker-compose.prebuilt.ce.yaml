@@ -269,6 +269,7 @@ services:
       IMAP_FETCH_DELAY_MS: ${IMAP_FETCH_DELAY_MS:-0}
       IMAP_EVENT_CHANNEL_BY_TENANT: ${IMAP_EVENT_CHANNEL_BY_TENANT:-false}
       IMAP_OAUTH_AUTH_MECHANISM: ${IMAP_OAUTH_AUTH_MECHANISM:-XOAUTH2}
+      IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
     volumes:
       - type: bind
         source: ./secrets/db_password_server

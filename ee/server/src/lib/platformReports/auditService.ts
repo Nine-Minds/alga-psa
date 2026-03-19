@@ -31,12 +31,22 @@ export type TenantEventType =
   | 'tenant.cancel_subscription'
   | 'tenant.delete';
 
+// Notification events
+export type NotificationEventType =
+  | 'notification.list'
+  | 'notification.view'
+  | 'notification.create'
+  | 'notification.update'
+  | 'notification.delete'
+  | 'notification.stats'
+  | 'notification.resolve_recipients';
+
 // General events
 export type GeneralEventType = 'extension.access';
 
-export type AuditEventType = ReportEventType | TenantEventType | GeneralEventType;
+export type AuditEventType = ReportEventType | TenantEventType | NotificationEventType | GeneralEventType;
 
-export type ResourceType = 'report' | 'tenant' | 'user' | 'subscription';
+export type ResourceType = 'report' | 'tenant' | 'user' | 'subscription' | 'notification';
 export type AuditStatus = 'pending' | 'completed' | 'failed' | 'running';
 
 export interface AuditLogEntry {

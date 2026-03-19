@@ -1905,6 +1905,19 @@ const Documents = ({
           </Drawer>
         </div>
 
+        {/* Folder Selector Modal for New Documents (entity mode) */}
+        <FolderSelectorModal
+          isOpen={showDocumentFolderModal}
+          onClose={() => setShowDocumentFolderModal(false)}
+          onSelectFolder={handleDocumentFolderSelected}
+          title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
+          description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
+          namespace={namespace}
+          entityId={entityId}
+          entityType={entityType}
+          getFoldersFn={getFoldersFn}
+        />
+
         {/* Unsaved Changes Confirmation Dialog */}
         <ConfirmationDialog
           id={`${id}-unsaved-changes-dialog`}

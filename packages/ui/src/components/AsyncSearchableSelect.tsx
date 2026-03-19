@@ -71,8 +71,11 @@ export function AsyncSearchableSelect({
   const [options, setOptions] = useState<SelectOption[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const pageRef = useRef(1);
+  const listRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -178,36 +181,74 @@ export function AsyncSearchableSelect({
   }, [open]);
 
   const fetchOptions = useCallback(
-    async (term: string) => {
-      setLoading(true);
+    async (term: string, page: number) => {
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setLoadError(null);
       try {
-        const result = await loadOptions({ search: term, page: 1, limit });
-        setOptions(result.options);
+        const result = await loadOptions({ search: term, page, limit });
+        if (page === 1) {
+          setOptions(result.options);
+        } else {
+          setOptions((prev) => [...prev, ...result.options]);
+        }
         setTotal(result.total);
+        pageRef.current = page;
       } catch (e) {
         console.error('[AsyncSearchableSelect] Failed to load options:', e);
-        setOptions([]);
-        setTotal(0);
+        if (page === 1) {
+          setOptions([]);
+          setTotal(0);
+        }
         setLoadError('Failed to load results');
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     },
     [loadOptions, limit]
   );
 
+  // Reset to page 1 when search term changes or dropdown opens
   useEffect(() => {
     if (!open || disabled) return;
 
+    pageRef.current = 1;
     const t = window.setTimeout(() => {
-      fetchOptions(search.trim());
+      fetchOptions(search.trim(), 1);
     }, debounceMs);
 
     return () => window.clearTimeout(t);
   }, [open, disabled, search, debounceMs, fetchOptions]);
 
   const hasMore = showMoreIndicator && total > options.length;
+
+  // Load next page on scroll to bottom (infinite scroll)
+  const fetchNextPage = useCallback(() => {
+    if (loadingMore || loading || !hasMore) return;
+    fetchOptions(search.trim(), pageRef.current + 1);
+  }, [loadingMore, loading, hasMore, search, fetchOptions]);
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list || !open) return;
+
+    // Command.List may wrap content in a nested scrollable div
+    const scrollEl = list.querySelector('[role="listbox"]')?.parentElement ?? list;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollEl;
+      if (scrollHeight - scrollTop - clientHeight < 40) {
+        fetchNextPage();
+      }
+    };
+
+    scrollEl.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollEl.removeEventListener('scroll', handleScroll);
+  }, [open, fetchNextPage]);
 
   const dropdown = (
     <div
@@ -238,7 +279,7 @@ export function AsyncSearchableSelect({
           {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-[rgb(var(--color-text-300))]" />}
         </div>
 
-        <Command.List className="overflow-y-auto overscroll-contain p-1" style={{ maxHeight: maxListHeight }}>
+        <Command.List ref={listRef} className="overflow-y-auto overscroll-contain p-1" style={{ maxHeight: maxListHeight }}>
           {loadError ? (
             <div className="py-6 text-center text-sm text-red-600">{loadError}</div>
           ) : options.length > 0 ? (
@@ -279,8 +320,10 @@ export function AsyncSearchableSelect({
               ))}
 
               {hasMore && (
-                <div className="px-2 py-2 text-xs text-[rgb(var(--color-text-400))]">
-                  Showing {options.length} of {total}. Refine your search to see more.
+                <div className="flex items-center justify-center px-2 py-2">
+                  {loadingMore && (
+                    <Loader2 className="h-4 w-4 animate-spin text-[rgb(var(--color-text-300))]" />
+                  )}
                 </div>
               )}
             </>

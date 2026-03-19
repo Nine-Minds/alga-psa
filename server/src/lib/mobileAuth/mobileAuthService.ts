@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { z } from 'zod';
 import { getConnection } from '../db/db';
-import { ApiKeyService } from '../services/apiKeyService';
+import { ApiKeyService } from '@alga-psa/auth';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
 

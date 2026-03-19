@@ -195,6 +195,12 @@
       "@alga-psa/documents/*": [
         "../packages/documents/src/*"
       ],
+      "@alga-psa/block-content": [
+        "../packages/block-content/src"
+      ],
+      "@alga-psa/block-content/*": [
+        "../packages/block-content/src/*"
+      ],
       "@alga-psa/storage": [
         "../packages/storage/src"
       ],
