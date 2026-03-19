@@ -38,37 +38,37 @@
   {
     "id": "F007",
     "description": "Sidebar.tsx: add useTranslation('msp/core') and translate item.name display via t(item.translationKey)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
     "id": "F008",
     "description": "Sidebar.tsx: translate 'Go to dashboard' aria-label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
     "id": "F009",
     "description": "Sidebar.tsx: translate 'AlgaPSA Logo' alt text",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
     "id": "F010",
     "description": "Sidebar.tsx: translate 'Expand sidebar' and 'Collapse sidebar' labels",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
     "id": "F011",
     "description": "Sidebar.tsx: translate section titles for settings, billing, and extensions modes via t(section.translationKey)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
     "id": "F012",
     "description": "Sidebar.tsx: translate tooltip text for collapsed sidebar items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {

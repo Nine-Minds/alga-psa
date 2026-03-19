@@ -56,55 +56,55 @@
   {
     "id": "T010",
     "description": "Sidebar.tsx: with msp-i18n-enabled ON + non-English locale, nav items display translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T011",
     "description": "Sidebar.tsx: with msp-i18n-enabled OFF, nav items display English text (no regressions)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T012",
     "description": "Sidebar.tsx: collapsed sidebar tooltips show translated nav item names",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T013",
     "description": "Sidebar.tsx: 'Go to dashboard' aria-label is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T014",
     "description": "Sidebar.tsx: 'AlgaPSA Logo' alt text is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
     "id": "T015",
     "description": "Sidebar.tsx: 'Expand sidebar' / 'Collapse sidebar' labels are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
     "id": "T016",
     "description": "Sidebar.tsx: settings mode section titles ('Organization & Access', etc.) display translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T017",
     "description": "Sidebar.tsx: billing mode section titles display translated text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T018",
     "description": "Sidebar.tsx: 'Back to Main' button text and tooltip are translated (already has key — verify consumption)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {

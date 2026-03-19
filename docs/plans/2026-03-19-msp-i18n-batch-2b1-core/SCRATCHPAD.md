@@ -37,6 +37,8 @@
 
 - (2026-03-19) Completed `F001-F006` and `T001-T009` together in the shared menu config layer. Added optional `translationKey` metadata to `MenuItem` and `NavigationSection`, populated every main/bottom/settings/billing/extensions nav item with stable i18n keys, and added `server/src/test/unit/layout/menuConfig.i18n.test.ts` to lock the mapping in place before Sidebar/Header consume it.
 - (2026-03-19) New core keys implied by the menu config and still pending locale-file work: `nav.documentsAll`, `nav.knowledgeBase`, `nav.controlPanel`, `nav.workflowEditor`, `nav.systemMonitoring`, `nav.jobMonitoring`, `settings.tabs.language`, `settings.tabs.sla`, and all `nav.billing.*` entries.
+- (2026-03-19) Completed `F007-F012` and `T010-T018` in `Sidebar.tsx`. Sidebar now translates menu item labels by cloning config items with `t(item.translationKey)`, translates the dashboard link/logo/toggle/back-to-main chrome, and filters the hidden Language settings entry by `translationKey` instead of English text so locale changes do not break the feature-flag behavior.
+- (2026-03-19) Added `server/src/test/unit/layout/Sidebar.i18n.test.tsx` with a lightweight tooltip/collapse mock to verify translated open-state labels, collapsed tooltip labels, section titles in settings and billing modes, and the English fallback path when translations are unavailable.
 
 ## Commands / Runbooks
 
