@@ -79,7 +79,7 @@
   {
     "id": "TB12",
     "description": "Backward compatibility: existing projects with no phase statuses show project-level columns for all phases; existing tasks retain valid project_status_mapping_id after migration; settings UI shows project-level statuses without regression; phase cascade deletion cleans up correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"],
     "covers": ["T057", "T058", "T059", "T061"]
   }
