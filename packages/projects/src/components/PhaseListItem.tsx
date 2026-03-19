@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { IProjectPhase } from '@alga-psa/types';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -65,6 +65,22 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-scroll the editing form into view when editing starts
+  useEffect(() => {
+    if (isEditing && itemRef.current) {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      requestAnimationFrame(() => {
+        const target = actionsRef.current ?? itemRef.current;
+        target?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+
+        try { nameInputRef.current?.focus({ preventScroll: true }); }
+        catch { nameInputRef.current?.focus(); }
+      });
+    }
+  }, [isEditing]);
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -116,16 +132,10 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    console.log('PhaseListItem handleDrop called for phase:', phase.phase_name);
-    
+
     const draggedPhaseId = e.dataTransfer.getData('text/plain');
-    const dropData = e.dataTransfer.getData('application/json');
-    
-    console.log('PhaseListItem drop data:', { draggedPhaseId, dropData });
-    
+
     if (draggedPhaseId === phase.phase_id) {
-      console.log('Cannot drop phase on itself');
       return; // Can't drop on itself
     }
     
@@ -237,14 +247,14 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Name</label>
               <TextArea
+                ref={nameInputRef}
                 value={editingName}
                 onChange={(e) => onNameChange(e.target.value)}
                 className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                 onClick={(e) => e.stopPropagation()}
-                autoFocus
               />
             </div>
-            {/* Description Input - Added */}
+            {/* Description Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Description</label>
               <TextArea
@@ -278,33 +288,32 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 clearable={true}
               />
             </div>
-          </div>
-          {/* Action Buttons  */}
-          <div className="flex justify-end gap-2 mt-3">
-            <Button
-              id={`cancel-edit-phase-${phase.phase_id}`}
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCancel();
-              }}
-              title="Cancel editing"
-            >
-              Cancel
-            </Button>
-            <Button
-              id={`save-edit-phase-${phase.phase_id}`}
-              variant="default"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSave(phase);
-              }}
-              title="Save changes"
-            >
-              Save
-            </Button>
+            <div ref={actionsRef} className={styles.phaseEditActions}>
+              <Button
+                id={`cancel-edit-phase-${phase.phase_id}`}
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancel();
+                }}
+                title="Cancel editing"
+              >
+                Cancel
+              </Button>
+              <Button
+                id={`save-edit-phase-${phase.phase_id}`}
+                variant="default"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSave(phase);
+                }}
+                title="Save changes"
+              >
+                Save
+              </Button>
+            </div>
           </div>
         </div>
       ) : (

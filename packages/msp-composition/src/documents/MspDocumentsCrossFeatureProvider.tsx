@@ -16,8 +16,9 @@ import {
   removeDocumentAssociations,
   updateDocument,
   uploadDocument,
+  ensureEntityFolders,
 } from '@alga-psa/documents/actions/documentActions';
-import { getBlockContent, updateBlockContent } from '@alga-psa/documents/actions/documentBlockContentActions';
+import { createBlockDocument, getBlockContent, updateBlockContent } from '@alga-psa/documents/actions/documentBlockContentActions';
 import { downloadDocumentInBrowser } from '@alga-psa/documents/actions/document-download';
 import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
 import Documents from '@alga-psa/documents/components/Documents';
@@ -68,6 +69,8 @@ export function MspDocumentsCrossFeatureProvider({ children }: { children: React
       updateBlockContent,
       downloadDocumentInBrowser,
       uploadDocument,
+      createBlockDocument,
+      ensureEntityFolders,
     }),
     [renderDocuments, renderDocumentSelector, renderDocumentUpload, renderFolderSelectorModal]
   );

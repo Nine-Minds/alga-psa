@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -17,12 +17,12 @@ import {
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import {
-  createWorkflowScheduleAction,
-  getWorkflowScheduleAction,
+  createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
+  getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
   getWorkflowSchemaAction,
   listWorkflowDefinitionsPagedAction,
   listWorkflowSchemaRefsAction,
-  updateWorkflowScheduleAction
+  updateWorkflowScheduleAction as updateWorkflowScheduleActionDefault
 } from '@alga-psa/workflows/actions';
 import {
   buildCronFromRecurringBuilder,
@@ -33,6 +33,7 @@ import {
   WEEKDAY_OPTIONS,
   type RecurringBuilderState,
 } from './workflowScheduleRecurrence';
+import WorkflowScheduleTimezonePicker from './WorkflowScheduleTimezonePicker';
 
 type JsonSchema = {
   type?: string | string[];
@@ -75,6 +76,19 @@ type WorkflowScheduleDialogProps = {
   initialWorkflowId?: string | null;
   onClose: () => void;
   onSaved: () => void;
+  scheduleActions?: WorkflowScheduleDialogActions;
+};
+
+export type WorkflowScheduleDialogActions = {
+  createWorkflowScheduleAction: typeof createWorkflowScheduleActionDefault;
+  getWorkflowScheduleAction: typeof getWorkflowScheduleActionDefault;
+  updateWorkflowScheduleAction: typeof updateWorkflowScheduleActionDefault;
+};
+
+const defaultScheduleActions: WorkflowScheduleDialogActions = {
+  createWorkflowScheduleAction: createWorkflowScheduleActionDefault,
+  getWorkflowScheduleAction: getWorkflowScheduleActionDefault,
+  updateWorkflowScheduleAction: updateWorkflowScheduleActionDefault,
 };
 
 const resolveSchemaRef = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
@@ -240,7 +254,8 @@ export default function WorkflowScheduleDialog({
   scheduleId,
   initialWorkflowId,
   onClose,
-  onSaved
+  onSaved,
+  scheduleActions = defaultScheduleActions
 }: WorkflowScheduleDialogProps) {
   const [workflowOptions, setWorkflowOptions] = useState<WorkflowOption[]>([]);
   const [availableSchemaRefs, setAvailableSchemaRefs] = useState<Set<string>>(new Set());
@@ -325,7 +340,7 @@ export default function WorkflowScheduleDialog({
       const loadSchedule = async () => {
         setIsLoadingSchedule(true);
         try {
-          const schedule = await getWorkflowScheduleAction({ scheduleId });
+          const schedule = await scheduleActions.getWorkflowScheduleAction({ scheduleId });
           if (cancelled) return;
           setSelectedWorkflowId(schedule.workflow_id);
           setScheduleName(schedule.name ?? '');
@@ -381,7 +396,7 @@ export default function WorkflowScheduleDialog({
     setPayloadTouched(false);
     setIsLoadingSchedule(false);
     return undefined;
-  }, [initialWorkflowId, isOpen, mode, scheduleId]);
+  }, [initialWorkflowId, isOpen, mode, scheduleActions, scheduleId]);
 
   useEffect(() => {
     if (!isOpen || !selectedWorkflow?.payload_schema_ref || workflowEligibilityMessage) {
@@ -772,14 +787,14 @@ export default function WorkflowScheduleDialog({
       } as const;
 
       const result = mode === 'edit' && scheduleId
-        ? await updateWorkflowScheduleAction({
+        ? await scheduleActions.updateWorkflowScheduleAction({
           scheduleId,
           ...common,
           runAt: triggerType === 'schedule' ? toIsoString(runAt) : undefined,
           cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
           timezone: triggerType === 'recurring' ? timezone.trim() : undefined
         })
-        : await createWorkflowScheduleAction({
+        : await scheduleActions.createWorkflowScheduleAction({
           ...common,
           runAt: triggerType === 'schedule' ? toIsoString(runAt) : undefined,
           cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
@@ -1043,12 +1058,11 @@ export default function WorkflowScheduleDialog({
                   </div>
                 )}
 
-                <Input
+                <WorkflowScheduleTimezonePicker
                   id="schedule-dialog-timezone"
                   label="Timezone"
                   value={timezone}
-                  onChange={(event) => setTimezone(event.target.value)}
-                  placeholder="America/New_York"
+                  onValueChange={setTimezone}
                 />
               </div>
             )}
@@ -1108,8 +1122,20 @@ export default function WorkflowScheduleDialog({
                   )}
                 </div>
               ) : (
-                <div className="rounded border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground">
-                  No payload schema is available for this workflow yet.
+                <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-full bg-[rgb(var(--color-background-100))] p-1.5 text-[rgb(var(--color-text-500))]">
+                      <Info className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                        No payload schema is available for this workflow yet.
+                      </div>
+                      <div className="text-sm text-[rgb(var(--color-text-600))]">
+                        Form fields will appear here once this workflow publishes a pinned payload schema.
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

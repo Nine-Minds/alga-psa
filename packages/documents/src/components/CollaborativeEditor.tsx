@@ -16,6 +16,7 @@ import {
   MentionNode,
   MentionSuggestionExtension,
   MentionSuggestionPopup,
+  AiResponseBlock,
 } from '@alga-psa/ui/editor';
 import type { EmojiSuggestionState, MentionSuggestionState, MentionSuggestionUser } from '@alga-psa/ui/editor';
 import AvatarIcon from '@alga-psa/ui/components/AvatarIcon';
@@ -184,6 +185,7 @@ export function CollaborativeEditor({
       Underline,
       Emoticon,
       MentionNode,
+      AiResponseBlock,
       EmojiSuggestionExtension.configure({
         onStateChange: handleEmojiStateChange,
       }),

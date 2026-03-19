@@ -25,7 +25,7 @@ import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/u
 import { updateContact, getContactByContactNameId, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { validateEmailAddress, validateContactName, validateRole } from '@alga-psa/validation';
-import Documents from '@alga-psa/documents/components/Documents';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { useToast } from '@alga-psa/ui';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
@@ -223,6 +223,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const drawer = useDrawer();
   const clientDrawer = useClientDrawer();
   const { getTicketFormOptions, renderContactTickets } = useClientCrossFeature();
+  const { renderDocuments } = useDocumentsCrossFeature();
 
   // Implement refreshContactData function
   const refreshContactData = useCallback(async () => {
@@ -852,17 +853,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       label: "Documents",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          {currentUser ? (
-            <Documents
-              id={`${id}-documents`}
-              documents={documents}
-              gridColumns={3}
-              userId={currentUser.user_id}
-              entityId={editedContact.contact_name_id}
-              entityType="contact"
-              onDocumentCreated={onDocumentCreated || (async () => {})}
-            />
-          ) : (
+          {currentUser ? renderDocuments({
+              id: `${id}-documents`,
+              documents,
+              gridColumns: 3,
+              userId: currentUser.user_id,
+              entityId: editedContact.contact_name_id,
+              entityType: 'contact',
+              onDocumentCreated: onDocumentCreated || (async () => {}),
+          }) : (
             <div>Loading...</div>
           )}
         </div>

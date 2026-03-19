@@ -97,6 +97,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Logs and notifications
   'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
+  'platform_notification_recipients',
 
   // Extension logs and execution
   'extension_execution_log', 'extension_execution_log_old',

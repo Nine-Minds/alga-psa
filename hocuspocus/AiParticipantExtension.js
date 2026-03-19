@@ -24,6 +24,8 @@ export class AiParticipantExtension {
     this.aiApiKey = config.aiApiKey || ''
     this.processingDocs = new Set() // re-entrancy guard keyed by documentName
     this.conversationHistories = new Map() // documentName -> [{role, content}]
+    this.debounceTimers = new Map() // documentName -> timeout id
+    this.DEBOUNCE_MS = 2000 // wait 2s after last keystroke before processing
   }
 
   async onChange({ document, documentName }) {
@@ -33,6 +35,23 @@ export class AiParticipantExtension {
     }
 
     // Re-entrancy guard: skip if we're already processing this document
+    if (this.processingDocs.has(documentName)) {
+      return
+    }
+
+    // Debounce: wait for user to stop typing before processing
+    if (this.debounceTimers.has(documentName)) {
+      clearTimeout(this.debounceTimers.get(documentName))
+    }
+
+    this.debounceTimers.set(documentName, setTimeout(() => {
+      this.debounceTimers.delete(documentName)
+      this.processDocument(document, documentName)
+    }, this.DEBOUNCE_MS))
+  }
+
+  async processDocument(document, documentName) {
+    // Re-entrancy guard (check again after debounce)
     if (this.processingDocs.has(documentName)) {
       return
     }
@@ -86,8 +105,11 @@ export class AiParticipantExtension {
       const mentionInfo = this.findAiMentionInParagraph(node)
       if (!mentionInfo) continue
 
-      // Check that there's a following sibling (user pressed Enter)
+      // Check that the next sibling is an empty paragraph (user pressed Enter after typing)
+      // This prevents firing mid-typing when there's existing content below
       if (i + 1 >= topLevelNodes.length) continue
+      const nextNode = topLevelNodes[i + 1]
+      if (!this.isEmptyParagraph(nextNode)) continue
 
       results.push({
         paragraphNode: node,
@@ -98,6 +120,17 @@ export class AiParticipantExtension {
     }
 
     return results
+  }
+
+  /**
+   * Check if a node is an empty paragraph (no text content).
+   * Used to detect that the user pressed Enter after typing their instruction.
+   */
+  isEmptyParagraph(node) {
+    if (!(node instanceof Y.XmlElement)) return false
+    if (node.nodeName !== 'paragraph') return false
+    const text = this.serializeInlineContent(node).trim()
+    return text === ''
   }
 
   /**
@@ -218,6 +251,12 @@ export class AiParticipantExtension {
         const displayName = node.getAttribute('displayName') || node.getAttribute('username') || ''
         return `@${displayName}`
       }
+      case 'aiResponseBlock':
+        // Serialize the inner content normally (the wrapper is presentation-only)
+        return node.toArray()
+          .map(child => this.serializeNode(child))
+          .filter(Boolean)
+          .join('\n\n')
       default:
         return this.serializeInlineContent(node)
     }
@@ -509,7 +548,8 @@ export class AiParticipantExtension {
   // ---------------------------------------------------------------------------
 
   /**
-   * Insert AI response as rich ProseMirror nodes parsed from markdown.
+   * Insert AI response as rich ProseMirror nodes wrapped in an aiResponseBlock
+   * container with accept/dismiss controls on the frontend.
    */
   insertRichResponse(document, fragment, afterIndex, markdownText) {
     const blocks = this.parseMarkdownBlocks(markdownText)
@@ -523,14 +563,13 @@ export class AiParticipantExtension {
     }
 
     document.transact(() => {
-      let insertIndex = afterIndex + 1
-      for (const el of yElements) {
-        fragment.insert(insertIndex, [el])
-        insertIndex++
-      }
+      // Wrap all response elements in an aiResponseBlock container
+      const wrapper = new Y.XmlElement('aiResponseBlock')
+      wrapper.insert(0, yElements)
+      fragment.insert(afterIndex + 1, [wrapper])
     })
 
-    return yElements.length
+    return 1 // single wrapper node inserted
   }
 
   /**

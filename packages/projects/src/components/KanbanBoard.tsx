@@ -169,7 +169,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   });
   
   return (
-    <div className={styles.kanbanBoard}>
+    <div className={styles.kanbanBoard} data-kanban-board="true">
       {statuses.filter(status => status.is_visible).map((status, index): React.JSX.Element => {
         // Use configured color or fallback to cycling colors
         const configuredColor = status.color;

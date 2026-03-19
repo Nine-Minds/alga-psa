@@ -48,6 +48,15 @@ export interface DocumentsCrossFeatureCallbacks {
   updateBlockContent: (documentId: string, input: any) => Promise<any>;
   downloadDocumentInBrowser: (documentId: string, documentName: string) => Promise<any>;
   uploadDocument: (formData: FormData, metadata: any) => Promise<any>;
+  createBlockDocument: (input: {
+    document_name: string;
+    user_id: string;
+    block_data: any;
+    entityId?: string;
+    entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
+    folder_path?: string | null;
+  }) => Promise<{ document_id: string; content_id: string }>;
+  ensureEntityFolders: (entityId: string, entityType: string) => Promise<any>;
 }
 
 const DocumentsCrossFeatureContext = createContext<DocumentsCrossFeatureCallbacks | null>(null);

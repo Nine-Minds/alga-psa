@@ -43,6 +43,7 @@ import type { ITeam } from '@alga-psa/types';
 import { useSession } from 'next-auth/react';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 
 
 interface TicketInfoProps {
@@ -113,6 +114,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 }) => {
   const { data: session } = useSession();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+  const { deleteDocument } = useDocumentsCrossFeature();
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
@@ -395,6 +397,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: discardDescriptionEdit,
+    deleteDocumentFn: deleteDocument,
   });
 
   useEffect(() => {

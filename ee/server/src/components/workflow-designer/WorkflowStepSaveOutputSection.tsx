@@ -83,9 +83,9 @@ export const WorkflowStepSaveOutputSection: React.FC<{
             </Button>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <div className="flex items-center gap-1.5 text-xs text-[rgb(var(--color-text-500))]">
             <span>Accessible as:</span>
-            <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-mono">
+            <code className="bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 rounded text-[rgb(var(--color-text-700))] font-mono">
               vars.{currentSaveAs}
             </code>
           </div>

@@ -233,6 +233,7 @@ export const deleteUser = withAuth(async (
         .where({ default_assigned_to: userId, tenant: tenantId })
         .update({ default_assigned_to: null });
 
+      await trx('platform_notification_recipients').where({ user_id: userId, tenant: tenantId || undefined }).del();
       await trx('user_roles').where({ user_id: userId, tenant: tenantId || undefined }).del();
       await trx('user_preferences').where({ user_id: userId, tenant: tenantId || undefined }).del();
 
