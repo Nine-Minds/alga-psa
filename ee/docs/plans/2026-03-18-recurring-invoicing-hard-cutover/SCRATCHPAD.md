@@ -15,6 +15,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Prefer explicit hard failures and repair actions over fallback compatibility rows when recurring service-period materialization is missing.
 - (2026-03-18) This plan is a hard-cutover follow-on to the broader service-period-first plan and the softer service-driven invoicing cutover plan.
 - (2026-03-18) Keep the hard-cutover architecture notes separate from the softer service-driven runbook so the steady-state model is explicit and testable.
+- (2026-03-18) Recurring invoice linkage should derive candidate obligations from canonical persisted detail metadata (`config_id`, service-period window, due position, invoice window) plus contract-line or assignment identity, never from invoice-header `billing_cycle_id`.
 
 ## Agent Findings
 
@@ -81,6 +82,11 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
     - [bucketUsageService.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/services/bucketUsageService.ts)
     - [billingScheduleActions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/billingScheduleActions.ts)
     - [20241130164200_add_billing_cycle_id_to_invoices.cjs](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/migrations/20241130164200_add_billing_cycle_id_to_invoices.cjs)
+- Recurring invoice-linkage slice completed:
+  - [invoiceService.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/services/invoiceService.ts) now builds recurring linkage candidates from canonical config and invoice-window data, then matches `recurring_service_periods` across explicit `contract_line` and `client_contract_line` obligations without any `invoice.billing_cycle_id` branch.
+  - The linkage helper no longer suppresses missing-relation errors as a rollout-era fallback; required recurring linkage relations are now assumed to exist in steady state.
+  - Added persistence coverage in [invoiceService.fixedPersistence.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts) for both client-cadence and contract-cadence rows with null `billing_cycle_id`.
+  - Added static guards in [recurringInvoiceLinkage.static.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringInvoiceLinkage.static.test.ts) to lock out `billing_cycle_id`-driven widening and mixed-schema fallback logic.
 
 ## Discoveries / Constraints
 
@@ -104,6 +110,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Invoice API list/detail contracts now distinguish client recurring invoices as `client_cadence_window`, not `billing_cycle_window`. `billing_cycle_id` remains available on invoice DTOs only as optional historical metadata or explicit include-side context, not as the recurring classifier.
 - (2026-03-18) `recurring_projection` was dead compatibility metadata in the clean runtime paths. Canonical recurring reads now key directly off `recurring_detail_periods`; only the already-dirty `billingInvoiceTiming.integration.test.ts` still references the removed field and was intentionally left untouched until that file is clean.
 - (2026-03-18) Live recurring history now loads through `getRecurringInvoiceHistoryPaginated(...)` and labels the surface as recurring invoice history, not invoiced billing cycles. A deprecated `getInvoicedBillingCyclesPaginated(...)` alias remains only so the already-dirty `billingInvoiceTiming.integration.test.ts` harness can be cleaned up separately without mixing in its unrelated edits.
+- (2026-03-18) `invoiceService.ts` no longer uses `invoice.billing_cycle_id` to choose recurring linkage candidates. The next remaining bridge-like misclassification seam is still in [invoiceModification.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/invoiceModification.ts), where null/non-null `billing_cycle_id` is still used for prepayment logic (`F046`/`F047`).
 
 ## Commands / Runbooks
 
@@ -125,6 +132,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts src/test/integration/accounting/invoiceSelection.integration.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/billing/recurringInvoiceHistory.static.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/recurringInvoiceLinkage.static.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -157,6 +166,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T011/T035/T036/T037 implemented with ready-row UI coverage for an unbridged contract-cadence row, recurring-history UI coverage for row actions and service-period/execution-window copy, and a static guard that the live history surface no longer imports or labels itself as invoiced billing cycles.
 - (2026-03-18) F039/F040/F041 implemented by making recurring reverse/delete wrappers delete the invoice first through `hardDeleteInvoice(...)` for both bridged and unbridged rows, then apply any optional billing-cycle metadata cleanup afterward. Canonical recurring service-period linkage repair remains the primary delete path via `releaseRecurringServicePeriodInvoiceLinkageForInvoice(...)`.
 - (2026-03-18) T012/T013 implemented by extending the existing client-cadence `AutomaticInvoices` UI regression so the same proof covers both preview and generate actions submitting canonical selector input with no `billing_cycle_id`.
+- (2026-03-18) F042/F043/F044/F045 implemented by making `invoiceService.ts` derive recurring linkage candidates from canonical config/window identity, matching both `contract_line` and `client_contract_line` obligations without consulting `invoice.billing_cycle_id`, and deleting the mixed-schema missing-relation fallback guard from recurring linkage persistence.
+- (2026-03-18) T031/T032 implemented with static source guards proving recurring invoice linkage no longer widens or narrows from `invoice.billing_cycle_id` and no longer suppresses missing-relation fallback errors.
 
 ## Links / References
 

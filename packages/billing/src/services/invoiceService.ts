@@ -57,16 +57,6 @@ function addUtcDayToDateOnly(value: string): string {
   return next.toISOString().slice(0, 10);
 }
 
-function isMissingRecurringLinkageRelationError(error: unknown) {
-  if (!error || typeof error !== 'object') {
-    return false;
-  }
-
-  const code = 'code' in error ? (error as { code?: string }).code : undefined;
-  const message = error instanceof Error ? error.message : String(error);
-  return code === '42P01' || /relation .* does not exist/i.test(message);
-}
-
 async function linkRecurringServicePeriodToInvoiceDetail(params: {
   tx: Knex.Transaction;
   tenant: string;
@@ -107,7 +97,7 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
 
   const invoiceWindow = await invoiceBuilder
     .where({ invoice_id: invoiceId, tenant })
-    .first(['billing_period_start', 'billing_period_end', 'billing_cycle_id']);
+    .first(['billing_period_start', 'billing_period_end']);
 
   const invoiceWindowStart = normalizeRecurringDateForPersistence(invoiceWindow?.billing_period_start);
   const invoiceWindowEnd = normalizeRecurringDateForPersistence(invoiceWindow?.billing_period_end);
@@ -134,37 +124,41 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     return 0;
   }
 
-  const obligationTypeFilter = invoiceWindow?.billing_cycle_id
-    ? ['contract_line', 'client_contract_line']
-    : ['contract_line'];
-  const obligationIds = new Set<string>([configRow.contract_line_id]);
+  const obligationCandidates: Array<{
+    obligation_type: 'contract_line' | 'client_contract_line';
+    obligation_id: string;
+  }> = [
+    {
+      obligation_type: 'contract_line',
+      obligation_id: configRow.contract_line_id,
+    },
+  ];
 
-  if (invoiceWindow?.billing_cycle_id) {
-    try {
-      const clientContractLineRows = await tx('client_contract_lines')
-        .where({
-          tenant,
-          client_id: clientId,
-          contract_line_id: configRow.contract_line_id,
-        })
-        .select<{ client_contract_line_id: string }[]>('client_contract_line_id');
+  const clientContractLineRows = await tx('client_contract_lines')
+    .where({
+      tenant,
+      client_id: clientId,
+      contract_line_id: configRow.contract_line_id,
+    })
+    .select<{ client_contract_line_id: string }[]>('client_contract_line_id');
 
-      for (const row of clientContractLineRows) {
-        if (row.client_contract_line_id) {
-          obligationIds.add(row.client_contract_line_id);
-        }
-      }
-    } catch (error) {
-      if (!isMissingRecurringLinkageRelationError(error)) {
-        throw error;
-      }
+  for (const row of clientContractLineRows) {
+    if (row.client_contract_line_id) {
+      obligationCandidates.push({
+        obligation_type: 'client_contract_line',
+        obligation_id: row.client_contract_line_id,
+      });
     }
   }
 
   return tx('recurring_service_periods')
     .where({ tenant, charge_family: chargeFamily, due_position: billingTiming })
-    .whereIn('obligation_type', obligationTypeFilter)
-    .whereIn('obligation_id', Array.from(obligationIds))
+    .where(function recurringObligationMatch() {
+      for (const [index, candidate] of obligationCandidates.entries()) {
+        const clause = index === 0 ? this.where : this.orWhere;
+        clause.call(this, candidate);
+      }
+    })
     .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
     .whereNull('invoice_charge_detail_id')
     .where({
