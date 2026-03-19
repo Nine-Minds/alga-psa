@@ -85,6 +85,18 @@ export interface NotificationStats {
   }>;
 }
 
+export interface NotificationRecipientRead {
+  user_id: string;
+  tenant: string;
+  tenant_name: string | null;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  matched_at: string | null;
+  dismissed_at: string | null;
+  detail_viewed_at: string | null;
+}
+
 export interface ResolvedRecipient {
   user_id: string;
   tenant: string;
@@ -429,6 +441,48 @@ export class PlatformNotificationService {
       total_detail_viewed: totalDetailViewed,
       reads_by_tenant: readsByTenant,
     };
+  }
+
+  // ── Per-user reads ──
+
+  async getNotificationReads(notificationId: string): Promise<NotificationRecipientRead[]> {
+    const knex = await getAdminConnection();
+
+    const rows = await knex('platform_notification_recipients as r')
+      .join('users as u', function () {
+        this.on('r.tenant', '=', 'u.tenant').andOn('r.user_id', '=', 'u.user_id');
+      })
+      .leftJoin('tenants as t', 'r.tenant', 't.tenant')
+      .where('r.notification_id', notificationId)
+      .whereNull('r.excluded_at')
+      .select(
+        'r.user_id',
+        'r.tenant',
+        't.client_name as tenant_name',
+        'u.email',
+        'u.first_name',
+        'u.last_name',
+        'r.matched_at',
+        'r.dismissed_at',
+        'r.detail_viewed_at'
+      )
+      .orderBy([
+        { column: 'r.detail_viewed_at', order: 'desc', nulls: 'last' },
+        { column: 'r.dismissed_at', order: 'desc', nulls: 'last' },
+        { column: 'u.last_name', order: 'asc' },
+      ]);
+
+    return rows.map((row: Record<string, unknown>) => ({
+      user_id: row.user_id as string,
+      tenant: row.tenant as string,
+      tenant_name: (row.tenant_name as string) || null,
+      email: row.email as string,
+      first_name: (row.first_name as string) || null,
+      last_name: (row.last_name as string) || null,
+      matched_at: row.matched_at ? (row.matched_at as Date).toISOString() : null,
+      dismissed_at: row.dismissed_at ? (row.dismissed_at as Date).toISOString() : null,
+      detail_viewed_at: row.detail_viewed_at ? (row.detail_viewed_at as Date).toISOString() : null,
+    }));
   }
 
   // ── Private helpers ──

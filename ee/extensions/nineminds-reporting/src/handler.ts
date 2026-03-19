@@ -72,6 +72,7 @@ const routes: Route[] = [
   // Notifications
   { pattern: /^\/notifications\/resolve-recipients$/, handler: handleResolveRecipients },
   { pattern: /^\/notifications\/([0-9a-f-]+)\/stats$/, handler: handleNotificationStats },
+  { pattern: /^\/notifications\/([0-9a-f-]+)\/reads$/, handler: handleNotificationReads },
   { pattern: /^\/notifications\/([0-9a-f-]+)$/, handler: handleNotificationById },
   { pattern: /^\/notifications$/, handler: handleNotifications },
   // Health check
@@ -122,12 +123,14 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
 
 async function processRequest(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   const method = request.http.method || 'POST';
-  const url = request.http.url || '/';
+  const fullUrl = request.http.url || '/';
+  const queryIdx = fullUrl.indexOf('?');
+  const url = queryIdx >= 0 ? fullUrl.substring(0, queryIdx) : fullUrl;
   const requestId = request.context.requestId ?? 'n/a';
   const tenantId = request.context.tenantId;
   const extensionId = request.context.extensionId;
 
-  await safeLog(host, 'info', `[nineminds-control-panel] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${url} build=${BUILD_STAMP}`);
+  await safeLog(host, 'info', `[nineminds-control-panel] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${fullUrl} build=${BUILD_STAMP}`);
 
   for (const route of routes) {
     const match = url.match(route.pattern);
@@ -485,6 +488,13 @@ async function handleNotificationStats(_request: ExecuteRequest, host: HostBindi
   const id = params.param0;
   await safeLog(host, 'info', `[nineminds-control-panel] fetching notification stats id=${id} via uiProxy`);
   const result = await callPlatformApi(host, `/api/v1/platform-notifications/${id}/stats`);
+  return jsonResponse(result.data, { status: result.status });
+}
+
+async function handleNotificationReads(_request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const id = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] fetching notification reads id=${id} via uiProxy`);
+  const result = await callPlatformApi(host, `/api/v1/platform-notifications/${id}/reads`);
   return jsonResponse(result.data, { status: result.status });
 }
 
