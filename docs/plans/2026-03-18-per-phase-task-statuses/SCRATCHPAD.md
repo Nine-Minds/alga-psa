@@ -31,6 +31,7 @@
 ## Progress Log
 
 - (2026-03-18) `TB01` complete. Added `server/src/test/unit/migrations/perPhaseTaskStatusesMigration.contract.test.ts` to assert nullable `phase_id`/`template_phase_id`, additive migration behavior, CE phase index creation, and EE composite FK repair inputs. Verification: `cd server && npx vitest run src/test/unit/migrations/perPhaseTaskStatusesMigration.contract.test.ts`.
+- (2026-03-18) `TB02` complete. Added `server/src/test/unit/interfaces/projectStatusPhaseId.contract.test.ts` to lock the shared and server `IProjectStatusMapping` / `ProjectStatus` contracts to an optional `phase_id` field. Verification: `cd server && npx vitest run src/test/unit/interfaces/projectStatusPhaseId.contract.test.ts`.
 
 ## Commands / Runbooks
 
