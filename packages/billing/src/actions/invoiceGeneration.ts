@@ -250,48 +250,41 @@ function normalizeRecurringWindowDate(value: ISO8601String): ISO8601String {
 
 function buildRecurringWindowErrorContext(
   selectorInput: IRecurringDueSelectionInput,
-  bridgeMetadata?: RecurringBridgeMetadata,
 ) {
   return {
     executionIdentityKey: selectorInput.executionWindow.identityKey,
-    billingCycleId: resolveRecurringInvoiceBridgeId(bridgeMetadata),
   };
 }
 
 function withRecurringWindowErrorContext<T extends Error>(
   error: T,
   selectorInput: IRecurringDueSelectionInput,
-  bridgeMetadata?: RecurringBridgeMetadata,
 ): T {
-  Object.assign(error, buildRecurringWindowErrorContext(selectorInput, bridgeMetadata));
+  Object.assign(error, buildRecurringWindowErrorContext(selectorInput));
   return error;
 }
 
 function buildPreviewInvoiceFailure(
   selectorInput: IRecurringDueSelectionInput,
   error: string,
-  bridgeMetadata?: RecurringBridgeMetadata,
 ): PreviewInvoiceResponse {
   return {
     success: false,
     error,
-    ...buildRecurringWindowErrorContext(selectorInput, bridgeMetadata),
+    ...buildRecurringWindowErrorContext(selectorInput),
   };
 }
 
 function buildDuplicateRecurringInvoiceError(input: {
   selectorInput: IRecurringDueSelectionInput;
   invoiceId: string;
-  bridgeMetadata?: RecurringBridgeMetadata;
 }): Error {
-  const billingCycleId = resolveRecurringInvoiceBridgeId(input.bridgeMetadata);
   const error = new Error(
     'Invoice already exists for this recurring execution window',
   );
 
   Object.assign(error, {
     code: DUPLICATE_RECURRING_INVOICE_CODE,
-    billingCycleId,
     executionIdentityKey: input.selectorInput.executionWindow.identityKey,
     invoiceId: input.invoiceId,
   });
@@ -1006,7 +999,6 @@ export const previewInvoice = withAuth(async (
       ? buildPreviewInvoiceFailure(
           selectorInput,
           error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
-          { billingCycleId: billing_cycle_id },
         )
       : {
           success: false,
@@ -1106,7 +1098,6 @@ export const generateInvoiceForSelectionInput = withAuth(async (
       throw withRecurringWindowErrorContext(
         new Error(emailValidation.error),
         normalizedSelectorInput,
-        bridgeMetadata,
       );
     }
   }
@@ -1121,7 +1112,6 @@ export const generateInvoiceForSelectionInput = withAuth(async (
     throw buildDuplicateRecurringInvoiceError({
       selectorInput: normalizedSelectorInput,
       invoiceId: existingInvoice.invoiceId,
-      bridgeMetadata,
     });
   }
 
@@ -1140,7 +1130,6 @@ export const generateInvoiceForSelectionInput = withAuth(async (
     throw withRecurringWindowErrorContext(
       new Error(billingResult.error),
       normalizedSelectorInput,
-      bridgeMetadata,
     );
   }
 
@@ -1158,7 +1147,6 @@ export const generateInvoiceForSelectionInput = withAuth(async (
           'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.'
         ),
         normalizedSelectorInput,
-        bridgeMetadata,
       );
     }
 
@@ -1240,7 +1228,6 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
     throw withRecurringWindowErrorContext(
       new Error('Nothing to bill'),
       normalizedSelectorInput,
-      bridgeMetadata,
     );
   }
 
@@ -1249,7 +1236,6 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
       throw withRecurringWindowErrorContext(
         new Error(`Service "${charge.serviceName}" has an undefined rate`),
         normalizedSelectorInput,
-        bridgeMetadata,
       );
     }
   }

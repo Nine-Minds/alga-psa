@@ -415,7 +415,6 @@ describe('selector-input recurring generation', () => {
     await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
       message: 'Invoice already exists for this recurring execution window',
       code: DUPLICATE_RECURRING_INVOICE_CODE,
-      billingCycleId: null,
       executionIdentityKey: selectorInput.executionWindow.identityKey,
       invoiceId: 'invoice-existing',
     });

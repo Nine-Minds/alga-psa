@@ -515,7 +515,6 @@ describe('invoice preview recurring timing', () => {
       success: false,
       error: 'Permission denied: Cannot preview invoices',
       executionIdentityKey: 'contract_cadence_window:contract:client-1:contract-1:line-1:2025-02-08:2025-03-08',
-      billingCycleId: null,
     });
     expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).not.toHaveBeenCalled();
   });
@@ -747,14 +746,12 @@ describe('invoice preview recurring timing', () => {
     await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
       message: 'Billing email is required before generating recurring invoices.',
       executionIdentityKey: selectorInput.executionWindow.identityKey,
-      billingCycleId: null,
     });
 
     expect(previewResult).toMatchObject({
       success: false,
       error: 'Billing email is required before generating recurring invoices.',
       executionIdentityKey: selectorInput.executionWindow.identityKey,
-      billingCycleId: null,
     });
   });
 
@@ -803,7 +800,6 @@ describe('invoice preview recurring timing', () => {
       message:
         'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.',
       executionIdentityKey: selectorInput.executionWindow.identityKey,
-      billingCycleId: null,
     });
   });
 });

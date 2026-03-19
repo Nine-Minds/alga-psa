@@ -28,7 +28,7 @@
   { "id": "F027", "description": "Keep or introduce separate non-recurring/client-cycle APIs where legitimate client billing schedule operations still need them.", "implemented": true },
   { "id": "F028", "description": "Update shared recurring timing interfaces to remove bridge-only fields such as required `billingCycleId` and `hasBillingCycleBridge`.", "implemented": true },
   { "id": "F029", "description": "Update shared recurring due-selection interfaces to make recurring identity fully canonical and bridge-free.", "implemented": true },
-  { "id": "F030", "description": "Update invoice preview/generation error contracts so recurring diagnostics do not depend on `billingCycleId`.", "implemented": false },
+  { "id": "F030", "description": "Update invoice preview/generation error contracts so recurring diagnostics do not depend on `billingCycleId`.", "implemented": true },
   { "id": "F031", "description": "Remove recurring invoice DTO semantics that classify or explain recurring behavior through `billing_cycle_id`.", "implemented": false },
   { "id": "F032", "description": "Preserve `billing_cycle_id` on invoice DTOs only as optional historical/client-context metadata if still needed.", "implemented": false },
   { "id": "F033", "description": "Make invoice list/detail/read models derive recurring semantics from canonical recurring summary/detail data instead of `invoices.billing_cycle_id`.", "implemented": false },
