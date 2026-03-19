@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "Client portal ClientKanbanBoard: renders phase-specific status columns from props",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7.3"]
   },
   {
