@@ -26,6 +26,11 @@
 - (2026-03-18) `ProjectTaskStatusEditor.tsx` and `ProjectTaskStatusSelector.tsx` are used during project creation/editing. They may need to handle template-based phase statuses.
 - (2026-03-18) Phase task CSV import (`IImportReferenceData.statusMappings`) resolves statuses at project level. Needs to resolve against phase-effective statuses.
 - (2026-03-18) The `display_order` field's uniqueness scope changes from per-project to per-(project, phase). Need to ensure reordering logic scopes correctly.
+- (2026-03-18) `TB01` is implemented as a migration contract test against migration source files rather than a live schema migration run. This keeps coverage fast while still locking down nullable columns, composite FK wiring, additive behavior, and the EE Citus companion repair.
+
+## Progress Log
+
+- (2026-03-18) `TB01` complete. Added `server/src/test/unit/migrations/perPhaseTaskStatusesMigration.contract.test.ts` to assert nullable `phase_id`/`template_phase_id`, additive migration behavior, CE phase index creation, and EE composite FK repair inputs. Verification: `cd server && npx vitest run src/test/unit/migrations/perPhaseTaskStatusesMigration.contract.test.ts`.
 
 ## Commands / Runbooks
 
