@@ -20,6 +20,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Persisted recurring execution windows are already canonical recurring truth, so billing-engine validation for selector-input recurring runs must not round-trip back through `client_billing_cycles` or auto-create cycle rows just to validate the window.
 - (2026-03-18) Direct `selector_input` preview/generate requests must normalize and validate against persisted `recurring_service_periods`; treating the caller-provided window as trusted input leaves a gap where mutated windows can bypass canonical service-period authority.
 - (2026-03-18) Client billing schedule edits should regenerate future client-cadence `recurring_service_periods` after the last billed boundary while leaving `client_billing_cycles` available only for schedule administration and historical context.
+- (2026-03-18) Bucket allowance periods should resolve from canonical `recurring_service_periods` for both client cadence and contract cadence; `client_billing_cycles` should not determine bucket rollover windows once recurring service periods exist.
 
 ## Agent Findings
 
@@ -110,6 +111,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
   - Added [clientCadenceScheduleRegeneration.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/clientCadenceScheduleRegeneration.ts) to derive the last billed client boundary, load client-cadence obligations, and regenerate future `recurring_service_periods` with canonical `billing_schedule_changed` / `backfill_materialization` provenance instead of mutating future `client_billing_cycles`.
   - Updated [billingScheduleActions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/billingScheduleActions.ts) and [billingCycleAnchorActions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/billingCycleAnchorActions.ts) so both schedule-edit entrypoints call the new regeneration helper after updating client schedule settings.
   - Added focused unit coverage in [updateClientBillingSchedule.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/updateClientBillingSchedule.test.ts) and rewrote the DB-backed schedule expectations in [clientBillingCycleAnchors.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts) to assert recurring-service-period regeneration and preserved schedule-administration cycles instead of future-cycle deactivation.
+- Bucket recurring-period slice completed:
+  - Updated [bucketUsageService.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/services/bucketUsageService.ts) so current and previous bucket allowance periods resolve from canonical `recurring_service_periods` by obligation and schedule key, with no live `client_billing_cycles` lookup in the recurring bucket path.
+  - Replaced the old client-cycle-based unit coverage in [bucketUsageService.periods.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/bucketUsageService.periods.test.ts) with client-cadence and contract-cadence tests that prove rollover uses canonical recurring service periods and never touches `client_billing_cycles`.
 
 ## Discoveries / Constraints
 
@@ -138,6 +142,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) The schedule-edit actions still read `client_billing_cycles` only to determine the last invoiced historical boundary. That boundary is now passive historical input to recurring-service-period regeneration; future schedule changes no longer deactivate or redefine recurring work by mutating future cycle rows.
 - (2026-03-18) The DB-backed schedule-management suite now imports action files directly instead of `@alga-psa/billing/actions`, because the broader action index pulls optional jobs infrastructure that is not resolvable in this isolated test harness.
 - (2026-03-18) DB-backed verification for `clientBillingCycleAnchors.test.ts` is currently blocked locally because PostgreSQL is unavailable on `127.0.0.1:5438` / `::1:5438`. The rewritten tests load and compile, but the shared test context aborts before any test body executes.
+- (2026-03-18) `bucketUsageService.ts` no longer queries `client_billing_cycles` on the recurring bucket path. Bucket period resolution now derives current and rollover windows from `recurring_service_periods` and falls back to plan-anchor arithmetic only when no canonical service period exists.
 
 ## Commands / Runbooks
 
@@ -169,6 +174,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/updateClientBillingSchedule.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/bucketUsageService.periods.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -212,6 +218,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T089 implemented with preview/generate regressions proving selector-input recurring actions reject execution windows that do not match materialized recurring service periods and still surface canonical execution-identity diagnostics.
 - (2026-03-18) F053/F054 implemented by routing both client billing schedule edit actions through canonical client-cadence service-period regeneration, keeping `client_billing_cycles` available for schedule administration while removing the old future-cycle invalidation behavior from recurring execution.
 - (2026-03-18) T052/T053 implemented with focused unit coverage for schedule-driven `recurring_service_periods` regeneration plus a DB-backed schedule suite rewrite that now asserts preserved client-cycle administration and canonical recurring regeneration semantics, although the DB-backed run is currently blocked locally by the missing PostgreSQL test instance.
+- (2026-03-18) F055 implemented by deriving bucket allowance periods and rollover lookups from canonical `recurring_service_periods` schedule windows instead of preferring `client_billing_cycles`.
+- (2026-03-18) T054/T055 implemented with client-cadence and contract-cadence bucket-service unit coverage proving recurring bucket resolution uses canonical service periods and never hits `client_billing_cycles`.
 
 ## Links / References
 
