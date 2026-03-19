@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "TaskStatusSelect shows effective statuses for the task's phase via props",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.3"]
   },
   {

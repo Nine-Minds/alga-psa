@@ -42,33 +42,34 @@ export default function TaskEdit({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (!initialStatuses) {
-          const projectStatuses = await getProjectTaskStatuses(phase.project_id);
-          setStatuses(projectStatuses);
-          setSelectedPhaseStatuses(projectStatuses);
-        }
+        const projectStatuses = await getProjectTaskStatuses(phase.project_id, phase.phase_id);
+        setStatuses(projectStatuses);
+        setSelectedPhaseStatuses(projectStatuses);
       } catch (error) {
         console.error('Error fetching task details:', error);
       }
     };
     fetchData();
-  }, [phase.project_id, initialStatuses]);
+  }, [phase.phase_id, phase.project_id]);
+
+  useEffect(() => {
+    if (initialStatuses) {
+      setStatuses(initialStatuses);
+      setSelectedPhaseStatuses(initialStatuses);
+    }
+  }, [initialStatuses]);
 
   const handlePhaseChange = async (newPhaseId: string) => {
     if (!phases) return;
     
     const newPhase = phases.find(p => p.phase_id === newPhaseId);
-    if (newPhase && newPhase.project_id !== phase.project_id) {
-      // If moving to a different project, fetch its statuses
+    if (newPhase) {
       try {
-        const newProjectStatuses = await getProjectTaskStatuses(newPhase.project_id);
+        const newProjectStatuses = await getProjectTaskStatuses(newPhase.project_id, newPhase.phase_id);
         setSelectedPhaseStatuses(newProjectStatuses);
       } catch (error) {
         console.error('Error fetching new project statuses:', error);
       }
-    } else {
-      // If moving within the same project, use current statuses
-      setSelectedPhaseStatuses(statuses);
     }
   };
 
