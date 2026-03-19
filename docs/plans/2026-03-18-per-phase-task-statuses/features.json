@@ -200,7 +200,7 @@
   {
     "id": "F034",
     "description": "TemplateStatusManager: phase selector allows per-phase status configuration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8.2"]
   },
   {
