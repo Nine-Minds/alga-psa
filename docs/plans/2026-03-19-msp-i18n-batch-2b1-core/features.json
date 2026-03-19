@@ -122,25 +122,25 @@
   {
     "id": "F021",
     "description": "TrialBanner.tsx: add useTranslation('msp/core') and translate 'Premium confirmed' message",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR7"]
   },
   {
     "id": "F022",
     "description": "TrialBanner.tsx: translate '1 day left' / '{{count}} days left' with interpolation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR7"]
   },
   {
     "id": "F023",
     "description": "TrialBanner.tsx: translate 'Premium Trial: {{daysLabel}} — confirm to keep'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR7"]
   },
   {
     "id": "F024",
     "description": "TrialBanner.tsx: translate '{{tier}} Trial: {{daysLabel}}' for Stripe trials",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR7"]
   },
   {

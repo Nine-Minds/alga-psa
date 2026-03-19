@@ -194,31 +194,31 @@
   {
     "id": "T033",
     "description": "TrialBanner.tsx: 'Premium confirmed — starts next billing cycle' is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
     "id": "T034",
     "description": "TrialBanner.tsx: '1 day left' singular form is translated correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T035",
     "description": "TrialBanner.tsx: '{{count}} days left' plural form with interpolation works in all languages",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T036",
     "description": "TrialBanner.tsx: 'Premium Trial: {{daysLabel}} — confirm to keep' is translated with interpolation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T037",
     "description": "TrialBanner.tsx: '{{tier}} Trial: {{daysLabel}}' is translated with tier name interpolation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
