@@ -37,7 +37,7 @@
   {
     "id": "TB06",
     "description": "Cross-phase task movement: same status name in target → keeps equivalent; no match + open source → first open by display_order; no match + closed source → first closed by display_order; both phases on defaults → status unchanged; source custom/target defaults → remapped; cross-project moves unchanged; edge cases (all-closed phase, all-open phase)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F017", "F018", "F019", "F040"],
     "covers": ["T025", "T026", "T027", "T028", "T029", "T030", "T031", "T063", "T064"]
   },
