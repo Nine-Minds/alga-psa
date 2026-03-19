@@ -23,3 +23,5 @@ exports.down = async function(knex) {
     table.dropColumn('phase_id');
   });
 };
+
+exports.config = { transaction: false };
