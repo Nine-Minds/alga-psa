@@ -155,6 +155,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T010 implemented with a UI regression proving `AutomaticInvoices` can render, preview, and generate a client-cadence row whose `billingCycleId` metadata is null while still sending canonical selector-input targets.
 - (2026-03-18) F037/F038 implemented by renaming the live recurring history reader to `getRecurringInvoiceHistoryPaginated(...)`, removing the remaining billing-cycle cadence fallback from the history query, and updating `AutomaticInvoices` copy from billing-cycle framing to recurring-invoice-history framing.
 - (2026-03-18) T011/T035/T036/T037 implemented with ready-row UI coverage for an unbridged contract-cadence row, recurring-history UI coverage for row actions and service-period/execution-window copy, and a static guard that the live history surface no longer imports or labels itself as invoiced billing cycles.
+- (2026-03-18) F039/F040/F041 implemented by making recurring reverse/delete wrappers delete the invoice first through `hardDeleteInvoice(...)` for both bridged and unbridged rows, then apply any optional billing-cycle metadata cleanup afterward. Canonical recurring service-period linkage repair remains the primary delete path via `releaseRecurringServicePeriodInvoiceLinkageForInvoice(...)`.
+- (2026-03-18) T012/T013 implemented by extending the existing client-cadence `AutomaticInvoices` UI regression so the same proof covers both preview and generate actions submitting canonical selector input with no `billing_cycle_id`.
 
 ## Links / References
 

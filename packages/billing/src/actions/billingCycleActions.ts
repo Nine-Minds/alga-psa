@@ -209,6 +209,81 @@ export const createNextBillingCycle = withAuth(async (
   });
 });
 
+async function getBillingCycleRecord(
+  knex: Knex,
+  tenant: string,
+  cycleId: string
+) {
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return trx('client_billing_cycles')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant,
+      })
+      .first();
+  });
+}
+
+async function deactivateBillingCycleRecord(
+  knex: Knex,
+  tenant: string,
+  cycleId: string
+): Promise<void> {
+  const billingCycle = await getBillingCycleRecord(knex, tenant, cycleId);
+
+  if (!billingCycle) {
+    throw new Error('Billing cycle not found');
+  }
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return trx('client_billing_cycles')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant
+      })
+      .update({
+        is_active: false,
+        period_end_date: new Date().toISOString()
+      });
+  });
+
+  const nextBillingDate = await getNextBillingDate(
+    billingCycle.client_id,
+    new Date().toISOString()
+  );
+
+  if (!nextBillingDate) {
+    throw new Error('Failed to verify future billing periods');
+  }
+}
+
+async function permanentlyDeleteBillingCycleRecord(
+  knex: Knex,
+  tenant: string,
+  cycleId: string
+): Promise<void> {
+  const billingCycle = await getBillingCycleRecord(knex, tenant, cycleId);
+
+  if (!billingCycle) {
+    throw new Error('Billing cycle not found');
+  }
+
+  const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return trx('client_billing_cycles')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant
+      })
+      .del();
+  });
+
+  if (deletedCount === 0) {
+    console.warn(`Billing cycle ${cycleId} was not found for deletion, but associated invoice might have been deleted.`);
+  } else {
+    console.log(`Successfully deleted billing cycle ${cycleId}`);
+  }
+}
+
 // function for rollback (deactivate cycle, delete invoice)
 export const removeBillingCycle = withAuth(async (
   user,
@@ -216,20 +291,6 @@ export const removeBillingCycle = withAuth(async (
   cycleId: string
 ): Promise<void> => {
   const { knex } = await createTenantKnex();
-
-  // Get the billing cycle first to ensure it exists and get client_id
-  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles')
-      .where({
-        billing_cycle_id: cycleId,
-        tenant
-      })
-      .first();
-  });
-
-  if (!billingCycle) {
-    throw new Error('Billing cycle not found');
-  }
 
   // Check for existing invoices
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -242,32 +303,10 @@ export const removeBillingCycle = withAuth(async (
   });
 
   if (invoice) {
-    // Use the hardDeleteInvoice function to properly clean up the invoice
     await hardDeleteInvoice(invoice.invoice_id);
   }
 
-  // Mark billing cycle as inactive instead of deleting
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles')
-      .where({
-        billing_cycle_id: cycleId,
-        tenant
-      })
-      .update({
-        is_active: false,
-        period_end_date: new Date().toISOString() // Set end date to now
-      });
-  });
-
-  // Verify future periods won't be affected
-  const nextBillingDate = await getNextBillingDate(
-    billingCycle.client_id,
-    new Date().toISOString()
-  );
-
-  if (!nextBillingDate) {
-    throw new Error('Failed to verify future billing periods');
-  }
+  await deactivateBillingCycleRecord(knex, tenant, cycleId);
 });
 
 // function for hard delete (delete cycle and invoice)
@@ -278,20 +317,6 @@ export const hardDeleteBillingCycle = withAuth(async (
 ): Promise<void> => {
   const { knex } = await createTenantKnex();
 
-  // Get the billing cycle first to ensure it exists and get client_id
-  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles')
-      .where({
-        billing_cycle_id: cycleId,
-        tenant
-      })
-      .first();
-  });
-
-  if (!billingCycle) {
-    throw new Error('Billing cycle not found');
-  }
-
   // Check for existing invoices
   const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('invoices')
@@ -303,27 +328,10 @@ export const hardDeleteBillingCycle = withAuth(async (
   });
 
   if (invoice) {
-    // Use the hardDeleteInvoice function to properly clean up the invoice
     await hardDeleteInvoice(invoice.invoice_id);
   }
 
-  // Delete the billing cycle record
-  const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_cycles')
-      .where({
-        billing_cycle_id: cycleId,
-        tenant
-      })
-      .del();
-  });
-
-  if (deletedCount === 0) {
-    // This might happen if the cycle was already deleted in a race condition,
-    // but the invoice deletion succeeded. Log a warning.
-    console.warn(`Billing cycle ${cycleId} was not found for deletion, but associated invoice might have been deleted.`);
-  } else {
-    console.log(`Successfully deleted billing cycle ${cycleId}`);
-  }
+  await permanentlyDeleteBillingCycleRecord(knex, tenant, cycleId);
 });
 
 export interface RecurringInvoiceHistoryRow {
@@ -416,12 +424,12 @@ export const reverseRecurringInvoice = withAuth(async (
   { tenant },
   params: { invoiceId: string; billingCycleId?: string | null }
 ): Promise<void> => {
-  if (params.billingCycleId) {
-    await removeBillingCycle(params.billingCycleId);
-    return;
-  }
-
   await hardDeleteInvoice(params.invoiceId);
+
+  if (params.billingCycleId) {
+    const { knex } = await createTenantKnex();
+    await deactivateBillingCycleRecord(knex, tenant, params.billingCycleId);
+  }
 });
 
 export const hardDeleteRecurringInvoice = withAuth(async (
@@ -429,12 +437,12 @@ export const hardDeleteRecurringInvoice = withAuth(async (
   { tenant },
   params: { invoiceId: string; billingCycleId?: string | null }
 ): Promise<void> => {
-  if (params.billingCycleId) {
-    await hardDeleteBillingCycle(params.billingCycleId);
-    return;
-  }
-
   await hardDeleteInvoice(params.invoiceId);
+
+  if (params.billingCycleId) {
+    const { knex } = await createTenantKnex();
+    await permanentlyDeleteBillingCycleRecord(knex, tenant, params.billingCycleId);
+  }
 });
 
 export const getInvoicedBillingCycles = withAuth(async (

@@ -378,7 +378,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(generateCall?.[0]?.targets?.[0]?.selectorInput?.billingCycleId).toBeUndefined();
   });
 
-  it('T091: client-cadence ready rows use canonical selector input while still preserving passive billing-cycle metadata for the table', async () => {
+  it('T012/T013/T091: client-cadence ready rows use canonical selector input while still preserving passive billing-cycle metadata for the table', async () => {
     const clientRow = createClientRow();
     getAvailableRecurringDueWorkMock.mockResolvedValue({
       rows: [clientRow],
