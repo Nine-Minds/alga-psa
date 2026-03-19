@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "Client portal ProjectDetailView: fetch phase-effective statuses when phase selection changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7.2"]
   },
   {
