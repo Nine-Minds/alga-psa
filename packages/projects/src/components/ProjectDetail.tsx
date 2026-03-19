@@ -542,9 +542,10 @@ export default function ProjectDetail({
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
   const kanbanHeaderRef = useRef<HTMLDivElement>(null);
-  const scrollbarProxyRef = useRef<HTMLDivElement>(null);
+  const scrollbarTrackRef = useRef<HTMLDivElement>(null);
+  const scrollbarThumbRef = useRef<HTMLDivElement>(null);
+  const dragAbortRef = useRef<AbortController | null>(null);
   const stickyStatusStripRef = useRef<HTMLDivElement>(null);
-  const [boardScrollWidth, setBoardScrollWidth] = useState(0);
   const [kanbanHeaderHeight, setKanbanHeaderHeight] = useState(0);
   const [phasesPanelHeight, setPhasesPanelHeight] = useState<number | null>(null);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -668,63 +669,224 @@ export default function ProjectDetail({
     };
   }, [isDark]);
 
-  // Proxy scrollbar and sticky status strip: keep horizontal scroll positions in sync.
+  const getKanbanScrollbarGeometry = useCallback(() => {
+    const container = kanbanBoardRef.current;
+    const track = scrollbarTrackRef.current;
+    if (!container || !track) return null;
+
+    const scrollWidth = Math.max(container.scrollWidth, container.clientWidth);
+    const scrollRange = Math.max(0, scrollWidth - container.clientWidth);
+    const trackWidth = track.clientWidth;
+    if (trackWidth <= 0) return null;
+
+    if (scrollRange === 0) {
+      return {
+        container,
+        scrollRange,
+        thumbWidth: trackWidth,
+        maxThumbOffset: 0,
+        trackWidth
+      };
+    }
+
+    const proportionalThumbWidth = (container.clientWidth / scrollWidth) * trackWidth;
+    const thumbWidth = Math.min(trackWidth, Math.max(proportionalThumbWidth, 48));
+    return {
+      container,
+      scrollRange,
+      thumbWidth,
+      maxThumbOffset: Math.max(0, trackWidth - thumbWidth),
+      trackWidth
+    };
+  }, []);
+
+  const updateKanbanScrollbarThumb = useCallback(() => {
+    const thumb = scrollbarThumbRef.current;
+    const geometry = getKanbanScrollbarGeometry();
+    if (!thumb || !geometry) return;
+
+    if (geometry.scrollRange === 0 || geometry.maxThumbOffset === 0) {
+      thumb.style.width = '100%';
+      thumb.style.transform = 'translateX(0)';
+      thumb.classList.add(styles.kanbanScrollbarThumbStatic);
+      thumb.setAttribute('aria-valuenow', '0');
+      return;
+    }
+
+    const thumbOffset = (geometry.container.scrollLeft / geometry.scrollRange) * geometry.maxThumbOffset;
+    thumb.style.width = `${(geometry.thumbWidth / geometry.trackWidth) * 100}%`;
+    thumb.style.transform = `translateX(${thumbOffset}px)`;
+    thumb.classList.remove(styles.kanbanScrollbarThumbStatic);
+    thumb.setAttribute('aria-valuenow', String(Math.round((geometry.container.scrollLeft / geometry.scrollRange) * 100)));
+  }, [getKanbanScrollbarGeometry]);
+
+  const setKanbanScrollFromThumbOffset = useCallback((nextThumbOffset: number) => {
+    const geometry = getKanbanScrollbarGeometry();
+    if (!geometry) return;
+
+    if (geometry.scrollRange === 0 || geometry.maxThumbOffset === 0) {
+      geometry.container.scrollLeft = 0;
+      return;
+    }
+
+    const clampedThumbOffset = Math.min(Math.max(nextThumbOffset, 0), geometry.maxThumbOffset);
+    geometry.container.scrollLeft = (clampedThumbOffset / geometry.maxThumbOffset) * geometry.scrollRange;
+  }, [getKanbanScrollbarGeometry]);
+
+  const handleKanbanScrollbarTrackPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).dataset.kanbanScrollbarThumb === 'true') {
+      return;
+    }
+
+    const track = scrollbarTrackRef.current;
+    const geometry = getKanbanScrollbarGeometry();
+    if (!track || !geometry) return;
+
+    const rect = track.getBoundingClientRect();
+    const clickOffset = event.clientX - rect.left;
+    const targetThumbOffset = clickOffset - geometry.thumbWidth / 2;
+    setKanbanScrollFromThumbOffset(targetThumbOffset);
+  }, [getKanbanScrollbarGeometry, setKanbanScrollFromThumbOffset]);
+
+  const handleKanbanScrollbarThumbPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const geometry = getKanbanScrollbarGeometry();
+    if (!geometry || geometry.scrollRange === 0 || geometry.maxThumbOffset === 0) return;
+
+    // Abort any prior drag session still lingering
+    dragAbortRef.current?.abort();
+    const controller = new AbortController();
+    dragAbortRef.current = controller;
+    const { signal } = controller;
+
+    const startClientX = event.clientX;
+    const startScrollLeft = geometry.container.scrollLeft;
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const deltaX = moveEvent.clientX - startClientX;
+      const scrollDelta = (deltaX / geometry.maxThumbOffset) * geometry.scrollRange;
+      geometry.container.scrollLeft = startScrollLeft + scrollDelta;
+    };
+
+    const cleanUp = () => {
+      dragAbortRef.current = null;
+      controller.abort();
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, { signal });
+    window.addEventListener('pointerup', cleanUp, { signal });
+    window.addEventListener('pointercancel', cleanUp, { signal });
+  }, [getKanbanScrollbarGeometry]);
+
+  const SCROLL_STEP = 60;
+
+  const handleKanbanScrollbarKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const container = kanbanBoardRef.current;
+    if (!container) return;
+
+    let handled = true;
+    switch (event.key) {
+      case 'ArrowLeft':
+        container.scrollLeft -= SCROLL_STEP;
+        break;
+      case 'ArrowRight':
+        container.scrollLeft += SCROLL_STEP;
+        break;
+      case 'Home':
+        container.scrollLeft = 0;
+        break;
+      case 'End':
+        container.scrollLeft = container.scrollWidth;
+        break;
+      default:
+        handled = false;
+    }
+
+    if (handled) {
+      event.preventDefault();
+    }
+  }, []);
+
+  // Scrollbar metrics and sticky status strip: keep horizontal scroll positions in sync.
   useEffect(() => {
     const container = kanbanBoardRef.current;
-    const proxy = scrollbarProxyRef.current;
     const stickyStrip = stickyStatusStripRef.current;
-    if (!container || !proxy) return;
+    if (!container) return;
 
     let isSyncing = false;
+    let observedBoard: HTMLElement | null = null;
 
-    const syncScrollPositions = (source: 'container' | 'proxy' | 'sticky') => {
+    const ro = new ResizeObserver(() => {
+      updateKanbanScrollbarThumb();
+    });
+
+    const observeBoard = () => {
+      const board = container.querySelector('[data-kanban-board="true"]') as HTMLElement | null;
+      if (board === observedBoard) return;
+
+      if (observedBoard) {
+        ro.unobserve(observedBoard);
+      }
+      observedBoard = board;
+      if (observedBoard) {
+        ro.observe(observedBoard);
+      }
+    };
+
+    const syncScrollPositions = (source: 'container' | 'sticky') => {
       if (isSyncing) return;
       isSyncing = true;
       const nextLeft = source === 'container'
         ? container.scrollLeft
-        : source === 'proxy'
-          ? proxy.scrollLeft
-          : (stickyStrip?.scrollLeft ?? 0);
+        : (stickyStrip?.scrollLeft ?? 0);
 
       if (source !== 'container') container.scrollLeft = nextLeft;
-      if (source !== 'proxy') proxy.scrollLeft = nextLeft;
       if (stickyStrip && source !== 'sticky') stickyStrip.scrollLeft = nextLeft;
+      updateKanbanScrollbarThumb();
       isSyncing = false;
     };
 
     const onContainerScroll = () => syncScrollPositions('container');
-    const onProxyScroll = () => syncScrollPositions('proxy');
     const onStickyStripScroll = () => syncScrollPositions('sticky');
 
     container.addEventListener('scroll', onContainerScroll);
-    proxy.addEventListener('scroll', onProxyScroll);
     if (stickyStrip) {
       stickyStrip.addEventListener('scroll', onStickyStripScroll);
     }
+    ro.observe(container);
+    observeBoard();
     syncScrollPositions('container');
 
-    // Track the board's scroll width with ResizeObserver
-    const updateWidth = () => {
-      setBoardScrollWidth(container.scrollWidth);
-    };
-    updateWidth();
-
-    const ro = new ResizeObserver(updateWidth);
-    ro.observe(container);
-    // Also observe the first child (the kanban board) if it exists
-    if (container.firstElementChild) {
-      ro.observe(container.firstElementChild);
-    }
+    let nestedRafId: number | null = null;
+    const rafId = window.requestAnimationFrame(() => {
+      observeBoard();
+      updateKanbanScrollbarThumb();
+      nestedRafId = window.requestAnimationFrame(() => {
+        observeBoard();
+        updateKanbanScrollbarThumb();
+      });
+    });
 
     return () => {
       container.removeEventListener('scroll', onContainerScroll);
-      proxy.removeEventListener('scroll', onProxyScroll);
       if (stickyStrip) {
         stickyStrip.removeEventListener('scroll', onStickyStripScroll);
       }
+      window.cancelAnimationFrame(rafId);
+      if (nestedRafId !== null) {
+        window.cancelAnimationFrame(nestedRafId);
+      }
+      if (observedBoard) {
+        ro.unobserve(observedBoard);
+      }
       ro.disconnect();
+      // Clean up any in-flight drag listeners
+      dragAbortRef.current?.abort();
+      dragAbortRef.current = null;
     };
-  }, [showStickyStatusNames, viewMode]);
+  }, [showStickyStatusNames, viewMode, kanbanZoomLevel, visibleKanbanStatuses.length, selectedPhase?.phase_id, isLoadingTasks, updateKanbanScrollbarThumb]);
 
   // Track header height so the sticky status strip can stack below it when both are active
   useEffect(() => {
@@ -2541,9 +2703,27 @@ export default function ProjectDetail({
               className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}
             >
               {renderHeader()}
-              {/* Proxy scrollbar — sits at the bottom edge of the header */}
-              <div className={styles.kanbanScrollbarProxy} ref={scrollbarProxyRef}>
-                <div className={styles.kanbanScrollbarProxyInner} style={{ width: boardScrollWidth }} />
+              <div className={styles.kanbanScrollbarShell}>
+                <div
+                  ref={scrollbarTrackRef}
+                  className={styles.kanbanScrollbarTrack}
+                  onPointerDown={handleKanbanScrollbarTrackPointerDown}
+                >
+                  <div
+                    data-kanban-scrollbar-thumb="true"
+                    ref={scrollbarThumbRef}
+                    className={styles.kanbanScrollbarThumb}
+                    onPointerDown={handleKanbanScrollbarThumbPointerDown}
+                    onKeyDown={handleKanbanScrollbarKeyDown}
+                    role="scrollbar"
+                    aria-controls="kanban-scroll-container"
+                    aria-orientation="horizontal"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={0}
+                    tabIndex={0}
+                  />
+                </div>
               </div>
             </div>
             {/* Independent sticky status strip */}
@@ -2594,7 +2774,7 @@ export default function ProjectDetail({
               </div>
             )}
             {/* Scrollable content area */}
-            <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
+            <div id="kanban-scroll-container" className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
               {renderContent()}
             </div>
           </div>
