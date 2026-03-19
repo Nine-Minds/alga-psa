@@ -65,6 +65,7 @@
 - (2026-03-18) Implemented `F010` by extending `addStatusToProject()` with optional `phaseId`, storing `phase_id` on insert, and scoping the `display_order` lookup to either the target phase or project defaults. This prevents new phase statuses from inheriting order positions from unrelated scopes.
 - (2026-03-18) Implemented `F011` by extending the action-layer `getProjectStatusMappings()` with the same scope rule as the model: `phaseId` fetches that phase’s rows, and no `phaseId` fetches only project defaults. That avoids leaking all phase rows into the existing settings UI.
 - (2026-03-18) Implemented `F012` by extending `reorderProjectStatuses()` with optional `phaseId` and constraining each update to the matching phase/default scope. This protects phase-specific boards from reordering the wrong mapping set.
+- (2026-03-18) Implemented `F013` by adding `copyProjectStatusesToPhase(projectId, phaseId)`. It validates phase ownership, treats an already-customized phase as idempotent, and copies only project-default mappings (`phase_id IS NULL`) into the phase while preserving ordering, visibility, and status references.
 
 ### Key Files — MSP UI
 - `packages/projects/src/components/ProjectDetail.tsx` — orchestrator, passes statuses to KanbanBoard (L2401-2406), phase selection (L186), task filtering (L346-425)

@@ -7,6 +7,44 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IProjectStatusMapping, IStatus } from '@alga-psa/types';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
+type ProjectStatusMappingDetails = IProjectStatusMapping & {
+  status_name?: string;
+  name?: string;
+  is_closed?: boolean;
+};
+
+async function getScopedProjectStatusMappings(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectId: string,
+  phaseId?: string | null
+): Promise<ProjectStatusMappingDetails[]> {
+  const query = trx('project_status_mappings as psm')
+    .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
+    .leftJoin('statuses as s', function(this: Knex.JoinClause) {
+      this.on('psm.status_id', 's.status_id')
+        .andOn('psm.tenant', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
+      this.on('psm.standard_status_id', 'ss.standard_status_id')
+        .andOn('psm.tenant', 'ss.tenant');
+    })
+    .select(
+      'psm.*',
+      trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+      trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
+      trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    );
+
+  if (phaseId) {
+    query.andWhere('psm.phase_id', phaseId);
+  } else {
+    query.whereNull('psm.phase_id');
+  }
+
+  return query.orderBy('psm.display_order');
+}
+
 /**
  * Add a status to a project
  */
@@ -86,30 +124,66 @@ export const getProjectStatusMappings = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    const query = trx('project_status_mappings as psm')
-      .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
-      .leftJoin('statuses as s', function(this: Knex.JoinClause) {
-        this.on('psm.status_id', 's.status_id')
-          .andOn('psm.tenant', 's.tenant');
-      })
-      .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
-        this.on('psm.standard_status_id', 'ss.standard_status_id')
-          .andOn('psm.tenant', 'ss.tenant');
-      })
-      .select(
-        'psm.*',
-        trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
-        trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
-        trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
-      );
+    return await getScopedProjectStatusMappings(trx, tenant, projectId, phaseId);
+  });
+});
 
-    if (phaseId) {
-      query.andWhere('psm.phase_id', phaseId);
-    } else {
-      query.whereNull('psm.phase_id');
+/**
+ * Copy project default statuses into a phase as custom mappings.
+ */
+export const copyProjectStatusesToPhase = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+  phaseId: string
+): Promise<IProjectStatusMapping[]> => {
+  if (!await hasPermission(user, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx) => {
+    const phase = await trx('project_phases')
+      .where({ tenant, project_id: projectId, phase_id: phaseId })
+      .first();
+
+    if (!phase) {
+      throw new Error('Project phase not found');
     }
 
-    return await query.orderBy('psm.display_order');
+    const existingPhaseMappings = await trx('project_status_mappings')
+      .where({ tenant, project_id: projectId, phase_id: phaseId })
+      .orderBy('display_order');
+
+    if (existingPhaseMappings.length > 0) {
+      return existingPhaseMappings;
+    }
+
+    const defaultMappings = await trx('project_status_mappings')
+      .where({ tenant, project_id: projectId })
+      .whereNull('phase_id')
+      .orderBy('display_order');
+
+    if (defaultMappings.length === 0) {
+      return [];
+    }
+
+    const inserts = defaultMappings.map((mapping) => ({
+      tenant,
+      project_id: projectId,
+      phase_id: phaseId,
+      status_id: mapping.status_id,
+      standard_status_id: mapping.standard_status_id,
+      is_standard: mapping.is_standard,
+      custom_name: mapping.custom_name,
+      display_order: mapping.display_order,
+      is_visible: mapping.is_visible
+    }));
+
+    return await trx('project_status_mappings')
+      .insert(inserts)
+      .returning('*');
   });
 });
 
