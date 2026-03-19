@@ -1390,7 +1390,7 @@ const EMAIL_COLORS = {
   borderLight: '#e2e8f0',
 };
 
-function createCancellationEmailContent(tenantName: string, userName: string): {
+function createDeactivationEmailContent(tenantName: string, userName: string): {
   subject: string;
   htmlBody: string;
   textBody: string;
@@ -1398,7 +1398,7 @@ function createCancellationEmailContent(tenantName: string, userName: string): {
   const currentYear = new Date().getFullYear();
   const supportUrl = 'https://portal.nineminds.com/auth/client-portal/signin';
 
-  const subject = `Your Alga PSA account cancellation has been confirmed`;
+  const subject = `Your Alga PSA account has been deactivated`;
 
   const htmlBody = `
   <!DOCTYPE html>
@@ -1407,7 +1407,7 @@ function createCancellationEmailContent(tenantName: string, userName: string): {
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account Cancellation Confirmation</title>
+    <title>Account Deactivation Notice</title>
     <style type="text/css">
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap');
       table {border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt;}
@@ -1431,8 +1431,8 @@ function createCancellationEmailContent(tenantName: string, userName: string): {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
                     <tr>
                       <td align="center" bgcolor="${EMAIL_COLORS.primary}" style="background: linear-gradient(135deg, ${EMAIL_COLORS.primary} 0%, ${EMAIL_COLORS.primaryLight} 100%); background-color: ${EMAIL_COLORS.primary}; padding: 40px 24px; text-align: center; border-radius: 12px 12px 0 0;">
-                        <h1 style="font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 28px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2;">Account Cancellation Confirmed</h1>
-                        <p style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; color: #ffffff; margin: 0; opacity: 0.95;">We've received your request</p>
+                        <h1 style="font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 28px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2;">Account Deactivated</h1>
+                        <p style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; color: #ffffff; margin: 0; opacity: 0.95;">Your account has been deactivated</p>
                       </td>
                     </tr>
                   </table>
@@ -1442,7 +1442,7 @@ function createCancellationEmailContent(tenantName: string, userName: string): {
                     <td bgcolor="#ffffff" style="background-color: #ffffff; padding: 40px 32px;">
                       <h2 style="color: ${EMAIL_COLORS.textPrimary}; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 22px; font-weight: 600; margin-bottom: 16px;">Hello ${userName},</h2>
 
-                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 16px; margin-bottom: 24px;">We've received your cancellation request for your <b style="color: ${EMAIL_COLORS.textPrimary};">${tenantName}</b> account on Alga PSA. We're sorry to see you go.</p>
+                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 16px; margin-bottom: 24px;">Your <b style="color: ${EMAIL_COLORS.textPrimary};">${tenantName}</b> account on Alga PSA has been deactivated. We're sorry to see you go.</p>
 
                       <!-- What happens next -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
@@ -1455,7 +1455,7 @@ function createCancellationEmailContent(tenantName: string, userName: string): {
                                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
                                     <tr>
                                       <td style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 10px; line-height: 1.6; font-size: 15px;">
-                                        <b style="color: ${EMAIL_COLORS.primary};">1.</b> Your subscription has been canceled and <b>you will no longer be charged</b>.
+                                        <b style="color: ${EMAIL_COLORS.primary};">1.</b> Your account has been deactivated and <b>you will no longer be charged</b>.
                                       </td>
                                     </tr>
                                     <tr>
@@ -1515,8 +1515,8 @@ function createCancellationEmailContent(tenantName: string, userName: string): {
                   <!-- Footer -->
                   <tr>
                     <td align="center" bgcolor="${EMAIL_COLORS.bgDark}" style="background-color: ${EMAIL_COLORS.bgDark}; color: ${EMAIL_COLORS.textOnDark}; padding: 32px 24px; text-align: center; font-size: 14px; line-height: 1.6; border-radius: 0 0 12px 12px;">
-                      <p style="color: ${EMAIL_COLORS.textOnDark}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 8px 0;">This email was sent as part of your account cancellation process.</p>
-                      <p style="color: ${EMAIL_COLORS.textOnDark}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">If you did not request this cancellation, please contact support immediately.</p>
+                      <p style="color: ${EMAIL_COLORS.textOnDark}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 8px 0;">This email was sent as part of your account deactivation process.</p>
+                      <p style="color: ${EMAIL_COLORS.textOnDark}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">If you did not request this, please contact support immediately.</p>
                       <p style="color: ${EMAIL_COLORS.textLight}; font-size: 13px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0;">&copy; ${currentYear} Nine Minds. All rights reserved.</p>
                     </td>
                   </tr>
@@ -1533,15 +1533,15 @@ function createCancellationEmailContent(tenantName: string, userName: string): {
   </html>`;
 
   const textBody = `
-Account Cancellation Confirmed
+Account Deactivated
 
 Hello ${userName},
 
-We've received your cancellation request for your "${tenantName}" account on Alga PSA. We're sorry to see you go.
+Your "${tenantName}" account on Alga PSA has been deactivated. We're sorry to see you go.
 
 WHAT HAPPENS NEXT:
 
-1. Your subscription has been canceled and you will no longer be charged.
+1. Your account has been deactivated and you will no longer be charged.
 2. All user accounts have been deactivated.
 3. Your data will be retained for a grace period before permanent deletion, in case you change your mind.
 4. A copy of your data has been exported and is available upon request.
@@ -1556,8 +1556,8 @@ Best regards,
 The Alga PSA Team
 
 ---
-This email was sent as part of your account cancellation process.
-If you did not request this cancellation, please contact support immediately.
+This email was sent as part of your account deactivation process.
+If you did not request this, please contact support immediately.
 
 (c) ${currentYear} Nine Minds. All rights reserved.
   `.trim();
@@ -1566,16 +1566,19 @@ If you did not request this cancellation, please contact support immediately.
 }
 
 /**
- * Send cancellation confirmation email to the tenant's registered email address.
- * Called after user deactivation and Stripe cancellation, to confirm
- * that the cancellation has been processed and they will no longer be charged.
+ * Send account deactivation email to the tenant's registered email address.
+ * Called during the tenant deletion workflow after users have been deactivated.
+ *
+ * Note: The "cancellation request received" email (for user-initiated cancellations)
+ * is sent separately by cancelSubscriptionAction when the user clicks Cancel.
+ * This activity always sends the "account deactivated" email.
  */
 export async function sendCancellationConfirmationEmail(
   tenantId: string,
   tenantName: string,
 ): Promise<SendCancellationEmailResult> {
   const log = logger();
-  log.info('Sending cancellation confirmation email to tenant', { tenantId, tenantName });
+  log.info('Sending account deactivation email to tenant', { tenantId, tenantName });
 
   const result: SendCancellationEmailResult = {
     emailsSent: 0,
@@ -1603,7 +1606,7 @@ export async function sendCancellationConfirmationEmail(
     const emailServiceInstance = await emailServicePromise;
 
     const recipientName = tenant.client_name || tenantName;
-    const { subject, htmlBody, textBody } = createCancellationEmailContent(tenantName, recipientName);
+    const { subject, htmlBody, textBody } = createDeactivationEmailContent(tenantName, recipientName);
 
     try {
       await emailServiceInstance.sendEmail({
@@ -1613,13 +1616,13 @@ export async function sendCancellationConfirmationEmail(
         text: textBody,
         metadata: {
           tenantId,
-          emailType: 'cancellation_confirmation',
+          emailType: 'account_deactivated',
           workflowType: 'tenant_deletion',
         },
       });
 
       result.emailsSent++;
-      log.info('Cancellation email sent', { email: tenant.email });
+      log.info('Deactivation email sent', { email: tenant.email });
     } catch (emailError) {
       result.emailsFailed++;
       const errorMsg = emailError instanceof Error ? emailError.message : 'Unknown error';
