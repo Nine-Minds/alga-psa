@@ -132,7 +132,7 @@ class IframeBridge {
    * Call the extension's WASM handler via the proxy.
    * The route is relative to the extension's handler (e.g., '/reports', '/schema').
    */
-  async callProxy<T>(route: string, payload?: Uint8Array | null): Promise<T> {
+  async callProxy<T>(route: string, payload?: Uint8Array | null, options?: { method?: string }): Promise<T> {
     return new Promise((resolve, reject) => {
       const requestId = crypto.randomUUID();
 
@@ -181,7 +181,7 @@ class IframeBridge {
           version: ENVELOPE_VERSION,
           type: 'apiproxy',
           request_id: requestId,
-          payload: { route, body: bodyBase64 },
+          payload: { route, body: bodyBase64, method: options?.method },
         },
         this.parentOrigin
       );
@@ -293,7 +293,7 @@ async function proxyApiCall<T>(
   console.log('[Extension] Calling proxy:', { route, handlerRoute, method, hasBody: !!payload });
 
   try {
-    const result = await bridge.callProxy<T>(handlerRoute, payload);
+    const result = await bridge.callProxy<T>(handlerRoute, payload, { method });
     console.log('[Extension] Proxy response:', result);
     return result;
   } catch (error) {
