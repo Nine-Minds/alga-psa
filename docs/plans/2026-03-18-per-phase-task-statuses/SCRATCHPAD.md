@@ -71,6 +71,7 @@
 - (2026-03-18) Implemented `F016` in `moveTaskToPhase()` by splitting same-project cross-phase moves from the existing cross-project branch, fetching target phase-effective mappings, and preserving intent via same-name matches when the original mapping ID is not valid in the destination phase.
 - (2026-03-18) Implemented `F017` by upgrading the same-project phase move fallback: if no same-name mapping exists and the source status is open, the task now lands in the first open target status by `display_order` instead of the first arbitrary column.
 - (2026-03-18) Implemented `F018` by making the fallback symmetric for closed work: if a closed task has no same-name match in the destination phase, `moveTaskToPhase()` now selects the first closed target status before falling back to the first overall column.
+- (2026-03-18) Implemented `F019` by leaving the original cross-project move branch intact and isolating the new remapping logic to same-project cross-phase moves only. This keeps legacy project-to-project behavior stable while enabling phase-aware remapping where the PRD requires it.
 
 ### Key Files — MSP UI
 - `packages/projects/src/components/ProjectDetail.tsx` — orchestrator, passes statuses to KanbanBoard (L2401-2406), phase selection (L186), task filtering (L346-425)

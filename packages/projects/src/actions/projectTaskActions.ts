@@ -1082,7 +1082,8 @@ export const moveTaskToPhase = withAuth(async (
             // Always use the provided status mapping ID if it exists
             let finalStatusMappingId = newStatusMappingId || existingTask.project_status_mapping_id;
 
-            // If moving to a different project and no specific status mapping is provided
+            // Preserve the existing cross-project remapping behavior.
+            // Same-project phase-aware remapping is handled in the branch below.
             if (currentPhase.project_id !== newPhase.project_id && !newStatusMappingId) {
                 // Get current status mapping
                 const currentMapping = await ProjectModel.getProjectStatusMapping(trx, tenant, existingTask.project_status_mapping_id);
