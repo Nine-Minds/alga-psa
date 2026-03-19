@@ -107,6 +107,8 @@
 - `packages/projects/src/components/project-templates/TemplateStatusManager.tsx`
 - `packages/projects/src/components/project-templates/wizard-steps/TemplateStatusColumnsStep.tsx`
 
+- (2026-03-18) Implemented `F033` by threading optional `template_phase_id` into the template status-mapping interfaces and wizard type definitions. The schema column from `F003` is now representable in runtime objects and wizard state.
+
 ### Key Files — Import / Events
 - `packages/types/src/interfaces/phaseTaskImport.interfaces.ts` — IImportReferenceData
 
