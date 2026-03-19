@@ -13,6 +13,9 @@ import type { Knex } from 'knex';
 import type { IProject, IProjectPhase, IProjectStatusMapping, IProjectTask, IStatus, IStandardStatus, ItemType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
+/** Status enriched with mapping metadata as returned by getProjectTaskStatuses. */
+export type ProjectTaskStatus = (IStatus | IStandardStatus) & Pick<IProjectStatusMapping, 'project_status_mapping_id' | 'phase_id' | 'custom_name' | 'display_order' | 'is_visible'> & { is_standard: boolean };
+
 /**
  * Project model with tenant-explicit methods.
  * All methods require an explicit tenant parameter for multi-tenant safety.
@@ -761,7 +764,7 @@ const ProjectModel = {
     tenant: string,
     projectId: string,
     phaseId?: string | null
-  ): Promise<(IStatus | IStandardStatus)[]> => {
+  ): Promise<ProjectTaskStatus[]> => {
     try {
       const mappings = await ProjectModel.getEffectiveStatusMappings(knexOrTrx, tenant, projectId, phaseId);
       if (!mappings || mappings.length === 0) return [];
@@ -786,7 +789,7 @@ const ProjectModel = {
       const standardMap = new Map((standardStatusRows as IStandardStatus[]).map(s => [s.standard_status_id, s]));
       const customMap = new Map((customStatusRows as IStatus[]).map(s => [s.status_id, s]));
 
-      const statuses = mappings.map((mapping: IProjectStatusMapping): IStatus | IStandardStatus | null => {
+      const statuses = mappings.map((mapping: IProjectStatusMapping): ProjectTaskStatus | null => {
         if (mapping.is_standard && mapping.standard_status_id) {
           const standardStatus = standardMap.get(mapping.standard_status_id);
           return standardStatus
@@ -798,7 +801,7 @@ const ProjectModel = {
                 display_order: mapping.display_order,
                 is_visible: mapping.is_visible,
                 is_standard: true,
-              } as IStandardStatus)
+              } as ProjectTaskStatus)
             : null;
         } else if (mapping.status_id) {
           const customStatus = customMap.get(mapping.status_id);
@@ -811,14 +814,14 @@ const ProjectModel = {
                 display_order: mapping.display_order,
                 is_visible: mapping.is_visible,
                 is_standard: false,
-              } as IStatus)
+              } as ProjectTaskStatus)
             : null;
         } else {
           console.error('Invalid project status mapping: missing both standard_status_id and status_id');
           return null;
         }
       });
-      return statuses.filter((status): status is IStatus | IStandardStatus => status !== null);
+      return statuses.filter((status): status is ProjectTaskStatus => status !== null);
     } catch (error) {
       console.error('Error getting project statuses:', error);
       throw error;
