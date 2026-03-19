@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "New action: removePhaseStatuses(phaseId) deletes all phase-specific mappings, reverting to project defaults",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3.4"]
   },
   {
