@@ -128,7 +128,8 @@ export const addStatusToProject = withAuth(async (
       payload: {
         tenantId: tenant,
         projectId,
-        mappingId: mapping.project_status_mapping_id
+        mappingId: mapping.project_status_mapping_id,
+        phaseId: mapping.phase_id ?? undefined,
       }
     });
 
@@ -288,6 +289,14 @@ export const updateProjectStatusMapping = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
+  const existingMapping = await knex('project_status_mappings')
+    .where({ project_status_mapping_id: mappingId, tenant })
+    .first();
+
+  if (!existingMapping) {
+    throw new Error('Status mapping not found');
+  }
+
   await knex('project_status_mappings')
     .where({ project_status_mapping_id: mappingId, tenant })
     .update(updates);
@@ -297,7 +306,9 @@ export const updateProjectStatusMapping = withAuth(async (
     eventType: 'PROJECT_STATUS_UPDATED',
     payload: {
       tenantId: tenant,
+      projectId: existingMapping.project_id,
       mappingId,
+      phaseId: existingMapping.phase_id ?? undefined,
       updates
     }
   });
@@ -362,7 +373,8 @@ export const deleteProjectStatusMapping = withAuth(async (
       payload: {
         tenantId: tenant,
         projectId: mapping.project_id,
-        mappingId
+        mappingId,
+        phaseId: mapping.phase_id ?? undefined,
       }
     });
   });
@@ -409,6 +421,7 @@ export const reorderProjectStatuses = withAuth(async (
       payload: {
         tenantId: tenant,
         projectId,
+        phaseId: phaseId ?? undefined,
         statusOrder
       }
     });
