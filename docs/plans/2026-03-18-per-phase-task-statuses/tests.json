@@ -58,7 +58,7 @@
   {
     "id": "TB09",
     "description": "Client portal: getClientProjectStatuses returns phase-effective statuses with phaseId and project-level without; switching phase updates ClientKanbanBoard columns; ClientTaskListView groups under correct phase-effective status headers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020", "F030", "F031", "F032"],
     "covers": ["T032", "T033", "T046", "T047"]
   },
