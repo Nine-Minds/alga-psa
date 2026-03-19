@@ -12,9 +12,11 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { deleteEntityWithValidation } from '@alga-psa/core';
-import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
-import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
+import {
+    DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+    resolveRecurringAuthoringPolicy,
+} from '@shared/billingClients/recurringAuthoringPolicy';
 import {
     normalizeLiveRecurringStorage,
     normalizeTemplateRecurringStorage,
@@ -77,12 +79,6 @@ export const getContractLineById = withAuth(async (
                 .first();
 
             if (templateLine) {
-                // Legacy template-terms fallback remains readable during staged rollout,
-                // but template_line.billing_timing is now the authoritative write target.
-                const templateTerms = await trx('contract_template_line_terms')
-                    .where({ tenant, template_line_id: planId })
-                    .first();
-
                 return {
                     contract_line_id: templateLine.template_line_id,
                     contract_line_name: templateLine.template_line_name,
@@ -94,7 +90,6 @@ export const getContractLineById = withAuth(async (
                     custom_rate: templateLine.custom_rate != null ? Number(templateLine.custom_rate) : null,
                     ...normalizeTemplateRecurringStorage({
                         billing_timing: templateLine.billing_timing,
-                        terms_billing_timing: templateTerms?.billing_timing,
                         cadence_owner: templateLine.cadence_owner,
                     }),
                     contract_line_type: templateLine.line_type ?? 'Fixed',
@@ -149,14 +144,11 @@ export const createContractLine = withAuth(async (
             const { tenant: _, ...safePlanData } = planData;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
                 cadenceOwner: safePlanData.cadence_owner,
+                defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: safePlanData.billing_timing,
             });
             safePlanData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
             safePlanData.billing_timing = recurringAuthoringPolicy.billingTiming;
-            assertSupportedCadenceOwnerDuringRollout({
-                cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
-                billingTiming: recurringAuthoringPolicy.billingTiming,
-            });
             const plan = await ContractLine.create(trx, safePlanData);
             const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
@@ -207,16 +199,12 @@ export const updateContractLine = withAuth(async (
             const { tenant: _, ...safeUpdateData } = updateData;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
                 cadenceOwner: safeUpdateData.cadence_owner,
-                fallbackCadenceOwner: existingPlan.cadence_owner,
+                fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: safeUpdateData.billing_timing,
                 fallbackBillingTiming: existingPlan.billing_timing,
             });
             safeUpdateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
             safeUpdateData.billing_timing = recurringAuthoringPolicy.billingTiming;
-            assertSupportedCadenceOwnerDuringRollout({
-                cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
-                billingTiming: recurringAuthoringPolicy.billingTiming,
-            });
 
             // If the plan is hourly, remove only the per-service hourly_rate field
             // minimum_billable_time and round_up_to_nearest are now contract-line-level
@@ -287,14 +275,6 @@ export const upsertContractLineTerms = withAuth(async (
                 updated_at: trx.fn.now(),
             });
 
-        // Keep the legacy template-terms shadow write in sync during staged rollout.
-        // contract_template_lines.billing_timing remains the authoritative template storage surface.
-        await trx('contract_template_line_terms')
-            .where({ tenant, template_line_id: contractLineId })
-            .update({
-                billing_timing: billingTiming,
-                updated_at: trx.fn.now(),
-            });
     });
 });
 

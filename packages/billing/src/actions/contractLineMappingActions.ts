@@ -9,7 +9,10 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
-import { resolveRecurringAuthoringPolicy } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 
 import { withTransaction } from '@alga-psa/db';
@@ -571,7 +574,7 @@ export const updateContractLineAssociation = withAuth(async (
           .first(['cadence_owner', 'billing_timing']);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
           cadenceOwner: dbUpdateData.cadence_owner,
-          fallbackCadenceOwner: existingTemplateLine?.cadence_owner,
+          fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: dbUpdateData.billing_timing,
           fallbackBillingTiming: existingTemplateLine?.billing_timing,
         });

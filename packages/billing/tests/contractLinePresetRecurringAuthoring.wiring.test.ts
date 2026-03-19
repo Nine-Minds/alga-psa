@@ -24,7 +24,7 @@ describe('contract line preset recurring authoring wiring', () => {
     expect(fixedPresetSource).toContain('billing_timing: billingTiming,');
     expect(fixedPresetSource).toContain("cadence_owner: plan?.cadence_owner ?? 'client',");
     expect(fixedPresetSource).toContain(
-      'This preset defaults to client-schedule cadence during the current rollout.',
+      'This preset keeps its cadence owner explicit when it is copied to a recurring line.',
     );
   });
 });

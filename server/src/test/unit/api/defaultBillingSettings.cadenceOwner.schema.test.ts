@@ -6,7 +6,7 @@ import {
 } from '../../../lib/api/schemas/financialSchemas';
 
 describe('default billing settings cadence-owner schema', () => {
-  it('exposes client cadence rollout metadata on default billing settings responses', () => {
+  it('exposes enabled mixed-cadence metadata on default billing settings responses', () => {
     const parsed = defaultBillingSettingsSchema.parse({
       tenant: '11111111-1111-1111-1111-111111111111',
       zero_dollar_invoice_handling: 'normal',
@@ -19,15 +19,15 @@ describe('default billing settings cadence-owner schema', () => {
     });
 
     expect(parsed.default_recurring_cadence_owner).toBe('client');
-    expect(parsed.recurring_cadence_rollout_state).toBe('client_only');
-    expect(parsed.recurring_cadence_rollout_message).toContain('Contract-owned cadence is not enabled');
+    expect(parsed.recurring_cadence_rollout_state).toBe('mixed_enabled');
+    expect(parsed.recurring_cadence_rollout_message).toContain('both enabled');
   });
 
-  it('rejects contract cadence as a writable billing-settings default during rollout', () => {
-    expect(() =>
-      updateBillingSettingsSchema.parse({
-        default_recurring_cadence_owner: 'contract',
-      }),
-    ).toThrow();
+  it('allows contract cadence as a writable billing-settings default', () => {
+    const parsed = updateBillingSettingsSchema.parse({
+      default_recurring_cadence_owner: 'contract',
+    });
+
+    expect(parsed.default_recurring_cadence_owner).toBe('contract');
   });
 });

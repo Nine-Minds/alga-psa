@@ -3,8 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 import type { IContractLine, IContractLineMapping } from '@alga-psa/types';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
-import { resolveRecurringAuthoringPolicy } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
-import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
 import {
   normalizeLiveRecurringStorage,
   normalizeTemplateRecurringStorage,
@@ -92,10 +94,6 @@ export async function fetchDetailedContractLines(
 
   if (template) {
     const rows = await knex('contract_template_lines as lines')
-      // Legacy template terms remain a read fallback only while historical rows are normalized.
-      .leftJoin('contract_template_line_terms as terms', function joinTemplateTerms() {
-        this.on('terms.template_line_id', '=', 'lines.template_line_id').andOn('terms.tenant', '=', 'lines.tenant');
-      })
       .leftJoin('contract_template_line_fixed_config as fixed', function joinTemplateFixed() {
         this.on('fixed.template_line_id', '=', 'lines.template_line_id').andOn('fixed.tenant', '=', 'lines.tenant');
       })
@@ -112,7 +110,6 @@ export async function fetchDetailedContractLines(
         'lines.template_line_name as contract_line_name',
         'lines.line_type as contract_line_type',
         'lines.billing_frequency',
-        'terms.billing_timing as terms_billing_timing',
         'fixed.base_rate as default_rate',
         'fixed.enable_proration as template_enable_proration',
         'fixed.billing_cycle_alignment as template_billing_cycle_alignment',
@@ -287,11 +284,6 @@ async function cloneTemplateLineToContract(
     .where({ tenant, template_line_id: templateLineId })
     .first();
 
-  // Template terms remain a staged compatibility fallback only.
-  const templateTerms = await trx('contract_template_line_terms')
-    .where({ tenant, template_line_id: templateLineId })
-    .first();
-
   const now = trx.fn.now();
   const newContractLineId = uuidv4();
   const effectiveRate =
@@ -304,7 +296,6 @@ async function cloneTemplateLineToContract(
   });
   const templateRecurringStorage = normalizeTemplateRecurringStorage({
     billing_timing: templateLine.billing_timing,
-    terms_billing_timing: templateTerms?.billing_timing,
     cadence_owner: templateLine.cadence_owner,
   });
 
@@ -317,18 +308,18 @@ async function cloneTemplateLineToContract(
     contract_id: contractId,
     contract_line_name: templateLine.template_line_name,
     description: templateLine.description ?? null,
-    billing_frequency: templateTerms?.billing_frequency ?? templateLine.billing_frequency,
+    billing_frequency: templateLine.billing_frequency,
     is_custom: false,
     contract_line_type: templateLine.line_type ?? 'Fixed',
     service_category: templateLine.service_category ?? null,
     is_active: templateLine.is_active ?? true,
-    enable_overtime: templateTerms?.enable_overtime ?? templateLine.enable_overtime ?? false,
-    overtime_rate: templateTerms?.overtime_rate ?? templateLine.overtime_rate ?? null,
-    overtime_threshold: templateTerms?.overtime_threshold ?? templateLine.overtime_threshold ?? null,
-    enable_after_hours_rate: templateTerms?.enable_after_hours_rate ?? templateLine.enable_after_hours_rate ?? false,
-    after_hours_multiplier: templateTerms?.after_hours_multiplier ?? templateLine.after_hours_multiplier ?? null,
-    minimum_billable_time: templateTerms?.minimum_billable_time ?? templateLine.minimum_billable_time ?? null,
-    round_up_to_nearest: templateTerms?.round_up_to_nearest ?? templateLine.round_up_to_nearest ?? null,
+    enable_overtime: templateLine.enable_overtime ?? false,
+    overtime_rate: templateLine.overtime_rate ?? null,
+    overtime_threshold: templateLine.overtime_threshold ?? null,
+    enable_after_hours_rate: templateLine.enable_after_hours_rate ?? false,
+    after_hours_multiplier: templateLine.after_hours_multiplier ?? null,
+    minimum_billable_time: templateLine.minimum_billable_time ?? null,
+    round_up_to_nearest: templateLine.round_up_to_nearest ?? null,
     created_at: now,
     updated_at: now,
     is_template: false,
@@ -536,7 +527,7 @@ export async function updateContractLine(
       .first(['cadence_owner', 'billing_timing']);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
       cadenceOwner: payload.cadence_owner,
-      fallbackCadenceOwner: existingTemplateLine?.cadence_owner,
+      fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming: payload.billing_timing,
       fallbackBillingTiming: existingTemplateLine?.billing_timing,
     });
@@ -571,7 +562,7 @@ export async function updateContractLine(
     .first(['cadence_owner', 'billing_timing']);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
     cadenceOwner: payload.cadence_owner,
-    fallbackCadenceOwner: existingLine?.cadence_owner,
+    fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     billingTiming: payload.billing_timing,
     fallbackBillingTiming: existingLine?.billing_timing,
   });
@@ -629,8 +620,9 @@ export async function updateContractLineRate(
   if (template) {
     const existingTemplateLine = await knex('contract_template_lines')
       .where({ tenant, template_id: contractId, template_line_id: contractLineId })
-      .first(['billing_timing']);
+      .first(['billing_timing', 'cadence_owner']);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming,
       fallbackBillingTiming: existingTemplateLine?.billing_timing,
     });
@@ -647,8 +639,9 @@ export async function updateContractLineRate(
 
   const existingLine = await knex('contract_lines')
     .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
-    .first(['billing_timing']);
+    .first(['billing_timing', 'cadence_owner']);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     billingTiming,
     fallbackBillingTiming: existingLine?.billing_timing,
   });

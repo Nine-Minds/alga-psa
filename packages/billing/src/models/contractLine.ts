@@ -3,7 +3,10 @@ import { Knex } from 'knex';
 import type { IContractLine } from '@alga-psa/types';
 import { requireTenantId } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
-import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@shared/billingClients/recurringAuthoringPolicy';
 
 const ContractLine = {
   isInUse: async (knexOrTrx: Knex | Knex.Transaction, planId: string): Promise<boolean> => {
@@ -100,6 +103,7 @@ const ContractLine = {
     } = plan;
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
       cadenceOwner: contractLineCore.cadence_owner,
+      defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming: billing_timing,
     });
 
@@ -130,7 +134,7 @@ const ContractLine = {
 
       const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
         cadenceOwner: dataToUpdate.cadence_owner,
-        fallbackCadenceOwner: existingPlan?.cadence_owner,
+        fallbackCadenceOwner: existingPlan?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
         billingTiming: dataToUpdate.billing_timing,
         fallbackBillingTiming: existingPlan?.billing_timing,
       });

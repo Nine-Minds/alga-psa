@@ -22,8 +22,10 @@ import {
   addContractLine as repositoryAddContractLine,
   removeContractLine as repositoryRemoveContractLine,
 } from 'server/src/lib/repositories/contractLineRepository';
-import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
-import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@shared/billingClients/recurringAuthoringPolicy';
 import { normalizeTemplateRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
 import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
@@ -282,6 +284,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         });
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
           cadenceOwner: data.cadence_owner ?? planData.cadence_owner,
+          defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
           enableProration,
           billingCycleAlignment: alignment,
@@ -292,10 +295,6 @@ export class ContractLineService extends BaseService<IContractLine> {
         planData.billing_cycle_alignment = recurringAuthoringPolicy.billingCycleAlignment;
         planData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
         planData.billing_timing = recurringAuthoringPolicy.billingTiming;
-        assertSupportedCadenceOwnerDuringRollout({
-          cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
-          billingTiming: recurringAuthoringPolicy.billingTiming,
-        });
 
         delete (planData as any).base_rate;
 
@@ -333,16 +332,12 @@ export class ContractLineService extends BaseService<IContractLine> {
         const updateData = this.addUpdateAuditFields(data, context);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
           cadenceOwner: data.cadence_owner,
-          fallbackCadenceOwner: resolveCadenceOwner(existingPlan.cadence_owner),
+          fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
           fallbackBillingTiming: existingPlan.billing_timing,
         });
         updateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
         updateData.billing_timing = recurringAuthoringPolicy.billingTiming;
-        assertSupportedCadenceOwnerDuringRollout({
-          cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
-          billingTiming: recurringAuthoringPolicy.billingTiming,
-        });
         
         // Handle plan type specific logic
         if (existingPlan.contract_line_type === 'Hourly') {
@@ -389,16 +384,12 @@ export class ContractLineService extends BaseService<IContractLine> {
         const updateData = this.addUpdateAuditFields(data, context);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
           cadenceOwner: data.cadence_owner,
-          fallbackCadenceOwner: resolveCadenceOwner(existingPlan.cadence_owner),
+          fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: data.billing_timing,
           fallbackBillingTiming: existingPlan.billing_timing,
         });
         updateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
         updateData.billing_timing = recurringAuthoringPolicy.billingTiming;
-        assertSupportedCadenceOwnerDuringRollout({
-          cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
-          billingTiming: recurringAuthoringPolicy.billingTiming,
-        });
         
         // Handle plan type specific logic
         if (existingPlan.contract_line_type === 'Hourly') {

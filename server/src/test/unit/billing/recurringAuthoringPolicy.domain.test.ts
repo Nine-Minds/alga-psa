@@ -1,15 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@shared/billingClients/recurringAuthoringPolicy';
 
 describe('recurring authoring policy', () => {
-  it('uses one authoritative default for cadence owner, billing timing, and partial-period alignment', () => {
-    expect(resolveRecurringAuthoringPolicy({})).toEqual({
+  it('uses only explicit boundary defaults for cadence owner while still standardizing timing and alignment', () => {
+    expect(resolveRecurringAuthoringPolicy({
+      defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+    })).toEqual({
       cadenceOwner: 'client',
       billingTiming: 'arrears',
       enableProration: false,
       billingCycleAlignment: 'start',
     });
+  });
+
+  it('fails fast when neither an explicit cadence owner nor a stored fallback is available', () => {
+    expect(() => resolveRecurringAuthoringPolicy({})).toThrow(
+      'Recurring authoring requires an explicit cadence owner or a stored cadence owner to reuse.',
+    );
   });
 
   it('preserves explicit billing timing while deriving legacy alignment from partial-period settings', () => {

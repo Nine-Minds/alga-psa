@@ -10,10 +10,6 @@ type NormalizableRecurringStorage = {
   cadence_owner?: CadenceOwner | null;
 };
 
-type TemplateRecurringStorage = NormalizableRecurringStorage & {
-  terms_billing_timing?: RecurringBillingTiming | null;
-};
-
 // One storage contract for recurring authoring/read paths:
 // - live lines store cadence/timing directly on contract_lines
 // - template lines store cadence/timing directly on contract_template_lines
@@ -30,7 +26,6 @@ export const AUTHORITATIVE_RECURRENCE_STORAGE_MODEL = {
     fields: ['billing_frequency', 'billing_timing', 'cadence_owner'],
     fixedConfigTable: 'contract_template_line_fixed_config',
     fixedConfigFields: ['enable_proration', 'billing_cycle_alignment'],
-    compatibilityFallbacks: ['contract_template_line_terms.billing_timing'],
   },
   presetDefaults: {
     table: 'contract_line_presets',
@@ -59,14 +54,13 @@ export function normalizeLiveRecurringStorage<T extends NormalizableRecurringSto
   };
 }
 
-export function normalizeTemplateRecurringStorage<T extends TemplateRecurringStorage>(
+export function normalizeTemplateRecurringStorage<T extends NormalizableRecurringStorage>(
   row: T,
 ): T & { billing_timing: RecurringBillingTiming; cadence_owner: CadenceOwner } {
   return {
     ...row,
     billing_timing:
       row.billing_timing
-      ?? row.terms_billing_timing
       ?? DEFAULT_RECURRING_AUTHORING_BILLING_TIMING,
     cadence_owner: resolveCadenceOwner(row.cadence_owner),
   };

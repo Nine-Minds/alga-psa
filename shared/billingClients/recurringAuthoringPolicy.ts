@@ -14,6 +14,7 @@ export const DEFAULT_RECURRING_AUTHORING_BILLING_TIMING: RecurringBillingTiming 
 type ResolveRecurringAuthoringPolicyInput = {
   cadenceOwner?: CadenceOwner | null;
   fallbackCadenceOwner?: CadenceOwner | null;
+  defaultCadenceOwner?: CadenceOwner | null;
   billingTiming?: RecurringBillingTiming | null;
   fallbackBillingTiming?: RecurringBillingTiming | null;
   enableProration?: boolean | null;
@@ -34,11 +35,19 @@ export function resolveRecurringAuthoringPolicy(
   input: ResolveRecurringAuthoringPolicyInput,
 ): RecurringAuthoringPolicy {
   const enableProration = Boolean(input.enableProration ?? false);
+  const resolvedCadenceOwner =
+    input.cadenceOwner
+    ?? input.fallbackCadenceOwner
+    ?? input.defaultCadenceOwner;
+
+  if (!resolvedCadenceOwner) {
+    throw new Error(
+      'Recurring authoring requires an explicit cadence owner or a stored cadence owner to reuse.',
+    );
+  }
 
   return {
-    cadenceOwner: resolveCadenceOwner(
-      input.cadenceOwner ?? input.fallbackCadenceOwner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
-    ),
+    cadenceOwner: resolveCadenceOwner(resolvedCadenceOwner),
     billingTiming:
       input.billingTiming
       ?? input.fallbackBillingTiming

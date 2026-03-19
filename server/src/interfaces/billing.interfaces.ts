@@ -522,7 +522,7 @@ export interface IDefaultBillingSettings extends TenantEntity {
   renewal_ticket_priority?: string | null;
   renewal_ticket_assignee_id?: string | null;
   default_recurring_cadence_owner?: CadenceOwner;
-  recurring_cadence_rollout_state?: 'client_only';
+  recurring_cadence_rollout_state?: 'mixed_enabled';
   recurring_cadence_rollout_message?: string;
   created_at: ISO8601String;
   updated_at: ISO8601String;
@@ -536,7 +536,7 @@ export interface IClientContractLineSettings extends TenantEntity {
   credit_expiration_days?: number;
   credit_expiration_notification_days?: number[];
   default_recurring_cadence_owner?: CadenceOwner;
-  recurring_cadence_rollout_state?: 'client_only';
+  recurring_cadence_rollout_state?: 'mixed_enabled';
   recurring_cadence_rollout_message?: string;
   created_at: ISO8601String;
   updated_at: ISO8601String;

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { getUnsupportedRecurringAuthoringCombinationMessage } from '../../../shared/billingClients/recurringAuthoringValidation';
 
 describe('recurring authoring validation boundaries', () => {
-  it('T240: unsupported authoring combinations fail early with clear cadence, timing, frequency, and line-type boundaries', () => {
+  it('T240: unsupported authoring combinations fail early with clear cadence, frequency, and line-type boundaries', () => {
     expect(
       getUnsupportedRecurringAuthoringCombinationMessage({
         lineType: 'Hourly',
@@ -13,18 +13,18 @@ describe('recurring authoring validation boundaries', () => {
         billingTiming: 'advance',
         billingFrequency: 'quarterly',
       }),
-    ).toBe(
-      'Unsupported recurring authoring combination for Hourly services: contract anniversary cadence with advance billing on quarterly frequency is not enabled during the client-cadence rollout. Use client billing schedule instead.',
-    );
+    ).toBeNull();
 
     expect(
       getUnsupportedRecurringAuthoringCombinationMessage({
         lineType: 'Usage',
-        cadenceOwner: 'client',
+        cadenceOwner: 'contract',
         billingTiming: 'arrears',
-        billingFrequency: 'monthly',
+        billingFrequency: 'weekly',
       }),
-    ).toBeNull();
+    ).toBe(
+      'Unsupported recurring authoring combination for Usage services: contract anniversary cadence currently supports monthly, quarterly, semi-annually, and annual billing frequencies. weekly is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.',
+    );
 
     const contractWizardSource = readFileSync(
       resolve(__dirname, '../src/components/billing-dashboard/contracts/ContractWizard.tsx'),

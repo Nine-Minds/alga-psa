@@ -159,9 +159,6 @@ describe('recurrence storage model contracts', () => {
     expect(AUTHORITATIVE_RECURRENCE_STORAGE_MODEL.liveContractLines.table).toBe('contract_lines');
     expect(AUTHORITATIVE_RECURRENCE_STORAGE_MODEL.templateLines.table).toBe('contract_template_lines');
     expect(AUTHORITATIVE_RECURRENCE_STORAGE_MODEL.presetDefaults.table).toBe('contract_line_presets');
-    expect(AUTHORITATIVE_RECURRENCE_STORAGE_MODEL.templateLines.compatibilityFallbacks).toContain(
-      'contract_template_line_terms.billing_timing',
-    );
     expect(AUTHORITATIVE_RECURRENCE_STORAGE_MODEL.sharedInterfaces.authoritativeShapes).toEqual(
       expect.arrayContaining(['IContractLine', 'IContractTemplateLine', 'IContractLinePreset']),
     );
@@ -173,16 +170,14 @@ describe('recurrence storage model contracts', () => {
     expect(
       normalizeTemplateRecurringStorage({
         billing_timing: null,
-        terms_billing_timing: 'advance',
       }),
     ).toMatchObject({
-      billing_timing: 'advance',
+      billing_timing: 'arrears',
       cadence_owner: 'client',
     });
     expect(
       normalizeTemplateRecurringStorage({
         billing_timing: 'arrears',
-        terms_billing_timing: 'advance',
         cadence_owner: 'contract',
       }),
     ).toMatchObject({
@@ -377,22 +372,40 @@ describe('recurrence storage model contracts', () => {
     expect(serverRepository).toContain('fallbackBillingTiming: existingLine?.billing_timing,');
   });
 
-  it('T247: dropped recurrence-related tables are no longer joined or read by live models before service-period-first work begins', () => {
-    expect(AUTHORITATIVE_RECURRENCE_STORAGE_MODEL.templateLines.compatibilityFallbacks).toContain(
-      'contract_template_line_terms.billing_timing',
+  it('T064: recurring authoring and storage helpers no longer use template-term fallback reads or shadow writes in normal paths', () => {
+    const recurrenceStorageSource = fs.readFileSync(
+      path.join(repoRoot, 'shared/billingClients/recurrenceStorageModel.ts'),
+      'utf8',
+    );
+    const contractTemplateSource = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/models/contractTemplate.ts'),
+      'utf8',
+    );
+    const contractLineActionSource = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/actions/contractLineAction.ts'),
+      'utf8',
+    );
+    const packageRepositorySource = fs.readFileSync(
+      path.join(repoRoot, 'packages/billing/src/repositories/contractLineRepository.ts'),
+      'utf8',
+    );
+    const serverRepositorySource = fs.readFileSync(
+      path.join(repoRoot, 'server/src/lib/repositories/contractLineRepository.ts'),
+      'utf8',
     );
 
-    expect(
-      rgFiles(
-        'contract_line_terms|contract_line_mappings|contract_template_line_mappings',
-        'packages/billing/src',
-        'server/src/lib',
-        'shared/billingClients',
-      ),
-    ).toEqual([]);
+    expect(recurrenceStorageSource).not.toContain('compatibilityFallbacks');
+    expect(recurrenceStorageSource).not.toContain('terms_billing_timing');
+    expect(contractTemplateSource).not.toContain(".leftJoin('contract_template_line_terms");
+    expect(contractLineActionSource).not.toContain('contract_template_line_terms');
+    expect(packageRepositorySource).not.toContain('terms_billing_timing');
+    expect(packageRepositorySource).not.toContain(".leftJoin('contract_template_line_terms");
+    expect(serverRepositorySource).not.toContain('terms_billing_timing');
+    expect(serverRepositorySource).not.toContain(".leftJoin('contract_template_line_terms");
+    expect(serverRepositorySource).not.toContain("trx('contract_template_line_terms')");
   });
 
-  it('T248: documentation and models no longer describe superseded term-storage tables or assumptions as authoritative', () => {
+  it('T248: documentation and code treat superseded term-storage tables as historical context, not normal runtime behavior', () => {
     const storageMatrix = fs.readFileSync(
       path.join(
         repoRoot,
@@ -418,10 +431,11 @@ describe('recurrence storage model contracts', () => {
     );
 
     expect(storageMatrix).toContain('legacy read compatibility only');
-    expect(contractLineAction).toContain('authoritative template storage surface');
-    expect(contractTemplateModel).toContain('fallback only while older rows coexist');
-    expect(packageRepository).toContain('staged compatibility fallback only');
-    expect(serverRepository).toContain('staged compatibility fallback only');
+    expect(contractLineAction).not.toContain('authoritative template storage surface');
+    expect(contractTemplateModel).not.toContain('fallback only while older rows coexist');
+    expect(packageRepository).not.toContain('staged compatibility fallback only');
+    expect(serverRepository).not.toContain('staged compatibility fallback only');
+    expect(serverRepository).not.toContain('Legacy template terms remain a read fallback only while historical rows are normalized.');
   });
 
   it('T249: compatibility readers and writers handle partially migrated recurrence records across authoring and read-model surfaces', () => {

@@ -16,7 +16,6 @@
 import { z } from 'zod';
 import {
   CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
-  getCadenceOwnerRolloutValidationMessage
 } from '@shared/billingClients/cadenceOwnerRollout';
 import { 
   uuidSchema, 
@@ -575,27 +574,11 @@ export const contractLineBaseSchema = z.object({
   after_hours_multiplier: z.number().nullable().optional()
 });
 
-const withCadenceOwnerRolloutValidation = <T extends z.ZodTypeAny>(schema: T): T =>
-  schema.superRefine((data: any, ctx) => {
-    const message = getCadenceOwnerRolloutValidationMessage({
-      cadenceOwner: data?.cadence_owner,
-      billingTiming: data?.billing_timing,
-    });
-
-    if (message) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['cadence_owner'],
-        message,
-      });
-    }
-  }) as unknown as T;
-
-export const createContractLineSchema = withCadenceOwnerRolloutValidation(contractLineBaseSchema.extend({
+export const createContractLineSchema = contractLineBaseSchema.extend({
   tenant: uuidSchema
-}));
+});
 
-export const updateContractLineSchema = withCadenceOwnerRolloutValidation(contractLineBaseSchema.partial());
+export const updateContractLineSchema = contractLineBaseSchema.partial();
 
 export const contractLineResponseSchema = contractLineBaseSchema.merge(baseEntitySchema);
 
@@ -624,11 +607,11 @@ export const clientContractLineBaseSchema = z.object({
   contract_name: z.string().optional()
 });
 
-export const createClientContractLineSchema = withCadenceOwnerRolloutValidation(clientContractLineBaseSchema.extend({
+export const createClientContractLineSchema = clientContractLineBaseSchema.extend({
   tenant: uuidSchema
-}));
+});
 
-export const updateClientContractLineSchema = withCadenceOwnerRolloutValidation(clientContractLineBaseSchema.partial());
+export const updateClientContractLineSchema = clientContractLineBaseSchema.partial();
 
 export const clientContractLineResponseSchema = clientContractLineBaseSchema.merge(baseEntitySchema);
 

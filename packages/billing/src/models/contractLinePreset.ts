@@ -2,7 +2,10 @@
 import { Knex } from 'knex';
 import type { IContractLinePreset } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@shared/billingClients/recurringAuthoringPolicy';
 import { normalizePresetRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
 
 function normalizeContractLinePreset<T extends Partial<IContractLinePreset>>(
@@ -56,6 +59,7 @@ const ContractLinePreset = {
   ): Promise<IContractLinePreset> => {
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
       cadenceOwner: preset.cadence_owner,
+      defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming: preset.billing_timing,
     });
     const presetWithId = {
@@ -95,7 +99,7 @@ const ContractLinePreset = {
       const { tenant: _, preset_id: __, ...dataToUpdate } = updateData;
       const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
         cadenceOwner: dataToUpdate.cadence_owner,
-        fallbackCadenceOwner: existingPreset.cadence_owner,
+        fallbackCadenceOwner: existingPreset.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
         billingTiming: dataToUpdate.billing_timing,
         fallbackBillingTiming: existingPreset.billing_timing,
       });

@@ -1,28 +1,2 @@
-import type { CadenceOwner } from '@alga-psa/types';
-
-type CadenceOwnerRolloutValidationInput = {
-  cadenceOwner?: CadenceOwner | null;
-  billingTiming?: 'arrears' | 'advance' | null;
-};
-
 export const CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE =
-  'Contract-owned cadence and mixed-cadence billing are not enabled during the client-cadence rollout.';
-
-export function getCadenceOwnerRolloutValidationMessage(
-  input: CadenceOwnerRolloutValidationInput,
-): string | null {
-  if (input.cadenceOwner === 'contract') {
-    return CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE;
-  }
-
-  return null;
-}
-
-export function assertSupportedCadenceOwnerDuringRollout(
-  input: CadenceOwnerRolloutValidationInput,
-): void {
-  const message = getCadenceOwnerRolloutValidationMessage(input);
-  if (message) {
-    throw new Error(message);
-  }
-}
+  'Client-schedule and contract-anniversary cadence are both enabled. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing.';

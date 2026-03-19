@@ -1,7 +1,10 @@
 // server/src/lib/models/contractLineMapping.ts
 import type { IContractLineMapping } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { resolveRecurringAuthoringPolicy } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 
 function normalizeContractLineMapping<T extends Partial<IContractLineMapping>>(
@@ -146,6 +149,12 @@ const ContractLineMapping = {
         throw new Error(`Contract line ${contractLineId} is already linked to contract ${contractId}`);
       }
 
+      if (!contractLine.cadence_owner) {
+        throw new Error(
+          `Contract line ${contractLineId} is missing cadence_owner and must be normalized before linking.`,
+        );
+      }
+
       // Update contract_lines directly to link it to the contract
       const [updatedLine] = await db('contract_lines')
         .where({
@@ -155,7 +164,7 @@ const ContractLineMapping = {
         .update({
           contract_id: contractId,
           custom_rate: customRate,
-          cadence_owner: contractLine.cadence_owner ?? 'client',
+          cadence_owner: contractLine.cadence_owner,
           display_order: 0,
           updated_at: db.fn.now()
         })
@@ -274,7 +283,7 @@ const ContractLineMapping = {
         .first(['cadence_owner', 'billing_timing']);
       const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
         cadenceOwner: dataToUpdate.cadence_owner,
-        fallbackCadenceOwner: existingLine?.cadence_owner,
+        fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
         billingTiming: dataToUpdate.billing_timing,
         fallbackBillingTiming: existingLine?.billing_timing,
       });

@@ -53,8 +53,7 @@ const CADENCE_OWNER_OPTIONS = [
   {
     value: 'contract',
     label: 'Invoice on contract anniversary',
-    description: 'Use this contract line’s own anniversary dates. Mixed client-schedule and contract-anniversary billing is staged for a later rollout.',
-    disabled: true,
+    description: 'Use this contract line’s own anniversary dates. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing.',
   },
 ];
 

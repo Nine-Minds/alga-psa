@@ -334,7 +334,7 @@ export function FixedPresetConfiguration({
                   placeholder="Select billing timing"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  This preset defaults to client-schedule cadence during the current rollout. Billing timing still controls whether the copied recurring line bills at the start or end of each covered period.
+                  This preset keeps its cadence owner explicit when it is copied to a recurring line. Billing timing still controls whether the copied recurring line bills at the start or end of each covered period.
                 </p>
               </div>
             </div>

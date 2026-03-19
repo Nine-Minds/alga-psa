@@ -1,6 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE } from '@shared/billingClients/cadenceOwnerRollout';
-
 const withTransaction = vi.fn();
 const publishEvent = vi.fn();
 
@@ -58,7 +56,7 @@ describe('ContractLineService cadence owner handling', () => {
     vi.clearAllMocks();
   });
 
-  it('blocks contract cadence on create during rollout and still defaults missing cadence_owner to client', async () => {
+  it('allows contract cadence on create and still defaults missing cadence_owner to client', async () => {
     let insertPayload: Record<string, unknown> | undefined;
     const knex = { scope: 'root-knex' };
     const trx = ((table: string) => {
@@ -91,7 +89,7 @@ describe('ContractLineService cadence owner handling', () => {
       cadence_owner: 'client',
     } as any);
 
-    await expect(service.create(
+    await service.create(
       {
         contract_line_name: 'Managed Support',
         billing_frequency: 'monthly',
@@ -99,9 +97,9 @@ describe('ContractLineService cadence owner handling', () => {
         cadence_owner: 'contract',
       },
       context,
-    )).rejects.toThrow(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
+    );
 
-    expect(insertPayload).toBeUndefined();
+    expect(insertPayload?.cadence_owner).toBe('contract');
 
     await service.create(
       {
@@ -113,10 +111,10 @@ describe('ContractLineService cadence owner handling', () => {
     );
 
     expect(insertPayload?.cadence_owner).toBe('client');
-    expect(publishEvent).toHaveBeenCalledTimes(1);
+    expect(publishEvent).toHaveBeenCalledTimes(2);
   });
 
-  it('blocks contract cadence on update during rollout', async () => {
+  it('allows contract cadence on update', async () => {
     let updatePayload: Record<string, unknown> | undefined;
     const knex = { scope: 'root-knex' };
     const trx = ((table: string) => {
@@ -153,15 +151,15 @@ describe('ContractLineService cadence owner handling', () => {
       contract_line_type: 'Fixed',
     });
 
-    await expect(service.update(
+    await service.update(
       'line-1',
       {
         cadence_owner: 'contract',
       },
       context,
-    )).rejects.toThrow(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
+    );
 
-    expect(updatePayload).toBeUndefined();
+    expect(updatePayload?.cadence_owner).toBe('contract');
   });
 
   it('backfills missing cadence_owner to client when updating a legacy row', async () => {

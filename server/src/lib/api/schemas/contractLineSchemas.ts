@@ -4,7 +4,6 @@
  */
 
 import { z } from 'zod';
-import { getCadenceOwnerRolloutValidationMessage } from '@shared/billingClients/cadenceOwnerRollout';
 import { 
   uuidSchema, 
   createListQuerySchema, 
@@ -59,24 +58,8 @@ const baseContractLineSchema = z.object({
   features: z.array(z.string()).optional()
 });
 
-const withCadenceOwnerRolloutValidation = <T extends z.ZodTypeAny>(schema: T): T =>
-  schema.superRefine((data: any, ctx) => {
-    const message = getCadenceOwnerRolloutValidationMessage({
-      cadenceOwner: data?.cadence_owner,
-      billingTiming: data?.billing_timing,
-    });
-
-    if (message) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['cadence_owner'],
-        message,
-      });
-    }
-  }) as unknown as T;
-
 // Create contract line schema
-export const createContractLineSchema = withCadenceOwnerRolloutValidation(baseContractLineSchema.refine(data => {
+export const createContractLineSchema = baseContractLineSchema.refine(data => {
   // Validation: If overtime is enabled, rate and threshold must be provided
   if (data.enable_overtime && (!data.overtime_rate || !data.overtime_threshold)) {
     return false;
@@ -88,10 +71,10 @@ export const createContractLineSchema = withCadenceOwnerRolloutValidation(baseCo
   return true;
 }, {
   message: "When overtime or after-hours features are enabled, all related fields must be provided"
-}));
+});
 
 // Update contract line schema
-export const updateContractLineSchema = withCadenceOwnerRolloutValidation(createUpdateSchema(baseContractLineSchema));
+export const updateContractLineSchema = createUpdateSchema(baseContractLineSchema);
 
 // Contract Line response schema
 export const contractLineResponseSchema = z.object({

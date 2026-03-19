@@ -13,22 +13,50 @@ const contractWizardActionsSource = readFileSync(
   new URL('../src/actions/contractWizardActions.ts', import.meta.url),
   'utf8',
 );
+const contractLineServiceSource = readFileSync(
+  new URL('../../../server/src/lib/api/services/ContractLineService.ts', import.meta.url),
+  'utf8',
+);
+const contractLineSchemasSource = readFileSync(
+  new URL('../../../server/src/lib/api/schemas/contractLineSchemas.ts', import.meta.url),
+  'utf8',
+);
+const financialSchemasSource = readFileSync(
+  new URL('../../../server/src/lib/api/schemas/financialSchemas.ts', import.meta.url),
+  'utf8',
+);
+const serverContractLineRepositorySource = readFileSync(
+  new URL('../../../server/src/lib/repositories/contractLineRepository.ts', import.meta.url),
+  'utf8',
+);
+const recurringAuthoringPolicySource = readFileSync(
+  new URL('../../../shared/billingClients/recurringAuthoringPolicy.ts', import.meta.url),
+  'utf8',
+);
 
 describe('cadence owner rollout action wiring', () => {
-  it('guards live contract-line and wizard write paths with the shared rollout validator', () => {
-    expect(contractLineActionSource).toContain(
-      "import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';",
-    );
-    expect(contractLineActionSource.match(/assertSupportedCadenceOwnerDuringRollout\(/g)?.length).toBeGreaterThanOrEqual(2);
+  it('T063: removes the dead rollout validator from authoring write paths and shared schemas', () => {
+    expect(contractLineActionSource).not.toContain('assertSupportedCadenceOwnerDuringRollout');
+    expect(contractLinePresetActionsSource).not.toContain('assertSupportedCadenceOwnerDuringRollout');
+    expect(contractWizardActionsSource).not.toContain('assertSupportedCadenceOwnerDuringRollout');
+    expect(contractLineServiceSource).not.toContain('assertSupportedCadenceOwnerDuringRollout');
+    expect(contractLineSchemasSource).not.toContain('getCadenceOwnerRolloutValidationMessage');
+    expect(financialSchemasSource).not.toContain('getCadenceOwnerRolloutValidationMessage');
+  });
 
-    expect(contractLinePresetActionsSource).toContain(
-      "import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';",
+  it('keeps cadence defaults explicit at write boundaries instead of hiding them in the shared authoring policy', () => {
+    expect(recurringAuthoringPolicySource).toContain('defaultCadenceOwner?: CadenceOwner | null;');
+    expect(recurringAuthoringPolicySource).not.toContain(
+      'input.cadenceOwner ?? input.fallbackCadenceOwner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER',
     );
-    expect(contractLinePresetActionsSource.match(/assertSupportedCadenceOwnerDuringRollout\(/g)?.length).toBeGreaterThanOrEqual(4);
-
-    expect(contractWizardActionsSource).toContain(
-      "import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';",
+    expect(contractLineActionSource).toContain('defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER');
+    expect(contractLinePresetActionsSource).toContain('safePresetData.cadence_owner = safePresetData.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER;');
+    expect(contractWizardActionsSource).toContain('defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER');
+    expect(serverContractLineRepositorySource).toContain(
+      'fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER',
     );
-    expect(contractWizardActionsSource.match(/assertSupportedCadenceOwnerDuringRollout\(/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(serverContractLineRepositorySource).toContain(
+      'fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER',
+    );
   });
 });

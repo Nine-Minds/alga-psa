@@ -12,13 +12,13 @@ import type { CadenceOwner } from '@alga-psa/types';
 
 type RenewalMode = 'none' | 'manual' | 'auto';
 type RenewalDueDateActionPolicy = 'queue_only' | 'create_ticket';
-type RecurringCadenceRolloutState = 'client_only';
+type RecurringCadenceRolloutState = 'mixed_enabled';
 
 const DEFAULT_RENEWAL_MODE: RenewalMode = 'manual';
 const DEFAULT_NOTICE_PERIOD_DAYS = 30;
 const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY: RenewalDueDateActionPolicy = 'create_ticket';
 const DEFAULT_RECURRING_CADENCE_OWNER: CadenceOwner = 'client';
-const DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE: RecurringCadenceRolloutState = 'client_only';
+const DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE: RecurringCadenceRolloutState = 'mixed_enabled';
 const requireBillingSettingsUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing_settings', 'update')) {
     return permissionError('Permission denied: Cannot update billing settings');
@@ -116,13 +116,6 @@ export const updateDefaultBillingSettings = withAuth(async (
 ): Promise<{ success: boolean } | ActionPermissionError> => {
   const denied = await requireBillingSettingsUpdatePermission(user);
   if (denied) return denied;
-
-  if (
-    data.defaultRecurringCadenceOwner &&
-    data.defaultRecurringCadenceOwner !== DEFAULT_RECURRING_CADENCE_OWNER
-  ) {
-    throw new Error(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
-  }
 
   const { knex } = await createTenantKnex();
 
@@ -262,13 +255,6 @@ export const updateClientContractLineSettings = withAuth(async (
           tenant
         })
         .delete();
-    }
-
-    if (
-      data.defaultRecurringCadenceOwner &&
-      data.defaultRecurringCadenceOwner !== DEFAULT_RECURRING_CADENCE_OWNER
-    ) {
-      throw new Error(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
     }
 
     const existingSettings = await trx('client_billing_settings')

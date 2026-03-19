@@ -15,9 +15,11 @@ import {
   buildContractRenewalUpcomingPayload,
   computeContractRenewalUpcoming,
 } from '@shared/workflow/streams/domainEventBuilders/contractEventBuilders';
-import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
-import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@shared/billingClients/recurringAuthoringPolicy';
 
 
 import ContractLine from '../models/contractLine';
@@ -269,10 +271,6 @@ export const createContractTemplateFromWizard = withAuth(async (
     }
   }
 
-  assertSupportedCadenceOwnerDuringRollout({
-    cadenceOwner: submission.cadence_owner ?? 'client',
-  });
-
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -358,6 +356,7 @@ export const createContractTemplateFromWizard = withAuth(async (
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
       cadenceOwner: submission.cadence_owner,
+      defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming: submission.billing_timing,
       enableProration: submission.enable_proration,
     });
@@ -717,10 +716,6 @@ export const createClientContractFromWizard = withAuth(async (
     }
   }
 
-  assertSupportedCadenceOwnerDuringRollout({
-    cadenceOwner: submission.cadence_owner ?? 'client',
-  });
-
   const { knex } = await createTenantKnex();
 
   let createdForWorkflow: {
@@ -1026,9 +1021,10 @@ export const createClientContractFromWizard = withAuth(async (
     const createdContractLineIds: string[] = [];
     let primaryContractLineId: string | undefined;
     let nextDisplayOrder = 0;
-    const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
+  const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
     cadenceOwner: submission.cadence_owner,
+    defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     billingTiming: submission.billing_timing,
     enableProration: submission.enable_proration,
   });

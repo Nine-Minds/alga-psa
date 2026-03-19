@@ -9,9 +9,8 @@ describe('contract wizard cadence_owner wiring', () => {
       'utf8'
     );
 
-    expect(source).toContain(
-      "import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';"
-    );
+    expect(source).toContain("from '@shared/billingClients/recurringAuthoringPolicy';");
+    expect(source).toContain('resolveRecurringAuthoringPolicy');
     expect(source.match(/const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy\(/g)?.length).toBe(2);
     expect(source.match(/billing_timing: recurringAuthoringPolicy\.billingTiming/g)?.length).toBeGreaterThanOrEqual(4);
     expect(source.match(/cadence_owner: recurringAuthoringPolicy\.cadenceOwner/g)?.length).toBeGreaterThanOrEqual(4);
@@ -54,5 +53,31 @@ describe('contract wizard cadence_owner wiring', () => {
     expect(fixedFeeStepSource).toContain(
       "updateData({ cadence_owner: value as ContractWizardData['cadence_owner'] })"
     );
+  });
+
+  it('T062: wizard and template boundaries keep client cadence as an explicit product default while write helpers stay bridge-free', () => {
+    const wizardSource = readFileSync(
+      resolve(__dirname, '../src/components/billing-dashboard/contracts/ContractWizard.tsx'),
+      'utf8'
+    );
+    const templateWizardSource = readFileSync(
+      resolve(__dirname, '../src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx'),
+      'utf8'
+    );
+    const actionsSource = readFileSync(
+      resolve(__dirname, '../src/actions/contractWizardActions.ts'),
+      'utf8'
+    );
+    const recurringAuthoringPolicySource = readFileSync(
+      resolve(__dirname, '../../../shared/billingClients/recurringAuthoringPolicy.ts'),
+      'utf8'
+    );
+
+    expect(wizardSource).toContain("cadence_owner: wizardData.cadence_owner ?? 'client'");
+    expect(templateWizardSource).toContain("cadence_owner: wizardData.cadence_owner ?? 'client'");
+    expect(actionsSource).toContain('defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER');
+    expect(recurringAuthoringPolicySource).toContain('defaultCadenceOwner?: CadenceOwner | null;');
+    expect(recurringAuthoringPolicySource).toContain('?? input.defaultCadenceOwner;');
+    expect(recurringAuthoringPolicySource).toContain('Recurring authoring requires an explicit cadence owner or a stored cadence owner to reuse.');
   });
 });

@@ -9,6 +9,13 @@ type RecurringAuthoringValidationInput = {
   billingFrequency?: string | null;
 };
 
+const SUPPORTED_CONTRACT_CADENCE_FREQUENCIES = new Set([
+  'monthly',
+  'quarterly',
+  'semi-annually',
+  'annually',
+]);
+
 export function getUnsupportedRecurringAuthoringCombinationMessage(
   input: RecurringAuthoringValidationInput,
 ): string | null {
@@ -16,8 +23,10 @@ export function getUnsupportedRecurringAuthoringCombinationMessage(
     return null;
   }
 
-  const billingTiming = input.billingTiming === 'advance' ? 'advance' : 'arrears';
   const billingFrequency = input.billingFrequency ?? 'monthly';
+  if (SUPPORTED_CONTRACT_CADENCE_FREQUENCIES.has(billingFrequency)) {
+    return null;
+  }
 
-  return `Unsupported recurring authoring combination for ${input.lineType} services: contract anniversary cadence with ${billingTiming} billing on ${billingFrequency} frequency is not enabled during the client-cadence rollout. Use client billing schedule instead.`;
+  return `Unsupported recurring authoring combination for ${input.lineType} services: contract anniversary cadence currently supports monthly, quarterly, semi-annually, and annual billing frequencies. ${billingFrequency} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.`;
 }

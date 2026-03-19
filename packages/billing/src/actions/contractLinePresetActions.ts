@@ -11,8 +11,10 @@ import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
-import { assertSupportedCadenceOwnerDuringRollout } from '@shared/billingClients/cadenceOwnerRollout';
-import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';
+import {
+    DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+    resolveRecurringAuthoringPolicy,
+} from '@shared/billingClients/recurringAuthoringPolicy';
 
 
 
@@ -81,9 +83,7 @@ export const createContractLinePreset = withAuth(async (
             }
 
             const { tenant: _, ...safePresetData } = presetData as any;
-            assertSupportedCadenceOwnerDuringRollout({
-                cadenceOwner: safePresetData.cadence_owner ?? 'client',
-            });
+            safePresetData.cadence_owner = safePresetData.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER;
             const preset = await ContractLinePreset.create(trx, tenant, safePresetData);
 
             // Track analytics
@@ -126,9 +126,6 @@ export const updateContractLinePreset = withAuth(async (
             }
 
             const { tenant: _, preset_id: __, ...safeUpdateData } = updateData as any;
-            assertSupportedCadenceOwnerDuringRollout({
-                cadenceOwner: safeUpdateData.cadence_owner ?? null,
-            });
             const preset = await ContractLinePreset.update(trx, tenant, presetId, safeUpdateData);
 
             // Track analytics
@@ -361,11 +358,6 @@ export const copyPresetToContractLine = withAuth(async (
                     round_up_to_nearest: roundUpToNearest,
                 } : {}),
             };
-            assertSupportedCadenceOwnerDuringRollout({
-                cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
-                billingTiming: recurringAuthoringPolicy.billingTiming,
-            });
-
             const contractLine = await ContractLine.create(trx, contractLineData);
 
             if (!contractLine.contract_line_id) {
@@ -610,6 +602,7 @@ export const createCustomContractLine = withAuth(async (
                 : undefined;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
                 cadenceOwner: input.cadence_owner,
+                defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: input.billing_timing,
                 enableProration: input.enable_proration,
             });
@@ -627,11 +620,6 @@ export const createCustomContractLine = withAuth(async (
                     round_up_to_nearest: roundUpToNearest,
                 } : {}),
             };
-            assertSupportedCadenceOwnerDuringRollout({
-                cadenceOwner: recurringAuthoringPolicy.cadenceOwner,
-                billingTiming: recurringAuthoringPolicy.billingTiming,
-            });
-
             const contractLine = await ContractLine.create(trx, contractLineData);
 
             if (!contractLine.contract_line_id) {

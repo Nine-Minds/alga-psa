@@ -275,20 +275,18 @@ describe('contract line cadence_owner action persistence', () => {
     );
   });
 
-  it('T143: action-layer contract line creation paths reject staged mixed-cadence writes during rollout', async () => {
+  it('T143: action-layer contract line creation paths now allow contract cadence writes for supported frequencies', async () => {
     const { createCustomContractLine, copyPresetToContractLine } = await import('../src/actions/contractLinePresetActions');
 
-    await expect(
-      createCustomContractLine('contract-1', {
-        contract_line_name: 'Blocked Contract Cadence',
-        contract_line_type: 'Fixed',
-        billing_frequency: 'monthly',
-        cadence_owner: 'contract',
-        services: [{ service_id: 'svc-1', quantity: 1 }],
-      }),
-    ).rejects.toThrow(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE);
+    await createCustomContractLine('contract-1', {
+      contract_line_name: 'Allowed Contract Cadence',
+      contract_line_type: 'Fixed',
+      billing_frequency: 'monthly',
+      cadence_owner: 'contract',
+      services: [{ service_id: 'svc-1', quantity: 1 }],
+    });
 
-    expect(contractLineCreate).not.toHaveBeenCalled();
+    expect(contractLineCreate).toHaveBeenCalled();
 
     presetFindById.mockResolvedValueOnce({
       preset_id: 'preset-contract',
@@ -300,10 +298,13 @@ describe('contract line cadence_owner action persistence', () => {
       round_up_to_nearest: null,
     });
 
-    await expect(copyPresetToContractLine('contract-1', 'preset-contract')).rejects.toThrow(
-      CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
-    );
+    await copyPresetToContractLine('contract-1', 'preset-contract');
 
-    expect(contractLineCreate).not.toHaveBeenCalled();
+    expect(contractLineCreate).toHaveBeenCalledWith(
+      currentTrx,
+      expect.objectContaining({
+        cadence_owner: 'contract',
+      }),
+    );
   });
 });
