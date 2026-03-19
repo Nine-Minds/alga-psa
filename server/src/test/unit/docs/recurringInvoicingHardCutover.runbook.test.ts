@@ -43,4 +43,14 @@ describe('recurring invoicing hard cutover docs', () => {
     expect(architecture).toContain('no live recurring path may use it to decide what recurring work exists');
     expect(architecture).toContain('later physical removal can happen after historical read-side cleanup is complete');
   });
+
+  it('documents the historical read-side fallback strategy without reintroducing live recurring bridge logic', () => {
+    expect(architecture).toContain('## Historical Read-Side Strategy');
+    expect(architecture).toContain('treat it as `financial_document_fallback`');
+    expect(architecture).toContain('surface `missing_source_context`');
+    expect(architecture).toContain('do not synthesize new recurring due work from `client_billing_cycles`');
+    expect(runbook).toContain('## Historical Incomplete Linkage');
+    expect(runbook).toContain('keep the invoice readable as a historical financial document');
+    expect(runbook).toContain('do not treat `billing_cycle_id` as a replacement execution key');
+  });
 });

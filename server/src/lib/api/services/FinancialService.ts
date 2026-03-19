@@ -1016,7 +1016,6 @@ export class FinancialService extends BaseService<ITransaction> {
     clientId: string,
     periodStart: string,
     periodEnd: string,
-    billingCycleId?: string,
     context?: ServiceContext
   ): Promise<FinancialResponse<BillingCalculationResult>> {
     if (context) {
@@ -1024,11 +1023,10 @@ export class FinancialService extends BaseService<ITransaction> {
     }
     
     const billingEngine = new BillingEngineClass();
-    const result = await billingEngine.calculateBilling(
+    const result = await billingEngine.calculateBillingForExecutionWindow(
       clientId,
       periodStart,
       periodEnd,
-      billingCycleId!
     );
 
     // Calculate tax amounts

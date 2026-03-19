@@ -80,6 +80,24 @@ Use canonical recurring linkage when repairing recurring invoice state:
 
 Do not treat a `billing_cycle_id` value as the primary repair handle for recurring invoices.
 
+## Historical Incomplete Linkage
+
+Some historical invoices may remain readable without complete canonical recurring linkage.
+
+Use this posture:
+
+1. if canonical recurring detail rows exist, read and explain the invoice from those canonical periods
+2. if canonical detail rows are absent, keep the invoice readable as a historical financial document instead of inventing synthetic recurring periods
+3. if related source invoice lineage cannot be resolved, surface that as missing source context and keep the invoice readable with null recurring period metadata
+
+What not to do:
+
+- do not recreate live recurring due rows from `client_billing_cycles`
+- do not treat `billing_cycle_id` as a replacement execution key
+- do not backfill synthetic recurring service periods onto historical invoices purely for display
+
+Fallback read states such as `financial_document_fallback` and `missing_source_context` are acceptable only to preserve historical readability while cleanup or backfill work is handled explicitly.
+
 ## Validation Checklist
 
 - recurring due-work investigation starts from `recurring_service_periods`

@@ -427,10 +427,6 @@ export type TransactionType =
   | 'currency_adjustment'
   | 'tax_adjustment';
 
-export interface IBillingCycleInvoiceRequest {
-  billing_cycle_id: string;
-}
-
 export interface ITransaction extends TenantEntity {
   transaction_id: string;
   client_id: string;

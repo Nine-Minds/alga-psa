@@ -52,6 +52,21 @@ The current deprecation posture is:
 - no live recurring path may use it to decide what recurring work exists, whether it is duplicate, how it is previewed or generated, or how recurring linkage is repaired
 - later physical removal can happen after historical read-side cleanup is complete, but live recurring code must already behave as though the bridge is gone
 
+## Historical Read-Side Strategy
+
+Historical invoices may still lack complete canonical recurring linkage. The hard cutover handles that only on the read side:
+
+- when canonical recurring detail periods exist, treat the invoice as `canonical_recurring`
+- when canonical detail is absent but the invoice must remain readable, treat it as `financial_document_fallback`
+- when related source invoice context cannot be resolved at all, surface `missing_source_context`
+
+This is a migration/read model strategy, not a live recurring execution mode:
+
+- do not synthesize new recurring due work from `client_billing_cycles`
+- do not rebuild live recurring identity from invoice-header `billing_cycle_id`
+- do not backfill fake recurring service periods just to make historical invoices look canonical
+- use fallback states only to keep historical reads, exports, and lineage views diagnosable while cleanup/backfill work proceeds separately
+
 ## Anti-Regression Rules
 
 Future recurring changes should preserve these boundaries:

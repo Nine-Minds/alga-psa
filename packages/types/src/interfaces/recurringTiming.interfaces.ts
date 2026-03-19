@@ -290,7 +290,6 @@ export interface IRecurringInvoiceWindow extends IRecurringDateRange {
   cadenceOwner: CadenceOwner;
   duePosition: DuePosition;
   windowId?: string;
-  billingCycleId?: string | null;
 }
 
 export interface IRecurringCoverage {

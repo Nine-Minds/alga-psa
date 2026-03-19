@@ -376,7 +376,7 @@ export const billingResultSchema = z.object({
 // INVOICE SCHEMAS
 // ============================================================================
 
-export const invoiceBaseSchema = z.object({
+const invoiceWriteSchema = z.object({
   invoice_id: uuidSchema.optional(),
   client_id: uuidSchema,
   invoice_date: isoDateSchema,
@@ -388,17 +388,18 @@ export const invoiceBaseSchema = z.object({
   invoice_number: z.string(),
   finalized_at: isoDateSchema.optional(),
   credit_applied: z.number().default(0),
-  billing_cycle_id: uuidSchema.optional(),
   is_manual: z.boolean().default(false)
 });
 
-export const createInvoiceSchema = invoiceBaseSchema.extend({
+export const createInvoiceSchema = invoiceWriteSchema.extend({
   tenant: uuidSchema
 });
 
-export const updateInvoiceSchema = invoiceBaseSchema.partial();
+export const updateInvoiceSchema = invoiceWriteSchema.partial();
 
-export const invoiceResponseSchema = invoiceBaseSchema.merge(baseEntitySchema);
+export const invoiceResponseSchema = invoiceWriteSchema.merge(baseEntitySchema).extend({
+  billing_cycle_id: uuidSchema.optional(),
+});
 
 export const invoiceListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
   client_id: uuidSchema.optional(),
@@ -635,10 +636,6 @@ export const createClientContractLineCycleSchema = clientContractLineCycleBaseSc
 export const updateClientContractLineCycleSchema = clientContractLineCycleBaseSchema.partial();
 
 export const clientContractLineCycleResponseSchema = clientContractLineCycleBaseSchema.merge(baseEntitySchema);
-
-export const billingCycleInvoiceRequestSchema = z.object({
-  billing_cycle_id: uuidSchema
-});
 
 // ============================================================================
 // FINANCIAL RECONCILIATION SCHEMAS
@@ -978,8 +975,7 @@ export const calculateBillingSchema = z.object({
   client_id: uuidSchema,
   period_start: dateSchema,
   period_end: dateSchema,
-  billing_cycle_id: uuidSchema.optional()
-});
+}).strict('Billing calculation requests require canonical execution-window dates and do not accept billing_cycle_id.');
 
 export const billingCalculationResultSchema = z.object({
   charges: z.array(billingChargeBaseSchema),
