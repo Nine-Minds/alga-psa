@@ -149,6 +149,36 @@ async function getProjectStatusMappingDetails(
   return row ?? null;
 }
 
+function resolveSameProjectTargetStatusMapping(
+  sourceMapping: ProjectStatusMappingDetails,
+  targetMappings: ProjectStatusMappingDetails[]
+): ProjectStatusMappingDetails | null {
+  const existingTargetMapping = targetMappings.find((mapping) =>
+    mapping.project_status_mapping_id === sourceMapping.project_status_mapping_id
+  );
+
+  if (existingTargetMapping) {
+    return existingTargetMapping;
+  }
+
+  const sameNameMapping = targetMappings.find((mapping) =>
+    mapping.status_name === sourceMapping.status_name
+  );
+
+  if (sameNameMapping) {
+    return sameNameMapping;
+  }
+
+  if (!sourceMapping.is_closed) {
+    const firstOpenMapping = targetMappings.find((mapping) => !mapping.is_closed);
+    if (firstOpenMapping) {
+      return firstOpenMapping;
+    }
+  }
+
+  return targetMappings[0] ?? null;
+}
+
 function resolveTaskBlockRelation(params: {
   dependencyType: DependencyType;
   predecessorTaskId: string;
@@ -1122,23 +1152,12 @@ export const moveTaskToPhase = withAuth(async (
                     throw new Error('No valid status mappings found in target phase');
                 }
 
-                const existingTargetMapping = targetPhaseMappings.find((mapping) =>
-                    mapping.project_status_mapping_id === currentMapping.project_status_mapping_id
-                );
-
-                if (existingTargetMapping) {
-                    finalStatusMappingId = existingTargetMapping.project_status_mapping_id;
-                } else {
-                    const sameNameMapping = targetPhaseMappings.find((mapping) =>
-                        mapping.status_name === currentMapping.status_name
-                    );
-
-                    if (sameNameMapping) {
-                        finalStatusMappingId = sameNameMapping.project_status_mapping_id;
-                    } else {
-                        finalStatusMappingId = targetPhaseMappings[0].project_status_mapping_id;
-                    }
+                const resolvedMapping = resolveSameProjectTargetStatusMapping(currentMapping, targetPhaseMappings);
+                if (!resolvedMapping) {
+                    throw new Error('No valid status mappings found in target phase');
                 }
+
+                finalStatusMappingId = resolvedMapping.project_status_mapping_id;
             }
 
             // Generate new WBS code for the task
