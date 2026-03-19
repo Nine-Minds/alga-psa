@@ -17,6 +17,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Keep the hard-cutover architecture notes separate from the softer service-driven runbook so the steady-state model is explicit and testable.
 - (2026-03-18) Recurring invoice linkage should derive candidate obligations from canonical persisted detail metadata (`config_id`, service-period window, due position, invoice window) plus contract-line or assignment identity, never from invoice-header `billing_cycle_id`.
 - (2026-03-18) Prepayment classification should use explicit invoice-kind state (`is_prepayment`) rather than the absence of a recurring bridge field; bridge-less recurring invoices and prepayments are separate concepts.
+- (2026-03-18) Persisted recurring execution windows are already canonical recurring truth, so billing-engine validation for selector-input recurring runs must not round-trip back through `client_billing_cycles` or auto-create cycle rows just to validate the window.
 
 ## Agent Findings
 
@@ -56,6 +57,12 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
     - [invoiceGeneration.preview.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.preview.test.ts)
     - [invoiceGeneration.emptyResult.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.emptyResult.test.ts)
     - [invoiceGeneration.zeroDollarFinalization.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts)
+- Billing-engine recurring execution slice completed:
+  - Updated [billingEngine.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/lib/billing/billingEngine.ts) so selector-input recurring due-work loading and execution-window billing stay on canonical persisted service-period selections, bypass `validateBillingPeriod(...)` for `recurringTimingSelectionSource = "persisted"`, and never call `getClientContractLinesAndCycle(...)` or `getBillingCycle(...)` on the live recurring execution path.
+  - This keeps client cadence source rules relevant only before execution, when recurring service periods are materialized; the runtime billing engine now treats the persisted service-period window as the recurring source of truth.
+  - Added/updated focused tests:
+    - [billingEngine.timing.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/billingEngine.timing.test.ts)
+    - [billingEngine.recurringExecution.static.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/billingEngine.recurringExecution.static.test.ts)
 
 - Billing UI/actions sweep:
   - `AutomaticInvoices`, due-work selection, recurring run target selection, history, reversal/delete, accounting export, and some authoring/storage helpers still preserve bridge-first recurring behavior.
@@ -142,6 +149,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/billing/recurringInvoiceLinkage.static.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/invoiceFinalization.kindClassification.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/billingEngine.recurringExecution.static.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -178,6 +187,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T031/T032 implemented with static source guards proving recurring invoice linkage no longer widens or narrows from `invoice.billing_cycle_id` and no longer suppresses missing-relation fallback errors.
 - (2026-03-18) F046/F047/F048 implemented by classifying invoice finalization behavior from explicit `is_prepayment` plus negative totals, persisting `is_prepayment: true` on prepayment creation, and proving bridge-less recurring invoices with null `billing_cycle_id` no longer get routed through prepayment credit logic.
 - (2026-03-18) T048 implemented with a static source guard proving invoice finalization no longer keys recurring or prepayment classification from null/non-null `billing_cycle_id`.
+- (2026-03-18) F049/F050/F051 implemented by making persisted recurring execution-window billing bypass cycle validation, loading contract lines directly for the execution window, and preventing selector-input recurring runs from auto-loading or auto-creating `client_billing_cycles` during live execution.
+- (2026-03-18) T051 implemented with static and unit coverage proving the billing engine’s persisted recurring path no longer routes through `getClientContractLinesAndCycle(...)`, `validateBillingPeriod(...)`, or `getBillingCycle(...)` to execute recurring work.
 
 ## Links / References
 

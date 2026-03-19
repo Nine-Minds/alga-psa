@@ -169,6 +169,41 @@ const installRecurringRolloutGuardHarness = (
   });
 };
 
+const installPersistedRecurringExecutionHarness = (
+  engine: BillingEngine,
+  clientContractLines: any[],
+) => {
+  (engine as any).tenant = "test_tenant";
+  vi.spyOn(engine as any, "initKnex").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "withPinnedTransaction").mockImplementation(
+    async (callback: any) => callback((engine as any).knex),
+  );
+  vi.spyOn(engine as any, "getClientContractLinesForBillingPeriod").mockResolvedValue(
+    clientContractLines,
+  );
+  vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateFixedPriceCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateTimeBasedCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateUsageBasedCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateBucketPlanCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateProductCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "calculateLicenseCharges").mockResolvedValue([]);
+
+  (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
+    if (tableName === "clients") {
+      return buildQuery({
+        client_id: "client-1",
+        tenant: "test_tenant",
+        client_name: "Persisted Client",
+        default_currency_code: "USD",
+        is_tax_exempt: false,
+      });
+    }
+
+    return buildQuery(null);
+  });
+};
+
 describe("BillingEngine billing timing", () => {
   it("T045: fixed recurring arrears timing resolves partial first periods through shared coverage instead of a special skip branch", () => {
     const engine = new BillingEngine();
@@ -374,6 +409,104 @@ describe("BillingEngine billing timing", () => {
     expect((engine as any).calculateFixedPriceCharges).not.toHaveBeenCalled();
     expect((engine as any).calculateProductCharges).not.toHaveBeenCalled();
     expect((engine as any).calculateLicenseCharges).not.toHaveBeenCalled();
+  });
+
+  it("uses persisted recurring due selections without loading a client billing cycle row", async () => {
+    const engine = new BillingEngine();
+    const hourlyLine = {
+      client_contract_line_id: "hourly-line",
+      contract_line_type: "Hourly",
+    } as any;
+    const persistedSelections = {
+      "hourly-line": {
+        duePosition: "arrears",
+        servicePeriodStart: "2025-01-01",
+        servicePeriodEnd: "2025-01-31",
+        servicePeriodStartExclusive: "2025-01-01",
+        servicePeriodEndExclusive: "2025-02-01",
+        coverageRatio: 1,
+      },
+    };
+
+    installPersistedRecurringExecutionHarness(engine, [hourlyLine]);
+
+    const loadPersistedSelections = vi
+      .spyOn(engine as any, "loadPersistedRecurringTimingSelections")
+      .mockResolvedValue(persistedSelections);
+    const getBillingCycle = vi.spyOn(engine as any, "getBillingCycle");
+
+    const result = await engine.selectDueRecurringServicePeriodsForBillingWindow(
+      "client-1",
+      "2025-02-01",
+      "2025-03-01",
+    );
+
+    expect(result).toEqual(persistedSelections);
+    expect(
+      (engine as any).getClientContractLinesForBillingPeriod,
+    ).toHaveBeenCalledWith("client-1", {
+      startDate: "2025-02-01",
+      endDate: "2025-03-01",
+    });
+    expect(loadPersistedSelections).toHaveBeenCalledWith(
+      {
+        startDate: "2025-02-01",
+        endDate: "2025-03-01",
+      },
+      [hourlyLine],
+    );
+    expect(getBillingCycle).not.toHaveBeenCalled();
+  });
+
+  it("passes persisted execution-window timing through billing calculation without calling the legacy client-cycle loader", async () => {
+    const engine = new BillingEngine();
+    const hourlyLine = {
+      client_contract_line_id: "hourly-line",
+      contract_line_name: "Recurring Hours",
+      contract_line_type: "Hourly",
+      currency_code: "USD",
+      billing_timing: "arrears",
+      billing_frequency: "monthly",
+      cadence_owner: "client",
+      start_date: "2025-01-01",
+      end_date: null,
+    } as any;
+    const persistedSelection = {
+      duePosition: "arrears",
+      servicePeriodStart: "2025-01-01",
+      servicePeriodEnd: "2025-01-31",
+      servicePeriodStartExclusive: "2025-01-01",
+      servicePeriodEndExclusive: "2025-02-01",
+      coverageRatio: 1,
+    };
+
+    installPersistedRecurringExecutionHarness(engine, [hourlyLine]);
+
+    const getClientContractLinesAndCycle = vi.spyOn(
+      engine as any,
+      "getClientContractLinesAndCycle",
+    );
+    const getBillingCycle = vi.spyOn(engine as any, "getBillingCycle");
+    await engine.calculateBillingForExecutionWindow(
+      "client-1",
+      "2025-02-01",
+      "2025-03-01",
+      {
+        recurringTimingSelections: {
+          "hourly-line": persistedSelection,
+        },
+        recurringTimingSelectionSource: "persisted",
+      },
+    );
+
+    expect(getClientContractLinesAndCycle).not.toHaveBeenCalled();
+    expect(
+      (engine as any).getClientContractLinesForBillingPeriod,
+    ).toHaveBeenCalledWith("client-1", {
+      startDate: "2025-02-01",
+      endDate: "2025-03-01",
+    });
+    expect(getBillingCycle).not.toHaveBeenCalled();
   });
 
   it("T150: partial rollout protection rejects a billing run when a provided recurring selection diverges from the canonical service period for a line", async () => {
