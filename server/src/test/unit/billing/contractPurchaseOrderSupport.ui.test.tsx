@@ -5,7 +5,6 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
-  buildClientScheduleDueWorkRow,
   buildServicePeriodRecurringDueWorkRow,
 } from '@alga-psa/shared/billingClients/recurringDueWork';
 import { buildRecurringServicePeriodRecord } from '../../test-utils/recurringTimingFixtures';
@@ -92,25 +91,57 @@ vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
 
 const { default: AutomaticInvoices } = await import('../../../../../packages/billing/src/components/billing-dashboard/AutomaticInvoices');
 
+function createClientRow(input: {
+  clientId: string;
+  clientName: string;
+  billingCycleId: string;
+  scheduleKey: string;
+  periodKey: string;
+}) {
+  return buildServicePeriodRecurringDueWorkRow({
+    clientId: input.clientId,
+    clientName: input.clientName,
+    billingCycleId: input.billingCycleId,
+    record: buildRecurringServicePeriodRecord({
+      cadenceOwner: 'client',
+      duePosition: 'advance',
+      sourceObligation: {
+        tenant: 'tenant-1',
+        obligationId: `${input.clientId}-line-1`,
+        obligationType: 'client_contract_line',
+        chargeFamily: 'fixed',
+      },
+      scheduleKey: input.scheduleKey,
+      periodKey: input.periodKey,
+      invoiceWindow: {
+        start: '2025-01-01',
+        end: '2025-02-01',
+        semantics: 'half_open',
+      },
+      servicePeriod: {
+        start: '2025-01-01',
+        end: '2025-02-01',
+        semantics: 'half_open',
+      },
+    }),
+  });
+}
+
 function createPeriods() {
   return [
-    buildClientScheduleDueWorkRow({
+    createClientRow({
       clientId: 'client-1',
       clientName: 'Alpha Co',
       billingCycleId: 'cycle-1',
-      servicePeriodStart: '2025-01-01',
-      servicePeriodEnd: '2025-02-01',
-      invoiceWindowStart: '2025-01-01',
-      invoiceWindowEnd: '2025-02-01',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:alpha-line-1:client:advance',
+      periodKey: 'period:2025-01-01:2025-02-01:alpha',
     }),
-    buildClientScheduleDueWorkRow({
+    createClientRow({
       clientId: 'client-2',
       clientName: 'Beta Co',
       billingCycleId: 'cycle-2',
-      servicePeriodStart: '2025-01-01',
-      servicePeriodEnd: '2025-02-01',
-      invoiceWindowStart: '2025-01-01',
-      invoiceWindowEnd: '2025-02-01',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:beta-line-1:client:advance',
+      periodKey: 'period:2025-01-01:2025-02-01:beta',
     }),
   ] as any;
 }
@@ -229,10 +260,18 @@ describe('Contract PO UI flows', () => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
         targets: [
           expect.objectContaining({
-            selectorInput: expect.objectContaining({ billingCycleId: 'cycle-1' }),
+            selectorInput: expect.objectContaining({
+              executionWindow: expect.objectContaining({
+                periodKey: 'period:2025-01-01:2025-02-01:alpha',
+              }),
+            }),
           }),
           expect.objectContaining({
-            selectorInput: expect.objectContaining({ billingCycleId: 'cycle-2' }),
+            selectorInput: expect.objectContaining({
+              executionWindow: expect.objectContaining({
+                periodKey: 'period:2025-01-01:2025-02-01:beta',
+              }),
+            }),
           }),
         ],
       });
@@ -243,7 +282,7 @@ describe('Contract PO UI flows', () => {
 
   it('T008: batch invoicing prompts upfront when overage possible and can skip overage invoices', async () => {
     getPurchaseOrderOverageForSelectionInputMock.mockImplementation(async (selectorInput: any) => {
-      if (selectorInput.billingCycleId === 'cycle-1') {
+      if (selectorInput.executionWindow?.periodKey === 'period:2025-01-01:2025-02-01:alpha') {
         return { overage_cents: 500, po_number: 'PO-1' };
       }
       return null;
@@ -282,7 +321,11 @@ describe('Contract PO UI flows', () => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
         targets: [
           expect.objectContaining({
-            selectorInput: expect.objectContaining({ billingCycleId: 'cycle-2' }),
+            selectorInput: expect.objectContaining({
+              executionWindow: expect.objectContaining({
+                periodKey: 'period:2025-01-01:2025-02-01:beta',
+              }),
+            }),
           }),
         ],
         allowPoOverage: false,
@@ -346,13 +389,17 @@ describe('Contract PO UI flows', () => {
     });
 
     const [selectorInput] = getPurchaseOrderOverageForSelectionInputMock.mock.calls[0] ?? [];
-    expect(selectorInput?.billingCycleId).toBe('cycle-1');
+    expect(selectorInput?.executionWindow?.periodKey).toBe('period:2025-01-01:2025-02-01:alpha');
 
     await waitFor(() => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
         targets: [
           expect.objectContaining({
-            selectorInput: expect.objectContaining({ billingCycleId: 'cycle-1' }),
+            selectorInput: expect.objectContaining({
+              executionWindow: expect.objectContaining({
+                periodKey: 'period:2025-01-01:2025-02-01:alpha',
+              }),
+            }),
           }),
         ],
         allowPoOverage: true,
@@ -435,7 +482,11 @@ describe('Contract PO UI flows', () => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
         targets: [
           expect.objectContaining({
-            selectorInput: expect.objectContaining({ billingCycleId: 'cycle-1' }),
+            selectorInput: expect.objectContaining({
+              executionWindow: expect.objectContaining({
+                periodKey: 'period:2025-01-01:2025-02-01:alpha',
+              }),
+            }),
           }),
         ],
         allowPoOverage: true,

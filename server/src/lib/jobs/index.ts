@@ -28,10 +28,6 @@ import { StorageService } from '../../lib/storage/StorageService';
 import logger from '@alga-psa/core/logger';
 import type { IRecurringRunExecutionWindowIdentity } from '@alga-psa/types';
 import type { IRecurringDueSelectionInput } from '@alga-psa/types';
-import {
-  buildBillingCycleDueSelectionInput,
-  buildClientBillingCycleExecutionWindow,
-} from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 // =============================================================================
 // NEW JOB RUNNER ABSTRACTION EXPORTS
@@ -208,34 +204,33 @@ export const scheduleInvoiceGeneration = async (
   runAt: Date,
   tenantId: string
 ): Promise<string | null> => {
-  return await scheduleRecurringWindowInvoiceGeneration({
-    clientId,
-    billingCycleId,
-    runAt,
-    tenantId,
-    executionWindow: buildClientBillingCycleExecutionWindow({
-      billingCycleId,
-      clientId,
-    }),
-  });
+  throw new Error(
+    `Recurring invoice scheduling no longer accepts billingCycleId ${billingCycleId}. Use scheduleRecurringWindowInvoiceGeneration with canonical selectorInput.`,
+  );
 };
 
 export const scheduleRecurringWindowInvoiceGeneration = async (input: {
   clientId: string;
   runAt: Date;
   tenantId: string;
-  billingCycleId?: string;
-  executionWindow: IRecurringRunExecutionWindowIdentity;
-  selectorInput?: IRecurringDueSelectionInput;
+  executionWindow?: IRecurringRunExecutionWindowIdentity;
+  selectorInput: IRecurringDueSelectionInput;
 }): Promise<string | null> => {
   const scheduler = await initializeScheduler();
+  const executionWindow = input.executionWindow ?? input.selectorInput.executionWindow;
+
+  if (executionWindow.identityKey !== input.selectorInput.executionWindow.identityKey) {
+    throw new Error(
+      `Recurring invoice job execution window ${executionWindow.identityKey} does not match selectorInput ${input.selectorInput.executionWindow.identityKey}.`,
+    );
+  }
+
   return await scheduler.scheduleScheduledJob<GenerateInvoiceData>(
     'generate-invoice',
     input.runAt,
     {
       clientId: input.clientId,
-      billingCycleId: input.billingCycleId,
-      executionWindow: input.executionWindow,
+      executionWindow,
       selectorInput: input.selectorInput,
       tenantId: input.tenantId,
     }

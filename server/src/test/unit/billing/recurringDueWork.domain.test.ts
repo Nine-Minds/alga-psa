@@ -45,11 +45,11 @@ describe('recurring due-work row builder', () => {
       cadenceSource: 'client_schedule',
       executionWindowKind: 'client_cadence_window',
       billingCycleId: null,
-      hasBillingCycleBridge: false,
       scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
       periodKey: 'period:2025-02-01:2025-03-01',
     });
     expect(row.selectorInput.executionWindow.identityKey).toBe(row.executionIdentityKey);
+    expect(row).not.toHaveProperty('hasBillingCycleBridge');
   });
 
   it('T002: returns stable execution identity for a contract-cadence recurring service-period row with no billing-cycle bridge', () => {
@@ -89,9 +89,9 @@ describe('recurring due-work row builder', () => {
       cadenceSource: 'contract_anniversary',
       executionWindowKind: 'contract_cadence_window',
       billingCycleId: null,
-      hasBillingCycleBridge: false,
     });
     expect(row.selectorInput.executionWindow.identityKey).toBe(row.executionIdentityKey);
+    expect(row).not.toHaveProperty('hasBillingCycleBridge');
   });
 
   it('T003: exposes cadence-source metadata, service-period labels, and invoice-window labels for client-cadence rows', () => {
@@ -215,7 +215,7 @@ describe('recurring due-work row builder', () => {
     expect(row.executionIdentityKey).toContain('client_cadence_window:client:client-1');
     expect(row.executionIdentityKey).not.toContain('cycle-2025-02');
     expect(row.billingCycleId).toBe('cycle-2025-02');
-    expect(row.hasBillingCycleBridge).toBe(true);
+    expect(row).not.toHaveProperty('hasBillingCycleBridge');
   });
 
   it('T017: hourly recurring service-period rows can participate in due-work selection once persisted charge-family support is widened', () => {
@@ -249,7 +249,7 @@ describe('recurring due-work row builder', () => {
     expect(row.executionWindowKind).toBe('contract_cadence_window');
     expect(row.selectorInput.executionWindow.contractLineId).toBe('line-hourly');
     expect(row.billingCycleId).toBeNull();
-    expect(row.hasBillingCycleBridge).toBe(false);
+    expect(row).not.toHaveProperty('hasBillingCycleBridge');
   });
 
   it('T018: usage recurring service-period rows can participate in due-work selection once persisted charge-family support is widened', () => {
@@ -283,6 +283,6 @@ describe('recurring due-work row builder', () => {
     expect(row.executionWindowKind).toBe('contract_cadence_window');
     expect(row.selectorInput.executionWindow.contractLineId).toBe('line-usage');
     expect(row.billingCycleId).toBeNull();
-    expect(row.hasBillingCycleBridge).toBe(false);
+    expect(row).not.toHaveProperty('hasBillingCycleBridge');
   });
 });

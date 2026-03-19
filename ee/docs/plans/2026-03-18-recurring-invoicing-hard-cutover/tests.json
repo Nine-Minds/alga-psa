@@ -7,7 +7,7 @@
   { "id": "T006", "description": "Unit: client-cadence recurring due-work row identity can be built without `billingCycleId`.", "implemented": true, "featureIds": ["F007", "F014", "F015"] },
   { "id": "T007", "description": "Unit: recurring execution identity keys are stable and bridge-free for client cadence.", "implemented": true, "featureIds": ["F014", "F015", "F016"] },
   { "id": "T008", "description": "Unit: recurring execution identity keys are stable and bridge-free for contract cadence.", "implemented": true, "featureIds": ["F014", "F016"] },
-  { "id": "T009", "description": "Static validation: shared recurring identity interfaces no longer require `billingCycleId` or `hasBillingCycleBridge`.", "implemented": false, "featureIds": ["F028", "F029", "F073"] },
+  { "id": "T009", "description": "Static validation: shared recurring identity interfaces no longer require `billingCycleId` or `hasBillingCycleBridge`.", "implemented": true, "featureIds": ["F028", "F029", "F073"] },
   { "id": "T010", "description": "UI: `AutomaticInvoices` can render and act on a client-cadence recurring row whose bridge metadata is null.", "implemented": false, "featureIds": ["F007", "F060", "F061"] },
   { "id": "T011", "description": "UI: `AutomaticInvoices` can render and act on a contract-cadence recurring row without any billing-cycle bridge.", "implemented": false, "featureIds": ["F006", "F060", "F061"] },
   { "id": "T012", "description": "UI: recurring preview action sends canonical selector input only and no `billing_cycle_id`.", "implemented": false, "featureIds": ["F021", "F023"] },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildBillingCycleDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
+import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import {
   buildRecurringServicePeriodDueSelectionQuery,
   selectDueRecurringServicePeriodRecords,
@@ -12,9 +12,10 @@ import {
 
 describe('recurring service period due selection', () => {
   it('T344: persisted due-selection query contract filters eligible unlinked service-period records by schedule key, exact invoice window, and lifecycle state before runtime cutover', () => {
-    const selectorInput = buildBillingCycleDueSelectionInput({
+    const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      billingCycleId: 'cycle-1',
+      scheduleKey: 'schedule:a',
+      periodKey: 'period:2025-02-01:2025-03-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
     });
@@ -135,9 +136,10 @@ describe('recurring service period due selection', () => {
   });
 
   it('T006: due-work selection excludes billed recurring service periods from the ready-to-invoice reader', () => {
-    const selectorInput = buildBillingCycleDueSelectionInput({
+    const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      billingCycleId: 'cycle-1',
+      scheduleKey: 'schedule:a',
+      periodKey: 'period:2025-02-01:2025-03-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
     });
@@ -167,9 +169,10 @@ describe('recurring service period due selection', () => {
   });
 
   it('T007: due-work selection excludes archived and superseded recurring service periods from the ready-to-invoice reader', () => {
-    const selectorInput = buildBillingCycleDueSelectionInput({
+    const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      billingCycleId: 'cycle-1',
+      scheduleKey: 'schedule:a',
+      periodKey: 'period:2025-02-01:2025-03-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
     });

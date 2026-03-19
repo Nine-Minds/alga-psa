@@ -150,7 +150,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
         }
 
         failures.push({
-          billingCycleId: selectorInput.billingCycleId ?? null,
+          billingCycleId: null,
           executionIdentityKey: executionWindow.identityKey,
           executionWindowKind: executionWindow.kind,
           errorMessage: err instanceof Error ? err.message : 'Unknown error occurred',

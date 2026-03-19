@@ -5,7 +5,6 @@ export type CadenceOwner = (typeof CADENCE_OWNERS)[number];
 
 export const RECURRING_RUN_EXECUTION_WINDOW_KINDS = [
   'client_cadence_window',
-  'billing_cycle_window',
   'contract_cadence_window',
 ] as const;
 export type RecurringRunExecutionWindowKind =
@@ -360,7 +359,6 @@ export interface IRecurringRunExecutionWindowIdentity {
   identityKey: string;
   cadenceOwner: CadenceOwner;
   clientId?: string;
-  billingCycleId?: string | null;
   scheduleKey?: string | null;
   periodKey?: string | null;
   contractId?: string | null;
@@ -480,7 +478,6 @@ export interface IRecurringDueSelectionInput {
   clientId: string;
   windowStart: ISO8601String;
   windowEnd: ISO8601String;
-  billingCycleId?: string | null;
   executionWindow: IRecurringRunExecutionWindowIdentity;
 }
 
@@ -500,7 +497,6 @@ export interface IRecurringDueWorkRow {
   clientId: string;
   clientName?: string | null;
   billingCycleId?: string | null;
-  hasBillingCycleBridge: boolean;
   servicePeriodStart: ISO8601String;
   servicePeriodEnd: ISO8601String;
   servicePeriodLabel: string;

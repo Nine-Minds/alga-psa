@@ -1,41 +1,26 @@
 import {
-  generateInvoice,
   generateInvoiceForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import type {
   IRecurringDueSelectionInput,
   IRecurringRunExecutionWindowIdentity,
 } from '@alga-psa/types';
-import { buildClientBillingCycleExecutionWindow } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 export interface GenerateInvoiceData extends Record<string, unknown> {
   tenantId: string;
   clientId: string;
-  billingCycleId?: string;
-  executionWindow?: IRecurringRunExecutionWindowIdentity;
-  selectorInput?: IRecurringDueSelectionInput;
+  executionWindow: IRecurringRunExecutionWindowIdentity;
+  selectorInput: IRecurringDueSelectionInput;
 }
 
 export async function generateInvoiceHandler(data: GenerateInvoiceData): Promise<void> {
-  const executionWindow =
-    data.executionWindow ??
-    (data.billingCycleId
-      ? buildClientBillingCycleExecutionWindow({
-          billingCycleId: data.billingCycleId,
-          clientId: data.clientId,
-        })
-      : undefined);
+  const executionWindow = data.executionWindow;
 
-  if (!data.billingCycleId && !data.selectorInput) {
-    throw new Error(
-      executionWindow
-        ? `Recurring execution window ${executionWindow.identityKey} is defined but no billingCycleId bridge was provided.`
-      : 'Recurring invoice job is missing both executionWindow and billingCycleId.',
-    );
+  if (!data.selectorInput) {
+    throw new Error('Recurring invoice job is missing selectorInput.');
   }
 
   if (
-    data.selectorInput &&
     data.selectorInput.executionWindow.identityKey !== executionWindow?.identityKey
   ) {
     throw new Error(
@@ -44,22 +29,10 @@ export async function generateInvoiceHandler(data: GenerateInvoiceData): Promise
   }
 
   try {
-    if (data.selectorInput && !data.billingCycleId) {
-      await generateInvoiceForSelectionInput(data.selectorInput);
-      return;
-    }
-
-    if (!data.billingCycleId) {
-      throw new Error(
-        `Recurring execution window ${executionWindow?.identityKey} could not resolve a billingCycleId bridge for invoice generation.`,
-      );
-    }
-
-    // Generate invoice using the existing invoice generation logic
-    await generateInvoice(data.billingCycleId);
+    await generateInvoiceForSelectionInput(data.selectorInput);
   } catch (error) {
     console.error(
-      `Failed to generate invoice for recurring execution window ${executionWindow?.identityKey ?? data.billingCycleId}:`,
+      `Failed to generate invoice for recurring execution window ${executionWindow?.identityKey}:`,
       error,
     );
     throw error; // Re-throw to let pg-boss handle the failure

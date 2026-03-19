@@ -54,7 +54,6 @@ export function buildRecurringRunExecutionIdentityKey(
     window.clientId,
     window.scheduleKey ?? undefined,
     window.periodKey ?? undefined,
-    window.billingCycleId ?? undefined,
     window.contractId ?? undefined,
     window.contractLineId ?? undefined,
     window.windowStart ?? undefined,
@@ -77,27 +76,6 @@ export function buildClientCadenceExecutionWindow(input: {
     periodKey: input.periodKey,
     windowStart: input.windowStart,
     windowEnd: input.windowEnd,
-  };
-
-  return {
-    ...baseWindow,
-    identityKey: buildRecurringRunExecutionIdentityKey(baseWindow),
-  };
-}
-
-export function buildClientBillingCycleExecutionWindow(input: {
-  billingCycleId: string;
-  clientId?: string;
-  windowStart?: string | null;
-  windowEnd?: string | null;
-}): IRecurringRunExecutionWindowIdentity {
-  const baseWindow = {
-    kind: 'billing_cycle_window' as const,
-    cadenceOwner: 'client' as const,
-    billingCycleId: input.billingCycleId,
-    clientId: input.clientId,
-    windowStart: input.windowStart ?? null,
-    windowEnd: input.windowEnd ?? null,
   };
 
   return {
@@ -147,26 +125,6 @@ export function buildRecurringRunSelectionIdentity(
     executionIdentityKeys,
     selectionKey: `recurring-run-selection:${keyBody}`,
     retryKey: `recurring-run-retry:${keyBody}`,
-  };
-}
-
-export function buildBillingCycleDueSelectionInput(input: {
-  clientId: string;
-  billingCycleId: string;
-  windowStart: string;
-  windowEnd: string;
-}): IRecurringDueSelectionInput {
-  return {
-    clientId: input.clientId,
-    billingCycleId: input.billingCycleId,
-    windowStart: input.windowStart,
-    windowEnd: input.windowEnd,
-    executionWindow: buildClientBillingCycleExecutionWindow({
-      billingCycleId: input.billingCycleId,
-      clientId: input.clientId,
-      windowStart: input.windowStart,
-      windowEnd: input.windowEnd,
-    }),
   };
 }
 

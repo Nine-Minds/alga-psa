@@ -70,6 +70,9 @@ const buildDateRangeFilter = (range: DateRange): BillingPeriodDateRange | undefi
   return { from, to };
 };
 
+const hasRecurringBillingCycleBridge = (record: { billingCycleId?: string | null }) =>
+  Boolean(record.billingCycleId);
+
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
   // Drawer removed: client details quick view no longer used here
   const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
@@ -860,7 +863,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     <Badge variant="outline">
                       {record.cadenceSource === 'contract_anniversary' ? 'Contract anniversary' : 'Client schedule'}
                     </Badge>
-                    {!record.hasBillingCycleBridge ? (
+                    {!hasRecurringBillingCycleBridge(record) ? (
                       <Badge variant="secondary">No billing cycle bridge</Badge>
                     ) : null}
                     <div className="text-xs text-muted-foreground">

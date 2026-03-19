@@ -97,6 +97,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) one API service path still appears to reference old cycle column names (`cycle_id`, `period_start`, `period_end`) and should be rechecked during cleanup.
 - (2026-03-18) bucket recurring logic still prefers `client_billing_cycles` as a resolution source.
 - (2026-03-18) accounting export still carries canonical-vs-fallback recurring provenance states.
+- (2026-03-18) Shared recurring identity types now drop bridge-only `billingCycleId` and `hasBillingCycleBridge` fields, but read-side invoice history types still legitimately expose `billing_cycle_window` and bridge metadata for historical context.
+- (2026-03-18) `generateInvoiceHandler` and `scheduleRecurringWindowInvoiceGeneration` are now selector-input-only. The old `scheduleInvoiceGeneration(...)` helper is left as an explicit hard failure if something still tries to schedule recurring work from a raw `billingCycleId`.
+- (2026-03-18) DB-backed verification for `billingInvoiceTiming.integration.test.ts` could not run locally because PostgreSQL was unavailable on `127.0.0.1:5438` / `::1:5438`. The targeted tests were skipped before any test body executed.
 
 ## Commands / Runbooks
 
@@ -110,6 +113,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/recurringBillingRunActions.static.test.ts src/test/unit/billing/recurringBillingRunWorkflowEvents.test.ts src/test/unit/billing/recurringBillingRunWindowIdentity.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.emptyResult.test.ts src/test/unit/billing/invoiceGeneration.duplicate.test.ts src/test/unit/billing/invoiceGeneration.duplicate.static.test.ts src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/recurringIdentityTypes.static.test.ts src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts src/test/unit/billing/recurringDueWork.domain.test.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/jobs/generateInvoiceHandler.recurringExecutionIdentity.test.ts src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T321|T322/T328" --coverage.enabled=false`
 
 ## Completed Items
 
@@ -132,6 +137,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) F025/F026 implemented by removing API service/controller routing through `generateInvoice(...)` or `previewInvoice(...)`, renaming the generate controller path away from billing-cycle framing, and making recurring API routes depend only on selector-input actions.
 - (2026-03-18) F027 confirmed by keeping billing-cycle-specific schedule administration surfaces separate from recurring execution APIs; no recurring preview/generate contract still depends on those schedule-only endpoints.
 - (2026-03-18) T020/T021/T022 implemented with client-cadence, contract-cadence, and static source coverage showing duplicate detection uses canonical recurring linkage before any legacy billing-cycle fallback.
+- (2026-03-18) F028/F029 implemented by removing bridge-only `billingCycleId` and `hasBillingCycleBridge` fields from shared recurring identity interfaces, dropping shared `billing_cycle_window` builders, converting shared client due-work builders to canonical schedule/period selector input, and updating recurring jobs to require canonical selector-input payloads.
+- (2026-03-18) T009 implemented with a static contract test for the shared recurring type file plus domain/UI/job coverage proving client-cadence and contract-cadence shared builders still work after the bridge fields were removed.
 
 ## Links / References
 

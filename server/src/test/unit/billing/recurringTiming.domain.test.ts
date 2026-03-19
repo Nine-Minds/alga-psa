@@ -23,7 +23,7 @@ import {
 import { DEFAULT_CADENCE_OWNER as sharedDefaultCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { RECURRING_RANGE_SEMANTICS } from '@alga-psa/types';
 import {
-  buildClientBillingCycleExecutionWindow as buildClientExecutionWindow,
+  buildClientCadenceExecutionWindow as buildClientExecutionWindow,
   buildContractCadenceExecutionWindow as buildContractExecutionWindow,
   buildRecurringRunSelectionIdentity as buildSelectionIdentity,
   listRecurringRunExecutionWindowKinds as listExecutionWindowKinds,
@@ -157,22 +157,25 @@ describe('recurring timing shared domain', () => {
 
   it('T181: recurring run execution identity supports client-cadence scheduling without relying only on a raw billingCycleId string', () => {
     const window = buildClientExecutionWindow({
-      billingCycleId: 'cycle-2025-01',
       clientId: 'client-1',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+      periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-01-01',
       windowEnd: '2025-02-01',
     });
 
     expect(window).toEqual({
-      kind: 'billing_cycle_window',
-      identityKey: 'billing_cycle_window:client:client-1:cycle-2025-01:2025-01-01:2025-02-01',
+      kind: 'client_cadence_window',
+      identityKey:
+        'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-01-01:2025-02-01:2025-01-01:2025-02-01',
       cadenceOwner: 'client',
-      billingCycleId: 'cycle-2025-01',
       clientId: 'client-1',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+      periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-01-01',
       windowEnd: '2025-02-01',
     });
-    expect(listExecutionWindowKinds([window])).toEqual(['billing_cycle_window']);
+    expect(listExecutionWindowKinds([window])).toEqual(['client_cadence_window']);
   });
 
   it('T182: recurring run execution identity supports contract-cadence windows as a first-class scheduling shape', () => {
@@ -184,8 +187,9 @@ describe('recurring timing shared domain', () => {
       windowEnd: '2025-03-08',
     });
     const clientWindow = buildClientExecutionWindow({
-      billingCycleId: 'cycle-2025-02',
       clientId: 'client-1',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+      periodKey: 'period:2025-02-01:2025-03-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
     });
@@ -201,7 +205,7 @@ describe('recurring timing shared domain', () => {
       windowEnd: '2025-03-08',
     });
     expect(listExecutionWindowKinds([clientWindow, contractWindow, contractWindow])).toEqual([
-      'billing_cycle_window',
+      'client_cadence_window',
       'contract_cadence_window',
     ]);
   });

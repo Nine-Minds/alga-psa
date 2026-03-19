@@ -359,7 +359,6 @@ describe('recurring due-work reader', () => {
       clientName: 'Zenith Health',
       cadenceSource: 'contract_anniversary',
       billingCycleId: null,
-      hasBillingCycleBridge: false,
     });
   });
 

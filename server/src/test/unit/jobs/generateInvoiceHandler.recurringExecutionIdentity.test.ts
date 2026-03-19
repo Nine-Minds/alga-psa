@@ -1,15 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const {
-  generateInvoiceMock,
   generateInvoiceForSelectionInputMock,
 } = vi.hoisted(() => ({
-  generateInvoiceMock: vi.fn(),
   generateInvoiceForSelectionInputMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({
-  generateInvoice: generateInvoiceMock,
   generateInvoiceForSelectionInput: generateInvoiceForSelectionInputMock,
 }));
 
@@ -45,16 +42,25 @@ describe('generateInvoiceHandler recurring execution identity', () => {
     });
 
     expect(generateInvoiceForSelectionInputMock).toHaveBeenCalledWith(selectorInput);
-    expect(generateInvoiceMock).not.toHaveBeenCalled();
   });
 
-  it('keeps the legacy billingCycleId bridge for client-cadence jobs', async () => {
-    await generateInvoiceHandler({
-      tenantId: 'tenant-1',
-      clientId: 'client-1',
-      billingCycleId: 'cycle-1',
-    });
-
-    expect(generateInvoiceMock).toHaveBeenCalledWith('cycle-1');
+  it('rejects recurring jobs that omit canonical selector input payloads', async () => {
+    await expect(() =>
+      generateInvoiceHandler({
+        tenantId: 'tenant-1',
+        clientId: 'client-1',
+        executionWindow: {
+          kind: 'client_cadence_window',
+          cadenceOwner: 'client',
+          clientId: 'client-1',
+          scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+          periodKey: 'period:2025-02-01:2025-03-01',
+          windowStart: '2025-02-01T00:00:00Z',
+          windowEnd: '2025-03-01T00:00:00Z',
+          identityKey:
+            'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01T00:00:00Z:2025-03-01T00:00:00Z',
+        },
+      } as any),
+    ).rejects.toThrow('Recurring invoice job is missing selectorInput.');
   });
 });

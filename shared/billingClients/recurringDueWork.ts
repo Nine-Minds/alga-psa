@@ -8,7 +8,6 @@ import type {
 } from '@alga-psa/types';
 import {
   buildClientCadenceDueSelectionInput,
-  buildBillingCycleDueSelectionInput,
   buildContractCadenceDueSelectionInput,
   buildRecurringRunSelectionIdentity,
 } from './recurringRunExecutionIdentity';
@@ -40,13 +39,15 @@ interface BuildRecurringDueWorkRowInput {
 export interface ClientScheduleDueWorkWindowInput {
   clientId: string;
   clientName?: string | null;
-  billingCycleId: string;
+  scheduleKey: string;
+  periodKey: string;
   servicePeriodStart: ISO8601String;
   servicePeriodEnd: ISO8601String;
   invoiceWindowStart?: ISO8601String;
   invoiceWindowEnd?: ISO8601String;
   asOf?: ISO8601String;
   canGenerate?: boolean;
+  billingCycleId?: string | null;
 }
 
 export interface ServicePeriodDueWorkRecordInput {
@@ -98,11 +99,7 @@ function isEarlyInvoiceWindow(windowEnd: ISO8601String, asOf?: ISO8601String) {
 function buildBaseRecurringDueWorkRow(input: BuildRecurringDueWorkRowInput): IRecurringDueWorkRow {
   const executionWindow = input.selectorInput.executionWindow;
   const identity = buildRecurringDueWorkIdentity(executionWindow);
-  const billingCycleId =
-    input.billingCycleId
-    ?? input.selectorInput.billingCycleId
-    ?? executionWindow.billingCycleId
-    ?? null;
+  const billingCycleId = input.billingCycleId ?? null;
   const invoiceWindowStart = normalizeDueWorkDate(input.selectorInput.windowStart);
   const invoiceWindowEnd = normalizeDueWorkDate(input.selectorInput.windowEnd);
   const contractId = executionWindow.contractId ?? null;
@@ -124,7 +121,6 @@ function buildBaseRecurringDueWorkRow(input: BuildRecurringDueWorkRowInput): IRe
     clientId: input.selectorInput.clientId,
     clientName: input.clientName ?? null,
     billingCycleId,
-    hasBillingCycleBridge: Boolean(billingCycleId),
     servicePeriodStart,
     servicePeriodEnd,
     servicePeriodLabel: formatRangeLabel(servicePeriodStart, servicePeriodEnd),
@@ -194,9 +190,10 @@ export function buildClientScheduleDueWorkRow(
   const servicePeriodEnd = normalizeDueWorkDate(input.servicePeriodEnd);
   const invoiceWindowStart = normalizeDueWorkDate(input.invoiceWindowStart ?? servicePeriodStart);
   const invoiceWindowEnd = normalizeDueWorkDate(input.invoiceWindowEnd ?? servicePeriodEnd);
-  const selectorInput = buildBillingCycleDueSelectionInput({
+  const selectorInput = buildClientCadenceDueSelectionInput({
     clientId: input.clientId,
-    billingCycleId: input.billingCycleId,
+    scheduleKey: input.scheduleKey,
+    periodKey: input.periodKey,
     windowStart: invoiceWindowStart,
     windowEnd: invoiceWindowEnd,
   });
@@ -209,6 +206,9 @@ export function buildClientScheduleDueWorkRow(
     clientName: input.clientName,
     canGenerate: input.canGenerate,
     asOf: input.asOf,
+    billingCycleId: input.billingCycleId ?? null,
+    scheduleKey: input.scheduleKey,
+    periodKey: input.periodKey,
   });
 }
 
