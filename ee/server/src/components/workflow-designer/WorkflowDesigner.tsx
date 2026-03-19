@@ -259,6 +259,13 @@ const stableSerialize = (value: unknown): string =>
 
 const areStructurallyEqual = (left: unknown, right: unknown): boolean => stableSerialize(left) === stableSerialize(right);
 
+const DESIGNER_FLOAT_EDGE_GUTTER = 8;
+const DESIGNER_FLOAT_PANEL_OFFSET = 16;
+const DESIGNER_FLOAT_MIN_HEIGHT = 160;
+const DESIGNER_PALETTE_WIDTH = 224;
+const DESIGNER_CENTER_LEFT_EXTRA_PADDING = 48;
+const DESIGNER_CENTER_RIGHT_EXTRA_PADDING = 24;
+
 type PipeSegment = {
   index: number;
   branch: 'then' | 'else' | 'try' | 'catch' | 'body';
@@ -1277,15 +1284,87 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       });
     };
 
+    const el = designerFloatAnchorRef.current;
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined' && el
+        ? new ResizeObserver(() => {
+            update();
+          })
+        : null;
+
+    if (resizeObserver && el) {
+      resizeObserver.observe(el);
+    }
+
     update();
     window.addEventListener('resize', update);
     window.addEventListener('scroll', update, true);
+    document.addEventListener('transitionend', update, true);
+    document.addEventListener('animationend', update, true);
     return () => {
       if (rafId != null) window.cancelAnimationFrame(rafId);
+      resizeObserver?.disconnect();
       window.removeEventListener('resize', update);
       window.removeEventListener('scroll', update, true);
+      document.removeEventListener('transitionend', update, true);
+      document.removeEventListener('animationend', update, true);
     };
   }, [activeTab]);
+
+  const designerFloatingLayout = useMemo(() => {
+    if (!designerFloatAnchorRect || typeof window === 'undefined') {
+      return null;
+    }
+
+    const top = Math.min(
+      Math.max(DESIGNER_FLOAT_EDGE_GUTTER, designerFloatAnchorRect.top + DESIGNER_FLOAT_PANEL_OFFSET),
+      window.innerHeight - DESIGNER_FLOAT_MIN_HEIGHT
+    );
+    const paletteLeft = Math.min(
+      Math.max(DESIGNER_FLOAT_EDGE_GUTTER, designerFloatAnchorRect.left + DESIGNER_FLOAT_PANEL_OFFSET),
+      window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - DESIGNER_PALETTE_WIDTH
+    );
+    const paletteRight = paletteLeft + DESIGNER_PALETTE_WIDTH;
+    const sidebarLeft = Math.min(
+      Math.max(
+        DESIGNER_FLOAT_EDGE_GUTTER,
+        designerFloatAnchorRect.right - DESIGNER_FLOAT_PANEL_OFFSET - designerSidebarWidth
+      ),
+      Math.max(DESIGNER_FLOAT_EDGE_GUTTER, window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - designerSidebarWidth)
+    );
+    const maxHeight = Math.max(
+      DESIGNER_FLOAT_MIN_HEIGHT,
+      designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + DESIGNER_FLOAT_PANEL_OFFSET) - DESIGNER_FLOAT_PANEL_OFFSET
+    );
+    const centerPaddingLeft = Math.max(
+      0,
+      paletteRight - designerFloatAnchorRect.left + DESIGNER_CENTER_LEFT_EXTRA_PADDING
+    );
+    const centerPaddingRight = Math.max(
+      0,
+      designerFloatAnchorRect.right - sidebarLeft + DESIGNER_CENTER_RIGHT_EXTRA_PADDING
+    );
+
+    return {
+      paletteStyle: {
+        position: 'fixed',
+        top,
+        left: paletteLeft,
+        maxHeight,
+      } as React.CSSProperties,
+      sidebarStyle: {
+        position: 'fixed',
+        top,
+        left: sidebarLeft,
+        width: designerSidebarWidth,
+        maxHeight,
+      } as React.CSSProperties,
+      centerScrollStyle: {
+        paddingLeft: `${centerPaddingLeft}px`,
+        paddingRight: `${centerPaddingRight}px`,
+      } as React.CSSProperties,
+    };
+  }, [designerFloatAnchorRect, designerSidebarWidth]);
 
   const stepPathMap = useMemo(() => {
     return activeDefinition ? buildStepPathMap(activeDefinition.steps as Step[]) : {};
@@ -3019,12 +3098,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             {(provided) => (
               <WorkflowDesignerPalette
                 visible={Boolean(designerFloatAnchorRect)}
-                style={designerFloatAnchorRect ? {
-                  position: 'fixed',
-                  top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
-                  left: Math.min(Math.max(8, designerFloatAnchorRect.left + 16), window.innerWidth - 8 - 224),
-                  maxHeight: Math.max(160, designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + 16) - 16)
-                } : undefined}
+                style={designerFloatingLayout?.paletteStyle}
                 search={search}
                 onSearchChange={setSearch}
                 registryError={registryError}
@@ -3084,16 +3158,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           <aside
             id="workflow-designer-sidebar-scroll"
             className={`pointer-events-auto relative max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
-            style={designerFloatAnchorRect ? {
-              position: 'fixed',
-              top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
-              left: Math.min(
-                Math.max(8, designerFloatAnchorRect.right - 16 - designerSidebarWidth),
-                Math.max(8, window.innerWidth - 8 - designerSidebarWidth)
-              ),
-              width: designerSidebarWidth,
-              maxHeight: Math.max(160, designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + 16) - 16)
-            } : undefined}
+            style={designerFloatingLayout?.sidebarStyle}
           >
             <div
               id="workflow-designer-sidebar-resize-handle"
@@ -3275,7 +3340,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           </aside>
         </div>
 
-	        <div id="workflow-designer-center-scroll" className="flex-1 min-h-0 overflow-y-auto p-6 pl-72 pr-[460px]">
+	        <div
+            id="workflow-designer-center-scroll"
+            className="flex-1 min-h-0 overflow-y-auto p-6 pl-72 pr-[460px]"
+            style={designerFloatingLayout?.centerScrollStyle}
+          >
           <div className="max-w-4xl mx-auto space-y-6">
                 {showInitialDesignerSkeleton ? (
                   <>
