@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Add phase_id?: string to ProjectStatus type in packages/types and server/src/interfaces",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.1"]
   },
   {
