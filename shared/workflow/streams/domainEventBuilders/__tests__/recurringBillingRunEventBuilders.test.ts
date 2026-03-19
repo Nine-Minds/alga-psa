@@ -30,7 +30,8 @@ describe('recurringBillingRunEventBuilders', () => {
         scheduleId: '3a109f2c-16f1-4caa-bd2f-1295aeae2f78',
         startedAt: occurredAt,
         initiatedByUserId: actorUserId,
-        executionWindowKinds: ['contract_cadence_window', 'billing_cycle_window'],
+        windowIdentity: 'mixed_execution_windows',
+        executionWindowKinds: ['contract_cadence_window', 'client_cadence_window'],
       }),
       ctx
     );
@@ -46,7 +47,8 @@ describe('recurringBillingRunEventBuilders', () => {
         invoicesCreated: 12,
         failedCount: 3,
         warnings: ['Some invoices were skipped due to validation errors.'],
-        executionWindowKinds: ['billing_cycle_window'],
+        windowIdentity: 'client_cadence_window',
+        executionWindowKinds: ['client_cadence_window'],
       }),
       ctx
     );

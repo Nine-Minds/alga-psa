@@ -31,6 +31,18 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
     - [recurringDueWork.domain.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringDueWork.domain.test.ts)
     - [recurringDueWorkReader.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts)
     - [recurringDueWorkReader.static.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringDueWorkReader.static.test.ts)
+- Recurring run-orchestration slice completed:
+  - Updated [recurringBillingRunActions.shared.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/recurringBillingRunActions.shared.ts) so recurring run targets always carry canonical `selectorInput` plus execution-window identity; client-cadence target mapping now starts from canonical due-work rows instead of billing periods.
+  - Updated [recurringBillingRunActions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/recurringBillingRunActions.ts) so recurring batch selection reads only `getAvailableRecurringDueWork(...)`, recurring runs no longer accept raw `billingCycleIds`, and execution always delegates through `generateInvoiceForSelectionInput(...)`.
+  - Updated [AutomaticInvoices.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx) so ready-table, preview, and PO-overage generate flows submit canonical recurring targets for both bridged client rows and bridge-free contract rows.
+  - Updated recurring workflow metadata in [recurringBillingRunEventBuilders.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders.ts) and [billingEventSchemas.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/shared/workflow/runtime/schemas/billingEventSchemas.ts) so run payloads use `client_cadence_window`, `contract_cadence_window`, or `mixed_execution_windows`, rather than treating billing-cycle windows as the default live recurring mode.
+  - Added/updated focused tests:
+    - [recurringBillingRunActions.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringBillingRunActions.test.ts)
+    - [recurringBillingRunActions.static.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringBillingRunActions.static.test.ts)
+    - [recurringBillingRunWorkflowEvents.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringBillingRunWorkflowEvents.test.ts)
+    - [recurringBillingRunWindowIdentity.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringBillingRunWindowIdentity.test.ts)
+    - [automaticInvoices.recurringDueWork.ui.test.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx)
+    - [contractPurchaseOrderSupport.ui.test.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx)
 
 - Billing UI/actions sweep:
   - `AutomaticInvoices`, due-work selection, recurring run target selection, history, reversal/delete, accounting export, and some authoring/storage helpers still preserve bridge-first recurring behavior.
@@ -65,7 +77,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) The due-work reader still needs later UI/run-action follow-up because some surfaces continue to use `billingCycleId` for row actions even though due-work identity is now canonical.
 - (2026-03-18) `invoiceModification.ts` still uses null/non-null `billing_cycle_id` to classify prepayment-style invoices, which will misclassify bridge-less recurring invoices.
 - (2026-03-18) `billingAndTax.ts` now sources ready recurring work only from `recurring_service_periods`, but the separate repair-gap surface still needs downstream UI handling so operators can act on missing materialization without relying on compatibility rows.
-- (2026-03-18) `recurringRunExecutionIdentity.ts` now has canonical `client_cadence_window` support, but preview/generate/run callers still need to be migrated off the legacy billing-cycle helper path.
+- (2026-03-18) recurring run selection and `AutomaticInvoices` generation now use canonical selector-input targets, but preview/generate API contracts and shared type unions still carry legacy `billing_cycle_id` or `billing_cycle_window` semantics outside the run-action surface.
 - (2026-03-18) `billingCycleActions.ts` still frames recurring history and reversal as billing-cycle operations.
 - (2026-03-18) `InvoiceService.ts` still classifies recurring invoice rows via `invoices.billing_cycle_id` in some read paths.
 - (2026-03-18) one API service path still appears to reference old cycle column names (`cycle_id`, `period_start`, `period_end`) and should be rechecked during cleanup.
@@ -81,6 +93,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/docs/recurringInvoicingHardCutover.runbook.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/recurringDueWork.domain.test.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts src/test/unit/billing/recurringDueWorkReader.static.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/recurringBillingRunActions.static.test.ts src/test/unit/billing/recurringBillingRunWorkflowEvents.test.ts src/test/unit/billing/recurringBillingRunWindowIdentity.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx --coverage.enabled=false`
 
 ## Completed Items
 
@@ -92,6 +106,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) F003/F004/F005/F006 implemented by removing recurring due-work compatibility merges, removing recurring mixed-schema fallback guards from the reader/engine, and sourcing ready recurring work only from persisted service-period rows.
 - (2026-03-18) F007/F008/F009 implemented by introducing canonical client-cadence execution identity keyed by schedule/period/window and treating `billingCycleId` only as optional read-side metadata on due-work rows.
 - (2026-03-18) T001/T002/T003/T004/T005/T006 implemented with static, integration, and unit coverage for canonical due-work sourcing and bridge-free client-cadence row identity.
+- (2026-03-18) F010/F011/F012/F013 implemented by removing raw-cycle recurring run entrypoints, selecting recurring runs from canonical due-work rows only, and making the recurring run executor invoke selector-input invoice generation for all cadence owners.
+- (2026-03-18) F014/F015 implemented at the run-target boundary by removing required `billingCycleId` from recurring run target contracts and making client-cadence run identity schedule/period/window keyed end to end.
+- (2026-03-18) T007/T008/T023/T024/T026/T027/T028 implemented with unit, integration, static, and UI coverage for bridge-free execution identity keys, canonical recurring run selection, and selector-input-only recurring run execution.
 
 ## Links / References
 

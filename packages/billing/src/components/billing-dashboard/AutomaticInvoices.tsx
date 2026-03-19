@@ -341,13 +341,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const buildRecurringRunTarget = (period: ReadyPeriod) => {
-    if (period.hasBillingCycleBridge && period.billingCycleId) {
-      return {
-        billingCycleId: period.billingCycleId,
-        executionWindow: period.executionWindow,
-      };
-    }
-
     return {
       selectorInput: period.selectorInput,
       executionWindow: period.executionWindow,
@@ -355,17 +348,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const buildRecurringRunTargetFromSelection = (selection: {
-    billingCycleId?: string | null;
     selectorInput: IRecurringDueSelectionInput;
   }) => {
-    if (selection.billingCycleId) {
-      return {
-        billingCycleId: selection.billingCycleId,
-        selectorInput: selection.selectorInput,
-        executionWindow: selection.selectorInput.executionWindow,
-      };
-    }
-
     return {
       selectorInput: selection.selectorInput,
       executionWindow: selection.selectorInput.executionWindow,
@@ -380,6 +364,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       (failure.executionIdentityKey && period.executionIdentityKey === failure.executionIdentityKey)
       || (failure.billingCycleId && period.billingCycleId === failure.billingCycleId),
     );
+
+  const resolveRecurringFailureLabel = (failure: {
+    billingCycleId?: string | null;
+    executionIdentityKey?: string;
+  }) => {
+    const period = resolveFailurePeriod(failure);
+    const clientName = period?.clientName?.trim();
+    return clientName || failure.billingCycleId || failure.executionIdentityKey || 'Recurring billing window';
+  };
 
   const handlePreviewInvoice = async (period: ReadyPeriod) => {
     setIsPreviewLoading(true);
@@ -465,13 +458,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       });
       const newErrors: { [key: string]: string } = {};
       for (const failure of runResult.failures) {
-        const period = resolveFailurePeriod(failure);
-        const clientName =
-          period?.clientName ??
-          failure.billingCycleId ??
-          failure.executionIdentityKey ??
-          'Recurring billing window';
-        newErrors[clientName] = failure.errorMessage;
+        const label = resolveRecurringFailureLabel(failure);
+        newErrors[label] = failure.errorMessage;
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -519,13 +507,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         allowPoOverage: decision === 'allow',
       });
       for (const failure of runResult.failures) {
-        const period = resolveFailurePeriod(failure);
-        const clientName =
-          period?.clientName ??
-          failure.billingCycleId ??
-          failure.executionIdentityKey ??
-          'Recurring billing window';
-        newErrors[clientName] = failure.errorMessage;
+        const label = resolveRecurringFailureLabel(failure);
+        newErrors[label] = failure.errorMessage;
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -628,7 +611,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       const runResult = await generateInvoicesAsRecurringBillingRun({
         targets: [
           buildRecurringRunTargetFromSelection({
-            billingCycleId: previewState.billingCycleId,
             selectorInput: previewState.selectorInput,
           }),
         ],
@@ -658,7 +640,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       return;
     }
 
-    const { billingCycleId, selectorInput } = poOverageSingleConfirm;
+    const { selectorInput } = poOverageSingleConfirm;
     setPoOverageSingleConfirm({
       isOpen: false,
       billingCycleId: null,
@@ -675,7 +657,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       const runResult = await generateInvoicesAsRecurringBillingRun({
         targets: [
           buildRecurringRunTargetFromSelection({
-            billingCycleId,
             selectorInput,
           }),
         ],

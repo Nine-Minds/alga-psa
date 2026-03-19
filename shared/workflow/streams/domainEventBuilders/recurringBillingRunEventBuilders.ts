@@ -1,7 +1,10 @@
 export type RecurringBillingRunSelectionMode = 'due_service_periods';
-export type RecurringBillingRunWindowIdentity = 'billing_cycle_window';
+export type RecurringBillingRunWindowIdentity =
+  | 'client_cadence_window'
+  | 'contract_cadence_window'
+  | 'mixed_execution_windows';
 export type RecurringBillingRunExecutionWindowKind =
-  | 'billing_cycle_window'
+  | 'client_cadence_window'
   | 'contract_cadence_window';
 
 function normalizeExecutionWindowKinds(
@@ -35,7 +38,7 @@ export function buildRecurringBillingRunStartedPayload(input: RecurringBillingRu
     selectionKey: input.selectionKey,
     retryKey: input.retryKey,
     selectionMode: input.selectionMode ?? 'due_service_periods',
-    windowIdentity: input.windowIdentity ?? 'billing_cycle_window',
+    windowIdentity: input.windowIdentity ?? 'mixed_execution_windows',
     executionWindowKinds: normalizeExecutionWindowKinds(input.executionWindowKinds),
   };
 }
@@ -63,7 +66,7 @@ export function buildRecurringBillingRunCompletedPayload(input: RecurringBilling
     selectionKey: input.selectionKey,
     retryKey: input.retryKey,
     selectionMode: input.selectionMode ?? 'due_service_periods',
-    windowIdentity: input.windowIdentity ?? 'billing_cycle_window',
+    windowIdentity: input.windowIdentity ?? 'mixed_execution_windows',
     executionWindowKinds: normalizeExecutionWindowKinds(input.executionWindowKinds),
   };
 }
@@ -91,7 +94,7 @@ export function buildRecurringBillingRunFailedPayload(input: RecurringBillingRun
     selectionKey: input.selectionKey,
     retryKey: input.retryKey,
     selectionMode: input.selectionMode ?? 'due_service_periods',
-    windowIdentity: input.windowIdentity ?? 'billing_cycle_window',
+    windowIdentity: input.windowIdentity ?? 'mixed_execution_windows',
     executionWindowKinds: normalizeExecutionWindowKinds(input.executionWindowKinds),
   };
 }

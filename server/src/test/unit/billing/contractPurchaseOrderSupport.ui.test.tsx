@@ -228,8 +228,12 @@ describe('Contract PO UI flows', () => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
         targets: [
-          expect.objectContaining({ billingCycleId: 'cycle-1' }),
-          expect.objectContaining({ billingCycleId: 'cycle-2' }),
+          expect.objectContaining({
+            selectorInput: expect.objectContaining({ billingCycleId: 'cycle-1' }),
+          }),
+          expect.objectContaining({
+            selectorInput: expect.objectContaining({ billingCycleId: 'cycle-2' }),
+          }),
         ],
       });
     });
@@ -276,7 +280,11 @@ describe('Contract PO UI flows', () => {
     await waitFor(() => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledTimes(1);
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        targets: [expect.objectContaining({ billingCycleId: 'cycle-2' })],
+        targets: [
+          expect.objectContaining({
+            selectorInput: expect.objectContaining({ billingCycleId: 'cycle-2' }),
+          }),
+        ],
         allowPoOverage: false,
       });
     });
@@ -342,7 +350,11 @@ describe('Contract PO UI flows', () => {
 
     await waitFor(() => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        targets: [expect.objectContaining({ billingCycleId: 'cycle-1' })],
+        targets: [
+          expect.objectContaining({
+            selectorInput: expect.objectContaining({ billingCycleId: 'cycle-1' }),
+          }),
+        ],
         allowPoOverage: true,
       });
     });
@@ -421,7 +433,11 @@ describe('Contract PO UI flows', () => {
 
     await waitFor(() => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
-        targets: [expect.objectContaining({ billingCycleId: 'cycle-1' })],
+        targets: [
+          expect.objectContaining({
+            selectorInput: expect.objectContaining({ billingCycleId: 'cycle-1' }),
+          }),
+        ],
         allowPoOverage: true,
       });
     });

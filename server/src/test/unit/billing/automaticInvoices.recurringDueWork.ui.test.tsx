@@ -346,7 +346,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
         targets: [
           expect.objectContaining({
-            billingCycleId: clientRow.billingCycleId,
+            selectorInput: clientRow.selectorInput,
             executionWindow: clientRow.executionWindow,
           }),
         ],
@@ -494,7 +494,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
             selectorInput: contractRow.selectorInput,
           }),
           expect.objectContaining({
-            billingCycleId: clientRow.billingCycleId,
+            selectorInput: clientRow.selectorInput,
             executionWindow: clientRow.executionWindow,
           }),
         ],

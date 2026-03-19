@@ -18,9 +18,11 @@ const invoiceRecurringProvenanceSchema = z.object({
   billingTimingShape: z.enum(['none', 'uniform', 'mixed']),
 });
 const recurringBillingRunSelectionModeSchema = z.enum(['due_service_periods']).describe('How recurring billing selected charge timing for the run');
-const recurringBillingRunWindowIdentitySchema = z.enum(['billing_cycle_window']).describe('How the current recurring run identified invoice windows');
+const recurringBillingRunWindowIdentitySchema = z
+  .enum(['client_cadence_window', 'contract_cadence_window', 'mixed_execution_windows'])
+  .describe('How the current recurring run identified invoice windows');
 const recurringBillingRunExecutionWindowKindSchema = z
-  .enum(['billing_cycle_window', 'contract_cadence_window'])
+  .enum(['client_cadence_window', 'contract_cadence_window'])
   .describe('Which recurring execution-window kinds the run was prepared to process');
 
 export const invoiceGeneratedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
