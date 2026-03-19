@@ -759,10 +759,11 @@ const ProjectModel = {
   getProjectTaskStatuses: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    projectId: string
+    projectId: string,
+    phaseId?: string | null
   ): Promise<(IStatus | IStandardStatus)[]> => {
     try {
-      const mappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);
+      const mappings = await ProjectModel.getEffectiveStatusMappings(knexOrTrx, tenant, projectId, phaseId);
       if (!mappings || mappings.length === 0) return [];
 
       // Batch-fetch all standard and custom statuses in 2 queries instead of 1 per mapping
@@ -792,6 +793,7 @@ const ProjectModel = {
             ? ({
                 ...standardStatus,
                 project_status_mapping_id: mapping.project_status_mapping_id,
+                phase_id: mapping.phase_id,
                 custom_name: mapping.custom_name,
                 display_order: mapping.display_order,
                 is_visible: mapping.is_visible,
@@ -804,6 +806,7 @@ const ProjectModel = {
             ? ({
                 ...customStatus,
                 project_status_mapping_id: mapping.project_status_mapping_id,
+                phase_id: mapping.phase_id,
                 custom_name: mapping.custom_name,
                 display_order: mapping.display_order,
                 is_visible: mapping.is_visible,
