@@ -10,7 +10,7 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
 import { createTestDate, createTestDateISO, dateHelpers } from '../../../../../test-utils/dateUtils';
 import { ClientContractLine } from '@alga-psa/billing/models';
-import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import { BillingEngine } from '@alga-psa/billing/services';
 import {
   createTestService,
   createFixedPlanAssignment,
@@ -101,13 +101,13 @@ vi.mock('@alga-psa/core', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+vi.mock('@alga-psa/workflows/persistence', () => ({
   WorkflowEventModel: {
     create: vi.fn(),
   },
 }));
 
-vi.mock('@alga-psa/shared/workflow/streams', () => ({
+vi.mock('@alga-psa/workflow-streams', () => ({
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),

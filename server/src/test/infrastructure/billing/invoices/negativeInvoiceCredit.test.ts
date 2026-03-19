@@ -77,13 +77,13 @@ vi.mock('@alga-psa/core', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+vi.mock('@alga-psa/workflows/persistence', () => ({
   WorkflowEventModel: {
     create: vi.fn(),
   },
 }));
 
-vi.mock('@alga-psa/shared/workflow/streams', () => ({
+vi.mock('@alga-psa/workflow-streams', () => ({
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),

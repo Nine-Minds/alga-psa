@@ -468,6 +468,13 @@
     "responseSource": {
       "clientPortal": "Empfangen über Kundenportal",
       "inboundEmail": "Empfangen über E-Mail"
+    },
+    "origin": {
+      "internal": "Intern erstellt",
+      "clientPortal": "Über Kundenportal erstellt",
+      "inboundEmail": "Über eingehende E-Mail erstellt",
+      "api": "Über API erstellt",
+      "other": "Über andere Quelle erstellt"
     }
   },
   "surveys": {
@@ -562,7 +569,8 @@
           "boards": "Boards",
           "statuses": "Status",
           "priorities": "Prioritäten",
-          "any": "Alle"
+          "any": "Alle",
+          "unrestricted": "Gilt für jedes Ticket und Projekt"
         },
         "status": {
           "enabled": "Aktiv",
@@ -753,16 +761,7 @@
       "scheduleEntryCreated": "Termineintrag erfolgreich erstellt"
     }
   },
-  "notifications": {
-    "viewAll": "Alle Benachrichtigungen anzeigen",
-    "categories": {
-      "Authentication": "Authentifizierung",
-      "Invoices": "Rechnungen",
-      "Projects": "Projekte",
-      "Tickets": "Tickets",
-      "Time Entries": "Zeiteinträge"
-    }
-  },
+  "notifications": {},
   "sessionManagement": {
     "title": "Aktive Sitzungen",
     "description": "Verwalten Sie Ihre aktiven Anmeldesitzungen auf allen Geräten (maximal 5 Sitzungen)",
@@ -873,6 +872,8 @@
     "required": "Erforderlich",
     "optional": "Optional",
     "notSpecified": "Nicht angegeben",
-    "unknown": "Unbekannt"
+    "unknown": "Unbekannt",
+    "uploading": "Hochladen...",
+    "submitting": "Absenden..."
   }
 }

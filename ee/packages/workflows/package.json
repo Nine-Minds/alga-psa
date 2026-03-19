@@ -26,6 +26,54 @@
       "import": "./src/components/*.tsx",
       "types": "./src/components/*.tsx"
     },
+    "./runtime": {
+      "import": "./src/runtime/index.ts",
+      "types": "./src/runtime/index.ts"
+    },
+    "./authoring": {
+      "import": "./src/authoring/index.ts",
+      "types": "./src/authoring/index.ts"
+    },
+    "./runtime/*": {
+      "import": "./src/runtime/*.ts",
+      "types": "./src/runtime/*.ts"
+    },
+    "./workers": {
+      "import": "./src/workers/index.ts",
+      "types": "./src/workers/index.ts"
+    },
+    "./persistence": {
+      "import": "./src/persistence/index.ts",
+      "types": "./src/persistence/index.ts"
+    },
+    "./persistence/*": {
+      "import": "./src/persistence/*.ts",
+      "types": "./src/persistence/*.ts"
+    },
+    "./bundle": {
+      "import": "./src/bundle/index.ts",
+      "types": "./src/bundle/index.ts"
+    },
+    "./bundle/*": {
+      "import": "./src/bundle/*.ts",
+      "types": "./src/bundle/*.ts"
+    },
+    "./expression-authoring": {
+      "import": "./src/expression-authoring/index.ts",
+      "types": "./src/expression-authoring/index.ts"
+    },
+    "./secrets": {
+      "import": "./dist/secrets/index.mjs",
+      "types": "./src/secrets/index.ts"
+    },
+    "./adapters/*": {
+      "import": "./src/adapters/*.ts",
+      "types": "./src/adapters/*.ts"
+    },
+    "./types": {
+      "import": "./src/types/index.ts",
+      "types": "./src/types/index.ts"
+    },
     "./forms/*": {
       "import": "./src/forms/*.ts",
       "types": "./src/forms/*.ts"
@@ -46,9 +94,12 @@
   "dependencies": {
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/event-schemas": "*",
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
     "zod": "^3.22.4",
     "zod-to-json-schema": "^3.24.6"
   },
@@ -57,6 +108,7 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
+    "@alga-psa/shared": "*",
     "typescript": "^5.3.0",
     "tsup": "^8.0.0"
   }

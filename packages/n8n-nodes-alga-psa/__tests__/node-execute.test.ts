@@ -22,6 +22,29 @@ async function executeNode(
   };
 }
 
+async function executeNodeExpectFailure(
+  items: Array<Record<string, unknown>>,
+  requestHandler: (options: any, index: number) => unknown = () => ({ data: {} }),
+) {
+  const node = new AlgaPsa();
+  const harness = createExecuteHarness({
+    items,
+    continueOnFail: false,
+    requestHandler,
+  });
+
+  try {
+    await node.execute.call(harness.context);
+  } catch (error) {
+    return {
+      error,
+      requests: harness.requests,
+    };
+  }
+
+  throw new Error('Expected execute to fail');
+}
+
 const baseCreateParams = {
   resource: 'ticket',
   ticketOperation: 'create',
@@ -30,6 +53,12 @@ const baseCreateParams = {
   board_id: { mode: 'id', value: '00000000-0000-0000-0000-000000000002' },
   status_id: { mode: 'id', value: '00000000-0000-0000-0000-000000000003' },
   priority_id: { mode: 'id', value: '00000000-0000-0000-0000-000000000004' },
+};
+
+const baseContactCreateParams = {
+  resource: 'contact',
+  contactOperation: 'create',
+  full_name: 'Ada Lovelace',
 };
 
 describe('Node execute operations', () => {
@@ -546,6 +575,333 @@ describe('Node execute operations', () => {
         () => ({ data: {} }),
       ),
     ).rejects.toBeInstanceOf(NodeOperationError);
+  });
+
+  it('T019: contact create sends POST /api/v1/contacts', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          ...baseContactCreateParams,
+          contactCreateAdditionalFields: {},
+        },
+      ],
+      () => ({ data: { contact_name_id: 'contact-1' } }),
+    );
+
+    expect(requests[0]?.method).toBe('POST');
+    expect(requests[0]?.url).toBe('https://api.algapsa.test/api/v1/contacts');
+    expect(requests[0]?.body).toEqual({ full_name: 'Ada Lovelace' });
+  });
+
+  it('T020: contact create request body includes parsed phone_numbers when provided', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          ...baseContactCreateParams,
+          contactCreateAdditionalFields: {
+            phone_numbers: JSON.stringify([
+              {
+                phone_number: '+1-206-555-0100',
+                canonical_type: 'mobile',
+                is_default: true,
+              },
+            ]),
+          },
+        },
+      ],
+      () => ({ data: { contact_name_id: 'contact-1' } }),
+    );
+
+    expect(requests[0]?.body).toMatchObject({
+      full_name: 'Ada Lovelace',
+      phone_numbers: [
+        {
+          phone_number: '+1-206-555-0100',
+          canonical_type: 'mobile',
+          is_default: true,
+        },
+      ],
+    });
+  });
+
+  it('T021: contact create unwraps a successful data wrapper into the created contact object', async () => {
+    const { output } = await executeNode(
+      [
+        {
+          ...baseContactCreateParams,
+          contactCreateAdditionalFields: {},
+        },
+      ],
+      () => ({ data: { contact_name_id: 'contact-123', full_name: 'Ada Lovelace' } }),
+    );
+
+    expect(output[0][0].json).toEqual({
+      contact_name_id: 'contact-123',
+      full_name: 'Ada Lovelace',
+    });
+  });
+
+  it('T022: contact get sends GET /api/v1/contacts/{id}', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          resource: 'contact',
+          contactOperation: 'get',
+          contactId: '00000000-0000-0000-0000-000000000101',
+        },
+      ],
+      () => ({ data: { contact_name_id: '00000000-0000-0000-0000-000000000101' } }),
+    );
+
+    expect(requests[0]?.method).toBe('GET');
+    expect(requests[0]?.url).toBe(
+      'https://api.algapsa.test/api/v1/contacts/00000000-0000-0000-0000-000000000101',
+    );
+  });
+
+  it('T023: contact get returns the normalized contact object', async () => {
+    const { output } = await executeNode(
+      [
+        {
+          resource: 'contact',
+          contactOperation: 'get',
+          contactId: '00000000-0000-0000-0000-000000000102',
+        },
+      ],
+      () => ({
+        data: {
+          contact_name_id: '00000000-0000-0000-0000-000000000102',
+          full_name: 'Grace Hopper',
+        },
+      }),
+    );
+
+    expect(output[0][0].json).toEqual({
+      contact_name_id: '00000000-0000-0000-0000-000000000102',
+      full_name: 'Grace Hopper',
+    });
+  });
+
+  it('T024: contact list sends GET /api/v1/contacts with selected pagination and filter query parameters', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          resource: 'contact',
+          contactOperation: 'list',
+          contactPage: 2,
+          contactLimit: 50,
+          contactListFilters: {
+            client_id: '00000000-0000-0000-0000-000000000103',
+            search_term: 'ada',
+            is_inactive: true,
+          },
+        },
+      ],
+      () => ({ data: [], pagination: { page: 2, total: 0 } }),
+    );
+
+    expect(requests[0]?.method).toBe('GET');
+    expect(requests[0]?.url).toBe('https://api.algapsa.test/api/v1/contacts');
+    expect(requests[0]?.qs).toEqual({
+      page: 2,
+      limit: 50,
+      client_id: '00000000-0000-0000-0000-000000000103',
+      search_term: 'ada',
+      is_inactive: true,
+    });
+  });
+
+  it('T025: contact list preserves pagination metadata in node output', async () => {
+    const { output } = await executeNode(
+      [
+        {
+          resource: 'contact',
+          contactOperation: 'list',
+          contactPage: 1,
+          contactLimit: 25,
+          contactListFilters: {},
+        },
+      ],
+      () => ({
+        data: [{ contact_name_id: 'contact-1' }],
+        pagination: { page: 1, total: 1, totalPages: 1 },
+      }),
+    );
+
+    expect(output[0][0].json).toEqual({
+      data: [{ contact_name_id: 'contact-1' }],
+      pagination: { page: 1, total: 1, totalPages: 1 },
+    });
+  });
+
+  it('T026: contact update sends PUT /api/v1/contacts/{id} with only changed fields', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          resource: 'contact',
+          contactOperation: 'update',
+          contactId: '00000000-0000-0000-0000-000000000104',
+          contactUpdateAdditionalFields: {
+            email: 'ada@example.com',
+            notes: '',
+            client_id: { mode: 'id', value: '00000000-0000-0000-0000-000000000105' },
+          },
+        },
+      ],
+      () => ({ data: { contact_name_id: '00000000-0000-0000-0000-000000000104' } }),
+    );
+
+    expect(requests[0]?.method).toBe('PUT');
+    expect(requests[0]?.url).toBe(
+      'https://api.algapsa.test/api/v1/contacts/00000000-0000-0000-0000-000000000104',
+    );
+    expect(requests[0]?.body).toEqual({
+      email: 'ada@example.com',
+      client_id: '00000000-0000-0000-0000-000000000105',
+    });
+  });
+
+  it('T027: contact update returns the normalized updated contact object', async () => {
+    const { output } = await executeNode(
+      [
+        {
+          resource: 'contact',
+          contactOperation: 'update',
+          contactId: '00000000-0000-0000-0000-000000000106',
+          contactUpdateAdditionalFields: {
+            role: 'Director of Automation',
+          },
+        },
+      ],
+      () => ({
+        data: {
+          contact_name_id: '00000000-0000-0000-0000-000000000106',
+          role: 'Director of Automation',
+        },
+      }),
+    );
+
+    expect(output[0][0].json).toEqual({
+      contact_name_id: '00000000-0000-0000-0000-000000000106',
+      role: 'Director of Automation',
+    });
+  });
+
+  it('T028: contact delete sends DELETE /api/v1/contacts/{id}', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          resource: 'contact',
+          contactOperation: 'delete',
+          contactId: '00000000-0000-0000-0000-000000000107',
+        },
+      ],
+      () => undefined,
+    );
+
+    expect(requests[0]?.method).toBe('DELETE');
+    expect(requests[0]?.url).toBe(
+      'https://api.algapsa.test/api/v1/contacts/00000000-0000-0000-0000-000000000107',
+    );
+  });
+
+  it('T029: contact delete returns a non-empty normalized success object', async () => {
+    const { output } = await executeNode(
+      [
+        {
+          resource: 'contact',
+          contactOperation: 'delete',
+          contactId: '00000000-0000-0000-0000-000000000108',
+        },
+      ],
+      () => undefined,
+    );
+
+    expect(output[0][0].json).toEqual({
+      success: true,
+      id: '00000000-0000-0000-0000-000000000108',
+      deleted: true,
+    });
+  });
+
+  it('T030: contact get rejects an empty contactId before making a request', async () => {
+    const result = await executeNodeExpectFailure([
+      {
+        resource: 'contact',
+        contactOperation: 'get',
+        contactId: '',
+      },
+    ]);
+
+    expect(result.error).toBeInstanceOf(NodeOperationError);
+    expect(result.requests).toHaveLength(0);
+  });
+
+  it('T031: contact update rejects an invalid UUID contactId before making a request', async () => {
+    const result = await executeNodeExpectFailure([
+      {
+        resource: 'contact',
+        contactOperation: 'update',
+        contactId: 'not-a-uuid',
+        contactUpdateAdditionalFields: {
+          role: 'Operations',
+        },
+      },
+    ]);
+
+    expect(result.error).toBeInstanceOf(NodeOperationError);
+    expect(result.requests).toHaveLength(0);
+  });
+
+  it('T032: contact delete rejects an invalid UUID contactId before making a request', async () => {
+    const result = await executeNodeExpectFailure([
+      {
+        resource: 'contact',
+        contactOperation: 'delete',
+        contactId: 'still-not-a-uuid',
+      },
+    ]);
+
+    expect(result.error).toBeInstanceOf(NodeOperationError);
+    expect(result.requests).toHaveLength(0);
+  });
+
+  it('T033: contact continue-on-fail returns item-level error objects while later items still execute', async () => {
+    const { output } = await executeNode(
+      [
+        {
+          resource: 'contact',
+          contactOperation: 'get',
+          contactId: '00000000-0000-0000-0000-000000000109',
+        },
+        {
+          resource: 'contact',
+          contactOperation: 'get',
+          contactId: '00000000-0000-0000-0000-000000000110',
+        },
+      ],
+      (_options, index) => {
+        if (index === 0) {
+          throw createApiError(404, 'NOT_FOUND', 'Contact not found', { contactId: 'missing' });
+        }
+
+        return { data: { contact_name_id: '00000000-0000-0000-0000-000000000110' } };
+      },
+      true,
+    );
+
+    expect(output[0]).toHaveLength(2);
+    expect(output[0][0].json).toEqual({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Contact not found',
+        details: { contactId: 'missing' },
+        statusCode: 404,
+      },
+    });
+    expect(output[0][1].json).toEqual({
+      contact_name_id: '00000000-0000-0000-0000-000000000110',
+    });
   });
 
   it('T031: Continue On Fail emits item-level errors and continues remaining items', async () => {

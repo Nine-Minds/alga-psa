@@ -39,25 +39,8 @@ import { ArrowLeft, RefreshCw, Calendar } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
-// Map URL slugs to tab labels
-const TAB_SLUG_TO_LABEL: Record<string, string> = {
-  'dashboard': 'Dashboard',
-  'policies': 'Policies',
-  'business-hours': 'Business Hours',
-  'pause-rules': 'Pause Rules',
-  'escalation': 'Escalation',
-};
-
-// Map tab labels to URL slugs
-const TAB_LABEL_TO_SLUG: Record<string, string> = {
-  'Dashboard': 'dashboard',
-  'Policies': 'policies',
-  'Business Hours': 'business-hours',
-  'Pause Rules': 'pause-rules',
-  'Escalation': 'escalation',
-};
-
-const DEFAULT_TAB = 'Dashboard';
+const DEFAULT_TAB = 'dashboard';
+const SLA_TAB_IDS = ['dashboard', 'policies', 'business-hours', 'pause-rules', 'escalation'] as const;
 
 type DateRangeOption = '7d' | '14d' | '30d' | '90d';
 
@@ -91,8 +74,10 @@ export default function SlaSettingsPage() {
 
   // Determine initial tab from URL
   const getInitialTab = (): string => {
-    if (!tabParam) return DEFAULT_TAB;
-    return TAB_SLUG_TO_LABEL[tabParam.toLowerCase()] || DEFAULT_TAB;
+    const requestedTab = tabParam?.toLowerCase();
+    return requestedTab && SLA_TAB_IDS.includes(requestedTab as typeof SLA_TAB_IDS[number])
+      ? requestedTab
+      : DEFAULT_TAB;
   };
 
   const [currentTab, setCurrentTab] = useState<string>(getInitialTab());
@@ -109,12 +94,11 @@ export default function SlaSettingsPage() {
   }, [tabParam]);
 
   // Update URL when tab changes
-  const updateURL = useCallback((tabLabel: string) => {
+  const updateURL = useCallback((tabId: string) => {
     const currentSearchParams = new URLSearchParams(window.location.search);
-    const urlSlug = TAB_LABEL_TO_SLUG[tabLabel];
 
-    if (urlSlug && tabLabel !== DEFAULT_TAB) {
-      currentSearchParams.set('tab', urlSlug);
+    if (tabId !== DEFAULT_TAB) {
+      currentSearchParams.set('tab', tabId);
     } else {
       currentSearchParams.delete('tab');
     }
@@ -198,7 +182,7 @@ export default function SlaSettingsPage() {
 
   // Fetch dashboard data when switching to Dashboard tab or when date range changes
   useEffect(() => {
-    if (currentTab === 'Dashboard') {
+    if (currentTab === 'dashboard') {
       fetchDashboardData();
     }
   }, [currentTab, dateRange, fetchDashboardData]);
@@ -342,14 +326,17 @@ export default function SlaSettingsPage() {
 
   const tabs = [
     {
+      id: 'dashboard',
       label: 'Dashboard',
       content: renderDashboardContent(),
     },
     {
+      id: 'policies',
       label: 'Policies',
       content: renderPoliciesContent(),
     },
     {
+      id: 'business-hours',
       label: 'Business Hours',
       content: (
         <Suspense fallback={
@@ -366,6 +353,7 @@ export default function SlaSettingsPage() {
       ),
     },
     {
+      id: 'pause-rules',
       label: 'Pause Rules',
       content: (
         <Suspense fallback={
@@ -382,6 +370,7 @@ export default function SlaSettingsPage() {
       ),
     },
     {
+      id: 'escalation',
       label: 'Escalation',
       content: (
         <Suspense fallback={

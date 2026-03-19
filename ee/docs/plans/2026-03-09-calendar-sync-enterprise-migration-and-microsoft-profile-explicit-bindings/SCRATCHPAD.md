@@ -1,0 +1,411 @@
+# Scratchpad — Calendar Sync Enterprise Migration and Microsoft Profile Explicit Bindings
+
+- Plan slug: `calendar-sync-enterprise-migration-and-microsoft-profile-explicit-bindings`
+- Created: `2026-03-09`
+
+## What This Is
+
+Follow-on implementation notes for moving calendar sync to EE-only ownership and finishing the Microsoft profile explicit-binding cleanup.
+
+## Decisions
+
+- (2026-03-09) Calendar sync moves to EE end to end, including integration settings, user-profile calendar settings, OAuth callbacks, runtime services, webhook maintenance, and subscriber execution.
+- (2026-03-09) Shared Microsoft profile storage remains shared infrastructure; this plan does not create a second EE-only Microsoft credential model.
+- (2026-03-09) CE Microsoft profile UX should describe and bind only MSP SSO.
+- (2026-03-09) EE Microsoft profile UX should expose MSP SSO plus email, calendar, and Teams consumers.
+- (2026-03-09) Explicit consumer bindings are the source of truth; legacy compatibility/default-consumer wording should be removed from the target design.
+- (2026-03-09) CE keeps only stub or wrapper entrypoints where route or import boundaries require them, following the existing Entra and Teams EE patterns.
+- (2026-03-09) The Entra and Teams CE-stub plus EE-delegation pattern is the precedent for calendar route wrappers: stable shared URL, `501` JSON in CE, dynamic EE delegation in enterprise.
+- (2026-03-09) Canonical unavailable copy for calendar HTTP stubs should be `Calendar sync is only available in Enterprise Edition.` so CE fails clearly before any token exchange, provider write, or sync side effect.
+- (2026-03-09) One edition-aware consumer matrix should drive both UI visibility and action-layer enforcement: CE shows only `msp_sso`; EE shows `msp_sso`, `email`, `calendar`, and `teams`.
+
+## Discoveries / Constraints
+
+- (2026-03-09) `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx` currently renders Calendar as a shared category and renders `MicrosoftIntegrationSettings` directly under `Providers`.
+- (2026-03-09) `server/src/components/settings/profile/UserProfile.tsx` currently renders a `Calendar` tab through `CalendarIntegrationsSettings`, so the EE move has to include profile settings, not just admin settings.
+- (2026-03-09) Shared calendar callback routes currently live at `server/src/app/api/auth/google/calendar/callback/route.ts` and `server/src/app/api/auth/microsoft/calendar/callback/route.ts`.
+- (2026-03-09) Shared calendar runtime code exists in both `server/src/services/calendar/*` and `packages/integrations/src/services/calendar/*`, so the extraction needs an ownership pass across settings, service exports, adapters, and maintenance jobs.
+- (2026-03-09) `packages/integrations/src/actions/integrations/microsoftActions.ts` still contains legacy compatibility semantics such as `LEGACY_MICROSOFT_PROFILE_CONSUMERS`, compatibility backfill logic, default-profile copy, and fallback-based consumer resolution.
+- (2026-03-09) `MicrosoftIntegrationSettings.tsx` still contains the legacy Microsoft consumers pane and default-compatibility copy even though the binding table and binding actions already exist.
+- (2026-03-09) The current binding table is shared at `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`, and Teams already depends on `selected_profile_id` plus binding-aware resolution.
+- (2026-03-09) There are no screenshots checked into `ee/docs` for this plan folder or nearby migration docs, so the documentation cleanup for Calendar ownership is entirely text and runbook based.
+- (2026-03-09) Calendar public entry routes also include `server/src/app/api/calendar/webhooks/google/route.ts` and `server/src/app/api/calendar/webhooks/microsoft/route.ts`, so webhook maintenance has to follow the same CE stub or EE delegator rule as OAuth callbacks.
+- (2026-03-09) Shared auth/runtime precedent already exists for Microsoft consumers:
+  - `packages/auth/src/lib/sso/mspSsoResolution.ts`
+  - `packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.ts`
+  - `ee/server/src/lib/auth/teamsMicrosoftProviderResolution.ts`
+- (2026-03-09) Existing doc-contract precedent lives at `server/src/test/unit/docs/teamsEnterpriseOnlyMigrationPlan.contract.test.ts`, which is the right pattern for validating this plan folder as it evolves.
+- (2026-03-09) `packages/integrations/src/actions/calendarActions.ts` was converted into an edition-gated EE delegator layer. Shared action entrypoints no longer import `CalendarProviderService`, `CalendarSyncService`, `CalendarWebhookMaintenanceService`, or calendar adapters directly.
+- (2026-03-09) The new EE action implementation currently lives at `packages/ee/src/lib/actions/integrations/calendarActions.ts`. It centralizes provider CRUD, manual sync, conflict resolution, sync status reads, and manual Microsoft webhook renewal behind the `@enterprise` alias boundary.
+- (2026-03-09) `server/src/lib/actions/calendarActions.ts` now exists as a stable server-side re-export of `@alga-psa/integrations/actions/calendarActions`, which keeps existing server imports/tests working while the shared package owns only the delegator boundary.
+- (2026-03-09) The initial action-delegator slice completed the CE CRUD-entrypoint cutover (`F074`); later slices then moved subscriber registration and the concrete EE runtime service tree so the live calendar runtime no longer depends on shared `server/src/services/calendar/*`.
+- (2026-03-09) `server/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts` is now a CE no-op plus EE delegator. The concrete schedule-entry subscriber moved to `packages/ee/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`, so CE startup no longer loads `CalendarSyncService` or `CalendarProviderService` through subscriber registration.
+- (2026-03-09) Because callbacks, webhooks, maintenance jobs, action entrypoints, subscriber registration, and the concrete EE service tree now all terminate under EE-owned modules, shared calendar sync services/adapters no longer have a live CE runtime entrypoint and EE no longer executes through shared `server/src/services/calendar/*` entrypoints.
+- (2026-03-09) `server/src/test/integration/calendar/scheduleAutoSync.integration.test.ts` still depends on a local PostgreSQL test instance at port `5438`; targeted validation for the subscriber slice therefore uses deterministic unit tests (`calendarSyncSubscriber.delegator.test.ts` and `calendarSyncSubscriber.ee.test.ts`) instead of the DB-backed integration suite in this environment.
+- (2026-03-09) The concrete EE calendar runtime now lives under `packages/ee/src/lib/services/calendar/*`. EE callbacks, webhook routes, maintenance jobs, subscriber registration, and action entrypoints all import that package-owned service tree through `@enterprise/lib/services/calendar/*`.
+- (2026-03-09) The EE runtime ownership contract now explicitly covers:
+  - webhook renewal and maintenance jobs through `packages/ee/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts` and `packages/ee/src/lib/services/calendar/CalendarWebhookMaintenanceService.ts`
+  - provider secret handling through `packages/ee/src/lib/services/calendar/CalendarProviderService.ts`
+  - adapter selection and provider-type branching through `packages/ee/src/lib/services/calendar/CalendarSyncService.ts` and `packages/ee/src/lib/services/calendar/CalendarWebhookProcessor.ts`
+  - background schedule-entry subscriber execution through `packages/ee/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`
+
+## Commands / Runbooks
+
+- (2026-03-09) Scaffold plan:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Calendar Sync Enterprise Migration and Microsoft Profile Explicit Bindings" --slug calendar-sync-enterprise-migration-and-microsoft-profile-explicit-bindings`
+- (2026-03-09) Validate plan:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-09-calendar-sync-enterprise-migration-and-microsoft-profile-explicit-bindings`
+- (2026-03-09) Useful discovery queries:
+  - `rg -n "CalendarIntegrationsSettings|CalendarSyncService|CalendarProviderService|microsoft_profile_consumer_bindings|LEGACY_MICROSOFT_PROFILE_CONSUMERS|MicrosoftIntegrationSettings" packages server ee`
+  - `rg -n "api/auth/.*/calendar/callback|teams|msp_sso" server packages ee`
+- (2026-03-09) Focused validation suites expected for this migration:
+  - settings/profile visibility tests for CE versus EE calendar entrypoints
+  - calendar callback and webhook wrapper tests for unavailable versus delegated behavior
+  - Microsoft profile UI contract tests for CE-only MSP SSO versus EE consumer visibility
+  - Microsoft binding action tests for edition visibility, tenant scoping, archive guards, and fallback removal
+  - ownership/package-boundary tests for shared wrapper imports versus EE runtime modules
+  - migration/documentation contract tests for shared binding schema and this plan folder
+- (2026-03-09) Latest validator result:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-09-calendar-sync-enterprise-migration-and-microsoft-profile-explicit-bindings`
+  - Result: valid (`216` features, `432` tests)
+- (2026-03-09) Focused implementation checks for the calendar visibility slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/components/integrations/IntegrationsSettingsPage.calendar.test.tsx src/test/unit/components/profile/UserProfile.calendar.contract.test.ts ../packages/integrations/src/lib/calendarAvailability.test.ts`
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/components/integrations/IntegrationsSettingsPage.teams.test.tsx`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the calendar callback delegator slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/api/calendarCallbackRoutes.delegator.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the calendar webhook delegator slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/api/calendarWebhookRoutes.delegator.test.ts src/test/unit/api/calendarCallbackRoutes.delegator.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the calendar maintenance delegator slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/api/calendarCallbackRoutes.delegator.test.ts src/test/unit/api/calendarWebhookRoutes.delegator.test.ts src/test/unit/jobs/calendarWebhookMaintenanceHandler.delegator.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the calendar action delegator slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/calendar/calendarActions.ee.contract.test.ts src/test/unit/calendar/calendarActions.sync.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the calendar subscriber delegator slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/calendar/calendarSyncSubscriber.delegator.test.ts src/test/unit/calendar/calendarSyncSubscriber.ee.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the EE runtime ownership slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/calendar/calendarActions.ceBoundary.test.ts src/test/unit/calendar/calendarActions.ee.contract.test.ts src/test/unit/calendar/calendarActions.sync.test.ts src/test/unit/calendar/calendarSyncSubscriber.delegator.test.ts src/test/unit/calendar/calendarSyncSubscriber.ee.test.ts src/test/unit/calendar/calendarRuntimeOwnership.contract.test.ts src/test/unit/api/calendarCallbackRoutes.delegator.test.ts src/test/unit/api/calendarWebhookRoutes.delegator.test.ts src/test/unit/jobs/calendarWebhookMaintenanceHandler.delegator.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+
+## Links / References
+
+- Prior Microsoft profile and Teams plan:
+  - `ee/docs/plans/2026-03-07-microsoft-teams-integration-v1/`
+- Prior Teams EE-boundary follow-on plan:
+  - `ee/docs/plans/2026-03-08-microsoft-teams-enterprise-only-migration/`
+- Current shared settings composition:
+  - `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx`
+- Current shared Microsoft profile UI:
+  - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx`
+- Current shared Microsoft actions:
+  - `packages/integrations/src/actions/integrations/microsoftActions.ts`
+- Current shared profile page:
+  - `server/src/components/settings/profile/UserProfile.tsx`
+- Current shared calendar callback routes:
+  - `server/src/app/api/auth/google/calendar/callback/route.ts`
+  - `server/src/app/api/auth/microsoft/calendar/callback/route.ts`
+- Current EE-owned calendar entrypoints after the first two migration slices:
+  - `packages/integrations/src/components/settings/integrations/CalendarEnterpriseIntegrationSettings.tsx`
+  - `@enterprise/components/settings/profile/CalendarProfileSettings`
+  - `ee/server/src/app/api/auth/google/calendar/callback/route.ts`
+  - `ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts`
+- Current shared calendar webhook routes:
+  - `server/src/app/api/calendar/webhooks/google/route.ts`
+  - `server/src/app/api/calendar/webhooks/microsoft/route.ts`
+- Current shared Teams/Entra EE-boundary precedent:
+  - `server/src/app/api/teams/_ceStub.ts`
+  - `server/src/app/api/teams/_eeDelegator.ts`
+  - `server/src/app/api/integrations/entra/_ceStub.ts`
+  - `server/src/test/unit/api/teamsRoutes.delegator.test.ts`
+  - `server/src/test/unit/api/entraRoutes.delegator.test.ts`
+
+## Open Questions
+
+- (2026-03-09) If Outlook inbound email remains CE-supported long term, decide whether its explicit Microsoft binding should stay EE-only in provider UI or move to a consumer-owned CE surface later. The current plan assumes the Microsoft profile page itself shows only MSP SSO in CE.
+
+## Calendar EE Move Inventory
+
+- Settings composition:
+  - `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx`
+  - `packages/integrations/src/components/calendar/CalendarIntegrationsSettings.tsx`
+  - `packages/integrations/src/components/calendar/index.ts`
+- User profile surface:
+  - `server/src/components/settings/profile/UserProfile.tsx`
+- Shared route wrappers that must become CE stubs or EE delegators:
+  - `server/src/app/api/auth/google/calendar/callback/route.ts`
+  - `server/src/app/api/auth/microsoft/calendar/callback/route.ts`
+  - `server/src/app/api/calendar/webhooks/google/route.ts`
+  - `server/src/app/api/calendar/webhooks/microsoft/route.ts`
+- Calendar callback delegator helpers and EE-owned route files added for the second migration slice:
+  - `server/src/app/api/auth/calendar/_ceStub.ts`
+  - `server/src/app/api/auth/calendar/_eeDelegator.ts`
+  - `packages/ee/src/app/api/auth/google/calendar/callback/route.ts`
+  - `packages/ee/src/app/api/auth/microsoft/calendar/callback/route.ts`
+  - `ee/server/src/app/api/auth/google/calendar/callback/route.ts`
+  - `ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts`
+- Calendar webhook delegator helpers and EE-owned route files added for the third migration slice:
+  - `server/src/app/api/calendar/_ceStub.ts`
+  - `server/src/app/api/calendar/_eeDelegator.ts`
+  - `packages/ee/src/app/api/calendar/webhooks/google/route.ts`
+  - `packages/ee/src/app/api/calendar/webhooks/microsoft/route.ts`
+  - `ee/server/src/app/api/calendar/webhooks/google/route.ts`
+  - `ee/server/src/app/api/calendar/webhooks/microsoft/route.ts`
+- Calendar maintenance handler boundary added for the fourth migration slice:
+  - `server/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`
+  - `packages/ee/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`
+- Calendar UI visibility and EE-entry helpers added for the first migration slice:
+  - `packages/integrations/src/lib/calendarAvailability.ts`
+  - `packages/integrations/src/components/settings/integrations/CalendarEnterpriseIntegrationSettings.tsx`
+  - `packages/ee/src/components/settings/integrations/CalendarIntegrationsSettings.tsx`
+  - `ee/server/src/components/settings/integrations/CalendarIntegrationsSettings.tsx`
+  - `packages/ee/src/components/settings/profile/CalendarProfileSettings.tsx`
+  - `ee/server/src/components/settings/profile/CalendarProfileSettings.tsx`
+- Shared runtime code that still owns live calendar behavior after the action delegator slice:
+  - `packages/integrations/src/services/calendar/CalendarProviderService.ts`
+  - `packages/integrations/src/services/calendar/CalendarSyncService.ts`
+  - `packages/integrations/src/services/calendar/CalendarWebhookProcessor.ts`
+  - `packages/integrations/src/services/calendar/CalendarWebhookMaintenanceService.ts`
+  - `packages/integrations/src/services/calendar/providers/GoogleCalendarAdapter.ts`
+  - `packages/integrations/src/services/calendar/providers/MicrosoftCalendarAdapter.ts`
+  - `packages/integrations/src/services/calendar/providers/base/BaseCalendarAdapter.ts`
+- Shared action boundary files added for the fifth migration slice:
+  - `packages/integrations/src/actions/calendarActions.ts`
+  - `packages/ee/src/lib/actions/integrations/calendarActions.ts`
+  - `server/src/lib/actions/calendarActions.ts`
+- Shared subscriber boundary files added for the sixth migration slice:
+  - `server/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`
+  - `packages/ee/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`
+- EE-owned concrete runtime modules added for the seventh migration slice:
+  - `packages/ee/src/lib/services/calendar/CalendarProviderService.ts`
+  - `packages/ee/src/lib/services/calendar/CalendarSyncService.ts`
+  - `packages/ee/src/lib/services/calendar/CalendarWebhookMaintenanceService.ts`
+  - `packages/ee/src/lib/services/calendar/CalendarWebhookProcessor.ts`
+  - `packages/ee/src/lib/services/calendar/providers/GoogleCalendarAdapter.ts`
+  - `packages/ee/src/lib/services/calendar/providers/MicrosoftCalendarAdapter.ts`
+  - `packages/ee/src/lib/services/calendar/providers/base/BaseCalendarAdapter.ts`
+  - `packages/ee/src/lib/services/CalendarProviderService.ts`
+  - `packages/ee/src/lib/services/CalendarSyncService.ts`
+- Server runtime ownership hotspots that must stop executing in CE:
+  - `server/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`
+  - `server/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`
+  - `server/src/services/CalendarProviderService.ts`
+  - `server/src/services/CalendarSyncService.ts`
+  - `server/src/services/calendar/CalendarProviderService.ts`
+  - `server/src/services/calendar/CalendarSyncService.ts`
+  - `server/src/services/calendar/CalendarWebhookMaintenanceService.ts`
+  - `server/src/services/calendar/CalendarWebhookProcessor.ts`
+- Existing tests that should evolve with the EE cutover:
+  - `server/src/test/integration/calendar/manualSync.integration.test.ts`
+  - `server/src/test/integration/calendar/scheduleAutoSync.integration.test.ts`
+  - `server/src/test/integration/calendar/webhookProcessing.integration.test.ts`
+  - `server/src/test/unit/calendar/calendarActions.sync.test.ts`
+  - `server/src/test/unit/api/calendarCallbackRoutes.delegator.test.ts`
+  - `server/src/test/unit/api/calendarWebhookRoutes.delegator.test.ts`
+  - `server/src/test/unit/jobs/calendarWebhookMaintenanceHandler.delegator.test.ts`
+
+## Microsoft Binding Cleanup Inventory
+
+- Shared UI and contracts:
+  - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx`
+  - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx`
+- Shared action and helper layer:
+  - `packages/integrations/src/actions/integrations/microsoftActions.ts`
+  - `packages/integrations/src/actions/integrations/microsoftActions.test.ts`
+  - `packages/integrations/src/actions/integrations/mspSsoDomainActions.ts`
+- Shared auth/runtime consumers that must stay binding-driven:
+  - `packages/auth/src/lib/sso/mspSsoResolution.ts`
+  - `packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.ts`
+  - `server/src/app/api/auth/msp/sso/discover/route.ts`
+  - `server/src/app/api/auth/msp/sso/resolve/route.ts`
+  - `ee/server/src/lib/auth/teamsMicrosoftProviderResolution.ts`
+- Shared schema and migration coverage:
+  - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
+  - `server/src/test/unit/migrations/microsoftConsumerBindingsMigration.test.ts`
+
+## Unsupported Edge States / Manual Cleanup
+
+- Tenants with an active Microsoft calendar provider but no explicit `calendar` binding should be backfilled or rebound during migration; the steady-state runtime should not silently fall back to `is_default`.
+- Tenants with archived Microsoft profiles still bound to active consumers should hit archive/delete guards until the binding is reassigned or cleared.
+- If Outlook email temporarily retains fallback behavior, that fallback must stay isolated and documented as migration-only cleanup work instead of appearing in CE provider UX.
+
+## Review Checklists
+
+- CE review checklist:
+  - No Calendar category remains visible in `Settings -> Integrations`.
+  - No Calendar tab remains visible in `Profile`.
+  - Calendar callback and webhook URLs fail clearly with enterprise-only behavior instead of partially executing.
+  - Microsoft profile UI shows only MSP SSO-oriented copy and one binding control.
+- EE review checklist:
+  - Calendar settings remain fully configurable from `Settings -> Integrations -> Calendar`.
+  - Profile `Calendar` tab remains functional.
+  - Calendar callback and webhook URLs delegate to EE implementations and preserve current success/error behavior.
+  - Microsoft profile UI shows MSP SSO, Email, Calendar, and Teams consumer controls.
+- Regression checklist:
+  - Teams EE cleanup remains intact; no shared Teams runtime is reintroduced.
+  - MSP SSO discovery and resolve flows still use shared Microsoft profile infrastructure.
+  - Email binding strategy is explicit and not left to compatibility-default assumptions.
+  - Archive/delete guards still block profiles that remain actively bound.
+  - Shared wrappers do not import EE files via raw filesystem-relative paths.
+- Final acceptance checklist:
+  - CE has no live calendar UI or runtime behavior.
+  - EE retains complete calendar settings, profile, callback, webhook, and runtime behavior.
+  - Microsoft consumer selection is binding-driven and edition-aware.
+  - The legacy Microsoft consumers pane and default-compatibility wording are gone.
+
+## Working Log
+
+- (2026-03-09) Strengthened the PRD with explicit continuation references to the 2026-03-07 Microsoft/Teams plan and the 2026-03-08 Teams EE-only migration plan.
+- (2026-03-09) Added calendar and Microsoft edition-contract matrices, CE stub/EE delegation rules, stable route commitments, intentional deletions, and a final acceptance matrix.
+- (2026-03-09) Expanded the scratchpad with file inventories, focused validation suites, unsupported-edge-state notes, and CE/EE/regression review checklists so the migration can proceed without reopening scope discovery.
+- (2026-03-09) Implemented the first calendar UI ownership slice:
+  - added `calendarAvailability.ts` as the shared edition-aware source for Calendar category/tab visibility and fallback resolution,
+  - moved settings Calendar rendering behind `CalendarEnterpriseIntegrationSettings`,
+  - moved profile Calendar rendering behind `@enterprise/components/settings/profile/CalendarProfileSettings`,
+  - removed CE Calendar discovery from settings navigation and profile tabs while preserving EE deep-link behavior.
+- (2026-03-09) Updated the CE `packages/ee` Calendar settings/profile stubs to return explicit enterprise-only messaging when those wrappers are imported directly, while keeping the normal CE navigation surfaces hidden.
+- (2026-03-09) Added focused tests for CE/EE Calendar visibility:
+  - helper tests for category/tab resolution,
+  - `IntegrationsSettingsPage.calendar.test.tsx` for CE hiding and EE visibility/provider copy,
+  - `UserProfile.calendar.contract.test.ts` for the profile EE wrapper boundary.
+- (2026-03-09) Implemented the calendar OAuth callback ownership slice:
+  - moved the live Google and Microsoft calendar callback handlers to `ee/server/src/app/api/auth/.../calendar/callback/route.ts`,
+  - replaced the shared callback files with CE stubs plus EE delegators,
+  - added `packages/ee` callback stubs so CE builds remain import-safe,
+  - kept the public callback URLs stable while removing live callback imports from shared route wrappers.
+- (2026-03-09) Added `calendarCallbackRoutes.delegator.test.ts` to verify:
+  - CE returns enterprise-only payloads,
+  - EE delegates the original `Request` object to the EE route handlers,
+  - shared callback wrappers no longer import `CalendarProviderService`, adapters, or OAuth-state logic directly.
+- (2026-03-09) Updated the written migration artifacts to treat Calendar as an EE-owned surface consistently:
+  - no checked-in screenshots needed refresh,
+  - the PRD/checklists describe Calendar as EE-only,
+  - the runbook references now point to the EE-owned settings/profile/callback entrypoints instead of a shared Calendar surface.
+- (2026-03-09) Implemented the calendar webhook route ownership slice:
+  - moved the live Google and Microsoft webhook handlers to `ee/server/src/app/api/calendar/webhooks/.../route.ts`,
+  - replaced the shared webhook route files with CE stubs plus EE delegators,
+  - added `packages/ee` webhook stubs so CE builds remain import-safe,
+  - kept the public webhook URLs stable while removing shared re-exports of live webhook handlers.
+- (2026-03-09) Extended the route-contract tests to verify:
+  - CE webhook routes fail clearly with enterprise-only responses,
+  - EE webhook routes delegate GET/POST/OPTIONS to EE handlers,
+  - callback tests still cover CE unavailable behavior, EE delegation, and malformed callback input through the EE implementations.
+- (2026-03-09) Confirmed middleware/auth handling has no calendar-callback-specific CE feature wiring:
+  - callback URLs still flow through the generic `/api/auth/*` boundary,
+  - webhook URLs remain explicitly unauthenticated for stable external delivery,
+  - the shared route files no longer advertise live calendar webhook codepaths as CE-owned behavior.
+- (2026-03-09) Moved the calendar webhook maintenance job entrypoint behind an edition-safe wrapper:
+  - shared `server/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts` now no-ops in CE and lazy-loads the EE implementation,
+  - live maintenance logic now resides in `packages/ee/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`,
+  - focused tests verify CE no-op behavior, EE delegation, and removal of direct maintenance-service imports from the shared handler wrapper.
+- (2026-03-09) The route runbook references now cover the full current EE ownership chain for calendar network entrypoints:
+  - callback wrappers delegate to `ee/server/src/app/api/auth/.../calendar/callback/route.ts`,
+  - webhook wrappers delegate to `ee/server/src/app/api/calendar/webhooks/.../route.ts`,
+  - maintenance job entrypoints delegate through `server/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts` into `packages/ee/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`.
+- (2026-03-09) Confirmed the Calendar settings UI boundary remains stable:
+  - `IntegrationsSettingsPage.tsx` renders `CalendarEnterpriseIntegrationSettings`,
+  - `CalendarEnterpriseIntegrationSettings.tsx` dynamically imports `@enterprise/components/settings/integrations/CalendarIntegrationsSettings`,
+  - the shared settings composition no longer imports the concrete Calendar UI directly.
+- (2026-03-09) Implemented the Microsoft explicit-binding UI and action cleanup slice:
+  - added `packages/integrations/src/lib/microsoftConsumerVisibility.ts` as the edition-aware source of truth for which Microsoft consumers are visible in CE vs EE,
+  - rewrote `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx` to remove the legacy consumers pane, render one explicit binding row per visible consumer, and make CE copy MSP-SSO-only while EE copy covers MSP SSO, email, calendar, and Teams,
+  - updated `packages/integrations/src/actions/integrations/microsoftActions.ts` so CE rejects EE-only consumer binding writes, status payloads expose edition-appropriate redirect/scope metadata, and `resolveMicrosoftProfileForConsumer()` no longer falls back to the default profile when no explicit binding exists,
+  - kept the legacy binding backfill helper in place for migration-safe rows, so the remaining fallback/backfill cleanup items stay open even though active resolution now uses binding rows.
+- (2026-03-09) Added focused Microsoft validation coverage:
+  - `packages/integrations/src/lib/microsoftConsumerVisibility.test.ts` covers CE/EE consumer visibility contracts,
+  - `packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts` covers CE write rejection, EE reassignment, archive/permission guards, and Teams explicit-binding resolution,
+  - `packages/integrations/src/actions/integrations/microsoftActions.test.ts` covers CE vs EE Microsoft status metadata shaping,
+  - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx` covers the new explicit-binding UI, CE/EE copy differences, archived-profile filtering, and removal of the legacy compatibility pane/codepath.
+- (2026-03-09) Microsoft slice validation commands:
+  - `cd server && pnpm vitest run --config vitest.config.ts ../packages/integrations/src/lib/microsoftConsumerVisibility.test.ts ../packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx ../src/test/unit/components/integrations/TeamsIntegrationSettings.contract.test.tsx`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Tightened the binding UX contract so the placeholder option remains a no-op rather than an implicit clear:
+  - `MicrosoftIntegrationSettings.contract.test.tsx` now asserts that selecting the empty option does not issue a binding write,
+  - this keeps the current product rule explicit: bindings can be reassigned from this surface, but not silently cleared.
+- (2026-03-09) Teams rebinding now invalidates stale Teams install state from the Microsoft binding action itself:
+  - `setMicrosoftConsumerBinding()` updates `teams_integrations.selected_profile_id` when the Teams consumer is rebound,
+  - active/installing Teams records are pushed back to `install_pending` and their package metadata, bot/app IDs, and last error are cleared,
+  - the focused binding test also asserts unrelated Microsoft consumer bindings remain unchanged during that rebinding.
+- (2026-03-09) Email and calendar rebinding remain on the “prompt reconnection” path in the Microsoft settings UI:
+  - the consumer descriptors now carry explicit reconnect warnings for Outlook email and Microsoft calendar,
+  - `MicrosoftIntegrationSettings.contract.test.tsx` asserts those rebind toasts mention re-authorization so the operator-facing reconnection contract stays covered.
+- (2026-03-09) Replaced the blanket Microsoft compatibility binding backfill with migration-scoped explicit binding materialization:
+  - `packages/integrations/src/actions/integrations/microsoftActions.ts` no longer exports `resolveMicrosoftProfileForCompatibility` and no longer invents `email/calendar/msp_sso` bindings from the default profile on every read,
+  - the action layer now materializes explicit binding rows only when legacy state proves a tenant needs them:
+    - `msp_sso` from active `msp_sso_tenant_login_domains`,
+    - `email` from existing `email_providers` rows with `provider_type = 'microsoft'`,
+    - `calendar` from existing `calendar_providers` rows with `provider_type = 'microsoft'`,
+  - `listMicrosoftConsumerBindings()` now returns visible consumers with `profileId: null` when no explicit binding or migration signal exists, and `resolveMicrosoftProfileForConsumer()` returns `null` in the same case instead of falling back to the default profile.
+- (2026-03-09) Updated the focused Microsoft action tests to lock in the new migration-scoped binding behavior:
+  - `microsoftConsumerBindings.test.ts` now covers migration-triggered MSP SSO/email/calendar backfill signals plus the no-legacy-signal path where all migrated consumers remain explicitly unbound,
+  - `microsoftActions.test.ts` now seeds login-domain/email/calendar legacy state only when asserting migrated consumer visibility, and verifies the public integrations action indexes expose the binding-driven API surface without the removed compatibility export.
+- (2026-03-09) Remaining Microsoft runtime gap after this slice:
+  - active MSP SSO, Outlook email, and Microsoft calendar runtime credential readers still consume mirrored tenant secrets in their own packages/routes,
+  - the binding table now drives the shared Microsoft settings/action layer and migration materialization logic, but the next slice still has to cut those runtime credential lookups over to explicit binding resolution.
+- (2026-03-09) Cut the remaining Microsoft runtime consumer resolution paths over to explicit bindings for email, calendar, and Teams:
+  - added `packages/integrations/src/lib/microsoftConsumerProfileResolution.ts` as the shared binding-aware runtime resolver for `msp_sso`, `email`, `calendar`, and `teams`,
+  - the resolver now materializes migration-safe `msp_sso`, `email`, and `calendar` bindings only from concrete legacy usage signals (`msp_sso_tenant_login_domains`, `email_providers`, `calendar_providers`) while failing closed for unsupported/no-signal cases,
+  - `packages/integrations/src/actions/email-actions/oauthActions.ts`, `server/src/app/api/auth/microsoft/callback/route.ts`, and `server/src/services/email/providers/MicrosoftGraphAdapter.ts` now resolve Microsoft email credentials from the bound profile instead of tenant/env fallbacks,
+  - `packages/ee/src/lib/actions/integrations/calendarActions.ts`, `ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts`, and `packages/ee/src/lib/services/calendar/providers/MicrosoftCalendarAdapter.ts` now resolve Microsoft calendar credentials from the bound profile instead of tenant/env fallbacks,
+  - replaced the leftover `packages/ee/src/lib/auth/teamsMicrosoftProviderResolution.ts` stub with the real binding-aware Teams resolver so the shared Teams runtime wrapper no longer collapses to `not_configured`.
+- (2026-03-09) Added focused runtime-resolution coverage for this slice:
+  - `packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts` covers email binding resolution, calendar migration backfill, and invalid-profile failure modes,
+  - `server/src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts` asserts the active email/calendar OAuth and token-refresh callers import the shared resolver and no longer reach for direct Microsoft env/tenant secrets,
+  - `packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.test.ts` now passes against the real `packages/ee` Teams resolver instead of the old stub.
+- (2026-03-09) Runtime-resolution validation commands:
+  - `cd server && pnpm vitest run --config vitest.config.ts ../packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts ../packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.test.ts src/test/unit/lib/teams/teamsRuntimeOwnership.contract.test.ts ../packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Cut the remaining MSP SSO Microsoft auth runtime off the legacy default-profile/tenant-secret path:
+  - `packages/auth/src/lib/sso/mspSsoResolution.ts` now checks Azure AD tenant readiness through `resolveMicrosoftConsumerProfileConfig(tenant, 'msp_sso')` instead of direct `microsoft_client_*` tenant secrets,
+  - `packages/auth/src/lib/nextAuthOptions.ts` now hydrates request-scoped Azure AD OAuth credentials from the bound `msp_sso` Microsoft profile when the resolver cookie selects a tenant source,
+  - this leaves Google on its existing tenant/app secret path, but removes the last active Microsoft runtime consumer-resolution path that still bypassed explicit bindings.
+- (2026-03-09) Added MSP SSO runtime regression coverage for the binding cutover:
+  - `packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts` now covers `msp_sso` binding backfill from active login domains plus the fail-closed path once no binding signal remains,
+  - `packages/auth/src/lib/sso/mspSsoResolution.test.ts` now exercises Azure AD tenant readiness through the shared binding resolver rather than direct Microsoft tenant secret reads,
+  - `packages/auth/src/lib/nextAuthOptions.mspContract.test.ts` and `server/src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts` now assert the shared auth runtime imports the binding-aware Microsoft resolver instead of direct tenant-secret lookups.
+- (2026-03-09) MSP SSO binding-runtime validation commands:
+  - `cd server && pnpm vitest run --config vitest.config.ts ../packages/auth/src/lib/sso/mspSsoResolution.test.ts ../packages/auth/src/lib/nextAuthOptions.mspContract.test.ts ../packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Reduced the Microsoft `is_default` flag back to profile-management metadata instead of a consumer-routing hint:
+  - `packages/integrations/src/lib/microsoftConsumerProfileResolution.ts` now chooses migration backfill targets by matching the mirrored legacy Microsoft credentials to an active profile, or by using the only active profile when that choice is unambiguous,
+  - `packages/integrations/src/actions/integrations/microsoftActions.ts` now reuses that candidate-selection helper for consumer binding materialization, so missing binding rows no longer attach to whichever profile happens to be marked default,
+  - the binding UI still lets admins manage a default profile for profile CRUD and legacy secret mirroring, but the per-consumer binding rows no longer label a selected profile as the routing default.
+- (2026-03-09) Added focused default-profile cleanup coverage:
+  - `packages/integrations/src/actions/integrations/microsoftActions.test.ts` now proves enterprise email binding backfill follows the mirrored legacy Microsoft credentials instead of the `is_default` flag and fails closed when no unique routing candidate remains,
+  - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx` now asserts binding summaries stop rendering `(default profile)` as part of consumer routing copy.
+- (2026-03-09) Default-profile cleanup validation commands:
+  - `cd server && pnpm vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx ../packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts ../packages/auth/src/lib/sso/mspSsoResolution.test.ts ../packages/auth/src/lib/nextAuthOptions.mspContract.test.ts src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Removed the last compatibility-default language from the shared Microsoft schema comments:
+  - `server/migrations/20260307120000_create_microsoft_profiles.cjs` now states that `is_default` is profile-management metadata only,
+  - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs` now states that each consumer chooses a profile through an explicit binding row,
+  - `server/src/test/unit/microsoft/microsoftConsumerSchema.contract.test.ts` locks in that wording so future migration edits do not reintroduce default-profile routing language.
+- (2026-03-09) Default-profile cleanup follow-up:
+  - `packages/integrations/src/actions/integrations/microsoftActions.test.ts` now pins the CE status contract to `NEXT_PUBLIC_EDITION=community` so the MSP SSO-only assertions remain deterministic regardless of the outer test environment.
+- (2026-03-09) Closed the remaining migration-coverage and artifact-contract gaps:
+  - added `server/src/test/unit/calendar/calendarMigrationOwnership.contract.test.ts` to lock in the fresh-install boundary where CE keeps shared Microsoft binding schema but omits EE calendar table-creation migrations, while EE adds the calendar migration set and concrete runtime entrypoints,
+  - added `server/src/test/unit/docs/calendarMicrosoftMigrationPlan.contract.test.ts` to keep the dated plan folder self-contained, cross-referenced, and aligned on CE/EE contracts, validation runbooks, and review/regression checklists,
+  - expanded `packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts` so migration coverage now explicitly includes tenants with no Microsoft profiles, one active profile and no binding rows, active calendar-provider alignment, and archived-profile fail-closed behavior.
+- (2026-03-09) Final broad validation command for the remaining calendar and Microsoft plan items:
+  - `cd server && pnpm exec vitest run --coverage.enabled=false ../packages/integrations/src/lib/calendarAvailability.test.ts src/test/unit/components/integrations/IntegrationsSettingsPage.calendar.test.tsx src/test/unit/components/profile/UserProfile.calendar.contract.test.ts src/test/unit/api/calendarCallbackRoutes.delegator.test.ts src/test/unit/api/calendarWebhookRoutes.delegator.test.ts src/test/unit/jobs/calendarWebhookMaintenanceHandler.delegator.test.ts src/test/unit/calendar/calendarActions.ceBoundary.test.ts src/test/unit/calendar/calendarActions.ee.contract.test.ts src/test/unit/calendar/calendarActions.sync.test.ts src/test/unit/calendar/calendarSyncSubscriber.delegator.test.ts src/test/unit/calendar/calendarSyncSubscriber.ee.test.ts src/test/unit/calendar/calendarRuntimeOwnership.contract.test.ts src/test/unit/calendar/calendarMigrationOwnership.contract.test.ts ../packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts src/test/unit/microsoft/microsoftConsumerSchema.contract.test.ts src/test/unit/docs/calendarMicrosoftMigrationPlan.contract.test.ts`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-09-calendar-sync-enterprise-migration-and-microsoft-profile-explicit-bindings`
+- (2026-03-09) Added the remaining migration-regression coverage for fresh installs, existing calendar rows, and explicit-binding edge cases:
+  - `server/src/test/unit/calendar/calendarActions.ceBoundary.test.ts` now proves fresh/community installs still fail closed for both provider listing and direct sync attempts even when a calendar provider id is supplied,
+  - `server/src/test/unit/calendar/calendarActions.ee.contract.test.ts` and `server/src/test/unit/calendar/calendarActions.sync.test.ts` now lock in that fresh enterprise installs and existing provider rows continue through the EE-owned action/service path,
+  - `packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts` now covers tenants with no Microsoft profiles, a single default profile plus legacy calendar usage, archived-profile binding guards, and invalid cross-tenant binding attempts,
+  - `packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts` keeps the archived/missing-credential runtime failure path explicit.
+- (2026-03-09) Added cleanup contracts for the last remaining unchecked migration items:
+  - `server/src/test/unit/calendar/calendarRuntimeOwnership.contract.test.ts` now ties the shared Microsoft binding-schema wording to the EE-owned calendar runtime tree,
+  - `server/src/test/unit/components/integrations/IntegrationsSettingsPage.calendar.test.tsx` now carries the explicit replacement coverage for the old CE-calendar-visible expectations.
+- (2026-03-09) Migration-regression validation commands for the final unchecked calendar/binding items:
+  - `cd server && pnpm vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts ../packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts src/test/unit/calendar/calendarActions.ceBoundary.test.ts src/test/unit/calendar/calendarActions.ee.contract.test.ts src/test/unit/calendar/calendarActions.sync.test.ts src/test/unit/calendar/calendarRuntimeOwnership.contract.test.ts src/test/unit/components/integrations/IntegrationsSettingsPage.calendar.test.tsx`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Added a dedicated plan-contract test for the migration artifacts themselves:
+  - `server/src/test/unit/docs/calendarSyncEnterpriseMigrationPlan.contract.test.ts` now locks the shared entrypoint/helper rules, calendar and Microsoft inventories, compatibility deletions, stable route commitments, CE-stub/EE-delegation documentation, the Microsoft CE/EE surface matrix, and the final acceptance matrix directly against the PRD and scratchpad.
+- (2026-03-09) Plan-contract validation commands:
+  - `cd server && pnpm vitest run --config vitest.config.ts src/test/unit/docs/calendarSyncEnterpriseMigrationPlan.contract.test.ts`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`

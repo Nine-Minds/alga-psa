@@ -1398,6 +1398,9 @@ export class ChatCompletionsService {
       lines.push(
         `- Active record: ${record.type} | id: ${record.id} | description: ${record.description}`,
       );
+      lines.push(
+        `- Reference resolution: treat phrases like "this ${record.type}" or "the current ${record.type}" as the active record above unless the user clearly says otherwise.`,
+      );
     }
 
     return lines.join('\n');
@@ -1420,6 +1423,7 @@ export class ChatCompletionsService {
         'Never include properties that are not defined for the selected endpoint; if the user mentions data that cannot be expressed with the documented schema (for example a project name when the ticket create payload does not accept project_id), acknowledge it in the natural-language response but leave it out of the API request. ' +
         'When handling documents, do not assume null file_id means empty content; in-app documents may store content in document_block_content or document_content. Call GET /api/documents/{documentId}/content to retrieve readable content before concluding the document has no data. ' +
         'Do not create or modify unrelated master data (such as categories, boards, or projects) unless the user explicitly asks for that; prefer reusing existing records you just looked up. ' +
+        'When users ask questions that could be answered by internal documentation (e.g. how-to questions, troubleshooting, process questions), proactively search the knowledge base using GET /api/v1/kb-articles with a relevant search query. If matching articles are found, read their content with GET /api/v1/kb-articles/{id}/content and use that information in your response. When creating KB articles from resolved tickets, use POST /api/v1/kb-articles/from-ticket/{ticketId} and then review the generated content. ' +
         'After a function result is provided, summarize the outcome for the user and outline any follow-up you will handle automatically.' +
         (promptContext ? `\n\n${promptContext}` : ''),
     };
@@ -2109,6 +2113,15 @@ export class ChatCompletionsService {
       }
       return encodeURIComponent(String(candidate));
     });
+
+    const unresolvedPathParams = Array.from(path.matchAll(/\{([^}]+)\}/g), (match) => match[1]).filter(
+      (segment): segment is string => typeof segment === 'string' && segment.length > 0,
+    );
+    if (unresolvedPathParams.length > 0) {
+      throw new Error(
+        `Unresolved path parameters for ${entry.id}: ${unresolvedPathParams.join(', ')}`,
+      );
+    }
 
     // Include any additional headers/query params provided explicitly
     Object.entries(headerInput).forEach(([key, value]) => {

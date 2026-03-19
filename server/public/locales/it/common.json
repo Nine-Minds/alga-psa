@@ -101,6 +101,13 @@
     "responseSource": {
       "clientPortal": "Ricevuto tramite Portale Clienti",
       "inboundEmail": "Ricevuto tramite e-mail"
+    },
+    "origin": {
+      "internal": "Creato internamente",
+      "clientPortal": "Creato tramite portale clienti",
+      "inboundEmail": "Creato tramite e-mail in entrata",
+      "api": "Creato tramite API",
+      "other": "Creato tramite altro"
     }
   },
   "time": {
@@ -470,16 +477,7 @@
       }
     }
   },
-  "notifications": {
-    "viewAll": "Visualizza tutte le notifiche",
-    "categories": {
-      "Authentication": "Autenticazione",
-      "Invoices": "Fatture",
-      "Projects": "Progetti",
-      "Tickets": "Ticket",
-      "Time Entries": "Inserimenti orari"
-    }
-  },
+  "notifications": {},
   "surveys": {
     "common": {
       "loading": "Caricamento..."
@@ -572,7 +570,8 @@
           "boards": "Bacheche",
           "statuses": "Stati",
           "priorities": "Priorità",
-          "any": "Qualsiasi"
+          "any": "Qualsiasi",
+          "unrestricted": "Si applica a ogni ticket e progetto"
         },
         "status": {
           "enabled": "Attivo",
@@ -623,26 +622,24 @@
         },
         "noTemplates": "Crea un modello di sondaggio prima di aggiungere i trigger.",
         "prioritiesMixed": "Le board selezionate utilizzano tipi di priorità diversi. Vengono mostrate tutte le priorità."
-      },
-      "response": {
-        "invalidTitle": "Sondaggio non disponibile",
-        "invalidMessage": "Questo link per il feedback non è più valido o è già stato utilizzato.",
-        "ratingPrompt": "Com'è stata la tua esperienza?",
-        "ratingAssistive": "Seleziona un punteggio da 1 a {{scale}}",
-        "commentLabel": "Commenti aggiuntivi (facoltativo)",
-        "submitButton": "Invia feedback",
-        "submitting": "Invio del feedback…",
-        "submittedTitle": "Grazie per la tua risposta!",
-        "submittedMessage": "{{thankYouText}}",
-        "retryButton": "Riprova",
-        "ratingSubmitted": "Feedback inviato",
-        "errorMessage": "Impossibile registrare il feedback. Riprova.",
-        "selectRatingError": "Seleziona un punteggio prima di inviare.",
-        "supportMessage": "Per qualsiasi domanda, contatta il tuo tecnico."
       }
     },
     "response": {
-      "pageTitle": "Sondaggio sulla soddisfazione del cliente"
+      "pageTitle": "Sondaggio sulla soddisfazione del cliente",
+      "invalidTitle": "Sondaggio non disponibile",
+      "invalidMessage": "Questo link per il feedback non è più valido o è già stato utilizzato.",
+      "ratingPrompt": "Com'è stata la tua esperienza?",
+      "ratingAssistive": "Seleziona un punteggio da 1 a {{scale}}",
+      "commentLabel": "Commenti aggiuntivi (facoltativo)",
+      "submitButton": "Invia feedback",
+      "submitting": "Invio del feedback…",
+      "submittedTitle": "Grazie per la tua risposta!",
+      "submittedMessage": "{{thankYouText}}",
+      "retryButton": "Riprova",
+      "ratingSubmitted": "Feedback inviato",
+      "errorMessage": "Impossibile registrare il feedback. Riprova.",
+      "selectRatingError": "Seleziona un punteggio prima di inviare.",
+      "supportMessage": "Per qualsiasi domanda, contatta il tuo tecnico."
     }
   },
   "availability": {
@@ -875,6 +872,8 @@
     "required": "Obbligatorio",
     "optional": "Opzionale",
     "notSpecified": "Non specificato",
-    "unknown": "Sconosciuto"
+    "unknown": "Sconosciuto",
+    "uploading": "Caricamento...",
+    "submitting": "Invio..."
   }
 }

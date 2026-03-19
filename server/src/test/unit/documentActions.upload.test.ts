@@ -162,6 +162,82 @@ describe('uploadDocument', () => {
     ]);
   });
 
+  it('prefers the ticket attachments system folder when it exists', async () => {
+    knexStub.folderRows.push(
+      {
+        tenant: 'tenant-123',
+        entity_id: 'ticket-42',
+        entity_type: 'ticket',
+        folder_path: '/Tickets',
+      },
+      {
+        tenant: 'tenant-123',
+        entity_id: 'ticket-42',
+        entity_type: 'ticket',
+        folder_path: '/Tickets/Attachments',
+      },
+    );
+
+    const formData = new FormData();
+    const file = new File([Buffer.from('hello world')], 'example.png', { type: 'image/png' });
+    formData.set('file', file);
+
+    const result = await documentActions.uploadDocument(formData, {
+      userId: 'user-1',
+      ticketId: 'ticket-42',
+    });
+
+    expect(result.success).toBe(true);
+    expect((knexStub.inserts[0] as IDocument).folder_path).toBe('/Tickets/Attachments');
+  });
+
+  it('initializes ticket default folders and stores uploads in attachments when folders were not created yet', async () => {
+    knexStub.defaultFolderRows.push(
+      {
+        tenant: 'tenant-123',
+        entity_type: 'ticket',
+        folder_name: 'Tickets',
+        folder_path: '/Tickets',
+        is_client_visible: false,
+        sort_order: 0,
+      },
+      {
+        tenant: 'tenant-123',
+        entity_type: 'ticket',
+        folder_name: 'Attachments',
+        folder_path: '/Tickets/Attachments',
+        is_client_visible: false,
+        sort_order: 1,
+      },
+    );
+
+    const formData = new FormData();
+    const file = new File([Buffer.from('hello world')], 'example.png', { type: 'image/png' });
+    formData.set('file', file);
+
+    const result = await documentActions.uploadDocument(formData, {
+      userId: 'user-1',
+      ticketId: 'ticket-42',
+    });
+
+    expect(result.success).toBe(true);
+    expect(knexStub.folderRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entity_id: 'ticket-42',
+          entity_type: 'ticket',
+          folder_path: '/Tickets',
+        }),
+        expect.objectContaining({
+          entity_id: 'ticket-42',
+          entity_type: 'ticket',
+          folder_path: '/Tickets/Attachments',
+        }),
+      ]),
+    );
+    expect((knexStub.inserts[0] as IDocument).folder_path).toBe('/Tickets/Attachments');
+  });
+
   it('returns error result when validation fails before upload', async () => {
     validateFileUploadMock.mockRejectedValue(new Error('invalid file'));
 
@@ -184,6 +260,8 @@ function createKnexStub() {
   const inserts: any[] = [];
   const updateArgs: any[] = [];
   const whereArgs: any[] = [];
+  const folderRows: any[] = [];
+  const defaultFolderRows: any[] = [];
 
   const documentsBuilder = {
     insert: vi.fn(async (record: any) => {
@@ -219,8 +297,124 @@ function createKnexStub() {
     })),
   };
 
+  const createDocumentFoldersBuilder = () => {
+    const filters: Array<{ column: string; value: any }> = [];
+    let orderByColumn: string | null = null;
+    let orderByDirection: 'asc' | 'desc' = 'asc';
+
+    const applyFilters = () => {
+      const filteredRows = folderRows.filter((row) =>
+        filters.every(({ column, value }) => row[column] === value),
+      );
+
+      if (!orderByColumn) {
+        return filteredRows;
+      }
+
+      return [...filteredRows].sort((left, right) => {
+        const leftValue = left[orderByColumn];
+        const rightValue = right[orderByColumn];
+        if (leftValue === rightValue) {
+          return 0;
+        }
+
+        const comparison = leftValue < rightValue ? -1 : 1;
+        return orderByDirection === 'asc' ? comparison : comparison * -1;
+      });
+    };
+
+    const builder: any = {
+      insert: vi.fn(async (records: any | any[]) => {
+        const rows = Array.isArray(records) ? records : [records];
+        folderRows.push(...rows);
+      }),
+      where: vi.fn((column: any, value?: any) => {
+        if (typeof column === 'object' && column !== null) {
+          for (const [key, entryValue] of Object.entries(column)) {
+            filters.push({ column: key, value: entryValue });
+          }
+        } else {
+          filters.push({ column, value });
+        }
+        return builder;
+      }),
+      andWhere: vi.fn((column: string, value: any) => {
+        filters.push({ column, value });
+        return builder;
+      }),
+      orderBy: vi.fn((column: string, direction: 'asc' | 'desc' = 'asc') => {
+        orderByColumn = column;
+        orderByDirection = direction;
+        return builder;
+      }),
+      select: vi.fn(() => builder),
+      first: vi.fn(async () => applyFilters()[0] ?? null),
+      then: (resolve: (value: any[]) => unknown) => Promise.resolve(resolve(applyFilters())),
+    };
+
+    return builder;
+  };
+
+  const createDefaultDocumentFoldersBuilder = () => {
+    const filters: Array<{ column: string; value: any }> = [];
+    const orderByColumns: Array<{ column: string; direction: 'asc' | 'desc' }> = [];
+
+    const applyFilters = () => {
+      const filteredRows = defaultFolderRows.filter((row) =>
+        filters.every(({ column, value }) => row[column] === value),
+      );
+
+      return [...filteredRows].sort((left, right) => {
+        for (const { column, direction } of orderByColumns) {
+          const leftValue = left[column];
+          const rightValue = right[column];
+          if (leftValue === rightValue) {
+            continue;
+          }
+
+          const comparison = leftValue < rightValue ? -1 : 1;
+          return direction === 'asc' ? comparison : comparison * -1;
+        }
+
+        return 0;
+      });
+    };
+
+    const builder: any = {
+      where: vi.fn((column: any, value?: any) => {
+        if (typeof column === 'object' && column !== null) {
+          for (const [key, entryValue] of Object.entries(column)) {
+            filters.push({ column: key, value: entryValue });
+          }
+        } else {
+          filters.push({ column, value });
+        }
+        return builder;
+      }),
+      andWhere: vi.fn((column: string, value: any) => {
+        filters.push({ column, value });
+        return builder;
+      }),
+      orderBy: vi.fn((column: string, direction: 'asc' | 'desc' = 'asc') => {
+        orderByColumns.push({ column, direction });
+        return builder;
+      }),
+      select: vi.fn(() => builder),
+      first: vi.fn(async () => applyFilters()[0] ?? null),
+      insert: vi.fn(async (records: any | any[]) => {
+        const rows = Array.isArray(records) ? records : [records];
+        defaultFolderRows.push(...rows);
+      }),
+      then: (resolve: (value: any[]) => unknown) => Promise.resolve(resolve(applyFilters())),
+    };
+
+    return builder;
+  };
+
   const knexFn = vi.fn((table: string) => {
     if (table === 'documents') return documentsBuilder;
+    if (table === 'document_folders') return createDocumentFoldersBuilder();
+    if (table === 'document_default_folders') return createDefaultDocumentFoldersBuilder();
     if (table === 'document_types') return documentTypesBuilder;
     if (table === 'shared_document_types') return sharedDocumentTypesBuilder;
     return defaultBuilder;
@@ -235,6 +429,8 @@ function createKnexStub() {
     inserts,
     updateArgs,
     whereArgs,
+    folderRows,
+    defaultFolderRows,
   };
 }
 

@@ -1,5 +1,8 @@
 import { defineConfig } from 'vitest/config';
+import fs from 'node:fs';
 import path from 'path';
+
+fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
 export default defineConfig({
   test: {
@@ -49,6 +52,7 @@ export default defineConfig({
       // Workspace packages are not guaranteed to be linked into node_modules in all dev/test setups.
       // Explicitly alias the most common @alga-psa/* modules to their source entrypoints for Vitest.
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../packages/core/src/index.ts') },
+      { find: /^@alga-psa\/core\/formatters$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/formatters.ts') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/logger.ts') },
       { find: /^@alga-psa\/core\/features$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/features.ts') },
       { find: /^@alga-psa\/core\/secrets$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts') },
@@ -88,6 +92,8 @@ export default defineConfig({
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../packages/ui/src/$1') },
       { find: /^@alga-psa\/billing$/, replacement: path.resolve(__dirname, '../packages/billing/src/index.ts') },
       { find: /^@alga-psa\/billing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/billing/src/$1') },
+      { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../packages/formatting/src/index.ts') },
+      { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../packages/formatting/src/$1') },
       { find: /^@alga-psa\/projects$/, replacement: path.resolve(__dirname, '../packages/projects/src/index.ts') },
       { find: /^@alga-psa\/projects\/(.*)$/, replacement: path.resolve(__dirname, '../packages/projects/src/$1') },
       { find: /^@alga-psa\/onboarding$/, replacement: path.resolve(__dirname, '../packages/onboarding/src/index.ts') },
@@ -95,11 +101,17 @@ export default defineConfig({
       { find: /^@alga-psa\/onboarding\/(.*)$/, replacement: path.resolve(__dirname, '../packages/onboarding/src/$1') },
       { find: /^@alga-psa\/tickets$/, replacement: path.resolve(__dirname, '../packages/tickets/src/index.ts') },
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tickets/src/$1') },
-      { find: /^@alga-psa\/product-extension-actions$/, replacement: path.resolve(__dirname, '../packages/product-extension-actions/src/index.ts') },
+      { find: /^@alga-psa\/product-extension-actions$/, replacement: path.resolve(__dirname, '../packages/product-extension-actions/oss/entry.ts') },
       { find: /^@alga-psa\/tags$/, replacement: path.resolve(__dirname, '../packages/tags/src/index.ts') },
       { find: /^@alga-psa\/tags\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tags/src/$1') },
       { find: /^@alga-psa\/scheduling$/, replacement: path.resolve(__dirname, '../packages/scheduling/src/index.ts') },
       { find: /^@alga-psa\/scheduling\/(.*)$/, replacement: path.resolve(__dirname, '../packages/scheduling/src/$1') },
+      { find: /^@alga-psa\/ee-calendar$/, replacement: path.resolve(__dirname, '../ee/packages/calendar/src/index.ts') },
+      { find: /^@alga-psa\/ee-calendar\/(.*)$/, replacement: path.resolve(__dirname, '../ee/packages/calendar/src/$1') },
+      { find: /^@alga-psa\/ee-microsoft-teams$/, replacement: path.resolve(__dirname, '../ee/packages/microsoft-teams/src/index.ts') },
+      { find: /^@alga-psa\/ee-microsoft-teams\/(.*)$/, replacement: path.resolve(__dirname, '../ee/packages/microsoft-teams/src/$1') },
+      { find: /^@alga-psa\/ee-stubs$/, replacement: path.resolve(__dirname, '../packages/ee/src/index.ts') },
+      { find: /^@alga-psa\/ee-stubs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/ee/src/$1') },
       { find: /^@alga-psa\/workflows$/, replacement: path.resolve(__dirname, '../ee/packages/workflows/src/index.ts') },
       { find: /^@alga-psa\/workflows\/(.*)$/, replacement: path.resolve(__dirname, '../ee/packages/workflows/src/$1') },
       { find: /^@alga-psa\/documents$/, replacement: path.resolve(__dirname, '../packages/documents/src/index.ts') },

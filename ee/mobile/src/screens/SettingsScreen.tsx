@@ -1,20 +1,25 @@
 import { useEffect, useState } from "react";
-import { Alert, Linking, Modal, Platform, Pressable, Text, View } from "react-native";
+import { Alert, Linking, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import * as Application from "expo-application";
+import { useTranslation } from "react-i18next";
 import { getAppConfig } from "../config/appConfig";
-import { colors, spacing, typography } from "../ui/theme";
+import { useTheme } from "../ui/ThemeContext";
 import { authenticateForUnlock, canUseBiometrics, getBiometricGateEnabled, setBiometricGateEnabled } from "../auth/biometricGate";
 import { useAuth } from "../auth/AuthContext";
 import { clearTicketsCache } from "../cache/ticketsCache";
+import { Avatar } from "../ui/components/Avatar";
 import { tryBuildHostedPathUrl } from "../urls/hostedUrls";
 import { getHideSensitiveNotificationsEnabled, setHideSensitiveNotificationsEnabled } from "../settings/privacyPreferences";
 import { formatAppVersion } from "./settingsDiagnostics";
+import type { Theme } from "../ui/themes";
 
 export function SettingsScreen() {
+  const { t } = useTranslation("settings");
+  const theme = useTheme();
   const config = getAppConfig();
   const { session, logout } = useAuth();
-  const version = Application.nativeApplicationVersion ?? "unknown";
-  const build = Application.nativeBuildVersion ?? "unknown";
+  const version = Application.nativeApplicationVersion ?? t("common:unknown");
+  const build = Application.nativeBuildVersion ?? t("common:unknown");
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState<boolean | null>(null);
   const [biometricError, setBiometricError] = useState<string | null>(null);
@@ -58,7 +63,7 @@ export function SettingsScreen() {
       const available = biometricAvailable ?? (await canUseBiometrics());
       setBiometricAvailable(available);
       if (!available) {
-        setBiometricError("Biometrics are not set up on this device.");
+        setBiometricError(t("security.biometricNotSetUp"));
         return;
       }
 
@@ -76,30 +81,40 @@ export function SettingsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, padding: spacing.lg, backgroundColor: colors.background }}>
-      <Text style={{ ...typography.title, marginBottom: spacing.sm, color: colors.text }}>
-        Settings
-      </Text>
-
-      <View style={{ marginTop: spacing.lg }}>
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginBottom: spacing.sm }}>
-          Account
+    <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={{ padding: theme.spacing.lg }}>
+      <View>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
+          {t("sections.account")}
         </Text>
-        <Row label="Status" value={session ? "Signed in" : "Signed out"} />
-        <View style={{ height: spacing.sm }} />
-        <Row label="User" value={session?.user?.email ?? session?.user?.name ?? session?.user?.id ?? "—"} />
-        <View style={{ height: spacing.sm }} />
-        <Row label="Tenant" value={session?.tenantId ?? "—"} />
-        <View style={{ height: spacing.sm }} />
-        <ToggleRow
-          label="Logout"
-          value="Sign out"
-          disabled={logoutBusy || !session}
+        {session ? (
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+            <Avatar
+              name={session.user?.name ?? session.user?.email ?? undefined}
+              imageUri={session.user?.avatarUrl && config.ok ? `${config.baseUrl}${session.user.avatarUrl}` : undefined}
+              authToken={session.accessToken}
+              size="lg"
+            />
+            <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
+              <Text style={{ ...theme.typography.subtitle, color: theme.colors.text }}>
+                {session.user?.name ?? session.user?.email ?? "—"}
+              </Text>
+              {session.user?.name && session.user?.email ? (
+                <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+                  {session.user.email}
+                </Text>
+              ) : null}
+              <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+                {session.tenantId ?? "—"}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+        <Pressable
           onPress={() => {
-            Alert.alert("Sign out?", "You will need to sign in again to access tickets.", [
-              { text: "Cancel", style: "cancel" },
+            Alert.alert(t("account.signOutConfirmTitle"), t("account.signOutConfirmMessage"), [
+              { text: t("common:cancel"), style: "cancel" },
               {
-                text: "Sign out",
+                text: t("account.signOut"),
                 style: "destructive",
                 onPress: () => {
                   void (async () => {
@@ -108,7 +123,7 @@ export function SettingsScreen() {
                     try {
                       await logout();
                     } catch {
-                      Alert.alert("Logout failed", "Unable to sign out. Please try again.");
+                      Alert.alert(t("account.signOutFailed"), t("account.signOutFailedMessage"));
                     } finally {
                       setLogoutBusy(false);
                     }
@@ -117,41 +132,60 @@ export function SettingsScreen() {
               },
             ]);
           }}
-        />
+          disabled={logoutBusy || !session}
+          accessibilityRole="button"
+          accessibilityLabel={t("account.signOut")}
+          style={({ pressed }) => ({
+            paddingVertical: theme.spacing.sm,
+            paddingHorizontal: theme.spacing.md,
+            backgroundColor: theme.colors.card,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: theme.borderRadius.md,
+            alignItems: "center",
+            opacity: pressed ? 0.9 : logoutBusy || !session ? 0.5 : 1,
+          })}
+        >
+          <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "600" }}>
+            {logoutBusy ? t("account.signingOut") : t("account.signOut")}
+          </Text>
+        </Pressable>
       </View>
 
-      <View style={{ marginTop: spacing.lg }}>
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginBottom: spacing.sm }}>
-          Diagnostics
+      <View style={{ marginTop: theme.spacing.lg }}>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
+          {t("sections.diagnostics")}
         </Text>
-        <Row label="App version" value={formatAppVersion(version, build)} />
-        <View style={{ height: spacing.sm }} />
-        <Row label="Platform" value={`${Platform.OS}`} />
-        <View style={{ height: spacing.sm }} />
-        <Row label="Environment" value={config.ok ? config.env : "invalid"} />
-        <View style={{ height: spacing.sm }} />
-        <Row label="Base URL" value={config.ok ? config.baseUrl : "missing"} />
+        <Row theme={theme} label={t("diagnostics.appVersion")} value={formatAppVersion(version, build)} />
+        <View style={{ height: theme.spacing.sm }} />
+        <Row theme={theme} label={t("diagnostics.platform")} value={`${Platform.OS}`} />
+        <View style={{ height: theme.spacing.sm }} />
+        <Row theme={theme} label={t("diagnostics.environment")} value={config.ok ? config.env : t("diagnostics.invalid")} />
+        <View style={{ height: theme.spacing.sm }} />
+        <Row theme={theme} label={t("diagnostics.baseUrl")} value={config.ok ? config.baseUrl : t("diagnostics.missing")} />
       </View>
 
-      <View style={{ marginTop: spacing.xl }}>
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginBottom: spacing.sm }}>
-          Security
+      <View style={{ marginTop: theme.spacing.xl }}>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
+          {t("sections.security")}
         </Text>
         <ToggleRow
-          label="Biometric lock"
-          value={biometricEnabled ? "On" : "Off"}
+          theme={theme}
+          label={t("security.biometricLock")}
+          value={biometricEnabled ? t("common:on") : t("common:off")}
           disabled={biometricBusy}
           onPress={() => void toggleBiometric()}
         />
         {biometricError ? (
-          <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.danger }}>
+          <Text style={{ ...theme.typography.caption, marginTop: theme.spacing.sm, color: theme.colors.danger }}>
             {biometricError}
           </Text>
         ) : null}
-        <View style={{ height: spacing.sm }} />
+        <View style={{ height: theme.spacing.sm }} />
         <ToggleRow
-          label="Hide sensitive notifications"
-          value={hideSensitiveEnabled ? "On" : "Off"}
+          theme={theme}
+          label={t("security.hideSensitiveNotifications")}
+          value={hideSensitiveEnabled ? t("common:on") : t("common:off")}
           disabled={hideSensitiveBusy}
           onPress={() => {
             void (async () => {
@@ -167,30 +201,31 @@ export function SettingsScreen() {
             })();
           }}
         />
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-          Applies to future push notifications.
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+          {t("security.hideSensitiveHint")}
         </Text>
       </View>
 
-      <View style={{ marginTop: spacing.xl }}>
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginBottom: spacing.sm }}>
-          Data
+      <View style={{ marginTop: theme.spacing.xl }}>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
+          {t("sections.data")}
         </Text>
         <ToggleRow
-          label="Clear cache"
-          value="Clear"
+          theme={theme}
+          label={t("data.clearCache")}
+          value={t("common:clear")}
           onPress={() => {
             Alert.alert(
-              "Clear cache?",
-              "This clears in-memory ticket caches on this device. You may need to refresh tickets after.",
+              t("data.clearCacheConfirmTitle"),
+              t("data.clearCacheConfirmMessage"),
               [
-                { text: "Cancel", style: "cancel" },
+                { text: t("common:cancel"), style: "cancel" },
                 {
-                  text: "Clear",
+                  text: t("common:clear"),
                   style: "destructive",
                   onPress: () => {
                     clearTicketsCache();
-                    Alert.alert("Cleared", "Cache cleared.");
+                    Alert.alert(t("data.cleared"), t("data.clearedMessage"));
                   },
                 },
               ],
@@ -199,24 +234,27 @@ export function SettingsScreen() {
         />
       </View>
 
-      <View style={{ marginTop: spacing.xl }}>
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginBottom: spacing.sm }}>
-          About
+      <View style={{ marginTop: theme.spacing.xl }}>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
+          {t("sections.about")}
         </Text>
         <ToggleRow
-          label="About"
-          value="Open"
+          theme={theme}
+          label={t("sections.about")}
+          value={t("common:open")}
           onPress={() => setAboutOpen(true)}
         />
-        <View style={{ height: spacing.sm }} />
+        <View style={{ height: theme.spacing.sm }} />
         <ToggleRow
-          label="Legal"
-          value="Open"
+          theme={theme}
+          label={t("legal")}
+          value={t("common:open")}
           onPress={() => setLegalOpen(true)}
         />
       </View>
 
       <AboutModal
+        theme={theme}
         visible={aboutOpen}
         onClose={() => setAboutOpen(false)}
         version={version}
@@ -224,48 +262,52 @@ export function SettingsScreen() {
         baseUrl={config.ok ? config.baseUrl : null}
       />
       <LegalModal
+        theme={theme}
         visible={legalOpen}
         onClose={() => setLegalOpen(false)}
         privacyUrl={tryBuildHostedPathUrl(config.ok ? config.baseUrl : null, "/legal/privacy")}
         termsUrl={tryBuildHostedPathUrl(config.ok ? config.baseUrl : null, "/legal/terms")}
       />
-    </View>
+    </ScrollView>
   );
 }
 
 function AboutModal({
+  theme,
   visible,
   onClose,
   version,
   build,
   baseUrl,
 }: {
+  theme: Theme;
   visible: boolean;
   onClose: () => void;
   version: string;
   build: string;
   baseUrl: string | null;
 }) {
+  const { t } = useTranslation("settings");
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, padding: spacing.lg, backgroundColor: colors.background }}>
-        <Text style={{ ...typography.title, color: colors.text }}>About</Text>
-        <View style={{ height: spacing.md }} />
-        <Row label="App" value="Alga PSA Mobile" />
-        <View style={{ height: spacing.sm }} />
-        <Row label="Version" value={`${version} (${build})`} />
-        <View style={{ height: spacing.sm }} />
-        <Row label="Base URL" value={baseUrl ?? "—"} />
+      <View style={{ flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background }}>
+        <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{t("aboutModal.title")}</Text>
+        <View style={{ height: theme.spacing.md }} />
+        <Row theme={theme} label={t("aboutModal.app")} value={t("aboutModal.appName")} />
+        <View style={{ height: theme.spacing.sm }} />
+        <Row theme={theme} label={t("aboutModal.version")} value={t("aboutModal.versionValue", { version, build })} />
+        <View style={{ height: theme.spacing.sm }} />
+        <Row theme={theme} label={t("aboutModal.baseUrl")} value={baseUrl ?? "—"} />
 
         <View style={{ flex: 1 }} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close about"
+          accessibilityLabel={t("aboutModal.closeAccessibility")}
           onPress={onClose}
           style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
         >
-          <Text style={{ ...typography.body, color: colors.primary, fontWeight: "700" }}>
-            Close
+          <Text style={{ ...theme.typography.body, color: theme.colors.primary, fontWeight: "700" }}>
+            {t("common:close")}
           </Text>
         </Pressable>
       </View>
@@ -274,11 +316,13 @@ function AboutModal({
 }
 
 function LegalModal({
+  theme,
   visible,
   onClose,
   privacyUrl,
   termsUrl,
 }: {
+  theme: Theme;
   visible: boolean;
   onClose: () => void;
   privacyUrl: string | null;
@@ -289,25 +333,29 @@ function LegalModal({
     void Linking.openURL(url);
   };
 
+  const { t } = useTranslation("settings");
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, padding: spacing.lg, backgroundColor: colors.background }}>
-        <Text style={{ ...typography.title, color: colors.text }}>Legal</Text>
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-          Privacy policy and terms are currently hosted on the Alga web app.
+      <View style={{ flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background }}>
+        <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{t("legalModal.title")}</Text>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+          {t("legalModal.subtitle")}
         </Text>
 
-        <View style={{ marginTop: spacing.lg }}>
+        <View style={{ marginTop: theme.spacing.lg }}>
           <ToggleRow
-            label="Privacy policy"
-            value={privacyUrl ? "Open" : "Unavailable"}
+            theme={theme}
+            label={t("legalModal.privacyPolicy")}
+            value={privacyUrl ? t("common:open") : t("common:unavailable")}
             disabled={!privacyUrl}
             onPress={() => openUrl(privacyUrl)}
           />
-          <View style={{ height: spacing.sm }} />
+          <View style={{ height: theme.spacing.sm }} />
           <ToggleRow
-            label="Terms of service"
-            value={termsUrl ? "Open" : "Unavailable"}
+            theme={theme}
+            label={t("legalModal.termsOfService")}
+            value={termsUrl ? t("common:open") : t("common:unavailable")}
             disabled={!termsUrl}
             onPress={() => openUrl(termsUrl)}
           />
@@ -316,12 +364,12 @@ function LegalModal({
         <View style={{ flex: 1 }} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close legal"
+          accessibilityLabel={t("legalModal.closeAccessibility")}
           onPress={onClose}
           style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
         >
-          <Text style={{ ...typography.body, color: colors.primary, fontWeight: "700" }}>
-            Close
+          <Text style={{ ...theme.typography.body, color: theme.colors.primary, fontWeight: "700" }}>
+            {t("common:close")}
           </Text>
         </Pressable>
       </View>
@@ -329,32 +377,34 @@ function LegalModal({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ theme, label, value }: { theme: Theme; label: string; value: string }) {
   return (
     <View
       style={{
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
-        backgroundColor: colors.card,
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
+        backgroundColor: theme.colors.card,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: theme.colors.border,
         borderRadius: 10,
       }}
       accessibilityRole="text"
       accessibilityLabel={`${label}: ${value}`}
     >
-      <Text style={{ ...typography.caption, color: colors.mutedText }}>{label}</Text>
-      <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>{value}</Text>
+      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{label}</Text>
+      <Text style={{ ...theme.typography.body, color: theme.colors.text, marginTop: 2 }}>{value}</Text>
     </View>
   );
 }
 
 function ToggleRow({
+  theme,
   label,
   value,
   disabled,
   onPress,
 }: {
+  theme: Theme;
   label: string;
   value: string;
   disabled?: boolean;
@@ -367,17 +417,17 @@ function ToggleRow({
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}`}
       style={({ pressed }) => ({
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
-        backgroundColor: colors.card,
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
+        backgroundColor: theme.colors.card,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: theme.colors.border,
         borderRadius: 10,
         opacity: pressed && !disabled ? 0.95 : 1,
       })}
     >
-      <Text style={{ ...typography.caption, color: colors.mutedText }}>{label}</Text>
-      <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>{value}</Text>
+      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{label}</Text>
+      <Text style={{ ...theme.typography.body, color: theme.colors.text, marginTop: 2 }}>{value}</Text>
     </Pressable>
   );
 }

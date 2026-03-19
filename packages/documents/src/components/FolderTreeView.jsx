@@ -1,10 +1,11 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { getFolderTree, deleteFolder } from '../actions/documentActions';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 export default function FolderTreeView({ onFolderSelect, selectedFolder, onFolderDeleted, isCollapsed = false, onToggleCollapse }) {
     const [folderTree, setFolderTree] = useState([]);
     const [expandedFolders, setExpandedFolders] = useState(new Set());
@@ -133,9 +134,7 @@ export default function FolderTreeView({ onFolderSelect, selectedFolder, onFolde
         <h3 className="text-sm font-semibold">
           {t('documents.folders.title', 'Folders')}
         </h3>
-        {onToggleCollapse && (<button onClick={onToggleCollapse} className="p-1 hover:bg-gray-100 rounded" title={t('documents.folders.collapse', 'Collapse folders')}>
-            <ChevronLeft className="w-4 h-4"/>
-          </button>)}
+        {onToggleCollapse && (<CollapseToggleButton id="documents-collapse-folders-button" isCollapsed={false} collapsedLabel={t('documents.folders.expand', 'Show folders')} expandedLabel={t('documents.folders.collapse', 'Collapse folders')} expandDirection="right" onClick={onToggleCollapse}/>)}
       </div>
       <div className="flex-1 overflow-y-auto">
 

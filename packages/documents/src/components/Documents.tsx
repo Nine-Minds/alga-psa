@@ -12,6 +12,7 @@ import DocumentSelector from './DocumentSelector';
 import DocumentsPagination from './DocumentsPagination';
 import { DocumentsGridSkeleton } from './DocumentsPageSkeleton';
 import { Button } from '@alga-psa/ui/components/Button';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextEditor } from '@alga-psa/ui/editor';
@@ -19,9 +20,10 @@ import { CollaborativeEditor } from './CollaborativeEditor';
 import FolderTreeView from './FolderTreeView';
 import FolderManager from './FolderManager';
 import DocumentListView from './DocumentListView';
+import ShareLinkDialog from './ShareLinkDialog';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import FolderSelectorModal from './FolderSelectorModal';
-import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, ChevronRight, X, FolderInput, Trash2 } from 'lucide-react';
+import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, X, FolderInput, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 import toast from 'react-hot-toast';
@@ -30,8 +32,10 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { getCurrentUser, searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
 import {
   getDocumentsByEntity,
   getDocumentsByFolder,
@@ -39,7 +43,9 @@ import {
   createFolder,
   deleteDocument,
   removeDocumentAssociations,
-  updateDocument
+  updateDocument,
+  toggleDocumentVisibility,
+  ensureEntityFolders
 } from '../actions/documentActions';
 import {
   getBlockContent,
@@ -87,6 +93,8 @@ interface DocumentsProps {
   uploadFormRef?: React.RefObject<HTMLDivElement | null>;
   filters?: DocumentFilters;
   namespace?: DocumentsNamespace;
+  /** Override the default folder-fetching function (e.g. for client portal) */
+  getFoldersFn?: () => Promise<string[]>;
 }
 
 const Documents = ({
@@ -102,7 +110,8 @@ const Documents = ({
   uploadFormRef,
   searchTermFromParent = '',
   filters,
-  namespace = 'common'
+  namespace = 'common',
+  getFoldersFn
 }: DocumentsProps): React.JSX.Element => {
   const { t } = useTranslation(namespace);
   const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
@@ -148,6 +157,11 @@ const Documents = ({
   const [editedDocumentId, setEditedDocumentId] = useState<string | null>(null);
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(0);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+  const [visibilityUpdatingIds, setVisibilityUpdatingIds] = useState<Set<string>>(new Set());
+  const [isClientUserContext, setIsClientUserContext] = useState(false);
+  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
+  const [shareDialogDocument, setShareDialogDocument] = useState<IDocument | null>(null);
+  const { enabled: documentFeaturesEnabled } = useFeatureFlag('document-folder-templates', { defaultValue: false });
 
   // Determine if we're in folder mode (no entity specified) early
   // This affects whether we need user preferences
@@ -258,23 +272,47 @@ const Documents = ({
         setCurrentUserName(displayName);
         setCurrentTenantId(user.tenant ?? '');
         setCurrentUserId(user.user_id);
+        setIsClientUserContext(user.user_type === 'client');
       } catch (loadError) {
         console.error('[Documents] Failed to load current user for collab editor:', loadError);
       }
     };
 
+    const loadAiFeatureFlag = async () => {
+      try {
+        const features = await getExperimentalFeatures();
+        if (!mounted) return;
+        setAiAssistantEnabled(features.aiAssistant ?? false);
+      } catch {
+        // Feature flag not available — leave disabled
+      }
+    };
+
     void loadCurrentUser();
+    void loadAiFeatureFlag();
 
     return () => {
       mounted = false;
     };
   }, []);
 
-  // Sync currentFolder with URL changes (for breadcrumb navigation)
+  // In entity mode, ensure default folders are created on first visit
+  useEffect(() => {
+    if (entityId && entityType) {
+      void ensureEntityFolders(entityId, entityType);
+    }
+  }, [entityId, entityType]);
+
+  // Sync currentFolder with URL changes (for breadcrumb/back-forward navigation)
+  const prevSearchParamsRef = useRef(searchParams?.get('folder') ?? null);
   useEffect(() => {
     if (!entityId && !entityType) {
-      const folderParam = searchParams?.get('folder') ?? null;
-      setCurrentFolder(folderParam || null);
+      const folderParam = searchParams?.get('folder') || null;
+      // Only sync when the URL actually changed (avoids loop with handleFolderSelect)
+      if (folderParam !== prevSearchParamsRef.current) {
+        prevSearchParamsRef.current = folderParam;
+        setCurrentFolder(folderParam);
+      }
     }
   }, [searchParams, entityId, entityType]);
 
@@ -316,6 +354,7 @@ const Documents = ({
       }
     }
   }, [initialDocuments, inFolderMode]);
+
 
   // Folder mode: fetch documents from server
   // Track all fetch dependencies to detect actual changes vs reference-only changes
@@ -380,15 +419,15 @@ const Documents = ({
   useEffect(() => {
     if (inFolderMode) return;
 
+    let filtered = initialDocuments;
+
     if (searchTermFromParent) {
-      const filtered = initialDocuments.filter(doc =>
+      filtered = filtered.filter(doc =>
         doc.document_name.toLowerCase().includes(searchTermFromParent.toLowerCase())
       );
-      setDocumentsToDisplay(filtered);
-    } else {
-      // Restore full list when search is cleared
-      setDocumentsToDisplay(initialDocuments);
     }
+
+    setDocumentsToDisplay(filtered);
   }, [searchTermFromParent, inFolderMode, initialDocuments]);
 
   // Refresh documents - handles both folder mode and entity mode
@@ -450,6 +489,7 @@ const Documents = ({
 
     // Update URL to persist folder selection
     if (inFolderMode) {
+      prevSearchParamsRef.current = folderPath;
       const params = new URLSearchParams(searchParams?.toString() ?? '');
       if (folderPath) {
         params.set('folder', folderPath);
@@ -527,12 +567,12 @@ const Documents = ({
   };
 
   const handleCreateDocument = async () => {
-    // In folder mode: auto-save to current folder if browsing one
     if (inFolderMode && currentFolder) {
+      // Folder mode: auto-save to current folder if browsing one
       setDocumentFolderPath(currentFolder);
       await handleDocumentFolderSelected(currentFolder);
     } else {
-      // Entity mode or root folder: show folder selector
+      // Show folder selector (both folder mode at root and entity mode)
       setShowDocumentFolderModal(true);
     }
   };
@@ -973,6 +1013,7 @@ const Documents = ({
   const gridColumnsClass = gridColumns === 4
     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
     : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+  const showVisibilityControls = !isClientUserContext;
 
   // Use refs to store click handlers to avoid recreating them
   const clickHandlersRef = useRef<Map<string, () => void>>(new Map());
@@ -1047,6 +1088,70 @@ const Documents = ({
     return moveHandlersRef.current.get(key)!;
   };
 
+  const handleToggleDocumentVisibility = async (document: IDocument, nextValue: boolean) => {
+    const previousValue = Boolean(document.is_client_visible);
+
+    setVisibilityUpdatingIds((previous) => {
+      const next = new Set(previous);
+      next.add(document.document_id);
+      return next;
+    });
+
+    setDocumentsToDisplay((previousDocuments) =>
+      previousDocuments.map((item) =>
+        item.document_id === document.document_id
+          ? { ...item, is_client_visible: nextValue }
+          : item
+      )
+    );
+
+    try {
+      const result = await toggleDocumentVisibility([document.document_id], nextValue);
+
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        setDocumentsToDisplay((previousDocuments) =>
+          previousDocuments.map((item) =>
+            item.document_id === document.document_id
+              ? { ...item, is_client_visible: previousValue }
+              : item
+          )
+        );
+        return;
+      }
+
+      if (result === 0) {
+        setDocumentsToDisplay((previousDocuments) =>
+          previousDocuments.map((item) =>
+            item.document_id === document.document_id
+              ? { ...item, is_client_visible: previousValue }
+              : item
+          )
+        );
+        toast.error(tDoc('messages.visibilityToggleFailed', 'Failed to update visibility'));
+      }
+    } catch (error) {
+      setDocumentsToDisplay((previousDocuments) =>
+        previousDocuments.map((item) =>
+          item.document_id === document.document_id
+            ? { ...item, is_client_visible: previousValue }
+            : item
+        )
+      );
+      handleError(error, tDoc('messages.visibilityToggleFailed', 'Failed to update visibility'));
+    } finally {
+      setVisibilityUpdatingIds((previous) => {
+        const next = new Set(previous);
+        next.delete(document.document_id);
+        return next;
+      });
+    }
+  };
+
+  const handleShareDocument = useCallback((doc: IDocument) => {
+    setShareDialogDocument(doc);
+  }, []);
+
   // Render document cards - let React handle the re-renders with memo
   const renderDocumentCards = () => {
     return documentsToDisplay.map((document) => {
@@ -1062,6 +1167,10 @@ const Documents = ({
             onMove={getOrCreateMoveHandler(document)}
             showDisassociate={Boolean(entityId && entityType)}
             showMove={inFolderMode}
+            showVisibilityControls={showVisibilityControls}
+            onToggleVisibility={handleToggleDocumentVisibility}
+            isVisibilityUpdating={visibilityUpdatingIds.has(document.document_id)}
+            onShare={documentFeaturesEnabled ? handleShareDocument : undefined}
             forceRefresh={editedDocumentId === document.document_id ? refreshTimestamp : undefined}
             onClick={getOrCreateClickHandler(document)}
             isContentDocument={!document.file_id}
@@ -1214,6 +1323,7 @@ const Documents = ({
                   userName={currentUserName || userId}
                   editorRef={collabEditorRef}
                   searchMentions={searchUsersForMentions}
+                  aiAssistantEnabled={aiAssistantEnabled}
                   onConnectionStatusChange={handleCollabConnectionStatusChange}
                 />
               )
@@ -1307,13 +1417,14 @@ const Documents = ({
             {/* Collapsed Folders Button */}
             {isFoldersPaneCollapsed && (
               <div className="flex-shrink-0 border-r border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-start p-2">
-                <button
+                <CollapseToggleButton
+                  id="documents-show-folders-button"
+                  isCollapsed={true}
+                  collapsedLabel="Show folders"
+                  expandedLabel="Collapse folders"
+                  expandDirection="right"
                   onClick={() => setIsFoldersPaneCollapsed(false)}
-                  className="p-1 hover:bg-gray-100 rounded"
-                  title="Show folders"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                />
               </div>
             )}
 
@@ -1324,6 +1435,9 @@ const Documents = ({
                   key={folderTreeKey}
                   selectedFolder={currentFolder}
                   onFolderSelect={handleFolderSelect}
+                  entityId={entityId}
+                  entityType={entityType}
+                  showVisibilityIndicators={showVisibilityControls}
                   onFolderDeleted={() => {
                     refreshDocuments();
                   }}
@@ -1349,6 +1463,7 @@ const Documents = ({
                     await refreshDocuments();
                   }}
                   onCancel={() => setShowUpload(false)}
+                  getFoldersFn={getFoldersFn}
                 />
               </div>
             )}
@@ -1453,6 +1568,11 @@ const Documents = ({
                       onSelectionChange={setSelectedDocumentsForMove}
                       onDelete={(doc) => handleDelete(doc)}
                       onClick={(doc) => handleDocumentClick(doc)}
+                      showVisibilityControls={showVisibilityControls}
+                      onToggleVisibility={handleToggleDocumentVisibility}
+                      visibilityUpdatingIds={visibilityUpdatingIds}
+                      showShareControls={documentFeaturesEnabled}
+                      onShare={documentFeaturesEnabled ? handleShareDocument : undefined}
                     />
                   ) : (
                     documentsToDisplay.length > 0 ? (
@@ -1501,6 +1621,9 @@ const Documents = ({
             title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
             description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
             namespace={namespace}
+            entityId={entityId}
+            entityType={entityType}
+            getFoldersFn={getFoldersFn}
           />
 
           {/* Folder Selector Modal for Moving Documents */}
@@ -1521,6 +1644,9 @@ const Documents = ({
                 : tDoc('folderSelector.moveDescription', 'Select destination folder')
             }
             namespace={namespace}
+            entityId={entityId}
+            entityType={entityType}
+            getFoldersFn={getFoldersFn}
           />
 
           {/* Folder Selector Modal for Bulk Moving Documents */}
@@ -1536,6 +1662,9 @@ const Documents = ({
               defaultValue: `Select destination folder for ${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''}`
             })}
             namespace={namespace}
+            entityId={entityId}
+            entityType={entityType}
+            getFoldersFn={getFoldersFn}
           />
 
           {/* Preview Modal for Images/Videos/PDFs */}
@@ -1602,6 +1731,15 @@ const Documents = ({
           confirmLabel="Discard changes"
           cancelLabel="Continue editing"
         />
+
+        {shareDialogDocument && (
+          <ShareLinkDialog
+            isOpen={true}
+            onClose={() => setShareDialogDocument(null)}
+            documentId={shareDialogDocument.document_id}
+            documentName={shareDialogDocument.document_name}
+          />
+        )}
         </div>
       </ReflectionContainer>
     );
@@ -1649,22 +1787,57 @@ const Documents = ({
           </div>
         </div>
 
-        {showUpload && (
-          <div ref={uploadFormRef} className="mb-4 p-4 border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md bg-white dark:bg-[rgb(var(--color-card))]">
-            <DocumentUpload
-              id={`${id}-upload`}
-              userId={userId}
-              entityId={entityId}
-              entityType={entityType}
-              onUploadComplete={async () => {
-                setShowUpload(false);
-                // Refresh the documents list (triggers router.refresh() in entity mode)
-                await refreshDocuments();
-              }}
-              onCancel={() => setShowUpload(false)}
-            />
-          </div>
-        )}
+        <div className="space-y-4">
+            {showUpload && (
+              <div ref={uploadFormRef} className="p-4 border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md bg-white dark:bg-[rgb(var(--color-card))]">
+                <DocumentUpload
+                  id={`${id}-upload`}
+                  userId={userId}
+                  entityId={entityId}
+                  entityType={entityType}
+                  onUploadComplete={async () => {
+                    setShowUpload(false);
+                    // Refresh the documents list (triggers router.refresh() in entity mode)
+                    await refreshDocuments();
+                  }}
+                  onCancel={() => setShowUpload(false)}
+                  getFoldersFn={getFoldersFn}
+                />
+              </div>
+            )}
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {isLoading ? (
+              <DocumentsGridSkeleton gridColumns={gridColumns} />
+            ) : documentsToDisplay.length > 0 ? (
+              <div className={`grid ${gridColumnsClass} gap-4`}>
+                {renderDocumentCards()}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
+                {tDoc('empty.default', 'No documents found')}
+              </div>
+            )}
+
+            {documentsToDisplay.length > 0 && totalPages > 1 && (
+              <div className="mt-4">
+                <DocumentsPagination
+                  id={`${id}-pagination`}
+                  currentPage={currentPage}
+                  totalItems={totalDocuments}
+                  itemsPerPage={pageSize}
+                  onPageChange={handlePageChange}
+                  onItemsPerPageChange={handlePageSizeChange}
+                  itemsPerPageOptions={viewMode === 'grid' ? gridPageSizeOptions : undefined}
+                />
+              </div>
+            )}
+        </div>
 
         {showSelector && entityId && entityType ? (
           <DocumentSelector
@@ -1680,68 +1853,6 @@ const Documents = ({
             onClose={() => setShowSelector(false)}
           />
         ) : null}
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {isLoading ? (
-          <DocumentsGridSkeleton gridColumns={gridColumns} />
-        ) : documentsToDisplay.length > 0 ? (
-          <div className={`grid ${gridColumnsClass} gap-4`}>
-            {renderDocumentCards()}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
-            {tDoc('empty.default', 'No documents found')}
-          </div>
-        )}
-
-        {documentsToDisplay.length > 0 && totalPages > 1 && (
-          <div className="mt-4">
-            <DocumentsPagination
-              id={`${id}-pagination`}
-              currentPage={currentPage}
-              totalItems={totalDocuments}
-              itemsPerPage={pageSize}
-              onPageChange={handlePageChange}
-              onItemsPerPageChange={handlePageSizeChange}
-              itemsPerPageOptions={viewMode === 'grid' ? gridPageSizeOptions : undefined}
-            />
-          </div>
-        )}
-
-        {/* Folder Selector Modal for New Documents (Entity Mode) */}
-        <FolderSelectorModal
-          isOpen={showDocumentFolderModal}
-          onClose={() => setShowDocumentFolderModal(false)}
-          onSelectFolder={handleDocumentFolderSelected}
-          title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
-          description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
-          namespace={namespace}
-        />
-
-        {/* Folder Selector Modal for Moving Documents (Entity Mode) */}
-        <FolderSelectorModal
-          isOpen={showMoveFolderModal}
-          onClose={() => {
-            setShowMoveFolderModal(false);
-            setDocumentToMove(null);
-          }}
-          onSelectFolder={handleMoveFolderSelected}
-          title={tDoc('folderSelector.moveTitle', 'Move Document')}
-          description={
-            documentToMove
-              ? tDoc('folderSelector.moveDescriptionWithName', {
-                  name: documentToMove.document_name,
-                  defaultValue: `Select destination folder for "${documentToMove.document_name}"`
-                })
-              : tDoc('folderSelector.moveDescription', 'Select destination folder')
-          }
-          namespace={namespace}
-        />
 
         {/* Preview Modal for Images/Videos/PDFs */}
         {showPreviewModal && previewDocument && previewDocument.file_id && (
@@ -1794,6 +1905,19 @@ const Documents = ({
           </Drawer>
         </div>
 
+        {/* Folder Selector Modal for New Documents (entity mode) */}
+        <FolderSelectorModal
+          isOpen={showDocumentFolderModal}
+          onClose={() => setShowDocumentFolderModal(false)}
+          onSelectFolder={handleDocumentFolderSelected}
+          title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
+          description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
+          namespace={namespace}
+          entityId={entityId}
+          entityType={entityType}
+          getFoldersFn={getFoldersFn}
+        />
+
         {/* Unsaved Changes Confirmation Dialog */}
         <ConfirmationDialog
           id={`${id}-unsaved-changes-dialog`}
@@ -1806,6 +1930,15 @@ const Documents = ({
           cancelLabel="Continue editing"
         />
       </div>
+
+      {shareDialogDocument && (
+        <ShareLinkDialog
+          isOpen={true}
+          onClose={() => setShareDialogDocument(null)}
+          documentId={shareDialogDocument.document_id}
+          documentName={shareDialogDocument.document_name}
+        />
+      )}
     </ReflectionContainer>
   );
 };

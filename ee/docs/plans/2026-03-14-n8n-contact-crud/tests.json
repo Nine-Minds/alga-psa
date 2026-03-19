@@ -1,0 +1,224 @@
+[
+  {
+    "id": "T001",
+    "description": "Description: resource selector includes `contact`.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Description: contact operation selector exposes only `create`, `get`, `list`, `update`, and `delete`.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Description: node subtitle resolves correctly when the selected resource is `contact`.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Description: contact create keeps `full_name` as a required top-level field and does not bury it inside an additional-fields collection.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Description: contact create additional-fields collection exposes `email`, `client_id`, `role`, `notes`, `is_inactive`, and `phone_numbers`.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T006",
+    "description": "Description: contact update additional-fields collection exposes `full_name`, `email`, `client_id`, `role`, `notes`, `is_inactive`, and `phone_numbers`.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T007",
+    "description": "Description: `contactId` field is shown only for contact get, update, and delete operations.",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T008",
+    "description": "Description: contact list inputs expose `page`, `limit`, `client_id`, `search_term`, and `is_inactive`.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T009",
+    "description": "Load options: contact create `client_id` supports both list lookup and manual UUID entry.",
+    "implemented": true,
+    "featureIds": ["F009", "F022"]
+  },
+  {
+    "id": "T010",
+    "description": "Load options: contact update `client_id` supports both list lookup and manual UUID entry.",
+    "implemented": true,
+    "featureIds": ["F009", "F022"]
+  },
+  {
+    "id": "T011",
+    "description": "Helper: contact create payload builder maps `full_name` and omits absent optional fields.",
+    "implemented": true,
+    "featureIds": ["F010", "F023"]
+  },
+  {
+    "id": "T012",
+    "description": "Helper: contact create payload builder includes scalar optional fields when present.",
+    "implemented": true,
+    "featureIds": ["F010", "F023"]
+  },
+  {
+    "id": "T013",
+    "description": "Helper: contact update payload builder includes only provided update fields.",
+    "implemented": true,
+    "featureIds": ["F011", "F023"]
+  },
+  {
+    "id": "T014",
+    "description": "Helper: contact list query builder serializes pagination and core filters correctly.",
+    "implemented": true,
+    "featureIds": ["F012", "F023"]
+  },
+  {
+    "id": "T015",
+    "description": "Helper: `phone_numbers` parser accepts a valid JSON array of contact phone-number objects.",
+    "implemented": true,
+    "featureIds": ["F013", "F023"]
+  },
+  {
+    "id": "T016",
+    "description": "Helper: `phone_numbers` parser rejects malformed JSON before any request is sent.",
+    "implemented": true,
+    "featureIds": ["F013", "F023"]
+  },
+  {
+    "id": "T017",
+    "description": "Helper: `phone_numbers` parser rejects non-array JSON values before any request is sent.",
+    "implemented": true,
+    "featureIds": ["F013", "F023"]
+  },
+  {
+    "id": "T018",
+    "description": "Helper: `phone_numbers` parser rejects array entries that are missing `phone_number`.",
+    "implemented": true,
+    "featureIds": ["F013", "F023"]
+  },
+  {
+    "id": "T019",
+    "description": "Execute: contact create sends `POST /api/v1/contacts`.",
+    "implemented": true,
+    "featureIds": ["F014", "F023"]
+  },
+  {
+    "id": "T020",
+    "description": "Execute: contact create request body includes parsed `phone_numbers` when provided.",
+    "implemented": true,
+    "featureIds": ["F013", "F014", "F023"]
+  },
+  {
+    "id": "T021",
+    "description": "Execute: contact create unwraps a successful `{ data: ... }` response into the created contact object.",
+    "implemented": true,
+    "featureIds": ["F014", "F020", "F023"]
+  },
+  {
+    "id": "T022",
+    "description": "Execute: contact get sends `GET /api/v1/contacts/{id}`.",
+    "implemented": true,
+    "featureIds": ["F015", "F023"]
+  },
+  {
+    "id": "T023",
+    "description": "Execute: contact get returns the normalized contact object.",
+    "implemented": true,
+    "featureIds": ["F015", "F020", "F023"]
+  },
+  {
+    "id": "T024",
+    "description": "Execute: contact list sends `GET /api/v1/contacts` with the selected pagination and filter query parameters.",
+    "implemented": true,
+    "featureIds": ["F016", "F023"]
+  },
+  {
+    "id": "T025",
+    "description": "Execute: contact list preserves pagination metadata in node output.",
+    "implemented": true,
+    "featureIds": ["F016", "F020", "F023"]
+  },
+  {
+    "id": "T026",
+    "description": "Execute: contact update sends `PUT /api/v1/contacts/{id}` with only changed fields.",
+    "implemented": true,
+    "featureIds": ["F017", "F023"]
+  },
+  {
+    "id": "T027",
+    "description": "Execute: contact update returns the normalized updated contact object.",
+    "implemented": true,
+    "featureIds": ["F017", "F020", "F023"]
+  },
+  {
+    "id": "T028",
+    "description": "Execute: contact delete sends `DELETE /api/v1/contacts/{id}`.",
+    "implemented": true,
+    "featureIds": ["F018", "F023"]
+  },
+  {
+    "id": "T029",
+    "description": "Execute: contact delete returns a non-empty normalized success object containing success and deleted metadata.",
+    "implemented": true,
+    "featureIds": ["F018", "F020", "F023"]
+  },
+  {
+    "id": "T030",
+    "description": "Validation: contact get rejects an empty `contactId` before making a request.",
+    "implemented": true,
+    "featureIds": ["F019", "F023"]
+  },
+  {
+    "id": "T031",
+    "description": "Validation: contact update rejects an invalid UUID `contactId` before making a request.",
+    "implemented": true,
+    "featureIds": ["F019", "F023"]
+  },
+  {
+    "id": "T032",
+    "description": "Validation: contact delete rejects an invalid UUID `contactId` before making a request.",
+    "implemented": true,
+    "featureIds": ["F019", "F023"]
+  },
+  {
+    "id": "T033",
+    "description": "Continue-on-fail: a contact API error is returned as an item-level error object while later items still execute.",
+    "implemented": true,
+    "featureIds": ["F021", "F023"]
+  },
+  {
+    "id": "T034",
+    "description": "Docs: README operation matrix includes contact CRUD operations.",
+    "implemented": true,
+    "featureIds": ["F024", "F026"]
+  },
+  {
+    "id": "T035",
+    "description": "Docs: README describes contact field scope, lookup behavior, and list/delete output expectations.",
+    "implemented": true,
+    "featureIds": ["F024", "F026"]
+  },
+  {
+    "id": "T036",
+    "description": "Docs: example workflow file for contact usage is present and referenced by the README.",
+    "implemented": true,
+    "featureIds": ["F025", "F024"]
+  },
+  {
+    "id": "T037",
+    "description": "Docs: release notes mention the contact CRUD expansion and its first-pass scope.",
+    "implemented": true,
+    "featureIds": ["F026"]
+  }
+]

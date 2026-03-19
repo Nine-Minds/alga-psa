@@ -11,10 +11,11 @@ import {
   updateSecret,
   validateSecretName
 } from '@alga-psa/tenancy/actions';
-import type { TenantSecretMetadata } from '@alga-psa/shared/workflow/secrets';
+import type { TenantSecretMetadata } from '@alga-psa/workflows/secrets';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface SecretDialogProps {
   open: boolean;
@@ -29,6 +30,7 @@ export default function SecretDialog({
   secret,
   onSuccess
 }: SecretDialogProps) {
+  const { t } = useTranslation('msp/settings');
   const isEditing = !!secret;
 
   const [name, setName] = useState('');
@@ -83,22 +85,22 @@ export default function SecretDialog({
 
     // Validate
     if (!isEditing && !name) {
-      toast.error('Secret name is required');
+      toast.error(t('secrets.messages.error.nameRequired'));
       return;
     }
 
     if (!isEditing && !value) {
-      toast.error('Secret value is required');
+      toast.error(t('secrets.messages.error.valueRequired'));
       return;
     }
 
     if (isEditing && !value && !description && description === secret?.description) {
-      toast.error('No changes to save');
+      toast.error(t('secrets.messages.error.noChanges'));
       return;
     }
 
     if (nameErrors.length > 0) {
-      toast.error('Please fix the validation errors');
+      toast.error(t('secrets.messages.error.fixValidation'));
       return;
     }
 
@@ -110,19 +112,19 @@ export default function SecretDialog({
           value: value || undefined,
           description: description || undefined
         });
-        toast.success(`Secret "${secret.name}" updated`);
+        toast.success(t('secrets.messages.success.updated', { name: secret.name }));
       } else {
         await createSecret({
           name,
           value,
           description: description || undefined
         });
-        toast.success(`Secret "${name}" created`);
+        toast.success(t('secrets.messages.success.created', { name }));
       }
 
       onSuccess();
     } catch (error) {
-      handleError(error, 'Failed to save secret');
+      handleError(error, t('secrets.messages.error.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -147,25 +149,25 @@ export default function SecretDialog({
     <Dialog
       isOpen={open}
       onClose={() => !saving && onOpenChange(false)}
-      title={isEditing ? 'Edit Secret' : 'Create Secret'}
+      title={isEditing ? t('secrets.dialog.editTitle') : t('secrets.dialog.createTitle')}
     >
       <DialogContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="secret-name">
-              Name {!isEditing && <span className="text-red-500">*</span>}
+              {isEditing ? t('secrets.dialog.fields.name.label').replace(' *', '') : t('secrets.dialog.fields.name.label')}
             </Label>
             <Input
               id="secret-name"
               value={name}
               onChange={handleNameChange}
-              placeholder="MY_API_KEY"
+              placeholder={t('secrets.dialog.fields.name.placeholder')}
               disabled={isEditing || saving}
               className={`mt-1 font-mono ${nameErrors.length > 0 ? 'border-red-500' : ''}`}
             />
             {!isEditing && (
               <p className="text-xs text-gray-500 mt-1">
-                Use uppercase letters, numbers, and underscores only
+                {t('secrets.dialog.fields.name.help')}
               </p>
             )}
             {nameErrors.length > 0 && (
@@ -182,7 +184,7 @@ export default function SecretDialog({
 
           <div>
             <Label htmlFor="secret-value">
-              Value {!isEditing && <span className="text-red-500">*</span>}
+              {isEditing ? t('secrets.dialog.fields.value.label').replace(' *', '') : t('secrets.dialog.fields.value.label')}
             </Label>
             <div className="relative mt-1">
               <Input
@@ -190,7 +192,7 @@ export default function SecretDialog({
                 type={showValue ? 'text' : 'password'}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder={isEditing ? 'Enter new value to update' : 'Enter secret value'}
+                placeholder={isEditing ? t('secrets.dialog.fields.value.editPlaceholder') : t('secrets.dialog.fields.value.placeholder')}
                 disabled={saving}
                 className="pr-10"
               />
@@ -204,18 +206,18 @@ export default function SecretDialog({
             </div>
             {isEditing && (
               <p className="text-xs text-gray-500 mt-1">
-                Leave empty to keep the current value
+                {t('secrets.dialog.fields.value.editHelp')}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="secret-description">Description</Label>
+            <Label htmlFor="secret-description">{t('secrets.dialog.fields.description.label')}</Label>
             <TextArea
               id="secret-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What is this secret used for?"
+              placeholder={t('secrets.dialog.fields.description.placeholder')}
               disabled={saving}
               className="mt-1"
               rows={3}
@@ -230,14 +232,14 @@ export default function SecretDialog({
               onClick={() => onOpenChange(false)}
               disabled={saving}
             >
-              Cancel
+              {t('secrets.dialog.actions.cancel')}
             </Button>
             <Button
               id="save-secret-button"
               type="submit"
               disabled={!canSubmit() || saving}
             >
-              {saving ? 'Saving...' : isEditing ? 'Update Secret' : 'Create Secret'}
+              {saving ? t('secrets.dialog.actions.saving') : isEditing ? t('secrets.dialog.actions.update') : t('secrets.dialog.actions.create')}
             </Button>
           </DialogFooter>
         </form>

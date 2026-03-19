@@ -9,6 +9,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "react-native": path.resolve(__dirname, "test/mocks/react-native.ts"),
+      "react-native-webview": path.resolve(__dirname, "test/mocks/react-native-webview.ts"),
+      "expo-modules-core": path.resolve(__dirname, "test/mocks/expo-modules-core.ts"),
+      "expo-localization": path.resolve(__dirname, "test/mocks/expo-localization.ts"),
+      "rn-emoji-keyboard": path.resolve(__dirname, "test/mocks/rn-emoji-keyboard.ts"),
     },
   },
   test: {

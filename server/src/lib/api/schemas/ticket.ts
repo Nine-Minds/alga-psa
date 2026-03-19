@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
 import { 
   uuidSchema, 
   createListQuerySchema, 
@@ -12,6 +13,12 @@ import {
   booleanTransform,
   arrayTransform
 } from './common';
+
+const MAX_TICKET_COMMENT_LENGTH = 5000;
+
+function getVisibleCommentLength(value: string): number {
+  return formatBlockNoteContent(value).text.trim().length;
+}
 
 // Ticket attributes schema (flexible JSON object)
 const ticketAttributesSchema = z.record(z.unknown()).optional();
@@ -160,22 +167,29 @@ export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
     first_name: z.string(),
     last_name: z.string(),
     email: z.string()
-  }).optional()
+  }).optional(),
+  description_html: z.string().optional()
 });
 
 // Ticket comment schemas
 export const createTicketCommentSchema = z.object({
   comment_text: z.string()
     .min(1, 'Comment text is required')
-    .max(5000, 'Comment text is too long (max 5000 characters)'),
+    .refine((value) => getVisibleCommentLength(value) > 0, 'Comment text is required')
+    .refine(
+      (value) => getVisibleCommentLength(value) <= MAX_TICKET_COMMENT_LENGTH,
+      `Comment text is too long (max ${MAX_TICKET_COMMENT_LENGTH} characters)`
+    ),
   is_internal: z.boolean().optional().default(false),
-  time_spent: z.number().min(0).optional()
+  time_spent: z.number().min(0).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export const ticketCommentResponseSchema = z.object({
   comment_id: uuidSchema,
   ticket_id: uuidSchema,
   comment_text: z.string(),
+  comment_html: z.string().optional(),
   is_internal: z.boolean(),
   time_spent: z.number().nullable(),
   created_by: uuidSchema.nullable(),

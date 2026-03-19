@@ -3,10 +3,11 @@
 import React from 'react';
 import type { IDocument } from '@alga-psa/types';
 import { formatBytes, formatDate } from '@alga-psa/core/formatters';
-import { FileIcon, Download, Trash2 } from 'lucide-react';
+import { FileIcon, Download, Trash2, Share2, Link2 } from 'lucide-react';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import VisibilityToggle from './VisibilityToggle';
 
 interface DocumentListViewProps {
   documents: IDocument[];
@@ -14,6 +15,12 @@ interface DocumentListViewProps {
   onSelectionChange: (selected: Set<string>) => void;
   onDelete?: (document: IDocument) => void;
   onClick?: (document: IDocument) => void;
+  showVisibilityControls?: boolean;
+  onToggleVisibility?: (document: IDocument, nextValue: boolean) => void | Promise<void>;
+  visibilityUpdatingIds?: Set<string>;
+  showShareControls?: boolean;
+  onShare?: (document: IDocument) => void;
+  documentsWithShareLinks?: Set<string>;
 }
 
 export default function DocumentListView({
@@ -21,7 +28,13 @@ export default function DocumentListView({
   selectedDocuments,
   onSelectionChange,
   onDelete,
-  onClick
+  onClick,
+  showVisibilityControls = false,
+  onToggleVisibility,
+  visibilityUpdatingIds,
+  showShareControls = false,
+  onShare,
+  documentsWithShareLinks
 }: DocumentListViewProps) {
   const { t } = useTranslation('common');
 
@@ -67,6 +80,11 @@ export default function DocumentListView({
             <TableHead>
               {t('documents.list.modified', 'Modified')}
             </TableHead>
+            {showVisibilityControls && (
+              <TableHead>
+                {t('documents.list.visibility', 'Visibility')}
+              </TableHead>
+            )}
             <TableHead className="w-24">
               {t('documents.list.actions', 'Actions')}
             </TableHead>
@@ -102,6 +120,11 @@ export default function DocumentListView({
                   ) : null}
                   <FileIcon className={`w-4 h-4 text-gray-400 ${doc.thumbnail_file_id ? 'hidden' : ''}`} />
                   <span className="text-sm font-medium">{doc.document_name}</span>
+                  {documentsWithShareLinks?.has(doc.document_id) && (
+                    <span title={t('documents.hasShareLinks', 'Has active share links')}>
+                      <Link2 className="w-3 h-3 text-blue-500" />
+                    </span>
+                  )}
                 </div>
               </TableCell>
               <TableCell className="text-muted-foreground">
@@ -113,6 +136,33 @@ export default function DocumentListView({
               <TableCell className="text-muted-foreground">
                 {doc.updated_at ? formatDate(doc.updated_at) : '-'}
               </TableCell>
+              {showVisibilityControls && (
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        doc.is_client_visible
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                          : 'bg-gray-100 text-gray-700 dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-400))]'
+                      }`}
+                    >
+                      {doc.is_client_visible
+                        ? t('documents.visibility.clientVisible', 'Client visible')
+                        : t('documents.visibility.internalOnly', 'Internal')}
+                    </span>
+                    {onToggleVisibility && (
+                      <VisibilityToggle
+                        id={`document-visibility-${doc.document_id}`}
+                        isClientVisible={Boolean(doc.is_client_visible)}
+                        onToggle={(nextValue) => {
+                          void onToggleVisibility(doc, nextValue);
+                        }}
+                        disabled={visibilityUpdatingIds?.has(doc.document_id)}
+                      />
+                    )}
+                  </div>
+                </TableCell>
+              )}
               <TableCell onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center gap-1">
                   <button
@@ -122,6 +172,16 @@ export default function DocumentListView({
                   >
                     <Download className="w-4 h-4 text-gray-500" />
                   </button>
+                  {showShareControls && onShare && (
+                    <button
+                      id={`document-share-${doc.document_id}`}
+                      className="p-1 hover:bg-blue-100 rounded transition-colors"
+                      onClick={() => onShare(doc)}
+                      title={t('documents.share', 'Share')}
+                    >
+                      <Share2 className="w-4 h-4 text-blue-500" />
+                    </button>
+                  )}
                   {onDelete && (
                     <button
                       id={`document-delete-${doc.document_id}`}
@@ -138,7 +198,7 @@ export default function DocumentListView({
           ))}
           {documents.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={showVisibilityControls ? 7 : 6} className="h-24 text-center text-muted-foreground">
                 {t('documents.empty.default', 'No documents found')}
               </TableCell>
             </TableRow>

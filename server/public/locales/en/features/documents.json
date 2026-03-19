@@ -185,5 +185,38 @@
     "nameLabel": "Folder Name",
     "namePlaceholder": "Enter folder name",
     "willCreateIn": "Will be created in: {{folder}}"
+  },
+  "portal": {
+    "subtitle": "View and download your shared documents",
+    "searchPlaceholder": "Search documents...",
+    "showing": "{{count}} documents",
+    "loadError": "Failed to load documents. Please try again."
+  },
+  "kb": {
+    "title": "Knowledge Base",
+    "subtitle": "Find answers to common questions and how-to guides",
+    "categories": "Categories",
+    "allArticles": "All Articles",
+    "searchPlaceholder": "Search articles...",
+    "articleCount": "{{count}} articles",
+    "noArticles": "No articles found",
+    "loadError": "Failed to load articles. Please try again.",
+    "noContent": "No content available",
+    "articleNotFound": "Article not found",
+    "backToArticles": "Back to Articles",
+    "views": "views",
+    "wasHelpful": "Was this article helpful?",
+    "yes": "Yes",
+    "no": "No",
+    "feedbackThanks": "Thank you for your feedback!",
+    "feedbackError": "Failed to submit feedback",
+    "filterByTags": "Filter by tags..."
+  },
+  "visibility": {
+    "cascadeTitle": "Update document visibility",
+    "cascadeMakeVisible": "Would you also like to make all {{count}} document(s) in \"{{name}}\" visible to the client portal?",
+    "cascadeMakeHidden": "Would you also like to hide all {{count}} document(s) in \"{{name}}\" from the client portal?",
+    "cascadeYes": "Yes, update documents",
+    "cascadeNo": "No, folder only"
   }
 }

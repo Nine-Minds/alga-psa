@@ -28,12 +28,13 @@ import {
 import { InternalNotificationPreferences } from '@alga-psa/notifications/components';
 import { PasswordChangeForm, UserAvatarUpload } from '@alga-psa/users/components';
 import { ApiKeysSetup, SessionManagement } from '@alga-psa/auth/components';
+import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
 import { toast } from 'react-hot-toast';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
-import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getUserLocaleAction, updateUserLocaleAction } from '@alga-psa/user-composition/actions';
 import { getInheritedLocaleAction } from '@alga-psa/tenancy/actions';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
@@ -52,6 +53,19 @@ const ConnectSsoWrapper = dynamic(
   },
 );
 
+const CalendarProfileSettings = dynamic(
+  () => import('@alga-psa/ee-calendar/components').then((mod) => mod.CalendarProfileSettings),
+  {
+    loading: () => (
+      <SettingsTabSkeleton
+        title="Calendar"
+        description="Loading calendar settings..."
+      />
+    ),
+    ssr: false,
+  },
+);
+
 type NotificationView = 'email' | 'internal';
 
 interface UserProfileProps {
@@ -59,8 +73,10 @@ interface UserProfileProps {
 }
 
 export default function UserProfile({ userId }: UserProfileProps) {
+  const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
+  const isCalendarTabAvailable = isCalendarEnterpriseEdition();
   
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,25 +99,23 @@ export default function UserProfile({ userId }: UserProfileProps) {
   
   // Determine initial tab from URL or default to "Profile"
   const initialTab = useMemo(() => {
-    const validTabs = ['Profile', 'Security', 'Single Sign-On', 'API Keys', 'Notifications', 'Calendar'];
-    return tabParam && validTabs.includes(tabParam) ? tabParam : 'Profile';
-  }, [tabParam]);
+    return resolveUserProfileTab(tabParam, isCalendarTabAvailable);
+  }, [isCalendarTabAvailable, tabParam]);
 
   const [activeTab, setActiveTab] = useState<string>(initialTab);
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const validTabs = ['Profile', 'Security', 'Single Sign-On', 'API Keys', 'Notifications', 'Calendar'];
-    const targetTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'Profile';
+    const targetTab = resolveUserProfileTab(tabParam, isCalendarTabAvailable);
     setActiveTab(prev => prev !== targetTab ? targetTab : prev);
-  }, [tabParam]);
+  }, [isCalendarTabAvailable, tabParam]);
   
   // Handle tab change and update URL
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (tab === 'Profile') {
+      if (tab === 'profile') {
         params.delete('tab');
       } else {
         params.set('tab', tab);
@@ -126,7 +140,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
         setLoading(true);
         // Get user data
         const currentUser = await getCurrentUser();
-        if (!currentUser) throw new Error('User not found');
+        if (!currentUser) throw new Error(t('profile.messages.error.userNotFound'));
         setUser(currentUser);
         
         // Set form fields
@@ -197,7 +211,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
   const handleSave = async () => {
     if (!user) {
-      setError('User not found');
+      setError(t('profile.messages.error.userNotFound'));
       return;
     }
 
@@ -218,7 +232,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       if (field === 'first_name' || field === 'last_name') {
         // Make name fields required for profile saves
         if (!value || !value.trim()) {
-          newErrors[field] = field === 'first_name' ? 'First name is required' : 'Last name is required';
+          newErrors[field] = field === 'first_name' ? t('profile.validation.firstNameRequired') : t('profile.validation.lastNameRequired');
           hasValidationErrors = true;
         } else {
           const error = validateContactName(value);
@@ -267,7 +281,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
       // Show success confirmation
       setHasAttemptedSubmit(false);
-      toast.success('Profile updated successfully');
+      toast.success(t('profile.messages.success.profileUpdated'));
 
     } catch (err) {
       console.error('Error saving profile:', err);
@@ -295,7 +309,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   if (loading) {
     return (
       <Card className="p-6">
-        <div>Loading profile...</div>
+        <div>{t('profile.loading')}</div>
       </Card>
     );
   }
@@ -311,18 +325,19 @@ export default function UserProfile({ userId }: UserProfileProps) {
   if (!user) {
     return (
       <Card className="p-6">
-        <div>User not found</div>
+        <div>{t('profile.messages.error.userNotFound')}</div>
       </Card>
     );
   }
 
   const tabContent: TabContent[] = [
     {
+      id: 'profile',
       label: "Profile",
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle>{t('profile.basicInfo.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* User Avatar Upload */}
@@ -338,7 +353,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
             <div className="grid grid-cols-2 gap-x-4 gap-y-4">
               <div>
                 <Label htmlFor="firstName">
-                  First Name <span className="text-destructive">*</span>
+                  {t('profile.fields.firstName.label')}
                 </Label>
                 <Input
                   id="firstName"
@@ -362,7 +377,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
               </div>
               <div>
                 <Label htmlFor="lastName">
-                  Last Name <span className="text-destructive">*</span>
+                  {t('profile.fields.lastName.label')}
                 </Label>
                 <Input
                   id="lastName"
@@ -387,7 +402,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
             </div>
             <div>
               <Label htmlFor="email">
-                Email <span className="text-destructive">*</span>
+                {t('profile.fields.email.label')}
               </Label>
               <Input
                 id="email"
@@ -413,7 +428,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
             <div>
               <PhoneInput
                 id="phone"
-                label="Phone Number"
+                label={t('profile.fields.phoneNumber.label')}
                 value={phone}
                 onChange={(value) => {
                   setPhone(value);
@@ -440,7 +455,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
               )}
             </div>
             <div>
-              <Label htmlFor="timezone">Time Zone</Label>
+              <Label htmlFor="timezone">{t('profile.fields.timeZone.label')}</Label>
               <TimezonePicker
                 value={timezone}
                 onValueChange={setTimezone}
@@ -470,6 +485,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       ),
     },
     {
+      id: 'security',
       label: "Security",
       content: (
         <div className="space-y-6">
@@ -479,26 +495,29 @@ export default function UserProfile({ userId }: UserProfileProps) {
       ),
     },
     {
+      id: 'single-sign-on',
       label: "Single Sign-On",
       content: <ConnectSsoWrapper />,
     },
     {
+      id: 'api-keys',
       label: "API Keys",
       content: <ApiKeysSetup />,
     },
     {
+      id: 'notifications',
       label: "Notifications",
       content: (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Notification Preferences</CardTitle>
+              <CardTitle>{t('profile.notifications.title')}</CardTitle>
               <ViewSwitcher
                 currentView={notificationView}
                 onChange={setNotificationView}
                 options={[
-                  { value: 'email', label: 'Email' },
-                  { value: 'internal', label: 'Internal' },
+                  { value: 'email', label: t('profile.notifications.viewSwitcher.email') },
+                  { value: 'internal', label: t('profile.notifications.viewSwitcher.internal') },
                 ] as ViewSwitcherOption<NotificationView>[]}
               />
             </div>
@@ -537,10 +556,11 @@ export default function UserProfile({ userId }: UserProfileProps) {
         </Card>
       ),
     },
-    {
+    ...(isCalendarTabAvailable ? [{
+      id: 'calendar',
       label: "Calendar",
-      content: <CalendarIntegrationsSettings />,
-    },
+      content: <CalendarProfileSettings />,
+    }] : []),
   ];
 
   return (
@@ -555,7 +575,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       <div className="flex justify-end items-center space-x-2">
         {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
           <span className="text-destructive text-sm mr-2" role="alert">
-            Please fill in all required fields
+            {t('profile.messages.error.fillRequiredFields')}
           </span>
         )}
         <Button
@@ -563,7 +583,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
           onClick={handleSave}
           variant="default"
         >
-          Save Changes
+          {t('profile.actions.saveChanges')}
         </Button>
       </div>
     </div>

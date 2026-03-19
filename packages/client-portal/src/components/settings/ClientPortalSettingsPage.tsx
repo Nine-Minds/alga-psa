@@ -28,40 +28,24 @@ export default function ClientPortalSettingsPage() {
   const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Map URL slugs to translated labels (memoized to avoid recalculation)
-  const slugToLabelMap = useMemo<Record<TabId, string>>(() => ({
-    'account': tProfile('clientSettings.tabs.account'),
-    'client-details': tProfile('clientSettings.tabs.clientDetails'),
-    'user-management': tProfile('clientSettings.tabs.userManagement')
-  }), [tProfile]);
-
-  // Map translated labels back to URL slugs
-  const labelToSlugMap = useMemo<Record<string, TabId>>(() => {
-    return Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
-      acc[label] = slug as TabId;
-      return acc;
-    }, {} as Record<string, TabId>);
-  }, [slugToLabelMap]);
-
   // Determine initial tab from URL or default
-  const initialTabLabel = useMemo(() => {
+  const initialTabId = useMemo(() => {
     if (tabParam && VALID_TAB_SLUGS.includes(tabParam.toLowerCase() as TabId)) {
-      return slugToLabelMap[tabParam.toLowerCase() as TabId];
+      return tabParam.toLowerCase() as TabId;
     }
-    return slugToLabelMap[DEFAULT_TAB];
-  }, [tabParam, slugToLabelMap]);
+    return DEFAULT_TAB;
+  }, [tabParam]);
 
-  const [activeTab, setActiveTab] = useState<string>(initialTabLabel);
+  const [activeTab, setActiveTab] = useState<TabId>(initialTabId);
 
   // Update URL when tab changes (after hydration)
-  const updateURL = useCallback((tabLabel: string) => {
+  const updateURL = useCallback((tabId: TabId) => {
     if (!hydrationReadyRef.current) return;
 
-    const urlSlug = labelToSlugMap[tabLabel];
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== DEFAULT_TAB) {
-      currentSearchParams.set('tab', urlSlug);
+    if (tabId !== DEFAULT_TAB) {
+      currentSearchParams.set('tab', tabId);
     } else {
       currentSearchParams.delete('tab');
     }
@@ -71,19 +55,20 @@ export default function ClientPortalSettingsPage() {
       : '/client-portal/client-settings';
 
     window.history.pushState({}, '', newUrl);
-  }, [labelToSlugMap]);
+  }, []);
 
   // Handle client-side initialization and URL changes
   useEffect(() => {
     hydrationReadyRef.current = true;
 
-    setActiveTab((prev) => (prev === initialTabLabel ? prev : initialTabLabel));
-  }, [initialTabLabel]);
+    setActiveTab((prev) => (prev === initialTabId ? prev : initialTabId));
+  }, [initialTabId]);
 
   // Handle tab change with URL synchronization
-  const handleTabChange = useCallback((tabLabel: string) => {
-    setActiveTab(tabLabel);
-    updateURL(tabLabel);
+  const handleTabChange = useCallback((tabId: string) => {
+    const nextTab = tabId as TabId;
+    setActiveTab(nextTab);
+    updateURL(nextTab);
   }, [updateURL]);
 
   useEffect(() => {
@@ -109,11 +94,13 @@ export default function ClientPortalSettingsPage() {
 
   const tabs = [
     {
-      label: slugToLabelMap['account'],
+      id: 'account',
+      label: tProfile('clientSettings.tabs.account'),
       content: <ClientAccount />
     },
     {
-      label: slugToLabelMap['client-details'],
+      id: 'client-details',
+      label: tProfile('clientSettings.tabs.clientDetails'),
       content: <ClientDetailsSettings />
     }
   ];
@@ -121,7 +108,8 @@ export default function ClientPortalSettingsPage() {
   // Only add User Management tab if user has permission
   if (hasUserManagementAccess) {
     tabs.push({
-      label: slugToLabelMap['user-management'],
+      id: 'user-management',
+      label: tProfile('clientSettings.tabs.userManagement'),
       content: <UserManagementSettings />
     });
   }

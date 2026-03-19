@@ -122,7 +122,7 @@ const defaultProps: TicketConversationProps = {
   userMap: {},
   contactMap: {},
   currentUser: { id: 'user-1' },
-  activeTab: 'All Comments',
+  activeTab: 'all-comments',
   isEditing: false,
   currentComment: null,
   editorKey: 1,

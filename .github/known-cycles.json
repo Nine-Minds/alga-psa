@@ -1,7 +1,11 @@
 {
   "cycles": [
-    "@alga-psa/documents -> @alga-psa/tags",
-    "@alga-psa/shared -> @alga-psa/storage",
+    "@alga-psa/analytics -> @alga-psa/tenancy -> @alga-psa/workflows",
+    "@alga-psa/clients -> @alga-psa/workflows -> @alga-psa/projects",
+    "@alga-psa/notifications -> @alga-psa/workflows",
+    "@alga-psa/projects -> @alga-psa/workflows",
+    "@alga-psa/scheduling -> @alga-psa/workflows",
+    "@alga-psa/tickets -> @alga-psa/workflows",
     "@product/settings-extensions -> sebastian-ee -> server",
     "sebastian-ee -> server"
   ]

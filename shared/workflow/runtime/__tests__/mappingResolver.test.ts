@@ -76,7 +76,7 @@ describe('mappingResolver', () => {
       expect(mockResolver.resolve).toHaveBeenCalledWith('API_KEY', undefined);
     });
 
-    it('throws for missing secrets with noOpResolver', async () => {
+    it('T285: preserves missing-secret failures for advanced secret values after the editor refactor', async () => {
       const options = createOptions(createContext());
       const value: MappingValue = { $secret: 'MISSING' };
       await expect(
@@ -136,7 +136,7 @@ describe('mappingResolver', () => {
       expect(result).toEqual({});
     });
 
-    it('resolves mixed mapping fields', async () => {
+    it('T286: resolves advanced expression and secret mapping values through the unchanged runtime contract', async () => {
       const ctx = createContext({ count: 10 });
       const mockResolver: SecretResolver = {
         resolve: vi.fn().mockResolvedValue('secret-value')

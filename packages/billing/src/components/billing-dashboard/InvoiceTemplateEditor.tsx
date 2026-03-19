@@ -283,11 +283,11 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
              </TabsList>
              <TabsContent value="visual" className="pt-4 space-y-3">
                <div className="border rounded overflow-hidden bg-card" id="invoice-template-visual-designer">
-                 <DesignerVisualWorkspace
-                   visualWorkspaceTab={visualWorkspaceTab}
-                   onVisualWorkspaceTabChange={setVisualWorkspaceTab}
-                 />
-               </div>
+                   <DesignerVisualWorkspace
+                     visualWorkspaceTab={visualWorkspaceTab}
+                     onVisualWorkspaceTabChange={setVisualWorkspaceTab}
+                   />
+                 </div>
              </TabsContent>
              <TabsContent value="code" className="pt-4">
                <Alert variant="info" className="mb-3" data-automation-id="invoice-template-editor-code-readonly-alert">
@@ -333,7 +333,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
            </div>
            <div className="flex gap-2"> {/* Container for buttons */}
              <Button id="cancel-template-edit-button" variant="outline" onClick={handleBack} disabled={isLoading}>Cancel</Button> {/* Add id */}
-             <Button id="save-template-button" onClick={handleSave} disabled={isLoading}> {/* Add id */}
+             <Button id="save-template-button" onClick={handleSave} disabled={isLoading}>
                {isLoading ? 'Saving...' : 'Save Template'}
              </Button>
            </div>

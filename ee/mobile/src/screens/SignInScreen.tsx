@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Platform, Text, View } from "react-native";
 import { getAppConfig } from "../config/appConfig";
 import { logger } from "../logging/logger";
-import { colors, spacing, typography } from "../ui/theme";
-import { t } from "../i18n/i18n";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "../ui/ThemeContext";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { buildWebSignInUrl, createPendingMobileAuth, getAuthCallbackRedirectUri } from "../auth/mobileAuth";
 import { createApiClient } from "../api";
@@ -12,6 +12,8 @@ import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
 
 export function SignInScreen() {
+  const { t } = useTranslation("auth");
+  const theme = useTheme();
   const config = useMemo(() => getAppConfig(), []);
   const [status, setStatus] = useState<"idle" | "opening">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -54,14 +56,14 @@ export function SignInScreen() {
       const result = await getAuthCapabilities(client);
 
       if (!result.ok) {
-        setCapabilitiesError("Unable to verify mobile sign-in support on this server.");
+        setCapabilitiesError(t("signIn.errors.verifySupport"));
         setCapabilities(null);
         return;
       }
 
       setCapabilities(result.data);
     } catch {
-      setCapabilitiesError("Unable to verify mobile sign-in support on this server.");
+      setCapabilitiesError(t("signIn.errors.verifySupport"));
       setCapabilities(null);
     } finally {
       setCapabilitiesLoading(false);
@@ -75,12 +77,12 @@ export function SignInScreen() {
   const onSignIn = async () => {
     if (!baseUrl) {
       analytics.trackEvent(MobileAnalyticsEvents.authSignInBlocked, { reason: "missing_base_url" });
-      setError("Missing configuration. Please set EXPO_PUBLIC_ALGA_BASE_URL.");
+      setError(t("signIn.errors.missingConfig"));
       return;
     }
     if (!hostAllowed) {
       analytics.trackEvent(MobileAnalyticsEvents.authSignInBlocked, { reason: "host_not_allowlisted" });
-      setError("This base URL is not allowed for mobile sign-in.");
+      setError(t("signIn.errors.hostNotAllowed"));
       return;
     }
     setError(null);
@@ -94,7 +96,7 @@ export function SignInScreen() {
       const canOpen = await Linking.canOpenURL(loginUrl);
       if (!canOpen) {
         analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenFailed, { reason: "cannot_open_url" });
-        setError("Unable to open browser for sign-in.");
+        setError(t("signIn.errors.cannotOpenBrowser"));
         return;
       }
       await Linking.openURL(loginUrl);
@@ -102,7 +104,7 @@ export function SignInScreen() {
     } catch (e) {
       logger.error("Failed to open sign-in URL", { error: e });
       analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenFailed, { reason: "exception" });
-      setError("Failed to open browser. Please try again.");
+      setError(t("signIn.errors.failedOpenBrowser"));
     } finally {
       setStatus("idle");
     }
@@ -113,18 +115,18 @@ export function SignInScreen() {
       style={{
         flex: 1,
         justifyContent: "center",
-        padding: spacing.xl,
-        backgroundColor: colors.background,
+        padding: theme.spacing.xl,
+        backgroundColor: theme.colors.background,
       }}
     >
-      <Text style={{ ...typography.title, textAlign: "center", color: colors.text }}>
-        {t("app.title")}
+      <Text style={{ ...theme.typography.title, textAlign: "center", color: theme.colors.text }}>
+        {t("common:appTitle")}
       </Text>
-      <Text style={{ ...typography.body, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
-        Internal users only. Sign in using your Alga hosted account. We’ll open the system browser to complete login.
+      <Text style={{ ...theme.typography.body, marginTop: theme.spacing.md, textAlign: "center", color: theme.colors.textSecondary }}>
+        {t("signIn.subtitle")}
       </Text>
 
-      <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
+      <View style={{ marginTop: theme.spacing.lg, alignItems: "center" }}>
         <PrimaryButton
           onPress={() => void onSignIn()}
           disabled={
@@ -132,20 +134,20 @@ export function SignInScreen() {
             !baseUrl ||
             !hostAllowed
           }
-          accessibilityLabel={t("auth.signIn.cta")}
-          accessibilityHint="Opens the browser to complete sign-in."
+          accessibilityLabel={t("signIn.cta")}
+          accessibilityHint={t("signIn.accessibilityHint")}
         >
-          {status === "opening" ? t("auth.signIn.opening") : t("auth.signIn.cta")}
+          {status === "opening" ? t("signIn.opening") : t("signIn.cta")}
         </PrimaryButton>
       </View>
 
       {baseUrl ? (
         <Text
           style={{
-            ...typography.caption,
-            marginTop: spacing.md,
+            ...theme.typography.caption,
+            marginTop: theme.spacing.md,
             textAlign: "center",
-            color: colors.mutedText,
+            color: theme.colors.textSecondary,
           }}
         >
           {baseUrl}
@@ -155,10 +157,10 @@ export function SignInScreen() {
       {error ? (
         <Text
           style={{
-            ...typography.body,
-            marginTop: spacing.md,
+            ...theme.typography.body,
+            marginTop: theme.spacing.md,
             textAlign: "center",
-            color: colors.danger,
+            color: theme.colors.danger,
           }}
         >
           {error}
@@ -166,26 +168,26 @@ export function SignInScreen() {
       ) : null}
 
       {capabilitiesLoading ? (
-        <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
-          Checking server sign-in support…
+        <Text style={{ ...theme.typography.caption, marginTop: theme.spacing.md, textAlign: "center", color: theme.colors.textSecondary }}>
+          {t("signIn.checkingServer")}
         </Text>
       ) : capabilitiesError ? (
-        <View style={{ marginTop: spacing.md, alignItems: "center" }}>
-          <Text style={{ ...typography.caption, textAlign: "center", color: colors.mutedText }}>
+        <View style={{ marginTop: theme.spacing.md, alignItems: "center" }}>
+          <Text style={{ ...theme.typography.caption, textAlign: "center", color: theme.colors.textSecondary }}>
             {capabilitiesError}
           </Text>
-          <View style={{ height: spacing.md }} />
+          <View style={{ height: theme.spacing.md }} />
           <PrimaryButton onPress={() => void fetchCapabilities()} disabled={capabilitiesLoading}>
-            Retry
+            {t("common:retry")}
           </PrimaryButton>
         </View>
       ) : capabilities && !hostAllowed ? (
-        <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.danger }}>
-          This server domain is not allowed for mobile sign-in.
+        <Text style={{ ...theme.typography.caption, marginTop: theme.spacing.md, textAlign: "center", color: theme.colors.danger }}>
+          {t("signIn.errors.domainNotAllowed")}
         </Text>
       ) : capabilities && !hasConfiguredSsoProvider ? (
-        <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
-          Microsoft/Google SSO is not configured for this server. Sign-in may require a password login.
+        <Text style={{ ...theme.typography.caption, marginTop: theme.spacing.md, textAlign: "center", color: theme.colors.textSecondary }}>
+          {t("signIn.errors.ssoNotConfigured")}
         </Text>
       ) : null}
     </View>

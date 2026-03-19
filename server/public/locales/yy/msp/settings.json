@@ -1,0 +1,1259 @@
+{
+  "page": {
+    "title": "55555"
+  },
+  "tabs": {
+    "general": "55555",
+    "experimentalFeatures": "55555",
+    "clientPortal": "55555",
+    "users": "55555",
+    "teams": "55555",
+    "language": "55555",
+    "ticketing": "55555",
+    "projects": "55555",
+    "interactions": "55555",
+    "notifications": "55555",
+    "timeEntry": "55555",
+    "billing": "55555",
+    "secrets": "55555",
+    "importExport": "55555",
+    "email": "55555",
+    "integrations": "55555",
+    "extensions": "55555"
+  },
+  "unsavedChanges": {
+    "title": "55555",
+    "message": "55555"
+  },
+  "general": {
+    "title": "55555",
+    "description": "55555",
+    "fields": {
+      "organizationName": {
+        "label": "55555"
+      },
+      "defaultTimezone": {
+        "label": "55555",
+        "help": "55555"
+      }
+    },
+    "actions": {
+      "saveOrganizationName": "55555",
+      "saveDefaultTimezone": "55555"
+    },
+    "clients": {
+      "title": "55555",
+      "table": {
+        "name": "55555",
+        "default": "55555",
+        "actions": "55555"
+      },
+      "placeholder": "55555",
+      "addClient": "55555"
+    },
+    "messages": {
+      "success": {
+        "tenantNameUpdated": "55555",
+        "timezoneUpdated": "55555",
+        "clientAdded": "55555",
+        "clientRemoved": "55555",
+        "defaultClientUpdated": "55555"
+      },
+      "error": {
+        "loadTenantData": "55555",
+        "updateTenantName": "55555",
+        "updateTimezone": "55555",
+        "selectClient": "55555",
+        "clientNotFound": "55555",
+        "addClient": "55555",
+        "removeClient": "55555",
+        "setDefaultClient": "55555",
+        "loadClients": "55555"
+      }
+    }
+  },
+  "experimentalFeatures": {
+    "title": "55555",
+    "description": "55555",
+    "alert": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "features": {
+      "aiAssistant": {
+        "name": "55555",
+        "description": "55555",
+        "restriction": "55555"
+      },
+      "workflowAutomation": {
+        "name": "55555",
+        "description": "55555"
+      }
+    },
+    "actions": {
+      "save": "55555",
+      "saving": "55555",
+      "retry": "55555"
+    },
+    "loading": "55555",
+    "messages": {
+      "success": {
+        "saved": "55555"
+      },
+      "error": {
+        "loadFailed": "55555",
+        "saveFailed": "55555"
+      }
+    }
+  },
+  "users": {
+    "title": "55555",
+    "description": {
+      "msp": "55555",
+      "client": "55555"
+    },
+    "viewSwitcher": {
+      "msp": "55555",
+      "clientPortal": "55555"
+    },
+    "license": {
+      "usage": "55555 {{used}} 55555 {{limit}} 55555",
+      "noLimit": "55555",
+      "ofLimit": "55555 {{limit}} 55555",
+      "addLicensePrompt": "55555",
+      "addLicense": "55555"
+    },
+    "search": "55555",
+    "filter": {
+      "all": "55555",
+      "active": "55555",
+      "inactive": "55555",
+      "selectStatus": "55555"
+    },
+    "tabs": {
+      "list": "55555",
+      "structure": "55555",
+      "listDescription": "55555",
+      "structureDescription": "55555"
+    },
+    "actions": {
+      "createNewUser": "55555",
+      "createNewClientUser": "55555",
+      "copyPortalLink": "55555",
+      "copying": "55555",
+      "createUser": "55555",
+      "sendInvitation": "55555",
+      "cancel": "55555"
+    },
+    "form": {
+      "title": {
+        "msp": "55555",
+        "client": "55555"
+      },
+      "fields": {
+        "firstName": "55555",
+        "lastName": "55555",
+        "email": "55555",
+        "client": "55555",
+        "clientOptional": "55555",
+        "primaryRole": "55555",
+        "selectRole": "55555",
+        "reportsTo": "55555",
+        "reportsToOptional": "55555",
+        "selectManager": "55555",
+        "existingContact": "55555",
+        "existingContactOptional": "55555",
+        "selectExistingContact": "55555",
+        "selectExistingContactRequired": "55555",
+        "selectContactToInvite": "55555",
+        "password": "55555",
+        "passwordOptional": "55555",
+        "passwordPlaceholder": {
+          "msp": "55555",
+          "client": "55555"
+        },
+        "selectClient": "55555"
+      },
+      "passwordAlert": {
+        "withPassword": "55555",
+        "withoutPassword": "55555"
+      },
+      "requirePasswordChange": "55555"
+    },
+    "table": {
+      "firstName": "55555",
+      "lastName": "55555",
+      "email": "55555",
+      "client": "55555",
+      "role": "55555",
+      "lastLogin": "55555",
+      "actions": "55555",
+      "noClient": "55555",
+      "noRole": "55555",
+      "never": "55555",
+      "viaMethod": "55555 {{method}} 55555",
+      "loading": "55555",
+      "openMenu": "55555",
+      "edit": "55555",
+      "remove": "55555"
+    },
+    "loading": "55555",
+    "messages": {
+      "success": {
+        "portalInvitationSent": "55555",
+        "clientPortalUserCreated": "55555",
+        "copiedVanityLink": "55555",
+        "copiedCanonicalLink": "55555"
+      },
+      "error": {
+        "fetchUsers": "55555",
+        "fetchRoles": "55555",
+        "fetchClients": "55555",
+        "createUser": "55555",
+        "sendInvitation": "55555",
+        "sendInvitationManual": "55555",
+        "createClientPortalUser": "55555",
+        "clipboardUnavailable": "55555",
+        "copyPortalLink": "55555",
+        "fillRequiredFields": "55555",
+        "fixValidationErrors": "55555",
+        "fixValidationBeforeInvitation": "55555",
+        "emailAlreadyInUse": "55555",
+        "portalUserExists": "55555",
+        "portalUserExistsForContact": "55555",
+        "selectAppropriateRole": "55555",
+        "contactMissingEmail": "55555 {{name}} 55555",
+        "licenseLimit": "55555"
+      }
+    }
+  },
+  "userDetails": {
+    "title": "55555",
+    "fields": {
+      "firstName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "lastName": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "email": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "reportsTo": {
+        "label": "55555",
+        "placeholder": "55555"
+      },
+      "lastLogin": "55555",
+      "roles": "55555",
+      "status": "55555",
+      "statusHelp": "55555",
+      "newPassword": "55555"
+    },
+    "status": {
+      "active": "55555",
+      "inactive": "55555",
+      "inactiveTag": "55555"
+    },
+    "actions": {
+      "addRole": "55555",
+      "selectRoleToAdd": "55555",
+      "removeRole": "55555",
+      "setPassword": "55555",
+      "cancel": "55555",
+      "saveChanges": "55555"
+    },
+    "dialog": {
+      "setPassword": {
+        "title": "55555"
+      }
+    },
+    "messages": {
+      "success": {
+        "passwordChanged": "55555",
+        "userUpdated": "55555"
+      },
+      "error": {
+        "userNotFound": "55555",
+        "loadFailed": "55555",
+        "addRoleFailed": "55555",
+        "removeRoleFailed": "55555",
+        "updateUserNotFound": "55555",
+        "updateFailed": "55555",
+        "passwordTooShort": "55555",
+        "passwordChangeFailed": "55555",
+        "passwordChangeError": "55555"
+      }
+    }
+  },
+  "teams": {
+    "title": "55555",
+    "description": "55555",
+    "loading": "55555",
+    "emptyState": "55555",
+    "list": {
+      "title": "55555",
+      "addNewTeam": "55555",
+      "createTeam": "55555",
+      "cancel": "55555",
+      "delete": "55555",
+      "placeholder": "55555",
+      "selectManager": "55555"
+    },
+    "details": {
+      "loading": "55555",
+      "notFound": "55555",
+      "fields": {
+        "teamLead": "55555",
+        "addMember": "55555"
+      },
+      "placeholders": {
+        "teamName": "55555",
+        "selectTeamLead": "55555",
+        "selectUserToAdd": "55555"
+      },
+      "alert": {
+        "unsavedChanges": "55555"
+      },
+      "actions": {
+        "discard": "55555",
+        "saveChanges": "55555",
+        "saveName": "55555",
+        "cancel": "55555",
+        "editName": "55555",
+        "remove": "55555"
+      },
+      "table": {
+        "teamMembers": "55555",
+        "member": "55555",
+        "role": "55555"
+      },
+      "badge": {
+        "new": "55555",
+        "lead": "55555"
+      },
+      "memberCount": "55555 {{count}} 55555",
+      "memberCount_plural": "55555 {{count}} 55555",
+      "leadName": "55555 {{name}} 55555"
+    },
+    "messages": {
+      "error": {
+        "loadFailed": "55555",
+        "fetchUsers": "55555",
+        "createFailed": "55555 {{error}} 55555",
+        "deleteFailed": "55555"
+      }
+    }
+  },
+  "ticketing": {
+    "title": "55555",
+    "tabs": {
+      "display": "55555",
+      "ticketNumbering": "55555",
+      "boards": "55555",
+      "statuses": "55555",
+      "priorities": "55555",
+      "categories": "55555"
+    },
+    "numbering": {
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "prefix": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555"
+        },
+        "minimumDigits": {
+          "label": "55555",
+          "help": "55555"
+        },
+        "initialValue": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555"
+        },
+        "lastUsedNumber": {
+          "label": "55555",
+          "help": "55555"
+        },
+        "nextPreview": {
+          "label": "55555",
+          "help": "55555"
+        }
+      },
+      "actions": {
+        "saveChanges": "55555",
+        "cancel": "55555"
+      },
+      "dialog": {
+        "title": "55555",
+        "message": "55555",
+        "confirm": "55555"
+      },
+      "loading": "55555",
+      "messages": {
+        "error": {
+          "noSettings": "55555",
+          "loadFailed": "55555",
+          "updateFailed": "55555"
+        },
+        "success": {
+          "updated": "55555"
+        }
+      }
+    },
+    "statuses": {
+      "title": "55555",
+      "alert": "55555",
+      "table": {
+        "name": "55555",
+        "status": "55555",
+        "default": "55555",
+        "order": "55555",
+        "actions": "55555"
+      },
+      "statusLabels": {
+        "closed": "55555",
+        "open": "55555",
+        "closedHelp": "55555",
+        "openHelp": "55555",
+        "defaultHelp": "55555"
+      },
+      "actions": {
+        "addStatus": "55555",
+        "importStandard": "55555",
+        "edit": "55555",
+        "delete": "55555"
+      },
+      "messages": {
+        "success": {
+          "deleted": "55555",
+          "updated": "55555"
+        },
+        "error": {
+          "lastClosed": "55555",
+          "deleteLastClosed": "55555",
+          "removeDefault": "55555"
+        }
+      }
+    },
+    "boards": {
+      "title": "55555",
+      "alert": "55555",
+      "table": {
+        "name": "55555",
+        "description": "55555",
+        "status": "55555",
+        "default": "55555",
+        "defaultAgent": "55555",
+        "defaultPriority": "55555",
+        "boardManager": "55555",
+        "order": "55555",
+        "itilBoard": "55555",
+        "actions": "55555"
+      },
+      "statusLabels": {
+        "active": "55555",
+        "inactive": "55555"
+      },
+      "actions": {
+        "addBoard": "55555",
+        "importStandard": "55555",
+        "edit": "55555",
+        "delete": "55555",
+        "cancel": "55555",
+        "close": "55555",
+        "create": "55555",
+        "update": "55555",
+        "importSelected": "55555"
+      },
+      "fields": {
+        "boardName": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "description": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "displayOrder": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555"
+        },
+        "inactive": "55555",
+        "itilCompliant": "55555",
+        "boardConfiguration": "55555",
+        "boardManager": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555"
+        },
+        "defaultAssignedAgent": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555"
+        },
+        "defaultPriority": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555",
+          "none": "55555"
+        },
+        "slaPolicy": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555",
+          "none": "55555"
+        }
+      },
+      "dialog": {
+        "addBoard": "55555",
+        "editBoard": "55555",
+        "deleteBoardTitle": "55555",
+        "deleteBoardMessage": "55555",
+        "cleanupItilTitle": "55555",
+        "cleanupItilMessage": "55555",
+        "deleteOnly": "55555",
+        "deleteAndCleanup": "55555",
+        "deleteAll": "55555",
+        "importTitle": "55555",
+        "importDescription": "55555",
+        "importEmpty": "55555",
+        "conflictsTitle": "55555",
+        "conflictsDescription": "55555",
+        "nameConflict": "55555",
+        "orderConflict": "55555 {{order}} 55555",
+        "skipItem": "55555",
+        "importNewName": "55555",
+        "importWithOrder": "55555 {{order}} 55555",
+        "importWithResolutions": "55555"
+      },
+      "importTable": {
+        "active": "55555"
+      },
+      "itilInfo": {
+        "title": "55555",
+        "tooltip": "55555",
+        "categoriesTitle": "55555",
+        "priorityMatrixTitle": "55555",
+        "impactDescription": "55555",
+        "urgencyDescription": "55555",
+        "priorityDescription": "55555"
+      },
+      "messages": {
+        "success": {
+          "created": "55555",
+          "updated": "55555",
+          "deleted": "55555",
+          "imported": "55555"
+        },
+        "error": {
+          "fetchFailed": "55555",
+          "fetchAvailableFailed": "55555",
+          "nameRequired": "55555",
+          "saveFailed": "55555",
+          "lastDefault": "55555"
+        }
+      }
+    }
+  },
+  "interactions": {
+    "title": "55555",
+    "tabs": {
+      "types": "55555",
+      "statuses": "55555"
+    },
+    "types": {
+      "title": "55555",
+      "loading": "55555",
+      "table": {
+        "name": "55555",
+        "order": "55555",
+        "actions": "55555"
+      },
+      "actions": {
+        "addType": "55555",
+        "importStandard": "55555",
+        "edit": "55555",
+        "delete": "55555",
+        "cancel": "55555",
+        "importSelected": "55555"
+      },
+      "dialog": {
+        "import": {
+          "title": "55555",
+          "description": "55555",
+          "empty": "55555"
+        },
+        "conflicts": {
+          "title": "55555",
+          "description": "55555",
+          "nameConflict": "55555",
+          "orderConflict": "55555 {{order}} 55555",
+          "skipItem": "55555",
+          "importDifferentName": "55555",
+          "importDifferentOrder": "55555 {{order}} 55555",
+          "resolve": "55555"
+        }
+      },
+      "messages": {
+        "success": {
+          "deleted": "55555",
+          "imported": "55555 {{count}} 55555",
+          "imported_plural": "55555 {{count}} 55555"
+        },
+        "error": {
+          "fetchFailed": "55555",
+          "validateDeleteFailed": "55555",
+          "deleteFailed": "55555",
+          "checkConflicts": "55555",
+          "importFailed": "55555",
+          "fetchAvailable": "55555"
+        }
+      }
+    },
+    "statuses": {
+      "title": "55555",
+      "alert": "55555",
+      "table": {
+        "name": "55555",
+        "status": "55555",
+        "order": "55555",
+        "actions": "55555"
+      },
+      "statusLabels": {
+        "closedHelp": "55555",
+        "openHelp": "55555"
+      },
+      "actions": {
+        "addStatus": "55555",
+        "importStandard": "55555",
+        "edit": "55555",
+        "delete": "55555"
+      },
+      "messages": {
+        "success": {
+          "updated": "55555",
+          "deleted": "55555",
+          "imported": "55555 {{count}} 55555"
+        },
+        "error": {
+          "lastClosed": "55555",
+          "deleteLastClosed": "55555"
+        }
+      }
+    },
+    "quickAdd": {
+      "dialog": {
+        "createTitle": "55555",
+        "editTitle": "55555"
+      },
+      "fields": {
+        "name": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "displayOrder": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "icon": {
+          "label": "55555"
+        }
+      },
+      "preview": {
+        "title": "55555",
+        "empty": "55555"
+      },
+      "actions": {
+        "cancel": "55555",
+        "create": "55555",
+        "update": "55555",
+        "creating": "55555",
+        "updating": "55555"
+      },
+      "messages": {
+        "error": {
+          "nameRequired": "55555",
+          "saveFailed": "55555 {{action}} 55555"
+        }
+      }
+    }
+  },
+  "clientPortal": {
+    "language": {
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "defaultLanguage": "55555",
+        "availableLanguages": "55555"
+      },
+      "help": {
+        "defaultLanguage": "55555",
+        "availableLanguages": "55555"
+      },
+      "hierarchy": {
+        "title": "55555",
+        "description": "55555",
+        "userPreference": "55555",
+        "clientDefault": "55555",
+        "orgDefault": "55555",
+        "systemDefault": "55555",
+        "note": "55555"
+      }
+    },
+    "branding": {
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "companyName": "55555",
+        "companyLogo": "55555",
+        "colorPalette": "55555",
+        "primaryColor": "55555",
+        "secondaryColor": "55555"
+      },
+      "help": {
+        "companyName": "55555",
+        "companyLogo": "55555",
+        "primaryColor": "55555",
+        "secondaryColor": "55555"
+      },
+      "preview": "55555",
+      "previewDarkMode": "55555",
+      "actions": {
+        "saveBranding": "55555",
+        "previewDashboard": "55555",
+        "hideDashboard": "55555",
+        "previewSignIn": "55555",
+        "hideSignIn": "55555"
+      },
+      "customDomainRequired": "55555"
+    },
+    "dashboardPreview": {
+      "title": "55555",
+      "welcome": "55555",
+      "subtitle": "55555",
+      "openTickets": "55555",
+      "activeProjects": "55555",
+      "invoices": "55555",
+      "urgent": "55555 {{count}} 55555",
+      "nearDeadline": "55555 {{count}} 55555",
+      "dueThisMonth": "55555",
+      "recentActivity": "55555",
+      "ticketUpdated": "55555",
+      "hoursAgo": "55555 {{count}} 55555",
+      "newInvoice": "55555",
+      "milestoneCompleted": "55555",
+      "dayAgo": "55555",
+      "createTicket": "55555",
+      "viewProjects": "55555"
+    },
+    "signInPreview": {
+      "portalTitle": "55555",
+      "welcome": "55555",
+      "subtitle": "55555",
+      "features": {
+        "submitTickets": {
+          "title": "55555",
+          "description": "55555"
+        },
+        "trackStatus": {
+          "title": "55555",
+          "description": "55555"
+        },
+        "ticketHistory": {
+          "title": "55555",
+          "description": "55555"
+        },
+        "documentation": {
+          "title": "55555",
+          "description": "55555"
+        }
+      },
+      "signIn": {
+        "title": "55555",
+        "description": "55555",
+        "email": "55555",
+        "emailPlaceholder": "55555",
+        "password": "55555",
+        "passwordPlaceholder": "55555",
+        "forgotPassword": "55555",
+        "mspStaffLogin": "55555"
+      }
+    }
+  },
+  "mspLanguage": {
+    "title": "55555",
+    "description": "55555",
+    "fields": {
+      "defaultLanguage": "55555",
+      "availableLanguages": "55555"
+    },
+    "help": {
+      "defaultLanguage": "55555",
+      "availableLanguages": "55555"
+    },
+    "hierarchy": {
+      "title": "55555",
+      "userPreference": "55555",
+      "orgDefault": "55555",
+      "systemDefault": "55555"
+    }
+  },
+  "notifications": {
+    "title": "55555",
+    "description": {
+      "email": "55555",
+      "internal": "55555"
+    },
+    "viewSwitcher": {
+      "email": "55555",
+      "internal": "55555"
+    },
+    "emailTabs": {
+      "settings": "55555",
+      "emailTemplates": "55555",
+      "categories": "55555",
+      "telemetry": "55555"
+    },
+    "internalTabs": {
+      "categories": "55555"
+    },
+    "sections": {
+      "globalSettings": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "emailTemplates": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "categories": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "internalCategories": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "telemetry": {
+        "title": "55555",
+        "description": "55555"
+      }
+    }
+  },
+  "timeEntry": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "billing": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "secrets": {
+    "title": "55555",
+    "description": "55555",
+    "list": {
+      "title": "55555",
+      "description": "55555",
+      "search": "55555",
+      "createSecret": "55555",
+      "table": {
+        "name": "55555",
+        "description": "55555",
+        "lastUpdated": "55555",
+        "lastAccessed": "55555",
+        "actions": "55555",
+        "never": "55555",
+        "empty": "55555"
+      },
+      "tooltips": {
+        "edit": "55555",
+        "delete": "55555"
+      }
+    },
+    "dialog": {
+      "createTitle": "55555",
+      "editTitle": "55555",
+      "deleteTitle": "55555",
+      "fields": {
+        "name": {
+          "label": "55555",
+          "placeholder": "55555",
+          "help": "55555"
+        },
+        "value": {
+          "label": "55555",
+          "placeholder": "55555",
+          "editPlaceholder": "55555",
+          "editHelp": "55555"
+        },
+        "description": {
+          "label": "55555",
+          "placeholder": "55555"
+        }
+      },
+      "delete": {
+        "confirmation": "55555 {{name}} 55555",
+        "usedByWorkflows": "55555 {{count}} 55555",
+        "usedByWarning": "55555",
+        "cannotUndo": "55555",
+        "typeToConfirm": "55555 {{name}} 55555",
+        "placeholder": "55555"
+      },
+      "actions": {
+        "cancel": "55555",
+        "create": "55555",
+        "update": "55555",
+        "delete": "55555",
+        "saving": "55555",
+        "deleting": "55555"
+      }
+    },
+    "messages": {
+      "success": {
+        "created": "55555 {{name}} 55555",
+        "updated": "55555 {{name}} 55555",
+        "deleted": "55555 {{name}} 55555"
+      },
+      "error": {
+        "loadFailed": "55555",
+        "deleteFailed": "55555",
+        "saveFailed": "55555",
+        "nameRequired": "55555",
+        "valueRequired": "55555",
+        "noChanges": "55555",
+        "fixValidation": "55555"
+      }
+    }
+  },
+  "importExport": {
+    "title": "55555",
+    "description": "55555",
+    "history": {
+      "title": "55555",
+      "description": "55555",
+      "empty": "55555",
+      "table": {
+        "date": "55555",
+        "source": "55555",
+        "file": "55555",
+        "status": "55555",
+        "created": "55555",
+        "duplicates": "55555",
+        "errors": "55555"
+      }
+    },
+    "tabs": {
+      "assetImport": "55555",
+      "assetExport": "55555",
+      "templatesAutomation": "55555"
+    },
+    "import": {
+      "fields": {
+        "importSource": "55555",
+        "uploadFile": "55555",
+        "fieldMapping": "55555",
+        "rememberMapping": "55555"
+      },
+      "placeholders": {
+        "noSources": "55555",
+        "selectSource": "55555",
+        "sourceColumn": "55555",
+        "example": "55555 {{example}} 55555"
+      },
+      "help": {
+        "fieldMapping": "55555"
+      },
+      "alerts": {
+        "selectSource": "55555",
+        "chooseFile": "55555",
+        "validationIssues": "55555"
+      },
+      "actions": {
+        "generatePreview": "55555",
+        "preparingPreview": "55555",
+        "proceedWithImport": "55555",
+        "startingImport": "55555",
+        "refresh": "55555",
+        "refreshing": "55555",
+        "cancel": "55555",
+        "importSelected": "55555"
+      },
+      "preview": {
+        "title": "55555",
+        "description": "55555 {{totalRows}} 55555",
+        "stats": {
+          "total": "55555",
+          "valid": "55555",
+          "duplicates": "55555",
+          "errors": "55555"
+        },
+        "table": {
+          "row": "55555",
+          "values": "55555",
+          "issues": "55555"
+        },
+        "empty": "55555"
+      }
+    },
+    "export": {
+      "comingSoon": "55555"
+    },
+    "templates": {
+      "comingSoon": "55555"
+    },
+    "jobDetails": {
+      "title": "55555",
+      "stats": {
+        "totalRows": "55555",
+        "processed": "55555",
+        "created": "55555",
+        "updated": "55555",
+        "duplicates": "55555",
+        "errors": "55555"
+      },
+      "sections": {
+        "summary": "55555",
+        "records": "55555 {{count}} 55555",
+        "errors": "55555 {{count}} 55555",
+        "duplicates": "55555 {{count}} 55555"
+      },
+      "fields": {
+        "source": "55555",
+        "originalFileName": "55555",
+        "storedFileId": "55555",
+        "documentId": "55555",
+        "documentAssociation": "55555",
+        "clientAssociation": "55555",
+        "associatedClient": "55555",
+        "defaultClientContext": "55555",
+        "tenantClientFallback": "55555",
+        "externalId": "55555",
+        "status": "55555",
+        "sampleValues": "55555",
+        "error": "55555",
+        "duplicateMatch": "55555"
+      },
+      "empty": {
+        "noRecords": "55555",
+        "noErrors": "55555",
+        "noDuplicates": "55555",
+        "noValues": "55555"
+      },
+      "truncated": "55555 {{count}} 55555"
+    }
+  },
+  "email": {
+    "title": "55555",
+    "description": "55555"
+  },
+  "extensions": {
+    "title": "55555",
+    "description": "55555",
+    "tabs": {
+      "manage": "55555",
+      "install": "55555"
+    },
+    "enterpriseOnly": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "links": {
+      "needLogs": "55555",
+      "debugConsole": "55555"
+    },
+    "loading": {
+      "extensions": "55555",
+      "installer": "55555"
+    }
+  },
+  "security": {
+    "title": "55555",
+    "tabs": {
+      "roles": "55555",
+      "sessions": "55555",
+      "sso": "55555",
+      "permissions": "55555",
+      "userRoles": "55555",
+      "policies": "55555",
+      "apiKeys": "55555"
+    },
+    "loading": {
+      "roles": "55555",
+      "permissions": "55555",
+      "userRoles": "55555",
+      "policies": "55555",
+      "apiKeys": "55555",
+      "sso": "55555",
+      "sessions": "55555"
+    },
+    "userRoles": {
+      "title": "55555",
+      "description": {
+        "msp": "55555",
+        "client": "55555"
+      },
+      "viewSwitcher": {
+        "msp": "55555",
+        "clientPortal": "55555"
+      },
+      "showInactive": "55555",
+      "fields": {
+        "selectUser": "55555",
+        "selectRole": "55555"
+      },
+      "actions": {
+        "assignRole": "55555"
+      },
+      "table": {
+        "user": "55555",
+        "email": "55555",
+        "roles": "55555",
+        "actions": "55555"
+      },
+      "noRolesAssigned": "55555",
+      "removeRole": "55555 {{role}} 55555",
+      "emptyState": {
+        "noUsers": "55555 {{type}} 55555",
+        "inactiveHidden": "55555"
+      },
+      "inactiveTag": "55555"
+    },
+    "sessions": {
+      "title": "55555",
+      "subtitle": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
+      "subtitle_plural": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
+      "filters": {
+        "search": "55555",
+        "searchPlaceholder": "55555",
+        "user": "55555",
+        "allUsers": "55555",
+        "loginMethod": "55555",
+        "allMethods": "55555",
+        "userType": "55555",
+        "allTypes": "55555",
+        "from": "55555",
+        "to": "55555",
+        "selectDate": "55555",
+        "reset": "55555"
+      },
+      "loginMethods": {
+        "password": "55555",
+        "google": "55555",
+        "microsoft": "55555",
+        "keycloak": "55555"
+      },
+      "userTypes": {
+        "internal": "55555",
+        "client": "55555"
+      },
+      "session": {
+        "yourSession": "55555",
+        "unknownDevice": "55555",
+        "lastActive": "55555 {{time}} 55555",
+        "logout": "55555",
+        "revoke": "55555",
+        "revoking": "55555"
+      },
+      "oauthWarning": "55555 {{provider}} 55555 {{provider}} 55555",
+      "confirmLogout": "55555",
+      "messages": {
+        "loggingOut": "55555",
+        "revoked": "55555"
+      },
+      "emptyState": {
+        "loading": "55555",
+        "noMatch": "55555",
+        "noSessions": "55555"
+      }
+    }
+  },
+  "profile": {
+    "pageTitle": "55555",
+    "tabs": {
+      "profile": "55555",
+      "security": "55555",
+      "sso": "55555",
+      "apiKeys": "55555",
+      "notifications": "55555",
+      "calendar": "55555"
+    },
+    "basicInfo": {
+      "title": "55555"
+    },
+    "fields": {
+      "firstName": {
+        "label": "55555"
+      },
+      "lastName": {
+        "label": "55555"
+      },
+      "email": {
+        "label": "55555"
+      },
+      "phoneNumber": {
+        "label": "55555"
+      },
+      "timeZone": {
+        "label": "55555"
+      }
+    },
+    "actions": {
+      "saveChanges": "55555"
+    },
+    "notifications": {
+      "title": "55555",
+      "viewSwitcher": {
+        "email": "55555",
+        "internal": "55555"
+      }
+    },
+    "loading": "55555",
+    "messages": {
+      "success": {
+        "profileUpdated": "55555"
+      },
+      "error": {
+        "userNotFound": "55555",
+        "fillRequiredFields": "55555"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "55555",
+      "lastNameRequired": "55555"
+    }
+  },
+  "password": {
+    "changePassword": "55555",
+    "fields": {
+      "currentPassword": "55555",
+      "newPassword": "55555",
+      "confirmNewPassword": "55555"
+    },
+    "messages": {
+      "success": {
+        "changed": "55555"
+      },
+      "error": {
+        "mismatch": "55555",
+        "tooShort": "55555",
+        "changeFailed": "55555"
+      }
+    }
+  },
+  "orgChart": {
+    "emptyState": "55555",
+    "roles": {
+      "client": "55555",
+      "internal": "55555"
+    },
+    "badge": {
+      "inactive": "55555"
+    }
+  }
+}

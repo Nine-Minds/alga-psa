@@ -505,7 +505,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
           {previewData && previewTemplate && authoritativeRenderOutput && (
             <div className="p-2" data-automation-id="invoice-designer-preview-render-template">
-              <PaperInvoice>
+              <PaperInvoice templateAst={previewTemplate.templateAst ?? null}>
                 <TemplateRenderer
                   template={previewTemplate}
                   invoiceData={previewData}

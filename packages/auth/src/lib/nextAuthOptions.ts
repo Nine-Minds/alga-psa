@@ -29,6 +29,7 @@ import {
     getMspSsoSigningSecret,
     parseAndVerifyMspSsoResolutionCookie,
 } from "./sso/mspSsoResolution";
+import { resolveTeamsMicrosoftProviderConfig } from "./sso/teamsMicrosoftProviderResolution";
 import {
     buildClearedPendingRememberContextCookie,
     buildClearedRememberedEmailCookie,
@@ -42,6 +43,7 @@ import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
 import { getConnection } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
+import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -60,6 +62,83 @@ function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, proto
 
 const SESSION_MAX_AGE = getSessionMaxAge();
 const SESSION_COOKIE = getSessionCookieConfig();
+
+/**
+ * Fetches the tenant's plan from the database.
+ * Used for both initial sign-in and throttled refresh in JWT callbacks.
+ */
+interface TenantSubscriptionInfo {
+    plan?: string;
+    trial_end?: string | null;
+    subscription_status?: string | null;
+    premium_trial_end?: string | null;
+    premium_trial_confirmed?: boolean;
+    premium_trial_effective_date?: string | null;
+}
+
+async function fetchTenantPlan(tenantId: string): Promise<string | undefined> {
+    const info = await fetchTenantSubscriptionInfo(tenantId);
+    return info.plan;
+}
+
+async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubscriptionInfo> {
+    const { getAdminConnection } = await import('@alga-psa/db/admin');
+    const knex = await getAdminConnection();
+
+    // Fetch plan from tenants table
+    const tenantRecord = await knex('tenants')
+        .where('tenant', tenantId)
+        .select('plan')
+        .first();
+
+    // Fetch active subscription status + trial info from stripe_subscriptions
+    // Use a single query to minimize DB load (this runs on every JWT refresh)
+    let trialEnd: string | null = null;
+    let subscriptionStatus: string | null = null;
+    let premiumTrialEnd: string | null = null;
+    let premiumTrialConfirmed = false;
+    let premiumTrialEffectiveDate: string | null = null;
+
+    try {
+        const subscription = await knex('stripe_subscriptions')
+            .where({ tenant: tenantId })
+            .whereIn('status', ['active', 'trialing', 'past_due', 'unpaid'])
+            .orderByRaw("CASE WHEN status = 'trialing' THEN 0 WHEN status = 'active' THEN 1 ELSE 2 END")
+            .select('status', 'current_period_end', 'metadata')
+            .first();
+
+        if (subscription) {
+            subscriptionStatus = subscription.status;
+
+            // For trialing subscriptions, current_period_end is the trial end date
+            if (subscription.status === 'trialing' && subscription.current_period_end) {
+                trialEnd = new Date(subscription.current_period_end).toISOString();
+            }
+
+            // Check for active or confirmed Premium trial (stored in metadata)
+            const metadata = subscription.metadata || {};
+            if (metadata.premium_trial === 'true' && metadata.premium_trial_end) {
+                premiumTrialEnd = metadata.premium_trial_end;
+            } else if (metadata.premium_trial === 'confirmed') {
+                premiumTrialConfirmed = true;
+                premiumTrialEffectiveDate = metadata.premium_trial_effective_date || null;
+                // Use effective date so the UI shows when Premium billing starts
+                premiumTrialEnd = premiumTrialEffectiveDate;
+            }
+        }
+    } catch {
+        // stripe_subscriptions table may not exist in CE or early setup — ignore
+    }
+
+    return {
+        plan: tenantRecord?.plan ?? undefined,
+        trial_end: trialEnd,
+        subscription_status: subscriptionStatus,
+        premium_trial_end: premiumTrialEnd,
+        premium_trial_confirmed: premiumTrialConfirmed,
+        premium_trial_effective_date: premiumTrialEffectiveDate,
+    };
+}
 
 const NEXTAUTH_SECURE_COOKIES = process.env.NODE_ENV === 'production';
 const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
@@ -365,6 +444,7 @@ interface ExtendedUser {
     user_type: string;
     clientId?: string;
     contactId?: string;
+    plan?: string;
     deviceInfo?: {
         ip: string;
         userAgent: string;
@@ -885,7 +965,12 @@ async function ensureOAuthAccountLink(
 }
 
 // Helper function to get OAuth secrets from secret provider with env fallback
-async function getOAuthSecrets() {
+interface BuildAuthOptionsContext {
+    teamsTenantId?: string;
+    teamsMicrosoftOnly?: boolean;
+}
+
+async function getOAuthSecrets(context?: BuildAuthOptionsContext) {
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
     const secretProvider = await getSecretProviderInstance();
 
@@ -926,6 +1011,26 @@ async function getOAuthSecrets() {
         microsoftAuthority: microsoftAuthority || process.env.MICROSOFT_OAUTH_AUTHORITY || '',
     };
 
+    if (context?.teamsMicrosoftOnly) {
+        resolved.googleClientId = '';
+        resolved.googleClientSecret = '';
+    }
+
+    if (context?.teamsTenantId) {
+        const teamsMicrosoft = await resolveTeamsMicrosoftProviderConfig(context.teamsTenantId);
+        if (teamsMicrosoft.status === 'ready') {
+            resolved.microsoftClientId = teamsMicrosoft.clientId || '';
+            resolved.microsoftClientSecret = teamsMicrosoft.clientSecret || '';
+            resolved.microsoftTenantId = teamsMicrosoft.microsoftTenantId || 'common';
+        } else {
+            resolved.microsoftClientId = '';
+            resolved.microsoftClientSecret = '';
+            resolved.microsoftTenantId = '';
+        }
+
+        return resolved;
+    }
+
     try {
         const signingSecret = await getMspSsoSigningSecret();
         if (!signingSecret) {
@@ -956,16 +1061,15 @@ async function getOAuthSecrets() {
         }
 
         if (resolution.provider === 'azure-ad') {
-            const [tenantMicrosoftClientId, tenantMicrosoftClientSecret, tenantMicrosoftTenantId] = await Promise.all([
-                secretProvider.getTenantSecret(resolution.tenantId, 'microsoft_client_id'),
-                secretProvider.getTenantSecret(resolution.tenantId, 'microsoft_client_secret'),
-                secretProvider.getTenantSecret(resolution.tenantId, 'microsoft_tenant_id'),
-            ]);
+            const tenantMicrosoft = await resolveMicrosoftConsumerProfileConfig(
+                resolution.tenantId,
+                'msp_sso'
+            );
 
-            if (tenantMicrosoftClientId && tenantMicrosoftClientSecret) {
-                resolved.microsoftClientId = tenantMicrosoftClientId;
-                resolved.microsoftClientSecret = tenantMicrosoftClientSecret;
-                resolved.microsoftTenantId = tenantMicrosoftTenantId || 'common';
+            if (tenantMicrosoft.status === 'ready') {
+                resolved.microsoftClientId = tenantMicrosoft.clientId || '';
+                resolved.microsoftClientSecret = tenantMicrosoft.clientSecret || '';
+                resolved.microsoftTenantId = tenantMicrosoft.microsoftTenantId || 'common';
             }
         }
     } catch (error) {
@@ -976,9 +1080,9 @@ async function getOAuthSecrets() {
 }
 
 // Build NextAuth options dynamically with secrets
-export async function buildAuthOptions(): Promise<NextAuthConfig> {
+export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promise<NextAuthConfig> {
     await ensureEnterpriseSsoRegistryInitialized();
-    const secrets = await getOAuthSecrets();
+    const secrets = await getOAuthSecrets(context);
     const nextAuthSecret = await getNextAuthSecret();
 
     return {
@@ -1499,7 +1603,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 
             return true; // Allow sign in
         },
-	        async jwt({ token, user }) {
+	        async jwt({ token, user, trigger }) {
 	            console.log('JWT callback - initial token:', {
 	                id: token.id,
 	                email: token.email,
@@ -1531,6 +1635,22 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 	                token.user_type = extendedUser.user_type;
 	                token.clientId = extendedUser.clientId;
 	                token.contactId = extendedUser.contactId;
+
+                // Fetch tenant plan + subscription info on initial sign-in
+                if (extendedUser.tenant) {
+                    try {
+                        const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
+                        token.plan = subInfo.plan;
+                        token.trial_end = subInfo.trial_end;
+                        token.subscription_status = subInfo.subscription_status;
+                        token.premium_trial_end = subInfo.premium_trial_end;
+                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
+                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.last_plan_check = Date.now();
+                    } catch (error) {
+                        console.error('[auth] Failed to fetch tenant subscription info:', error);
+                    }
+                }
 	              }
 
 	            // NEW: Create session record on initial sign-in
@@ -1620,6 +1740,31 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             //
             // If user is deleted/deactivated between requests, they'll be caught at next login
 
+            // Plan refresh: immediate on explicit update(), throttled otherwise (every 5 minutes)
+            if (token.tenant) {
+                const lastPlanCheck = token.last_plan_check as number || 0;
+                const now = Date.now();
+                const PLAN_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+                const forceRefresh = trigger === 'update';
+                const shouldRefreshPlan = forceRefresh || now - lastPlanCheck > PLAN_CHECK_INTERVAL;
+
+                if (shouldRefreshPlan) {
+                    try {
+                        const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
+                        token.plan = subInfo.plan;
+                        token.trial_end = subInfo.trial_end;
+                        token.subscription_status = subInfo.subscription_status;
+                        token.premium_trial_end = subInfo.premium_trial_end;
+                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
+                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.last_plan_check = now;
+                    } catch (error) {
+                        console.error('[auth] Failed to refresh tenant subscription info:', error);
+                        // Don't block on plan refresh errors
+                    }
+                }
+            }
+
             const result = {
                 ...token
                 // Token already contains all necessary user data from initial sign-in
@@ -1672,6 +1817,12 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 user.user_type = token.user_type as string;
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
+                user.plan = token.plan as string | undefined;
+                (user as any).trial_end = token.trial_end ?? null;
+                (user as any).subscription_status = token.subscription_status ?? null;
+                (user as any).premium_trial_end = token.premium_trial_end ?? null;
+                (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
+                (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {
@@ -1710,6 +1861,13 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 // For backward compatibility, create a cached instance
 export async function getAuthOptions(): Promise<NextAuthConfig> {
     return buildAuthOptions();
+}
+
+export async function buildTeamsAuthOptions(tenantId: string): Promise<NextAuthConfig> {
+    return buildAuthOptions({
+        teamsTenantId: tenantId,
+        teamsMicrosoftOnly: true,
+    });
 }
 
 // Synchronous fallback that uses environment variables
@@ -2184,7 +2342,7 @@ export const options: NextAuthConfig = {
 
             return true; // Allow sign in
         },
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger }) {
             console.log('JWT callback - initial token:', {
                 id: token.id,
                 email: token.email,
@@ -2216,6 +2374,22 @@ export const options: NextAuthConfig = {
 	                token.user_type = extendedUser.user_type;
 	                token.clientId = extendedUser.clientId;
 	                token.contactId = extendedUser.contactId;
+
+                // Fetch tenant plan + subscription info on initial sign-in
+                if (extendedUser.tenant) {
+                    try {
+                        const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
+                        token.plan = subInfo.plan;
+                        token.trial_end = subInfo.trial_end;
+                        token.subscription_status = subInfo.subscription_status;
+                        token.premium_trial_end = subInfo.premium_trial_end;
+                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
+                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.last_plan_check = Date.now();
+                    } catch (error) {
+                        console.error('[auth] Failed to fetch tenant subscription info:', error);
+                    }
+                }
 	              }
 
 	            // NEW: Create session record on initial sign-in
@@ -2305,6 +2479,31 @@ export const options: NextAuthConfig = {
             //
             // If user is deleted/deactivated between requests, they'll be caught at next login
 
+            // Plan refresh: immediate on explicit update(), throttled otherwise (every 5 minutes)
+            if (token.tenant) {
+                const lastPlanCheck = token.last_plan_check as number || 0;
+                const now = Date.now();
+                const PLAN_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+                const forceRefresh = trigger === 'update';
+                const shouldRefreshPlan = forceRefresh || now - lastPlanCheck > PLAN_CHECK_INTERVAL;
+
+                if (shouldRefreshPlan) {
+                    try {
+                        const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
+                        token.plan = subInfo.plan;
+                        token.trial_end = subInfo.trial_end;
+                        token.subscription_status = subInfo.subscription_status;
+                        token.premium_trial_end = subInfo.premium_trial_end;
+                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
+                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
+                        token.last_plan_check = now;
+                    } catch (error) {
+                        console.error('[auth] Failed to refresh tenant subscription info:', error);
+                        // Don't block on plan refresh errors
+                    }
+                }
+            }
+
             const result = {
                 ...token
                 // Token already contains all necessary user data from initial sign-in
@@ -2356,6 +2555,12 @@ export const options: NextAuthConfig = {
                 user.user_type = token.user_type as string;
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
+                user.plan = token.plan as string | undefined;
+                (user as any).trial_end = token.trial_end ?? null;
+                (user as any).subscription_status = token.subscription_status ?? null;
+                (user as any).premium_trial_end = token.premium_trial_end ?? null;
+                (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
+                (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {

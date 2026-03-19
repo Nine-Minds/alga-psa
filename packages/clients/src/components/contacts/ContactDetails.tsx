@@ -25,7 +25,7 @@ import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/u
 import { updateContact, getContactByContactNameId, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { validateEmailAddress, validateContactName, validateRole } from '@alga-psa/validation';
-import Documents from '@alga-psa/documents/components/Documents';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { useToast } from '@alga-psa/ui';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
@@ -223,6 +223,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const drawer = useDrawer();
   const clientDrawer = useClientDrawer();
   const { getTicketFormOptions, renderContactTickets } = useClientCrossFeature();
+  const { renderDocuments } = useDocumentsCrossFeature();
 
   // Implement refreshContactData function
   const refreshContactData = useCallback(async () => {
@@ -671,6 +672,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const tabContent = [
     {
+      id: 'details',
       label: "Details",
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
@@ -821,6 +823,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     },
     {
+      id: 'tickets',
       label: "Tickets",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -846,26 +849,26 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     },
     {
+      id: 'documents',
       label: "Documents",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          {currentUser ? (
-            <Documents
-              id={`${id}-documents`}
-              documents={documents}
-              gridColumns={3}
-              userId={currentUser.user_id}
-              entityId={editedContact.contact_name_id}
-              entityType="contact"
-              onDocumentCreated={onDocumentCreated || (async () => {})}
-            />
-          ) : (
+          {currentUser ? renderDocuments({
+              id: `${id}-documents`,
+              documents,
+              gridColumns: 3,
+              userId: currentUser.user_id,
+              entityId: editedContact.contact_name_id,
+              entityType: 'contact',
+              onDocumentCreated: onDocumentCreated || (async () => {}),
+          }) : (
             <div>Loading...</div>
           )}
         </div>
       )
     },
     {
+      id: 'interactions',
       label: "Interactions",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -880,6 +883,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     },
     {
+      id: 'notes',
       label: "Notes",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -891,6 +895,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     },
     {
+      id: 'portal',
       label: "Portal",
       content: (
         <ContactPortalTab
@@ -900,16 +905,6 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     }
   ];
-
-  // Find the matching tab label case-insensitively
-  const findTabLabel = (urlTab: string | null | undefined): string => {
-    if (!urlTab) return 'Details';
-    
-    const matchingTab = tabContent.find(
-      tab => tab.label.toLowerCase() === urlTab.toLowerCase()
-    );
-    return matchingTab?.label || 'Details';
-  };
 
   return (
     <ReflectionContainer id={id} label="Contact Details">
@@ -966,7 +961,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       <div>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
-          defaultTab={findTabLabel(searchParams?.get('tab'))}
+          defaultTab={searchParams?.get('tab')?.toLowerCase() || 'details'}
           onTabChange={handleTabChange}
         />
       </div>

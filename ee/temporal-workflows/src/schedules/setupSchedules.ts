@@ -5,6 +5,7 @@ import {
   calendarWebhookMaintenanceWorkflow,
   emailWebhookMaintenanceWorkflow,
   entraAllTenantsSyncWorkflow,
+  premiumTrialExpiryWorkflow,
 } from '../workflows';
 import * as dotenv from 'dotenv';
 
@@ -154,6 +155,25 @@ export async function setupSchedules() {
         workflowType: calendarWebhookMaintenanceWorkflow,
         args: [{ lookAheadMinutes: 180 }],
         taskQueue: EMAIL_WORKFLOW_TASK_QUEUE,
+        workflowExecutionTimeout: '10m',
+      },
+      policies: {
+        overlap: ScheduleOverlapPolicy.SKIP,
+        catchupWindow: '1m',
+      },
+    });
+
+    // Premium trial expiry check (runs daily, reverts expired trials to Pro)
+    const premiumTrialScheduleId = 'premium-trial-expiry-schedule';
+    await upsertSchedule(client, premiumTrialScheduleId, {
+      spec: {
+        intervals: [{ every: '24h' }],
+      },
+      action: {
+        type: 'startWorkflow',
+        workflowType: premiumTrialExpiryWorkflow,
+        args: [],
+        taskQueue: 'tenant-workflows',
         workflowExecutionTimeout: '10m',
       },
       policies: {

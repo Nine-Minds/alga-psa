@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -43,10 +43,13 @@ import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } f
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import {
   getStoredTicketConversationNewestFirst,
   setStoredTicketConversationNewestFirst,
 } from './ticketConversationOrderPreference';
+import { toggleCommentReaction, getCommentsReactionsBatch } from '../../actions/comment-actions/commentReactionActions';
+import type { IAggregatedReaction } from '@alga-psa/types';
 
 interface TicketConversationProps {
   id?: string;
@@ -76,6 +79,11 @@ interface TicketConversationProps {
   onClipboardImageUploaded?: () => Promise<void> | void;
   defaultNewestFirst?: boolean;
 }
+
+const ALL_COMMENTS_TAB_ID = 'all-comments';
+const CLIENT_TAB_ID = 'client';
+const INTERNAL_TAB_ID = 'internal';
+const RESOLUTION_TAB_ID = 'resolution';
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
   id,
@@ -107,6 +115,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
+  const { deleteDocument } = useDocumentsCrossFeature();
   // Ensure we have a stable id for interactive element ids
   const compId = id || `ticket-${ticket.ticket_id || 'unknown'}-conversation`;
   const [showEditor, setShowEditor] = useState(false);
@@ -116,9 +125,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const NO_STATUS_CHANGE = '__no_status_change__';
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
-
-  const internalLabel = t('conversation.internal', 'Internal');
-  const resolutionLabel = t('conversation.resolution', 'Resolution');
+  const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
+  const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
 
   const discardComposeEditor = React.useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
@@ -132,6 +140,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: discardComposeEditor,
+    deleteDocumentFn: deleteDocument,
   });
 
   const existingCommentUploadSession = useTicketRichTextUploadSession({
@@ -141,14 +150,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     trackDraftUploads: false,
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: onClose,
+    deleteDocumentFn: deleteDocument,
   });
 
   const handleAddCommentClick = () => {
     // Auto-check toggles based on which tab is active
     if (!hideInternalTab) {
-      setIsInternalToggle(activeTab === internalLabel);
+      setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
     }
-    setIsResolutionToggle(activeTab === resolutionLabel);
+    setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     setShowEditor(true);
   };
   const handleSubmitComment = async () => {
@@ -210,11 +220,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   useEffect(() => {
     if (showEditor) {
       if (!hideInternalTab) {
-        setIsInternalToggle(activeTab === internalLabel);
+        setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
       }
-      setIsResolutionToggle(activeTab === resolutionLabel);
+      setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     }
-  }, [activeTab, showEditor, hideInternalTab, internalLabel, resolutionLabel]);
+  }, [activeTab, showEditor, hideInternalTab]);
 
   // Reset close-status selection when leaving resolution mode or closing the editor.
   useEffect(() => {
@@ -280,6 +290,56 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     } catch {}
   }, [conversations]);
 
+  // Load reactions for all comments (stable dependency via sorted IDs string)
+  const commentIdsKey = useMemo(
+    () => conversations.map(c => c.comment_id).filter(Boolean).sort().join(','),
+    [conversations]
+  );
+  useEffect(() => {
+    const commentIds = commentIdsKey.split(',').filter(Boolean);
+    if (commentIds.length === 0) return;
+    getCommentsReactionsBatch(commentIds)
+      .then(({ reactions, userNames }) => {
+        setReactionsMap(reactions);
+        setReactionUserNames(prev => ({ ...prev, ...userNames }));
+      })
+      .catch((err) => console.error('[TicketConversation] Failed to load reactions:', err));
+  }, [commentIdsKey]);
+
+  const handleToggleReaction = useCallback(async (commentId: string, emoji: string) => {
+    try {
+      const { added } = await toggleCommentReaction(commentId, emoji);
+      setReactionsMap((prev) => {
+        const existing = prev[commentId] || [];
+        const idx = existing.findIndex((r) => r.emoji === emoji);
+        const userId = currentUser?.id || '';
+        if (idx === -1 && added) {
+          return { ...prev, [commentId]: [...existing, { emoji, count: 1, userIds: [userId], currentUserReacted: true }] };
+        }
+        if (idx !== -1) {
+          const reaction = existing[idx];
+          if (added) {
+            const updated = { ...reaction, count: reaction.count + 1, userIds: [...reaction.userIds, userId], currentUserReacted: true };
+            const newArr = [...existing];
+            newArr[idx] = updated;
+            return { ...prev, [commentId]: newArr };
+          } else {
+            if (reaction.count <= 1) {
+              return { ...prev, [commentId]: existing.filter((_, i) => i !== idx) };
+            }
+            const updated = { ...reaction, count: reaction.count - 1, userIds: reaction.userIds.filter((id) => id !== userId), currentUserReacted: false };
+            const newArr = [...existing];
+            newArr[idx] = updated;
+            return { ...prev, [commentId]: newArr };
+          }
+        }
+        return prev;
+      });
+    } catch (err) {
+      console.error('[TicketConversation] Failed to toggle reaction:', err);
+    }
+  }, [currentUser?.id]);
+
   const renderComments = (comments: IComment[]): React.JSX.Element[] => {
     // Use the sorted comments based on the reverseOrder state
     const commentsToRender = reverseOrder ? [...comments].reverse() : comments;
@@ -314,6 +374,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         onDelete={onDelete}
         hideInternalTab={hideInternalTab}
         uploadFile={existingCommentUploadSession.uploadFile}
+        reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
+        onToggleReaction={handleToggleReaction}
+        userNames={reactionUserNames}
       />
     );
     });
@@ -366,6 +429,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Build tab content array based on hideInternalTab
   const baseTabs = [
     {
+      id: ALL_COMMENTS_TAB_ID,
       label: t('conversation.allComments', 'All Comments'),
       content: (
         <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
@@ -378,6 +442,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       )
     },
     {
+      id: CLIENT_TAB_ID,
       label: t('conversation.client', 'Client'),
       content: (
         <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
@@ -387,6 +452,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       )
     },
     {
+      id: INTERNAL_TAB_ID,
       label: t('conversation.internal', 'Internal'),
       content: (
         <ReflectionContainer id={`${id}-internal-comments`} label="Internal Comments">
@@ -396,6 +462,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       )
     },
     {
+      id: RESOLUTION_TAB_ID,
       label: t('conversation.resolution', 'Resolution'),
       content: (
         <ReflectionContainer id={`${id}-resolution-comments`} label="Resolution Comments">
@@ -536,7 +603,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         </div>
         <CustomTabs
           tabs={tabContent}
-          defaultTab={t('conversation.allComments', 'All Comments')}
+          value={activeTab}
           tabStyles={tabStyles}
           onTabChange={onTabChange}
           extraContent={

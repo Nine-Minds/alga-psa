@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -17,13 +17,23 @@ import {
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import {
-  createWorkflowScheduleAction,
-  getWorkflowScheduleAction,
+  createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
+  getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
   getWorkflowSchemaAction,
   listWorkflowDefinitionsPagedAction,
   listWorkflowSchemaRefsAction,
-  updateWorkflowScheduleAction
+  updateWorkflowScheduleAction as updateWorkflowScheduleActionDefault
 } from '@alga-psa/workflows/actions';
+import {
+  buildCronFromRecurringBuilder,
+  DEFAULT_RECURRING_BUILDER_STATE,
+  getRecurringBuilderSummary,
+  getRecurringBuilderValidationMessage,
+  parseRecurringBuilderFromCron,
+  WEEKDAY_OPTIONS,
+  type RecurringBuilderState,
+} from './workflowScheduleRecurrence';
+import WorkflowScheduleTimezonePicker from './WorkflowScheduleTimezonePicker';
 
 type JsonSchema = {
   type?: string | string[];
@@ -57,6 +67,8 @@ type WorkflowOption = {
   payload_schema_ref?: string | null;
 };
 
+type RecurringEditorMode = 'builder' | 'advanced';
+
 type WorkflowScheduleDialogProps = {
   isOpen: boolean;
   mode: 'create' | 'edit';
@@ -64,6 +76,19 @@ type WorkflowScheduleDialogProps = {
   initialWorkflowId?: string | null;
   onClose: () => void;
   onSaved: () => void;
+  scheduleActions?: WorkflowScheduleDialogActions;
+};
+
+export type WorkflowScheduleDialogActions = {
+  createWorkflowScheduleAction: typeof createWorkflowScheduleActionDefault;
+  getWorkflowScheduleAction: typeof getWorkflowScheduleActionDefault;
+  updateWorkflowScheduleAction: typeof updateWorkflowScheduleActionDefault;
+};
+
+const defaultScheduleActions: WorkflowScheduleDialogActions = {
+  createWorkflowScheduleAction: createWorkflowScheduleActionDefault,
+  getWorkflowScheduleAction: getWorkflowScheduleActionDefault,
+  updateWorkflowScheduleAction: updateWorkflowScheduleActionDefault,
 };
 
 const resolveSchemaRef = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
@@ -229,7 +254,8 @@ export default function WorkflowScheduleDialog({
   scheduleId,
   initialWorkflowId,
   onClose,
-  onSaved
+  onSaved,
+  scheduleActions = defaultScheduleActions
 }: WorkflowScheduleDialogProps) {
   const [workflowOptions, setWorkflowOptions] = useState<WorkflowOption[]>([]);
   const [availableSchemaRefs, setAvailableSchemaRefs] = useState<Set<string>>(new Set());
@@ -241,6 +267,8 @@ export default function WorkflowScheduleDialog({
   const [triggerType, setTriggerType] = useState<'schedule' | 'recurring'>('schedule');
   const [runAt, setRunAt] = useState('');
   const [cron, setCron] = useState('');
+  const [recurringMode, setRecurringMode] = useState<RecurringEditorMode>('builder');
+  const [recurringBuilder, setRecurringBuilder] = useState<RecurringBuilderState>(DEFAULT_RECURRING_BUILDER_STATE);
   const [timezone, setTimezone] = useState('UTC');
   const [enabled, setEnabled] = useState(true);
   const [payloadSchema, setPayloadSchema] = useState<JsonSchema | null>(null);
@@ -312,13 +340,21 @@ export default function WorkflowScheduleDialog({
       const loadSchedule = async () => {
         setIsLoadingSchedule(true);
         try {
-          const schedule = await getWorkflowScheduleAction({ scheduleId });
+          const schedule = await scheduleActions.getWorkflowScheduleAction({ scheduleId });
           if (cancelled) return;
           setSelectedWorkflowId(schedule.workflow_id);
           setScheduleName(schedule.name ?? '');
           setTriggerType(schedule.trigger_type);
           setRunAt(toDatetimeLocalValue(schedule.run_at));
           setCron(schedule.cron ?? '');
+          if (schedule.trigger_type === 'recurring') {
+            const parsedRecurringBuilder = parseRecurringBuilderFromCron(schedule.cron ?? '');
+            setRecurringBuilder(parsedRecurringBuilder ?? DEFAULT_RECURRING_BUILDER_STATE);
+            setRecurringMode(parsedRecurringBuilder ? 'builder' : 'advanced');
+          } else {
+            setRecurringBuilder(DEFAULT_RECURRING_BUILDER_STATE);
+            setRecurringMode('builder');
+          }
           setTimezone(schedule.timezone ?? 'UTC');
           setEnabled(Boolean(schedule.enabled));
           const nextPayload = schedule.payload_json ?? {};
@@ -348,6 +384,8 @@ export default function WorkflowScheduleDialog({
     setTriggerType('schedule');
     setRunAt('');
     setCron('');
+    setRecurringMode('builder');
+    setRecurringBuilder(DEFAULT_RECURRING_BUILDER_STATE);
     setTimezone('UTC');
     setEnabled(true);
     setPayloadText('{}');
@@ -358,7 +396,7 @@ export default function WorkflowScheduleDialog({
     setPayloadTouched(false);
     setIsLoadingSchedule(false);
     return undefined;
-  }, [initialWorkflowId, isOpen, mode, scheduleId]);
+  }, [initialWorkflowId, isOpen, mode, scheduleActions, scheduleId]);
 
   useEffect(() => {
     if (!isOpen || !selectedWorkflow?.payload_schema_ref || workflowEligibilityMessage) {
@@ -471,7 +509,40 @@ export default function WorkflowScheduleDialog({
     && !jsonError
     && schemaErrors.length === 0
     && (triggerType === 'recurring' || Boolean(runAt))
-    && (triggerType === 'schedule' || (cron.trim() && timezone.trim()))
+    && (triggerType === 'schedule' || (timezone.trim() && (recurringMode === 'advanced'
+      ? cron.trim()
+      : buildCronFromRecurringBuilder(recurringBuilder))))
+  );
+
+  const recurringValidationMessage = useMemo(
+    () => triggerType !== 'recurring' || recurringMode === 'advanced'
+      ? null
+      : getRecurringBuilderValidationMessage(recurringBuilder),
+    [recurringBuilder, recurringMode, triggerType]
+  );
+
+  const effectiveRecurringCron = useMemo(
+    () => triggerType !== 'recurring'
+      ? ''
+      : recurringMode === 'advanced'
+        ? cron.trim()
+        : (buildCronFromRecurringBuilder(recurringBuilder) ?? ''),
+    [cron, recurringBuilder, recurringMode, triggerType]
+  );
+
+  const recurringSummary = useMemo(
+    () => triggerType !== 'recurring' || recurringMode === 'advanced'
+      ? null
+      : getRecurringBuilderSummary(recurringBuilder, timezone),
+    [recurringBuilder, recurringMode, timezone, triggerType]
+  );
+
+  const unsupportedRecurringCron = useMemo(
+    () => triggerType === 'recurring'
+      && recurringMode === 'advanced'
+      && Boolean(cron.trim())
+      && !parseRecurringBuilderFromCron(cron),
+    [cron, recurringMode, triggerType]
   );
 
   const updateFormValue = (updater: (previous: unknown) => unknown) => {
@@ -635,7 +706,7 @@ export default function WorkflowScheduleDialog({
               checked={Boolean(value)}
               onCheckedChange={(checked) => updateFormValue((previous) => setValueAtPath(previous, path, checked))}
             />
-            <span className="text-xs text-[rgb(var(--color-text-500))]">{Boolean(value) ? 'True' : 'False'}</span>
+            <span className="text-xs text-[rgb(var(--color-text-500))]">{value ? 'True' : 'False'}</span>
           </div>
           {resolved.description ? (
             <div className="text-xs text-[rgb(var(--color-text-500))]">{resolved.description}</div>
@@ -716,17 +787,17 @@ export default function WorkflowScheduleDialog({
       } as const;
 
       const result = mode === 'edit' && scheduleId
-        ? await updateWorkflowScheduleAction({
+        ? await scheduleActions.updateWorkflowScheduleAction({
           scheduleId,
           ...common,
           runAt: triggerType === 'schedule' ? toIsoString(runAt) : undefined,
-          cron: triggerType === 'recurring' ? cron.trim() : undefined,
+          cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
           timezone: triggerType === 'recurring' ? timezone.trim() : undefined
         })
-        : await createWorkflowScheduleAction({
+        : await scheduleActions.createWorkflowScheduleAction({
           ...common,
           runAt: triggerType === 'schedule' ? toIsoString(runAt) : undefined,
-          cron: triggerType === 'recurring' ? cron.trim() : undefined,
+          cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
           timezone: triggerType === 'recurring' ? timezone.trim() : undefined
         });
 
@@ -794,7 +865,13 @@ export default function WorkflowScheduleDialog({
                 id="schedule-dialog-trigger-type"
                 label="Trigger type"
                 value={triggerType}
-                onValueChange={(value) => setTriggerType(value as 'schedule' | 'recurring')}
+                onValueChange={(value) => {
+                  const nextTriggerType = value as 'schedule' | 'recurring';
+                  setTriggerType(nextTriggerType);
+                  if (nextTriggerType === 'recurring' && !cron.trim()) {
+                    setRecurringMode('builder');
+                  }
+                }}
                 options={[
                   { value: 'schedule', label: 'One-time' },
                   { value: 'recurring', label: 'Recurring' }
@@ -820,20 +897,172 @@ export default function WorkflowScheduleDialog({
                 onChange={(event) => setRunAt(event.target.value)}
               />
             ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Input
-                  id="schedule-dialog-cron"
-                  label="Cron"
-                  value={cron}
-                  onChange={(event) => setCron(event.target.value)}
-                  placeholder="0 9 * * 1-5"
-                />
-                <Input
+              <div className="space-y-4 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Recurring schedule</div>
+                    <div className="text-xs text-[rgb(var(--color-text-500))]">
+                      Choose a common recurrence pattern. Advanced cron is available for custom schedules.
+                    </div>
+                  </div>
+                  <div className="inline-flex rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-1">
+                    <button
+                      type="button"
+                      id="schedule-dialog-recurring-mode-builder"
+                      className={`rounded-md px-3 py-1.5 text-sm ${recurringMode === 'builder'
+                        ? 'bg-[rgb(var(--color-primary-500))] text-white'
+                        : 'text-[rgb(var(--color-text-600))]'}`}
+                      onClick={() => {
+                        const parsedRecurringBuilder = parseRecurringBuilderFromCron(cron);
+                        if (parsedRecurringBuilder) {
+                          setRecurringBuilder(parsedRecurringBuilder);
+                        }
+                        setRecurringMode('builder');
+                      }}
+                    >
+                      Schedule Builder
+                    </button>
+                    <button
+                      type="button"
+                      id="schedule-dialog-recurring-mode-advanced"
+                      className={`rounded-md px-3 py-1.5 text-sm ${recurringMode === 'advanced'
+                        ? 'bg-[rgb(var(--color-primary-500))] text-white'
+                        : 'text-[rgb(var(--color-text-600))]'}`}
+                      onClick={() => {
+                        const nextCron = buildCronFromRecurringBuilder(recurringBuilder);
+                        if (nextCron) {
+                          setCron(nextCron);
+                        }
+                        setRecurringMode('advanced');
+                      }}
+                    >
+                      Advanced Cron
+                    </button>
+                  </div>
+                </div>
+
+                {recurringMode === 'builder' ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      <CustomSelect
+                        id="schedule-dialog-recurring-frequency"
+                        label="Frequency"
+                        value={recurringBuilder.frequency}
+                        onValueChange={(value) => {
+                          setRecurringBuilder((current) => ({
+                            ...current,
+                            frequency: value as RecurringBuilderState['frequency'],
+                          }));
+                        }}
+                        options={[
+                          { value: 'daily', label: 'Daily' },
+                          { value: 'weekly', label: 'Weekly' },
+                          { value: 'monthly', label: 'Monthly' },
+                        ]}
+                      />
+                      <Input
+                        id="schedule-dialog-recurring-time"
+                        label="Time"
+                        type="time"
+                        value={recurringBuilder.time}
+                        onChange={(event) => {
+                          const nextTime = event.target.value;
+                          setRecurringBuilder((current) => ({
+                            ...current,
+                            time: nextTime,
+                          }));
+                        }}
+                      />
+                      {recurringBuilder.frequency === 'monthly' ? (
+                        <Input
+                          id="schedule-dialog-recurring-day-of-month"
+                          label="Day of month"
+                          type="number"
+                          value={recurringBuilder.dayOfMonth}
+                          onChange={(event) => {
+                            const nextDayOfMonth = event.target.value;
+                            setRecurringBuilder((current) => ({
+                              ...current,
+                              dayOfMonth: nextDayOfMonth,
+                            }));
+                          }}
+                          min="1"
+                          max="31"
+                        />
+                      ) : (
+                        <div className="flex items-end text-xs text-[rgb(var(--color-text-500))]">
+                          {recurringBuilder.frequency === 'daily'
+                            ? 'Runs every day at the selected time.'
+                            : 'Choose one or more weekdays below.'}
+                        </div>
+                      )}
+                    </div>
+
+                    {recurringBuilder.frequency === 'weekly' && (
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-[rgb(var(--color-text-800))]">Weekdays</div>
+                        <div className="flex flex-wrap gap-2">
+                          {WEEKDAY_OPTIONS.map((weekday) => {
+                            const isSelected = recurringBuilder.weekdays.includes(weekday.value);
+                            return (
+                              <button
+                                key={weekday.value}
+                                type="button"
+                                id={`schedule-dialog-recurring-weekday-${weekday.value}`}
+                                aria-pressed={isSelected}
+                                className={`rounded-md border px-3 py-1.5 text-sm ${isSelected
+                                  ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
+                                  : 'border-[rgb(var(--color-border-200))] bg-white text-[rgb(var(--color-text-700))]'}`}
+                                onClick={() => {
+                                  setRecurringBuilder((current) => ({
+                                    ...current,
+                                    weekdays: isSelected
+                                      ? current.weekdays.filter((value) => value !== weekday.value)
+                                      : [...current.weekdays, weekday.value],
+                                  }));
+                                }}
+                              >
+                                {weekday.shortLabel}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {recurringValidationMessage ? (
+                      <div className="text-xs text-destructive">{recurringValidationMessage}</div>
+                    ) : recurringSummary ? (
+                      <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-white px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
+                        <div>{recurringSummary}</div>
+                        <div className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+                          Cron: {effectiveRecurringCron}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {unsupportedRecurringCron && (
+                      <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
+                        This schedule uses a custom cron expression. Keep editing it here, or switch back to the builder to replace it with a common pattern.
+                      </div>
+                    )}
+                    <Input
+                      id="schedule-dialog-cron"
+                      label="Cron"
+                      value={cron}
+                      onChange={(event) => setCron(event.target.value)}
+                      placeholder="0 9 * * 1-5"
+                    />
+                  </div>
+                )}
+
+                <WorkflowScheduleTimezonePicker
                   id="schedule-dialog-timezone"
                   label="Timezone"
                   value={timezone}
-                  onChange={(event) => setTimezone(event.target.value)}
-                  placeholder="America/New_York"
+                  onValueChange={setTimezone}
                 />
               </div>
             )}
@@ -893,8 +1122,20 @@ export default function WorkflowScheduleDialog({
                   )}
                 </div>
               ) : (
-                <div className="rounded border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground">
-                  No payload schema is available for this workflow yet.
+                <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-full bg-[rgb(var(--color-background-100))] p-1.5 text-[rgb(var(--color-text-500))]">
+                      <Info className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                        No payload schema is available for this workflow yet.
+                      </div>
+                      <div className="text-sm text-[rgb(var(--color-text-600))]">
+                        Form fields will appear here once this workflow publishes a pinned payload schema.
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

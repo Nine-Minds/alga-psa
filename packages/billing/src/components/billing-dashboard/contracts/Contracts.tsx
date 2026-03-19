@@ -38,11 +38,8 @@ import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { ContractDialog } from './ContractDialog';
 import {
-  CONTRACT_LABEL_TO_SUBTAB,
-  CONTRACT_SUBTAB_LABELS,
   getDraftTabBadgeCount,
   normalizeContractSubtab,
-  type ContractSubTab,
 } from './contractsTabs';
 
 const Contracts: React.FC = () => {
@@ -728,9 +725,10 @@ const renderStatusBadge = (status: string) => {
   );
 
   const tabs = [
-    { label: 'Templates', content: renderTemplateTab() },
-    { label: 'Client Contracts', content: renderClientContractsTab() },
+    { id: 'templates', label: 'Templates', content: renderTemplateTab() },
+    { id: 'client-contracts', label: 'Client Contracts', content: renderClientContractsTab() },
     {
+      id: 'drafts',
       label: 'Drafts',
       icon: draftBadgeCount != null ? (
         <Badge variant="default-muted" className="ml-2 order-last">{draftBadgeCount}</Badge>
@@ -766,17 +764,15 @@ const renderStatusBadge = (status: string) => {
           ) : (
             <CustomTabs
               tabs={tabs}
-              defaultTab={CONTRACT_SUBTAB_LABELS[activeSubTab]}
-              onTabChange={(tab) => {
-                const targetSubtab = CONTRACT_LABEL_TO_SUBTAB[tab] || tab.toLowerCase();
-
-                if (targetSubtab === activeSubTab) {
+              defaultTab={activeSubTab}
+              onTabChange={(tabId) => {
+                if (tabId === activeSubTab) {
                   return;
                 }
 
                 const params = new URLSearchParams(searchParams?.toString() ?? '');
                 params.set('tab', 'contracts');
-                params.set('subtab', targetSubtab);
+                params.set('subtab', tabId);
                 router.push(`/msp/billing?${params.toString()}`);
               }}
             />

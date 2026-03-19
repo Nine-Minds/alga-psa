@@ -346,6 +346,29 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
   )
 }));
 
+vi.mock('@alga-psa/ui/components/TimezonePicker', () => ({
+  default: ({
+    value,
+    onValueChange,
+  }: {
+    value: string;
+    onValueChange: (value: string) => void;
+  }) => (
+    <label>
+      Browse all time zones
+      <select
+        aria-label="Browse all time zones"
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
+      >
+        <option value="UTC">UTC</option>
+        <option value="America/New_York">America/New_York</option>
+        <option value="America/Chicago">America/Chicago</option>
+      </select>
+    </label>
+  )
+}));
+
 vi.mock('@alga-psa/ui/components/Switch', () => ({
   Switch: ({
     checked,
@@ -522,7 +545,10 @@ describe('Schedules', () => {
     await screen.findByRole('dialog', { name: 'Edit Schedule' });
     expect(screen.getByLabelText('Schedule name')).toHaveValue('Weekday billing');
     expect(screen.getByLabelText('Trigger type')).toHaveValue('recurring');
+    expect(screen.getByLabelText('Frequency')).toHaveValue('weekly');
+    expect(screen.getByLabelText('Time')).toHaveValue('09:00');
     expect(screen.getByLabelText('Timezone')).toHaveValue('America/New_York');
+    expect(screen.queryByLabelText('Cron')).not.toBeInTheDocument();
   });
 
   it('pauses a currently enabled schedule from the row action', async () => {
@@ -576,15 +602,106 @@ describe('Schedules', () => {
     expect(screen.getByLabelText('Run at')).toBeInTheDocument();
   });
 
-  it('shows cron and timezone inputs for recurring schedules', async () => {
+  it('shows the recurring schedule builder and timezone input for recurring schedules', async () => {
     await renderSchedules();
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
     fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
 
-    expect(screen.getByLabelText('Cron')).toBeInTheDocument();
+    expect(screen.getByLabelText('Frequency')).toBeInTheDocument();
+    expect(screen.getByLabelText('Time')).toBeInTheDocument();
     expect(screen.getByLabelText('Timezone')).toBeInTheDocument();
+    expect(screen.getByText(/runs every day at/i)).toBeInTheDocument();
+  });
+
+  it('keeps UTC in the common timezone dropdown for new recurring schedules', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+
+    expect(screen.getByLabelText('Timezone')).toHaveValue('UTC');
+    expect(screen.queryByLabelText('Custom timezone')).not.toBeInTheDocument();
+  });
+
+  it('updates the recurrence summary when a custom timezone is entered', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(screen.getByLabelText('Timezone'), { target: { value: '__custom__' } });
+    fireEvent.change(screen.getByLabelText('Custom timezone'), { target: { value: 'Pacific/Niue' } });
+
+    expect(screen.getByText('Runs every day at 9:00 AM Pacific/Niue')).toBeInTheDocument();
+  });
+
+  it('updates the recurrence summary when a non-common timezone is chosen from browse all', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(screen.getByLabelText('Timezone'), { target: { value: '__browse_all__' } });
+    fireEvent.change(screen.getByLabelText('Browse all time zones'), { target: { value: 'America/Chicago' } });
+
+    expect(screen.getByText('Runs every day at 9:00 AM America/Chicago')).toBeInTheDocument();
+  });
+
+  it('creates a recurring schedule from the builder and saves the generated cron string', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(screen.getByLabelText('Workflow'), {
+      target: { value: workflowFixtures[0].workflow_id }
+    });
+    await screen.findByLabelText('customerId');
+
+    fireEvent.change(screen.getByLabelText('Schedule name'), { target: { value: 'Daily billing sync' } });
+    fireEvent.change(screen.getByLabelText('customerId'), { target: { value: 'C-300' } });
+    fireEvent.change(screen.getByLabelText('Time'), { target: { value: '06:45' } });
+    fireEvent.change(screen.getByLabelText('Timezone'), { target: { value: 'America/Chicago' } });
+    fireEvent.click(screen.getByText('Create Schedule', { selector: 'button' }));
+
+    await waitFor(() => {
+      expect(actionMocks.createWorkflowScheduleAction).toHaveBeenCalledWith(expect.objectContaining({
+        workflowId: workflowFixtures[0].workflow_id,
+        name: 'Daily billing sync',
+        triggerType: 'recurring',
+        cron: '45 6 * * *',
+        timezone: 'America/Chicago',
+        payload: {
+          customerId: 'C-300',
+          notify: false,
+        },
+      }));
+    });
+  });
+
+  it('requires at least one weekday for weekly recurring schedules in builder mode', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(screen.getByLabelText('Workflow'), {
+      target: { value: workflowFixtures[0].workflow_id }
+    });
+    await screen.findByLabelText('customerId');
+
+    fireEvent.change(screen.getByLabelText('Schedule name'), { target: { value: 'Weekly billing sync' } });
+    fireEvent.change(screen.getByLabelText('customerId'), { target: { value: 'C-400' } });
+    fireEvent.change(screen.getByLabelText('Frequency'), { target: { value: 'weekly' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Mon' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Choose at least one weekday.')).toBeInTheDocument();
+      expect(screen.getByText('Create Schedule', { selector: 'button' })).toBeDisabled();
+    });
   });
 
   it('renders schema-driven form fields for payload editing', async () => {

@@ -4,6 +4,9 @@ import { getConnection } from '@/lib/db/db';
 import { StorageProviderFactory } from '@alga-psa/storage';
 import { FileStoreModel } from 'server/src/models/storage';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { ApiKeyServiceForApi } from 'server/src/lib/services/apiKeyServiceForApi';
+import { findUserByIdForApi } from '@alga-psa/users/actions';
+import { runWithTenant } from 'server/src/lib/db';
 
 export async function GET(
   request: NextRequest,
@@ -52,7 +55,7 @@ export async function GET(
 
         if (tenantLogoAssoc) {
           isTenantLogo = true;
-          console.log(`Public access granted for tenant logo (file ${fileId}) from tenant ${fileTenant}`);
+          // Public access granted for tenant logo
         }
       }
     }
@@ -64,10 +67,32 @@ export async function GET(
 
     // If it's not a tenant logo, we need authentication
     if (!isTenantLogo) {
-      user = await getCurrentUser();
-      const tenantContext = await createTenantKnex();
-      knex = tenantContext.knex;
-      tenant = tenantContext.tenant;
+      // Try session-based auth first, then fall back to API key auth (mobile app)
+      try {
+        user = await getCurrentUser();
+      } catch {
+        // No session context (e.g. mobile API request) — fall through to API key auth
+      }
+      if (user) {
+        const tenantContext = await createTenantKnex();
+        knex = tenantContext.knex;
+        tenant = tenantContext.tenant;
+      } else {
+        const apiKey = request.headers.get('x-api-key');
+        if (apiKey) {
+          const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenant = keyRecord.tenant;
+            const resolved = await runWithTenant(tenant!, async () => {
+              const u = await findUserByIdForApi(keyRecord.user_id, tenant!);
+              const ctx = await createTenantKnex();
+              return { user: u, knex: ctx.knex };
+            });
+            user = resolved.user;
+            knex = resolved.knex;
+          }
+        }
+      }
 
       if (!tenant || !user) {
         return new NextResponse('Unauthorized', { status: 401 });
@@ -91,6 +116,7 @@ export async function GET(
     let associatedUserId: string | null = null;
     let associatedTenantId: string | null = null;
     let associatedProjectTaskId: string | null = null;
+    let associatedContractId: string | null = null;
     const associatedTicketIds = new Set<string>();
 
     // 0. If it's a tenant logo, grant public access
@@ -100,15 +126,19 @@ export async function GET(
     // 1. Check if user is internal - they have full access
     else if (user && user.user_type === 'internal') {
         hasPermission = true;
-        console.log(`Internal user ${user.user_id} granted access to file ${fileId}`);
+        // Internal user has full access
     } else if (user) {
         // 2. Find the document record linked to this file_id
         const documentRecord = await knex('documents')
-          .select('document_id')
+          .select('document_id', 'is_client_visible')
           .where({ file_id: fileId, tenant })
           .first();
 
         if (documentRecord) {
+          // For client users accessing via Documents Hub (not inline ticket display),
+          // require is_client_visible = true
+          const isClientUser = user.user_type === 'client';
+
           // Find all associations for this document
           const associations = await knex('document_associations')
             .select('entity_id', 'entity_type')
@@ -129,6 +159,8 @@ export async function GET(
               associatedTenantId = assoc.entity_id;
             } else if (assoc.entity_type === 'project_task') {
               associatedProjectTaskId = assoc.entity_id;
+            } else if (assoc.entity_type === 'contract') {
+              associatedContractId = assoc.entity_id;
             } else if (assoc.entity_type === 'ticket' && assoc.entity_id) {
               associatedTicketIds.add(assoc.entity_id);
             }
@@ -137,17 +169,17 @@ export async function GET(
           // Check if this is a tenant logo - all users in the tenant can view it
           if (associatedTenantId === user.tenant) {
             hasPermission = true;
-            console.log(`User ${user.user_id} accessing tenant logo (file ${fileId})`);
+            // User accessing tenant logo
           }
           // Check if this is the user's own avatar
           else if (associatedUserId === user.user_id) {
             hasPermission = true;
-            console.log(`User ${user.user_id} accessing their own avatar (file ${fileId})`);
+            // User accessing their own avatar
           }
           // Check if this is the user's own contact avatar
           else if (associatedContactId === user.contact_id) {
             hasPermission = true;
-            console.log(`User ${user.user_id} accessing their linked contact avatar (file ${fileId})`);
+            // User accessing their linked contact avatar
           }
           // Check client association
           else if (associatedClientId && user.contact_id) {
@@ -160,9 +192,12 @@ export async function GET(
             userClientId = contactRecord?.client_id ?? null;
 
             // Allow access if the user's client matches the document's associated client
+            // For client users, also require is_client_visible = true
             if (userClientId === associatedClientId) {
-              hasPermission = true;
-              console.log(`User ${user.user_id} granted access to client ${associatedClientId} file ${fileId}`);
+              if (!isClientUser || documentRecord.is_client_visible) {
+                hasPermission = true;
+                // Access granted via client association
+              }
             }
           }
 
@@ -175,7 +210,7 @@ export async function GET(
 
               if (associatedUser && associatedUser.tenant === user.tenant) {
                   hasPermission = true;
-                  console.log(`User ${user.user_id} granted access to user avatar ${fileId} within the same tenant`);
+                  // Access granted for user avatar within same tenant
               }
           }
 
@@ -223,13 +258,48 @@ export async function GET(
                       .first();
 
                   if (projectCheck) {
-                      hasPermission = true;
-                      console.log(`User ${user.user_id} granted access to project task document ${fileId} (client ${userClientId})`);
+                      // For client users, also require is_client_visible = true
+                      if (!isClientUser || documentRecord.is_client_visible) {
+                          hasPermission = true;
+                          // Access granted via project task association
+                      }
+                  }
+              }
+          }
+
+          // Check contract association - verify client owns the contract (billing_plan)
+          if (!hasPermission && associatedContractId && user.contact_id) {
+              // Get user's client_id if not already fetched
+              if (!userClientId) {
+                  const contactRecord = await knex('contacts')
+                      .select('client_id')
+                      .where({ contact_name_id: user.contact_id, tenant })
+                      .first();
+                  userClientId = contactRecord?.client_id ?? null;
+              }
+
+              if (userClientId) {
+                  // Check if this contract (billing_plan) belongs to the user's client
+                  const contractCheck = await knex('billing_plans')
+                      .where({
+                          plan_id: associatedContractId,
+                          tenant: tenant,
+                          company_id: userClientId
+                      })
+                      .first();
+
+                  if (contractCheck) {
+                      // For client users, also require is_client_visible = true
+                      if (!isClientUser || documentRecord.is_client_visible) {
+                          hasPermission = true;
+                          // Access granted via contract association
+                      }
                   }
               }
           }
 
           // Check ticket association - allow contact/client users when ticket belongs to them
+          // For client users, require is_client_visible = true
           if (!hasPermission && associatedTicketIds.size > 0 && user.contact_id) {
               // Get user's client_id if not already fetched
               if (!userClientId) {
@@ -253,24 +323,15 @@ export async function GET(
 
               const ticketAccess = await ticketAccessQuery;
               if (ticketAccess?.ticket_id) {
-                  hasPermission = true;
-                  console.log(`User ${user.user_id} granted access to ticket-associated file ${fileId} (ticket ${ticketAccess.ticket_id})`);
+                  if (!isClientUser || documentRecord.is_client_visible) {
+                      hasPermission = true;
+                  }
               }
           }
         }
     }
 
     if (!hasPermission) {
-      if (user) {
-        console.warn(`User ${user.user_id} (type: ${user.user_type}) does not have permission to view file ${fileId}.`);
-        console.warn(`AssociatedClient: ${associatedClientId}, UserClient: ${userClientId}`);
-        console.warn(`AssociatedContact: ${associatedContactId}, UserContact: ${user.contact_id}`);
-        console.warn(`AssociatedUser: ${associatedUserId}, UserId: ${user.user_id}`);
-        console.warn(`AssociatedProjectTask: ${associatedProjectTaskId}`);
-        console.warn(`AssociatedTickets: ${Array.from(associatedTicketIds).join(',')}`);
-      } else {
-        console.warn(`Unauthenticated user does not have permission to view file ${fileId}.`);
-      }
       return new NextResponse('Forbidden', { status: 403 });
     }
 
@@ -281,7 +342,6 @@ export async function GET(
                           fileRecord.mime_type === 'image/svg+xml';
     
     if (!isViewableType) {
-        console.warn(`Attempted to view non-viewable file: ${fileId}, MIME: ${fileRecord.mime_type}`);
         return new NextResponse('File type not supported for viewing', { status: 400 });
     }
 

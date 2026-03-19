@@ -15,23 +15,14 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import type { ImportJobDetails, ImportJobItemRecord, ImportJobRecord } from '@/types/imports.types';
 import { useImportActions } from './hooks/useImportActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-// Map URL slugs to tab labels
-const sectionToLabelMap: Record<string, string> = {
-  'asset-import': 'Asset Import',
-  'asset-export': 'Asset Export',
-  'templates-automation': 'Templates & Automation',
-};
-
-// Map tab labels back to URL slugs
-const labelToSlugMap: Record<string, string> = {
-  'Asset Import': 'asset-import',
-  'Asset Export': 'asset-export',
-  'Templates & Automation': 'templates-automation',
-};
+const SECTION_SLUGS = ['asset-import', 'asset-export', 'templates-automation'] as const;
 
 const ImportExportSettings = (): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
+
   const sectionParam = searchParams?.get('section');
 
   const {
@@ -59,27 +50,29 @@ const ImportExportSettings = (): React.JSX.Element => {
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    return initialLabel || 'Asset Import'; // Default to 'Asset Import'
+    const requestedTab = sectionParam?.toLowerCase();
+    return requestedTab && SECTION_SLUGS.includes(requestedTab as typeof SECTION_SLUGS[number])
+      ? requestedTab
+      : SECTION_SLUGS[0];
   });
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const currentLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'Asset Import';
+    const requestedTab = sectionParam?.toLowerCase();
+    const targetTab = requestedTab && SECTION_SLUGS.includes(requestedTab as typeof SECTION_SLUGS[number])
+      ? requestedTab
+      : SECTION_SLUGS[0];
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
   }, [sectionParam, activeTab]);
 
-  const updateURL = useCallback((tabLabel: string) => {
-    const urlSlug = labelToSlugMap[tabLabel];
-
+  const updateURL = useCallback((tabId: string) => {
     // Build new URL preserving existing parameters
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== 'asset-import') {
-      currentSearchParams.set('section', urlSlug);
+    if (tabId !== SECTION_SLUGS[0]) {
+      currentSearchParams.set('section', tabId);
     } else {
       currentSearchParams.delete('section');
     }
@@ -93,9 +86,9 @@ const ImportExportSettings = (): React.JSX.Element => {
     window.history.pushState({}, '', newUrl);
   }, []);
 
-  const handleTabChange = useCallback((tab: string) => {
-    setActiveTab(tab);
-    updateURL(tab);
+  const handleTabChange = useCallback((tabId: string) => {
+    setActiveTab(tabId);
+    updateURL(tabId);
   }, [updateURL]);
 
   const [file, setFile] = useState<File | null>(null);
@@ -167,12 +160,12 @@ const ImportExportSettings = (): React.JSX.Element => {
 
   const handleSubmit = async () => {
     if (!selectedSourceId) {
-      alert('Select an import source to continue.');
+      alert(t('importExport.import.alerts.selectSource'));
       return;
     }
 
     if (!file) {
-      alert('Choose a CSV or XLSX file to continue.');
+      alert(t('importExport.import.alerts.chooseFile'));
       return;
     }
 
@@ -200,7 +193,8 @@ const ImportExportSettings = (): React.JSX.Element => {
 
   const tabs: TabContent[] = useMemo(() => [
     {
-      label: 'Asset Import',
+      id: 'asset-import',
+      label: "Asset Import",
       content: (
         <div className="space-y-6">
           {error && (
@@ -211,13 +205,13 @@ const ImportExportSettings = (): React.JSX.Element => {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="import-source">Import source</Label>
+              <Label htmlFor="import-source">{t('importExport.import.fields.importSource')}</Label>
               <CustomSelect
                 id="import-source"
                 options={sourceOptions}
                 value={selectedSourceId ?? ''}
                 onValueChange={(value) => setSelectedSourceId(value || null)}
-                placeholder={sources.length === 0 ? 'No import sources available' : 'Select an import source'}
+                placeholder={sources.length === 0 ? t('importExport.import.placeholders.noSources') : t('importExport.import.placeholders.selectSource')}
                 disabled={isLoading || sourceOptions.length === 0}
                 className="h-10 !border-border/60 text-sm"
                 customStyles={{
@@ -227,7 +221,7 @@ const ImportExportSettings = (): React.JSX.Element => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="import-file">Upload file</Label>
+              <Label htmlFor="import-file">{t('importExport.import.fields.uploadFile')}</Label>
               <Input
                 id="import-file"
                 type="file"
@@ -248,15 +242,15 @@ const ImportExportSettings = (): React.JSX.Element => {
               onChange={(event) => setPersistTemplate(event.currentTarget.checked)}
             />
             <Label htmlFor="persist-template" className="text-sm font-normal">
-              Remember this mapping for future imports
+              {t('importExport.import.fields.rememberMapping')}
             </Label>
           </div>
 
           <div className="space-y-3">
             <div>
-              <h3 className="text-sm font-medium text-foreground">Field mapping</h3>
+              <h3 className="text-sm font-medium text-foreground">{t('importExport.import.fields.fieldMapping')}</h3>
               <p className="text-sm text-muted-foreground">
-                Enter the column names from your file that correspond to each required asset field. Leave optional fields blank to skip them.
+                {t('importExport.import.help.fieldMapping')}
               </p>
             </div>
 
@@ -269,12 +263,12 @@ const ImportExportSettings = (): React.JSX.Element => {
                       {definition.required && <span className="text-destructive"> *</span>}
                     </Label>
                     {definition.example && (
-                      <span className="text-xs text-muted-foreground">e.g. {definition.example}</span>
+                      <span className="text-xs text-muted-foreground">{t('importExport.import.placeholders.example', { example: definition.example })}</span>
                     )}
                   </div>
                   <Input
                     id={`field-${definition.field}`}
-                    placeholder="Source column name"
+                    placeholder={t('importExport.import.placeholders.sourceColumn')}
                     value={getSourceValueForField(definition.field)}
                     onChange={(event) => handleMappingChange(definition.field, event.target.value)}
                     disabled={isLoading}
@@ -286,30 +280,30 @@ const ImportExportSettings = (): React.JSX.Element => {
 
           <div className="flex flex-wrap gap-3">
             <Button id="start-import-button" onClick={handleSubmit} disabled={isLoading || !file || !selectedSourceId}>
-              {isLoading ? 'Preparing Preview…' : 'Generate Preview'}
+              {isLoading ? t('importExport.import.actions.preparingPreview') : t('importExport.import.actions.generatePreview')}
             </Button>
           </div>
 
           {preview && (
             <Card className="border border-muted">
               <CardHeader>
-                <CardTitle className="text-lg">Import Preview</CardTitle>
+                <CardTitle className="text-lg">{t('importExport.import.preview.title')}</CardTitle>
                 <CardDescription>
-                  Showing up to the first 10 rows from {preview.preview.summary.totalRows} total records.
+                  {t('importExport.import.preview.description', { totalRows: preview.preview.summary.totalRows })}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  <PreviewStat label="Total" value={preview.preview.summary.totalRows} />
-                  <PreviewStat label="Valid" value={preview.preview.summary.validRows} />
-                  <PreviewStat label="Duplicates" value={preview.preview.summary.duplicateRows} />
-                  <PreviewStat label="Errors" value={preview.preview.summary.errorRows} variant="destructive" />
+                  <PreviewStat label={t('importExport.import.preview.stats.total')} value={preview.preview.summary.totalRows} />
+                  <PreviewStat label={t('importExport.import.preview.stats.valid')} value={preview.preview.summary.validRows} />
+                  <PreviewStat label={t('importExport.import.preview.stats.duplicates')} value={preview.preview.summary.duplicateRows} />
+                  <PreviewStat label={t('importExport.import.preview.stats.errors')} value={preview.preview.summary.errorRows} variant="destructive" />
                 </div>
 
                 {preview.errorSummary && preview.errorSummary.topErrors?.length > 0 && (
                   <Alert variant="destructive">
                     <AlertDescription>
-                      <span className="font-medium text-foreground">Validation issues detected.</span>
+                      <span className="font-medium text-foreground">{t('importExport.import.alerts.validationIssues')}</span>
                       <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
                         {preview.errorSummary.topErrors.map((issue: any) => (
                           <li key={issue.field}>
@@ -324,16 +318,16 @@ const ImportExportSettings = (): React.JSX.Element => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-20">Row</TableHead>
-                      <TableHead>Values</TableHead>
-                      <TableHead>Issues</TableHead>
+                      <TableHead className="w-20">{t('importExport.import.preview.table.row')}</TableHead>
+                      <TableHead>{t('importExport.import.preview.table.values')}</TableHead>
+                      <TableHead>{t('importExport.import.preview.table.issues')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {preview.preview.rows.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-6">
-                          No preview rows available.
+                          {t('importExport.import.preview.empty')}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -378,7 +372,7 @@ const ImportExportSettings = (): React.JSX.Element => {
                     onClick={() => approveImport(preview.importJobId)}
                     disabled={isApproving || isLoading}
                   >
-                    {isApproving ? 'Starting Import…' : 'Proceed with Import'}
+                    {isApproving ? t('importExport.import.actions.startingImport') : t('importExport.import.actions.proceedWithImport')}
                   </Button>
                 </div>
               </CardContent>
@@ -388,24 +382,26 @@ const ImportExportSettings = (): React.JSX.Element => {
       ),
     },
     {
-      label: 'Asset Export',
+      id: 'asset-export',
+      label: "Asset Export",
       content: (
         <div className="space-y-4">
           <Alert>
             <AlertDescription>
-              Asset export tooling is coming soon. Planned capabilities include exporting filtered asset lists, audit data, and mapping templates directly to CSV/XLSX.
+              {t('importExport.export.comingSoon')}
             </AlertDescription>
           </Alert>
         </div>
       ),
     },
     {
-      label: 'Templates & Automation',
+      id: 'templates-automation',
+      label: "Templates & Automation",
       content: (
         <div className="space-y-4">
           <Alert>
             <AlertDescription>
-              Mapping templates and scheduled imports will live here. Save column mappings, share them across the team, and configure recurring jobs.
+              {t('importExport.templates.comingSoon')}
             </AlertDescription>
           </Alert>
         </div>
@@ -417,9 +413,9 @@ const ImportExportSettings = (): React.JSX.Element => {
     <div className="space-y-6" data-testid="import-export-settings">
       <Card>
         <CardHeader>
-          <CardTitle>Import &amp; Export Workspace</CardTitle>
+          <CardTitle>{t('importExport.title')}</CardTitle>
           <CardDescription>
-            Configure imports, exports, and automated data flows from a single control centre.
+            {t('importExport.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -440,8 +436,8 @@ const ImportExportSettings = (): React.JSX.Element => {
       <Card>
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle>Import &amp; Export History</CardTitle>
-            <CardDescription>Review every import or export job in one place.</CardDescription>
+            <CardTitle>{t('importExport.history.title')}</CardTitle>
+            <CardDescription>{t('importExport.history.description')}</CardDescription>
           </div>
           <Button
             id="refresh-import-export-history-button"
@@ -453,10 +449,10 @@ const ImportExportSettings = (): React.JSX.Element => {
             {isRefreshingHistory ? (
               <span className="flex items-center gap-2">
                 <Spinner size="sm" />
-                Refreshing…
+                {t('importExport.import.actions.refreshing')}
               </span>
             ) : (
-              'Refresh'
+              t('importExport.import.actions.refresh')
             )}
           </Button>
         </CardHeader>
@@ -464,20 +460,20 @@ const ImportExportSettings = (): React.JSX.Element => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>File</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Created</TableHead>
-                <TableHead className="text-right">Duplicates</TableHead>
-                <TableHead className="text-right">Errors</TableHead>
+                <TableHead>{t('importExport.history.table.date')}</TableHead>
+                <TableHead>{t('importExport.history.table.source')}</TableHead>
+                <TableHead>{t('importExport.history.table.file')}</TableHead>
+                <TableHead>{t('importExport.history.table.status')}</TableHead>
+                <TableHead className="text-right">{t('importExport.history.table.created')}</TableHead>
+                <TableHead className="text-right">{t('importExport.history.table.duplicates')}</TableHead>
+                <TableHead className="text-right">{t('importExport.history.table.errors')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {history.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="py-6 text-center text-sm text-muted-foreground">
-                    No import or export jobs found. Generate a preview to create the first job.
+                    {t('importExport.history.empty')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -546,6 +542,7 @@ const JobDetailsDrawerContent = ({
 };
 
 const ImportJobDetailsView = ({ details }: { details: ImportJobDetails }) => {
+  const { t } = useTranslation('msp/settings');
   const allItems = details.items ?? [];
   const records = useMemo(() => allItems.slice(0, 50), [allItems]);
   const errorItems = useMemo(
@@ -591,64 +588,68 @@ const ImportJobDetailsView = ({ details }: { details: ImportJobDetails }) => {
   const detailTabs: TabContent[] = useMemo(
     () => [
       {
-        label: 'Summary',
+        id: 'summary',
+        label: "Summary",
         content: (
           <div className="space-y-4">
             <InfoSection
-              title="Source"
+              title={t('importExport.jobDetails.fields.source')}
               rows={[
-                { label: 'Original file name', value: details.file_name ?? '—' },
-                { label: 'Stored file ID', value: details.source_file_id ?? '—' },
-                { label: 'Document ID', value: details.source_document_id ?? '—' },
-                { label: 'Document association', value: details.source_document_association_id ?? '—' }
+                { label: t('importExport.jobDetails.fields.originalFileName'), value: details.file_name ?? '—' },
+                { label: t('importExport.jobDetails.fields.storedFileId'), value: details.source_file_id ?? '—' },
+                { label: t('importExport.jobDetails.fields.documentId'), value: details.source_document_id ?? '—' },
+                { label: t('importExport.jobDetails.fields.documentAssociation'), value: details.source_document_association_id ?? '—' }
               ]}
             />
             <InfoSection
-              title="Client Association"
+              title={t('importExport.jobDetails.fields.clientAssociation')}
               rows={[
-                { label: 'Associated client', value: associatedClientId ?? tenantClientId ?? '—' },
-                { label: 'Default client context', value: defaultClientId ?? '—' },
-                { label: 'Tenant client fallback', value: tenantClientId ?? '—' }
+                { label: t('importExport.jobDetails.fields.associatedClient'), value: associatedClientId ?? tenantClientId ?? '—' },
+                { label: t('importExport.jobDetails.fields.defaultClientContext'), value: defaultClientId ?? '—' },
+                { label: t('importExport.jobDetails.fields.tenantClientFallback'), value: tenantClientId ?? '—' }
               ]}
             />
           </div>
         )
       },
       {
+        id: 'records',
         label: `Records (${allItems.length})`,
         content: (
           <JobRecordsTable items={records} hasMore={hasMoreRecords} />
         )
       },
       {
+        id: 'errors',
         label: `Errors (${errorItems.length})`,
         content: <JobErrorsTable items={errorItems} />
       },
       {
+        id: 'duplicates',
         label: `Duplicates (${duplicateItems.length})`,
         content: <JobDuplicatesTable items={duplicateItems} />
       }
     ],
-    [allItems.length, associatedClientId, details.file_name, details.source_document_association_id, details.source_document_id, details.source_file_id, duplicateItems, errorItems, hasMoreRecords, defaultClientId, tenantClientId]
+    [allItems.length, associatedClientId, details.file_name, details.source_document_association_id, details.source_document_id, details.source_file_id, duplicateItems, errorItems, hasMoreRecords, defaultClientId, tenantClientId, t]
   );
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-foreground">Import Job Details</h2>
+        <h2 className="text-xl font-semibold text-foreground">{t('importExport.jobDetails.title')}</h2>
         <p className="text-sm text-muted-foreground">
-          Created {new Date(details.created_at).toLocaleString()} &middot; Status{' '}
+          {t('importExport.history.table.created')} {new Date(details.created_at).toLocaleString()} &middot; {t('importExport.jobDetails.fields.status')}{' '}
           <span className="capitalize">{details.status}</span>
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <PreviewStat label="Total Rows" value={metrics.totalRows ?? details.total_rows} />
-        <PreviewStat label="Processed" value={metrics.processedRows ?? details.processed_rows} />
-        <PreviewStat label="Created" value={metrics.created ?? details.created_rows} />
-        <PreviewStat label="Updated" value={metrics.updated ?? details.updated_rows} />
-        <PreviewStat label="Duplicates" value={metrics.duplicates ?? details.duplicate_rows} />
-        <PreviewStat label="Errors" value={metrics.errors ?? details.error_rows} variant="destructive" />
+        <PreviewStat label={t('importExport.jobDetails.stats.totalRows')} value={metrics.totalRows ?? details.total_rows} />
+        <PreviewStat label={t('importExport.jobDetails.stats.processed')} value={metrics.processedRows ?? details.processed_rows} />
+        <PreviewStat label={t('importExport.jobDetails.stats.created')} value={metrics.created ?? details.created_rows} />
+        <PreviewStat label={t('importExport.jobDetails.stats.updated')} value={metrics.updated ?? details.updated_rows} />
+        <PreviewStat label={t('importExport.jobDetails.stats.duplicates')} value={metrics.duplicates ?? details.duplicate_rows} />
+        <PreviewStat label={t('importExport.jobDetails.stats.errors')} value={metrics.errors ?? details.error_rows} variant="destructive" />
       </div>
 
       <CustomTabs
@@ -687,8 +688,9 @@ const JobRecordsTable = ({
   items: ImportJobItemRecord[];
   hasMore?: boolean;
 }) => {
+  const { t } = useTranslation('msp/settings');
   if (!items.length) {
-    return <p className="text-sm text-muted-foreground">No processed records yet.</p>;
+    return <p className="text-sm text-muted-foreground">{t('importExport.jobDetails.empty.noRecords')}</p>;
   }
 
   return (
@@ -697,9 +699,9 @@ const JobRecordsTable = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>External ID</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Sample Values</TableHead>
+              <TableHead>{t('importExport.jobDetails.fields.externalId')}</TableHead>
+              <TableHead>{t('importExport.jobDetails.fields.status')}</TableHead>
+              <TableHead>{t('importExport.jobDetails.fields.sampleValues')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -719,7 +721,7 @@ const JobRecordsTable = ({
       </div>
       {hasMore && (
         <p className="text-xs text-muted-foreground">
-          Showing the first {items.length} records. Download the job results for full history.
+          {t('importExport.jobDetails.truncated', { count: items.length })}
         </p>
       )}
     </div>
@@ -727,8 +729,9 @@ const JobRecordsTable = ({
 };
 
 const JobErrorsTable = ({ items }: { items: ImportJobItemRecord[] }) => {
+  const { t } = useTranslation('msp/settings');
   if (!items.length) {
-    return <p className="text-sm text-muted-foreground">No validation errors were recorded.</p>;
+    return <p className="text-sm text-muted-foreground">{t('importExport.jobDetails.empty.noErrors')}</p>;
   }
 
   return (
@@ -736,9 +739,9 @@ const JobErrorsTable = ({ items }: { items: ImportJobItemRecord[] }) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>External ID</TableHead>
-            <TableHead>Error</TableHead>
-            <TableHead>Sample Values</TableHead>
+            <TableHead>{t('importExport.jobDetails.fields.externalId')}</TableHead>
+            <TableHead>{t('importExport.jobDetails.fields.error')}</TableHead>
+            <TableHead>{t('importExport.jobDetails.fields.sampleValues')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -760,8 +763,9 @@ const JobErrorsTable = ({ items }: { items: ImportJobItemRecord[] }) => {
 };
 
 const JobDuplicatesTable = ({ items }: { items: ImportJobItemRecord[] }) => {
+  const { t } = useTranslation('msp/settings');
   if (!items.length) {
-    return <p className="text-sm text-muted-foreground">No duplicates were detected for this job.</p>;
+    return <p className="text-sm text-muted-foreground">{t('importExport.jobDetails.empty.noDuplicates')}</p>;
   }
 
   return (
@@ -769,9 +773,9 @@ const JobDuplicatesTable = ({ items }: { items: ImportJobItemRecord[] }) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>External ID</TableHead>
-            <TableHead>Duplicate Match</TableHead>
-            <TableHead>Sample Values</TableHead>
+            <TableHead>{t('importExport.jobDetails.fields.externalId')}</TableHead>
+            <TableHead>{t('importExport.jobDetails.fields.duplicateMatch')}</TableHead>
+            <TableHead>{t('importExport.jobDetails.fields.sampleValues')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -799,10 +803,11 @@ const KeyValuePreview = ({
   data: Record<string, unknown>;
   maxEntries?: number;
 }) => {
+  const { t } = useTranslation('msp/settings');
   const entries = Object.entries(data ?? {}).slice(0, maxEntries);
 
   if (!entries.length) {
-    return <span className="text-sm text-muted-foreground">No values</span>;
+    return <span className="text-sm text-muted-foreground">{t('importExport.jobDetails.empty.noValues')}</span>;
   }
 
   return (

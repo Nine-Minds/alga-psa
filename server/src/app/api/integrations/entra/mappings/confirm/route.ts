@@ -1,12 +1,11 @@
 import {
-  dynamic,
-  runtime,
   eeUnavailable,
   isEnterpriseEdition,
   optionsResponse,
 } from '../../_ceStub';
 
-export { dynamic, runtime };
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 type EeRouteModule = {
   POST: (req: Request) => Promise<Response>;

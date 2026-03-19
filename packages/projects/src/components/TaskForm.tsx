@@ -54,7 +54,7 @@ import TaskTicketLinks, { TaskTicketLinksRef } from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
 import TaskCommentThread from './TaskCommentThread';
-import { createDocumentAssociations, deleteDocument, removeDocumentAssociations } from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
@@ -90,6 +90,7 @@ interface TaskFormProps {
   inDrawer?: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
   prefillData?: TaskFormPrefillData;
+  onCommentCountChange?: (taskId: string, count: number) => void;
 }
 
 export default function TaskForm({
@@ -105,8 +106,10 @@ export default function TaskForm({
   onPhaseChange,
   inDrawer = false,
   projectTreeData = [],
-  prefillData
+  prefillData,
+  onCommentCountChange
 }: TaskFormProps): React.JSX.Element {
+  const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
@@ -1114,14 +1117,17 @@ export default function TaskForm({
 
   const handleAddAgent = async (userId: string) => {
     try {
-      if (task?.task_id && assignedUser) {
-        // Existing task with a primary agent: save immediately
+      const primaryChanged = task?.assigned_to !== assignedUser;
+      if (task?.task_id && assignedUser && !primaryChanged) {
+        // Existing task with unchanged primary agent: save immediately
         await addTaskResourceAction(task.task_id, userId);
         const updatedResources = await getTaskResourcesAction(task.task_id);
         setTaskResources(updatedResources);
         toast.success('Agent added successfully');
       } else {
-        // New task OR existing task without primary agent: store temporarily
+        // New task, no primary agent, or primary has changed: store temporarily
+        // When primary has changed, we must defer saving to avoid CHECK constraint
+        // violation (assigned_to != additional_user_id) since DB still has old primary
         const selectedUser = users.find(u => u.user_id === userId);
         if (selectedUser) {
           const tempResource = {
@@ -1772,6 +1778,7 @@ export default function TaskForm({
               <TaskCommentThread
                 taskId={task.task_id}
                 projectId={phase.project_id}
+                onCommentCountChange={onCommentCountChange}
               />
             </div>
           )}

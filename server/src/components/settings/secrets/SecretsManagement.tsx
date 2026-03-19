@@ -10,15 +10,17 @@ import {
   deleteSecret,
   getSecretUsage
 } from '@alga-psa/tenancy/actions';
-import type { TenantSecretMetadata } from '@alga-psa/shared/workflow/secrets';
+import type { TenantSecretMetadata } from '@alga-psa/workflows/secrets';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Plus, Trash2, Edit, Key, AlertTriangle, Search } from 'lucide-react';
 import SecretDialog from './SecretDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function SecretsManagement() {
+  const { t } = useTranslation('msp/settings');
   const [secrets, setSecrets] = useState<TenantSecretMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -56,7 +58,7 @@ export default function SecretsManagement() {
       setSecrets(secretsData);
       setSecretUsage(usageData);
     } catch (error) {
-      handleError(error, 'Failed to load secrets');
+      handleError(error, t('secrets.messages.error.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -93,12 +95,12 @@ export default function SecretsManagement() {
     try {
       setDeleting(true);
       await deleteSecret(secretToDelete.name);
-      toast.success(`Secret "${secretToDelete.name}" deleted`);
+      toast.success(t('secrets.messages.success.deleted', { name: secretToDelete.name }));
       setDeleteDialogOpen(false);
       setSecretToDelete(null);
       await loadSecrets();
     } catch (error) {
-      handleError(error, 'Failed to delete secret');
+      handleError(error, t('secrets.messages.error.deleteFailed'));
     } finally {
       setDeleting(false);
     }
@@ -116,7 +118,7 @@ export default function SecretsManagement() {
 
   const columns: ColumnDefinition<TenantSecretMetadata>[] = useMemo(() => [
     {
-      title: 'Name',
+      title: t('secrets.list.table.name'),
       dataIndex: 'name',
       width: '25%',
       render: (value: string) => (
@@ -127,27 +129,27 @@ export default function SecretsManagement() {
       ),
     },
     {
-      title: 'Description',
+      title: t('secrets.list.table.description'),
       dataIndex: 'description',
       width: '30%',
       render: (value: string | undefined) => (
-        <span className="text-gray-600">{value || '-'}</span>
+        <span className="text-gray-600">{value || t('secrets.list.table.empty')}</span>
       ),
     },
     {
-      title: 'Last Updated',
+      title: t('secrets.list.table.lastUpdated'),
       dataIndex: 'updatedAt',
       width: '20%',
       render: (value: string) => new Date(value).toLocaleString(),
     },
     {
-      title: 'Last Accessed',
+      title: t('secrets.list.table.lastAccessed'),
       dataIndex: 'lastAccessedAt',
       width: '15%',
-      render: (value: string | undefined) => value ? new Date(value).toLocaleString() : 'Never',
+      render: (value: string | undefined) => value ? new Date(value).toLocaleString() : t('secrets.list.table.never'),
     },
     {
-      title: 'Actions',
+      title: t('secrets.list.table.actions'),
       dataIndex: 'actions',
       width: '10%',
       render: (_: unknown, record: TenantSecretMetadata) => (
@@ -157,7 +159,7 @@ export default function SecretsManagement() {
             variant="ghost"
             size="sm"
             onClick={() => handleEdit(record)}
-            title="Edit secret"
+            title={t('secrets.list.tooltips.edit')}
           >
             <Edit className="h-4 w-4" />
           </Button>
@@ -166,7 +168,7 @@ export default function SecretsManagement() {
             variant="ghost"
             size="sm"
             onClick={() => handleDeleteClick(record)}
-            title="Delete secret"
+            title={t('secrets.list.tooltips.delete')}
             className="text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="h-4 w-4" />
@@ -174,17 +176,16 @@ export default function SecretsManagement() {
         </div>
       ),
     }
-  ], []);
+  ], [t]);
 
   return (
     <div className="space-y-6">
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-semibold">Secrets</h2>
+            <h2 className="text-2xl font-semibold">{t('secrets.list.title')}</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Manage secrets for use in workflows. Secrets are encrypted and can be referenced using{' '}
-              <code className="bg-gray-100 px-1 rounded">{'{ $secret: "SECRET_NAME" }'}</code>
+              {t('secrets.list.description')}
             </p>
           </div>
           <Button
@@ -192,7 +193,7 @@ export default function SecretsManagement() {
             onClick={handleCreate}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Create Secret
+            {t('secrets.list.createSecret')}
           </Button>
         </div>
 
@@ -202,7 +203,7 @@ export default function SecretsManagement() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               id="secrets-search"
-              placeholder="Search secrets..."
+              placeholder={t('secrets.list.search')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -233,14 +234,13 @@ export default function SecretsManagement() {
       <Dialog
         isOpen={deleteDialogOpen}
         onClose={() => !deleting && setDeleteDialogOpen(false)}
-        title="Delete Secret"
+        title={t('secrets.dialog.deleteTitle')}
       >
         <DialogContent>
           {secretToDelete && (
             <div className="space-y-4">
               <p>
-                Are you sure you want to delete the secret{' '}
-                <code className="bg-gray-100 px-2 py-0.5 rounded font-mono">{secretToDelete.name}</code>?
+                {t('secrets.dialog.delete.confirmation', { name: secretToDelete.name })}
               </p>
 
               {getUsageForSecret(secretToDelete.name).length > 0 && (
@@ -249,10 +249,10 @@ export default function SecretsManagement() {
                     <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-[rgb(var(--color-text-800))]">
-                        This secret is used by {getUsageForSecret(secretToDelete.name).length} workflow(s)
+                        {t('secrets.dialog.delete.usedByWorkflows', { count: getUsageForSecret(secretToDelete.name).length })}
                       </p>
                       <p className="text-sm text-[rgb(var(--color-text-700))]">
-                        Deleting it will cause those workflows to fail when they try to access this secret.
+                        {t('secrets.dialog.delete.usedByWarning')}
                       </p>
                     </div>
                   </div>
@@ -260,19 +260,19 @@ export default function SecretsManagement() {
               )}
 
               <p className="text-sm text-gray-500">
-                This action cannot be undone.
+                {t('secrets.dialog.delete.cannotUndo')}
               </p>
 
               {/* Require typing secret name to confirm */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Type <code className="bg-gray-100 px-1 rounded font-mono text-sm">{secretToDelete.name}</code> to confirm:
+                  {t('secrets.dialog.delete.typeToConfirm', { name: secretToDelete.name })}
                 </label>
                 <Input
                   id="delete-confirm-name"
                   value={deleteConfirmName}
                   onChange={(e) => setDeleteConfirmName(e.target.value)}
-                  placeholder="Enter secret name"
+                  placeholder={t('secrets.dialog.delete.placeholder')}
                   disabled={deleting}
                   className="font-mono"
                 />
@@ -285,7 +285,7 @@ export default function SecretsManagement() {
                   onClick={() => setDeleteDialogOpen(false)}
                   disabled={deleting}
                 >
-                  Cancel
+                  {t('secrets.dialog.actions.cancel')}
                 </Button>
                 <Button
                   id="confirm-delete-secret"
@@ -293,7 +293,7 @@ export default function SecretsManagement() {
                   onClick={handleDeleteConfirm}
                   disabled={deleting || deleteConfirmName !== secretToDelete.name}
                 >
-                  {deleting ? 'Deleting...' : 'Delete Secret'}
+                  {deleting ? t('secrets.dialog.actions.deleting') : t('secrets.dialog.actions.delete')}
                 </Button>
               </DialogFooter>
             </div>

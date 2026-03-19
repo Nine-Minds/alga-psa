@@ -4,6 +4,7 @@ import React from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import type { IUser } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export interface OrgChartNodeData {
   user: IUser;
@@ -13,6 +14,7 @@ export interface OrgChartNodeData {
 }
 
 const OrgChartNode = ({ data }: NodeProps<OrgChartNodeData>) => {
+  const { t } = useTranslation('msp/settings');
   const { user, avatarUrl, roleLabel, isHighlighted } = data;
   const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
@@ -30,7 +32,7 @@ const OrgChartNode = ({ data }: NodeProps<OrgChartNodeData>) => {
           <div className="flex items-center gap-2">
             <div className="truncate text-sm font-semibold text-text-800">{displayName}</div>
             {user.is_inactive && (
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Inactive</span>
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('orgChart.badge.inactive')}</span>
             )}
           </div>
           <div className="truncate text-xs text-text-600">{roleLabel}</div>

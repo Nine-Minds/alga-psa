@@ -17,6 +17,7 @@ import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
 import toast from 'react-hot-toast';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface UserDetailsProps {
   userId: string;
@@ -24,6 +25,7 @@ interface UserDetailsProps {
 }
 
 const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
+  const { t } = useTranslation('msp/settings');
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [firstName, setFirstName] = useState('');
@@ -105,11 +107,11 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                   size="sm"
                 />
                 <span className={item.is_inactive ? 'text-muted-foreground' : ''}>
-                  {item.is_inactive ? `${nameLabel} (Inactive)` : nameLabel}
+                  {item.is_inactive ? `${nameLabel} ${t('userDetails.status.inactiveTag')}` : nameLabel}
                 </span>
               </span>
             ),
-            textValue: item.is_inactive ? `${nameLabel} (Inactive)` : nameLabel,
+            textValue: item.is_inactive ? `${nameLabel} ${t('userDetails.status.inactiveTag')}` : nameLabel,
             is_inactive: item.is_inactive,
           };
         });
@@ -151,11 +153,11 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         setIsActive(!userWithRoles.is_inactive);
         setRoles(userRoles);
       } else {
-        setError('User not found');
+        setError(t('userDetails.messages.error.userNotFound'));
       }
     } catch (err) {
       console.error('Error fetching user details:', err);
-      setError('Failed to load user details. Please try again.');
+      setError(t('userDetails.messages.error.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -178,7 +180,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
       }
     } catch (err) {
       console.error('Error fetching available roles:', err);
-      setError('Failed to load available roles.');
+      setError(t('userDetails.messages.error.loadFailed'));
     }
   };
 
@@ -192,7 +194,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
       setSelectedRole('');
     } catch (err) {
       console.error('Error adding role:', err);
-      setError('Failed to add role. Please try again.');
+      setError(t('userDetails.messages.error.addRoleFailed'));
     }
   };
 
@@ -205,7 +207,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
       setRoles(updatedRoles);
     } catch (err) {
       console.error('Error removing role:', err);
-      setError('Failed to remove role. Please try again.');
+      setError(t('userDetails.messages.error.removeRoleFailed'));
     }
   };
 
@@ -218,7 +220,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           if (licenseResult.success && licenseResult.data) {
             const { limit, remaining } = licenseResult.data;
             if (limit !== null && remaining === 0) {
-              toast.error('Cannot activate user: License limit reached. Please deactivate another user or upgrade your license.');
+              toast.error(t('users.messages.error.licenseLimit'));
               return;
             }
           }
@@ -240,13 +242,13 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           setUser(updatedUser);
           onUpdate();
           closeDrawer();
-          toast.success('User updated successfully');
+          toast.success(t('userDetails.messages.success.userUpdated'));
         } else {
-          setError('Failed to update user. User not found.');
+          setError(t('userDetails.messages.error.updateUserNotFound'));
         }
       } catch (err) {
         console.error('Error updating user:', err);
-        setError('Failed to update user. Please try again.');
+        setError(t('userDetails.messages.error.updateFailed'));
       }
     }
   };
@@ -257,14 +259,14 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
     setPasswordSuccess(null);
 
     if (adminNewPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
+      setPasswordError(t('userDetails.messages.error.passwordTooShort'));
       return;
     }
 
     try {
       const result = await adminChangeUserPassword(userId, adminNewPassword);
       if (result.success) {
-        setPasswordSuccess('Password changed successfully');
+        setPasswordSuccess(t('userDetails.messages.success.passwordChanged'));
         setAdminNewPassword('');
         // Collapse the form after successful password change
         setTimeout(() => {
@@ -272,10 +274,10 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           setPasswordSuccess(null);
         }, 2000);
       } else {
-        setPasswordError(result.error || 'Failed to change password');
+        setPasswordError(result.error || t('userDetails.messages.error.passwordChangeFailed'));
       }
     } catch (err) {
-      setPasswordError('An error occurred while changing password');
+      setPasswordError(t('userDetails.messages.error.passwordChangeError'));
     }
   };
 
@@ -300,7 +302,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   if (!user) {
     return (
       <Card className="p-6">
-        <Text size="2">No user found</Text>
+        <Text size="2">{t('userDetails.messages.error.userNotFound')}</Text>
       </Card>
     );
   }
@@ -314,44 +316,44 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
 
   return (
     <Card className="space-y-6 p-6">
-      <Text size="5" weight="bold" className="mb-6">User Details</Text>
+      <Text size="5" weight="bold" className="mb-6">{t('userDetails.title')}</Text>
       
       <Flex direction="column" gap="4">
         <div>
           <Text as="label" size="2" weight="medium" className="mb-2 block">
-            First Name
+            {t('userDetails.fields.firstName.label')}
           </Text>
           <Input
             type="text"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            placeholder="Enter first name"
+            placeholder={t('userDetails.fields.firstName.placeholder')}
             className="w-full"
           />
         </div>
 
         <div>
           <Text as="label" size="2" weight="medium" className="mb-2 block">
-            Last Name
+            {t('userDetails.fields.lastName.label')}
           </Text>
           <Input
             type="text"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            placeholder="Enter last name"
+            placeholder={t('userDetails.fields.lastName.placeholder')}
             className="w-full"
           />
         </div>
 
         <div>
           <Text as="label" size="2" weight="medium" className="mb-2 block">
-            Email
+            {t('userDetails.fields.email.label')}
           </Text>
           <Input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter email"
+            placeholder={t('userDetails.fields.email.placeholder')}
             className="w-full"
           />
         </div>
@@ -359,14 +361,14 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         {isTeamsV2Enabled && (
           <div>
             <Text as="label" size="2" weight="medium" className="mb-2 block">
-              Reports To
+              {t('userDetails.fields.reportsTo.label')}
             </Text>
             <CustomSelect
               options={reportsToOptions}
               value={reportsTo}
               onValueChange={setReportsTo}
               className="w-full"
-              placeholder="Select manager"
+              placeholder={t('userDetails.fields.reportsTo.placeholder')}
               allowClear
             />
           </div>
@@ -376,7 +378,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         {user?.last_login_at && (
           <div className="p-3 rounded-lg border bg-gray-50">
             <Text as="label" size="2" weight="medium" className="block mb-1">
-              Last Login
+              {t('userDetails.fields.lastLogin')}
             </Text>
             <Text size="2" color="gray" className="block">
               {new Date(user.last_login_at).toLocaleDateString('en-US', {
@@ -389,7 +391,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             </Text>
             {user.last_login_method && (
               <Text size="1" color="gray" className="block mt-1">
-                via {user.last_login_method}
+                {t('users.table.viaMethod', { method: user.last_login_method })}
               </Text>
             )}
           </div>
@@ -397,7 +399,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
 
         <div>
           <Text as="label" size="2" weight="medium" className="mb-2 block">
-            Roles
+            {t('userDetails.fields.roles')}
           </Text>
           <div className="space-y-2">
             {roles.map((role: IRole): React.JSX.Element => (
@@ -409,7 +411,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                   onClick={() => handleRemoveRole(role.role_id)}
                   className="text-destructive hover:text-destructive"
                 >
-                  Remove
+                  {t('userDetails.actions.removeRole')}
                 </Button>
               </div>
             ))}
@@ -420,7 +422,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
               value={selectedRole}
               onValueChange={setSelectedRole}
               className="flex-1"
-              placeholder="Select role to add"
+              placeholder={t('userDetails.actions.selectRoleToAdd')}
             />
             {selectedRole && (
               <Button
@@ -428,7 +430,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                 onClick={handleAddRole}
                 variant="default"
               >
-                Add Role
+                {t('userDetails.actions.addRole')}
               </Button>
             )}
           </div>
@@ -436,12 +438,12 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
 
         <div className="flex items-center justify-between py-3">
           <div className="flex-1">
-            <Text size="2" weight="medium">Status</Text>
-            <Text size="2" color="gray" className="block">Set user account status</Text>
+            <Text size="2" weight="medium">{t('userDetails.fields.status')}</Text>
+            <Text size="2" color="gray" className="block">{t('userDetails.fields.statusHelp')}</Text>
           </div>
           <div className="flex items-center gap-3">
             <Text size="2" color="gray">
-              {isActive ? 'Active' : 'Inactive'}
+              {isActive ? t('userDetails.status.active') : t('userDetails.status.inactive')}
             </Text>
             <Switch
               checked={isActive}
@@ -452,7 +454,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                   if (licenseResult.success && licenseResult.data) {
                     const { limit, remaining } = licenseResult.data;
                     if (limit !== null && remaining === 0) {
-                      toast.error('Cannot activate user: License limit reached. Please deactivate another user or upgrade your license.');
+                      toast.error(t('users.messages.error.licenseLimit'));
                       return;
                     }
                   }
@@ -474,7 +476,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
               onClick={() => setIsAdminPasswordExpanded(!isAdminPasswordExpanded)}
               className="w-full flex items-center justify-between text-left hover:bg-gray-50 p-2 rounded-md transition-colors"
             >
-              <span className="text-base font-medium">Set User Password (Admin)</span>
+              <span className="text-base font-medium">{t('userDetails.dialog.setPassword.title')}</span>
               {isAdminPasswordExpanded ? (
                 <ChevronUp className="h-5 w-5 text-gray-500" />
               ) : (
@@ -487,7 +489,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
               <form onSubmit={handleAdminChangePassword} className="space-y-4">
                 <div>
                   <Text as="label" size="2" weight="medium" className="mb-2 block">
-                    New Password
+                    {t('userDetails.fields.newPassword')}
                   </Text>
                   <div className="relative">
                     <Input
@@ -511,7 +513,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                   </div>
                 </div>
                 <Button id='set-password-btn' type="submit" variant="default">
-                  Set Password
+                  {t('userDetails.actions.setPassword')}
                 </Button>
               </form>
             </div>
@@ -538,14 +540,14 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           onClick={closeDrawer}
           variant="outline"
         >
-          Cancel
+          {t('userDetails.actions.cancel')}
         </Button>
         <Button
           id='save-changes-btn'
           onClick={handleSave}
           variant="default"
         >
-          Save Changes
+          {t('userDetails.actions.saveChanges')}
         </Button>
       </div>
     </Card>

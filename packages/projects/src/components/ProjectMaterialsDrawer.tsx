@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Label } from '@alga-psa/ui/components/Label';
-import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -19,8 +19,7 @@ import {
   addProjectMaterial,
   getServicePrices,
   deleteProjectMaterial,
-  type CatalogPickerItem,
-} from '@alga-psa/billing/actions';
+} from '../actions/materialCatalogActions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 
 interface ProjectMaterialsDrawerProps {
@@ -37,9 +36,8 @@ export default function ProjectMaterialsDrawer({
   const [showAddForm, setShowAddForm] = useState(false);
   const [materials, setMaterials] = useState<IProjectMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [products, setProducts] = useState<CatalogPickerItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [selectedProductLabel, setSelectedProductLabel] = useState<string>('');
   const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
@@ -65,27 +63,26 @@ export default function ProjectMaterialsDrawer({
     loadMaterials();
   }, [loadMaterials]);
 
-  const loadProducts = useCallback(async () => {
-    setIsLoadingProducts(true);
-    try {
+  // Server-side search for products via AsyncSearchableSelect
+  const loadProductOptions = useCallback(
+    async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
       const result = await searchServiceCatalogForPicker({
+        search,
+        page,
+        limit,
         item_kinds: ['product'],
         is_active: true,
-        limit: 100,
       });
-      setProducts(result.items);
-    } catch (error) {
-      handleError(error, 'Failed to load products');
-    } finally {
-      setIsLoadingProducts(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    if (showAddForm && products.length === 0) {
-      loadProducts();
-    }
-  }, [showAddForm, products.length, loadProducts]);
+      const options: SelectOption[] = result.items.map((item) => ({
+        value: item.service_id,
+        label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
+      }));
+
+      return { options, total: result.totalCount };
+    },
+    []
+  );
 
   useEffect(() => {
     if (!selectedProductId) {
@@ -132,6 +129,7 @@ export default function ProjectMaterialsDrawer({
   const resetAddForm = () => {
     setShowAddForm(false);
     setSelectedProductId('');
+    setSelectedProductLabel('');
     setProductPrices([]);
     setSelectedCurrency('');
     setQuantity(1);
@@ -214,23 +212,24 @@ export default function ProjectMaterialsDrawer({
           <div className="border rounded-md p-4 space-y-4 bg-gray-50">
             <div className="space-y-2">
               <Label htmlFor="project-materials-product-select">Product</Label>
-              <SearchableSelect
+              <AsyncSearchableSelect
                 id="project-materials-product-select"
-                options={products.map((product) => ({
-                  value: product.service_id,
-                  label: product.sku ? `${product.service_name} (${product.sku})` : product.service_name,
-                }))}
                 value={selectedProductId}
-                onChange={(value) => {
+                selectedLabel={selectedProductLabel}
+                onChange={(value, option) => {
                   setSelectedProductId(value);
+                  setSelectedProductLabel(option?.label ?? '');
                   setSelectedCurrency('');
                 }}
+                loadOptions={loadProductOptions}
+                limit={10}
+                debounceMs={300}
                 placeholder="Select a product..."
                 searchPlaceholder="Search products..."
-                emptyMessage={isLoadingProducts ? 'Loading products...' : 'No products found'}
+                emptyMessage="No products found"
                 dropdownMode="overlay"
                 maxListHeight="200px"
-                disabled={isLoadingProducts}
+                showMoreIndicator
               />
             </div>
 

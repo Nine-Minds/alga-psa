@@ -201,6 +201,12 @@ const nextConfig = {
       '@alga-psa/notifications/hooks': '../packages/notifications/src/hooks/index.ts',
       '@alga-psa/scheduling': '../packages/scheduling/src',
       '@alga-psa/scheduling/': '../packages/scheduling/src/',
+      '@alga-psa/ee-calendar': '../ee/packages/calendar/src/index.ts',
+      '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
+      '@alga-psa/ee-microsoft-teams': '../ee/packages/microsoft-teams/src/index.ts',
+      '@alga-psa/ee-microsoft-teams/': '../ee/packages/microsoft-teams/src/',
+      '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
+      '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@alga-psa/tags': '../packages/tags/src',
       '@alga-psa/tags/': '../packages/tags/src/',
       '@alga-psa/users': '../packages/users/src',
@@ -470,6 +476,8 @@ const nextConfig = {
       '@alga-psa/ui': path.join(__dirname, '../packages/ui/src'),
       '@alga-psa/clients': path.join(__dirname, '../packages/clients/src'),
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
+      '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
+      '@alga-psa/ee-microsoft-teams': path.join(__dirname, '../ee/packages/microsoft-teams/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
       '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
@@ -507,6 +515,12 @@ const nextConfig = {
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
         : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
+      '@alga-psa/ee-stubs': isEE
+        ? path.join(__dirname, '../ee/server/src')
+        : path.join(__dirname, '../packages/ee/src'),
+      '@alga-psa/ee-stubs/': isEE
+        ? path.join(__dirname, '../ee/server/src/')
+        : path.join(__dirname, '../packages/ee/src/'),
       '@alga-psa/integrations/email/providers/entry': isEE
         ? path.join(__dirname, '../packages/integrations/src/email/providers/ee/entry.tsx')
         : path.join(__dirname, '../packages/integrations/src/email/providers/oss/entry.tsx'),
@@ -990,7 +1004,19 @@ const nextConfig = {
   },
   // Externalize Node.js-only packages with native dependencies from server bundles.
   // This prevents Turbopack from bundling them with mangled names.
-  serverExternalPackages: ['puppeteer', 'sharp'],
+  serverExternalPackages: [
+    'puppeteer',
+    'sharp',
+    '@opentelemetry/sdk-node',
+    '@opentelemetry/auto-instrumentations-node',
+    '@opentelemetry/exporter-trace-otlp-grpc',
+    '@opentelemetry/exporter-metrics-otlp-grpc',
+    '@opentelemetry/sdk-metrics',
+    '@opentelemetry/sdk-trace-base',
+    '@opentelemetry/resources',
+    '@opentelemetry/semantic-conventions',
+    '@opentelemetry/api',
+  ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
     return 'build-' + Date.now();

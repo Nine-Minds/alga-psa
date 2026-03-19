@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import TimeSheetListViewSkeleton from '@alga-psa/ui/components/skeletons/TimeSheetListViewSkeleton';
-import { Plus, Pencil, ClipboardList, ArrowRight, ChevronDown, ChevronRight, Copy } from 'lucide-react';
+import { Plus, ClipboardList, ArrowRight, ChevronDown, ChevronRight, Copy, ExternalLink } from 'lucide-react';
 import { ITimeEntryWithWorkItemString } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { formatISO, parseISO, format } from 'date-fns';
@@ -14,6 +14,7 @@ import { BillableLegend } from './BillableLegend';
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { TimeEntryChangeRequestIndicator } from './TimeEntryChangeRequestFeedback';
 
 interface TimeSheetListViewProps {
     dates: Date[];
@@ -63,6 +64,7 @@ export function TimeSheetListView({
 }: TimeSheetListViewProps): React.JSX.Element {
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+    const previousDayLayoutSignatureRef = useRef<string>('');
     const headerColumnWidths = ['3%', '40%', '15%', '15%', '15%', '12%'] as const;
     const dayColumnWidths = ['3%', '40%', '15%', '15%', '15%', '10%'] as const;
 
@@ -158,11 +160,33 @@ export function TimeSheetListView({
 
     const hasWorkItems = Object.values(workItemsByType).some(items => items.length > 0);
 
-    // Expand all days that have entries on initial load
+    const unresolvedFeedbackDayKeys = useMemo(
+        () => dayGroups
+            .filter((group) => group.entries.some(({ entry }) =>
+                entry.change_request_state === 'unresolved' ||
+                entry.approval_status === 'CHANGES_REQUESTED',
+            ))
+            .map((group) => group.dateKey),
+        [dayGroups],
+    );
+
+    // Expand all populated days on initial layout changes, and always reopen days with unresolved feedback.
     React.useEffect(() => {
-        const daysWithEntries = dayGroups.filter(g => g.entries.length > 0).map(g => g.dateKey);
-        setExpandedDays(new Set(daysWithEntries));
-    }, [dayGroups.length]); // Only run when number of groups changes
+        const dayLayoutSignature = dayGroups.map((group) => group.dateKey).join('|');
+        const daysWithEntries = dayGroups.filter((group) => group.entries.length > 0).map((group) => group.dateKey);
+
+        setExpandedDays((prevExpandedDays) => {
+            const nextExpandedDays = dayLayoutSignature !== previousDayLayoutSignatureRef.current
+                ? new Set(daysWithEntries)
+                : new Set(prevExpandedDays);
+
+            unresolvedFeedbackDayKeys.forEach((dateKey) => nextExpandedDays.add(dateKey));
+
+            return nextExpandedDays;
+        });
+
+        previousDayLayoutSignatureRef.current = dayLayoutSignature;
+    }, [dayGroups, unresolvedFeedbackDayKeys]);
 
     const toggleDay = (dateKey: string) => {
         setExpandedDays(prev => {
@@ -410,11 +434,7 @@ export function TimeSheetListView({
                                                                     <td className="py-2 pr-3">
                                                                         <div className="flex items-center gap-2">
                                                                             <span
-                                                                                className="text-sm text-gray-900 hover:text-[rgb(var(--color-primary-500))] truncate cursor-pointer"
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    onWorkItemClick(workItem);
-                                                                                }}
+                                                                                className="text-sm text-gray-900 truncate"
                                                                                 title={workItem.type === 'ticket'
                                                                                     ? `${workItem.ticket_number} - ${workItem.title || workItem.name}`
                                                                                     : workItem.name
@@ -441,9 +461,15 @@ export function TimeSheetListView({
 
                                                                     {/* Time range */}
                                                                     <td className="py-2 px-3">
-                                                                        <span className="text-sm text-gray-500">
-                                                                            {formatTimeRange(entry.start_time, entry.end_time)}
-                                                                        </span>
+                                                                        <div className="flex flex-col items-start gap-1">
+                                                                            <span className="text-sm text-gray-500">
+                                                                                {formatTimeRange(entry.start_time, entry.end_time)}
+                                                                            </span>
+                                                                            <TimeEntryChangeRequestIndicator
+                                                                                changeRequests={entry.change_requests}
+                                                                                showLabel
+                                                                            />
+                                                                        </div>
                                                                     </td>
 
                                                                     {/* Duration */}
@@ -497,16 +523,16 @@ export function TimeSheetListView({
                                                                                     <Copy className="h-4 w-4" />
                                                                                 </Button>
                                                                                 <Button
-                                                                                    id={`edit-entry-${entry.entry_id}`}
+                                                                                    id={`view-work-item-${entry.entry_id}`}
                                                                                     variant="ghost"
                                                                                     size="sm"
                                                                                     onClick={(e) => {
                                                                                         e.stopPropagation();
-                                                                                        handleEntryClick(flatEntry);
+                                                                                        onWorkItemClick(workItem);
                                                                                     }}
-                                                                                    title="Edit entry"
+                                                                                    title="View details"
                                                                                 >
-                                                                                    <Pencil className="h-4 w-4" />
+                                                                                    <ExternalLink className="h-4 w-4" />
                                                                                 </Button>
                                                                             </div>
                                                                         )}

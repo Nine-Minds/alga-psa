@@ -17,7 +17,7 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
     buildCreditNoteAppliedPayload,
     buildCreditNoteCreatedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 
 

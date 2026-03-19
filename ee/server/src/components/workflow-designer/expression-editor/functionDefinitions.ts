@@ -5,7 +5,7 @@
  * for all available functions in workflow expressions.
  */
 
-import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '@shared/workflow/runtime/expressionFunctions';
+import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '@alga-psa/workflows/authoring';
 
 export interface FunctionParameter {
   name: string;

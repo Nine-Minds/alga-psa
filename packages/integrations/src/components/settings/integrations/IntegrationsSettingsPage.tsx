@@ -24,13 +24,19 @@ import {
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import RmmIntegrationsSetup from './RmmIntegrationsSetup';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
-import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings';
 import { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings';
+import { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseIntegrationSettings';
+import { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import {
+  getVisibleIntegrationCategoryIds,
+  isCalendarEnterpriseEdition,
+  resolveIntegrationSettingsCategory,
+} from '../../../lib/calendarAvailability';
 
 // Dynamic import for StripeConnectionSettings (EE/OSS modular pattern)
 // Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
@@ -52,6 +58,7 @@ const StripeConnectionSettings = dynamic(
 );
 
 import { EntraIntegrationSettings } from '@alga-psa/integrations/entra/components/entry';
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 
 // Integration category definitions
 interface IntegrationCategory {
@@ -70,26 +77,37 @@ interface IntegrationItem {
   isEE?: boolean;
 }
 
-const IntegrationsSettingsPage: React.FC = () => {
-  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+interface IntegrationsSettingsPageProps {
+  /** Whether the user can use Entra sync (premium feature) */
+  canUseEntraSync?: boolean;
+  /** Whether the user can use CIPP (premium feature) */
+  canUseCipp?: boolean;
+  /** Whether the user can use Teams integration (premium feature) */
+  canUseTeams?: boolean;
+}
+
+const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
+  canUseEntraSync = true,
+  canUseCipp = true,
+  canUseTeams = true,
+}) => {
+  const isEEAvailable = isCalendarEnterpriseEdition();
   const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
   const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
   const searchParams = useSearchParams();
   const categoryParam = searchParams?.get('category');
+  const visibleCategoryIds = useMemo(() => getVisibleIntegrationCategoryIds(isEEAvailable), [isEEAvailable]);
 
   // Initialize selected category from URL param or default to 'accounting'
   const [selectedCategory, setSelectedCategory] = useState<string>(
-    categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'identity', 'payments'].includes(categoryParam)
-      ? categoryParam
-      : 'accounting'
+    resolveIntegrationSettingsCategory(categoryParam, isEEAvailable)
   );
 
   // Update selected category when URL param changes
   useEffect(() => {
-    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'identity', 'payments'].includes(categoryParam)) {
-      setSelectedCategory(categoryParam);
-    }
-  }, [categoryParam]);
+    const nextCategory = resolveIntegrationSettingsCategory(categoryParam, isEEAvailable);
+    setSelectedCategory((currentCategory) => (currentCategory === nextCategory ? currentCategory : nextCategory));
+  }, [categoryParam, isEEAvailable]);
 
   // Define integration categories
   const categories: IntegrationCategory[] = useMemo(() => [
@@ -124,7 +142,7 @@ const IntegrationsSettingsPage: React.FC = () => {
     {
       id: 'communication',
       label: 'Communication',
-      description: 'Connect email services for ticket processing',
+      description: 'Connect inbox and collaboration surfaces for ticket processing, operator workflows, and Microsoft Teams access.',
       icon: Mail,
       integrations: [
         {
@@ -145,52 +163,60 @@ const IntegrationsSettingsPage: React.FC = () => {
             </Card>
           ),
         },
+        {
+          id: 'teams',
+          name: 'Microsoft Teams',
+          description: 'Configure Teams collaboration surfaces for MSP technicians',
+          component: canUseTeams
+            ? TeamsEnterpriseIntegrationSettings
+            : () => (
+                <FeatureUpgradeNotice
+                  featureName="Microsoft Teams"
+                  requiredTier="premium"
+                  description="Configure Microsoft Teams collaboration surfaces for MSP technicians. Upgrade to Premium to unlock this feature."
+                />
+              ),
+          isEE: true,
+        },
       ],
     },
-    {
+    ...(isEEAvailable ? [{
       id: 'calendar',
       label: 'Calendar',
-      description: 'Connect Google or Outlook calendars to keep dispatch and client appointments aligned',
+      description: 'Enterprise-only calendar sync for Google and Outlook keeps dispatch and client appointments aligned.',
       icon: Calendar,
       integrations: [
         {
           id: 'calendar-sync',
           name: 'Calendar Sync',
           description: 'Sync schedule entries with Google or Microsoft calendars',
-          component: () => (
-            <Card>
-              <CardHeader>
-                <CardTitle>Calendar Integrations</CardTitle>
-                <CardDescription>
-                  Connect Google Calendar or Microsoft Outlook Calendar to sync schedule entries
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <CalendarIntegrationsSettings />
-              </CardContent>
-            </Card>
-          ),
+          component: CalendarEnterpriseIntegrationSettings,
         },
       ],
-    },
+    }] : []),
     {
       id: 'providers',
       label: 'Providers',
-      description: 'Configure shared provider credentials used by integrations.',
+      description: isEEAvailable
+        ? 'Configure shared provider credentials used by email, calendar, MSP SSO, and other integrations.'
+        : 'Configure shared provider credentials used by email, MSP SSO, and other integrations.',
       icon: Cloud,
       integrations: [
         {
           id: 'google',
           name: 'Google',
-          description: 'Tenant-owned Google Cloud credentials for Gmail and Calendar',
+          description: isEEAvailable
+            ? 'Tenant-owned Google Cloud credentials for Gmail and Calendar'
+            : 'Tenant-owned Google Cloud credentials for Gmail and MSP SSO support flows',
           component: () => (
             <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Provider Credentials</CardTitle>
                   <CardDescription>
-                    Configure Google and Microsoft first, then connect provider accounts from the Inbound Email and Calendar integration screens.
-                    MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.
+                    {isEEAvailable
+                      ? 'Configure Google and Microsoft first, then connect provider accounts from the Inbound Email and Calendar integration screens. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.'
+                      : 'Configure Google and Microsoft first, then connect provider accounts from the Inbound Email integration screen. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.'}
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -212,7 +238,15 @@ const IntegrationsSettingsPage: React.FC = () => {
           id: 'entra',
           name: 'Microsoft Entra',
           description: 'Discover managed Microsoft tenants and sync users to contacts',
-          component: EntraIntegrationSettings,
+          component: canUseEntraSync
+            ? () => <EntraIntegrationSettings canUseCipp={canUseCipp} />
+            : () => (
+                <FeatureUpgradeNotice
+                  featureName="Entra Sync"
+                  requiredTier="premium"
+                  description="Discover managed Microsoft Entra tenants and sync users to contacts. Upgrade to Premium to unlock this feature."
+                />
+              ),
           isEE: true,
         }] : []),
       ],
@@ -235,13 +269,16 @@ const IntegrationsSettingsPage: React.FC = () => {
   ], [isEEAvailable, isEntraUiEnabled]);
 
   // Filter out empty categories
-  const visibleCategories = categories.filter(cat => cat.integrations.length > 0);
+  const visibleCategories = categories.filter((category) => {
+    return category.integrations.length > 0 && visibleCategoryIds.includes(category.id);
+  });
 
   // Get current category
   const currentCategory = visibleCategories.find(cat => cat.id === selectedCategory) || visibleCategories[0];
 
   // Build tab content
   const tabContent: TabContent[] = visibleCategories.map(category => ({
+    id: category.id,
     label: category.label,
     icon: <category.icon className="w-4 h-4" />,
     content: (
@@ -295,9 +332,9 @@ const IntegrationsSettingsPage: React.FC = () => {
       {/* Category tabs */}
       <CustomTabs
         tabs={tabContent}
-        defaultTab={currentCategory?.label || 'Accounting'}
-        onTabChange={(tabLabel) => {
-          const category = visibleCategories.find(cat => cat.label === tabLabel);
+        defaultTab={currentCategory?.id ?? 'accounting'}
+        onTabChange={(tabId) => {
+          const category = visibleCategories.find(cat => cat.id === tabId);
           if (category) {
             setSelectedCategory(category.id);
             const currentSearchParams = new URLSearchParams(window.location.search);

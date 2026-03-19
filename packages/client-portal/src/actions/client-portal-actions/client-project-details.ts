@@ -141,6 +141,9 @@ export const getClientProjectTasks = withAuth(async (
     .leftJoin('statuses as s', function() {
       this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
     })
+    .leftJoin('standard_statuses as ss', function() {
+      this.on('psm.standard_status_id', 'ss.standard_status_id').andOn('psm.tenant', 'ss.tenant');
+    })
     .leftJoin('priorities as pri', function() {
       this.on('pt.priority_id', 'pri.priority_id').andOn('pt.tenant', 'pri.tenant');
     })
@@ -158,9 +161,9 @@ export const getClientProjectTasks = withAuth(async (
   query = query.select(
     'psm.custom_name',
     'psm.display_order',
-    's.name as status_name',
-    's.is_closed',
-    's.color as status_color'
+    knex.raw('COALESCE(s.name, ss.name) as status_name'),
+    knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
+    knex.raw('s.color as status_color')
   );
 
   // Join assigned_to if requested
@@ -406,28 +409,46 @@ export const getClientProjectTasks = withAuth(async (
 export const getClientProjectStatuses = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
-  projectId: string
+  projectId: string,
+  phaseId?: string | null
 ) => {
   const result = await getProjectWithConfigInternal(user, tenant, projectId);
   if (!result?.config.show_tasks) return null;
 
   const { knex } = await createTenantKnex();
 
-  // Get visible statuses for this project
-  const statuses = await knex('project_status_mappings as psm')
-    .leftJoin('statuses as s', function() {
-      this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
-    })
-    .where({ 'psm.project_id': projectId, 'psm.tenant': tenant, 'psm.is_visible': true })
-    .select(
-      'psm.project_status_mapping_id',
-      'psm.custom_name',
-      'psm.display_order',
-      's.name as status_name',
-      's.is_closed',
-      's.color'
-    )
-    .orderBy('psm.display_order');
+  const loadStatusesForScope = async (scopedPhaseId?: string | null) => {
+    const query = knex('project_status_mappings as psm')
+      .leftJoin('statuses as s', function() {
+        this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
+      })
+      .leftJoin('standard_statuses as ss', function() {
+        this.on('psm.standard_status_id', 'ss.standard_status_id').andOn('psm.tenant', 'ss.tenant');
+      })
+      .where({ 'psm.project_id': projectId, 'psm.tenant': tenant, 'psm.is_visible': true })
+      .select(
+        'psm.project_status_mapping_id',
+        'psm.custom_name',
+        'psm.display_order',
+        knex.raw('COALESCE(s.name, ss.name) as status_name'),
+        knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
+        knex.raw('s.color as color')
+      )
+      .orderBy('psm.display_order');
+
+    if (scopedPhaseId) {
+      query.andWhere('psm.phase_id', scopedPhaseId);
+    } else {
+      query.whereNull('psm.phase_id');
+    }
+
+    return query;
+  };
+
+  let statuses = phaseId ? await loadStatusesForScope(phaseId) : [];
+  if (!statuses || statuses.length === 0) {
+    statuses = await loadStatusesForScope();
+  }
 
   return {
     statuses: statuses.map((s: { project_status_mapping_id: string; custom_name: string | null; status_name: string; display_order: number; is_closed: boolean; color: string | null }) => ({
@@ -521,7 +542,8 @@ export const uploadClientTaskDocument = withAuth(async (
         created_by: user.user_id,
         entered_at: new Date(),
         updated_at: new Date(),
-        folder_path: folderPath ?? null
+        folder_path: folderPath ?? null,
+        is_client_visible: true,               // Client-uploaded docs are always visible to client portal
       });
 
       await trx('document_associations').insert({
@@ -587,7 +609,7 @@ export const getClientTaskDocuments = withAuth(async (
     return { success: false, error: 'Task documents not available' };
   }
 
-  // Get documents
+  // Get client-visible documents
   const documents = await knex('documents as d')
     .join('document_associations as da', function() {
       this.on('d.document_id', 'da.document_id').andOn('d.tenant', 'da.tenant');
@@ -598,7 +620,8 @@ export const getClientTaskDocuments = withAuth(async (
     .where({
       'da.entity_type': 'project_task',
       'da.entity_id': taskId,
-      'd.tenant': tenant
+      'd.tenant': tenant,
+      'd.is_client_visible': true,
     })
     .select(
       'd.document_id',

@@ -17,14 +17,15 @@
   "submit": {
     "testflight": {
       "ios": {
-        "ascAppId": "REPLACE_ME_ASC_APP_ID"
+        "ascAppId": "6760326836"
       }
     },
     "playInternal": {
       "android": {
-        "track": "internal"
+        "track": "internal",
+        "releaseStatus": "draft",
+        "serviceAccountKeyPath": "./google-service-account.json"
       }
     }
   }
 }
-

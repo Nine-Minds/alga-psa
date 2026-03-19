@@ -15,7 +15,17 @@ import {
   buildTagDefinitionCreatedPayload,
   buildTagDefinitionUpdatedPayload,
   buildTagRemovedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/tagEventBuilders';
+} from '@alga-psa/workflow-streams';
+
+/** Map tagged entity types to their permission resource equivalents */
+const ENTITY_PERMISSION_MAP: Partial<Record<TaggedEntityType, string>> = {
+  client: 'client',
+  knowledge_base_article: 'document',
+};
+
+function getPermissionResource(taggedType: TaggedEntityType): string {
+  return ENTITY_PERMISSION_MAP[taggedType] ?? taggedType;
+}
 
 export const findTagsByEntityId = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[]> => {
   const { knex: db } = await createTenantKnex();
@@ -113,9 +123,7 @@ export const createTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Check permissions
-      // Convert tagged_type to resource name (e.g., 'project_task' -> 'project_task')
-      // Map 'client' to 'client' for permission checks
-      const entityResource = tag.tagged_type === 'client' ? 'client' : tag.tagged_type;
+      const entityResource = getPermissionResource(tag.tagged_type);
 
       if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
         await throwPermissionErrorAsync(`update ${tag.tagged_type.replace('_', ' ')}`);
@@ -248,8 +256,7 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
       }
 
       // Check permissions
-      // Map 'client' to 'client' for permission checks
-      const entityResource = existingTag.tagged_type === 'client' ? 'client' : existingTag.tagged_type;
+      const entityResource = getPermissionResource(existingTag.tagged_type);
 
       if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
         await throwPermissionErrorAsync(`update ${existingTag.tagged_type.replace('_', ' ')}`);
@@ -357,8 +364,7 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
       }
 
       // Check basic update permission for entity
-      // Map 'client' to 'client' for permission checks
-      const entityResource = existingTag.tagged_type === 'client' ? 'client' : existingTag.tagged_type;
+      const entityResource = getPermissionResource(existingTag.tagged_type);
 
       if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
         await throwPermissionErrorAsync(`update ${existingTag.tagged_type.replace('_', ' ')}`);
@@ -706,8 +712,7 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
       }
 
       // Check permissions
-      // Map 'client' to 'client' for permission checks
-      const entityResource = tag.tagged_type === 'client' ? 'client' : tag.tagged_type;
+      const entityResource = getPermissionResource(tag.tagged_type);
 
       if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
         await throwPermissionErrorAsync(`update ${tag.tagged_type.replace('_', ' ')}`);
@@ -777,8 +782,7 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
       }
 
       // Check permissions
-      // Map 'client' to 'client' for permission checks
-      const entityResource = tag.tagged_type === 'client' ? 'client' : tag.tagged_type;
+      const entityResource = getPermissionResource(tag.tagged_type);
 
       if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
         await throwPermissionErrorAsync(`update ${tag.tagged_type.replace('_', ' ')}`);
@@ -882,8 +886,8 @@ export const checkTagPermissions = withOptionalAuth(async (currentUser: IUserWit
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Map 'client' to 'client' for permission checks
-      const permissionEntity = taggedType === 'client' ? 'client' : taggedType;
+      // Map tagged entity types to their permission resource equivalents
+      const permissionEntity = getPermissionResource(taggedType);
 
       // Check all permissions in parallel
       const [entityUpdate, tagCreate, tagUpdate, tagDelete] = await Promise.all([
@@ -929,8 +933,7 @@ export const deleteAllTagsByText = withAuth(async (currentUser: IUserWithRoles, 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check permissions
-      // Map 'client' to 'client' for permission checks
-      const entityResource = taggedType === 'client' ? 'client' : taggedType;
+      const entityResource = getPermissionResource(taggedType);
 
       if (!await hasPermissionAsync(currentUser, entityResource, 'update', trx)) {
         await throwPermissionErrorAsync(`update ${taggedType.replace('_', ' ')}`);

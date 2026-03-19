@@ -13,7 +13,7 @@ import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpe
 import { getSlaPolicies } from '@alga-psa/sla/actions';
 import { ISlaPolicy } from '@alga-psa/sla/types';
 import { BillingCycleType } from '@alga-psa/types';
-import Documents from '@alga-psa/documents/components/Documents';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
@@ -60,7 +60,6 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
-import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
 import ClientContractLineDashboard from './ClientContractLineDashboard';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
@@ -207,6 +206,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 }) => {
   const { t } = useTranslation('common');
   const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets } = useClientCrossFeature();
+  const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -1037,6 +1037,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const tabContent = useMemo(() => [
     {
+      id: 'details',
       label: "Details",
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
@@ -1346,6 +1347,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'tickets',
       label: "Tickets",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1369,10 +1371,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'assets',
       label: "Assets",
       content: renderClientAssets({ clientId: client.client_id }),
     },
     {
+      id: 'billing',
       label: "Billing",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1385,6 +1389,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'billing-dashboard',
       label: "Billing Dashboard",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1393,6 +1398,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'contacts',
       label: "Contacts",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1404,28 +1410,28 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'documents',
       label: "Documents",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          {currentUser ? (
-            <Documents
-              id={`${id}-documents`}
-              documents={documents}
-              gridColumns={3}
-              userId={currentUser.user_id}
-              entityId={client.client_id}
-              entityType="client"
-              onDocumentCreated={async () => {
+          {currentUser ? renderDocuments({
+              id: `${id}-documents`,
+              documents,
+              gridColumns: 3,
+              userId: currentUser.user_id,
+              entityId: client.client_id,
+              entityType: 'client',
+              onDocumentCreated: async () => {
                 memoizedRouter.refresh();
-              }}
-            />
-          ) : (
+              },
+          }) : (
             <div>Loading...</div>
           )}
         </div>
       )
     },
     {
+      id: 'tax-settings',
       label: "Tax Settings",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1436,6 +1442,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'additional-info',
       label: "Additional Info",
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
@@ -1498,6 +1505,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'notes',
       label: "Notes",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1509,6 +1517,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'interactions',
       label: "Interactions",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1552,16 +1561,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     memoizedRouter,
     interactions
   ]);
-
-  // Find the matching tab label case-insensitively
-  const findTabLabel = useCallback((urlTab: string | null | undefined): string => {
-    if (!urlTab) return 'Details';
-    
-    const matchingTab = tabContent.find(
-      tab => tab.label.toLowerCase() === urlTab.toLowerCase()
-    );
-    return matchingTab?.label || 'Details';
-  }, [tabContent]);
 
   return (
     <ReflectionContainer id={id} label="Client Details">
@@ -1660,9 +1659,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       <div>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
-          // In quick view we only render the Details tab. Force default to Details
+          // In quick view we only render the Details tab. Force default to details
           // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
-          defaultTab={quickView ? 'Details' : findTabLabel(searchParams?.get('tab'))}
+          defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
           onTabChange={handleTabChange}
         />
 

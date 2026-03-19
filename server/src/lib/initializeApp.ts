@@ -12,7 +12,7 @@ import { JobService } from 'server/src/services/job.service';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import { initializeJobRunner, stopJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
-import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
+import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
@@ -24,8 +24,9 @@ import { Temporal } from '@js-temporal/polyfill';
 import { JobStatus } from 'server/src/types/job';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
 import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, TokenBucketRateLimiter, BucketConfig, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
+import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
-import { registerWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime';
+import { registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
 import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRunnerProvider';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
@@ -188,6 +189,13 @@ export async function initializeApp() {
       // Continue startup - queue failure is not critical (rate-limited emails will be dropped)
     }
 
+    try {
+      await EventEmailRetryQueue.getInstance().initialize(getRedisClient);
+      logger.info('Event email retry queue initialized');
+    } catch (error) {
+      logger.error('Failed to initialize event email retry queue:', error);
+    }
+
     // Initialize storage service
     const storageService = new StorageService();
 
@@ -224,6 +232,7 @@ export async function initializeApp() {
         await shutdownNotificationAccumulator();
         await TokenBucketRateLimiter.getInstance().shutdown();
         await DelayedEmailQueue.getInstance().shutdown();
+        await EventEmailRetryQueue.getInstance().shutdown();
         await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);
@@ -233,6 +242,7 @@ export async function initializeApp() {
         await shutdownNotificationAccumulator();
         await TokenBucketRateLimiter.getInstance().shutdown();
         await DelayedEmailQueue.getInstance().shutdown();
+        await EventEmailRetryQueue.getInstance().shutdown();
         await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);

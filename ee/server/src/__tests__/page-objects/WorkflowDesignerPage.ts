@@ -35,14 +35,18 @@ export class WorkflowDesignerPage {
   readonly schemaClearButton: Locator;
   readonly triggerMappingJumpToContract: Locator;
   readonly emptyPipeline: Locator;
+  readonly listCreateButton: Locator;
+  readonly emptyStateCreateButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.header = page.getByRole('heading', { name: 'Workflows' });
-    this.listHeader = page.getByRole('heading', { name: 'Workflows' });
+    this.header = page.getByRole('heading', { name: /Workflow (Editor|Designer)/ });
+    this.listHeader = page.getByRole('heading', { name: 'Workflow Editor' });
     this.workflowsTab = page.getByRole('tab', { name: 'Workflows' });
     this.designerTab = page.getByRole('tab', { name: 'Designer' });
     this.workflowListCreateButton = page.locator('#workflow-list-create-btn');
+    this.listCreateButton = page.locator('#create-workflow-btn');
+    this.emptyStateCreateButton = page.locator('#create-first-workflow-btn');
     this.newWorkflowButton = page.locator('#workflow-designer-create');
     this.schedulesButton = page.locator('#workflow-designer-open-schedules');
     this.saveDraftButton = page.locator('#workflow-designer-save');
@@ -77,7 +81,7 @@ export class WorkflowDesignerPage {
 
   async goto(baseUrl?: string): Promise<void> {
     const targetBaseUrl = baseUrl ?? resolvePlaywrightBaseUrl();
-    const url = `${targetBaseUrl}/msp/workflows?tab=designer`;
+    const url = `${targetBaseUrl}/msp/workflow-editor`;
 
     const startedAt = Date.now();
     let lastError: unknown = null;
@@ -103,14 +107,32 @@ export class WorkflowDesignerPage {
 
   async waitForLoaded(): Promise<void> {
     await expect(this.header).toBeVisible({ timeout: 30_000 });
-    await expect(this.newWorkflowButton).toBeVisible({ timeout: 30_000 });
+    await expect.poll(
+      async () => {
+        for (const candidate of this.getCreateWorkflowButtonCandidates()) {
+          if (await candidate.isVisible()) {
+            return true;
+          }
+        }
+        return false;
+      },
+      { timeout: 30_000 }
+    ).toBe(true);
   }
 
   async waitForReady(): Promise<void> {
     await this.waitForLoaded();
-    await expect(this.newWorkflowButton).toBeVisible({ timeout: 30_000 });
-    await expect(this.newWorkflowButton).toBeEnabled({ timeout: 30_000 });
-    await expect(this.nameInput).toBeVisible({ timeout: 30_000 });
+    await expect.poll(
+      async () => {
+        for (const candidate of this.getCreateWorkflowButtonCandidates()) {
+          if (await candidate.isVisible()) {
+            return await candidate.isEnabled();
+          }
+        }
+        return false;
+      },
+      { timeout: 30_000 }
+    ).toBe(true);
   }
 
   async waitForPipelineReady(): Promise<void> {
@@ -124,10 +146,53 @@ export class WorkflowDesignerPage {
   }
 
   async clickNewWorkflow(): Promise<void> {
-    await expect(this.newWorkflowButton).toBeVisible({ timeout: 20_000 });
-    await this.newWorkflowButton.click();
+    await this.waitForLoaded();
+
+    let createButton: Locator | null = null;
+    for (const candidate of this.getCreateWorkflowButtonCandidates()) {
+      if (await candidate.isVisible()) {
+        createButton = candidate;
+        break;
+      }
+    }
+
+    if (!createButton) {
+      throw new Error('No workflow creation button is available.');
+    }
+
+    await expect(createButton).toBeEnabled({ timeout: 20_000 });
+    await createButton.click();
+    const nameInputVisible = await this.nameInput
+      .isVisible({ timeout: 10_000 })
+      .catch(() => false);
+
+    if (!nameInputVisible) {
+      const currentUrl = new URL(this.page.url());
+      await this.page.goto(`${currentUrl.origin}/msp/workflow-editor/new`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+    }
+
     await expect(this.nameInput).toBeVisible({ timeout: 30_000 });
     await this.waitForPipelineReady();
+    await expect.poll(
+      async () => {
+        return this.page.locator('[id^="workflow-designer-add-"]').evaluateAll((nodes) => {
+          return nodes.some((node) => node.getAttribute('aria-disabled') !== 'true');
+        });
+      },
+      { timeout: 30_000 }
+    ).toBe(true);
+  }
+
+  private getCreateWorkflowButtonCandidates(): Locator[] {
+    return [
+      this.newWorkflowButton,
+      this.listCreateButton,
+      this.workflowListCreateButton,
+      this.emptyStateCreateButton,
+    ];
   }
 
   async saveDraft(): Promise<void> {
@@ -142,9 +207,9 @@ export class WorkflowDesignerPage {
     await expect(this.saveDraftButton).toHaveText(/Save Draft/, { timeout: 90_000 });
     await expect(this.saveDraftButton).toBeEnabled({ timeout: 90_000 });
 
-    // New workflow creation should push workflowId into the URL.
+    // New workflow creation should route from /new to the specific workflow path.
     if (!hadWorkflowId) {
-      await expect(this.page).toHaveURL(/workflowId=[0-9a-fA-F-]{36}/, { timeout: 90_000 });
+      await expect(this.page).toHaveURL(/\/msp\/workflow-editor\/[0-9a-fA-F-]{36}/, { timeout: 90_000 });
     }
   }
 
@@ -189,20 +254,15 @@ export class WorkflowDesignerPage {
   }
 
   async selectWorkflowByName(name: string): Promise<void> {
-    await expect(this.workflowsTab).toBeVisible({ timeout: 30_000 });
-    await this.workflowsTab.click();
-
     const workflowLink = this.page.getByRole('link', { name, exact: true });
     await expect(workflowLink.first()).toBeVisible({ timeout: 30_000 });
     await workflowLink.first().click();
 
-    await expect(this.page).toHaveURL(/tab=designer/, { timeout: 60_000 });
+    await expect(this.page).toHaveURL(/\/msp\/workflow-editor\/[0-9a-fA-F-]{36}/, { timeout: 60_000 });
     await expect(this.nameInput).toHaveValue(name, { timeout: 60_000 });
   }
 
   async waitForWorkflowInList(name: string): Promise<void> {
-    await expect(this.workflowsTab).toBeVisible({ timeout: 30_000 });
-    await this.workflowsTab.click();
     const workflowLink = this.page.getByRole('link', { name, exact: true });
     await expect(workflowLink.first()).toBeVisible({ timeout: 30_000 });
   }

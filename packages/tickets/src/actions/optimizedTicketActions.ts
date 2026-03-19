@@ -25,7 +25,6 @@ import { validateData } from '@alga-psa/validation';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getEventBus } from '@alga-psa/event-bus';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
-import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch, getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import {
   ticketFormSchema,
@@ -1368,6 +1367,33 @@ export const getTicketsForList = withAuth(async (
       console.error('Failed to fetch tickets:', error);
       throw new Error('Failed to fetch tickets');
     }
+  });
+});
+
+/**
+ * Get all ticket IDs matching the current filters (no pagination).
+ * Used for "select all matching" functionality.
+ */
+export const getAllMatchingTicketIds = withAuth(async (
+  user,
+  { tenant },
+  filters: ITicketListFilters
+): Promise<string[]> => {
+  const {knex: db} = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    const validatedFilters = cleanFilterValues(
+      validateData(ticketListFiltersSchema, filters) as ITicketListFilters
+    );
+
+    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+
+    const rows = await baseQuery.clone().clearSelect().clearOrder().select('t.ticket_id');
+    return rows.map((row: { ticket_id: string }) => row.ticket_id);
   });
 });
 

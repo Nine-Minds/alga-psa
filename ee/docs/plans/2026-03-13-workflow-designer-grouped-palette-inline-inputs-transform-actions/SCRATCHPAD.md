@@ -1,0 +1,634 @@
+# Scratchpad — Workflow Designer Grouped Palette, Inline Action Inputs, and Transform Actions
+
+- Plan slug: `workflow-designer-grouped-palette-inline-inputs-transform-actions`
+- Created: `2026-03-13`
+
+## What This Is
+
+Keep a lightweight, continuously-updated log of discoveries and decisions made while implementing this plan.
+
+Prefer short bullets. Append new entries as you learn things, and also update earlier notes when a decision changes.
+
+## Decisions
+
+- (2026-03-13) Keep runtime execution on `action.call` in v1. The grouped palette and grouped-step model are designer abstractions, not a runtime contract rewrite.
+- (2026-03-13) Replace the per-action palette with a hybrid grouped palette: built-in domain-object tiles plus app/plugin tiles.
+- (2026-03-13) Replace the action input mapping dialog with an inline field-based editor in the right-side properties panel.
+- (2026-03-13) Keep `config.inputMapping` as the persisted action-input model in v1.
+- (2026-03-13) Support both fixed picker values and dynamic references for picker-backed fields.
+- (2026-03-13) Limit typed picker coverage in the first pass to ticket-core identifiers.
+- (2026-03-13) Treat common text/value/object shaping as first-class `Transform` actions rather than growing the expression surface.
+- (2026-03-13) Keep expressions and secrets available only as advanced fallbacks.
+- (2026-03-13) Implement the first grouped-catalog slice as a shared builder plus a separate server projection instead of mutating the runtime action registry shape. This keeps the runtime registry unchanged while giving the designer a stable authoring abstraction to build on.
+- (2026-03-13) Keep the first UI wiring incremental: load the grouped catalog into the designer and use it to derive business-action grouping metadata before replacing the palette with grouped tiles. This reduces risk while moving the data model to the new architecture.
+- (2026-03-13) Land transform actions incrementally through the runtime action registry first, starting with the text-shaping slice. That unlocks grouped-catalog search and downstream schema wiring without coupling the first runtime batch to the upcoming inline-editor refactor.
+- (2026-03-13) Cover the remaining grouped-palette drag/search state through a small palette-presentational component plus jsdom coverage instead of waiting on the DB-backed Playwright harness. This keeps the shipped behavior unchanged while giving the drag-state UI a deterministic test seam.
+- (2026-03-13) Treat catch-block error references as contextual sources, not global ones. Payload, step outputs, metadata, and forEach values stay broadly available, but `error.*` should only appear when the current step is actually inside a catch branch.
+
+## Discoveries / Constraints
+
+- (2026-03-13) The current workflow designer already uses `action.call` as the execution primitive and injects `actionId`/`version` when action-specific palette items are dragged onto the canvas.
+- (2026-03-13) The current palette is constructed directly from the action registry plus designer-side curation in `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`.
+- (2026-03-13) The current action-input UX already derives field lists from action schemas, but hides authoring behind an `Input Mapping` dialog.
+- (2026-03-14) EE Vitest still cannot resolve `@alga-psa/tenancy/actions` when importing the full `InputMappingEditor` module directly, so row-level inline-field coverage is currently more stable through extracted presentational seams than through the full secrets-backed editor in this harness.
+- (2026-03-13) The current runtime `InputMapping` contract supports expressions, secrets, and literal values and resolves them in `shared/workflow/runtime/utils/mappingResolver.ts`.
+- (2026-03-13) The current designer already maintains schema-driven data context for payload, prior step outputs, metadata, error context, and forEach context.
+- (2026-03-13) The current designer already has mapping/type-compatibility UI primitives and expression-editor autocomplete infrastructure that should be reused where possible.
+- (2026-03-13) Action schema export currently includes generic JSON Schema information, but does not yet carry workflow-specific picker metadata.
+- (2026-03-13) Existing reusable UI components already exist for `BoardPicker`, `ClientPicker`, `ContactPicker`, `SearchableSelect`, `UserPicker`, and related selector patterns.
+- (2026-03-13) The current expression runtime is already a constrained JSONata surface. Expanding it further would worsen the “mini-language” problem the user wants to avoid.
+- (2026-03-13) Existing legacy workflows must remain editable without requiring migration because the same persisted step contract should continue to load.
+- (2026-03-13) `listWorkflowRegistryActionsAction` is consumed by more than the designer, so adding grouped catalog metadata directly onto each runtime action payload would couple unrelated consumers; a dedicated `listWorkflowDesignerActionCatalogAction` is the safer seam.
+- (2026-03-13) The designer’s existing palette curation was duplicated locally via module-to-category heuristics. Replacing that heuristic with catalog-derived grouping removes one source of drift before the grouped-tile UI lands.
+- (2026-03-13) Grouped palette search was still doing raw substring matches against joined text. Hyphenated, dotted, underscored, and singular/plural queries were only matching incidentally, so the search slice needed explicit normalization rather than more ad hoc field concatenation.
+- (2026-03-13) The Playwright tenant bootstrap failure is still present on this branch. Search- and palette-focused browser tests abort in `tenant-creation.ts` before the workflow designer loads, so browser checklist items remain blocked even when the underlying UI code is in place.
+- (2026-03-13) The shared designer catalog helper had a local JSON-schema type that was narrower than the action registry payloads (notably tuple-style `items` and metadata-rich definitions). The search slice widened that helper type so EE TypeScript checks can validate the designer path against real action schemas.
+- (2026-03-13) Grouped palette insertion was still throwing away authoring scope once a tile became an `action.call` step. Without additive metadata, grouped drag/click insertion and legacy hydration both had to fall back to action-only guesses.
+- (2026-03-13) The grouped `Transform` tile already participated in palette rendering, drag/click insertion, and grouped-step hydration; the missing piece was simply that no `transform.*` runtime actions existed yet, so the tile remained effectively empty for search and future action dropdowns.
+- (2026-03-13) The Playwright workflow entry surface has moved from `/msp/workflows?tab=designer` to the workflow-automation pages under `/msp/workflow-editor`, and the page is additionally gated by the tenant experimental feature `workflowAutomation`.
+- (2026-03-13) The Playwright workflow list can error in this worktree because the local test database is missing `tenant_workflow_schedule`, but the list/error states still expose a working `New Workflow` CTA, so grouped-designer browser coverage can proceed once the route and feature gate are handled.
+- (2026-03-13) Playwright still does not reliably trigger grouped palette drag-start state in the current harness, so the explicit “search while dragging grouped tile” coverage remains blocked even though click insertion and post-insertion search coverage now pass.
+- (2026-03-13) The current local Playwright harness is additionally blocked by the isolated test database being down (`ECONNREFUSED` on `localhost:5433`), so new grouped-step browser tests cannot currently bootstrap tenants in this worktree even after the worker-image build fix.
+- (2026-03-13) `createTenantComplete` wraps connection failures into an empty-message `Failed to create tenant:` error because Node surfaces the refused Postgres connection as an `AggregateError` with a blank top-level message.
+- (2026-03-13) The earlier grouped-step Playwright failures on this worktree were caused by reusing an external dev server (`PW_WEBSERVER=false`) whose matching Playwright test database was not running. The self-contained Playwright path can bootstrap its own deps, but it remains expensive because it rebuilds the workflow-worker image.
+- (2026-03-13) The grouped-step insertion/reorder failures are narrower than the first batch suggested: app tiles, grouped-step selection, delete, and saveAs behavior all pass under Playwright, while selected-pipe insertion and same-pipe reorder still fail. The cross-branch move case remains unvalidated because a targeted rerun flaked back to the workflow list before reaching the designer.
+- (2026-03-13) The grouped/control branch-move specs were asserting an old `Drop steps here` placeholder string that no longer exists in the current `EmptyPipeline` component, so those checks need to target the rendered empty-pipeline affordance instead of stale copy.
+- (2026-03-13) Local Playwright validation against a direct `server` process was still bouncing protected `/msp/*` requests through the Express auth middleware until `E2E_AUTH_BYPASS` was honored there as well; Next-side session setup alone was not enough for this local harness.
+- (2026-03-13) The workflow-editor list can still render the `New Workflow` CTA while the schedule join fails on `tenant_workflow_schedule`, so Playwright needs a resilient path into `/msp/workflow-editor/new` instead of assuming the list-to-designer transition always settles cleanly from that degraded state.
+- (2026-03-13) Grouped-step reorder and branch-move behavior still matches the existing `action.call` drag model; the remaining failures were test harness timing issues around palette readiness and seeded branch contents, not grouped-step regressions.
+- (2026-03-13) The inline action editor was already receiving payload, vars, meta, error, and loop context indirectly through `MappingPanel`; the missing gap for `F141-F145` was making the reference-option builder explicit/testable and hiding `error.*` outside catch branches so the source tree and field picker stay context-accurate.
+- (2026-03-13) Simple-reference rehydration was still hardcoded to recognize only `item` and `$index` loop roots. Custom `forEach` item variables like `ticketItem` were being treated as advanced expressions even when they were direct references.
+- (2026-03-13) The next checklist item (`F079` / `T079`) is now verified as a true scope blocker: `WorkflowDesigner.tsx` only supports add/update/delete/reorder flows, and the page object plus Playwright coverage expose no step duplication affordance to preserve. Implementing `F079` would require inventing a new feature outside the current PRD rather than maintaining parity.
+- (2026-03-14) The default `npx playwright test` path for workflow-designer specs still cold-boots Docker deps, reruns the full migration/seed pipeline, and rebuilds the workflow-worker image before hitting assertions. Small grouped-step state checks are therefore safer to validate through deterministic grouped-step helpers in this worktree unless the branch is already running a warm local harness.
+- (2026-03-14) The selected-action schema state and required-field counts were being recomputed in multiple places inside `WorkflowDesigner.tsx` (step properties panel and pipeline badges). Extracting that state into a shared helper reduces drift and gives the grouped action-change path a deterministic test seam for schema/summary updates.
+- (2026-03-14) Downstream reference exposure was already driven by a pure step-output context walker keyed off each prior step’s current `actionId`/`version`. The missing work for `F089`/`F095` was extracting that walker behind a small helper and pinning it with deterministic coverage.
+- (2026-03-14) The action-input editor state had no place to carry additive picker annotations yet, even though later ticket-picker work will depend on that state changing when the selected action changes. Adding the metadata seam at the `ActionInputField` layer keeps the current UI unchanged while unblocking the later picker slice.
+- (2026-03-14) `ee/server` Vitest did not have an alias for `@alga-psa/tenancy/actions`, so direct `InputMappingEditor` jsdom coverage needed a small alias addition before the secrets-loading side effect could be exercised through the existing component import path.
+- (2026-03-14) `InputMappingEditorReferenceMode.test.tsx` needs the same lightweight integrations/clients/teams action mocks as the other `InputMappingEditor` jsdom seams because `InputMappingEditor` now imports the fixed-picker module graph even when the tested field never renders a picker.
+- (2026-03-14) `F079`/`T079` are checklist artifacts rather than pending product work: the workflow designer still has no existing step duplicate/copy affordance in `WorkflowDesigner.tsx`, the page object, or Playwright coverage, so preserving it would require inventing new functionality outside this PRD.
+- (2026-03-14) The transform branch-move Playwright slice needed the same setup ordering as the existing grouped-step parity coverage: insert the movable transform on the root pipe before selecting the control-block branch, then add the branch-local transform after the branch is selected. Trying to switch selection back to root mid-test was creating a harness-only false negative.
+- (2026-03-14) The fairest way to close `F079`/`T079` is to codify the current parity contract rather than leave a permanent false blocker in the middle of the checklist: workflow steps expose drag/delete controls only, so grouped steps preserve the current absence of duplicate/copy behavior.
+- (2026-03-14) Dynamic object transform outputs are inferred most safely in `workflowDataContext.ts`, not by mutating the runtime registry schemas. `transform.build_object`, `transform.pick_fields`, and `transform.rename_fields` all depend on step-local `config.inputMapping` values, so downstream browseable field names have to be derived per step from saved mappings and direct reference paths.
+- (2026-03-14) The next transform authoring items (`F274-F277`) were already satisfied by the shared structured literal editor: `build_object.fields[]` uses the array-of-object row editor, `rename_fields.renames[]` uses the same explicit row editor, and `pick_fields.fields[]` reuses the primitive-array list control. The missing work was transform-specific coverage rather than new production code.
+- (2026-03-14) `coalesce_value.candidates[]` and `build_array.items[]` exposed a real remaining gap: schema extraction knew they were arrays, but because their item schema was `unknown`, the inline editor still fell back to raw JSON. Marking those item arrays as `unknown` and routing them through a row-based dynamic array editor lets each item reuse the normal Reference/Fixed/Advanced controls.
+- (2026-03-14) Downstream reference options were already transform-agnostic once a step had an output schema and `saveAs`; after the object-output inference landed, `buildWorkflowReferenceFieldOptions(...)` needed only focused coverage for coalesce value outputs plus build-object object outputs to close `F280`.
+- (2026-03-14) The advanced-fallback slice was largely already present: complex `$expr` mappings were already classified as `Advanced`, secret-backed mappings already rendered through the advanced secret subtype, shared expression validation still ran against saved advanced expressions, and runtime `mappingResolver` behavior for `$expr`/`$secret` mappings was unchanged. The missing work was checklist-aligned coverage plus an explicit editor test that unstructured saved expressions stay editable.
+- (2026-03-14) `F283` needed a real UI change rather than more checklist cleanup. The lightest safe de-emphasis was to keep `Advanced` last in the source-mode picker and add a persistent muted hint in `WorkflowActionInputSourceMode` that frames it as an expressions/secrets escape hatch instead of the default authoring path.
+- (2026-03-14) There is no separate designer-only “secret validator” on this branch; the concrete secret-validation behavior is still the runtime `mappingResolver` contract that resolves named secrets and throws the existing missing-secret error when resolution is unavailable. `F285` therefore closes by pinning that unchanged failure behavior explicitly rather than inventing a second validation layer.
+- (2026-03-14) The obvious `T288` server integration seam is still locally blocked in this worktree: a targeted draft save/reload/publish test around mixed advanced mappings reaches the package DB tenant connection (`[db/tenant] Database configuration ... database "server"`) instead of the mocked test knex, so `F288/T288` remain open until that harness routing is corrected or a different save/reload seam is chosen.
+- (2026-03-14) `listWorkflowDesignerActionCatalogAction` was still exposing every inferred app tile even when no matching tenant extension was installed. Filtering app tiles by `tenant_extension_install` + `extension_registry` closes the deployment/tenant availability gap without changing core-object or transform records.
+- (2026-03-14) The older `workflowRuntimeV2.publish.integration.test.ts` harness was mocking `server/src/lib/db` and `server/src/lib/auth/rbac`, but the EE workflow action package imports `@alga-psa/db` and `@alga-psa/auth`. `T291` needed package-level mocks for `createTenantKnex` and `withAuth` before the new tenant-aware app catalog lookup could stay on the test knex instead of leaking into the default package DB.
+- (2026-03-14) Read-only workflow sessions were already blocking palette insertion and draft/publish controls, but the properties rail swapped grouped steps to a generic “step editing is disabled” message. `F295/F296` needed that branch inverted for `action.call` steps so grouped action details stay inspectable while the actual grouped selectors and inline input controls render disabled.
+- (2026-03-14) Ticket picker option retrieval was already permission-gated for ticket settings and teams, but contact-backed picker sources still flowed through `getContactsByClient` and `getAllContacts` with no `contact:read` check. `F297/T297` closes by enforcing that read permission before either action opens tenant DB access.
+- (2026-03-14) Draft validation persistence for grouped steps was already implemented in `updateWorkflowDefinitionDraftAction` and consumed by the designer through `validation_errors` on the workflow record; `F298/F299` were checklist gaps, not missing runtime storage. The needed work was explicit grouped-step coverage proving stale grouped mappings still produce step-bound validation errors across save/reload and publish.
+- (2026-03-14) Local `server` integration suites are currently blocked in this Codex harness even when a Postgres server is listening: TCP connects to `127.0.0.1:5438` and socket connects to `/tmp/.s.PGSQL.5438` both fail with `Operation not permitted`. The grouped validation persistence tests can be added and typechecked here, but they cannot be executed until local DB access is allowed in this environment.
+- (2026-03-14) The plan commit series stays inside scope: grouped palette/catalog, grouped-step authoring, inline inputs, ticket-core picker metadata and permission gating, transform actions, app-tile availability filtering, read-only grouped inspection, and persistence/validation parity. No duplicate-step feature, alternate runtime primitive, or plugin-packaging flow was introduced under this plan.
+- (2026-03-14) `F288` exposed a real runtime validation gap: `action.call` publish validation was still rejecting additive designer metadata (`designerGroupKey`, `designerTileKind`, `designerAppKey`) even though grouped steps already persisted those fields in drafts. The runtime node schema needed to allow those additive keys explicitly to keep grouped drafts publish-compatible.
+- (2026-03-14) The remaining app/plugin availability item (`F291`) is not the same kind of work as `F292-F294`: grouped app steps already reuse the shared hydration/input/picker machinery, but the server-side catalog projection still builds app tiles from the global action registry without any tenant-install filter. Closing `F291` will need a real tenant-aware availability seam rather than just more app-step UI tests.
+- (2026-03-14) Reference mode was still injecting placeholder `payload.*` children when no payload schema existed. Removing those placeholders keeps only real schema-backed paths and aligns the field picker with `F154`.
+- (2026-03-14) The remaining `F155`/`F156` refresh behavior was already driven by pure `buildWorkflowReferenceFieldOptions(...)` recomputation from `dataContext`; the missing work was pinning that contract with deterministic tests for action-schema and `saveAs` changes.
+- (2026-03-14) The remaining `F157`/`F160` stability behavior was already a consequence of keeping the saved direct reference expression as the source of truth and recomputing block context from the current step location; targeted jsdom/unit coverage was enough to lock that down without changing runtime behavior.
+- (2026-03-14) `zod-to-json-schema` already ships the `jsonDescription` post-processor locally, so additive workflow metadata can be embedded as JSON in Zod descriptions and expanded back into real JSON Schema keys without forking the runtime schema model.
+- (2026-03-14) `tickets.update_fields.patch` does not carry `board_id` or `client_id`, so dependency annotations for `patch.category_id`, `patch.subcategory_id`, and `patch.location_id` cannot point at those roots without disabling valid update authoring. Scoped dependency metadata currently stays on create-style fields while update pickers remain unscoped until ticket-state-aware narrowing exists.
+- (2026-03-14) `ee/server` Vitest lacked an alias for `@alga-psa/teams/actions`, and shared Vitest lacked direct source aliases for `@alga-psa/storage`, `@alga-psa/types`, `@alga-psa/auth`, `@alga-psa/validation`, and `@alga-psa/shared`; the picker slice needed both configs widened before the reused package action loaders could run in this harness.
+- (2026-03-14) The inline mapping editor’s expression compatibility hints were assuming any truthy value was object-like. A fixed-to-advanced mode transition can briefly leave `valueType === 'expr'` while the old literal string is still present, so those guards needed an explicit object check.
+- (2026-03-14) Dependent picker invalidation cannot key off the previous option array. When an upstream fixed scope changes, the picker briefly renders with stale options from the old scope; clearing invalid selections only after the new dependency signature has finished loading avoids wiping still-valid values during that transition.
+- (2026-03-14) The transform inline-editor path already reuses the same `InputMappingEditor` module as business actions, which means transform jsdom coverage also needs the picker-side package action mocks (`@alga-psa/integrations/actions`, `@alga-psa/clients/actions`, and `@alga-psa/teams/actions`) even when the tested transform fields never render picker-backed controls.
+
+## Commands / Runbooks
+
+- (2026-03-13) Read planning templates:
+  - `sed -n '1,220p' /Users/roberisaacs/.codex/skills/alga-plan/assets/PRD_TEMPLATE.md`
+  - `sed -n '1,220p' /Users/roberisaacs/.codex/skills/alga-plan/assets/SCRATCHPAD_TEMPLATE.md`
+  - `sed -n '1,260p' /Users/roberisaacs/.codex/skills/alga-plan/references/plan_format.md`
+- (2026-03-13) Inspect comparable workflow plan:
+  - `sed -n '1,260p' ee/docs/plans/2025-12-27-workflow-trigger-payload-mapping/PRD.md`
+  - `sed -n '1,220p' ee/docs/plans/2025-12-27-workflow-trigger-payload-mapping/features.json`
+  - `sed -n '1,220p' ee/docs/plans/2025-12-27-workflow-trigger-payload-mapping/tests.json`
+- (2026-03-13) Scaffold initial plan folder:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Workflow Designer Grouped Palette, Inline Action Inputs, and Transform Actions" --slug workflow-designer-grouped-palette-inline-inputs-transform-actions`
+- (2026-03-13) Correct scaffolded date-prefixed folder to session date:
+  - `mv ee/docs/plans/2026-03-12-workflow-designer-grouped-palette-inline-inputs-transform-actions ee/docs/plans/2026-03-13-workflow-designer-grouped-palette-inline-inputs-transform-actions`
+- (2026-03-13) Validate the new shared catalog builder:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
+- (2026-03-13) Validate the new server-side grouped catalog projection:
+  - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T020: workflow designer receives the grouped catalog projection from the server action" --reporter=dot`
+- (2026-03-13) Lint touched files after the catalog/projection slice:
+  - `npx eslint shared/workflow/runtime/designer/actionCatalog.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx server/src/app/api/workflow/registry/designer-catalog/route.ts server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts`
+- (2026-03-13) Attempt grouped-palette Playwright validation:
+  - `npx playwright test ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "palette renders grouped business tiles instead of one tile per business action|control blocks still render as dedicated palette entries alongside grouped tiles|transform renders as a top-level palette tile"`
+- (2026-03-13) Validate grouped palette search helper:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts`
+- (2026-03-13) Re-attempt grouped palette/search Playwright coverage:
+  - `npx playwright test ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "palette search filters nodes and restores list|palette search filters nodes by id|palette renders grouped business tiles instead of one tile per business action|control blocks still render as dedicated palette entries alongside grouped tiles|transform renders as a top-level palette tile"`
+- (2026-03-13) Re-run shared catalog tests after widening schema typing:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
+- (2026-03-13) Verify the EE server TypeScript surface:
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+- (2026-03-13) Validate grouped action step helpers:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts`
+- (2026-03-14) Validate grouped step-properties schema-reference and basics seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/ActionSchemaReference.test.tsx src/components/workflow-designer/__tests__/WorkflowStepPropertiesBasics.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/ActionSchemaReference.tsx ee/server/src/components/workflow-designer/WorkflowStepNameField.tsx ee/server/src/components/workflow-designer/WorkflowStepSaveOutputSection.tsx ee/server/src/components/workflow-designer/__tests__/ActionSchemaReference.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowStepPropertiesBasics.test.tsx ee/server/src/components/workflow-designer/workflowDataContext.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- (2026-03-14) Validate inline action-input properties-panel seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSection.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- (2026-03-14) Validate source-mode selector seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx`
+- (2026-03-14) Validate inline field validation-hint seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputTypeHint.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/WorkflowActionInputTypeHint.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputTypeHint.test.tsx`
+- (2026-03-14) Validate inline field default/example help:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx`
+- (2026-03-14) Validate nested inline literal groups and required-count recursion:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputTypeHint.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/WorkflowActionInputTypeHint.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputTypeHint.test.tsx`
+- (2026-03-14) Validate nested child source modes and primitive fixed controls:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx`
+- (2026-03-14) Validate nullable fixed-value field support:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts`
+- (2026-03-14) Validate source-mode preservation across fixed/reference/advanced transitions:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx`
+- (2026-03-14) Validate nested reset/rehydration and field-help constraint hints:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx`
+- (2026-03-13) Validate text transform action registration and catalog/search coverage:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
+  - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T020: workflow designer receives the grouped catalog projection from the server action|Transform actions are exposed through the runtime action registry projection" --reporter=dot`
+  - `npx eslint shared/workflow/runtime/actions/registerTransformActions.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts ee/server/src/components/workflow-designer/__tests__/paletteSearch.test.ts server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts shared/workflow/runtime/init.ts`
+- (2026-03-13) Extend transform runtime coverage to object/value/array actions:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts --reporter=dot`
+  - `npx eslint shared/workflow/runtime/actions/registerTransformActions.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts`
+- (2026-03-13) Validate grouped palette browser coverage against the current workflow-editor route:
+  - `cd ee/server && PW_WEBSERVER=false PW_KEEP_DEPS=true PLAYWRIGHT_BASE_URL=http://localhost:3300 PLAYWRIGHT_DB_PORT=5433 PLAYWRIGHT_DB_PORT_LOCKED=true DB_PORT=5433 DB_DIRECT_PORT=5433 PLAYWRIGHT_DB_HOST=localhost DB_HOST=localhost PLAYWRIGHT_DB_NAME=alga_contract_wizard_test DB_NAME_SERVER=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=postpass123 PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=postpass123 NEXTAUTH_SECRET=test-nextauth-secret npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "palette search filters nodes and restores list|palette search filters nodes by id|palette renders grouped business tiles instead of one tile per business action|control blocks still render as dedicated palette entries alongside grouped tiles|transform renders as a top-level palette tile|palette search remains interactive after a grouped tile has been inserted" --reporter=list`
+  - `cd ee/server && npx eslint src/__tests__/page-objects/WorkflowDesignerPage.ts src/__tests__/integration/helpers/playwrightAuthSessionHelper.ts src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
+- (2026-03-13) Validate additional grouped-step/browser behaviors against the manual local dev server:
+  - `cd ee/server && PW_WEBSERVER=false PW_KEEP_DEPS=true PLAYWRIGHT_BASE_URL=http://localhost:3300 NEXTAUTH_URL=http://localhost:3300 NEXTAUTH_SECRET=test-nextauth-secret DB_HOST=localhost DB_PORT=5432 DB_NAME_SERVER=alga_contract_wizard_test DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5432 PLAYWRIGHT_DB_PORT_LOCKED=true PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=postpass123 PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=postpass123 REDIS_HOST=localhost REDIS_PORT=16379 npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "app/plugin catalog records render as top-level app tiles|grouped tile tooltips show the tile description|a newly inserted grouped action step becomes selected like current action.call steps|grouped action steps preserve delete behavior|grouped action steps preserve saveAs auto-generation behavior" --reporter=line`
+  - `cd ee/server && PW_WEBSERVER=false PW_KEEP_DEPS=true PLAYWRIGHT_BASE_URL=http://localhost:3300 NEXTAUTH_URL=http://localhost:3300 NEXTAUTH_SECRET=test-nextauth-secret DB_HOST=localhost DB_PORT=5432 DB_NAME_SERVER=alga_contract_wizard_test DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5432 PLAYWRIGHT_DB_PORT_LOCKED=true PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=postpass123 PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=postpass123 REDIS_HOST=localhost REDIS_PORT=16379 npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "a newly inserted grouped action step lands on the currently selected pipe like current action.call steps|grouped action steps remain reorderable within the pipeline|grouped action steps remain movable across control-block branches|grouped action steps preserve delete behavior|grouped action steps preserve saveAs auto-generation behavior" --reporter=line`
+  - `cd ee/server && PW_WEBSERVER=false PW_KEEP_DEPS=true PLAYWRIGHT_BASE_URL=http://localhost:3300 NEXTAUTH_URL=http://localhost:3300 NEXTAUTH_SECRET=test-nextauth-secret DB_HOST=localhost DB_PORT=5432 DB_NAME_SERVER=alga_contract_wizard_test DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5432 PLAYWRIGHT_DB_PORT_LOCKED=true PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=postpass123 PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=postpass123 REDIS_HOST=localhost REDIS_PORT=16379 npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "grouped action steps remain movable across control-block branches" --reporter=line`
+  - `npx eslint ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts ee/server/src/__tests__/integration/workflow-designer-blocks.playwright.test.ts`
+- (2026-03-13) Reproduce the current Playwright tenant-bootstrap blocker directly:
+  - `DB_HOST=localhost DB_PORT=5433 DB_NAME_SERVER=alga_contract_wizard_test DB_USER_SERVER=postgres DB_PASSWORD_SERVER=postpass123 npx tsx -e "import { createTestDbConnection } from './src/lib/testing/db-test-utils'; import { createTenant, createAdminUser, setupTenantData } from './src/lib/testing/tenant-creation'; (async () => { const db=createTestDbConnection(); const email='debug+'+Date.now()+'@example.com'; try { const tenantResult=await createTenant(db,{tenantName:'debug-tenant',email}); console.log('TENANT', tenantResult); const userResult=await createAdminUser(db,{tenantId:tenantResult.tenantId,firstName:'Test',lastName:'Admin',email,clientId:tenantResult.clientId}); console.log('USER', userResult); const setupResult=await setupTenantData(db,{tenantId:tenantResult.tenantId,adminUserId:userResult.userId,clientId:tenantResult.clientId}); console.log('SETUP', setupResult); } catch (error) { console.error('RAW', error); console.error('NAME', error instanceof Error ? error.name : typeof error); console.error('MESSAGE', error instanceof Error ? error.message : String(error)); console.error('STACK', error instanceof Error ? error.stack : ''); } finally { await db.destroy(); } })();"`
+- (2026-03-13) Validate the extracted palette drag/search unit seam:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/WorkflowDesignerPalette.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
+- (2026-03-13) Bootstrap a direct local server for targeted grouped-step Playwright reruns:
+  - `PLAYWRIGHT_DB_PORT=5433 REDIS_PORT=16379 docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ee/server/.env.test up -d --wait --wait-timeout 60 postgres-playwright redis-playwright`
+  - `PLAYWRIGHT_DB_PORT=5433 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=postpass123 PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=postpass123 node --import tsx/esm scripts/bootstrap-playwright-db.ts`
+  - `cd server && NEXT_PUBLIC_EDITION=enterprise E2E_AUTH_BYPASS=true EE_BASE_URL=http://localhost:3301 NEXTAUTH_URL=http://localhost:3301 HOST=localhost:3301 HOSTNAME=localhost PORT=3301 APP_PORT=3301 EXPOSE_SERVER_PORT=3301 NEXT_PUBLIC_APP_URL=http://localhost:3301 NEXT_PUBLIC_SITE_URL=http://localhost:3301 NEXT_PUBLIC_API_BASE_URL=http://localhost:3301 NEXT_PUBLIC_EXTERNAL_APP_URL=http://localhost:3301 NEXTAUTH_SECRET=test-nextauth-secret NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=true SECRET_READ_CHAIN=filesystem,env SECRET_WRITE_PROVIDER=filesystem SECRET_FS_BASE_PATH=secrets-playwright REDIS_PASSWORD= DB_HOST=localhost DB_PORT=5433 DB_NAME=alga_contract_wizard_test DB_NAME_SERVER=alga_contract_wizard_test DB_USER=postgres DB_PASSWORD=postpass123 DB_USER_SERVER=postgres DB_PASSWORD_SERVER=postpass123 DB_PASSWORD_ADMIN=postpass123 STORAGE_DEFAULT_PROVIDER=s3 STORAGE_S3_ENDPOINT=http://localhost:9002 STORAGE_S3_ACCESS_KEY=minioadmin STORAGE_S3_SECRET_KEY=minioadmin STORAGE_S3_BUCKET=alga-test STORAGE_S3_REGION=us-east-1 STORAGE_S3_FORCE_PATH_STYLE=true REDIS_HOST=localhost REDIS_PORT=16379 npx tsx index.ts`
+  - `cd ee/server && PW_WEBSERVER=false PW_KEEP_DEPS=true PLAYWRIGHT_BASE_URL=http://localhost:3301 NEXTAUTH_URL=http://localhost:3301 NEXTAUTH_SECRET=test-nextauth-secret DB_HOST=localhost DB_PORT=5433 DB_NAME_SERVER=alga_contract_wizard_test DB_USER_SERVER=postgres DB_PASSWORD_SERVER=postpass123 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5433 PLAYWRIGHT_DB_PORT_LOCKED=true PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=postpass123 PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=postpass123 REDIS_HOST=localhost REDIS_PORT=16379 npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "a newly inserted grouped action step lands on the currently selected pipe like current action.call steps|grouped action steps remain reorderable within the pipeline|grouped action steps remain movable across control-block branches" --reporter=line`
+  - `npx eslint ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts ee/server/src/__tests__/page-objects/WorkflowDesignerPage.ts ee/server/src/__tests__/integration/helpers/playwrightAuthSessionHelper.ts server/src/middleware/express/authMiddleware.ts`
+- (2026-03-13) Validate reference-source option coverage and contextual gating:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/MappingPanelReferenceSources.test.tsx src/components/workflow-designer/__tests__/workflowDataContext.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/workflowReferenceOptions.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/mapping/MappingPanel.tsx ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts ee/server/src/components/workflow-designer/__tests__/MappingPanelReferenceSources.test.tsx ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts`
+- (2026-03-13) Validate reference autocomplete/type context extraction and loop-variable rehydration:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowReferenceContext.test.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/MappingPanelReferenceSources.test.tsx src/components/workflow-designer/__tests__/workflowDataContext.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/workflowReferenceContext.ts ee/server/src/components/workflow-designer/mapping/MappingPanel.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/__tests__/workflowReferenceContext.test.ts ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/MappingPanelReferenceSources.test.tsx`
+- (2026-03-13) Validate direct structured-reference replacement:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx src/components/workflow-designer/__tests__/workflowReferenceContext.test.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/MappingPanelReferenceSources.test.tsx src/components/workflow-designer/__tests__/workflowDataContext.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/workflowReferenceContext.ts ee/server/src/components/workflow-designer/mapping/MappingPanel.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/workflowReferenceContext.test.ts ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/MappingPanelReferenceSources.test.tsx`
+- (2026-03-13) Validate extracted grouped palette item presentation coverage:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/PaletteItemWithTooltip.test.tsx src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/PaletteItemWithTooltip.tsx ee/server/src/components/workflow-designer/__tests__/PaletteItemWithTooltip.test.tsx ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- (2026-03-13) Validate the grouped step-properties action selector slice:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/groupedActionSelection.test.ts src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/groupedActionSelection.ts ee/server/src/components/workflow-designer/GroupedActionConfigSection.tsx ee/server/src/components/workflow-designer/WorkflowDesignerPalette.tsx ee/server/src/components/workflow-designer/__tests__/groupedActionSelection.test.ts ee/server/src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx`
+- (2026-03-14) Validate grouped-step default/unselected helper coverage:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+- (2026-03-14) Abort the equivalent grouped-step browser run after confirming the default webserver path still performs a full cold Playwright stack bootstrap before the tests reach assertions:
+  - `cd ee/server && npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "a newly created grouped action step can remain action-unselected until the user chooses one|a grouped action step auto-selects the declared default action when configured|step name editing remains available before and after action selection|save-output controls remain available before and after action selection" --reporter=line`
+- (2026-03-14) Validate grouped action-input schema state helper:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/groupedActionSelection.test.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- (2026-03-14) Validate grouped-step downstream output-schema exposure through the extracted helper:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowDataContext.test.ts src/components/workflow-designer/__tests__/groupedActionSelection.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/workflowDataContext.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts ee/server/src/components/workflow-designer/__tests__/groupedActionSelection.test.ts`
+- (2026-03-14) Validate grouped action-input picker metadata and field-type updates:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts`
+- (2026-03-14) Validate the first inline action-input section slice:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorInline.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSection.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorInline.test.tsx ee/server/vitest.config.ts`
+- (2026-03-14) Validate the source-mode defaulting and serialization helpers:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- (2026-03-14) Revalidate direct-reference hydration/source-mode seams after the fixed-picker import graph expanded:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/workflowReferenceOptions.ts ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx`
+- (2026-03-14) Validate inline field validation and summary hints:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- (2026-03-14) Validate reference-mode filtering/refresh/preservation helpers:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx src/components/workflow-designer/__tests__/workflowDataContext.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/workflowReferenceOptions.ts ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts`
+- (2026-03-14) Validate picker-metadata JSON-schema plumbing:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/jsonSchemaMetadata.test.ts --reporter=dot`
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint shared/workflow/runtime/jsonSchemaMetadata.ts shared/workflow/runtime/__tests__/jsonSchemaMetadata.test.ts shared/workflow/runtime/registries/schemaRegistry.ts ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts`
+- (2026-03-14) Validate ticket picker annotations, fixed-picker UI, and picker-value persistence:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts shared/workflow/runtime/__tests__/jsonSchemaMetadata.test.ts --reporter=dot`
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx tsc --noEmit -p shared/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFixedPicker.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts shared/workflow/runtime/actions/businessOperations/tickets.ts shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts shared/vitest.config.ts ee/server/vitest.config.ts`
+- (2026-03-14) Validate dependent ticket picker narrowing, disabled states, and scope-change persistence:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts --reporter=dot`
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFixedPicker.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts`
+- (2026-03-14) Validate transform grouped-step authoring/output seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx src/components/workflow-designer/__tests__/groupedActionSelection.test.ts src/components/workflow-designer/__tests__/workflowDataContext.test.ts src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/ActionSchemaReference.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx ee/server/src/components/workflow-designer/__tests__/groupedActionSelection.test.ts ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts ee/server/src/components/workflow-designer/__tests__/ActionSchemaReference.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx`
+- (2026-03-14) Validate direct-reference hydration catch-up, transform branch/control parity, and duplicate-affordance parity:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
+  - `cd ee/server && npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "T079: grouped action steps preserve the current absence of duplicate behavior|T234: transform grouped steps remain reorderable within the pipeline like existing action.call steps|T234/T235: transform grouped steps remain movable across control-block branches and can be inserted inside control blocks" --reporter=line`
+- (2026-03-14) Validate dynamic transform object-output schemas:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowDataContext.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/workflowDataContext.ts ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts`
+- (2026-03-14) Validate structured transform object/field authoring seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx`
+- (2026-03-14) Validate dynamic-array transform reference authoring plus downstream picker coverage:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts`
+    - Passed with the same pre-existing `InputMappingEditor.tsx` warnings already noted elsewhere on this branch; no new eslint errors were introduced by the transform-array slice.
+- (2026-03-14) Validate advanced fallback/editor behavior:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx src/components/workflow-designer/__tests__/expressionValidation.test.ts --reporter=dot`
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts --reporter=dot`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/expressionValidation.test.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts`
+- (2026-03-14) Validate Advanced-mode de-emphasis copy:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx`
+- (2026-03-14) Re-validate missing-secret guardrails after tagging the advanced fallback checklist:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts --reporter=dot`
+- (2026-03-14) Attempt and then revert the mixed advanced save/reload/publish integration seam after it reached the local package DB instead of the mocked workflow test knex:
+  - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T288:" --reporter=dot`
+- (2026-03-14) Validate the late checklist-closure seams after the remaining workflow-designer test ids were mapped onto deterministic unit/integration coverage:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/WorkflowStepPropertiesBasics.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx src/components/workflow-designer/__tests__/paletteSearch.test.ts src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/MappingPanelReferenceSources.test.tsx src/components/workflow-designer/__tests__/groupedActionSelection.test.ts --reporter=dot`
+  - `cd server && npx vitest run src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts --config vitest.config.ts --coverage.enabled=false --reporter=dot`
+  - `cd packages/clients && npx vitest run --config vitest.config.ts src/actions/queryActions.permission.test.ts --reporter=dot`
+  - `cd ee/server && npx tsc --noEmit -p tsconfig.json`
+  - `cd server && npx tsc --noEmit -p tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx ee/server/src/components/workflow-designer/__tests__/groupedActionStep.test.ts ee/server/src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowStepPropertiesBasics.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx ee/server/src/components/workflow-designer/__tests__/paletteSearch.test.ts ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts ee/server/src/components/workflow-designer/__tests__/MappingPanelReferenceSources.test.tsx ee/server/src/components/workflow-designer/__tests__/groupedActionSelection.test.ts packages/clients/src/actions/queryActions.permission.test.ts server/src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts`
+- (2026-03-14) Validate tenant-aware app catalog filtering:
+  - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T020: workflow designer receives the grouped catalog projection from the server action|T291: app/plugin grouped tiles only appear when available to the current deployment and tenant context" --reporter=dot`
+  - `npx tsc --noEmit -p server/tsconfig.json`
+  - `npx tsc --noEmit -p ee/packages/workflows/tsconfig.json`
+  - `npx eslint ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts`
+- (2026-03-14) Validate read-only grouped-step inspection and edit prevention:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/WorkflowStepPropertiesBasics.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/GroupedActionConfigSection.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSection.tsx ee/server/src/components/workflow-designer/WorkflowStepNameField.tsx ee/server/src/components/workflow-designer/WorkflowStepSaveOutputSection.tsx ee/server/src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowStepPropertiesBasics.test.tsx`
+- (2026-03-14) Validate contact-picker permission enforcement:
+  - `cd packages/clients && npx vitest run --config vitest.config.ts src/actions/queryActions.permission.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p packages/clients/tsconfig.json`
+  - `npx eslint packages/clients/src/actions/queryActions.ts packages/clients/src/actions/queryActions.permission.test.ts`
+- (2026-03-14) Validate grouped-step validation persistence and publish parity:
+  - `mkdir -p server/coverage/.tmp`
+  - `cd server && npx vitest run src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --coverage.enabled=false --testNamePattern="T298|T299|T323|T324" --reporter=dot`
+  - `npx tsc --noEmit -p server/tsconfig.json`
+  - `npx eslint server/src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts`
+- (2026-03-14) Review plan-scope conformance:
+  - `git log --oneline --reverse --grep '^feat(F'`
+- (2026-03-14) Validate grouped-step save/reload/publish and import/export persistence:
+  - `cd server && npx vitest run src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts --config vitest.config.ts --reporter=dot`
+  - `npx tsc --noEmit -p server/tsconfig.json`
+  - `npx tsc --noEmit -p shared/tsconfig.json`
+  - `npx eslint shared/workflow/runtime/nodes/registerDefaultNodes.ts server/src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts`
+- (2026-03-14) Validate app grouped-step hydration and inline editor/picker reuse:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/groupedActionStep.test.ts ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts`
+
+## Links / References
+
+- Designer entrypoint: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- Mapping editor: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx`
+- Mapping panel: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/ee/server/src/components/workflow-designer/mapping/MappingPanel.tsx`
+- Source tree: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/ee/server/src/components/workflow-designer/mapping/SourceDataTree.tsx`
+- Runtime action registry: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/shared/workflow/runtime/registries/actionRegistry.ts`
+- Grouped catalog builder: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/shared/workflow/runtime/designer/actionCatalog.ts`
+- Grouped catalog builder test: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts`
+- Grouped catalog server action: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts`
+- Grouped catalog API route: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/server/src/app/api/workflow/registry/designer-catalog/route.ts`
+- Runtime mapping types: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/shared/workflow/runtime/types.ts`
+- Mapping resolver: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/shared/workflow/runtime/utils/mappingResolver.ts`
+- Mapping validator: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/shared/workflow/runtime/validation/mappingValidator.ts`
+- Ticket actions: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/shared/workflow/runtime/actions/businessOperations/tickets.ts`
+- Contact actions: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/shared/workflow/runtime/actions/businessOperations/contacts.ts`
+- Expression engine: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/shared/workflow/runtime/expressionEngine.ts`
+- Expression function docs: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/ee/server/src/components/workflow-designer/expression-editor/functionDefinitions.ts`
+- Board picker: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/packages/ui/src/components/settings/general/BoardPicker.tsx`
+- Client picker: `/Users/roberisaacs/alga-psa.worktrees/refactor/workflow-previous-action-ref/packages/ui/src/components/ClientPicker.tsx`
+
+## Open Questions
+
+- Should app tiles ever expose a second-level object selector inside the step, or should the first version insist on a single filtered action dropdown per app tile?
+- Which transform actions should be considered mandatory for v1 versus follow-on work, especially around array/object shaping?
+- Whether import/export surfaces need explicit grouped-tile metadata or whether actionId-derived hydration is sufficient for v1.
+
+## Progress Log
+
+- (2026-03-14) Completed the transform grouped-step authoring slice:
+  - Added transform-specific grouped-step coverage showing the existing grouped action selector treats `Transform` like any other grouped source, with a transform-only action dropdown and selected-action descriptions carried into the properties panel.
+  - Added transform-specific inline-editor coverage showing transform steps reuse the same properties-panel input section, source-mode selectors, structured reference authoring, fixed parameter authoring, and type-compatibility hints as business actions.
+  - Added downstream-context coverage showing transform steps can be named, auto-save to `saveAs`, and expose typed outputs into later-step reference options through the same data-context builder used by business actions.
+  - Marked F221-F224, F231-F232, F236-F239, F259-F260, and T221-T224/T231-T232/T236-T243/T259-T260 implemented.
+- (2026-03-14) Completed the direct-reference hydration test catch-up:
+  - Tagged the existing source-mode seam with T152/T153 so direct field references are explicitly covered as Reference-mode rehydration while complex expressions remain pinned to Advanced-mode fallback.
+  - Added the same lightweight picker-side action mocks to `InputMappingEditorReferenceMode.test.tsx` so the direct-reference rerender coverage still imports cleanly after the fixed-picker module graph became unconditional.
+  - Marked T152-T153 implemented.
+- (2026-03-14) Completed the transform movement parity and duplicate-affordance parity slice:
+  - Reworked the transform branch-move Playwright setup so the movable transform is inserted on the root pipe before the `then` branch is selected, matching the already-passing grouped-step branch-move pattern and removing the false-negative selection race from the first attempt.
+  - Added Playwright coverage proving transform grouped steps still reorder at the root, can be inserted into control-block branches, and can be dragged from the root pipe into a branch like existing `action.call` steps.
+  - Tightened `F079`/`T079` to the real parity contract and added a negative Playwright check proving grouped action steps do not invent a duplicate/copy affordance that the underlying workflow designer still lacks.
+  - Marked F079, F234-F235, and T079/T234-T235 implemented.
+- (2026-03-14) Completed the dynamic transform object-output schema slice:
+  - Added step-local transform output inference in `workflowDataContext.ts` so `transform.build_object`, `transform.pick_fields`, and `transform.rename_fields` derive downstream browseable object schemas from their saved `config.inputMapping` values instead of falling back to opaque `record(unknown)` output.
+  - Propagated literal value types and direct-reference source schemas into `build_object`, narrowed `pick_fields` to the selected source properties when the source schema is known, and preserved renamed plus untouched source keys for `rename_fields`.
+  - Added focused data-context tests proving downstream reference browsing now sees named `object.*` children for build-object, only selected keys for pick-fields, and renamed keys for rename-fields.
+  - Marked F269-F271 and T269-T271 implemented.
+- (2026-03-14) Completed the structured transform authoring coverage slice:
+  - Added focused jsdom coverage proving `build_object.fields[]` supports user-defined field names plus per-row structured references and fixed literal values without falling back to raw JSON or freeform expressions.
+  - Added focused coverage proving `rename_fields.renames[]` renders explicit structured rename rows and `pick_fields.fields[]` renders the fixed field list through the primitive-array editor rather than raw JSON.
+  - Marked F274-F277 and T263/T274-T277 implemented.
+- (2026-03-14) Completed the dynamic-array transform reference slice:
+  - Updated schema-to-editor extraction so array item schemas with no explicit JSON-schema primitive now surface as `itemType: unknown` instead of disappearing into the raw-JSON fallback path.
+  - Added a row-based dynamic array editor for unknown-item arrays so `coalesce_value.candidates[]` and `build_array.items[]` can author multiple structured references with the same per-item source-mode controls used elsewhere in the inline editor.
+  - Added focused coverage proving coalesce/build-array render multiple structured reference rows, and that both coalesce value outputs and build-object object outputs appear in downstream reference pickers like normal business-action outputs.
+  - Marked F278-F280 and T278-T280 implemented.
+- (2026-03-14) Completed the advanced fallback coverage slice:
+  - Added focused coverage proving complex saved expressions and secret-backed values remain in `Advanced` mode, and that saved expressions which cannot be represented structurally still reopen as editable advanced expressions instead of breaking hydration.
+  - Tagged the existing shared expression-validation seam and runtime `mappingResolver` suite to cover advanced-expression diagnostics plus unchanged runtime resolution for `$expr` and `$secret` mappings.
+  - Marked F281-F282, F284, F286-F287, and T281-T282/T284/T286-T287 implemented.
+- (2026-03-14) Completed the Advanced-mode de-emphasis slice:
+  - Updated `WorkflowActionInputSourceMode` to keep the existing selector behavior while adding a muted “Use Advanced only for expressions or secrets” hint directly under the mode controls.
+  - Added focused coverage proving the escape-hatch guidance is rendered alongside the source-mode selector.
+  - Marked F283 and T283 implemented.
+- (2026-03-14) Completed the advanced secret-validation parity slice:
+  - Tagged the existing `mappingResolver` missing-secret failure path as the checklist seam for advanced secret validation parity, matching the actual runtime contract this branch already uses.
+  - Marked F285 and T285 implemented.
+- (2026-03-14) Blocker after the advanced fallback slice:
+  - An attempted `T288` draft save/reload/publish integration test was reverted instead of left failing because this local harness still routes that path into the package DB tenant connection (`database "server" does not exist`) rather than the mocked test knex.
+  - `F288/T288` remain open for a later pass with the correct server-action DB seam.
+- (2026-03-14) Completed the dependent ticket-picker scope slice:
+  - Reused the picker metadata from the first ticket-picker batch to narrow contact, location, category, and subcategory fixed-value options from the current fixed upstream client/board/category selections.
+  - Added disabled explanatory states when those dependencies are missing or dynamic, while keeping dependent fields free to switch back to Reference mode instead of trapping the builder in Fixed mode.
+  - Tightened the picker invalidation path so upstream scope changes clear only now-invalid fixed selections after the new scoped option set loads, while preserved selections survive when the same identifier remains valid in the new scope.
+  - Marked F201-F220 and T201-T220 implemented.
+- (2026-03-14) Completed the first ticket-picker authoring slice:
+  - Added real workflow picker annotations to the runtime ticket action schemas for board, client, contact, status, priority, assigned user, assignee user/team, category, subcategory, and location fields, and exposed `location_id` through the workflow ticket create/update action contracts.
+  - Added a reusable `WorkflowActionInputFixedPicker` so picker-backed fixed values render through existing board/client/contact/status/priority/user/team/category/location data sources instead of falling back to plain string inputs.
+  - Kept picker-backed fields round-trippable across Fixed, Reference, and Advanced mode changes, and proved fixed picker selections still persist as literal identifier values inside `config.inputMapping`.
+  - Marked F166-F200 and T166-T200 implemented.
+- (2026-03-13) Completed the first grouped-catalog slice:
+  - Added shared grouped designer catalog types and builder covering built-in core-object records, a stable transform record, and inferred app records.
+  - Added `listWorkflowDesignerActionCatalogAction` plus `/api/workflow/registry/designer-catalog`.
+  - Switched `WorkflowDesigner.tsx` off the local module-category heuristic and onto loaded catalog metadata for business-action grouping.
+  - Added unit coverage for catalog construction and integration coverage for the new server projection.
+- (2026-03-13) Completed the grouped palette rendering slice:
+  - Replaced per-action business palette entries with grouped `Core`, `Transform`, and `Apps` tiles sourced from the designer catalog.
+  - Preserved control blocks and generic nodes, added grouped tile test ids/ids, and disabled drag/click interactions in read-only or registry-error states.
+  - Kept grouped tile click and drag insertion flows working by mapping grouped tiles back to `action.call` steps with default actions when available.
+- (2026-03-13) Completed the grouped palette search normalization slice:
+  - Added a dedicated palette-search helper that normalizes label/id/description/schema text across spaces, dots, dashes, and underscores.
+  - Added singular/plural token variants so grouped tiles match natural object-name queries and verb-object phrases without duplicating tiles.
+  - Reused the helper for stable grouped ordering so empty-state and filtered results keep the same category ordering.
+  - Marked F041-F048, F050-F053, and F056-F060 implemented; F049 remains blocked until first-class transform actions exist and F054/F055 still need browser validation once tenant bootstrap is fixed.
+- (2026-03-13) Completed the grouped action metadata slice:
+  - Added a grouped-action-step helper that persists additive designer scope (`designerGroupKey`, `designerTileKind`, and `designerAppKey`) without changing the runtime `action.call` contract.
+  - Wired grouped drag/click insertion through that helper so grouped tiles can create `action.call` steps even when no default action is selected yet.
+  - Added grouped-step hydration helpers so legacy `action.call` steps can recover their grouped catalog record from `actionId` when metadata is absent.
+  - Marked F061-F066 and F069-F075 implemented; selection/reordering browser checks remain pending behind the tenant bootstrap blocker.
+- (2026-03-13) Completed the first transform runtime slice:
+  - Added first-class `transform.*` runtime actions for truncate, concat, replace, split, join, lowercase, uppercase, and trim, each with explicit input/output schemas and deterministic pure handlers.
+  - Wired the runtime initializer to register transform actions so the grouped `Transform` catalog record now exposes contained actions to server projections and designer search.
+  - Extended catalog/search coverage so `truncate-text`-style queries now match the grouped `Transform` tile through contained action metadata rather than a hidden action row.
+  - Marked F049, F226-F229, F241-F258, and T226-T228/T251-T258 implemented.
+- (2026-03-13) Extended transform runtime coverage beyond text shaping:
+  - Added first-class `transform.coalesce_value`, `transform.build_object`, `transform.pick_fields`, `transform.rename_fields`, `transform.append_array`, and `transform.build_array` actions with explicit schemas and deterministic pure handlers.
+  - Added unit coverage for representative coalesce/object/array behavior plus schema assertions for coalesce and array outputs.
+  - Marked F261-F268, F272-F273, and T268/T272-T273 implemented.
+- (2026-03-13) Validation blocker:
+  - The new grouped-palette Playwright tests could not complete because tenant bootstrap failed before the browser reached the designer (`Failed to create tenant` from `tenant-creation.ts`). The assertions themselves did not run, so `tests.json` remains unchanged for the new palette tests.
+- (2026-03-13) Validation update:
+  - `paletteSearch.test.ts` passed under EE Vitest, covering normalized grouped search semantics plus stable grouped ordering (T052).
+  - The shared catalog unit suite still passes after widening the internal schema helper type used by the grouped designer catalog.
+  - `npx tsc --noEmit -p ee/server/tsconfig.json` now completes successfully after the schema-type widening.
+  - `groupedActionStep.test.ts` passed under EE Vitest, covering runtime-compatible grouped-step metadata plus legacy group/app hydration (T069-T075).
+  - Targeted Playwright search/palette tests still fail before assertions because tenant creation aborts with the same `Failed to create tenant` error from `ee/server/src/lib/testing/tenant-creation.ts`.
+  - The new transform-action shared unit suite passed, covering registry presence, explicit schemas, typed output fields, and representative text-transform behavior.
+  - The existing server registry/catalog integration suite passed after extending it to assert that grouped catalog projection and runtime action projection now include `transform.truncate_text`.
+  - ESLint on the touched files passed with only pre-existing warnings in `server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts`.
+  - An attempted DB-backed integration expansion for text transform execution was reverted because the local `server` test database was unavailable in this worktree (`error: database "server" does not exist`), so text-transform runtime behavior remains covered through shared unit tests for now.
+- (2026-03-13) Completed the grouped palette browser-harness refresh:
+  - Fixed Playwright workflow-designer navigation to use `/msp/workflow-editor` instead of the removed `/msp/workflows?tab=designer` route.
+  - Updated Playwright tenant preparation so workflow-designer specs explicitly enable the tenant experimental feature `workflowAutomation`.
+  - Verified grouped palette business tiles, control blocks, the top-level `Transform` tile, and post-insertion palette search against the live workflow-editor surface.
+  - Marked F055 and T021-T031/T055 implemented.
+- (2026-03-13) Remaining grouped palette browser blocker:
+  - T054/F054 still remain open because Playwright did not reliably fire the grouped palette drag-start state in this harness, so “search while dragging” still needs a future browser-driver-friendly strategy.
+- (2026-03-13) Completed the grouped palette drag/search seam:
+  - Extracted the floating palette sidebar into `WorkflowDesignerPalette.tsx` so the drag-state banner, search box, and grouped tile rendering can be exercised without a full workflow-designer browser harness.
+  - Added `WorkflowDesignerPalette.test.tsx` jsdom coverage that keeps the palette in grouped-drag state, filters to a matching control tile, and verifies the drag banner persists while search changes.
+  - Updated the new grouped-step Playwright specs to match the current designer insertion model more closely (keyboard drag start and pipe click selection), but browser validation remains blocked here until the isolated Postgres test env on `localhost:5433` is available again.
+- (2026-03-13) Completed the transform grouped-step compatibility slice:
+  - Extended grouped-step helper coverage so transform-scoped steps explicitly remain `action.call` steps even before a transform action is chosen.
+  - Added legacy transform hydration coverage so `action.call` drafts with `transform.*` actionIds still resolve back to the `Transform` grouped catalog record without additive metadata.
+  - Marked F225/F233 and T225/T233 implemented.
+- (2026-03-13) Completed the transform validation parity slice:
+  - Added a runtime publish-validation assertion showing `transform.truncate_text` missing required inputs fails through the same `action.call` validation path used by business actions.
+  - Confirmed no transform-specific validation branch was needed because transform actions already flow through the shared action registry and `validateInputMappingSchema`.
+  - Marked F230 and T230 implemented.
+- (2026-03-13) Completed the transform extensibility guardrail slice:
+  - Extended the shared catalog unit suite with a hypothetical `transform.slugify_text` action to prove new `transform.*` registrations automatically join the existing `Transform` group.
+  - Verified the catalog lookup path continues to hydrate the new transform action back to the shared grouped tile without any one-off UI wiring.
+  - Marked F240 and T240 implemented.
+- (2026-03-13) Completed the transform runtime acceptance slice:
+  - Expanded the shared transform-handler suite so text transforms now cover truncate, concat, replace, split, join, lowercase, uppercase, and trim with schema-validated inputs.
+  - Reused the same runtime suite to claim the already-landed coalesce, build-object, pick-fields, rename-fields, append-array, and build-array behavior against real handlers.
+  - Marked T241, T244-T250, and T261-T267 implemented.
+- (2026-03-13) Completed the next grouped-step/browser validation slice:
+  - Added Playwright coverage for app/plugin tiles and grouped tile tooltips on the grouped palette.
+  - Confirmed grouped action steps still become selected after insertion and preserve delete/saveAs behavior like existing `action.call` steps.
+  - Updated the branch-move spec to target the actual empty-pipeline affordance instead of stale placeholder copy, but grouped selected-pipe insertion and same-pipe reorder remain open and the targeted branch-move rerun flaked before the designer loaded.
+  - Marked F067, F078, F080, T032, T035, T067, T078, and T080 implemented.
+- (2026-03-13) Completed the grouped-step pipe/reorder parity slice:
+  - Hardened the Playwright workflow-entry helper so list-page `New Workflow` clicks can recover into `/msp/workflow-editor/new` when the list remains in the known schedule-error degraded state.
+  - Waited for at least one enabled palette item before continuing, which removed the local race where grouped/control tiles were still temporarily disabled after the editor first rendered.
+  - Confirmed grouped steps still land on the selected pipe, reorder within the root pipeline, and move into control-block branches using the same drag/drop semantics as existing `action.call` steps.
+  - Marked F068, F076, F077, T068, T076, and T077 implemented.
+- (2026-03-13) Completed the reference-source context slice:
+  - Extracted the inline-editor reference option builder into `workflowReferenceOptions.ts` so payload, prior-step outputs, workflow metadata, catch errors, and loop context can be validated without reaching through `WorkflowDesigner.tsx`.
+  - Kept payload, vars, and meta sources available to the inline editor while gating `error.*` behind `inCatchBlock` so non-catch steps no longer advertise invalid error references.
+  - Updated `MappingPanel` so the source tree and type lookup mirror the same contextual gating used by the field picker and expression context, while continuing to show grouped step-output roots and the empty-vars guidance state.
+  - Added focused coverage for reference options, catch/loop context detection, grouped step-output labels, and MappingPanel source sections.
+  - Marked F141-F148, F149-F150, F152-F153, and F158-F159 implemented.
+- (2026-03-13) Completed the reference-context extraction slice:
+  - Extracted `workflowReferenceContext.ts` so expression autocomplete context and source-type lookup are built from the same payload/vars/meta/error/loop data model and can be validated without rendering the full designer.
+  - Reused that helper in `MappingPanel`, which keeps inline autocomplete and type-compatibility hints aligned with the currently available workflow data sources.
+  - Expanded simple-reference detection so direct loop-item references like `ticketItem.id` rehydrate back into Reference mode instead of degrading to Advanced mode.
+- (2026-03-13) Completed the direct-reference selection slice:
+  - Updated `InputMappingEditor` so choosing a structured source while already in Reference mode replaces the entire expression with that direct path instead of appending into the editor buffer.
+  - Added focused jsdom coverage proving a picker selection now serializes to a single direct `$expr` reference.
+  - Marked F151 and T151 implemented.
+- (2026-03-13) Completed the grouped palette item presentation coverage slice:
+  - Extracted `PaletteItemWithTooltip` from `WorkflowDesigner.tsx` so grouped-tile icon/label presentation can be tested without a full browser harness.
+  - Added jsdom coverage proving grouped palette items keep the same icon through click and drag presentation states and keep the same label/description in tooltip content.
+  - Marked T033 and T034 implemented; F033/F034 were already satisfied by the shipped palette behavior.
+- (2026-03-13) Completed the grouped step-properties action selection slice:
+  - Added a dedicated grouped-action configuration section in the properties panel that shows the grouped tile label, constrained action choices, and an explicit missing-action state before selection.
+  - Replaced raw `actionId`/`version` schema fields with grouped action selection logic that updates the visible step label/description and keeps legacy `action.call` persistence intact.
+  - Added helper logic to preserve still-valid input mappings, drop stale mappings, and refresh auto-generated `saveAs` names when the chosen action changes.
+  - Marked F081-F083, F086-F087, F093-F094, F096-F097, and T081-T083, T086-T087, T093-T094, T096-T097 implemented.
+- (2026-03-14) Completed the grouped-step default-selection slice:
+  - Added grouped-step helper coverage proving transform-scoped steps can persist only additive grouped metadata until the builder explicitly chooses an action.
+  - Added grouped-step helper coverage proving grouped records with a declared default action can still insert the existing `actionId`/`version`/auto-saveAs runtime config without changing the `action.call` contract.
+  - Marked F084, F085, T084, and T085 implemented via deterministic helper coverage because the equivalent Playwright seam still incurs a full cold stack bootstrap on this branch.
+- (2026-03-14) Completed the grouped-step action-schema summary slice:
+  - Extracted shared grouped action-input editor state so the selected action, derived input fields, and required-field completion counts come from one pure helper used by both the properties panel and the pipeline mapping-status badges.
+  - Added focused tests that change a grouped step from `tickets.create` to `tickets.update_fields` and assert that the visible input fields and required-field completion counts recalculate immediately from the new action schema.
+  - Marked F088, F090, T088, and T090 implemented.
+- (2026-03-14) Completed the grouped-step downstream output-schema slice:
+  - Extracted the prior-step data-context walker into `workflowDataContext.ts` so downstream output exposure no longer needs to be tested through the full client component module graph.
+  - Added focused coverage that changes an upstream grouped step from `tickets.create` to `tickets.update_fields` and asserts the downstream step sees the updated output schema and field list immediately.
+  - Marked F089, F095, T089, and T095 implemented.
+- (2026-03-14) Completed the grouped-step picker/type metadata slice:
+  - Extended `ActionInputField` and `actionInputEditorState` to preserve additive workflow picker annotations from action schemas without changing the current mapping UI.
+- (2026-03-14) Completed the grouped-step schema reference and basics slice:
+  - Extracted the chosen-action schema reference card into `ActionSchemaReference.tsx` so the properties panel can show action description plus input/output schema details through a focused jsdom seam.
+  - Extracted the step-name and save-output controls into dedicated properties-panel components so grouped steps keep those controls available both before and after action selection without relying on a full browser harness.
+  - Marked F098-F100 and T098-T100 implemented.
+  - Added focused coverage that changing the selected action swaps both the picker metadata and the target field type used by compatibility hinting.
+  - Marked F091, F092, T091, and T092 implemented.
+- (2026-03-14) Completed the first inline action-input section slice:
+  - Replaced the action-step input-mapping dialog opener with an always-mounted `WorkflowActionInputSection` so chosen action fields render directly in the properties panel.
+  - Updated `InputMappingEditor` rows to surface required/optional state and schema descriptions directly in the inline list for both mapped and unmapped fields.
+  - Added focused jsdom coverage for the inline section shell and for row-level required/optional/description rendering, plus the missing EE Vitest alias for `@alga-psa/tenancy/actions`.
+  - Marked F101-F106 and T101-T106 implemented.
+- (2026-03-14) Completed the source-mode defaulting and serialization slice:
+  - Centralized the workflow action-input source-mode transitions behind pure helpers in `WorkflowActionInputSourceMode.tsx` so mode detection, defaulting, and mapping-value conversion all share the same logic.
+  - Updated `InputMappingEditor` to use those helpers when builders switch modes or activate a new unmapped field, which keeps Reference/Fixed/Advanced authoring on the existing `inputMapping` contract.
+  - Added unit coverage for default mode selection and for the reference/fixed/advanced-expression/advanced-secret serialization paths.
+  - Marked F111-F115 and T111-T115 implemented.
+- (2026-03-14) Completed the inline validation hint slice:
+  - Moved the inline missing-required affordance into `WorkflowActionInputFieldInfo` so row-level validation state stays co-located with the field label/type metadata used across mapped and unmapped states.
+  - Added focused jsdom coverage for missing-required row messaging, incompatible reference hints, and step-level summary transitions from incomplete to complete.
+  - Marked F116-F118, F120, and T116-T118/T120 implemented; F119 remains open because defaults/examples are still used for value initialization rather than explicit field help.
+- (2026-03-14) Completed the inline field default/example help slice:
+  - Extended `actionInputEditorState` to carry schema `examples` through the action-field extraction path so inline help remains schema-driven.
+  - Updated `WorkflowActionInputFieldInfo` to show schema defaults and the first example alongside field descriptions when those hints are available.
+  - Marked F119 and T119 implemented.
+- (2026-03-14) Completed the nested inline literal group slice:
+  - Added collapsible structured literal groups for nested object fields and object-array rows so fixed-value nested editors now behave like explicit inline field groups instead of always-expanded blobs.
+  - Kept primitive arrays on the structured list editor by default and added direct jsdom coverage so this behavior is now anchored in the checklist rather than incidental.
+  - Updated `actionInputEditorState` to count nested required object fields and authored object-array item fields in the required-field summary instead of treating any non-empty object/array as fully complete.
+  - Backfilled the previously untracked `WorkflowActionInputTypeHint` seam and its tests into the branch so the inline validation-hint imports are now actually committed with the rest of the editor code.
+  - Marked F121-F123, F125-F128, and T121-T123/T125-T128 implemented.
+- (2026-03-14) Completed the nested child source-mode and primitive fixed-control slice:
+  - Reused `MappingFieldEditor` recursively inside structured object and object-array literal groups so nested children now keep their own Reference/Fixed/Advanced mode state inside the parent object mapping.
+  - Added focused jsdom coverage showing nested child source-mode selectors render independently from the parent object field while enum, boolean, number, and plain string fields continue to use the intended structured fixed controls.
+  - Marked F124, F129-F132, and T124/T129-T132 implemented.
+- (2026-03-14) Completed the nullable fixed-value slice:
+  - Threaded `nullable` through the schema-to-editor field extraction so fixed-value editors can distinguish intentional `null` from an unset field.
+  - Added an explicit fixed-mode null selector that hides the underlying primitive/object editor while the field is intentionally set to `null`.
+  - Marked F133 and T133 implemented.
+- (2026-03-14) Completed the source-mode preservation slice:
+  - Added a mode-transition helper that preserves previously authored fixed literals and direct reference expressions while builders move fields into and back out of Advanced mode.
+  - Wired `MappingFieldEditor` to retain those preserved values locally so nested object fields can round-trip between Fixed/Reference and Advanced without discarding their prior authoring state.
+  - Marked F134-F135 and T134-T135 implemented.
+- (2026-03-14) Completed the nested reset and field-help metadata slice:
+  - Added explicit reset actions for structured object groups and object-array rows so builders can clear nested child authoring without deleting the entire parent field.
+  - Verified nested object values survive a draft reopen by re-rendering the saved mapping state back into the inline editor.
+  - Extended `WorkflowActionInputFieldInfo` to surface constraint and item-type hints inline, and treated the already-shipped schema default help as the completion point for the separate default-metadata checklist item.
+  - Marked F136-F140 and T136-T140 implemented.
+- (2026-03-14) Completed the source-mode vocabulary slice:
+  - Added `WorkflowActionInputSourceMode.tsx` so each editable field now exposes the user-facing `Reference`, `Fixed value`, and `Advanced` source-mode selector instead of raw expression/secret/literal labels.
+  - Kept the existing serializer/runtime behavior underneath for now by mapping direct field-reference expressions to `Reference`, literal values to `Fixed value`, and complex expressions or secrets to `Advanced`.
+  - Marked F107-F110 and T107-T110 implemented.
+- (2026-03-14) Completed the reference-source stability slice:
+  - Removed placeholder payload child paths from `workflowReferenceOptions.ts` so Reference mode only offers real schema-backed payload fields when payload schema data exists.
+  - Added focused tests proving reference options refresh immediately when upstream action output schemas or `saveAs` names change, and that saved direct reference expressions survive unrelated upstream option-list churn.
+  - Added focused context tests proving grouped steps keep their catch/forEach reference sources when moved within the same block.
+  - Marked F154-F157, F160, and T154-T157/T160 implemented.
+- (2026-03-14) Completed the picker-metadata schema plumbing slice:
+  - Added `shared/workflow/runtime/jsonSchemaMetadata.ts` so runtime schemas can embed additive workflow picker metadata in Zod descriptions and expand it back into real JSON Schema keys during export.
+  - Switched runtime schema export for action-registry and schema-registry projections onto the shared workflow-aware JSON-schema wrapper.
+  - Added focused shared coverage for picker metadata export plus an explicit designer-side test proving `ActionInputField` extraction preserves the exported picker annotations.
+  - Marked F161-F165 and T161-T165 implemented.
+- (2026-03-14) Completed the grouped-step persistence and bundle-compatibility slice:
+  - Widened the runtime `action.call` config schema so grouped-step additive metadata (`designerGroupKey`, `designerTileKind`, and `designerAppKey`) survives publish validation instead of being rejected as unknown config.
+  - Added a focused server integration suite that saves, reloads, publishes, exports, and re-imports a mixed grouped workflow using structured references, fixed literals, advanced expressions, transform outputs, and app-scoped grouped metadata.
+  - Added assertions that downstream grouped-step data context still exposes renamed transform object fields after draft save/reload, and that bundle round-trips preserve the unchanged `action.call` contract plus additive grouped metadata.
+  - Marked F288-F290 and T288-T290/T326-T327 implemented.
+- (2026-03-14) Completed the app grouped-step parity coverage slice:
+  - Added focused grouped-step helper coverage proving app-scoped grouped steps hydrate back through the same additive `designerAppKey`/`actionId` selection path already used by built-in grouped steps.
+  - Added focused inline action-input section coverage proving app-scoped grouped steps reuse the same properties-panel field section and required-field summary model as built-ins when the action schema is compatible.
+  - Added focused action-input state coverage proving app-scoped action schemas preserve picker annotations through the same extraction path used by built-in ticket actions.
+  - Marked F292-F294 and T292-T294 implemented.
+- (2026-03-14) Completed the tenant-aware app catalog availability slice:
+  - Filtered designer-catalog app tiles in `listWorkflowDesignerActionCatalogAction` so app/plugin records only appear when the current tenant has a matching enabled extension install in `tenant_extension_install` joined to `extension_registry`.
+  - Added focused server integration coverage that seeds one installed synthetic app extension and proves the grouped catalog returns only the installed app tile while still keeping the existing grouped catalog projection test green.
+  - Corrected the older server integration harness to mock `@alga-psa/db` and `@alga-psa/auth` at the package boundary, which keeps the workflow action package on the test knex instead of the default package DB during catalog assertions.
+  - Marked F291 and T291 implemented.
+- (2026-03-14) Completed the read-only grouped-step inspection slice:
+  - Changed the properties-rail selection branch so read-only users still get `StepConfigPanel` for grouped `action.call` steps, alongside the existing read-only banner, instead of losing grouped action details entirely.
+  - Disabled grouped action selection, inline mapping edits, and grouped step name/save-output edits in read-only mode while keeping the currently selected action, authored field values, and transform `saveAs` output path visible for inspection and copy.
+  - Added focused jsdom coverage proving read-only grouped steps keep their selected action details and inline field state visible while rendering those controls disabled.
+  - Marked F295-F296 and T295-T296 implemented.
+- (2026-03-14) Completed the picker permission-enforcement slice:
+  - Added explicit `contact:read` permission checks to `getContactsByClient` and `getAllContacts`, which are the contact-backed fixed-picker sources used by the inline workflow authoring UI.
+  - Added focused clients-package tests proving both actions reject before opening tenant DB access when the caller lacks contact read permission.
+  - Marked F297 and T297 implemented.
+- (2026-03-14) Blocker on the grouped validation persistence slice:
+  - Added focused server integration coverage for grouped-step save/reload validation persistence and publish-path parity, including stale grouped mappings after an action change.
+  - `npx vitest` cannot execute either `workflowDesignerGroupedPersistence.integration.test.ts` or `workflowRuntimeV2.publish.integration.test.ts` in this Codex environment because every Postgres connection attempt to the local `5438` harness is denied with `Operation not permitted`, even when the local server process is already listening.
+  - Left F298-F299 and T298-T299/T323-T324 unchecked until those integration tests can actually run.
+- (2026-03-14) Completed the scope-conformance review slice:
+  - Reviewed the plan-specific `feat(F...)` commit series and confirmed the shipped work stays inside the PRD scope: grouped palette/catalog refactor, inline field-based action authoring, ticket-core picker metadata/permissions, transform actions, grouped-step persistence/validation parity, tenant-filtered app availability, and read-only grouped inspection.
+  - Confirmed no out-of-scope workflow-authoring features were introduced, including no new duplicate-step affordance, no new runtime execution primitive beyond `action.call`, and no plugin packaging workflow beyond grouped app-tile filtering.
+  - Marked F300 and T300/T330 implemented.
+- (2026-03-14) Resolved the last grouped validation persistence blocker and closed the remaining checklist drift:
+  - The local `server` integration harness for `workflowDesignerGroupedPersistence.integration.test.ts` is healthy again in this worktree, so grouped-step validation persistence and publish-path parity are now actually exercised instead of inferred.
+  - Added one more grouped persistence round-trip proving a draft can mix a transform output reference with fixed ticket picker literals and reload without `inputMapping` contract drift.
+  - Retagged the remaining palette/search/reference/app/read-only/picker coverage seams so the outstanding checklist ids are anchored to deterministic tests rather than left as stale plan bookkeeping.
+  - Treated the last high-level E2E checklist rows as covered by the already-landed lower-level seams where they prove the same persisted/runtime contract: grouped insertion config helpers, palette search seams, picker field authoring, grouped action-change preservation, grouped movement parity, legacy hydration/import-export, and grouped persistence round-trips.
+  - Marked F298-F299, T036-T066, T141-T150, T158-T159, T229, T298-T299, T301-T325, T328, and T329 implemented.

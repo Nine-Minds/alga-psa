@@ -205,6 +205,13 @@ spec:
           {{- end }}
           {{- end }}
 
+          # ----------- AI Document Assist ----------------
+          - name: AI_DOCUMENT_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: AI_DOCUMENT_API_KEY
+
           # ----------- TEMPORAL ----------------
           - name: TEMPORAL_ADDRESS
             value: "{{ .Values.temporal.address }}"
@@ -694,6 +701,54 @@ spec:
           {{- if .Values.stripe.license_price_id }}
           - name: STRIPE_LICENSE_PRICE_ID
             value: "{{ .Values.stripe.license_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.pro_base_price_id }}
+          - name: STRIPE_PRO_BASE_PRICE_ID
+            value: "{{ .Values.stripe.pro_base_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.pro_user_price_id }}
+          - name: STRIPE_PRO_USER_PRICE_ID
+            value: "{{ .Values.stripe.pro_user_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.premium_base_price_id }}
+          - name: STRIPE_PREMIUM_BASE_PRICE_ID
+            value: "{{ .Values.stripe.premium_base_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.premium_user_price_id }}
+          - name: STRIPE_PREMIUM_USER_PRICE_ID
+            value: "{{ .Values.stripe.premium_user_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.pro_base_annual_price_id }}
+          - name: STRIPE_PRO_BASE_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.pro_base_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.pro_user_annual_price_id }}
+          - name: STRIPE_PRO_USER_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.pro_user_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.premium_base_annual_price_id }}
+          - name: STRIPE_PREMIUM_BASE_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.premium_base_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.premium_user_annual_price_id }}
+          - name: STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.premium_user_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.early_adopters_base_price_id }}
+          - name: STRIPE_EARLY_ADOPTERS_BASE_PRICE_ID
+            value: "{{ .Values.stripe.early_adopters_base_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.early_adopters_user_price_id }}
+          - name: STRIPE_EARLY_ADOPTERS_USER_PRICE_ID
+            value: "{{ .Values.stripe.early_adopters_user_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.early_adopters_base_annual_price_id }}
+          - name: STRIPE_EARLY_ADOPTERS_BASE_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.early_adopters_base_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.early_adopters_user_annual_price_id }}
+          - name: STRIPE_EARLY_ADOPTERS_USER_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.early_adopters_user_annual_price_id }}"
           {{- end }}
           {{- end }}
 

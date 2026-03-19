@@ -10,7 +10,6 @@ import { IDocument } from 'server/src/interfaces/document.interface';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { NumberingService } from 'server/src/lib/services/numberingService';
 import { getEventBus } from 'server/src/lib/eventBus';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -29,6 +28,9 @@ import {
 import { ListOptions } from '../controllers/types';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
+import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketRichRender';
+import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+import { aggregateReactions } from '@alga-psa/types';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
 const TICKET_MOBILE_LIST_FIELDS = [
@@ -331,7 +333,7 @@ export class TicketService extends BaseService<ITicket> {
     const documents = await this.getTicketDocuments(id, context);
 
     return {
-      ...(ticket as ITicketWithDetails),
+      ...this.withDescriptionHtml(ticket as ITicketWithDetails),
       documents
     } as ITicketWithDetails;
   }
@@ -572,8 +574,15 @@ export class TicketService extends BaseService<ITicket> {
         }
       });
 
-      return ticket as ITicket;
+      return this.withDescriptionHtml(ticket as ITicket);
     });
+  }
+
+  private withDescriptionHtml<T extends ITicket>(ticket: T): T & { description_html: string } {
+    return {
+      ...ticket,
+      description_html: renderTicketDescriptionHtml(ticket.attributes),
+    };
   }
 
   /**
@@ -675,15 +684,57 @@ export class TicketService extends BaseService<ITicket> {
         if (options?.limit !== undefined) query.limit(options.limit);
       });
 
+    // Batch-fetch avatar URLs for all unique user IDs
+    const userIds = [...new Set(comments.map(c => c.user_id).filter(Boolean))] as string[];
+    const avatarMap: Record<string, string | null> = {};
+    await Promise.all(
+      userIds.map(async (uid) => {
+        try {
+          avatarMap[uid] = await getUserAvatarUrl(uid, context.tenant);
+        } catch {
+          avatarMap[uid] = null;
+        }
+      })
+    );
+
+    // Batch-fetch reactions for all comments
+    const commentIds = comments.map(c => c.comment_id).filter(Boolean) as string[];
+    let reactionsMap: Record<string, any[]> = {};
+    let reactionUserNames: Record<string, string> = {};
+    if (commentIds.length > 0) {
+      const reactionRows = await knex('comment_reactions')
+        .where({ tenant: context.tenant })
+        .whereIn('comment_id', commentIds)
+        .select('comment_id', 'emoji', 'user_id')
+        .orderBy('created_at', 'asc');
+
+      reactionsMap = aggregateReactions(reactionRows, 'comment_id', context.userId);
+
+      const reactionUserIds = [...new Set(reactionRows.map(r => r.user_id))];
+      if (reactionUserIds.length > 0) {
+        const reactionUsers = await knex('users')
+          .where({ tenant: context.tenant })
+          .whereIn('user_id', reactionUserIds)
+          .select('user_id', 'first_name', 'last_name');
+        for (const u of reactionUsers) {
+          reactionUserNames[u.user_id] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown';
+        }
+      }
+    }
+
     // Map database fields to API response format
     return comments.map(comment => ({
       ...comment,
       comment_text: comment.note,
+      comment_html: renderTicketRichTextHtml(comment.note),
       created_by: comment.user_id ?? null,
       created_by_name: comment.created_by_name || comment.author_contact_name || null,
+      created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
       author_contact_id: comment.author_contact_id || comment.contact_id || null,
       author_contact_name: comment.author_contact_name || null,
-      author_contact_email: comment.author_contact_email || null
+      author_contact_email: comment.author_contact_email || null,
+      reactions: reactionsMap[comment.comment_id] ?? [],
+      reaction_user_names: reactionUserNames,
     }));
   }
 
@@ -716,7 +767,8 @@ export class TicketService extends BaseService<ITicket> {
         user_id: context.userId,
         tenant: context.tenant,
         created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
+        updated_at: knex.raw('now()'),
+        metadata: data.metadata,
       };
 
       const [comment] = await trx('comments').insert(commentData).returning('*');
@@ -758,6 +810,7 @@ export class TicketService extends BaseService<ITicket> {
       return {
         ...comment,
         comment_text: comment.note,
+        comment_html: renderTicketRichTextHtml(comment.note),
         created_by: comment.user_id ?? null,
         author_contact_id: comment.contact_id ?? null,
         author_contact_name: null,
@@ -1149,6 +1202,10 @@ export class TicketService extends BaseService<ITicket> {
    * Safely publish events
    */
   private async safePublishEvent(eventType: string, event: any): Promise<void> {
+    if (process.env.E2E_SKIP_APP_INIT === 'true') {
+      return;
+    }
+
     try {
       await getEventBus().publish(
         {

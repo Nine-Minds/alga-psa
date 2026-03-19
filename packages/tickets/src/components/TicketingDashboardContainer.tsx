@@ -144,6 +144,8 @@ export default function TicketingDashboardContainer({
   renderClientDetails,
 }: TicketingDashboardContainerProps) {
   const latestFetchRequestIdRef = useRef(0);
+  const pendingFetchCountRef = useRef(0);
+  const filterFetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAppliedSearchRef = useRef<string>('');
   const isSyncingFromHistoryRef = useRef(false);
   // R1: Track initial mount to prevent unnecessary re-fetch when server data is already present
@@ -289,6 +291,7 @@ export default function TicketingDashboardContainer({
       return;
     }
     const requestId = ++latestFetchRequestIdRef.current;
+    pendingFetchCountRef.current++;
     setIsLoading(true);
     try {
       const effectiveSortBy = overrides?.sortBy ?? filters.sortBy ?? sortBy ?? 'entered_at';
@@ -347,8 +350,9 @@ export default function TicketingDashboardContainer({
       setTickets([]);
       setTotalCount(0);
     } finally {
-      if (requestId === latestFetchRequestIdRef.current) {
-        console.log('[Container] Setting isLoading to false');
+      pendingFetchCountRef.current--;
+      if (pendingFetchCountRef.current === 0) {
+        console.log('[Container] Setting isLoading to false (no pending fetches)');
         setIsLoading(false);
       }
     }
@@ -407,6 +411,10 @@ export default function TicketingDashboardContainer({
     return () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('pageshow', handlePageShow);
+      // Clean up any pending debounced filter fetch
+      if (filterFetchTimeoutRef.current) {
+        clearTimeout(filterFetchTimeoutRef.current);
+      }
     };
   }, [syncFromUrl]);
 
@@ -479,18 +487,59 @@ export default function TicketingDashboardContainer({
     await fetchTickets(activeFilters, 1, newPageSize);
   }, [fetchTickets, activeFilters, updateURLWithFilters, setStoredPageSize]);
 
-  const handleFiltersChanged = useCallback(async (newFilters: Partial<ITicketListFilters>) => {
-    console.log('[Container] handleFiltersChanged called with:', newFilters);
-    setCurrentPage(1); // Reset to page 1 when filters change
-    const mergedFilters = {
-      ...newFilters,
+  const handleFilterChange = useCallback((update: Partial<ITicketListFilters>) => {
+    // Non-empty update: skip if no values actually differ (guards against
+    // controlled components that call onChange on mount to normalize state).
+    // Empty update ({}) = force refresh (e.g., after bundling tickets).
+    const updateKeys = Object.keys(update);
+    const isForceRefresh = updateKeys.length === 0;
+    if (!isForceRefresh) {
+      const current = activeFiltersRef.current;
+      const hasRealChange = updateKeys.some((key) => {
+        const newVal = update[key as keyof ITicketListFilters];
+        const oldVal = current[key as keyof ITicketListFilters];
+        if (newVal === oldVal) return false;
+        if (Array.isArray(newVal) && Array.isArray(oldVal)) {
+          return newVal.length !== oldVal.length || newVal.some((v, i) => v !== (oldVal as unknown[])[i]);
+        }
+        return true;
+      });
+      if (!hasRealChange) return;
+    }
+
+    setCurrentPage(1);
+    const mergedFilters: Partial<ITicketListFilters> = {
+      ...activeFiltersRef.current,
+      ...update,
       sortBy,
       sortDirection,
     };
+    // Auto-derive showOpenOnly when statusId changes
+    if ('statusId' in update) {
+      mergedFilters.showOpenOnly = update.statusId === 'open';
+    }
     setActiveFilters(mergedFilters);
+    // Update ref immediately so rapid back-to-back calls merge with fresh state
+    activeFiltersRef.current = mergedFilters;
     updateURLWithFilters(mergedFilters, 1, pageSize);
-    await fetchTickets(mergedFilters, 1, pageSize);
-  }, [fetchTickets, pageSize, updateURLWithFilters, sortBy, sortDirection]);
+
+    // Debounce the fetch: cancel any pending debounced fetch and schedule a new one.
+    // This prevents N concurrent server requests when the user rapidly clicks filters
+    // (e.g., unselecting agents one by one). Only the final state triggers a fetch.
+    if (filterFetchTimeoutRef.current) {
+      clearTimeout(filterFetchTimeoutRef.current);
+    }
+    if (isForceRefresh) {
+      // Force refresh (empty update) should fetch immediately
+      void fetchTicketsRef.current(mergedFilters, 1, pageSize);
+    } else {
+      setIsLoading(true);
+      filterFetchTimeoutRef.current = setTimeout(() => {
+        filterFetchTimeoutRef.current = null;
+        void fetchTicketsRef.current(mergedFilters, 1, pageSize);
+      }, 300);
+    }
+  }, [pageSize, updateURLWithFilters, sortBy, sortDirection]);
 
   const handleSortChange = useCallback(async (columnId: string, direction: 'asc' | 'desc') => {
     const updatedFilters = {
@@ -532,8 +581,8 @@ export default function TicketingDashboardContainer({
       pageSize={pageSize}
       onPageChange={handlePageChange}
       onPageSizeChange={handlePageSizeChange}
-      onFiltersChanged={handleFiltersChanged}
-      initialFilterValues={activeFilters}
+      onFilterChange={handleFilterChange}
+      filterValues={activeFilters}
       isLoadingMore={isLoading}
       user={currentUser}
       displaySettings={displaySettings}

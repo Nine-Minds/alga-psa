@@ -30,7 +30,9 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useDeletionValidation } from '@alga-psa/auth/hooks/useDeletionValidation';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 const InteractionTypesSettings: React.FC = () => {
+  const { t } = useTranslation('msp/settings');
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,7 @@ const InteractionTypesSettings: React.FC = () => {
       setError(null);
     } catch (error) {
       console.error('Error fetching types:', error);
-      setError('Failed to fetch interaction types');
+      setError(t('interactions.types.messages.error.fetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -104,7 +106,7 @@ const InteractionTypesSettings: React.FC = () => {
     try {
       await validateDeletion(type.type_id);
     } catch (error: any) {
-      handleError(error, 'Failed to validate interaction type deletion');
+      handleError(error, t('interactions.types.messages.error.validateDeleteFailed'));
     }
   };
 
@@ -113,7 +115,7 @@ const InteractionTypesSettings: React.FC = () => {
     try {
       const result = await deleteInteractionType(deleteDialog.typeId);
       if (result.deleted) {
-        toast.success('Interaction type deleted');
+        toast.success(t('interactions.types.messages.success.deleted'));
         setError(null);
         fetchTypes();
         resetDeleteDialog();
@@ -122,7 +124,7 @@ const InteractionTypesSettings: React.FC = () => {
       await validateDeletion(deleteDialog.typeId);
     } catch (error: any) {
       console.error('Error deleting interaction type:', error);
-      setError(error?.message || 'Failed to delete interaction type');
+      setError(error?.message || t('interactions.types.messages.error.deleteFailed'));
     } finally {
       setIsDeleteProcessing(false);
     }
@@ -141,7 +143,7 @@ const InteractionTypesSettings: React.FC = () => {
         await handleImport();
       }
     } catch (error) {
-      handleError(error, 'Failed to check conflicts');
+      handleError(error, t('interactions.types.messages.error.checkConflicts'));
     }
   };
 
@@ -150,7 +152,7 @@ const InteractionTypesSettings: React.FC = () => {
       const result = await importReferenceData('interaction_types', selectedImportTypes, undefined, conflictResolutions);
       
       if (result.imported.length > 0) {
-        toast.success(`Imported ${result.imported.length} interaction type${result.imported.length !== 1 ? 's' : ''}`);
+        toast.success(t('interactions.types.messages.success.imported', { count: result.imported.length }));
       }
       
       if (result.skipped.length > 0) {
@@ -164,14 +166,14 @@ const InteractionTypesSettings: React.FC = () => {
       setConflictResolutions({});
       await fetchTypes();
     } catch (error) {
-      handleError(error, 'Failed to import interaction types');
+      handleError(error, t('interactions.types.messages.error.importFailed'));
     }
   };
 
 
   const tenantTypeColumns: ColumnDefinition<IInteractionType>[] = [
     {
-      title: 'Name',
+      title: t('interactions.types.table.name'),
       dataIndex: 'type_name',
       render: (value: string, record: IInteractionType) => (
         <div className="flex items-center space-x-2">
@@ -181,7 +183,7 @@ const InteractionTypesSettings: React.FC = () => {
       ),
     },
     {
-      title: 'Order',
+      title: t('interactions.types.table.order'),
       dataIndex: 'display_order',
       width: '10%',
       render: (value: number) => (
@@ -189,7 +191,7 @@ const InteractionTypesSettings: React.FC = () => {
       ),
     },
     {
-      title: 'Actions',
+      title: t('interactions.types.table.actions'),
       dataIndex: 'type_id',
       width: '10%',
       render: (_: any, record: IInteractionType) => (
@@ -213,7 +215,7 @@ const InteractionTypesSettings: React.FC = () => {
                 startEditing(record);
               }}
             >
-              Edit
+              {t('interactions.types.actions.edit')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-interaction-type-${record.type_id}`}
@@ -223,7 +225,7 @@ const InteractionTypesSettings: React.FC = () => {
                 openDeleteDialog(record);
               }}
             >
-              Delete
+              {t('interactions.types.actions.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -237,7 +239,7 @@ const InteractionTypesSettings: React.FC = () => {
         <div className="flex items-center justify-center py-8">
           <LoadingIndicator 
             layout="stacked" 
-            text="Loading interaction types..."
+            text={t('interactions.types.loading')}
             spinnerProps={{ size: 'md' }}
           />
         </div>
@@ -248,7 +250,7 @@ const InteractionTypesSettings: React.FC = () => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Interaction Types</h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">{t('interactions.types.title')}</h3>
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>
@@ -270,7 +272,7 @@ const InteractionTypesSettings: React.FC = () => {
             onClick={() => setShowAddDialog(true)} 
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Interaction Type
+            <Plus className="h-4 w-4 mr-2" /> {t('interactions.types.actions.addType')}
           </Button>
           <Button 
             id="import-interaction-types-button" 
@@ -282,11 +284,11 @@ const InteractionTypesSettings: React.FC = () => {
                 setSelectedImportTypes([]);
                 setShowImportDialog(true);
               } catch (error) {
-                handleError(error, 'Failed to fetch available interaction types for import');
+                handleError(error, t('interactions.types.messages.error.fetchAvailable'));
               }
             }}
           >
-            Import from Standard Interaction Types
+            {t('interactions.types.actions.importStandard')}
           </Button>
         </div>
       </div>
@@ -329,24 +331,24 @@ const InteractionTypesSettings: React.FC = () => {
           setShowImportDialog(false);
           setSelectedImportTypes([]);
         }} 
-        title="Import Standard Interaction Types"
+        title={t('interactions.types.dialog.import.title')}
       >
         <DialogContent>
           <div className="space-y-4">
             {!availableReferenceTypes || availableReferenceTypes.length === 0 ? (
-              <p className="text-muted-foreground">No standard interaction types available to import.</p>
+              <p className="text-muted-foreground">{t('interactions.types.dialog.import.empty')}</p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Select standard interaction types to import into your organization:
+                  {t('interactions.types.dialog.import.description')}
                 </p>
                 <div className="border rounded-md">
                   {/* Table Header */}
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
                     <div className="w-8"></div> {/* Checkbox column */}
                     <div className="w-12"></div> {/* Icon column */}
-                    <div className="flex-1">Name</div>
-                    <div className="w-20 text-center">Order</div>
+                    <div className="flex-1">{t('interactions.types.table.name')}</div>
+                    <div className="w-20 text-center">{t('interactions.types.table.order')}</div>
                   </div>
                   {/* Table Body */}
                   <div className="max-h-[300px] overflow-y-auto">
@@ -385,22 +387,22 @@ const InteractionTypesSettings: React.FC = () => {
           </div>
         </DialogContent>
         <DialogFooter>
-          <Button 
+          <Button
             id="cancel-import-interaction-types"
-            variant="outline" 
+            variant="outline"
             onClick={() => {
               setShowImportDialog(false);
               setSelectedImportTypes([]);
             }}
           >
-            Cancel
+            {t('interactions.types.actions.cancel')}
           </Button>
-          <Button 
+          <Button
             id="confirm-import-interaction-types"
             onClick={handleCheckConflicts}
             disabled={selectedImportTypes.length === 0}
           >
-            Import Selected
+            {t('interactions.types.actions.importSelected')}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -412,12 +414,12 @@ const InteractionTypesSettings: React.FC = () => {
           setImportConflicts([]);
           setConflictResolutions({});
         }} 
-        title="Resolve Import Conflicts"
+        title={t('interactions.types.dialog.conflicts.title')}
       >
         <DialogContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              The following items have conflicts that need to be resolved:
+              {t('interactions.types.dialog.conflicts.description')}
             </p>
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {importConflicts.map((conflict) => {
@@ -429,9 +431,9 @@ const InteractionTypesSettings: React.FC = () => {
                     <div>
                       <h4 className="font-medium">{conflict.referenceItem.type_name}</h4>
                       <p className="text-sm text-muted-foreground">
-                        Conflict: {conflict.conflictType === 'name' 
-                          ? 'Name already exists' 
-                          : `Order ${conflict.referenceItem.display_order} is already in use`}
+                        Conflict: {conflict.conflictType === 'name'
+                          ? t('interactions.types.dialog.conflicts.nameConflict')
+                          : t('interactions.types.dialog.conflicts.orderConflict', { order: conflict.referenceItem.display_order })}
                       </p>
                     </div>
                     
@@ -446,9 +448,9 @@ const InteractionTypesSettings: React.FC = () => {
                             [itemId]: { action: 'skip' }
                           })}
                         />
-                        <span>Skip this item</span>
+                        <span>{t('interactions.types.dialog.conflicts.skipItem')}</span>
                       </label>
-                      
+
                       <label className="flex items-center space-x-2">
                         <input
                           type="radio"
@@ -459,7 +461,7 @@ const InteractionTypesSettings: React.FC = () => {
                             [itemId]: { action: 'rename', newName: conflict.referenceItem.type_name + ' (2)' }
                           })}
                         />
-                        <span>Import with different name:</span>
+                        <span>{t('interactions.types.dialog.conflicts.importDifferentName')}</span>
                         {resolution.action === 'rename' && (
                           <Input
                             value={resolution.newName || ''}
@@ -484,7 +486,7 @@ const InteractionTypesSettings: React.FC = () => {
                               [itemId]: { action: 'reorder', newOrder: conflict.suggestedOrder }
                             })}
                           />
-                          <span>Import with order {conflict.suggestedOrder}</span>
+                          <span>{t('interactions.types.dialog.conflicts.importDifferentOrder', { order: conflict.suggestedOrder })}</span>
                         </label>
                       )}
                     </div>
@@ -495,21 +497,21 @@ const InteractionTypesSettings: React.FC = () => {
           </div>
         </DialogContent>
         <DialogFooter>
-          <Button 
+          <Button
             id="cancel-resolve-conflicts"
-            variant="outline" 
+            variant="outline"
             onClick={() => {
               setImportConflicts([]);
               setConflictResolutions({});
             }}
           >
-            Cancel
+            {t('interactions.types.actions.cancel')}
           </Button>
-          <Button 
+          <Button
             id="confirm-import-with-resolutions"
             onClick={handleImport}
           >
-            Import with Resolutions
+            {t('interactions.types.dialog.conflicts.resolve')}
           </Button>
         </DialogFooter>
       </Dialog>

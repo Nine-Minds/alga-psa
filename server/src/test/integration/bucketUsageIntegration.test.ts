@@ -5,7 +5,7 @@ import { Knex } from 'knex';
 // Import actions and services involved in the integration
 import { saveTimeEntry, deleteTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
 import { createUsageRecord, updateUsageRecord, deleteUsageRecord } from '@alga-psa/billing/actions';
-import { findOrCreateCurrentBucketUsageRecord, reconcileBucketUsageRecord } from 'server/src/lib/services/bucketUsageService';
+import { findOrCreateCurrentBucketUsageRecord, reconcileBucketUsageRecord } from '@alga-psa/billing/services/bucketUsageService';
 import { getRemainingBucketUnits } from '@alga-psa/reporting/actions';
 
 // Test utilities (if any, e.g., for creating test data)

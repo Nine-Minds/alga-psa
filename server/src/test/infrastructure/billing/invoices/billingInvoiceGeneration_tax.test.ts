@@ -11,7 +11,7 @@ import {
 import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
 import { generateManualInvoice } from '@alga-psa/billing/actions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
-import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import { BillingEngine } from '@alga-psa/billing/services';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
@@ -74,13 +74,13 @@ vi.mock('@alga-psa/core', () => ({
   })
 }));
 
-vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+vi.mock('@alga-psa/workflows/persistence', () => ({
   WorkflowEventModel: {
     create: vi.fn()
   }
 }));
 
-vi.mock('@alga-psa/shared/workflow/streams', () => ({
+vi.mock('@alga-psa/workflow-streams', () => ({
   getRedisStreamClient: () => ({
     publishEvent: vi.fn()
   }),

@@ -9,8 +9,9 @@ import { createTenantProjectStatus } from '../actions/projectTaskStatusActions';
 
 interface ProjectTaskStatusSelectorProps {
   availableStatuses: IStatus[];
-  selectedStatuses: Array<{ status_id: string; display_order: number }>;
-  onChange: (statuses: Array<{ status_id: string; display_order: number }>) => void;
+  selectedStatuses: Array<{ status_id: string; display_order: number; phase_id?: string }>;
+  onChange: (statuses: Array<{ status_id: string; display_order: number; phase_id?: string }>) => void;
+  phaseId?: string | null;
   onStatusCreated?: (status: IStatus) => void;
   error?: string;
 }
@@ -19,6 +20,7 @@ export function ProjectTaskStatusSelector({
   availableStatuses,
   selectedStatuses,
   onChange,
+  phaseId,
   onStatusCreated,
   error
 }: ProjectTaskStatusSelectorProps) {
@@ -33,7 +35,9 @@ export function ProjectTaskStatusSelector({
 
   // Add a status to the selection
   const addStatus = (statusId: string) => {
-    if (selectedStatuses.find(s => s.status_id === statusId)) {
+    if (selectedStatuses.find(
+      (status) => status.status_id === statusId && (status.phase_id ?? null) === (phaseId ?? null)
+    )) {
       return; // Already added
     }
 
@@ -43,13 +47,15 @@ export function ProjectTaskStatusSelector({
 
     onChange([
       ...selectedStatuses,
-      { status_id: statusId, display_order: maxOrder + 1 }
+      { status_id: statusId, display_order: maxOrder + 1, phase_id: phaseId ?? undefined }
     ]);
   };
 
   // Remove a status from the selection
   const removeStatus = (statusId: string) => {
-    const filtered = selectedStatuses.filter(s => s.status_id !== statusId);
+    const filtered = selectedStatuses.filter(
+      (status) => !(status.status_id === statusId && (status.phase_id ?? null) === (phaseId ?? null))
+    );
     // Reorder remaining statuses
     const reordered = filtered.map((s, index) => ({
       ...s,
@@ -102,7 +108,8 @@ export function ProjectTaskStatusSelector({
         .filter((s): s is IStatus => s !== undefined)
         .map((s, index) => ({
           status_id: s.status_id,
-          display_order: index + 1
+          display_order: index + 1,
+          phase_id: phaseId ?? undefined,
         }));
 
       if (standardStatuses.length === 3) {
@@ -111,15 +118,19 @@ export function ProjectTaskStatusSelector({
         // Fallback: use first 3 statuses if we can't find the standard ones
         onChange(availableStatuses.slice(0, 3).map((s, index) => ({
           status_id: s.status_id,
-          display_order: index + 1
+          display_order: index + 1,
+          phase_id: phaseId ?? undefined,
         })));
       }
     }
-  }, [availableStatuses]);
+  }, [availableStatuses, phaseId]);
 
   // Get unselected statuses
   const unselectedStatuses = availableStatuses.filter(
-    status => !selectedStatuses.find(s => s.status_id === status.status_id)
+    status => !selectedStatuses.find(
+      (selected) =>
+        selected.status_id === status.status_id && (selected.phase_id ?? null) === (phaseId ?? null)
+    )
   );
 
   // Toggle between standard and custom mode
@@ -186,7 +197,9 @@ export function ProjectTaskStatusSelector({
       {isExpanded && (
         <>
           <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-gray-600">Customize task statuses for this project</span>
+            <span className="text-xs text-gray-600">
+              {phaseId ? 'Customize task statuses for this phase' : 'Customize task statuses for this project'}
+            </span>
             <div className="flex gap-2">
               {unselectedStatuses.length > 0 && (
                 <Button

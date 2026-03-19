@@ -1,9 +1,10 @@
 'use server'
 
 import { createTenantKnex } from '@/lib/db';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { IChat } from '../../interfaces/chat.interface';
 import { IMessage } from '../../interfaces/message.interface';
-import Chat from '../../models/chat';
+import Chat, { IChatHistoryItem } from '../../models/chat';
 import Message from '../../models/message';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -91,6 +92,27 @@ export async function addMessageToChatAction(data: Omit<IMessage, 'tenant'>) {
 
   try {
     const message = await Message.insert(data);
+    if (data.chat_id) {
+      try {
+        const { knex } = await createTenantKnex();
+        await knex<IChat>('chats')
+          .where({ id: data.chat_id })
+          .update({ updated_at: knex.fn.now() });
+      } catch (touchError) {
+        if (
+          typeof touchError === 'object' &&
+          touchError !== null &&
+          'code' in touchError &&
+          (touchError as { code?: string }).code === '42703'
+        ) {
+          console.warn(
+            '[chatActions] chats.updated_at column missing; skipping chat recency update.',
+          );
+        } else {
+          throw touchError;
+        }
+      }
+    }
     return { _id: message.id, persisted: true };
   } catch (error) {
     if (isMissingRelationError(error)) {
@@ -126,6 +148,99 @@ export async function getChatMessagesAction(chatId: string) {
     }
     console.error(error);
     throw new Error('Failed to fetch chat messages');
+  }
+}
+
+export type ChatHistoryItem = Pick<
+  IChatHistoryItem,
+  'id' | 'title_text' | 'title_is_locked' | 'created_at' | 'updated_at' | 'preview_text'
+>;
+
+export async function listCurrentUserChatsAction(limit = 20): Promise<ChatHistoryItem[]> {
+  if (!(await isChatPersistenceAvailable())) {
+    return [];
+  }
+
+  const user = await getCurrentUser();
+  if (!user?.user_id) {
+    return [];
+  }
+
+  try {
+    return await Chat.getRecentByUser(user.user_id, limit);
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      markPersistenceStatus(false);
+      console.warn(
+        '[chatActions] Chat table missing during chat listing; continuing without persistence.',
+      );
+      return [];
+    }
+    console.error(error);
+    throw new Error('Failed to list chats');
+  }
+}
+
+export async function renameCurrentUserChatAction(chatId: string, title: string): Promise<boolean> {
+  if (!chatId) {
+    return false;
+  }
+
+  if (!(await isChatPersistenceAvailable())) {
+    return false;
+  }
+
+  const user = await getCurrentUser();
+  if (!user?.user_id) {
+    return false;
+  }
+
+  const nextTitle = title.trim();
+  if (!nextTitle.length) {
+    return false;
+  }
+
+  try {
+    return await Chat.updateTitleForUser(chatId, user.user_id, nextTitle);
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      markPersistenceStatus(false);
+      console.warn(
+        '[chatActions] Chat table missing during rename; continuing without persistence.',
+      );
+      return false;
+    }
+    console.error(error);
+    throw new Error('Failed to rename chat');
+  }
+}
+
+export async function deleteCurrentUserChatAction(chatId: string): Promise<boolean> {
+  if (!chatId) {
+    return false;
+  }
+
+  if (!(await isChatPersistenceAvailable())) {
+    return false;
+  }
+
+  const user = await getCurrentUser();
+  if (!user?.user_id) {
+    return false;
+  }
+
+  try {
+    return await Chat.deleteForUser(chatId, user.user_id);
+  } catch (error) {
+    if (isMissingRelationError(error)) {
+      markPersistenceStatus(false);
+      console.warn(
+        '[chatActions] Chat/messages table missing during delete; continuing without persistence.',
+      );
+      return false;
+    }
+    console.error(error);
+    throw new Error('Failed to delete chat');
   }
 }
 

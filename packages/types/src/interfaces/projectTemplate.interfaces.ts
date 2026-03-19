@@ -64,6 +64,7 @@ export interface IProjectTemplateChecklistItem extends TenantEntity {
 export interface IProjectTemplateStatusMapping extends TenantEntity {
   template_status_mapping_id: string;
   template_id: string;
+  template_phase_id?: string;
   status_id?: string;
   custom_status_name?: string;
   display_order: number;

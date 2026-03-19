@@ -185,5 +185,38 @@
     "nameLabel": "Nom du dossier",
     "namePlaceholder": "Saisissez le nom du dossier",
     "willCreateIn": "Sera créé dans : {{folder}}"
+  },
+  "portal": {
+    "subtitle": "Consultez et téléchargez vos documents partagés",
+    "searchPlaceholder": "Rechercher des documents...",
+    "showing": "{{count}} documents",
+    "loadError": "Échec du chargement des documents. Veuillez réessayer."
+  },
+  "kb": {
+    "title": "Base de connaissances",
+    "subtitle": "Trouvez des réponses aux questions courantes et des guides pratiques",
+    "categories": "Catégories",
+    "allArticles": "Tous les articles",
+    "searchPlaceholder": "Rechercher des articles...",
+    "articleCount": "{{count}} articles",
+    "noArticles": "Aucun article trouvé",
+    "loadError": "Échec du chargement des articles. Veuillez réessayer.",
+    "noContent": "Aucun contenu disponible",
+    "articleNotFound": "Article introuvable",
+    "backToArticles": "Retour aux articles",
+    "views": "vues",
+    "wasHelpful": "Cet article vous a-t-il été utile ?",
+    "yes": "Oui",
+    "no": "Non",
+    "feedbackThanks": "Merci pour votre retour !",
+    "feedbackError": "Échec de l'envoi du retour",
+    "filterByTags": "Filtrer par tags..."
+  },
+  "visibility": {
+    "cascadeTitle": "Mettre à jour la visibilité des documents",
+    "cascadeMakeVisible": "Souhaitez-vous également rendre les {{count}} document(s) dans \"{{name}}\" visibles sur le portail client ?",
+    "cascadeMakeHidden": "Souhaitez-vous également masquer les {{count}} document(s) dans \"{{name}}\" du portail client ?",
+    "cascadeYes": "Oui, mettre à jour les documents",
+    "cascadeNo": "Non, dossier uniquement"
   }
 }

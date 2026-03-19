@@ -352,7 +352,9 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       { type: 'ticket_resource', table: 'ticket_resources', foreignKey: 'assigned_to', label: 'ticket resource assignment' },
       { type: 'task_resource', table: 'task_resources', foreignKey: 'assigned_to', label: 'task resource assignment' },
       { type: 'invoice_annotation', table: 'invoice_annotations', foreignKey: 'user_id', label: 'invoice annotation' },
-      { type: 'job', table: 'jobs', foreignKey: 'user_id', label: 'job' }
+      { type: 'job', table: 'jobs', foreignKey: 'user_id', label: 'job' },
+      { type: 'comment_reaction', table: 'comment_reactions', foreignKey: 'user_id', label: 'comment reaction' },
+      { type: 'project_task_comment_reaction', table: 'project_task_comment_reactions', foreignKey: 'user_id', label: 'project task comment reaction' }
     ]
   },
   contract_line: {

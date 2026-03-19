@@ -9,6 +9,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Search, Building2, Mail } from 'lucide-react';
+import { isMicrosoftConsumerEnterpriseEdition } from '../../lib/microsoftConsumerVisibility';
 
 interface EmailProviderSelectorProps {
   onProviderSelected: (providerType: 'google' | 'microsoft' | 'imap') => void;
@@ -21,6 +22,7 @@ export function EmailProviderSelector({
   onCancel,
   hideHeader = false,
 }: EmailProviderSelectorProps) {
+  const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   
   const handleProviderClick = (providerType: 'google' | 'microsoft' | 'imap') => {
     onProviderSelected(providerType);
@@ -40,7 +42,10 @@ export function EmailProviderSelector({
       )}
 
       {/* Provider Selection Cards */}
-      <div id="email-provider-selector" className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <div
+        id="email-provider-selector"
+        className={`grid grid-cols-1 gap-6 max-w-5xl mx-auto ${isEnterpriseEdition ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}
+      >
         
         {/* Google Gmail Card */}
         <Card 
@@ -84,45 +89,45 @@ export function EmailProviderSelector({
           </CardContent>
         </Card>
 
-        {/* Microsoft 365 Card */}
-        <Card 
-          id="microsoft-provider-selector-card"
-          className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-[rgb(var(--color-card))] to-blue-500/10"
-          onClick={() => handleProviderClick('microsoft')}
-        >
-          <CardHeader className="text-center pb-4">
-            <div className="flex justify-center mb-4">
-              <div className="p-4 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 shadow-lg">
-                <div className="flex items-center justify-center">
-                  {/* Microsoft-style building/enterprise icon */}
-                  <Building2 className="h-8 w-8 text-white" />
+        {isEnterpriseEdition && (
+          <Card 
+            id="microsoft-provider-selector-card"
+            className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-[rgb(var(--color-card))] to-blue-500/10"
+            onClick={() => handleProviderClick('microsoft')}
+          >
+            <CardHeader className="text-center pb-4">
+              <div className="flex justify-center mb-4">
+                <div className="p-4 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 shadow-lg">
+                  <div className="flex items-center justify-center">
+                    <Building2 className="h-8 w-8 text-white" />
+                  </div>
                 </div>
               </div>
-            </div>
-            <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">Microsoft 365</CardTitle>
-            <CardDescription className="text-base text-[rgb(var(--color-text-600))]">
-              Microsoft 365 / Outlook Integration
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <div className="text-sm text-[rgb(var(--color-text-600))] space-y-2">
-              <p>✓ Microsoft 365 and Outlook accounts</p>
-              <p>✓ Folder-based email filtering</p>
-              <p>✓ Real-time email processing</p>
-              <p>✓ Azure AD OAuth integration</p>
-            </div>
-            <Button 
-              id="setup-microsoft-provider-button"
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-md"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleProviderClick('microsoft');
-              }}
-            >
-              Set up Microsoft 365
-            </Button>
-          </CardContent>
-        </Card>
+              <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">Microsoft 365</CardTitle>
+              <CardDescription className="text-base text-[rgb(var(--color-text-600))]">
+                Microsoft 365 / Outlook Integration
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <div className="text-sm text-[rgb(var(--color-text-600))] space-y-2">
+                <p>✓ Microsoft 365 and Outlook accounts</p>
+                <p>✓ Folder-based email filtering</p>
+                <p>✓ Real-time email processing</p>
+                <p>✓ Azure AD OAuth integration</p>
+              </div>
+              <Button 
+                id="setup-microsoft-provider-button"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-md"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleProviderClick('microsoft');
+                }}
+              >
+                Set up Microsoft 365
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* IMAP Card */}
         <Card
@@ -180,7 +185,9 @@ export function EmailProviderSelector({
       {/* Help Text */}
       <div className="text-center">
         <p className="text-xs text-muted-foreground max-w-2xl mx-auto">
-          Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.
+          {isEnterpriseEdition
+            ? 'Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.'
+            : 'Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; otherwise choose IMAP. You can change this later by removing and reconfiguring your email provider.'}
         </p>
       </div>
     </div>

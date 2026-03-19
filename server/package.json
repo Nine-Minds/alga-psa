@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.16.5",
+  "version": "1.0.10-rc4",
   "private": true,
   "type": "module",
   "engines": {
@@ -16,12 +16,12 @@
     "ngrok:tunnel": "ngrok http 3000",
     "test:webhook": "node scripts/test-webhook.js",
     "dev:with-ngrok": "echo 'Set NGROK_URL and run: NGROK_URL=https://your-url.ngrok.io npm run dev'",
-    "build": "NODE_ENV=production next build --webpack",
-    "build:turbo": "NODE_ENV=production next build --turbo",
-    "build:enterprise": "NODE_ENV=production next build --webpack",
-    "build:enterprise:turbo": "NODE_ENV=production NEXT_PUBLIC_EDITION=enterprise next build --turbo",
+    "build": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=production next build --webpack",
+    "build:turbo": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=production next build --turbo",
+    "build:enterprise": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=production next build --webpack",
+    "build:enterprise:turbo": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=production NEXT_PUBLIC_EDITION=enterprise next build --turbo",
     "build:enterprise-script": "../scripts/build-enterprise.sh",
-    "analyze": "NODE_ENV=production ANALYZE=true next build --webpack",
+    "analyze": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=production ANALYZE=true next build --webpack",
     "start": "next start -p 3000",
     "start:next": "next start -p 3000",
     "start:express": "tsx index.ts",
@@ -56,6 +56,7 @@
     "migrate:ee:status": "node scripts/run-ee-migrations.js status"
   },
   "dependencies": {
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@anthropic-ai/sdk": "^0.36.3",
     "@assemblyscript/loader": "^0.27.36",
@@ -92,7 +93,6 @@
     "@opentelemetry/winston-transport": "^0.13.0",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-form": "^0.1.2",
-
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-progress": "^1.1.1",
     "@radix-ui/react-select": "^2.0.0",

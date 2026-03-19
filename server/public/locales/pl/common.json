@@ -101,6 +101,13 @@
     "responseSource": {
       "clientPortal": "Otrzymano przez Portal Klienta",
       "inboundEmail": "Otrzymano przez e-mail"
+    },
+    "origin": {
+      "internal": "Utworzone wewnętrznie",
+      "clientPortal": "Utworzone przez portal klienta",
+      "inboundEmail": "Utworzone przez e-mail przychodzący",
+      "api": "Utworzone przez API",
+      "other": "Utworzone przez inne źródło"
     }
   },
   "time": {

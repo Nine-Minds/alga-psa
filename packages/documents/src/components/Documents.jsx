@@ -8,6 +8,7 @@ import DocumentSelector from './DocumentSelector';
 import DocumentsPagination from './DocumentsPagination';
 import { DocumentsGridSkeleton } from './DocumentsPageSkeleton';
 import { Button } from '@alga-psa/ui/components/Button';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from '@alga-psa/ui/components/Input';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
@@ -16,7 +17,7 @@ import FolderManager from './FolderManager';
 import DocumentListView from './DocumentListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import FolderSelectorModal from './FolderSelectorModal';
-import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, ChevronRight, X, FolderInput, Trash2 } from 'lucide-react';
+import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, X, FolderInput, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 import toast from 'react-hot-toast';
@@ -652,9 +653,7 @@ const Documents = ({ id = 'documents', documents: initialDocuments, gridColumns,
           <div className="flex flex-1 overflow-hidden">
             {/* Collapsed Folders Button */}
             {isFoldersPaneCollapsed && (<div className="flex-shrink-0 border-r border-gray-200 flex items-start p-2">
-                <button onClick={() => setIsFoldersPaneCollapsed(false)} className="p-1 hover:bg-gray-100 rounded" title="Show folders">
-                  <ChevronRight className="w-4 h-4"/>
-                </button>
+                <CollapseToggleButton id="documents-show-folders-button" isCollapsed={true} collapsedLabel="Show folders" expandedLabel="Collapse folders" expandDirection="right" onClick={() => setIsFoldersPaneCollapsed(false)}/>
               </div>)}
 
             {/* Folder Navigation Sidebar */}

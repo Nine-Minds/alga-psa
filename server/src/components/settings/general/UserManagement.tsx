@@ -30,10 +30,12 @@ import { validateContactName, validateEmailAddress, validatePassword, getPasswor
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import OrgChart from './org-chart/OrgChart';
 import { QuickAddContact } from '@alga-psa/clients/components';
 
 const UserManagement = (): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [users, setUsers] = useState<IUser[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -97,7 +99,7 @@ const UserManagement = (): React.JSX.Element => {
   const normalizeCreateUserError = (error: unknown): string => {
     const rawMessage = extractErrorMessage(error);
     if (!rawMessage) {
-      return 'Failed to create user';
+      return t('users.messages.error.createUser');
     }
 
     if (rawMessage.includes('EMAIL_EXISTS:') || rawMessage.includes('VALIDATION_ERROR:')) {
@@ -106,16 +108,16 @@ const UserManagement = (): React.JSX.Element => {
 
     if (/already exists|duplicate key value|unique constraint/i.test(rawMessage)) {
       if (rawMessage.includes('already exists for this contact or email address')) {
-        return 'A portal user already exists for this contact or email address.';
+        return t('users.messages.error.portalUserExists');
       }
       if (rawMessage.includes('already exists for this contact')) {
-        return 'A portal user already exists for this contact. Use password reset for the existing user.';
+        return t('users.messages.error.portalUserExistsForContact');
       }
-      return 'This email address is already in use. Please use a different email address.';
+      return t('users.messages.error.emailAlreadyInUse');
     }
 
     if (/cannot assign/i.test(rawMessage)) {
-      return 'Please select an appropriate role for this user type';
+      return t('users.messages.error.selectAppropriateRole');
     }
 
     return rawMessage;
@@ -246,14 +248,14 @@ const UserManagement = (): React.JSX.Element => {
         await navigator.clipboard.writeText(linkResult.url);
         toast.success(
           linkResult.source === 'vanity'
-            ? 'Copied vanity portal login link to clipboard'
-            : 'Copied canonical portal login link to clipboard'
+            ? t('users.messages.success.copiedVanityLink')
+            : t('users.messages.success.copiedCanonicalLink')
         );
       } else {
-        toast.error('Clipboard API is not available in this browser.');
+        toast.error(t('users.messages.error.clipboardUnavailable'));
       }
     } catch (error) {
-      handleError(error, 'Failed to copy portal login link');
+      handleError(error, t('users.messages.error.copyPortalLink'));
     } finally {
       setIsCopyingPortalLink(false);
     }
@@ -278,7 +280,7 @@ const UserManagement = (): React.JSX.Element => {
       setLoading(false);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError('Failed to fetch users');
+      setError(t('users.messages.error.fetchUsers'));
       setLoading(false);
     }
   };
@@ -300,7 +302,7 @@ const UserManagement = (): React.JSX.Element => {
       }
     } catch (err) {
       console.error('Error fetching roles:', err);
-      setError('Failed to fetch roles');
+      setError(t('users.messages.error.fetchRoles'));
     }
   };
 
@@ -310,7 +312,7 @@ const UserManagement = (): React.JSX.Element => {
       setClients(fetchedClients);
     } catch (err) {
       console.error('Error fetching clients:', err);
-      setError('Failed to fetch clients');
+      setError(t('users.messages.error.fetchClients'));
     }
   };
 
@@ -357,20 +359,20 @@ const fetchContacts = async (): Promise<void> => {
       // Validate all fields first
       const fieldsValid = validateAllFields();
       if (!fieldsValid) {
-        setError('Please fix the validation errors before continuing');
+        setError(t('users.messages.error.fixValidationErrors'));
         return;
       }
       
       // Validate required fields based on portal type
       if (portalType === 'msp') {
         if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
-          setError('Please fill in all required fields');
+          setError(t('users.messages.error.fillRequiredFields'));
           return;
         }
       } else {
         // For client portal, password is optional (they'll set it via invitation)
         if (!newUser.firstName || !newUser.lastName || !newUser.email) {
-          setError('Please fill in all required fields');
+          setError(t('users.messages.error.fillRequiredFields'));
           return;
         }
       }
@@ -379,7 +381,7 @@ const fetchContacts = async (): Promise<void> => {
         if (!newUser.password) {
           // Check for validation errors before sending invitation
           if (contactValidationError) {
-            toast.error('Please fix the validation errors before sending the invitation');
+            toast.error(t('users.messages.error.fixValidationBeforeInvitation'));
             return;
           }
           
@@ -387,12 +389,12 @@ const fetchContacts = async (): Promise<void> => {
             try {
               const invitationResult = await sendPortalInvitation(selectedContactId);
               if (invitationResult.success) {
-                toast.success('Portal invitation sent successfully!');
+                toast.success(t('users.messages.success.portalInvitationSent'));
               } else {
-                toast(invitationResult.error || 'Failed to send invitation', { icon: '⚠️', duration: 5000 });
+                toast(invitationResult.error || t('users.messages.error.sendInvitation'), { icon: '⚠️', duration: 5000 });
               }
             } catch (inviteError) {
-              toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
+              toast(t('users.messages.error.sendInvitationManual'), { icon: '⚠️', duration: 5000 });
             }
           } else {
             try {
@@ -405,12 +407,12 @@ const fetchContacts = async (): Promise<void> => {
               try {
                 const invitationResult = await sendPortalInvitation(contact.contact_name_id);
                 if (invitationResult.success) {
-                  toast.success('Portal invitation sent successfully!');
+                  toast.success(t('users.messages.success.portalInvitationSent'));
                 } else {
-                  toast(invitationResult.error || 'Failed to send invitation', { icon: '⚠️', duration: 5000 });
+                  toast(invitationResult.error || t('users.messages.error.sendInvitation'), { icon: '⚠️', duration: 5000 });
                 }
               } catch (inviteError) {
-                toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
+                toast(t('users.messages.error.sendInvitationManual'), { icon: '⚠️', duration: 5000 });
               }
             } catch (contactError: any) {
               // Handle contact creation errors
@@ -441,16 +443,16 @@ const fetchContacts = async (): Promise<void> => {
               : { password: newUser.password, contact: { email: newUser.email, fullName: `${newUser.firstName} ${newUser.lastName}`, clientId: newUser.clientId || '', isClientAdmin: false }, roleId: newUser.role, requirePasswordChange: requirePwdChange }
           );
           if (result.success) {
-            toast.success('Client portal user created successfully!');
+            toast.success(t('users.messages.success.clientPortalUserCreated'));
           } else {
-            reportCreateUserError(result.error || 'Failed to create client portal user');
+            reportCreateUserError(result.error || t('users.messages.error.createClientPortalUser'));
             return;
           }
           await fetchUsers();
         }
       } else {
         // Create MSP user
-        const createdUser = await addUser({
+        const result = await addUser({
           firstName: newUser.firstName,
           lastName: newUser.lastName,
           email: newUser.email,
@@ -459,8 +461,13 @@ const fetchContacts = async (): Promise<void> => {
           reportsTo: newUser.reportsTo || undefined
         });
 
+        if (!result.success) {
+          reportCreateUserError(result.error);
+          return;
+        }
+
         // Fetch the updated user with roles
-        const updatedUser = await getUserWithRoles(createdUser.user_id);
+        const updatedUser = await getUserWithRoles(result.user.user_id);
         if (updatedUser) {
           setUsers([...users, updatedUser]);
         }
@@ -519,14 +526,14 @@ const fetchContacts = async (): Promise<void> => {
   };
 
   const statusOptions = [
-    { value: 'all', label: 'All Users' },
-    { value: 'active', label: 'Active Users' },
-    { value: 'inactive', label: 'Inactive Users' }
+    { value: 'all', label: t('users.filter.all') },
+    { value: 'active', label: t('users.filter.active') },
+    { value: 'inactive', label: t('users.filter.inactive') }
   ];
 
   const viewOptions: ViewSwitcherOption<'msp' | 'client'>[] = [
-    { value: 'msp', label: 'MSP' },
-    { value: 'client', label: 'Client Portal' }
+    { value: 'msp', label: t('users.viewSwitcher.msp') },
+    { value: 'client', label: t('users.viewSwitcher.clientPortal') }
   ];
 
 
@@ -538,7 +545,7 @@ const fetchContacts = async (): Promise<void> => {
   const renderNewUserForm = () => (
     <div className="mb-4 p-4 border rounded-md">
       <h3 className="text-lg font-semibold mb-2">
-        Create New {portalType === 'msp' ? 'MSP User' : 'Client Portal User'}
+        {portalType === 'msp' ? t('users.form.title.msp') : t('users.form.title.client')}
       </h3>
       {error && (
         <Alert variant="destructive" className="mb-4">
@@ -550,7 +557,7 @@ const fetchContacts = async (): Promise<void> => {
           {/* Left column: manual details */}
           <div className="space-y-2">
             <div>
-              <Label htmlFor="first-name">First Name <span className="text-destructive">*</span></Label>
+              <Label htmlFor="first-name">{t('users.form.fields.firstName')} <span className="text-destructive">*</span></Label>
               <Input
                 id="first-name"
                 value={newUser.firstName}
@@ -571,7 +578,7 @@ const fetchContacts = async (): Promise<void> => {
               )}
             </div>
             <div>
-              <Label htmlFor="last-name">Last Name <span className="text-destructive">*</span></Label>
+              <Label htmlFor="last-name">{t('users.form.fields.lastName')} <span className="text-destructive">*</span></Label>
               <Input
                 id="last-name"
                 value={newUser.lastName}
@@ -592,7 +599,7 @@ const fetchContacts = async (): Promise<void> => {
               )}
             </div>
             <div>
-              <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
+              <Label htmlFor="email">{t('users.form.fields.email')} <span className="text-destructive">*</span></Label>
               <Input
                 id="email"
                 type="email"
@@ -615,8 +622,8 @@ const fetchContacts = async (): Promise<void> => {
             </div>
             {portalType === 'client' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Client
-                  <span className="text-sm text-gray-500"> (optional)</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.form.fields.client')}
+                  <span className="text-sm text-gray-500"> {t('users.form.fields.clientOptional')}</span>
                 </label>
                 <ClientPicker
                   id="new-user-client-picker"
@@ -627,26 +634,26 @@ const fetchContacts = async (): Promise<void> => {
                   onFilterStateChange={(state) => setClientFilterState(state)}
                   clientTypeFilter={clientClientTypeFilter}
                   onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
-                  placeholder="Select Client"
+                  placeholder={t('users.form.fields.selectClient')}
                   fitContent={false}
                 />
               </div>
             )}
             <div>
               <CustomSelect
-                label="Primary Role"
+                label={t('users.form.fields.primaryRole')}
                 value={newUser.role}
                 onValueChange={(value) => setNewUser({ ...newUser, role: value })}
                 options={roles.map((role): SelectOption => ({
                   value: role.role_id,
                   label: role.role_name
                 }))}
-                placeholder="Select Role"
+                placeholder={t('users.form.fields.selectRole')}
               />
             </div>
             {isTeamsV2Enabled && portalType === 'msp' && (
               <div>
-                <Label>Reports To <span className="text-sm text-muted-foreground font-normal">(optional)</span></Label>
+                <Label>{t('users.form.fields.reportsTo')} <span className="text-sm text-muted-foreground font-normal">{t('users.form.fields.reportsToOptional')}</span></Label>
                 <UserPicker
                   value={newUser.reportsTo}
                   onValueChange={(value) => setNewUser({ ...newUser, reportsTo: value || '' })}
@@ -655,7 +662,7 @@ const fetchContacts = async (): Promise<void> => {
                   labelStyle="none"
                   buttonWidth="full"
                   size="sm"
-                  placeholder="Select manager"
+                  placeholder={t('users.form.fields.selectManager')}
                 />
               </div>
             )}
@@ -665,8 +672,8 @@ const fetchContacts = async (): Promise<void> => {
           <div className="space-y-4">
             {portalType === 'client' && (
               <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">Existing Contact
-                  <span className="text-sm text-gray-500"> (optional)</span> </Label>
+                <Label className="block text-sm font-medium text-gray-700 mb-1">{t('users.form.fields.existingContact')}
+                  <span className="text-sm text-gray-500"> {t('users.form.fields.existingContactOptional')}</span> </Label>
                 <ContactPicker
                   id="new-user-contact-picker"
                   contacts={contacts}
@@ -688,7 +695,7 @@ const fetchContacts = async (): Promise<void> => {
 
                         // Check if contact has email when sending invitation
                         if (!newUser.password && (!c.email || c.email.trim() === '')) {
-                          setContactValidationError(`Contact "${c.full_name}" is missing an email address. Please update the contact's email before sending an invitation.`);
+                          setContactValidationError(t('users.messages.error.contactMissingEmail', { name: c.full_name }));
                         }
                       }
                     } else {
@@ -696,8 +703,8 @@ const fetchContacts = async (): Promise<void> => {
                     }
                   }}
                   clientId={newUser.clientId || undefined}
-                  label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
-                  placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
+                  label={newUser.password ? t('users.form.fields.selectExistingContact') : t('users.form.fields.selectExistingContactRequired')}
+                  placeholder={newUser.password ? t('users.form.fields.selectExistingContact') : t('users.form.fields.selectContactToInvite')}
                   onAddNew={() => setIsQuickAddContactOpen(true)}
                 />
                 <QuickAddContact
@@ -732,7 +739,7 @@ const fetchContacts = async (): Promise<void> => {
             )}
             <div>
               <Label htmlFor="password">
-                Password {portalType === 'msp' && <span className="text-destructive">*</span>} {portalType === 'client' && <span className="text-sm text-gray-500">(Leave blank to send invitation)</span>}
+                {t('users.form.fields.password')} {portalType === 'msp' && <span className="text-destructive">*</span>} {portalType === 'client' && <span className="text-sm text-gray-500">{t('users.form.fields.passwordOptional')}</span>}
               </Label>
               <div className="relative">
                 <Input
@@ -747,7 +754,7 @@ const fetchContacts = async (): Promise<void> => {
                     }
                   }}
                   className="pr-10"
-                  placeholder={portalType === 'client' ? 'Leave blank to send invitation' : 'Enter password'}
+                  placeholder={portalType === 'client' ? t('users.form.fields.passwordPlaceholder.client') : t('users.form.fields.passwordPlaceholder.msp')}
                   autoComplete="new-password"
                 />
                 <button
@@ -767,8 +774,8 @@ const fetchContacts = async (): Promise<void> => {
                 <Alert variant={newUser.password ? 'info' : 'warning'} className="mt-2">
                   <AlertDescription>
                     {newUser.password
-                      ? 'Setting a password will create the user immediately. They can log in right away.'
-                      : 'No password required — we will send a portal invitation for the user to set it.'}
+                      ? t('users.form.passwordAlert.withPassword')
+                      : t('users.form.passwordAlert.withoutPassword')}
                   </AlertDescription>
                 </Alert>
               )}
@@ -791,12 +798,12 @@ const fetchContacts = async (): Promise<void> => {
             disabled={portalType === 'client' && !newUser.password && !!contactValidationError}
           >
             {portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
-              ? 'Add License'
+              ? t('users.license.addLicense')
               : portalType === 'msp'
-                ? 'Create User'
+                ? t('users.actions.createUser')
                 : newUser.password
-                  ? 'Create User'
-                  : 'Send Portal Invitation'}
+                  ? t('users.actions.createUser')
+                  : t('users.actions.sendInvitation')}
           </Button>
           <Button
             id={`cancel-new-${portalType}-user-btn`}
@@ -820,7 +827,7 @@ const fetchContacts = async (): Promise<void> => {
               });
             }}
           >
-            Cancel
+            {t('users.actions.cancel')}
           </Button>
         </div>
       </div>
@@ -832,9 +839,9 @@ const fetchContacts = async (): Promise<void> => {
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle>User Management</CardTitle>
+            <CardTitle>{t('users.title')}</CardTitle>
             <CardDescription>
-              Manage {portalType === 'msp' ? 'MSP users and permissions' : 'client portal users and their access'}
+              {portalType === 'msp' ? t('users.description.msp') : t('users.description.client')}
             </CardDescription>
           </div>
           <ViewSwitcher
@@ -854,12 +861,16 @@ const fetchContacts = async (): Promise<void> => {
           >
             <AlertDescription className="flex items-center justify-between">
               <span>
-                MSP users: {licenseUsage.used}
-                {licenseUsage.limit !== null ? ` of ${licenseUsage.limit} licenses used` : ' (No limit)'}
+                {t('users.license.usage', {
+                  used: licenseUsage.used,
+                  limit: licenseUsage.limit !== null
+                    ? t('users.license.ofLimit', { limit: licenseUsage.limit })
+                    : t('users.license.noLimit')
+                })}
               </span>
               {licenseUsage.limit !== null && licenseUsage.remaining === 0 && (
                 <span>
-                  To add a new user you must purchase additional licenses
+                  {t('users.license.addLicensePrompt')}
                 </span>
               )}
             </AlertDescription>
@@ -872,7 +883,7 @@ const fetchContacts = async (): Promise<void> => {
                 <div className="relative p-0.5">
                   <Input
                     type="text"
-                    placeholder="Search users"
+                    placeholder={t('users.search')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
@@ -884,7 +895,7 @@ const fetchContacts = async (): Promise<void> => {
                     value={filterStatus}
                     onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
                     options={statusOptions}
-                    placeholder="Select Status"
+                    placeholder={t('users.filter.selectStatus')}
                   />
                 </div>
               </div>
@@ -894,7 +905,7 @@ const fetchContacts = async (): Promise<void> => {
                     id={`create-new-${portalType}-user-btn`}
                     onClick={() => setShowNewUserForm(true)}
                   >
-                    Create New User
+                    {t('users.actions.createNewUser')}
                   </Button>
                 )}
               </div>
@@ -902,16 +913,16 @@ const fetchContacts = async (): Promise<void> => {
             {showNewUserForm && renderNewUserForm()}
             <Tabs value={userView} onValueChange={(v) => setUserView(v as 'list' | 'org')}>
               <TabsList>
-                <TabsTrigger value="list">List</TabsTrigger>
-                <TabsTrigger value="org">Structure</TabsTrigger>
+                <TabsTrigger value="list">{t('users.tabs.list')}</TabsTrigger>
+                <TabsTrigger value="org">{t('users.tabs.structure')}</TabsTrigger>
               </TabsList>
               <TabsContent value="list">
-                <p className="text-sm text-muted-foreground mt-3 mb-4">Manage individual users, roles, and permissions.</p>
+                <p className="text-sm text-muted-foreground mt-3 mb-4">{t('users.tabs.listDescription')}</p>
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <LoadingIndicator
                       layout="stacked"
-                      text="Loading users..."
+                      text={t('users.loading')}
                       spinnerProps={{ size: 'md' }}
                     />
                   </div>
@@ -925,12 +936,12 @@ const fetchContacts = async (): Promise<void> => {
                 )}
               </TabsContent>
               <TabsContent value="org">
-                <p className="text-sm text-muted-foreground mt-3 mb-4">Visualize and manage the organizational reporting hierarchy.</p>
+                <p className="text-sm text-muted-foreground mt-3 mb-4">{t('users.tabs.structureDescription')}</p>
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <LoadingIndicator
                       layout="stacked"
-                      text="Loading users..."
+                      text={t('users.loading')}
                       spinnerProps={{ size: 'md' }}
                     />
                   </div>
@@ -955,7 +966,7 @@ const fetchContacts = async (): Promise<void> => {
                 <div className="relative p-0.5">
                   <Input
                     type="text"
-                    placeholder="Search users"
+                    placeholder={t('users.search')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
@@ -967,7 +978,7 @@ const fetchContacts = async (): Promise<void> => {
                     value={filterStatus}
                     onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
                     options={statusOptions}
-                    placeholder="Select Status"
+                    placeholder={t('users.filter.selectStatus')}
                   />
                 </div>
                 {portalType === 'client' && (
@@ -981,7 +992,7 @@ const fetchContacts = async (): Promise<void> => {
                       onFilterStateChange={(state) => setClientFilterState(state)}
                       clientTypeFilter={clientClientTypeFilter}
                       onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
-                      placeholder="Select client"
+                      placeholder={t('users.form.fields.selectClient')}
                       fitContent={true}
                     />
                   </div>
@@ -995,7 +1006,7 @@ const fetchContacts = async (): Promise<void> => {
                     onClick={handleCopyPortalLink}
                     disabled={isCopyingPortalLink}
                   >
-                    {isCopyingPortalLink ? 'Copying...' : 'Copy Portal Login Link'}
+                    {isCopyingPortalLink ? t('users.actions.copying') : t('users.actions.copyPortalLink')}
                   </Button>
                 )}
                 {!showNewUserForm && (
@@ -1003,7 +1014,7 @@ const fetchContacts = async (): Promise<void> => {
                     id={`create-new-${portalType}-user-btn`}
                     onClick={() => setShowNewUserForm(true)}
                   >
-                    Create New {portalType === 'msp' ? 'User' : 'Client User'}
+                    {portalType === 'msp' ? t('users.actions.createNewUser') : t('users.actions.createNewClientUser')}
                   </Button>
                 )}
               </div>
@@ -1013,7 +1024,7 @@ const fetchContacts = async (): Promise<void> => {
               <div className="flex items-center justify-center py-8">
                 <LoadingIndicator
                   layout="stacked"
-                  text="Loading users..."
+                  text={t('users.loading')}
                   spinnerProps={{ size: 'md' }}
                 />
               </div>

@@ -43,7 +43,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   contractDocuments,
   currentUserId,
   initialQuery,
-  renderClientDetails
+  renderClientDetails,
 }) => {
   const router = useRouter();
   const liveSearchParams = useSearchParams();

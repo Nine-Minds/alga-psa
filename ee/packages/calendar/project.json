@@ -1,0 +1,26 @@
+{
+  "name": "@alga-psa/ee-calendar",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "ee/packages/calendar/src",
+  "projectType": "library",
+  "tags": ["scope:ee-calendar", "type:vertical"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/ee/packages/calendar"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["ee/packages/calendar/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

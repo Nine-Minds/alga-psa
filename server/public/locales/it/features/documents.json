@@ -185,5 +185,38 @@
     "nameLabel": "Nome cartella",
     "namePlaceholder": "Inserisci il nome della cartella",
     "willCreateIn": "Verrà creata in: {{folder}}"
+  },
+  "portal": {
+    "subtitle": "Visualizza e scarica i tuoi documenti condivisi",
+    "searchPlaceholder": "Cerca documenti...",
+    "showing": "{{count}} documenti",
+    "loadError": "Caricamento dei documenti non riuscito. Riprova."
+  },
+  "kb": {
+    "title": "Base di conoscenza",
+    "subtitle": "Trova risposte alle domande più frequenti e guide pratiche",
+    "categories": "Categorie",
+    "allArticles": "Tutti gli articoli",
+    "searchPlaceholder": "Cerca articoli...",
+    "articleCount": "{{count}} articoli",
+    "noArticles": "Nessun articolo trovato",
+    "loadError": "Caricamento degli articoli non riuscito. Riprova.",
+    "noContent": "Nessun contenuto disponibile",
+    "articleNotFound": "Articolo non trovato",
+    "backToArticles": "Torna agli articoli",
+    "views": "visualizzazioni",
+    "wasHelpful": "Questo articolo ti è stato utile?",
+    "yes": "Sì",
+    "no": "No",
+    "feedbackThanks": "Grazie per il tuo feedback!",
+    "feedbackError": "Invio del feedback non riuscito",
+    "filterByTags": "Filtra per tag..."
+  },
+  "visibility": {
+    "cascadeTitle": "Aggiorna visibilità documenti",
+    "cascadeMakeVisible": "Vuoi anche rendere visibili tutti i {{count}} documento/i in \"{{name}}\" nel portale clienti?",
+    "cascadeMakeHidden": "Vuoi anche nascondere tutti i {{count}} documento/i in \"{{name}}\" dal portale clienti?",
+    "cascadeYes": "Sì, aggiorna documenti",
+    "cascadeNo": "No, solo cartella"
   }
 }

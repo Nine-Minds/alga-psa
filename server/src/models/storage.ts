@@ -1,9 +1,13 @@
-import { BaseModel } from './BaseModel';
+import { createTenantKnex } from '@alga-psa/db';
 import { FileStore } from '../types/storage';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-export class FileStoreModel extends BaseModel {
+export class FileStoreModel {
+  static async getTenant(): Promise<string | null> {
+    const { tenant } = await createTenantKnex();
+    return tenant;
+  }
   static async create(
     knexOrTrx: Knex | Knex.Transaction,
     data: Omit<FileStore, 'tenant' | 'file_id' | 'created_at' | 'updated_at' | 'is_deleted' | 'deleted_at' | 'deleted_by_id'>

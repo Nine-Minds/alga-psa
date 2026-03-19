@@ -1,0 +1,1259 @@
+{
+  "page": {
+    "title": "Admin-Einstellungen"
+  },
+  "tabs": {
+    "general": "Allgemein",
+    "experimentalFeatures": "Experimentelle Funktionen",
+    "clientPortal": "Kundenportal",
+    "users": "Benutzer",
+    "teams": "Teams",
+    "language": "Sprache",
+    "ticketing": "Ticketing",
+    "projects": "Projekte",
+    "interactions": "Interaktionen",
+    "notifications": "Benachrichtigungen",
+    "timeEntry": "Zeiterfassung",
+    "billing": "Abrechnung",
+    "secrets": "Geheimnisse",
+    "importExport": "Import/Export",
+    "email": "E-Mail",
+    "integrations": "Integrationen",
+    "extensions": "Erweiterungen"
+  },
+  "unsavedChanges": {
+    "title": "Ungespeicherte Änderungen",
+    "message": "Sie haben ungespeicherte Änderungen. Sind Sie sicher, dass Sie die Seite verlassen möchten? Ihre Änderungen gehen verloren."
+  },
+  "general": {
+    "title": "Allgemeine Einstellungen",
+    "description": "Verwalten Sie Ihren Organisationsnamen und den Standardkunden. Der Standardkunde wird zu Konfigurationszwecken verwendet und repräsentiert Ihren MSP.",
+    "fields": {
+      "organizationName": {
+        "label": "Organisationsname"
+      },
+      "defaultTimezone": {
+        "label": "Standardzeitzone",
+        "help": "Wird für E-Mails und Benachrichtigungen verwendet, wenn ein Benutzer keine eigene Zeitzone festgelegt hat."
+      }
+    },
+    "actions": {
+      "saveOrganizationName": "Organisationsname speichern",
+      "saveDefaultTimezone": "Standardzeitzone speichern"
+    },
+    "clients": {
+      "title": "Kunden",
+      "table": {
+        "name": "Name",
+        "default": "Standard",
+        "actions": "Aktionen"
+      },
+      "placeholder": "Wählen Sie einen Kunden zum Hinzufügen aus",
+      "addClient": "Kunde hinzufügen"
+    },
+    "messages": {
+      "success": {
+        "tenantNameUpdated": "Mandantenname erfolgreich aktualisiert",
+        "timezoneUpdated": "Standardzeitzone erfolgreich aktualisiert",
+        "clientAdded": "Kunde erfolgreich hinzugefügt",
+        "clientRemoved": "Kunde erfolgreich entfernt",
+        "defaultClientUpdated": "Standardkunde erfolgreich aktualisiert"
+      },
+      "error": {
+        "loadTenantData": "Mandantendaten konnten nicht geladen werden",
+        "updateTenantName": "Mandantenname konnte nicht aktualisiert werden",
+        "updateTimezone": "Zeitzone konnte nicht aktualisiert werden",
+        "selectClient": "Bitte wählen Sie einen Kunden aus",
+        "clientNotFound": "Kunde nicht gefunden",
+        "addClient": "Kunde konnte nicht hinzugefügt werden",
+        "removeClient": "Kunde konnte nicht entfernt werden",
+        "setDefaultClient": "Standardkunde konnte nicht festgelegt werden",
+        "loadClients": "Kunden konnten nicht geladen werden"
+      }
+    }
+  },
+  "experimentalFeatures": {
+    "title": "Experimentelle Funktionen",
+    "description": "Aktivieren oder deaktivieren Sie experimentelle Funktionen für Ihren Mandanten.",
+    "alert": {
+      "title": "Experimentell",
+      "description": "Experimentelle Funktionen können ohne Vorankündigung geändert oder entfernt werden."
+    },
+    "features": {
+      "aiAssistant": {
+        "name": "KI-Assistent",
+        "description": "Aktivieren Sie den KI-gestützten Schnellzugriff und die Chat-Seitenleiste.",
+        "restriction": "Nur für den Hauptabrechnungsmandanten verfügbar."
+      },
+      "workflowAutomation": {
+        "name": "Workflow-Automatisierung",
+        "description": "Aktivieren Sie experimentelle Workflow-Automatisierungsfunktionen im Workflow-Kontrollpanel und -Editor."
+      }
+    },
+    "actions": {
+      "save": "Speichern",
+      "saving": "Wird gespeichert...",
+      "retry": "Erneut versuchen"
+    },
+    "loading": "Experimentelle Funktionen werden geladen...",
+    "messages": {
+      "success": {
+        "saved": "Experimentelle Funktionseinstellungen gespeichert. Laden Sie die Seite neu, um die Änderungen zu übernehmen."
+      },
+      "error": {
+        "loadFailed": "Experimentelle Funktionseinstellungen konnten nicht geladen werden.",
+        "saveFailed": "Fehler beim Speichern der experimentellen Funktionseinstellungen."
+      }
+    }
+  },
+  "users": {
+    "title": "Benutzerverwaltung",
+    "description": {
+      "msp": "MSP-Benutzer und Berechtigungen verwalten",
+      "client": "Kundenportal-Benutzer und deren Zugriff verwalten"
+    },
+    "viewSwitcher": {
+      "msp": "MSP",
+      "clientPortal": "Kundenportal"
+    },
+    "license": {
+      "usage": "MSP-Benutzer: {{used}}{{limit}} Lizenzen verwendet",
+      "noLimit": " (Kein Limit)",
+      "ofLimit": " von {{limit}}",
+      "addLicensePrompt": "Um einen neuen Benutzer hinzuzufügen, müssen Sie zusätzliche Lizenzen erwerben",
+      "addLicense": "Lizenz hinzufügen"
+    },
+    "search": "Benutzer suchen",
+    "filter": {
+      "all": "Alle Benutzer",
+      "active": "Aktive Benutzer",
+      "inactive": "Inaktive Benutzer",
+      "selectStatus": "Status auswählen"
+    },
+    "tabs": {
+      "list": "Liste",
+      "structure": "Struktur",
+      "listDescription": "Verwalten Sie einzelne Benutzer, Rollen und Berechtigungen.",
+      "structureDescription": "Visualisieren und verwalten Sie die organisatorische Berichtshierarchie."
+    },
+    "actions": {
+      "createNewUser": "Neuen Benutzer erstellen",
+      "createNewClientUser": "Neuen Kundenbenutzer erstellen",
+      "copyPortalLink": "Portal-Anmeldelink kopieren",
+      "copying": "Wird kopiert...",
+      "createUser": "Benutzer erstellen",
+      "sendInvitation": "Portal-Einladung senden",
+      "cancel": "Abbrechen"
+    },
+    "form": {
+      "title": {
+        "msp": "Neuen MSP-Benutzer erstellen",
+        "client": "Neuen Kundenportal-Benutzer erstellen"
+      },
+      "fields": {
+        "firstName": "Vorname",
+        "lastName": "Nachname",
+        "email": "E-Mail",
+        "client": "Kunde",
+        "clientOptional": "(optional)",
+        "primaryRole": "Primäre Rolle",
+        "selectRole": "Rolle auswählen",
+        "reportsTo": "Vorgesetzter",
+        "reportsToOptional": "(optional)",
+        "selectManager": "Vorgesetzten auswählen",
+        "existingContact": "Bestehender Kontakt",
+        "existingContactOptional": "(optional)",
+        "selectExistingContact": "Bestehenden Kontakt auswählen (optional)",
+        "selectExistingContactRequired": "Bestehenden Kontakt auswählen",
+        "selectContactToInvite": "Kontakt zum Einladen auswählen",
+        "password": "Passwort",
+        "passwordOptional": "(Leer lassen, um eine Einladung zu senden)",
+        "passwordPlaceholder": {
+          "msp": "Passwort eingeben",
+          "client": "Leer lassen, um eine Einladung zu senden"
+        },
+        "selectClient": "Kunde auswählen"
+      },
+      "passwordAlert": {
+        "withPassword": "Wenn Sie ein Passwort festlegen, wird der Benutzer sofort erstellt. Er kann sich sofort anmelden.",
+        "withoutPassword": "Kein Passwort erforderlich — wir senden eine Portal-Einladung, damit der Benutzer es selbst festlegen kann."
+      },
+      "requirePasswordChange": "Passwortänderung bei der ersten Anmeldung erforderlich"
+    },
+    "table": {
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "email": "E-Mail",
+      "client": "Kunde",
+      "role": "Rolle",
+      "lastLogin": "Letzte Anmeldung",
+      "actions": "Aktionen",
+      "noClient": "Kein Kunde",
+      "noRole": "Keine Rolle",
+      "never": "Nie",
+      "viaMethod": "über {{method}}",
+      "loading": "Wird geladen...",
+      "openMenu": "Menü öffnen",
+      "edit": "Bearbeiten",
+      "remove": "Entfernen"
+    },
+    "loading": "Benutzer werden geladen...",
+    "messages": {
+      "success": {
+        "portalInvitationSent": "Portal-Einladung erfolgreich gesendet!",
+        "clientPortalUserCreated": "Kundenportal-Benutzer erfolgreich erstellt!",
+        "copiedVanityLink": "Benutzerdefinierter Portal-Anmeldelink in die Zwischenablage kopiert",
+        "copiedCanonicalLink": "Kanonischer Portal-Anmeldelink in die Zwischenablage kopiert"
+      },
+      "error": {
+        "fetchUsers": "Benutzer konnten nicht abgerufen werden",
+        "fetchRoles": "Rollen konnten nicht abgerufen werden",
+        "fetchClients": "Kunden konnten nicht abgerufen werden",
+        "createUser": "Benutzer konnte nicht erstellt werden",
+        "sendInvitation": "Einladung konnte nicht gesendet werden",
+        "sendInvitationManual": "Einladung konnte nicht gesendet werden. Sie können sie manuell aus der Benutzerliste senden.",
+        "createClientPortalUser": "Kundenportal-Benutzer konnte nicht erstellt werden",
+        "clipboardUnavailable": "Zwischenablage-API ist in diesem Browser nicht verfügbar.",
+        "copyPortalLink": "Portal-Anmeldelink konnte nicht kopiert werden",
+        "fillRequiredFields": "Bitte füllen Sie alle Pflichtfelder aus",
+        "fixValidationErrors": "Bitte beheben Sie die Validierungsfehler, bevor Sie fortfahren",
+        "fixValidationBeforeInvitation": "Bitte beheben Sie die Validierungsfehler, bevor Sie die Einladung senden",
+        "emailAlreadyInUse": "Diese E-Mail-Adresse wird bereits verwendet. Bitte verwenden Sie eine andere E-Mail-Adresse.",
+        "portalUserExists": "Für diesen Kontakt oder diese E-Mail-Adresse existiert bereits ein Portalbenutzer.",
+        "portalUserExistsForContact": "Für diesen Kontakt existiert bereits ein Portalbenutzer. Verwenden Sie die Passwort-Zurücksetzung für den bestehenden Benutzer.",
+        "selectAppropriateRole": "Bitte wählen Sie eine geeignete Rolle für diesen Benutzertyp aus",
+        "contactMissingEmail": "Dem Kontakt \"{{name}}\" fehlt eine E-Mail-Adresse. Bitte aktualisieren Sie die E-Mail-Adresse des Kontakts, bevor Sie eine Einladung senden.",
+        "licenseLimit": "Benutzer kann nicht aktiviert werden: Lizenzlimit erreicht. Bitte deaktivieren Sie einen anderen Benutzer oder erweitern Sie Ihre Lizenz."
+      }
+    }
+  },
+  "userDetails": {
+    "title": "Benutzerdetails",
+    "fields": {
+      "firstName": {
+        "label": "Vorname",
+        "placeholder": "Vorname eingeben"
+      },
+      "lastName": {
+        "label": "Nachname",
+        "placeholder": "Nachname eingeben"
+      },
+      "email": {
+        "label": "E-Mail",
+        "placeholder": "E-Mail eingeben"
+      },
+      "reportsTo": {
+        "label": "Vorgesetzter",
+        "placeholder": "Vorgesetzten auswählen"
+      },
+      "lastLogin": "Letzte Anmeldung",
+      "roles": "Rollen",
+      "status": "Status",
+      "statusHelp": "Benutzerkontostatus festlegen",
+      "newPassword": "Neues Passwort"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "inactiveTag": "(Inaktiv)"
+    },
+    "actions": {
+      "addRole": "Rolle hinzufügen",
+      "selectRoleToAdd": "Rolle zum Hinzufügen auswählen",
+      "removeRole": "Entfernen",
+      "setPassword": "Passwort festlegen",
+      "cancel": "Abbrechen",
+      "saveChanges": "Änderungen speichern"
+    },
+    "dialog": {
+      "setPassword": {
+        "title": "Benutzerpasswort festlegen (Admin)"
+      }
+    },
+    "messages": {
+      "success": {
+        "passwordChanged": "Passwort erfolgreich geändert",
+        "userUpdated": "Benutzer erfolgreich aktualisiert"
+      },
+      "error": {
+        "userNotFound": "Benutzer nicht gefunden",
+        "loadFailed": "Benutzerdetails konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "addRoleFailed": "Rolle konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut.",
+        "removeRoleFailed": "Rolle konnte nicht entfernt werden. Bitte versuchen Sie es erneut.",
+        "updateUserNotFound": "Benutzer konnte nicht aktualisiert werden. Benutzer nicht gefunden.",
+        "updateFailed": "Benutzer konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+        "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein",
+        "passwordChangeFailed": "Passwort konnte nicht geändert werden",
+        "passwordChangeError": "Beim Ändern des Passworts ist ein Fehler aufgetreten"
+      }
+    }
+  },
+  "teams": {
+    "title": "Teamverwaltung",
+    "description": "Erstellen und verwalten Sie Teams, weisen Sie Teamleiter zu und organisieren Sie Mitglieder in Ihrer Organisation",
+    "loading": "Teams werden geladen...",
+    "emptyState": "Bitte wählen Sie ein Team aus, um Mitglieder zu verwalten",
+    "list": {
+      "title": "Teams",
+      "addNewTeam": "Neues Team hinzufügen",
+      "createTeam": "Team erstellen",
+      "cancel": "Abbrechen",
+      "delete": "Löschen",
+      "placeholder": "Neuen Teamnamen eingeben",
+      "selectManager": "Vorgesetzten auswählen"
+    },
+    "details": {
+      "loading": "Teamdetails werden geladen...",
+      "notFound": "Kein Team gefunden",
+      "fields": {
+        "teamLead": "Teamleiter",
+        "addMember": "Mitglied hinzufügen"
+      },
+      "placeholders": {
+        "teamName": "Teamname eingeben",
+        "selectTeamLead": "Teamleiter auswählen",
+        "selectUserToAdd": "Benutzer zum Hinzufügen auswählen"
+      },
+      "alert": {
+        "unsavedChanges": "Sie haben ungespeicherte Änderungen"
+      },
+      "actions": {
+        "discard": "Verwerfen",
+        "saveChanges": "Änderungen speichern",
+        "saveName": "Name speichern",
+        "cancel": "Abbrechen",
+        "editName": "Name bearbeiten",
+        "remove": "Entfernen"
+      },
+      "table": {
+        "teamMembers": "Teammitglieder",
+        "member": "Mitglied",
+        "role": "Rolle"
+      },
+      "badge": {
+        "new": "Neu",
+        "lead": "Leiter"
+      },
+      "memberCount": "{{count}} Mitglied",
+      "memberCount_plural": "{{count}} Mitglieder",
+      "leadName": "Leiter: {{name}}"
+    },
+    "messages": {
+      "error": {
+        "loadFailed": "Teams konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "fetchUsers": "Benutzer konnten nicht abgerufen werden",
+        "createFailed": "Team konnte nicht erstellt werden: {{error}}",
+        "deleteFailed": "Team konnte nicht gelöscht werden"
+      }
+    }
+  },
+  "ticketing": {
+    "title": "Ticket-Einstellungen",
+    "tabs": {
+      "display": "Anzeige",
+      "ticketNumbering": "Ticketnummerierung",
+      "boards": "Boards",
+      "statuses": "Status",
+      "priorities": "Prioritäten",
+      "categories": "Kategorien"
+    },
+    "numbering": {
+      "title": "Nummernformat",
+      "description": "Definieren Sie das Präfix, die Ziffernfüllung und die aktuelle Sequenz",
+      "fields": {
+        "prefix": {
+          "label": "Ticketnummer-Präfix",
+          "placeholder": "TK-",
+          "help": "Optionales Präfix für Ticketnummern. Leer lassen für kein Präfix oder ein benutzerdefiniertes Präfix eingeben (z. B. 'TK-')"
+        },
+        "minimumDigits": {
+          "label": "Mindestanzahl Ziffern",
+          "help": "Mindestanzahl an Ziffern für die laufende Nummer. Zum Beispiel macht 6 aus '1' die Nummer '000001'"
+        },
+        "initialValue": {
+          "label": "Startwert",
+          "placeholder": "Wert eingeben",
+          "help": "Legen Sie die Startnummer für die Sequenz fest. Dies kann nur einmal festgelegt werden."
+        },
+        "lastUsedNumber": {
+          "label": "Zuletzt verwendete Nummer",
+          "help": "Die zuletzt vergebene Nummer. Die nächste Nummer wird um eins höher sein als dieser Wert."
+        },
+        "nextPreview": {
+          "label": "Vorschau der nächsten Ticketnummer",
+          "help": "Dies ist die Nummer, die dem nächsten Ticket zugewiesen wird"
+        }
+      },
+      "actions": {
+        "saveChanges": "Änderungen speichern",
+        "cancel": "Abbrechen"
+      },
+      "dialog": {
+        "title": "Ticketnummer-Einstellungen aktualisieren",
+        "message": "Änderungen an diesen Einstellungen wirken sich darauf aus, wie neue Ticketnummern generiert werden. Diese Änderung betrifft keine bestehenden Tickets. Möchten Sie wirklich fortfahren?",
+        "confirm": "Einstellungen aktualisieren"
+      },
+      "loading": "Wird geladen...",
+      "messages": {
+        "error": {
+          "noSettings": "Keine Ticketnummerierungseinstellungen gefunden. Bitte kontaktieren Sie Ihren Administrator.",
+          "loadFailed": "Ticketnummerierungseinstellungen konnten nicht geladen werden",
+          "updateFailed": "Einstellungen konnten nicht aktualisiert werden"
+        },
+        "success": {
+          "updated": "Ticketnummerierungseinstellungen erfolgreich aktualisiert"
+        }
+      }
+    },
+    "statuses": {
+      "title": "Ticket-Status",
+      "alert": "Standardstatus: Wenn Kunden Tickets über das Kundenportal erstellen, wird ihnen automatisch der als Standard markierte Status zugewiesen. Es kann immer nur ein Status als Standard festgelegt werden.",
+      "table": {
+        "name": "Name",
+        "status": "Status",
+        "default": "Standard",
+        "order": "Reihenfolge",
+        "actions": "Aktionen"
+      },
+      "statusLabels": {
+        "closed": "Geschlossen",
+        "open": "Offen",
+        "closedHelp": "Tickets mit diesem Status werden als geschlossen markiert",
+        "openHelp": "Tickets mit diesem Status bleiben offen",
+        "defaultHelp": "Standardstatus für neue Tickets aus dem Kundenportal"
+      },
+      "actions": {
+        "addStatus": "Status hinzufügen",
+        "importStandard": "Aus Standardstatus importieren",
+        "edit": "Bearbeiten",
+        "delete": "Löschen"
+      },
+      "messages": {
+        "success": {
+          "deleted": "Status erfolgreich gelöscht",
+          "updated": "Status erfolgreich aktualisiert"
+        },
+        "error": {
+          "lastClosed": "Mindestens ein Status muss als geschlossen markiert bleiben",
+          "deleteLastClosed": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden.",
+          "removeDefault": "Der Standardstatus kann nicht vom letzten Standardstatus entfernt werden"
+        }
+      }
+    },
+    "boards": {
+      "title": "Boards",
+      "alert": "Boards organisieren Tickets in logische Gruppen. Jedes Board kann seinen eigenen Standardagenten, Standardpriorität und SLA-Richtlinie haben.",
+      "table": {
+        "name": "Name",
+        "description": "Beschreibung",
+        "status": "Status",
+        "default": "Standard",
+        "defaultAgent": "Standardagent",
+        "defaultPriority": "Standardpriorität",
+        "boardManager": "Board-Verantwortlicher",
+        "order": "Reihenfolge",
+        "itilBoard": "ITIL-Board",
+        "actions": "Aktionen"
+      },
+      "statusLabels": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "actions": {
+        "addBoard": "Board hinzufügen",
+        "importStandard": "Aus Standardboards importieren",
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Abbrechen",
+        "close": "Schließen",
+        "create": "Erstellen",
+        "update": "Aktualisieren",
+        "importSelected": "Auswahl importieren"
+      },
+      "fields": {
+        "boardName": {
+          "label": "Board-Name",
+          "placeholder": "Board-Name eingeben"
+        },
+        "description": {
+          "label": "Beschreibung",
+          "placeholder": "Board-Beschreibung eingeben"
+        },
+        "displayOrder": {
+          "label": "Anzeigereihenfolge",
+          "placeholder": "Anzeigereihenfolge eingeben",
+          "help": "Steuert die Reihenfolge, in der Boards in der Liste erscheinen"
+        },
+        "inactive": "Als inaktiv markieren",
+        "itilCompliant": "ITIL-konform",
+        "boardConfiguration": "Board-Konfiguration",
+        "boardManager": {
+          "label": "Board-Verantwortlicher",
+          "placeholder": "Board-Verantwortlichen auswählen",
+          "help": "Der Benutzer, der für die Verwaltung dieses Boards verantwortlich ist"
+        },
+        "defaultAssignedAgent": {
+          "label": "Standardmäßig zugewiesener Agent",
+          "placeholder": "Standardagenten auswählen",
+          "help": "Neue Tickets in diesem Board werden standardmäßig diesem Agenten zugewiesen"
+        },
+        "defaultPriority": {
+          "label": "Standardpriorität",
+          "placeholder": "Standardpriorität auswählen",
+          "help": "Neue Tickets in diesem Board verwenden standardmäßig diese Priorität",
+          "none": "Keine"
+        },
+        "slaPolicy": {
+          "label": "SLA-Richtlinie",
+          "placeholder": "SLA-Richtlinie auswählen",
+          "help": "Die SLA-Richtlinie, die auf Tickets in diesem Board angewendet wird",
+          "none": "Keine"
+        }
+      },
+      "dialog": {
+        "addBoard": "Board hinzufügen",
+        "editBoard": "Board bearbeiten",
+        "deleteBoardTitle": "Board löschen",
+        "deleteBoardMessage": "Dadurch wird das Board dauerhaft gelöscht.",
+        "cleanupItilTitle": "ITIL-Board bereinigen",
+        "cleanupItilMessage": "Dadurch werden die ITIL-Kategorien und die Prioritätsmatrix entfernt, die mit diesem Board verknüpft sind.",
+        "deleteOnly": "Nur löschen",
+        "deleteAndCleanup": "Löschen und bereinigen",
+        "deleteAll": "Alle löschen",
+        "importTitle": "Standardboards importieren",
+        "importDescription": "Wählen Sie Standardboards zum Importieren in Ihre Organisation aus:",
+        "importEmpty": "Keine Standardboards zum Importieren verfügbar.",
+        "conflictsTitle": "Importkonflikte lösen",
+        "conflictsDescription": "Die folgenden Elemente haben Konflikte, die gelöst werden müssen:",
+        "nameConflict": "Name existiert bereits",
+        "skipItem": "Dieses Element überspringen",
+        "importNewName": "Mit anderem Namen importieren:",
+        "importWithResolutions": "Mit Auflösungen importieren",
+        "orderConflict": "Reihenfolge {{order}} wird bereits verwendet",
+        "importWithOrder": "Mit Reihenfolge {{order}} importieren"
+      },
+      "importTable": {
+        "active": "Aktiv"
+      },
+      "itilInfo": {
+        "title": "ITIL-Informationen",
+        "tooltip": "Dieses Board folgt ITIL-Best-Practices",
+        "categoriesTitle": "ITIL-Kategorien",
+        "priorityMatrixTitle": "Prioritätsmatrix",
+        "impactDescription": "Auswirkungsstufen definieren den Umfang des Problems",
+        "urgencyDescription": "Dringlichkeitsstufen definieren, wie schnell das Problem gelöst werden muss",
+        "priorityDescription": "Die Priorität wird aus Auswirkung und Dringlichkeit berechnet"
+      },
+      "messages": {
+        "success": {
+          "created": "Board erfolgreich erstellt",
+          "updated": "Board erfolgreich aktualisiert",
+          "deleted": "Board erfolgreich gelöscht",
+          "imported": "Boards erfolgreich importiert"
+        },
+        "error": {
+          "fetchFailed": "Boards konnten nicht geladen werden",
+          "fetchAvailableFailed": "Verfügbare Boards zum Importieren konnten nicht abgerufen werden",
+          "nameRequired": "Board-Name ist erforderlich",
+          "saveFailed": "Board konnte nicht gespeichert werden",
+          "lastDefault": "Das letzte Standard-Board kann nicht entfernt werden"
+        }
+      }
+    }
+  },
+  "interactions": {
+    "title": "Interaktionseinstellungen",
+    "tabs": {
+      "types": "Interaktionstypen",
+      "statuses": "Interaktionsstatus"
+    },
+    "types": {
+      "title": "Interaktionstypen",
+      "loading": "Interaktionstypen werden geladen...",
+      "table": {
+        "name": "Name",
+        "order": "Reihenfolge",
+        "actions": "Aktionen"
+      },
+      "actions": {
+        "addType": "Interaktionstyp hinzufügen",
+        "importStandard": "Aus Standard-Interaktionstypen importieren",
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Abbrechen",
+        "importSelected": "Ausgewählte importieren"
+      },
+      "dialog": {
+        "import": {
+          "title": "Standard-Interaktionstypen importieren",
+          "description": "Wählen Sie Standard-Interaktionstypen zum Importieren in Ihre Organisation aus:",
+          "empty": "Keine Standard-Interaktionstypen zum Importieren verfügbar."
+        },
+        "conflicts": {
+          "title": "Importkonflikte lösen",
+          "description": "Die folgenden Einträge haben Konflikte, die gelöst werden müssen:",
+          "nameConflict": "Name existiert bereits",
+          "orderConflict": "Reihenfolge {{order}} wird bereits verwendet",
+          "skipItem": "Diesen Eintrag überspringen",
+          "importDifferentName": "Mit anderem Namen importieren:",
+          "importDifferentOrder": "Mit Reihenfolge {{order}} importieren",
+          "resolve": "Mit Auflösungen importieren"
+        }
+      },
+      "messages": {
+        "success": {
+          "deleted": "Interaktionstyp gelöscht",
+          "imported": "{{count}} Interaktionstyp importiert",
+          "imported_plural": "{{count}} Interaktionstypen importiert"
+        },
+        "error": {
+          "fetchFailed": "Interaktionstypen konnten nicht abgerufen werden",
+          "validateDeleteFailed": "Löschvalidierung des Interaktionstyps fehlgeschlagen",
+          "deleteFailed": "Interaktionstyp konnte nicht gelöscht werden",
+          "checkConflicts": "Konflikte konnten nicht überprüft werden",
+          "importFailed": "Interaktionstypen konnten nicht importiert werden",
+          "fetchAvailable": "Verfügbare Interaktionstypen zum Importieren konnten nicht abgerufen werden"
+        }
+      }
+    },
+    "statuses": {
+      "title": "Interaktionsstatus",
+      "alert": "Interaktionsstatus: Verfolgen Sie den Zustand von Kundeninteraktionen wie Anrufen, E-Mails und Besprechungen.",
+      "table": {
+        "name": "Name",
+        "status": "Status",
+        "order": "Reihenfolge",
+        "actions": "Aktionen"
+      },
+      "statusLabels": {
+        "closedHelp": "Interaktionen mit diesem Status werden als geschlossen markiert",
+        "openHelp": "Interaktionen mit diesem Status bleiben offen"
+      },
+      "actions": {
+        "addStatus": "Status hinzufügen",
+        "importStandard": "Aus Standard importieren",
+        "edit": "Bearbeiten",
+        "delete": "Löschen"
+      },
+      "messages": {
+        "success": {
+          "updated": "Status erfolgreich aktualisiert",
+          "deleted": "Status erfolgreich gelöscht",
+          "imported": "{{count}} Status erfolgreich importiert"
+        },
+        "error": {
+          "lastClosed": "Mindestens ein Status muss als geschlossen markiert bleiben",
+          "deleteLastClosed": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden."
+        }
+      }
+    },
+    "quickAdd": {
+      "dialog": {
+        "createTitle": "Interaktionstyp erstellen",
+        "editTitle": "Interaktionstyp bearbeiten"
+      },
+      "fields": {
+        "name": {
+          "label": "Interaktionstypname:",
+          "placeholder": "z. B. 'Kunden-Onboarding-Anruf', 'Vertriebsdemo', 'Projektüberprüfung'"
+        },
+        "displayOrder": {
+          "label": "Anzeigereihenfolge:",
+          "placeholder": "z. B. 1, 2, 3..."
+        },
+        "icon": {
+          "label": "Symbol auswählen:"
+        }
+      },
+      "preview": {
+        "title": "Vorschau:",
+        "empty": "Geben Sie oben den Typnamen ein"
+      },
+      "actions": {
+        "cancel": "Abbrechen",
+        "create": "Typ erstellen",
+        "update": "Typ aktualisieren",
+        "creating": "Wird erstellt...",
+        "updating": "Wird aktualisiert..."
+      },
+      "messages": {
+        "error": {
+          "nameRequired": "Bitte geben Sie einen Namen für den Interaktionstyp ein.",
+          "saveFailed": "Interaktionstyp konnte nicht {{action}} werden. Bitte versuchen Sie es erneut."
+        }
+      }
+    }
+  },
+  "clientPortal": {
+    "language": {
+      "title": "Spracheinstellungen",
+      "description": "Konfigurieren Sie die Standardspracheinstellungen für Ihr Kundenportal. Diese Einstellungen gelten für alle Benutzer und Kunden, sofern sie nicht überschrieben werden.",
+      "fields": {
+        "defaultLanguage": "Standardsprache",
+        "availableLanguages": "Verfügbare Sprachen"
+      },
+      "help": {
+        "defaultLanguage": "Dies wird die Standardsprache für alle Kundenportal-Benutzer und E-Mail-Benachrichtigungen, sofern sie nicht durch Kundeneinstellungen oder individuelle Benutzerpräferenzen überschrieben wird",
+        "availableLanguages": "Wählen Sie aus, welche Sprachen den Benutzern zur Auswahl stehen"
+      },
+      "hierarchy": {
+        "title": "Sprachpräferenz-Hierarchie",
+        "description": "Diese Hierarchie gilt sowohl für die Kundenportal-Oberfläche als auch für E-Mail-Benachrichtigungen an Kundenportal-Benutzer:",
+        "userPreference": "Individuelle Benutzerpräferenz (höchste Priorität)",
+        "clientDefault": "Standard-Kundensprache",
+        "orgDefault": "Organisationsstandard (hier konfiguriert)",
+        "systemDefault": "Systemstandard (Englisch)",
+        "note": "Hinweis: Interne MSP-Benutzer erhalten E-Mails immer auf Englisch"
+      }
+    },
+    "branding": {
+      "title": "Branding & Erscheinungsbild",
+      "description": "Passen Sie das Erscheinungsbild Ihres Kundenportals mit Ihrem Unternehmensbranding an.",
+      "fields": {
+        "companyName": "Firmenname",
+        "companyLogo": "Firmenlogo",
+        "colorPalette": "Farbpalette",
+        "primaryColor": "Primärfarbe",
+        "secondaryColor": "Sekundärfarbe"
+      },
+      "help": {
+        "companyName": "Dies wird in der Kopfzeile des Kundenportals angezeigt",
+        "companyLogo": "Empfohlen: PNG oder SVG, max. 2 MB, transparenter Hintergrund",
+        "primaryColor": "Wird für Schaltflächen, Links und Hervorhebungen verwendet",
+        "secondaryColor": "Wird für Akzente und sekundäre Aktionen verwendet"
+      },
+      "preview": "Vorschau",
+      "previewDarkMode": "Dunkelmodus-Vorschau",
+      "actions": {
+        "saveBranding": "Branding-Einstellungen speichern",
+        "previewDashboard": "Kunden-Dashboard-Vorschau",
+        "hideDashboard": "Kunden-Dashboard ausblenden",
+        "previewSignIn": "Anmeldeseite-Vorschau",
+        "hideSignIn": "Anmeldeseite ausblenden"
+      },
+      "customDomainRequired": "Benutzerdefinierte Domain muss eingerichtet sein"
+    },
+    "dashboardPreview": {
+      "title": "Ihr Kundenportal",
+      "welcome": "Willkommen zurück!",
+      "subtitle": "Hier ist eine Übersicht Ihrer Kontoaktivitäten",
+      "openTickets": "Offene Tickets",
+      "activeProjects": "Aktive Projekte",
+      "invoices": "Rechnungen",
+      "urgent": "{{count}} dringend",
+      "nearDeadline": "{{count}} nahe am Termin",
+      "dueThisMonth": "Fällig in diesem Monat",
+      "recentActivity": "Letzte Aktivitäten",
+      "ticketUpdated": "Ticket #1234 wurde aktualisiert",
+      "hoursAgo": "vor {{count}} Stunden",
+      "newInvoice": "Neue Rechnung erstellt",
+      "milestoneCompleted": "Projektmeilenstein abgeschlossen",
+      "dayAgo": "vor 1 Tag",
+      "createTicket": "Ticket erstellen",
+      "viewProjects": "Projekte anzeigen"
+    },
+    "signInPreview": {
+      "portalTitle": "Kundenportal",
+      "welcome": "Willkommen in Ihrem Kundenportal",
+      "subtitle": "Verwalten Sie Ihre Support-Tickets und bleiben Sie in Verbindung",
+      "features": {
+        "submitTickets": {
+          "title": "Support-Tickets einreichen",
+          "description": "Erstellen und verwalten Sie Ihre Supportanfragen"
+        },
+        "trackStatus": {
+          "title": "Ticketstatus verfolgen",
+          "description": "Fortschritt in Echtzeit überwachen"
+        },
+        "ticketHistory": {
+          "title": "Ticketverlauf",
+          "description": "Zugriff auf Ihre vollständige Supporthistorie"
+        },
+        "documentation": {
+          "title": "Dokumentationszugriff",
+          "description": "Geteilte Dokumente und Ressourcen einsehen"
+        }
+      },
+      "signIn": {
+        "title": "Anmelden",
+        "description": "Bitte geben Sie Ihre Anmeldedaten ein, um auf Ihr Konto zuzugreifen.",
+        "email": "E-Mail",
+        "emailPlaceholder": "E-Mail eingeben",
+        "password": "Passwort",
+        "passwordPlaceholder": "Passwort eingeben",
+        "forgotPassword": "Passwort vergessen?",
+        "mspStaffLogin": "MSP-Mitarbeiter? Hier anmelden →"
+      }
+    }
+  },
+  "mspLanguage": {
+    "title": "Sprache",
+    "description": "Konfigurieren Sie die Standardspracheinstellungen für das MSP-Portal. Diese Einstellungen gelten für alle MSP-Benutzer, sofern sie nicht durch individuelle Präferenzen überschrieben werden.",
+    "fields": {
+      "defaultLanguage": "Standardsprache",
+      "availableLanguages": "Verfügbare Sprachen"
+    },
+    "help": {
+      "defaultLanguage": "Dies wird die Standardsprache für alle MSP-Portal-Benutzer, sofern sie nicht durch deren persönliche Präferenz überschrieben wird.",
+      "availableLanguages": "Wählen Sie aus, welche Sprachen den MSP-Benutzern zur Auswahl stehen"
+    },
+    "hierarchy": {
+      "title": "Sprachpräferenz-Hierarchie",
+      "userPreference": "Individuelle Benutzerpräferenz (höchste Priorität)",
+      "orgDefault": "Organisationsstandard (hier konfiguriert)",
+      "systemDefault": "Systemstandard (Englisch)"
+    }
+  },
+  "notifications": {
+    "title": "Benachrichtigungseinstellungen",
+    "description": {
+      "email": "Konfigurieren Sie, wie Ihr Mandant E-Mail-Benachrichtigungen versendet",
+      "internal": "Konfigurieren Sie, wie Ihr Mandant interne Benachrichtigungen versendet"
+    },
+    "viewSwitcher": {
+      "email": "E-Mail-Benachrichtigungen",
+      "internal": "Interne Benachrichtigungen"
+    },
+    "emailTabs": {
+      "settings": "Einstellungen",
+      "emailTemplates": "E-Mail-Vorlagen",
+      "categories": "Kategorien",
+      "telemetry": "Telemetrie"
+    },
+    "internalTabs": {
+      "categories": "Kategorien"
+    },
+    "sections": {
+      "globalSettings": {
+        "title": "Globale Einstellungen",
+        "description": "Konfigurieren Sie globale Benachrichtigungseinstellungen"
+      },
+      "emailTemplates": {
+        "title": "E-Mail-Vorlagen",
+        "description": "Verwalten Sie E-Mail-Benachrichtigungsvorlagen"
+      },
+      "categories": {
+        "title": "Benachrichtigungskategorien",
+        "description": "Verwalten Sie Benachrichtigungskategorien und -typen"
+      },
+      "internalCategories": {
+        "title": "Interne Benachrichtigungskategorien",
+        "description": "Verwalten Sie interne Benachrichtigungskategorien und -typen"
+      },
+      "telemetry": {
+        "title": "Telemetrie & Analysen",
+        "description": "Verwalten Sie Ihre Telemetrie- und Analysepräferenzen"
+      }
+    }
+  },
+  "timeEntry": {
+    "title": "Zeiterfassungseinstellungen",
+    "description": "Verwalten Sie Ihre Zeiterfassungseinstellungen und Zeiträume"
+  },
+  "billing": {
+    "title": "Abrechnungseinstellungen",
+    "description": "Verwalten Sie Ihre Abrechnung und Ihr Abonnement"
+  },
+  "secrets": {
+    "title": "Geheimnisverwaltung",
+    "description": "Verwalten Sie verschlüsselte Geheimnisse zur Verwendung in Workflows. Geheimnisse können in Workflow-Aktionen mit der $secret-Syntax referenziert werden.",
+    "list": {
+      "title": "Geheimnisse",
+      "description": "Verwalten Sie Geheimnisse zur Verwendung in Workflows. Geheimnisse werden verschlüsselt und können mit { $secret: \"SECRET_NAME\" } referenziert werden",
+      "search": "Geheimnisse suchen...",
+      "createSecret": "Geheimnis erstellen",
+      "table": {
+        "name": "Name",
+        "description": "Beschreibung",
+        "lastUpdated": "Zuletzt aktualisiert",
+        "lastAccessed": "Letzter Zugriff",
+        "actions": "Aktionen",
+        "never": "Nie",
+        "empty": "-"
+      },
+      "tooltips": {
+        "edit": "Geheimnis bearbeiten",
+        "delete": "Geheimnis löschen"
+      }
+    },
+    "dialog": {
+      "createTitle": "Geheimnis erstellen",
+      "editTitle": "Geheimnis bearbeiten",
+      "deleteTitle": "Geheimnis löschen",
+      "fields": {
+        "name": {
+          "label": "Name *",
+          "placeholder": "MY_API_KEY",
+          "help": "Verwenden Sie nur Großbuchstaben, Zahlen und Unterstriche"
+        },
+        "value": {
+          "label": "Wert *",
+          "placeholder": "Geheimniswert eingeben",
+          "editPlaceholder": "Neuen Wert zum Aktualisieren eingeben",
+          "editHelp": "Leer lassen, um den aktuellen Wert beizubehalten"
+        },
+        "description": {
+          "label": "Beschreibung",
+          "placeholder": "Wofür wird dieses Geheimnis verwendet?"
+        }
+      },
+      "delete": {
+        "confirmation": "Sind Sie sicher, dass Sie das Geheimnis {{name}} löschen möchten?",
+        "usedByWorkflows": "Dieses Geheimnis wird von {{count}} Workflow(s) verwendet",
+        "usedByWarning": "Das Löschen wird dazu führen, dass diese Workflows fehlschlagen, wenn sie versuchen, auf dieses Geheimnis zuzugreifen.",
+        "cannotUndo": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "typeToConfirm": "Geben Sie {{name}} zur Bestätigung ein:",
+        "placeholder": "Geheimnisname eingeben"
+      },
+      "actions": {
+        "cancel": "Abbrechen",
+        "create": "Geheimnis erstellen",
+        "update": "Geheimnis aktualisieren",
+        "delete": "Geheimnis löschen",
+        "saving": "Wird gespeichert...",
+        "deleting": "Wird gelöscht..."
+      }
+    },
+    "messages": {
+      "success": {
+        "created": "Geheimnis \"{{name}}\" erstellt",
+        "updated": "Geheimnis \"{{name}}\" aktualisiert",
+        "deleted": "Geheimnis \"{{name}}\" gelöscht"
+      },
+      "error": {
+        "loadFailed": "Geheimnisse konnten nicht geladen werden",
+        "deleteFailed": "Geheimnis konnte nicht gelöscht werden",
+        "saveFailed": "Geheimnis konnte nicht gespeichert werden",
+        "nameRequired": "Geheimnisname ist erforderlich",
+        "valueRequired": "Geheimniswert ist erforderlich",
+        "noChanges": "Keine Änderungen zum Speichern",
+        "fixValidation": "Bitte beheben Sie die Validierungsfehler"
+      }
+    }
+  },
+  "importExport": {
+    "title": "Import & Export Arbeitsbereich",
+    "description": "Konfigurieren Sie Importe, Exporte und automatisierte Datenflüsse von einer zentralen Steuerungsstelle aus.",
+    "history": {
+      "title": "Import- & Exportverlauf",
+      "description": "Überprüfen Sie jeden Import- oder Export-Auftrag an einem Ort.",
+      "empty": "Keine Import- oder Export-Aufträge gefunden. Erstellen Sie eine Vorschau, um den ersten Auftrag zu erstellen.",
+      "table": {
+        "date": "Datum",
+        "source": "Quelle",
+        "file": "Datei",
+        "status": "Status",
+        "created": "Erstellt",
+        "duplicates": "Duplikate",
+        "errors": "Fehler"
+      }
+    },
+    "tabs": {
+      "assetImport": "Asset-Import",
+      "assetExport": "Asset-Export",
+      "templatesAutomation": "Vorlagen & Automatisierung"
+    },
+    "import": {
+      "fields": {
+        "importSource": "Importquelle",
+        "uploadFile": "Datei hochladen",
+        "fieldMapping": "Feldzuordnung",
+        "rememberMapping": "Diese Zuordnung für zukünftige Importe speichern"
+      },
+      "placeholders": {
+        "noSources": "Keine Importquellen verfügbar",
+        "selectSource": "Importquelle auswählen",
+        "sourceColumn": "Name der Quellspalte",
+        "example": "z. B. {{example}}"
+      },
+      "help": {
+        "fieldMapping": "Geben Sie die Spaltennamen aus Ihrer Datei ein, die den jeweiligen erforderlichen Asset-Feldern entsprechen. Lassen Sie optionale Felder leer, um sie zu überspringen."
+      },
+      "alerts": {
+        "selectSource": "Wählen Sie eine Importquelle aus, um fortzufahren.",
+        "chooseFile": "Wählen Sie eine CSV- oder XLSX-Datei aus, um fortzufahren.",
+        "validationIssues": "Validierungsprobleme erkannt."
+      },
+      "actions": {
+        "generatePreview": "Vorschau erstellen",
+        "preparingPreview": "Vorschau wird vorbereitet...",
+        "proceedWithImport": "Mit Import fortfahren",
+        "startingImport": "Import wird gestartet...",
+        "refresh": "Aktualisieren",
+        "refreshing": "Wird aktualisiert...",
+        "cancel": "Abbrechen",
+        "importSelected": "Ausgewählte importieren"
+      },
+      "preview": {
+        "title": "Importvorschau",
+        "description": "Es werden bis zu die ersten 10 Zeilen von insgesamt {{totalRows}} Datensätzen angezeigt.",
+        "stats": {
+          "total": "Gesamt",
+          "valid": "Gültig",
+          "duplicates": "Duplikate",
+          "errors": "Fehler"
+        },
+        "table": {
+          "row": "Zeile",
+          "values": "Werte",
+          "issues": "Probleme"
+        },
+        "empty": "Keine Vorschauzeilen verfügbar."
+      }
+    },
+    "export": {
+      "comingSoon": "Asset-Export-Werkzeuge kommen in Kürze. Geplante Funktionen umfassen den Export von gefilterten Asset-Listen, Prüfdaten und Zuordnungsvorlagen direkt nach CSV/XLSX."
+    },
+    "templates": {
+      "comingSoon": "Zuordnungsvorlagen und geplante Importe werden hier verfügbar sein. Speichern Sie Spaltenzuordnungen, teilen Sie sie mit dem Team und konfigurieren Sie wiederkehrende Aufträge."
+    },
+    "jobDetails": {
+      "title": "Import-Auftragsdetails",
+      "stats": {
+        "totalRows": "Gesamtzeilen",
+        "processed": "Verarbeitet",
+        "created": "Erstellt",
+        "updated": "Aktualisiert",
+        "duplicates": "Duplikate",
+        "errors": "Fehler"
+      },
+      "sections": {
+        "summary": "Zusammenfassung",
+        "records": "Datensätze ({{count}})",
+        "errors": "Fehler ({{count}})",
+        "duplicates": "Duplikate ({{count}})"
+      },
+      "fields": {
+        "source": "Quelle",
+        "originalFileName": "Originaldateiname",
+        "storedFileId": "Gespeicherte Datei-ID",
+        "documentId": "Dokument-ID",
+        "documentAssociation": "Dokumentzuordnung",
+        "clientAssociation": "Kundenzuordnung",
+        "associatedClient": "Zugeordneter Kunde",
+        "defaultClientContext": "Standard-Kundenkontext",
+        "tenantClientFallback": "Mandanten-Kunden-Fallback",
+        "externalId": "Externe ID",
+        "status": "Status",
+        "sampleValues": "Beispielwerte",
+        "error": "Fehler",
+        "duplicateMatch": "Duplikatabgleich"
+      },
+      "empty": {
+        "noRecords": "Noch keine verarbeiteten Datensätze.",
+        "noErrors": "Keine Validierungsfehler aufgezeichnet.",
+        "noDuplicates": "Keine Duplikate für diesen Auftrag erkannt.",
+        "noValues": "Keine Werte"
+      },
+      "truncated": "Es werden die ersten {{count}} Datensätze angezeigt. Laden Sie die Auftragsergebnisse für den vollständigen Verlauf herunter."
+    }
+  },
+  "email": {
+    "title": "E-Mail-Konfiguration",
+    "description": "Konfigurieren Sie E-Mail-Anbieter, Domains und Einstellungen"
+  },
+  "extensions": {
+    "title": "Erweiterungsverwaltung",
+    "description": "Installieren, konfigurieren und verwalten Sie Erweiterungen, um die Funktionalität von Alga PSA zu erweitern.",
+    "tabs": {
+      "manage": "Verwalten",
+      "install": "Installieren"
+    },
+    "enterpriseOnly": {
+      "title": "Enterprise-Funktion",
+      "description": "Erweiterungen sind in der Enterprise-Edition von Alga PSA verfügbar."
+    },
+    "links": {
+      "needLogs": "Erweiterungsprotokolle benötigt?",
+      "debugConsole": "Service-Proxy-Demo-Debug-Konsole öffnen"
+    },
+    "loading": {
+      "extensions": "Erweiterungen werden geladen...",
+      "installer": "Installationsprogramm wird geladen..."
+    }
+  },
+  "security": {
+    "title": "Sicherheitseinstellungen",
+    "tabs": {
+      "roles": "Rollen",
+      "sessions": "Sitzungen",
+      "sso": "Single Sign-On",
+      "permissions": "Berechtigungen",
+      "userRoles": "Benutzerrollen",
+      "policies": "Richtlinien",
+      "apiKeys": "API Keys"
+    },
+    "loading": {
+      "roles": "Rollenkonfiguration wird geladen...",
+      "permissions": "Berechtigungskonfiguration wird geladen...",
+      "userRoles": "Benutzerrollenkonfiguration wird geladen...",
+      "policies": "Richtlinienkonfiguration wird geladen...",
+      "apiKeys": "API-Key-Konfiguration wird geladen...",
+      "sso": "SSO-Verwaltungswerkzeuge werden geladen...",
+      "sessions": "Aktive Sitzungen werden geladen..."
+    },
+    "userRoles": {
+      "title": "Rollen an Benutzer zuweisen",
+      "description": {
+        "msp": "Benutzerrollenzuweisungen für MSP-Benutzer verwalten",
+        "client": "Benutzerrollenzuweisungen für Kundenportal-Benutzer verwalten"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Kundenportal"
+      },
+      "showInactive": "Inaktive Benutzer anzeigen",
+      "fields": {
+        "selectUser": "Benutzer auswählen",
+        "selectRole": "Rolle auswählen"
+      },
+      "actions": {
+        "assignRole": "Rolle zuweisen"
+      },
+      "table": {
+        "user": "Benutzer",
+        "email": "E-Mail",
+        "roles": "Rollen",
+        "actions": "Aktionen"
+      },
+      "noRolesAssigned": "Keine Rollen zugewiesen",
+      "removeRole": "{{role}} entfernen",
+      "emptyState": {
+        "noUsers": "Keine {{type}}-Benutzer gefunden",
+        "inactiveHidden": "(Inaktive Benutzer ausgeblendet)"
+      },
+      "inactiveTag": "(Inaktiv)"
+    },
+    "sessions": {
+      "title": "Alle Benutzersitzungen",
+      "subtitle": "{{sessionCount}} aktive Sitzung bei {{userCount}} Benutzer",
+      "subtitle_plural": "{{sessionCount}} aktive Sitzungen bei {{userCount}} Benutzern",
+      "filters": {
+        "search": "Suche",
+        "searchPlaceholder": "Nach Name, E-Mail, Gerät oder IP suchen...",
+        "user": "Benutzer",
+        "allUsers": "Alle Benutzer",
+        "loginMethod": "Anmeldemethode",
+        "allMethods": "Alle Methoden",
+        "userType": "Benutzertyp",
+        "allTypes": "Alle Typen",
+        "from": "Von",
+        "to": "Bis",
+        "selectDate": "Datum auswählen",
+        "reset": "Zurücksetzen"
+      },
+      "loginMethods": {
+        "password": "Passwort",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Intern",
+        "client": "Kunde"
+      },
+      "session": {
+        "yourSession": "Ihre Sitzung",
+        "unknownDevice": "Unbekanntes Gerät",
+        "lastActive": "Zuletzt aktiv vor {{time}}",
+        "logout": "Abmelden",
+        "revoke": "Widerrufen",
+        "revoking": "Wird widerrufen..."
+      },
+      "oauthWarning": "Das Widerrufen dieser Sitzung widerruft nicht den {{provider}} OAuth-Zugriff. Widerrufen Sie den Zugriff in Ihren {{provider}}-Kontoeinstellungen.",
+      "confirmLogout": "Sind Sie sicher, dass Sie sich von diesem Gerät abmelden möchten?",
+      "messages": {
+        "loggingOut": "Wird abgemeldet...",
+        "revoked": "Sitzung erfolgreich widerrufen"
+      },
+      "emptyState": {
+        "loading": "Sitzungen werden geladen...",
+        "noMatch": "Keine Sitzungen entsprechen Ihrer Suche",
+        "noSessions": "Keine aktiven Sitzungen gefunden"
+      }
+    }
+  },
+  "profile": {
+    "tabs": {
+      "profile": "Profil",
+      "security": "Sicherheit",
+      "sso": "Single Sign-On",
+      "apiKeys": "API Keys",
+      "notifications": "Benachrichtigungen",
+      "calendar": "Kalender"
+    },
+    "basicInfo": {
+      "title": "Grundlegende Informationen"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Vorname *"
+      },
+      "lastName": {
+        "label": "Nachname *"
+      },
+      "email": {
+        "label": "E-Mail *"
+      },
+      "phoneNumber": {
+        "label": "Telefonnummer"
+      },
+      "timeZone": {
+        "label": "Zeitzone"
+      }
+    },
+    "actions": {
+      "saveChanges": "Änderungen speichern"
+    },
+    "notifications": {
+      "title": "Benachrichtigungspräferenzen",
+      "viewSwitcher": {
+        "email": "E-Mail",
+        "internal": "Intern"
+      }
+    },
+    "loading": "Profil wird geladen...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profil erfolgreich aktualisiert"
+      },
+      "error": {
+        "userNotFound": "Benutzer nicht gefunden",
+        "fillRequiredFields": "Bitte füllen Sie alle Pflichtfelder aus"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "Vorname ist erforderlich",
+      "lastNameRequired": "Nachname ist erforderlich"
+    },
+    "pageTitle": "Ihr Profil"
+  },
+  "password": {
+    "changePassword": "Passwort ändern",
+    "fields": {
+      "currentPassword": "Aktuelles Passwort",
+      "newPassword": "Neues Passwort",
+      "confirmNewPassword": "Neues Passwort bestätigen"
+    },
+    "messages": {
+      "success": {
+        "changed": "Passwort erfolgreich geändert"
+      },
+      "error": {
+        "mismatch": "Die neuen Passwörter stimmen nicht überein",
+        "tooShort": "Das Passwort muss mindestens 8 Zeichen lang sein",
+        "changeFailed": "Beim Ändern des Passworts ist ein Fehler aufgetreten"
+      }
+    }
+  },
+  "orgChart": {
+    "emptyState": "Keine Benutzer verfügbar.",
+    "roles": {
+      "client": "Kundenbenutzer",
+      "internal": "Interner Benutzer"
+    },
+    "badge": {
+      "inactive": "Inaktiv"
+    }
+  }
+}

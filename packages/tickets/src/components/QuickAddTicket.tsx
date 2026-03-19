@@ -7,10 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { addTicket } from '../actions/ticketActions';
+import { addTicket, updateTicket } from '../actions/ticketActions';
 import { addTicketResource } from '../actions/ticketResourceActions';
-import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getCurrentUser, getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
 import { getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
@@ -24,7 +25,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { Input } from '@alga-psa/ui/components/Input';
-import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { TextEditor } from '@alga-psa/ui/editor';
 import { toast } from 'react-hot-toast';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -42,8 +43,13 @@ import { assignTeamToTicket } from '@alga-psa/tickets/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import QuickAddCategory from './QuickAddCategory';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../lib/ticketRichText';
+import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
+import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -175,6 +181,7 @@ export function QuickAddTicket({
   renderBeforeFooter
 }: QuickAddTicketProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const { renderQuickAddClient, renderQuickAddContact } = useQuickAddClient();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [error, setError] = useState<string | null>(null);
@@ -182,7 +189,10 @@ export function QuickAddTicket({
   const [isLoading, setIsLoading] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [title, setTitle] = useState(prefilledTitle || '');
-  const [description, setDescription] = useState(prefilledDescription || '');
+  const [descriptionContent, setDescriptionContent] = useState(() =>
+    parseTicketRichTextContent(prefilledDescription || '')
+  );
+  const [descriptionEditorInstanceKey, setDescriptionEditorInstanceKey] = useState(0);
   const [assignedTo, setAssignedTo] = useState(prefilledAssignedTo || '');
   const [assignedTeamId, setAssignedTeamId] = useState<string | null>(null);
   const [teams, setTeams] = useState<ITeam[]>([]);
@@ -270,6 +280,14 @@ export function QuickAddTicket({
     title: 'Quick Add Ticket',
   });
 
+  const descriptionUploadSession = useQuickAddRichTextUploadSession({
+    componentLabel: 'QuickAddTicket',
+    onDiscard: () => {
+      resetForm();
+      onOpenChange(false);
+    },
+  });
+
   useEffect(() => {
     if (!open) {
       setIsSubmitting(false);
@@ -347,7 +365,8 @@ export function QuickAddTicket({
         }
 
         if (prefilledDescription) {
-          setDescription(prefilledDescription);
+          setDescriptionContent(parseTicketRichTextContent(prefilledDescription));
+          setDescriptionEditorInstanceKey((current) => current + 1);
         }
         if (prefilledTitle) {
           setTitle(prefilledTitle);
@@ -551,9 +570,10 @@ export function QuickAddTicket({
   };
 
 
-  const resetForm = () => {
+  function resetForm() {
     setTitle(prefilledTitle || '');
-    setDescription(prefilledDescription || '');
+    setDescriptionContent(parseTicketRichTextContent(prefilledDescription || ''));
+    setDescriptionEditorInstanceKey((current) => current + 1);
     setAssignedTo(prefilledAssignedTo || '');
     setAssignedTeamId(null);
     setBoardId('');
@@ -588,11 +608,11 @@ export function QuickAddTicket({
     setDueDateTime(undefined);
     setError(null);
     setHasAttemptedSubmit(false);
-  };
+    descriptionUploadSession.resetDraftTracking();
+  }
 
   const handleClose = () => {
-    resetForm();
-    onOpenChange(false);
+    descriptionUploadSession.requestDiscard();
   };
 
 
@@ -623,6 +643,63 @@ export function QuickAddTicket({
     return validationErrors;
   };
 
+  const finalizeDescriptionForCreatedTicket = async (newTicket: ITicket) => {
+    if (!newTicket.ticket_id || descriptionUploadSession.stagedClipboardImages.length === 0) {
+      return serializeTicketRichTextContent(descriptionContent);
+    }
+
+    const effectiveUserId =
+      session?.user?.id || (await getCurrentUser())?.user_id;
+
+    if (!effectiveUserId) {
+      throw new Error('User session is required for clipboard image upload.');
+    }
+
+    const replacementUrls = new Map<string, string>();
+    const { uploadDocument } = await import('@alga-psa/documents/actions/documentActions');
+
+    for (const stagedImage of descriptionUploadSession.stagedClipboardImages) {
+      const fileFormData = new FormData();
+      fileFormData.append('file', stagedImage.file);
+
+      const uploadResult = await uploadDocument(fileFormData, {
+        userId: effectiveUserId,
+        ticketId: newTicket.ticket_id,
+      });
+
+      if (isActionPermissionError(uploadResult)) {
+        throw new Error(uploadResult.permissionError || 'Clipboard image upload failed.');
+      }
+
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'Clipboard image upload failed.');
+      }
+
+      const uploadedDocument = uploadResult.document;
+      const documentUrl = uploadedDocument.file_id
+        ? `/api/documents/view/${uploadedDocument.file_id}`
+        : `/api/documents/download/${uploadedDocument.document_id}`;
+
+      replacementUrls.set(stagedImage.url, documentUrl);
+    }
+
+    const finalizedDescriptionContent = replaceTicketRichTextImageUrls(
+      descriptionContent,
+      replacementUrls
+    );
+    const serializedDescription = serializeTicketRichTextContent(finalizedDescriptionContent);
+
+    await updateTicket(newTicket.ticket_id, {
+      attributes: {
+        ...(newTicket.attributes || {}),
+        description: serializedDescription,
+      },
+      updated_at: new Date().toISOString(),
+    });
+
+    return serializedDescription;
+  };
+
   const handleCreateTicket = async ({ openAfterCreate = false }: { openAfterCreate?: boolean } = {}) => {
     setHasAttemptedSubmit(true);
 
@@ -637,7 +714,14 @@ export function QuickAddTicket({
     try {
       const formData = new FormData();
       formData.append('title', title);
-      formData.append('description', description);
+      const stagedClipboardImageUrls = new Set(
+        descriptionUploadSession.stagedClipboardImages.map((image) => image.url)
+      );
+      const descriptionForCreate = descriptionUploadSession.stagedClipboardImages.length > 0
+        ? removeTicketRichTextImageUrls(descriptionContent, stagedClipboardImageUrls)
+        : descriptionContent;
+
+      formData.append('description', serializeTicketRichTextContent(descriptionForCreate));
       formData.append('assigned_to', assignedTo);
       formData.append('board_id', boardId);
       formData.append('status_id', statusId);
@@ -703,6 +787,14 @@ export function QuickAddTicket({
         throw new Error('Failed to create ticket');
       }
 
+      let finalizedDescription = serializeTicketRichTextContent(descriptionForCreate);
+      try {
+        finalizedDescription = await finalizeDescriptionForCreatedTicket(newTicket);
+      } catch (descriptionFinalizeError) {
+        console.error('Failed to finalize quick add description:', descriptionFinalizeError);
+        toast.error('Ticket created, but pasted images could not be attached to the description.');
+      }
+
       // Assign team if selected
       if (assignedTeamId && newTicket.ticket_id) {
         try {
@@ -738,7 +830,14 @@ export function QuickAddTicket({
       }
 
       // Pass ticket with tags to callback
-      await onTicketAdded({ ...newTicket, tags: createdTags });
+      await onTicketAdded({
+        ...newTicket,
+        attributes: {
+          ...(newTicket.attributes || {}),
+          description: finalizedDescription,
+        },
+        tags: createdTags,
+      });
       resetForm();
       onOpenChange(false);
 
@@ -843,15 +942,23 @@ export function QuickAddTicket({
                     placeholder="Ticket Title *"
                     className={hasAttemptedSubmit && !title.trim() ? 'border-red-500' : ''}
                   />
-                  <TextArea
-                    id={`${id}-description`}
-                    value={description}
-                    onChange={(e) => {
-                      setDescription(e.target.value);
-                      clearErrorIfSubmitted();
-                    }}
-                    placeholder="Description"
-                  />
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-700">Description</div>
+                    <div className="min-w-0 w-full">
+                      <TextEditor
+                        key={`${id}-description-editor-${open ? descriptionEditorInstanceKey : 'closed'}`}
+                        id={`${id}-description`}
+                        initialContent={descriptionContent}
+                        onContentChange={(content) => {
+                          setDescriptionContent(content);
+                          clearErrorIfSubmitted();
+                        }}
+                        placeholder="Description"
+                        searchMentions={searchUsersForMentions}
+                        uploadFile={descriptionUploadSession.uploadFile}
+                      />
+                    </div>
+                  </div>
 
                   <div className={hasAttemptedSubmit && !clientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <ClientPicker
@@ -1290,6 +1397,17 @@ export function QuickAddTicket({
         }}
         preselectedBoardId={boardId}
         categories={categories}
+      />
+      <ConfirmationDialog
+        id={`${id}-description-clipboard-draft-cancel-dialog`}
+        isOpen={descriptionUploadSession.showDraftCancelDialog}
+        onClose={() => descriptionUploadSession.setShowDraftCancelDialog(false)}
+        onConfirm={descriptionUploadSession.deleteTrackedDraftClipboardImages}
+        title="Pasted Images Detected"
+        message="This quick-add description includes pasted images that have not been attached to a saved ticket yet. Continue editing, or delete the staged images and close?"
+        confirmLabel="Delete Images"
+        cancelLabel="Continue Editing"
+        isConfirming={descriptionUploadSession.isDeletingDraftImages}
       />
     </div>
   );

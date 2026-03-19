@@ -1,8 +1,7 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import logger from '@alga-psa/core/logger';
 import { normalizeClientContract } from '@shared/billingClients/clientContracts';
-import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime/init';
-import { getActionRegistryV2 } from '@shared/workflow/runtime/registries/actionRegistry';
+import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
 import { TicketModel } from '@shared/models/ticketModel';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import type { Knex } from 'knex';

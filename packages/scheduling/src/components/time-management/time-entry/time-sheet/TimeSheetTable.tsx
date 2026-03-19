@@ -15,6 +15,7 @@ import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { TimeSheetDateNavigatorState } from './types';
+import { getProminentTimeEntryChangeRequest } from '../../../../lib/timeEntryChangeRequests';
 
 interface TimeSheetTableProps {
     dates: Date[];
@@ -438,6 +439,14 @@ export function TimeSheetTable({
                                                             hoveredCell?.date === formatISO(date, { representation: 'date' });
                                             const isTodayDate = isToday(date);
                                             const canOpenCell = isEditable || dayEntries.length > 0;
+                                            const cellFeedbackState = dayEntries.some((entry) => entry.change_request_state === 'unresolved')
+                                              ? 'unresolved'
+                                              : dayEntries.some((entry) => entry.change_request_state === 'handled')
+                                                ? 'handled'
+                                                : null;
+                                            const prominentCellFeedback = getProminentTimeEntryChangeRequest(
+                                              dayEntries.flatMap((entry) => entry.change_requests ?? []),
+                                            );
 
 	                                            return (
 	                                                <td
@@ -497,19 +506,37 @@ export function TimeSheetTable({
                                                         });
                                                     }}
                                                 >
-	                                                    {dayEntries.length > 0 ? (
-	                                                        <div
-	                                                            className="rounded-lg p-2 text-xs h-full w-full flex items-center justify-center"
-	                                                            style={{
-	                                                                backgroundColor: colors.background,
-	                                                                borderColor: colors.border,
+		                                                    {dayEntries.length > 0 ? (
+		                                                        <div
+		                                                            className="relative rounded-lg p-2 text-xs h-full w-full flex items-center justify-center"
+		                                                            style={{
+		                                                                backgroundColor: colors.background,
+		                                                                borderColor: colors.border,
 	                                                                borderWidth: '1px',
 	                                                                borderStyle: 'solid'
-	                                                            }}
-	                                                        >
-	                                                            <div className="font-medium text-gray-700 text-center">
-	                                                                {formatDuration(totalDuration)}
-	                                                            </div>
+		                                                            }}
+		                                                        >
+		                                                            {cellFeedbackState ? (
+		                                                                <span
+		                                                                    className={`absolute right-1.5 top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full ${
+		                                                                        cellFeedbackState === 'unresolved'
+		                                                                            ? 'bg-amber-100 text-amber-700'
+		                                                                            : 'bg-emerald-100 text-emerald-700'
+		                                                                    }`}
+		                                                                    title={prominentCellFeedback?.comment}
+		                                                                    data-feedback-state={cellFeedbackState}
+		                                                                    aria-label={cellFeedbackState === 'unresolved' ? 'Change requested' : 'Addressed'}
+		                                                                >
+		                                                                    {cellFeedbackState === 'unresolved' ? (
+		                                                                        <X className="h-3 w-3" />
+		                                                                    ) : (
+		                                                                        <Check className="h-3 w-3" />
+		                                                                    )}
+		                                                                </span>
+		                                                            ) : null}
+		                                                            <div className="font-medium text-gray-700 text-center">
+		                                                                {formatDuration(totalDuration)}
+		                                                            </div>
 	                                                        </div>
 	                                                    ) : (
                                                         <div className="h-full w-full">

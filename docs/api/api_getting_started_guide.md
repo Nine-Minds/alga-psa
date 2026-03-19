@@ -14,7 +14,7 @@ The Alga PSA APIs provide programmatic access to our Professional Services Autom
 
 Our APIs follow REST principles and use JSON for request/response payloads. All API access is over HTTPS, and all data is sent and received as JSON.
 
-> 📝 **Note:** The Alga PSA hosted environment is available at `api.algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
+> 📝 **Note:** The Alga PSA hosted environment is available at `algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
 
 ## 2. Obtaining API Access
 
@@ -40,18 +40,18 @@ All API requests must include your API key in the `x-api-key` header:
 
 ```http
 GET /api/v1/endpoint
-Host: api.algapsa.com
+Host: algapsa.com
 x-api-key: your-api-key-here
 ```
 
 Example using cURL:
 ```bash
-curl -H "x-api-key: your-api-key-here" https://api.algapsa.com/api/v1/endpoint
+curl -H "x-api-key: your-api-key-here" https://algapsa.com/api/v1/endpoint
 ```
 
 Example using JavaScript/Node.js:
 ```javascript
-const response = await fetch('https://api.algapsa.com/api/v1/endpoint', {
+const response = await fetch('https://algapsa.com/api/v1/endpoint', {
   headers: {
     'x-api-key': 'your-api-key-here'
   }
@@ -65,7 +65,7 @@ import requests
 headers = {
     'x-api-key': 'your-api-key-here'
 }
-response = requests.get('https://api.algapsa.com/api/v1/endpoint', headers=headers)
+response = requests.get('https://algapsa.com/api/v1/endpoint', headers=headers)
 ```
 
 ## 4. Making Your First API Call
@@ -73,7 +73,7 @@ response = requests.get('https://api.algapsa.com/api/v1/endpoint', headers=heade
 Let's verify your API access by making a simple request:
 
 ```bash
-curl -H "x-api-key: your-api-key-here" https://api.algapsa.com/api/health
+curl -H "x-api-key: your-api-key-here" https://algapsa.com/api/health
 ```
 
 Expected successful response:

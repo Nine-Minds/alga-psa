@@ -1,5 +1,5 @@
 import { runWithTenant, createTenantKnex } from '@/lib/db';
-import { ApiKeyService } from 'server/src/lib/services/apiKeyService';
+import { ApiKeyService } from '@alga-psa/auth';
 import { withAdminTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 

@@ -8,38 +8,29 @@ import ClientContractsTab from './contracts/ClientContractsTab';
 
 type ContractSubTab = 'templates' | 'client-contracts';
 
+const CONTRACT_SUBTABS: readonly ContractSubTab[] = ['templates', 'client-contracts'];
+
 const ContractsHub: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Get active sub-tab from URL or default to 'templates'
-  const activeSubTab = (searchParams?.get('subtab') as ContractSubTab) || 'templates';
-
-  // Map URL subtab values to CustomTabs label values
-  const subtabToLabel: Record<ContractSubTab, string> = {
-    'templates': 'Templates',
-    'client-contracts': 'Client Contracts'
-  };
-
-  const labelToSubtab: Record<string, ContractSubTab> = {
-    'Templates': 'templates',
-    'Client Contracts': 'client-contracts'
-  };
+  const requestedSubtab = searchParams?.get('subtab');
+  const activeSubTab = requestedSubtab && CONTRACT_SUBTABS.includes(requestedSubtab as ContractSubTab)
+    ? (requestedSubtab as ContractSubTab)
+    : 'templates';
 
   // Trigger for refreshing data across tabs
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const handleTabChange = (value: string) => {
-    const targetSubtab = labelToSubtab[value] || value.toLowerCase();
-
-    if (targetSubtab === activeSubTab) {
+  const handleTabChange = (tabId: string) => {
+    if (tabId === activeSubTab) {
       return;
     }
 
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('tab', 'contracts');
-    // Convert label back to URL format
-    params.set('subtab', targetSubtab);
+    params.set('subtab', tabId);
     router.push(`/msp/billing?${params.toString()}`);
   };
 
@@ -56,6 +47,7 @@ const ContractsHub: React.FC = () => {
       <CustomTabs
         tabs={[
           {
+            id: 'templates',
             label: 'Templates',
             content: (
               <TemplatesTab
@@ -65,6 +57,7 @@ const ContractsHub: React.FC = () => {
             )
           },
           {
+            id: 'client-contracts',
             label: 'Client Contracts',
             content: (
               <ClientContractsTab
@@ -74,7 +67,7 @@ const ContractsHub: React.FC = () => {
             )
           }
         ]}
-        defaultTab={subtabToLabel[activeSubTab]}
+        defaultTab={activeSubTab}
         onTabChange={handleTabChange}
       />
     </div>

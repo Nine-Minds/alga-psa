@@ -22,6 +22,115 @@
           }
         ]
       }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/projects/{id}/task-status-mappings"
+      },
+      "metadata": {
+        "playbooks": [
+          "Call this before updating a project task when the user names a status like \"In Progress\" instead of providing a project_status_mapping_id.",
+          "Match against custom_name, status_name, or name, then use the returned project_status_mapping_id UUID in PUT /api/v1/projects/tasks/{taskId}."
+        ],
+        "examples": [
+          {
+            "name": "List task statuses for the active project",
+            "request": {
+              "params": {
+                "id": "11111111-1111-1111-1111-111111111111"
+              }
+            },
+            "notes": "Use the returned mappings to resolve the user’s requested status label to a project_status_mapping_id."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/projects/{id}/tasks"
+      },
+      "metadata": {
+        "playbooks": [
+          "When the user says \"this project\" and the current app context includes an active project record, use that project UUID for {id}.",
+          "Use this endpoint to find the target task by task_name within a known project before calling the single-task or update endpoint."
+        ],
+        "examples": [
+          {
+            "name": "List tasks for the active project",
+            "request": {
+              "params": {
+                "id": "11111111-1111-1111-1111-111111111111"
+              }
+            },
+            "notes": "Use the active project UUID from app context when the user refers to \"this project\"."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/projects/{id}/phases/{phaseId}/tasks"
+      },
+      "metadata": {
+        "playbooks": [
+          "Call this only when you already know both the project UUID and phase UUID.",
+          "Do not send placeholder strings for id or phaseId. Both path parameters must be UUIDs."
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/projects/tasks/{taskId}"
+      },
+      "metadata": {
+        "playbooks": [
+          "Use this endpoint only after you have already identified the concrete taskId UUID.",
+          "Do not call it with a task name or an unresolved {taskId} placeholder."
+        ],
+        "examples": [
+          {
+            "name": "Fetch one project task",
+            "request": {
+              "params": {
+                "taskId": "22222222-2222-2222-2222-222222222222"
+              }
+            },
+            "notes": "The taskId path parameter must be a UUID from a prior API response or active UI context."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/projects/tasks/{taskId}"
+      },
+      "metadata": {
+        "approvalRequired": true,
+        "playbooks": [
+          "If the user specifies a status label instead of a UUID, first call GET /api/v1/projects/{id}/task-status-mappings to resolve the correct project_status_mapping_id for that project.",
+          "To change task status, send project_status_mapping_id as a UUID. Do not send a plain status label like \"In Progress\" in the request body.",
+          "This public API does not accept project_id or phase_id in the update payload, so do not use it for moving a task to a different project or phase."
+        ],
+        "examples": [
+          {
+            "name": "Update a project task status mapping",
+            "request": {
+              "params": {
+                "taskId": "22222222-2222-2222-2222-222222222222"
+              },
+              "body": {
+                "project_status_mapping_id": "33333333-3333-3333-3333-333333333333"
+              }
+            },
+            "notes": "Only use a concrete project_status_mapping_id UUID that you already obtained from authoritative context."
+          }
+        ]
+      }
     }
   ]
 }

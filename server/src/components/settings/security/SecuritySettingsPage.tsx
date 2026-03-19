@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { useSearchParams } from 'next/navigation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Dynamic imports for heavy settings components
 const RoleManagement = dynamic(() => import('@alga-psa/auth/components/settings/policy/RoleManagement'), {
@@ -53,31 +54,28 @@ const AdminSessionManagement = dynamic(() => import('./AdminSessionManagement'),
   ssr: false
 });
 
+const SECURITY_TAB_IDS = ['roles', 'sessions', 'single-sign-on', 'permissions', 'user-roles', 'policies', 'api-keys'] as const;
+const DEFAULT_SECURITY_TAB = 'roles';
+
 const SecuritySettingsPage = (): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
-  // Map URL slugs (kebab-case) to Tab Labels
-  const slugToLabelMap: Record<string, string> = {
-    'roles': 'Roles',
-    'sessions': 'Sessions',
-    'permissions': 'Permissions',
-    'user-roles': 'User Roles',
-    'policies': 'Policies',
-    'api-keys': 'API Keys',
-    'single-sign-on': 'Single Sign-On',
-  };
-
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = React.useState<string>(() => {
-    const initialLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
-    return initialLabel || 'Roles'; // Default to 'Roles' if param is missing or invalid
+    const requestedTab = tabParam?.toLowerCase();
+    return requestedTab && SECURITY_TAB_IDS.includes(requestedTab as typeof SECURITY_TAB_IDS[number])
+      ? requestedTab
+      : DEFAULT_SECURITY_TAB;
   });
 
   // Update active tab when URL parameter changes
   React.useEffect(() => {
-    const currentLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'Roles';
+    const requestedTab = tabParam?.toLowerCase();
+    const targetTab = requestedTab && SECURITY_TAB_IDS.includes(requestedTab as typeof SECURITY_TAB_IDS[number])
+      ? requestedTab
+      : DEFAULT_SECURITY_TAB;
     // Only update state if the derived tab is different from the current state
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
@@ -86,22 +84,25 @@ const SecuritySettingsPage = (): React.JSX.Element => {
 
   const tabContent: TabContent[] = [
     {
+      id: 'roles',
       label: "Roles",
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Role Management" description="Loading role configuration..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title="Roles" description="Loading role configuration..." />}>
           <RoleManagement />
         </Suspense>
       ),
     },
     {
+      id: 'sessions',
       label: "Sessions",
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Active Sessions" description="Loading active sessions..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title="Sessions" description="Loading active sessions..." />}>
           <AdminSessionManagement />
         </Suspense>
       ),
     },
     {
+      id: 'single-sign-on',
       label: "Single Sign-On",
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Single Sign-On" description="Loading SSO management tools..." />}>
@@ -110,30 +111,34 @@ const SecuritySettingsPage = (): React.JSX.Element => {
       ),
     },
     {
+      id: 'permissions',
       label: "Permissions",
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Permissions Matrix" description="Loading permissions configuration..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title="Permissions" description="Loading permissions configuration..." />}>
           <PermissionsMatrix />
         </Suspense>
       ),
     },
     {
+      id: 'user-roles',
       label: "User Roles",
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="User Role Assignment" description="Loading user role configuration..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title="User Roles" description="Loading user role configuration..." />}>
           <UserRoleAssignment />
         </Suspense>
       ),
     },
     {
+      id: 'policies',
       label: "Policies",
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Policy Management" description="Loading policy configuration..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title="Policies" description="Loading policy configuration..." />}>
           <PolicyManagement />
         </Suspense>
       ),
     },
     {
+      id: 'api-keys',
       label: "API Keys",
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="API Keys" description="Loading API key configuration..." />}>
@@ -168,25 +173,17 @@ const SecuritySettingsPage = (): React.JSX.Element => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Security Settings</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('security.title')}</h1>
       <CustomTabs 
         tabs={tabContent}
         defaultTab={activeTab}
         onTabChange={(tab) => {
-          // Map Tab Labels back to URL slugs (kebab-case)
-          const labelToSlugMap: Record<string, string> = Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
-            acc[label] = slug;
-            return acc;
-          }, {} as Record<string, string>);
-
-          // Re-add immediate state update on tab change
           setActiveTab(tab);
 
-          const urlSlug = labelToSlugMap[tab];
           // Update URL using pushState to avoid full page reload
-          // Default to '/msp/security-settings' if the slug is 'roles' or not found
-          const newUrl = urlSlug && urlSlug !== 'roles'
-            ? `/msp/security-settings?tab=${urlSlug}`
+          // Default to '/msp/security-settings' if the slug is 'roles'
+          const newUrl = tab !== DEFAULT_SECURITY_TAB
+            ? `/msp/security-settings?tab=${tab}`
             : '/msp/security-settings';
 
           window.history.pushState({}, '', newUrl);

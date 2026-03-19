@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing screens intentionally compose billing feature components for customer-facing account pages. */
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CustomTabs, TabContent } from '@alga-psa/ui/components/CustomTabs';
@@ -85,34 +87,20 @@ const BucketUsageHistoryChart = dynamic(() => import('./BucketUsageHistoryChart'
 
 // Flag to control visibility of advanced usage tabs and metrics
 const SHOW_USAGE_FEATURES = true;
+const DEFAULT_BILLING_TAB = 'overview';
 
 export default function BillingOverview() {
   const { t } = useTranslation('features/billing');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
-  // Create mappings between slugs and translated labels
-  const slugToLabelMap = useMemo(() => ({
-    'overview': t('tabs.overview'),
-    'invoices': t('tabs.invoices'),
-    'hours-by-service': 'Hours by Service',
-    'usage-metrics': 'Usage Metrics'
-  }), [t]);
-
-  const labelToSlugMap = useMemo(() => ({
-    [t('tabs.overview')]: 'overview',
-    [t('tabs.invoices')]: 'invoices',
-    'Hours by Service': 'hours-by-service',
-    'Usage Metrics': 'usage-metrics'
-  }), [t]);
-
   // Determine initial tab from URL parameter
   const initialTab = useMemo(() => {
-    if (tabParam && slugToLabelMap[tabParam as keyof typeof slugToLabelMap]) {
-      return slugToLabelMap[tabParam as keyof typeof slugToLabelMap];
+    if (tabParam && ['overview', 'invoices', 'hours-by-service', 'usage-metrics'].includes(tabParam)) {
+      return tabParam;
     }
-    return t('tabs.overview');
-  }, [tabParam, slugToLabelMap, t]);
+    return DEFAULT_BILLING_TAB;
+  }, [tabParam]);
 
   const [currentTab, setCurrentTab] = useState<string | null>(initialTab);
   const [contractLine, setContractLine] = useState<IClientContractLine | null>(null);
@@ -160,13 +148,13 @@ export default function BillingOverview() {
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const targetTab = tabParam && slugToLabelMap[tabParam as keyof typeof slugToLabelMap]
-      ? slugToLabelMap[tabParam as keyof typeof slugToLabelMap]
-      : t('tabs.overview');
+    const targetTab = tabParam && ['overview', 'invoices', 'hours-by-service', 'usage-metrics'].includes(tabParam)
+      ? tabParam
+      : DEFAULT_BILLING_TAB;
     if (targetTab !== currentTab) {
       setCurrentTab(targetTab);
     }
-  }, [tabParam, slugToLabelMap, t, currentTab]);
+  }, [tabParam, currentTab]);
 
   // Load billing data
   useEffect(() => {
@@ -363,8 +351,7 @@ export default function BillingOverview() {
 
   // Create a function to switch to the Invoices tab
   const handleViewAllInvoices = useCallback(() => {
-    const invoicesTabLabel = t('tabs.invoices');
-    setCurrentTab(invoicesTabLabel);
+    setCurrentTab('invoices');
     // Update URL when navigating to Invoices tab
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -372,12 +359,13 @@ export default function BillingOverview() {
       const newUrl = `${window.location.pathname}?${params.toString()}`;
       window.history.pushState({}, '', newUrl);
     }
-  }, [t]);
+  }, []);
 
   // Memoize tabs to prevent unnecessary re-renders
   const tabs: TabContent[] = useMemo(() => {
     const tabsArray: TabContent[] = [
       {
+        id: 'overview',
         label: t('tabs.overview'),
         content: (
           <div id="overview-tab">
@@ -399,6 +387,7 @@ export default function BillingOverview() {
     // Add Invoices tab only if user has access
     if (hasInvoiceAccess) {
       tabsArray.push({
+        id: 'invoices',
         label: t('tabs.invoices'),
         content: (
           <div id="invoices-tab">
@@ -414,6 +403,7 @@ export default function BillingOverview() {
     if (SHOW_USAGE_FEATURES) {
       // Add Hours by Service tab
       tabsArray.push({
+        id: 'hours-by-service',
         label: 'Hours by Service',
         content: (
           <div id="hours-service-tab">
@@ -429,6 +419,7 @@ export default function BillingOverview() {
 
       // Add Usage Metrics tab
       tabsArray.push({
+        id: 'usage-metrics',
         label: 'Usage Metrics',
         content: (
           <div id="usage-metrics-tab">
@@ -470,14 +461,13 @@ export default function BillingOverview() {
   ]);
 
   // Helper function to update URL with tab parameter
-  const updateURL = useCallback((tabLabel: string) => {
+  const updateURL = useCallback((tabId: string) => {
     if (typeof window === 'undefined') return;
 
-    const slug = labelToSlugMap[tabLabel as keyof typeof labelToSlugMap];
     const params = new URLSearchParams(window.location.search);
 
-    if (slug && slug !== 'overview') {
-      params.set('tab', slug);
+    if (tabId !== DEFAULT_BILLING_TAB) {
+      params.set('tab', tabId);
     } else {
       params.delete('tab');
     }
@@ -487,7 +477,7 @@ export default function BillingOverview() {
       : window.location.pathname;
 
     window.history.pushState({}, '', newUrl);
-  }, [labelToSlugMap]);
+  }, []);
 
   // Memoize the tab change handler
   const handleTabChange = useCallback((tabValue: string) => {
@@ -504,7 +494,7 @@ export default function BillingOverview() {
     <div id="client-billing-overview" className="space-y-6">
       <CustomTabs
         tabs={tabs}
-        defaultTab={currentTab || tabs[0]?.label}
+        defaultTab={currentTab || tabs[0]?.id}
         onTabChange={handleTabChange}
       />
 

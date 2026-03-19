@@ -12,7 +12,11 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
-import { getGoogleProviderReadiness, getMicrosoftProviderReadiness } from './providerReadiness';
+import {
+  getGoogleProviderReadiness,
+  getMicrosoftProfileReadiness,
+  getMicrosoftProviderReadiness,
+} from './providerReadiness';
 
 describe('provider readiness helpers', () => {
   beforeEach(() => {
@@ -55,6 +59,36 @@ describe('provider readiness helpers', () => {
       ready: false,
       clientIdConfigured: true,
       clientSecretConfigured: false,
+    });
+  });
+
+  it('T019/T020: Microsoft profile readiness also requires tenant id, active state, and referenced secret presence', async () => {
+    tenantSecrets.set('tenant-1:microsoft_profile_profile-1_client_secret', 'profile-secret');
+
+    await expect(getMicrosoftProfileReadiness('tenant-1', {
+      clientId: 'profile-client-id',
+      tenantId: 'profile-tenant-id',
+      clientSecretRef: 'microsoft_profile_profile-1_client_secret',
+      isArchived: false,
+    })).resolves.toEqual({
+      ready: true,
+      clientIdConfigured: true,
+      clientSecretConfigured: true,
+      tenantIdConfigured: true,
+      active: true,
+    });
+
+    await expect(getMicrosoftProfileReadiness('tenant-1', {
+      clientId: 'profile-client-id',
+      tenantId: '',
+      clientSecretRef: 'microsoft_profile_profile-1_client_secret',
+      isArchived: false,
+    })).resolves.toEqual({
+      ready: false,
+      clientIdConfigured: true,
+      clientSecretConfigured: true,
+      tenantIdConfigured: false,
+      active: true,
     });
   });
 });

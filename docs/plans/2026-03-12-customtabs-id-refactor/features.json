@@ -1,0 +1,413 @@
+[
+  {
+    "id": "F001",
+    "description": "Add required `id: string` field to `TabContent` interface in CustomTabs.tsx",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / API Changes"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "CustomTabs uses `tab.id` (not `tab.label`) as Radix Tabs `value` prop for triggers and content panels",
+    "implemented": true,
+    "prdRefs": [
+      "Internal Component Changes"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "CustomTabs uses `tab.id` as React `key` prop for triggers and content panels",
+    "implemented": true,
+    "prdRefs": [
+      "Internal Component Changes"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "CustomTabs `onTabChange` callback fires with `tab.id` string",
+    "implemented": true,
+    "prdRefs": [
+      "Internal Component Changes"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "CustomTabs `defaultTab` and `value` props match against `tab.id`",
+    "implemented": true,
+    "prdRefs": [
+      "Internal Component Changes"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "CustomTabs `beforeTabChange` callback receives `tab.id` values",
+    "implemented": true,
+    "prdRefs": [
+      "Internal Component Changes"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "CustomTabs auto-expand section logic matches `tab.id === defaultTab` and `tab.id === value`",
+    "implemented": true,
+    "prdRefs": [
+      "Internal Component Changes"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "CustomTabs still renders `tab.label` as display text in trigger buttons",
+    "implemented": true,
+    "prdRefs": [
+      "Internal Component Changes"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "CustomTabs uncontrolled default falls back to `allTabs[0].id` when no defaultTab provided",
+    "implemented": true,
+    "prdRefs": [
+      "Internal Component Changes"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Migrate SettingsPage.tsx — add id to all 17 tabs, replace slugToLabelMap with id-based matching, activeTab stores id",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern F"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Migrate UserProfile.tsx — add id to 6 tabs, remove slug maps, defaultTab/onTabChange use id directly",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Migrate SecuritySettingsPage.tsx — add id to 7 tabs, remove bidirectional maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Migrate ImportExportSettings.tsx — add id to both tab arrays (3+4 tabs), remove bidirectional maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Migrate TicketingSettings.tsx — add id to 6 tabs, remove bidirectional maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Migrate NotificationsTab.tsx — add id to both tab arrays (4+1 tabs), remove bidirectional maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Migrate InteractionSettings.tsx — add id to 2 tabs, remove bidirectional maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Migrate ExtensionManagement.tsx — add id to 2 tabs, change defaultTab from 'Manage' to 'manage'",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern D"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Migrate SLA settings page (sla/page.tsx) — add id to 5 tabs, remove bidirectional maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Migrate notifications settings page (notifications/page.tsx) — add id to both tab arrays (3+1), remove bidirectional maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Migrate InvoicingHub.tsx — add id to 3 tabs, remove subtabToLabel/labelToSubtab maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Migrate ContractsHub.tsx — add id to 2 tabs, remove subtabToLabel/labelToSubtab maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Migrate DiscrepancyDetail.tsx — add id to 3 dynamic tabs",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern D"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Migrate CreditReconciliation.tsx — add id to tabs",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern D"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Migrate CreditManagement.tsx — add id to tabs",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern D"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Migrate Contracts.tsx — add id to tabs, update subtab URL handling",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Migrate CreditsTabs.tsx — add id to 3 tabs, remove TAB_SLUG_TO_LABEL/TAB_LABEL_TO_SLUG maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Migrate BillingSettings.tsx — add id to 3 tabs, remove bidirectional maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Migrate ClientNotificationsList.tsx — add id to 3 tabs, remove TAB_SLUG_MAP/TAB_KEY_TO_SLUG/tabKeyToLabel/labelToTabKey maps, keep t() labels for display",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern C"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Migrate ClientPortalSettingsPage.tsx — add id to 3 tabs, remove slugToLabelMap/labelToSlugMap",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Migrate ClientProfile.tsx — add id to 4+ tabs, remove slug maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A/B"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Migrate BillingOverview.tsx — add id to dynamic tabs",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern D"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Migrate ContactDetails.tsx — add id to 6 tabs, remove findTabLabel helper, handleTabChange writes id directly to URL",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern B"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Migrate ClientDetails.tsx — add id to all tabs, remove findTabLabel helper, handleTabChange writes id directly to URL",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern B"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Migrate BillingConfiguration.tsx — add id to tabs (if CustomTabs is actually used)",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern D"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Migrate TicketConversation.tsx — add id to 4 tabs ('all-comments', 'client', 'internal', 'resolution'), update activeTab/onTabChange props to use ids, keep t() labels for display",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern C"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Update all TicketConversation parent/caller components — pass id-based activeTab, handle id-based onTabChange",
+    "implemented": true,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Migrate AssetDetailTabs.tsx — add id to 6 tabs, remove tabSlugToLabelMap/tabLabelToSlugMap",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Migrate AssetDetails.tsx — add id to tabs",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern D"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Migrate SurveySettings.tsx — add id to 2 tabs, remove TAB_SLUG_TO_LABEL/TAB_LABEL_TO_SLUG maps",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Migrate TimeEntrySettings.tsx — add id to 2 tabs, remove subtabToLabelMap/labelToSlugMap",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Migrate ProjectSettings.tsx — add id to 4 tabs, remove sectionToLabelMap/labelToSlugMap",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Migrate IntegrationsSettingsPage.tsx — add id from category data, remove label-based slug generation",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern E"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Migrate AccountingMappingManager.tsx — add id from module data, remove slugToLabelMap/toSlug() helper",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern E"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Migrate WorkflowDesigner.tsx (EE) — add id to grouped tabs",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A (groups)"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Migrate NotificationsSection.tsx (EE) — add id to 3 tabs, remove tabSlugToLabelMap/tabLabelToSlugMap",
+    "implemented": true,
+    "prdRefs": [
+      "Consumer Migration Patterns",
+      "Pattern A"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Update translation guide (.ai/translation/translation-guide.md) — remove 'do not translate tab labels' warning, document that tab labels are now translatable via t()",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Build passes with zero TypeScript errors (npm run build)",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  }
+]

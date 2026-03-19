@@ -7,12 +7,14 @@ import {
   ProjectUpdatedEvent,
   ProjectClosedEvent,
   ProjectAssignedEvent,
-  ProjectTaskAssignedEvent
+  ProjectTaskAssignedEvent,
+  TaskCommentAddedEvent
 } from '@alga-psa/event-schemas';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '../../db';
-import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
+import { formatBlockNoteContent, convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { isValidEmail } from '@alga-psa/core';
 
@@ -148,6 +150,42 @@ async function sendNotificationIfEnabled(
     }
 
   } catch (error) {
+    const isEmailProviderError =
+      typeof error === 'object' &&
+      error !== null &&
+      (error as any).name === 'EmailProviderError' &&
+      typeof (error as any).isRetryable === 'boolean';
+
+    if (isEmailProviderError && (error as any).isRetryable === false) {
+      logger.warn('[ProjectEmailSubscriber] Non-retryable email send failure; skipping:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        subtypeName,
+        recipient: params.to,
+        tenantId: params.tenantId
+      });
+      return;
+    }
+
+    if (isEmailProviderError && (error as any).isRetryable === true) {
+      const queue = EventEmailRetryQueue.getInstance();
+      if (queue.isReady()) {
+        await queue.enqueue(params, {
+          retryAfterMs:
+            typeof (error as any).metadata?.retryAfterMs === 'number'
+              ? (error as any).metadata.retryAfterMs
+              : undefined,
+        });
+
+        logger.warn('[ProjectEmailSubscriber] Retryable email send failure queued for delayed retry:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          subtypeName,
+          recipient: params.to,
+          tenantId: params.tenantId
+        });
+        return;
+      }
+    }
+
     logger.error('[ProjectEmailSubscriber] Error in sendNotificationIfEnabled:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       subtypeName,
@@ -1220,6 +1258,157 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
 }
 
 /**
+ * Handle task comment added events
+ */
+async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<void> {
+  const { payload } = event;
+  const { tenantId, taskId, projectId, userId, commentContent } = payload;
+
+  try {
+    const { knex: db } = await createTenantKnex();
+
+    // Get task and project details
+    const task = await db('project_tasks as t')
+      .select(
+        't.task_id',
+        't.task_name',
+        't.assigned_to',
+        't.phase_id',
+        'p.project_name',
+        'p.project_id'
+      )
+      .leftJoin('project_phases as ph', function() {
+        this.on('ph.phase_id', '=', 't.phase_id')
+            .andOn('ph.tenant', '=', 't.tenant');
+      })
+      .leftJoin('projects as p', function() {
+        this.on('p.project_id', '=', 'ph.project_id')
+            .andOn('p.tenant', '=', 'ph.tenant');
+      })
+      .where('t.task_id', taskId)
+      .andWhere('t.tenant', tenantId)
+      .first();
+
+    if (!task) {
+      logger.warn('[ProjectEmailSubscriber] Could not send task comment email - task not found:', {
+        eventId: event.id,
+        taskId
+      });
+      return;
+    }
+
+    // Get comment author
+    const author = await db('users')
+      .select('first_name', 'last_name', 'email', 'user_id')
+      .where({ user_id: userId, tenant: tenantId })
+      .first();
+
+    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+    const authorEmail = author?.email || '';
+
+    // Parse comment content
+    let contentHtml = '';
+    let contentText = '';
+    if (commentContent) {
+      try {
+        const formatting = formatBlockNoteContent(commentContent);
+        contentHtml = formatting.html;
+        contentText = formatting.text;
+      } catch {
+        try {
+          contentText = convertBlockNoteToMarkdown(commentContent);
+          contentHtml = contentText;
+        } catch {
+          contentText = typeof commentContent === 'string' ? commentContent : '';
+          contentHtml = contentText;
+        }
+      }
+    }
+
+    // Build task URL
+    const taskUrlParams = new URLSearchParams();
+    taskUrlParams.set('phaseId', task.phase_id);
+    taskUrlParams.set('taskId', task.task_id);
+    const taskUrl = `${getBaseUrl()}/msp/projects/${task.project_id}?${taskUrlParams.toString()}`;
+
+    const emailContext = {
+      task: {
+        name: task.task_name,
+        url: taskUrl,
+      },
+      project: {
+        name: task.project_name,
+      },
+      comment: {
+        author: authorName,
+        contentHtml,
+        contentText,
+      },
+    };
+
+    const replyContext = {
+      projectId: task.project_id || projectId
+    };
+
+    // Get all assignees (primary + additional agents)
+    const assignees: Array<{ user_id: string; email: string }> = [];
+
+    // Primary assignee
+    if (task.assigned_to) {
+      const primaryAssignee = await db('users')
+        .select('user_id', 'email')
+        .where({ user_id: task.assigned_to, tenant: tenantId, is_inactive: false })
+        .first();
+      if (primaryAssignee && isValidEmail(primaryAssignee.email)) {
+        assignees.push(primaryAssignee);
+      }
+    }
+
+    // Additional agents
+    const additionalAgents = await db('task_resources as tr')
+      .select('u.user_id', 'u.email')
+      .leftJoin('users as u', function() {
+        this.on('u.user_id', '=', 'tr.additional_user_id')
+            .andOn('u.tenant', '=', 'tr.tenant')
+            .andOn('u.is_inactive', '=', db.raw('false'));
+      })
+      .where('tr.task_id', taskId)
+      .andWhere('tr.tenant', tenantId)
+      .whereNotNull('tr.additional_user_id');
+
+    for (const agent of additionalAgents) {
+      if (agent.email && isValidEmail(agent.email) && !assignees.some(a => a.user_id === agent.user_id)) {
+        assignees.push(agent);
+      }
+    }
+
+    // Send email to each assignee (excluding the comment author)
+    for (const assignee of assignees) {
+      if (assignee.user_id === userId) {
+        continue;
+      }
+
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: assignee.email,
+        subject: `New Comment on Task: ${task.task_name}`,
+        template: 'task-comment-added',
+        context: emailContext,
+        replyContext
+      }, 'Task Comment Added', assignee.user_id);
+    }
+
+  } catch (error) {
+    logger.error('[ProjectEmailSubscriber] Error handling task comment added event:', {
+      error,
+      eventId: event.id,
+      taskId
+    });
+    throw error;
+  }
+}
+
+/**
  * Handle all project events
  */
 async function handleProjectEvent(event: BaseEvent): Promise<void> {
@@ -1256,6 +1445,9 @@ async function handleProjectEvent(event: BaseEvent): Promise<void> {
     case 'PROJECT_TASK_ASSIGNED':
       await handleProjectTaskAssigned(validatedEvent as ProjectTaskAssignedEvent);
       break;
+    case 'TASK_COMMENT_ADDED':
+      await handleTaskCommentAdded(validatedEvent as TaskCommentAddedEvent);
+      break;
     default:
       logger.warn('[ProjectEmailSubscriber] Unhandled project event type:', {
         eventType: event.eventType,
@@ -1276,7 +1468,8 @@ export async function registerProjectEmailSubscriber(): Promise<void> {
       'PROJECT_UPDATED',
       'PROJECT_CLOSED',
       'PROJECT_ASSIGNED',
-      'PROJECT_TASK_ASSIGNED'
+      'PROJECT_TASK_ASSIGNED',
+      'TASK_COMMENT_ADDED'
     ] as const;
 
     const channel = getEmailEventChannel();
@@ -1304,7 +1497,8 @@ export async function unregisterProjectEmailSubscriber(): Promise<void> {
       'PROJECT_UPDATED',
       'PROJECT_CLOSED',
       'PROJECT_ASSIGNED',
-      'PROJECT_TASK_ASSIGNED'
+      'PROJECT_TASK_ASSIGNED',
+      'TASK_COMMENT_ADDED'
     ] as const;
 
     const channel = getEmailEventChannel();

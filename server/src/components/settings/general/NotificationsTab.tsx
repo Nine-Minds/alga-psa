@@ -9,40 +9,19 @@ import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSw
 import { NotificationSettings, EmailTemplates, NotificationCategories, InternalNotificationCategories } from "@alga-psa/notifications/components";
 import { TelemetrySettings } from "@alga-psa/ui/components/settings/telemetry/TelemetrySettings";
 import { useUnsavedChanges } from "@alga-psa/ui";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type NotificationView = 'email' | 'internal';
 
-// Map URL slugs to tab labels for email view
-const emailSectionToLabelMap: Record<string, string> = {
-  'settings': 'Settings',
-  'email-templates': 'Email Templates',
-  'categories': 'Categories',
-  'telemetry': 'Telemetry'
-};
-
-// Map URL slugs to tab labels for internal view
-const internalSectionToLabelMap: Record<string, string> = {
-  'categories': 'Categories'
-};
-
-// Map tab labels back to URL slugs for email view
-const emailLabelToSlugMap: Record<string, string> = {
-  'Settings': 'settings',
-  'Email Templates': 'email-templates',
-  'Categories': 'categories',
-  'Telemetry': 'telemetry'
-};
-
-// Map tab labels back to URL slugs for internal view
-const internalLabelToSlugMap: Record<string, string> = {
-  'Categories': 'categories'
-};
+const EMAIL_NOTIFICATION_TAB_IDS = ['settings', 'email-templates', 'categories', 'telemetry'] as const;
+const INTERNAL_NOTIFICATION_TAB_IDS = ['categories'] as const;
 
 export default function NotificationsTab() {
   return <NotificationsTabContent />;
 }
 
 function NotificationsTabContent() {
+  const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const viewParam = searchParams?.get('view');
   const sectionParam = searchParams?.get('section');
@@ -55,11 +34,15 @@ function NotificationsTabContent() {
 
   // Determine initial tab based on URL parameter and view
   const getInitialTab = (view: NotificationView): string => {
-    if (!sectionParam) {
-      return view === 'email' ? 'Settings' : 'Categories';
+    const requestedTab = sectionParam?.toLowerCase();
+    const validTabs: readonly string[] = view === 'email' ? EMAIL_NOTIFICATION_TAB_IDS : INTERNAL_NOTIFICATION_TAB_IDS;
+    const defaultTab = view === 'email' ? 'settings' : 'categories';
+
+    if (requestedTab && validTabs.includes(requestedTab)) {
+      return requestedTab;
     }
-    const sectionMap = view === 'email' ? emailSectionToLabelMap : internalSectionToLabelMap;
-    return sectionMap[sectionParam.toLowerCase()] || (view === 'email' ? 'Settings' : 'Categories');
+
+    return defaultTab;
   };
 
   const initialView = getInitialView();
@@ -81,7 +64,7 @@ function NotificationsTabContent() {
   }, [viewParam, sectionParam, currentView, currentTab]);
 
   // Update URL when view or tab changes
-  const updateURL = useCallback((view: NotificationView, tabLabel: string) => {
+  const updateURL = useCallback((view: NotificationView, tabId: string) => {
     const currentSearchParams = new URLSearchParams(window.location.search);
 
     // Update view parameter
@@ -92,12 +75,10 @@ function NotificationsTabContent() {
     }
 
     // Update section parameter
-    const slugMap = view === 'email' ? emailLabelToSlugMap : internalLabelToSlugMap;
-    const urlSlug = slugMap[tabLabel];
     const defaultSlug = view === 'email' ? 'settings' : 'categories';
 
-    if (urlSlug && urlSlug !== defaultSlug) {
-      currentSearchParams.set('section', urlSlug);
+    if (tabId !== defaultSlug) {
+      currentSearchParams.set('section', tabId);
     } else {
       currentSearchParams.delete('section');
     }
@@ -112,8 +93,8 @@ function NotificationsTabContent() {
   }, []);
 
   const viewOptions: ViewSwitcherOption<NotificationView>[] = [
-    { value: 'email', label: 'Email Notifications' },
-    { value: 'internal', label: 'Internal Notifications' },
+    { value: 'email', label: t('notifications.viewSwitcher.email') },
+    { value: 'internal', label: t('notifications.viewSwitcher.internal') },
   ];
 
   // Handle view change with confirmation
@@ -123,7 +104,7 @@ function NotificationsTabContent() {
     confirmNavigation(() => {
       setCurrentView(newView);
       // Reset to first tab of new view
-      const newTab = newView === 'email' ? 'Settings' : 'Categories';
+      const newTab = newView === 'email' ? 'settings' : 'categories';
       setCurrentTab(newTab);
       updateURL(newView, newTab);
     });
@@ -141,12 +122,13 @@ function NotificationsTabContent() {
 
   const emailTabContent = [
     {
+      id: 'settings',
       label: "Settings",
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Global Settings</CardTitle>
-            <CardDescription>Configure global notification settings</CardDescription>
+            <CardTitle>{t('notifications.sections.globalSettings.title')}</CardTitle>
+            <CardDescription>{t('notifications.sections.globalSettings.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <NotificationSettings />
@@ -155,12 +137,13 @@ function NotificationsTabContent() {
       ),
     },
     {
+      id: 'email-templates',
       label: "Email Templates",
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Email Templates</CardTitle>
-            <CardDescription>Manage email notification templates</CardDescription>
+            <CardTitle>{t('notifications.sections.emailTemplates.title')}</CardTitle>
+            <CardDescription>{t('notifications.sections.emailTemplates.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <EmailTemplates />
@@ -169,12 +152,13 @@ function NotificationsTabContent() {
       ),
     },
     {
+      id: 'categories',
       label: "Categories",
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Notification Categories</CardTitle>
-            <CardDescription>Manage notification categories and types</CardDescription>
+            <CardTitle>{t('notifications.sections.categories.title')}</CardTitle>
+            <CardDescription>{t('notifications.sections.categories.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <NotificationCategories />
@@ -183,12 +167,13 @@ function NotificationsTabContent() {
       ),
     },
     {
+      id: 'telemetry',
       label: "Telemetry",
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Telemetry & Analytics</CardTitle>
-            <CardDescription>Manage your telemetry and analytics preferences</CardDescription>
+            <CardTitle>{t('notifications.sections.telemetry.title')}</CardTitle>
+            <CardDescription>{t('notifications.sections.telemetry.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <TelemetrySettings />
@@ -200,12 +185,13 @@ function NotificationsTabContent() {
 
   const internalTabContent = [
     {
+      id: 'categories',
       label: "Categories",
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Internal Notification Categories</CardTitle>
-            <CardDescription>Manage internal notification categories and types</CardDescription>
+            <CardTitle>{t('notifications.sections.internalCategories.title')}</CardTitle>
+            <CardDescription>{t('notifications.sections.internalCategories.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <InternalNotificationCategories />
@@ -220,11 +206,11 @@ function NotificationsTabContent() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Notification Settings</CardTitle>
+            <CardTitle>{t('notifications.title')}</CardTitle>
             <CardDescription>
               {currentView === 'email'
-                ? 'Configure how your tenant sends email notifications'
-                : 'Configure how your tenant sends internal notifications'}
+                ? t('notifications.description.email')
+                : t('notifications.description.internal')}
             </CardDescription>
           </div>
           <ViewSwitcher

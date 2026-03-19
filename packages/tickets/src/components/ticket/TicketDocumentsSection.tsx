@@ -3,10 +3,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import Documents from '@alga-psa/documents/components/Documents';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IDocument } from '@alga-psa/types';
-import { getDocumentByTicketId } from '@alga-psa/documents/actions/documentActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import styles from './TicketDetails.module.css';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -17,15 +16,19 @@ interface TicketDocumentsSectionProps {
   ticketId: string;
   initialDocuments?: IDocument[];
   onDocumentCreated?: () => Promise<void>;
+  /** Override the default folder-fetching function (e.g. for client portal) */
+  getFoldersFn?: () => Promise<string[]>;
 }
 
 const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   id = 'ticket-documents-section',
   ticketId,
   initialDocuments = [],
-  onDocumentCreated
+  onDocumentCreated,
+  getFoldersFn
 }) => {
   const router = useRouter();
+  const { getDocumentByTicketId, renderDocuments } = useDocumentsCrossFeature();
   const { t } = useTranslation('features/documents');
   const { data: session } = useSession();
   const userId = session?.user?.id || '';
@@ -90,17 +93,18 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">{t('title', 'Documents')}</h2>
           </div>
-          <Documents
-            id={`${id}-documents`}
-            documents={documents}
-            userId={userId}
-            entityId={ticketId}
-            entityType="ticket"
-            isLoading={isLoading}
-            onDocumentCreated={handleDocumentCreated}
-            uploadFormRef={uploadFormRef}
-            namespace="features/documents"
-          />
+          {renderDocuments({
+            id: `${id}-documents`,
+            documents,
+            userId,
+            entityId: ticketId,
+            entityType: 'ticket',
+            isLoading,
+            onDocumentCreated: handleDocumentCreated,
+            uploadFormRef,
+            namespace: 'features/documents',
+            getFoldersFn,
+          })}
         </div>
       </div>
     </ReflectionContainer>

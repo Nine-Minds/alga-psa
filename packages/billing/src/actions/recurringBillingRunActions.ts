@@ -8,7 +8,7 @@ import {
   buildRecurringBillingRunCompletedPayload,
   buildRecurringBillingRunFailedPayload,
   buildRecurringBillingRunStartedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 export type RecurringBillingRunInvoiceFailure = {
   billingCycleId: string;
@@ -124,4 +124,3 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
     throw fatalError;
   }
 }
-

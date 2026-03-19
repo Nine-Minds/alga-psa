@@ -1,205 +1,54 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle, Wand2, Sparkles, RotateCcw, LinkIcon } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { ChevronRight, ChevronDown, Plus, Trash2, AlertTriangle, Wand2, Sparkles, RotateCcw, Expand } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { Label } from '@alga-psa/ui/components/Label';
-import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
-import { listTenantSecrets } from '@alga-psa/tenancy/actions';
-import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime/client';
 import {
-  ExpressionEditor,
-  type ExpressionEditorHandle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@alga-psa/ui/components/Dialog';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import type { InputMapping, MappingValue, Expr } from '@alga-psa/workflows/runtime';
+import {
   type ExpressionContext,
   type JsonSchema
 } from '../expression-editor';
-import {
-  useMappingDnd,
-  getDragData,
-  getDropTargetClasses,
-  type DragItem
-} from './useMappingDnd';
 import type { MappingPositionsHandlers } from './useMappingPositions';
 import { useMappingKeyboard } from './useMappingKeyboard';
+import { SourceDataTree, type DataTreeContext } from './SourceDataTree';
 import {
   TypeCompatibility,
   getTypeCompatibility,
-  getCompatibilityColor,
   getCompatibilityClasses,
   getCompatibilityLabel,
-  getDisplayTypeName
 } from './typeCompatibility';
-
-/**
- * Extended select option with type information for compatibility filtering
- */
-export interface TypedSelectOption extends SelectOption {
-  /** The data type of this field (e.g., 'string', 'number', 'object') */
-  type?: string;
-}
-
-/**
- * Compatibility group for dropdown options
- */
-interface CompatibilityGroup {
-  compatibility: TypeCompatibility;
-  label: string;
-  options: TypedSelectOption[];
-}
-
-/**
- * Build grouped field options sorted by type compatibility
- *
- * @param options - Available field options
- * @param targetType - The target field type to compare against
- * @returns Grouped and sorted options with compatibility indicators
- */
-function buildCompatibilityGroupedOptions(
-  options: SelectOption[],
-  targetType: string | undefined
-): CompatibilityGroup[] {
-  if (!targetType) {
-    // No target type - just return all options as unknown
-    return [{
-      compatibility: TypeCompatibility.UNKNOWN,
-      label: 'Available Fields',
-      options: options.map(o => ({ ...o }))
-    }];
-  }
-
-  const groups: Record<TypeCompatibility, TypedSelectOption[]> = {
-    [TypeCompatibility.EXACT]: [],
-    [TypeCompatibility.COERCIBLE]: [],
-    [TypeCompatibility.UNKNOWN]: [],
-    [TypeCompatibility.INCOMPATIBLE]: []
-  };
-
-  // Infer types from field paths and group by compatibility
-  for (const option of options) {
-    const inferredType = inferTypeFromPath(option.value);
-    const compatibility = getTypeCompatibility(inferredType, targetType);
-
-    groups[compatibility].push({
-      ...option,
-      type: inferredType,
-      // Add visual indicator to label
-      label: typeof option.label === 'string'
-        ? option.label
-        : option.label
-    });
-  }
-
-  // Build result groups (only include non-empty groups)
-  const result: CompatibilityGroup[] = [];
-
-  if (groups[TypeCompatibility.EXACT].length > 0) {
-    result.push({
-      compatibility: TypeCompatibility.EXACT,
-      label: '✓ Exact Match',
-      options: groups[TypeCompatibility.EXACT]
-    });
-  }
-
-  if (groups[TypeCompatibility.COERCIBLE].length > 0) {
-    result.push({
-      compatibility: TypeCompatibility.COERCIBLE,
-      label: '~ Can Convert',
-      options: groups[TypeCompatibility.COERCIBLE]
-    });
-  }
-
-  if (groups[TypeCompatibility.UNKNOWN].length > 0) {
-    result.push({
-      compatibility: TypeCompatibility.UNKNOWN,
-      label: '? Unknown',
-      options: groups[TypeCompatibility.UNKNOWN]
-    });
-  }
-
-  if (groups[TypeCompatibility.INCOMPATIBLE].length > 0) {
-    result.push({
-      compatibility: TypeCompatibility.INCOMPATIBLE,
-      label: '✗ Incompatible',
-      options: groups[TypeCompatibility.INCOMPATIBLE]
-    });
-  }
-
-  return result;
-}
-
-/**
- * Infer type from a field path
- * Uses heuristics based on common field naming patterns
- */
-function inferTypeFromPath(path: string): string | undefined {
-  if (!path) return undefined;
-
-  const parts = path.split('.');
-  const fieldName = parts[parts.length - 1].toLowerCase();
-
-  // Remove array index notation
-  const cleanName = fieldName.replace(/\[\]$/, '').replace(/\[\d+\]$/, '');
-
-  // Common patterns for specific types
-  if (cleanName.endsWith('id') || cleanName.endsWith('_id') || cleanName === 'id') return 'string';
-  if (cleanName.endsWith('email') || cleanName === 'email') return 'string';
-  if (cleanName.endsWith('name') || cleanName === 'name') return 'string';
-  if (cleanName.endsWith('title') || cleanName === 'title') return 'string';
-  if (cleanName.endsWith('description') || cleanName === 'description') return 'string';
-  if (cleanName.endsWith('message') || cleanName === 'message') return 'string';
-  if (cleanName.endsWith('url') || cleanName === 'url') return 'string';
-  if (cleanName.endsWith('path') || cleanName === 'path') return 'string';
-  if (cleanName.endsWith('text') || cleanName === 'text') return 'string';
-  if (cleanName.endsWith('content') || cleanName === 'content') return 'string';
-  if (cleanName.endsWith('subject') || cleanName === 'subject') return 'string';
-
-  if (cleanName.endsWith('count') || cleanName.endsWith('_count')) return 'number';
-  if (cleanName.endsWith('amount') || cleanName.endsWith('_amount')) return 'number';
-  if (cleanName.endsWith('total') || cleanName.endsWith('_total')) return 'number';
-  if (cleanName.endsWith('number') && !cleanName.includes('phone')) return 'number';
-  if (cleanName === 'index' || cleanName === '$index') return 'number';
-  if (cleanName.endsWith('port')) return 'number';
-  if (cleanName.endsWith('version')) return 'number';
-
-  if (cleanName.startsWith('is_') || cleanName.startsWith('has_')) return 'boolean';
-  if (cleanName.endsWith('enabled') || cleanName.endsWith('_enabled')) return 'boolean';
-  if (cleanName.endsWith('active') || cleanName.endsWith('_active')) return 'boolean';
-  if (cleanName.endsWith('flag') || cleanName.endsWith('_flag')) return 'boolean';
-  if (cleanName === 'required' || cleanName === 'optional') return 'boolean';
-  if (cleanName === 'success' || cleanName === 'valid') return 'boolean';
-
-  if (cleanName.endsWith('date') || cleanName.endsWith('_at')) return 'date';
-  if (cleanName.endsWith('time') || cleanName.endsWith('timestamp')) return 'date';
-  if (cleanName === 'created' || cleanName === 'updated') return 'date';
-
-  if (cleanName.endsWith('list') || cleanName.endsWith('items')) return 'array';
-  if (cleanName.endsWith('[]')) return 'array';
-  if (cleanName === 'attachments' || cleanName === 'files') return 'array';
-  if (cleanName === 'tags' || cleanName === 'labels') return 'array';
-
-  // Root paths
-  if (path === 'payload' || path === 'vars' || path === 'meta' || path === 'error') return 'object';
-
-  // State is typically a string
-  if (path === 'meta.state') return 'string';
-  if (path === 'meta.traceId') return 'string';
-  if (path === 'error.message' || path === 'error.name' || path === 'error.stack') return 'string';
-
-  return undefined;
-}
-
-function extractPrimaryPath(expression: string | undefined): string | null {
-  if (!expression) return null;
-  const trimmed = expression.trim();
-  if (!trimmed) return null;
-  const token = trimmed.split(/[\s+\-*/%()[\]{},<>=!&|?:]+/)[0];
-  return token || null;
-}
+import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
+import { getWorkflowActionInputTypeHint, WorkflowActionInputTypeHint } from '../WorkflowActionInputTypeHint';
+import { WorkflowActionInputFixedPicker } from '../WorkflowActionInputFixedPicker';
+import {
+  WorkflowActionInputSourceMode,
+  createWorkflowActionInputValueForMode,
+  deriveWorkflowActionInputSourceMode,
+  getDefaultWorkflowActionInputSourceMode,
+  isWorkflowActionInputLegacyValue,
+  transitionWorkflowActionInputMode,
+  type WorkflowActionInputSourceModeValue,
+} from '../WorkflowActionInputSourceMode';
+import {
+  ReferenceScopeSelector,
+  buildReferenceSourceModel,
+  deriveReferenceScope,
+  extractPrimaryPath,
+  inferTypeFromPath,
+  type ReferenceSourceScope,
+} from '../workflowReferenceSelector';
 
 /**
  * Build ExpressionContext from SelectOption[] for the Monaco expression editor
@@ -221,7 +70,6 @@ function buildExpressionContextFromOptions(fieldOptions: SelectOption[]): Expres
 
     const root = parts[0];
     const restPath = parts.slice(1);
-    const fieldName = restPath[restPath.length - 1];
 
     // Infer type from path
     const inferredType = inferTypeFromPath(path);
@@ -284,78 +132,39 @@ function buildExpressionContextFromOptions(fieldOptions: SelectOption[]): Expres
 }
 
 /**
- * Flatten grouped options back to a sorted array with visual indicators
- */
-function flattenGroupedOptions(groups: CompatibilityGroup[]): SelectOption[] {
-  const result: SelectOption[] = [];
-
-  for (const group of groups) {
-    // Add group header as a disabled option
-    if (groups.length > 1) {
-      result.push({
-        value: `__group_${group.compatibility}__`,
-        label: group.label,
-        is_inactive: true,
-        className: 'text-xs font-semibold text-gray-500 bg-gray-50 cursor-default'
-      });
-    }
-
-    // Add options with compatibility styling
-    for (const option of group.options) {
-      const classes = getCompatibilityClasses(group.compatibility);
-      result.push({
-        ...option,
-        className: `${option.className || ''} ${classes.text}`.trim()
-      });
-    }
-  }
-
-  return result;
-}
-
-/**
- * §17.3.2 - Type-filtered field picker component
- * Groups and sorts options by type compatibility with target field
- */
-const TypeFilteredFieldPicker: React.FC<{
-  id: string;
-  options: SelectOption[];
-  targetType: string | undefined;
-  onSelect: (path: string) => void;
-  disabled?: boolean;
-}> = ({ id, options, targetType, onSelect, disabled }) => {
-  // Build grouped options by type compatibility
-  const groupedOptions = useMemo(() => {
-    const groups = buildCompatibilityGroupedOptions(options, targetType);
-    return flattenGroupedOptions(groups);
-  }, [options, targetType]);
-
-  return (
-    <CustomSelect
-      id={id}
-      options={groupedOptions}
-      value=""
-      placeholder="Insert field"
-      onValueChange={(value) => {
-        // Skip group headers
-        if (value.startsWith('__group_')) return;
-        onSelect(value);
-      }}
-      allowClear
-      className="w-48"
-      disabled={disabled}
-    />
-  );
-};
-
-/**
  * Schema field definition for target action inputs
  */
 export interface ActionInputField {
   name: string;
   type: string;
+  nullable?: boolean;
   description?: string;
   required?: boolean;
+  examples?: unknown[];
+  editor?: {
+    kind: 'text' | 'picker' | 'color' | 'json' | 'custom';
+    inline?: {
+      mode: 'input' | 'textarea' | 'picker-summary' | 'swatch';
+    };
+    dialog?: {
+      mode: 'large-text';
+    };
+    dependencies?: string[];
+    fixedValueHint?: string;
+    allowsDynamicReference?: boolean;
+    picker?: {
+      resource: string;
+    };
+  };
+  picker?: {
+    kind: string;
+    dependencies?: string[];
+    fixedValueHint?: string;
+    allowsDynamicReference?: boolean;
+  };
+  presentation?: {
+    inputControl?: 'multiline';
+  };
   enum?: Array<string | number | boolean | null>;
   default?: unknown;
   constraints?: {
@@ -371,6 +180,34 @@ export interface ActionInputField {
   };
   children?: ActionInputField[];
 }
+
+const getWorkflowFieldEditor = (field: ActionInputField): NonNullable<ActionInputField['editor']> | undefined => {
+  if (field.editor) {
+    return field.editor;
+  }
+
+  if (field.picker?.kind) {
+    return {
+      kind: 'picker',
+      inline: { mode: 'picker-summary' },
+      dependencies: field.picker.dependencies,
+      fixedValueHint: field.picker.fixedValueHint,
+      allowsDynamicReference: field.picker.allowsDynamicReference,
+      picker: {
+        resource: field.picker.kind,
+      },
+    };
+  }
+
+  if (field.presentation?.inputControl === 'multiline') {
+    return {
+      kind: 'text',
+      inline: { mode: 'textarea' },
+    };
+  }
+
+  return undefined;
+};
 
 /**
  * Props for the InputMappingEditor component
@@ -392,7 +229,7 @@ export interface InputMappingEditorProps {
   targetFields: ActionInputField[];
 
   /**
-   * Available data context options for expressions
+   * Available data context options for references
    */
   fieldOptions: SelectOption[];
 
@@ -404,7 +241,7 @@ export interface InputMappingEditorProps {
   /**
    * §19.3 - Shared position handlers from MappingPanel
    */
-  positionsHandlers: MappingPositionsHandlers;
+  positionsHandlers?: MappingPositionsHandlers;
 
   /**
    * §19.1 - Source field type lookup for compatibility indicators
@@ -412,10 +249,15 @@ export interface InputMappingEditorProps {
   sourceTypeMap?: Map<string, string>;
 
   /**
-   * §20 - Expression context for Monaco editor autocomplete
-   * If not provided, falls back to building context from fieldOptions
+   * Reference context derived from workflow schemas.
+   * Falls back to building a minimal context from fieldOptions.
    */
   expressionContext?: ExpressionContext;
+
+  /**
+   * Grouped source data used by inline "Browse sources" reference panels.
+   */
+  referenceBrowseContext?: DataTreeContext;
 
   /**
    * Whether the editor is disabled
@@ -426,18 +268,20 @@ export interface InputMappingEditorProps {
 /**
  * Value type for a mapping entry
  */
-type ValueType = 'expr' | 'secret' | 'literal';
+type ValueType = 'reference' | 'fixed' | 'legacy';
 
 /**
  * Determine the type of a MappingValue
  */
 function getMappingValueType(value: MappingValue | undefined): ValueType {
-  if (!value) return 'literal';
+  if (!value) return 'fixed';
   if (typeof value === 'object' && value !== null) {
-    if ('$expr' in value) return 'expr';
-    if ('$secret' in value) return 'secret';
+    if ('$secret' in value) return 'legacy';
+    if ('$expr' in value) {
+      return isWorkflowActionInputLegacyValue(value) ? 'legacy' : 'reference';
+    }
   }
-  return 'literal';
+  return 'fixed';
 }
 
 /**
@@ -484,98 +328,81 @@ function isMappingValueSet(value: MappingValue | undefined, fieldType?: string):
  */
 const MappingFieldEditor: React.FC<{
   field: ActionInputField;
+  fieldPath?: string;
   value: MappingValue | undefined;
   onChange: (value: MappingValue | undefined) => void;
+  rootInputMapping: InputMapping;
   fieldOptions: SelectOption[];
-  secrets: Array<{ name: string; description?: string }>;
   stepId: string;
   disabled?: boolean;
   sourceTypeMap?: Map<string, string>;
   expressionContext?: ExpressionContext;
-}> = ({ field, value, onChange, fieldOptions, secrets, stepId, disabled, sourceTypeMap, expressionContext }) => {
-  const [valueType, setValueType] = useState<ValueType>(() => getMappingValueType(value));
-  const [expressionError, setExpressionError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  referenceBrowseContext?: DataTreeContext;
+}> = ({
+  field,
+  fieldPath,
+  value,
+  onChange,
+  rootInputMapping,
+  fieldOptions,
+  stepId,
+  disabled,
+  sourceTypeMap,
+  expressionContext,
+  referenceBrowseContext,
+}) => {
   const [expanded, setExpanded] = useState(true);
-  const editorRef = useRef<ExpressionEditorHandle>(null);
+  const [preservedFixedValue, setPreservedFixedValue] = useState<MappingValue | undefined>(() =>
+    deriveWorkflowActionInputSourceMode(value).mode === 'fixed' ? value : undefined
+  );
+  const [preservedReferenceValue, setPreservedReferenceValue] = useState<MappingValue | undefined>(() =>
+    deriveWorkflowActionInputSourceMode(value).mode === 'reference' ? value : undefined
+  );
+  const valueType = useMemo(() => getMappingValueType(value), [value]);
 
-  const idPrefix = `mapping-${stepId}-${field.name}`;
+  const resolvedFieldPath = fieldPath ?? field.name;
+  const idPrefix = `mapping-${stepId}-${resolvedFieldPath}`;
   const isMissingRequired = useMemo(
     () => Boolean(field.required) && !isMappingValueSet(value, field.type),
     [field.required, field.type, value]
   );
 
-  // Sync valueType when value prop changes externally
   useEffect(() => {
-    setValueType(getMappingValueType(value));
-  }, [value]);
-
-  const handleValueTypeChange = useCallback((newType: string) => {
-    const type = newType as ValueType;
-    setValueType(type);
-    setExpressionError(null);
-
-    // Convert to new type with appropriate default
-    if (type === 'expr') {
-      onChange({ $expr: '' });
-    } else if (type === 'secret') {
-      onChange({ $secret: '' });
-    } else {
-      // Literal - set appropriate default based on field type
-      if (field.type === 'boolean') onChange(false);
-      else if (field.type === 'number' || field.type === 'integer') onChange(0);
-      else if (field.type === 'array') onChange([]);
-      else if (field.type === 'object') onChange({});
-      else onChange('');
+    const sourceMode = deriveWorkflowActionInputSourceMode(value).mode;
+    if (sourceMode === 'fixed' && value !== undefined && valueType === 'fixed') {
+      setPreservedFixedValue(value);
     }
-  }, [field.type, onChange]);
+    if (sourceMode === 'reference' && value !== undefined && valueType === 'reference') {
+      setPreservedReferenceValue(value);
+    }
+  }, [value, valueType]);
 
-  const handleExpressionChange = useCallback((expr: string) => {
-    try {
-      if (expr.trim().length > 0) {
-        validateExpressionSource(expr);
+  const handleSourceModeChange = useCallback((nextMode: WorkflowActionInputSourceModeValue) => {
+    const transition = transitionWorkflowActionInputMode(
+      field,
+      value,
+      nextMode,
+      {
+        preservedFixedValue,
+        preservedReferenceValue,
       }
-      setExpressionError(null);
-    } catch (err) {
-      setExpressionError(err instanceof Error ? err.message : 'Invalid expression');
-    }
-    onChange({ $expr: expr });
-  }, [onChange]);
-
-  const handleSecretChange = useCallback((secretName: string) => {
-    onChange({ $secret: secretName });
-  }, [onChange]);
+    );
+    setPreservedFixedValue(transition.preservedFixedValue);
+    setPreservedReferenceValue(transition.preservedReferenceValue);
+    onChange(transition.nextValue);
+  }, [field, onChange, preservedFixedValue, preservedReferenceValue, value, valueType]);
 
   const handleLiteralChange = useCallback((literalValue: unknown) => {
     onChange(literalValue as MappingValue);
   }, [onChange]);
 
-  const handleInsertField = useCallback((path: string) => {
-    if (!path) return;
-    // Use Monaco editor's insertAtCursor if available
-    if (editorRef.current) {
-      editorRef.current.insertAtCursor(path);
-    } else {
-      // Fallback for non-Monaco case
-      const current = value && '$expr' in (value as object) ? (value as Expr).$expr ?? '' : '';
-      const next = current ? `${current} ${path}` : path;
-      handleExpressionChange(next);
-    }
-  }, [value, handleExpressionChange]);
-
-  const handleValidationChange = useCallback((errors: string[]) => {
-    setValidationErrors(errors);
-  }, []);
-
-  const typeOptions: SelectOption[] = [
-    { value: 'expr', label: 'Expression' },
-    { value: 'secret', label: 'Secret' },
-    { value: 'literal', label: 'Literal' },
-  ];
-
-  // §16.2 - Type mismatch warning for expression mappings
   const typeMismatchWarning = useMemo(() => {
-    if (valueType !== 'expr' || !value || !('$expr' in (value as object))) {
+    if (
+      valueType !== 'reference' ||
+      !value ||
+      typeof value !== 'object' ||
+      !('$expr' in value)
+    ) {
       return null;
     }
 
@@ -590,29 +417,16 @@ const MappingFieldEditor: React.FC<{
 
     if (!sourceType || !targetType) return null;
 
-    const compatibility = getTypeCompatibility(sourceType, targetType);
-
-    if (compatibility === TypeCompatibility.COERCIBLE) {
-      return {
-        type: 'warning' as const,
-        message: `Type "${sourceType}" will be converted to "${targetType}"`,
-        compatibility
-      };
-    }
-
-    if (compatibility === TypeCompatibility.INCOMPATIBLE) {
-      return {
-        type: 'error' as const,
-        message: `Type "${sourceType}" is incompatible with expected "${targetType}"`,
-        compatibility
-      };
-    }
-
-    return null;
+    return getWorkflowActionInputTypeHint(sourceType, targetType);
   }, [valueType, value, fieldOptions, field.type, sourceTypeMap]);
 
   const compatibilityBadge = useMemo(() => {
-    if (valueType !== 'expr' || !value || !('$expr' in (value as object))) {
+    if (
+      valueType !== 'reference' ||
+      !value ||
+      typeof value !== 'object' ||
+      !('$expr' in value)
+    ) {
       return null;
     }
 
@@ -624,6 +438,7 @@ const MappingFieldEditor: React.FC<{
     if (!field.type) return null;
 
     const compatibility = getTypeCompatibility(sourceType, field.type);
+    if (compatibility === TypeCompatibility.EXACT) return null;
     const classes = getCompatibilityClasses(compatibility);
 
     return {
@@ -634,156 +449,203 @@ const MappingFieldEditor: React.FC<{
     };
   }, [valueType, value, sourceTypeMap, field.type]);
 
-  const secretOptions: SelectOption[] = secrets.map(s => ({
-    value: s.name,
-    label: s.name,
-    ...(s.description && { description: s.description })
-  }));
+  const [showBrowseSources, setShowBrowseSources] = useState(false);
+  const currentSourceMode = valueType === 'legacy' ? deriveWorkflowActionInputSourceMode(value).mode : valueType;
+  const selectedReferencePath = currentSourceMode === 'reference' ? extractPrimaryPath(getDisplayValue(value)) : null;
+  const referenceSourceModel = useMemo(
+    () => buildReferenceSourceModel(referenceBrowseContext, fieldOptions, expressionContext?.payloadSchema),
+    [expressionContext?.payloadSchema, referenceBrowseContext, fieldOptions]
+  );
+  const [selectedReferenceScope, setSelectedReferenceScope] = useState<ReferenceSourceScope | ''>(() =>
+    deriveReferenceScope(selectedReferencePath, referenceBrowseContext).scope
+  );
+  const [selectedReferenceStep, setSelectedReferenceStep] = useState(() =>
+    deriveReferenceScope(selectedReferencePath, referenceBrowseContext).step
+  );
 
-  const typeIcon = valueType === 'expr' ? <Code className="w-3.5 h-3.5" /> :
-    valueType === 'secret' ? <Key className="w-3.5 h-3.5" /> :
-    <Type className="w-3.5 h-3.5" />;
+  useEffect(() => {
+    if (currentSourceMode !== 'reference' && showBrowseSources) {
+      setShowBrowseSources(false);
+    }
+  }, [currentSourceMode, showBrowseSources]);
+
+  useEffect(() => {
+    if (currentSourceMode !== 'reference') return;
+    if (!selectedReferencePath) return;
+    const nextSelection = deriveReferenceScope(selectedReferencePath, referenceBrowseContext);
+    setSelectedReferenceScope(nextSelection.scope);
+    setSelectedReferenceStep(nextSelection.step);
+  }, [currentSourceMode, referenceBrowseContext, selectedReferencePath]);
+
+  const handleBrowseSelect = useCallback((path: string) => {
+    onChange({ $expr: path });
+    setShowBrowseSources(false);
+  }, [onChange]);
+
+  const handleReferenceScopeChange = useCallback((nextScope: ReferenceSourceScope | '') => {
+    setSelectedReferenceScope(nextScope);
+    setSelectedReferenceStep('');
+    onChange({ $expr: '' });
+  }, [onChange]);
+
+  const handleReferenceStepChange = useCallback((nextStep: string) => {
+    setSelectedReferenceStep(nextStep);
+    onChange({ $expr: '' });
+  }, [onChange]);
+
+  const handleReferenceFieldChange = useCallback((path: string) => {
+    if (!path) {
+      onChange({ $expr: '' });
+      return;
+    }
+    onChange({ $expr: path });
+  }, [onChange]);
 
   return (
     <Card className="p-3 space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-2 text-sm font-medium text-gray-800 hover:text-gray-600"
+          className="min-w-0 flex-1 text-left text-sm font-medium text-gray-800 hover:text-gray-600"
           disabled={disabled}
         >
-          {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          <span className="flex items-center gap-1">
-            {field.name}
-            {field.required && (
-              <span
-                className="text-[11px] text-gray-500"
-                aria-hidden
-                title="Required"
-              >
-                *
-              </span>
-            )}
-          </span>
-          {isMissingRequired && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-destructive" title="Required field is missing a value">
-              <AlertTriangle className="w-3 h-3" />
-              Missing
-            </span>
-          )}
-          {compatibilityBadge && (
-            <Badge
-              className={`text-[10px] ${compatibilityBadge.classes.bg} ${compatibilityBadge.classes.text} ${compatibilityBadge.classes.border}`}
-              title={`${compatibilityBadge.label}: ${compatibilityBadge.sourceType ?? 'unknown'} → ${compatibilityBadge.targetType}`}
-            >
-              {compatibilityBadge.label}
-            </Badge>
-          )}
+          <div className="flex min-w-0 items-start gap-2">
+            {expanded ? <ChevronDown className="mt-0.5 h-4 w-4 shrink-0" /> : <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" />}
+            <WorkflowActionInputFieldInfo
+              field={field}
+              isMissingRequired={isMissingRequired}
+              compact
+            />
+          </div>
         </button>
-        <div className="flex items-center gap-2">
-          {typeIcon}
-          <CustomSelect
-            id={`${idPrefix}-type`}
-            options={typeOptions}
-            value={valueType}
-            onValueChange={handleValueTypeChange}
-            disabled={disabled}
-            className="w-28"
-          />
-        </div>
       </div>
 
       {expanded && (
-        <div className="pl-6 space-y-2">
-          {field.description && (
-            <p className="text-xs text-gray-500">{field.description}</p>
-          )}
-
-          {valueType === 'expr' && (
+        <div className="space-y-3 pl-2">
+          <div className="flex items-center justify-between gap-3">
+            <WorkflowActionInputSourceMode
+              idPrefix={idPrefix}
+              value={value}
+              onModeChange={handleSourceModeChange}
+              disabled={disabled}
+            />
+            {compatibilityBadge && valueType === 'reference' && (
+              <Badge
+                className={`text-[10px] ${compatibilityBadge.classes.bg} ${compatibilityBadge.classes.text} ${compatibilityBadge.classes.border}`}
+                title={`${compatibilityBadge.label}: ${compatibilityBadge.sourceType ?? 'unknown'} → ${compatibilityBadge.targetType}`}
+              >
+                {compatibilityBadge.label}
+              </Badge>
+            )}
+          </div>
+          {valueType === 'reference' && (
             <div className="space-y-2">
-              <div className="flex items-center justify-end">
-                {/* §17.3.2 - Type-filtered field picker */}
-                <TypeFilteredFieldPicker
-                  id={`${idPrefix}-picker`}
-                  options={fieldOptions}
-                  targetType={field.type}
-                  onSelect={handleInsertField}
-                  disabled={disabled}
-                />
-              </div>
-              {/* §20 - Monaco expression editor with syntax highlighting and autocomplete */}
-              <ExpressionEditor
-                ref={editorRef}
-                value={getDisplayValue(value)}
-                onChange={handleExpressionChange}
-                context={expressionContext}
-                singleLine={false}
-                height={60}
-                hasError={!!expressionError || validationErrors.length > 0}
-                disabled={disabled}
-                onValidationChange={handleValidationChange}
-                ariaLabel={`Expression for ${field.name}`}
-              />
-              {(expressionError || validationErrors.length > 0) && (
-                <div className="flex items-center gap-1 text-xs text-destructive">
-                  <AlertTriangle className="w-3 h-3" />
-                  {expressionError || validationErrors[0]}
-                </div>
-              )}
-              {/* §16.2 - Type mismatch warning */}
-              {!expressionError && typeMismatchWarning && (
-                <div className={`flex items-center gap-1 text-xs ${
-                  typeMismatchWarning.type === 'error' ? 'text-destructive' : 'text-warning'
-                }`}>
-                  <AlertTriangle className="w-3 h-3" />
-                  {typeMismatchWarning.message}
-                </div>
-              )}
-            </div>
-          )}
-
-          {valueType === 'secret' && (
-            <div className="space-y-2">
-              <CustomSelect
-                id={`${idPrefix}-secret`}
-                options={secretOptions}
-                value={getDisplayValue(value)}
-                placeholder="Select a secret..."
-                onValueChange={handleSecretChange}
-                disabled={disabled}
-              />
-              <div className="flex items-center justify-between">
-                {secrets.length === 0 ? (
-                  <p className="text-xs text-gray-500">
-                    No secrets available. Create secrets in Settings → Secrets.
-                  </p>
-                ) : (
-                  <p className="text-xs text-gray-400">
-                    Value: <span className="font-mono">••••••••</span>
-                  </p>
-                )}
-                <a
-                  href="/msp/settings?tab=Secrets"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary-600 hover:text-primary-700 hover:underline"
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  id={`${idPrefix}-browse-sources-toggle`}
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  disabled={disabled || !referenceBrowseContext}
+                  onClick={() => setShowBrowseSources((current) => !current)}
+                  className="text-xs text-gray-600 hover:text-gray-900"
                 >
-                  Manage Secrets →
-                </a>
+                  {showBrowseSources ? (
+                    <ChevronDown className="mr-1 h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  Browse sources
+                </Button>
+              </div>
+              <ReferenceScopeSelector
+                idPrefix={idPrefix}
+                model={referenceSourceModel}
+                targetType={field.type}
+                selectedScope={selectedReferenceScope}
+                selectedStep={selectedReferenceStep}
+                selectedField={selectedReferencePath}
+                disabled={disabled}
+                onScopeChange={handleReferenceScopeChange}
+                onStepChange={handleReferenceStepChange}
+                onFieldChange={handleReferenceFieldChange}
+              />
+              {showBrowseSources && referenceBrowseContext && (
+                <SourceDataTree
+                  context={referenceBrowseContext}
+                  onSelectField={handleBrowseSelect}
+                  selectedPath={selectedReferencePath ?? undefined}
+                  disabled={disabled}
+                  maxHeight="280px"
+                  targetType={field.type}
+                  compact
+                />
+              )}
+              {typeMismatchWarning && (
+                <WorkflowActionInputTypeHint
+                  sourceType={sourceTypeMap?.get(extractPrimaryPath((value as Expr).$expr) ?? '') ?? inferTypeFromPath(extractPrimaryPath((value as Expr).$expr) ?? '')}
+                  targetType={field.type}
+                />
+              )}
+            </div>
+          )}
+
+          {valueType === 'legacy' && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+              <div className="flex items-start gap-2 text-sm text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-medium">Legacy mapping no longer supported here</p>
+                  <p className="text-xs text-amber-800">
+                    This field uses a saved expression or secret. Replace it with a structured reference or a fixed value.
+                  </p>
+                </div>
+              </div>
+              <pre className="overflow-x-auto rounded bg-white/70 px-2 py-1 text-xs text-amber-900">
+                {getDisplayValue(value)}
+              </pre>
+              <div className="flex gap-2">
+                <Button
+                  id={`${idPrefix}-replace-with-reference`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={disabled}
+                  onClick={() => handleSourceModeChange('reference')}
+                >
+                  Use reference
+                </Button>
+                <Button
+                  id={`${idPrefix}-replace-with-fixed`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={disabled}
+                  onClick={() => handleSourceModeChange('fixed')}
+                >
+                  Use fixed value
+                </Button>
               </div>
             </div>
           )}
 
-          {valueType === 'literal' && (
+          {valueType === 'fixed' && (
             <LiteralValueEditor
               value={value as MappingValue}
               onChange={handleLiteralChange}
+              field={field}
+              rootInputMapping={rootInputMapping}
               fieldType={field.type}
               fieldEnum={field.enum}
               fieldChildren={field.children}
               fieldConstraints={field.constraints}
+              fieldOptions={fieldOptions}
+              stepId={stepId}
               idPrefix={idPrefix}
               disabled={disabled}
+              sourceTypeMap={sourceTypeMap}
+              expressionContext={expressionContext}
+              referenceBrowseContext={referenceBrowseContext}
             />
           )}
         </div>
@@ -824,6 +686,48 @@ const buildDefaultLiteralValue = (field: ActionInputField): MappingValue => {
     return next;
   }
   return '';
+};
+
+const StructuredLiteralGroup: React.FC<{
+  id: string;
+  title: string;
+  defaultExpanded?: boolean;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({
+  id,
+  title,
+  defaultExpanded = true,
+  actions,
+  children,
+}) => {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  return (
+    <div className="rounded-md border border-gray-200">
+      <div className="flex items-center justify-between gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2">
+        <button
+          id={`${id}-toggle`}
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-controls={`${id}-content`}
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${title}`}
+          className="flex items-center gap-2 text-xs font-medium text-gray-700 hover:text-gray-900"
+        >
+          {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          <span>{title}</span>
+        </button>
+        {actions}
+      </div>
+
+      {expanded && (
+        <div id={`${id}-content`} className="space-y-3 p-3">
+          {children}
+        </div>
+      )}
+    </div>
+  );
 };
 
 const looksLikeEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -920,25 +824,139 @@ const parsePrimitiveList = (
   return { values, errors };
 };
 
+const FixedValueEditorShell: React.FC<{
+  field: ActionInputField;
+  idPrefix: string;
+  value: MappingValue | undefined;
+  onChange: (value: MappingValue) => void;
+  disabled?: boolean;
+  inlineEditor?: React.ReactNode;
+}> = ({ field, idPrefix, value, onChange, disabled, inlineEditor }) => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [draftValue, setDraftValue] = useState('');
+  const dialogMode = getWorkflowFieldEditor(field)?.dialog?.mode;
+
+  useEffect(() => {
+    if (!isDialogOpen) return;
+    setDraftValue(typeof value === 'string' ? value : '');
+  }, [isDialogOpen, value]);
+
+  const hasDialogEditor = dialogMode === 'large-text';
+
+  if (!hasDialogEditor) {
+    return <>{inlineEditor}</>;
+  }
+
+  const openDialog = () => setIsDialogOpen(true);
+  const closeDialog = () => setIsDialogOpen(false);
+  const applyDialogValue = () => {
+    onChange(draftValue);
+    closeDialog();
+  };
+
+  return (
+    <>
+      <div className="space-y-2">
+        {inlineEditor}
+        <div className="flex justify-end">
+          <Button
+            id={`${idPrefix}-dialog-open`}
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={openDialog}
+            disabled={disabled}
+            className="gap-1"
+          >
+            <Expand className="h-3.5 w-3.5" />
+            Open editor
+          </Button>
+        </div>
+      </div>
+      <Dialog
+        id={`${idPrefix}-dialog`}
+        isOpen={isDialogOpen}
+        onClose={closeDialog}
+        title={`Edit ${field.name}`}
+        className="max-w-4xl"
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {field.name}</DialogTitle>
+            <DialogDescription>
+              Use the larger editor for longer fixed-value content.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <TextArea
+              id={`${idPrefix}-dialog-textarea`}
+              value={draftValue}
+              onChange={(event) => setDraftValue(event.target.value)}
+              rows={18}
+              disabled={disabled}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                id={`${idPrefix}-dialog-cancel`}
+                type="button"
+                variant="outline"
+                onClick={closeDialog}
+                disabled={disabled}
+              >
+                Cancel
+              </Button>
+              <Button
+                id={`${idPrefix}-dialog-save`}
+                type="button"
+                onClick={applyDialogValue}
+                disabled={disabled}
+              >
+                Apply
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 const LiteralValueEditor: React.FC<{
   value: MappingValue | undefined;
   onChange: (value: MappingValue) => void;
+  field: ActionInputField;
+  rootInputMapping: InputMapping;
   fieldType: string;
   fieldEnum?: Array<string | number | boolean | null>;
   fieldChildren?: ActionInputField[];
   fieldConstraints?: ActionInputField['constraints'];
+  fieldOptions: SelectOption[];
+  stepId: string;
   idPrefix: string;
   disabled?: boolean;
+  sourceTypeMap?: Map<string, string>;
+  expressionContext?: ExpressionContext;
+  referenceBrowseContext?: DataTreeContext;
 }> = ({
   value,
   onChange,
+  field,
+  rootInputMapping,
   fieldType,
   fieldEnum,
   fieldChildren,
   fieldConstraints,
+  fieldOptions,
+  stepId,
   idPrefix,
-  disabled
+  disabled,
+  sourceTypeMap,
+  expressionContext,
+  referenceBrowseContext,
 }) => {
+  const fieldEditor = getWorkflowFieldEditor(field);
+  const inlineEditorMode = fieldEditor?.inline?.mode;
+  const hasPickerEditor = fieldEditor?.kind === 'picker' && inlineEditorMode === 'picker-summary';
   const hasStructuredObjectEditor = fieldType === 'object' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredArrayObjectEditor = fieldType === 'array' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredPrimitiveArrayEditor =
@@ -946,9 +964,19 @@ const LiteralValueEditor: React.FC<{
     (fieldChildren?.length ?? 0) === 0 &&
     Boolean(fieldConstraints?.itemType) &&
     fieldConstraints?.itemType !== 'object' &&
+    fieldConstraints?.itemType !== 'unknown' &&
+    fieldConstraints?.itemType !== 'any' &&
     fieldConstraints?.itemType !== 'array';
+  const hasStructuredDynamicArrayEditor =
+    fieldType === 'array' &&
+    (fieldChildren?.length ?? 0) === 0 &&
+    (fieldConstraints?.itemType === 'unknown' ||
+      fieldConstraints?.itemType === 'any');
   const supportsStructuredEditor =
-    hasStructuredObjectEditor || hasStructuredArrayObjectEditor || hasStructuredPrimitiveArrayEditor;
+    hasStructuredObjectEditor ||
+    hasStructuredArrayObjectEditor ||
+    hasStructuredPrimitiveArrayEditor ||
+    hasStructuredDynamicArrayEditor;
 
   const [editorMode, setEditorMode] = useState<'structured' | 'json'>(
     supportsStructuredEditor ? 'structured' : 'json'
@@ -983,14 +1011,68 @@ const LiteralValueEditor: React.FC<{
     }
   }, [value, hasStructuredPrimitiveArrayEditor]);
 
+  const nullableOptions: SelectOption[] = [
+    { value: 'value', label: 'Use value' },
+    { value: 'null', label: 'Set null' },
+  ];
+  const supportsNull = field.nullable === true;
+  const wrapNullableEditor = (editor: React.ReactNode) => {
+    if (!supportsNull) return editor;
+
+    return (
+      <div className="space-y-2">
+        <CustomSelect
+          id={`${idPrefix}-literal-null-mode`}
+          options={nullableOptions}
+          value={value === null ? 'null' : 'value'}
+          onValueChange={(nextMode) => {
+            if (nextMode === 'null') {
+              onChange(null);
+              return;
+            }
+
+            if (value === null) {
+              onChange(buildDefaultLiteralValue(field));
+            }
+          }}
+          disabled={disabled}
+          className="w-36"
+        />
+        {value !== null && editor}
+      </div>
+    );
+  };
+
   // Handle enum fields
+  if (hasPickerEditor) {
+    return wrapNullableEditor(
+      <FixedValueEditorShell
+        field={field}
+        idPrefix={idPrefix}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        inlineEditor={
+          <WorkflowActionInputFixedPicker
+            field={field}
+            value={typeof value === 'string' ? value : null}
+            onChange={(nextValue) => onChange(nextValue)}
+            idPrefix={idPrefix}
+            rootInputMapping={rootInputMapping}
+            disabled={disabled}
+          />
+        }
+      />
+    );
+  }
+
   if (fieldEnum && fieldEnum.length > 0) {
     const enumOptions: SelectOption[] = fieldEnum.map(e => ({
       value: String(e ?? ''),
       label: String(e ?? '')
     }));
 
-    return (
+    return wrapNullableEditor(
       <CustomSelect
         id={`${idPrefix}-literal-enum`}
         options={enumOptions}
@@ -1007,7 +1089,7 @@ const LiteralValueEditor: React.FC<{
 
   // Handle boolean
   if (fieldType === 'boolean') {
-    return (
+    return wrapNullableEditor(
       <CustomSelect
         id={`${idPrefix}-literal-bool`}
         options={[
@@ -1023,7 +1105,7 @@ const LiteralValueEditor: React.FC<{
 
   // Handle number/integer
   if (fieldType === 'number' || fieldType === 'integer') {
-    return (
+    return wrapNullableEditor(
       <Input
         id={`${idPrefix}-literal-num`}
         type="number"
@@ -1079,34 +1161,45 @@ const LiteralValueEditor: React.FC<{
     const renderStructuredObjectEditor = () => {
       const nextValue = isRecordLiteral(value) ? value : {};
       return (
-        <div className="space-y-3 rounded-md border border-gray-200 p-3">
+        <StructuredLiteralGroup
+          id={`${idPrefix}-literal-object`}
+          title="Object fields"
+          actions={
+            <Button
+              id={`${idPrefix}-literal-object-reset`}
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={() => onChange(buildDefaultLiteralValue(field))}
+              disabled={disabled}
+              className="h-7 px-2 text-gray-500 hover:text-gray-900"
+            >
+              Reset
+            </Button>
+          }
+        >
           {fieldChildren?.map((child) => (
-            <div key={child.name} className="space-y-1.5">
-              <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
-                <span>{child.name}</span>
-                {child.required && <span className="text-gray-500">*</span>}
-              </div>
-              <LiteralValueEditor
-                value={nextValue[child.name] as MappingValue | undefined}
-                onChange={(childValue) => {
-                  onChange({
-                    ...nextValue,
-                    [child.name]: childValue
-                  });
-                }}
-                fieldType={child.type}
-                fieldEnum={child.enum}
-                fieldChildren={child.children}
-                fieldConstraints={child.constraints}
-                idPrefix={`${idPrefix}-literal-${child.name}`}
-                disabled={disabled}
-              />
-              {child.description && (
-                <p className="text-[11px] text-gray-500">{child.description}</p>
-              )}
-            </div>
+            <MappingFieldEditor
+              key={child.name}
+              field={child}
+              fieldPath={`${field.name}.${child.name}`}
+              value={nextValue[child.name] as MappingValue | undefined}
+              onChange={(childValue) => {
+                onChange({
+                  ...nextValue,
+                  [child.name]: childValue
+                });
+              }}
+              rootInputMapping={rootInputMapping}
+              fieldOptions={fieldOptions}
+              stepId={stepId}
+              disabled={disabled}
+              sourceTypeMap={sourceTypeMap}
+              expressionContext={expressionContext}
+              referenceBrowseContext={referenceBrowseContext}
+            />
           ))}
-        </div>
+        </StructuredLiteralGroup>
       );
     };
 
@@ -1114,69 +1207,87 @@ const LiteralValueEditor: React.FC<{
       const rows = Array.isArray(value)
         ? value.map((item) => (isRecordLiteral(item) ? item : {}))
         : [];
-
-      const addRow = () => {
+      const buildEmptyRow = () => {
         const newRow: Record<string, MappingValue> = {};
         for (const child of fieldChildren ?? []) {
           if (child.required || child.default !== undefined) {
             newRow[child.name] = buildDefaultLiteralValue(child);
           }
         }
-        onChange([...rows, newRow]);
+        return newRow;
+      };
+
+      const addRow = () => {
+        onChange([...rows, buildEmptyRow()]);
       };
 
       return (
         <div className="space-y-3">
           {rows.map((row, rowIndex) => (
-            <div key={`${idPrefix}-row-${rowIndex}`} className="rounded-md border border-gray-200 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-xs font-medium text-gray-600">Item {rowIndex + 1}</div>
-                <Button
-                  id={`${idPrefix}-literal-row-remove-${rowIndex}`}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onChange(rows.filter((_, idx) => idx !== rowIndex))}
+            <StructuredLiteralGroup
+              key={`${idPrefix}-row-${rowIndex}`}
+              id={`${idPrefix}-literal-row-${rowIndex}`}
+              title={`Item ${rowIndex + 1}`}
+              actions={
+                <div className="flex items-center gap-1">
+                  <Button
+                    id={`${idPrefix}-literal-row-reset-${rowIndex}`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => {
+                      const nextRows = [...rows];
+                      nextRows[rowIndex] = buildEmptyRow();
+                      onChange(nextRows);
+                    }}
+                    disabled={disabled}
+                    className="h-7 px-2 text-gray-500 hover:text-gray-900"
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    id={`${idPrefix}-literal-row-remove-${rowIndex}`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => onChange(rows.filter((_, idx) => idx !== rowIndex))}
+                    disabled={disabled}
+                    className="h-7 px-2 text-gray-500 hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              }
+            >
+              {fieldChildren?.map((child) => (
+                <MappingFieldEditor
+                  key={`${idPrefix}-row-${rowIndex}-${child.name}`}
+                  field={child}
+                  fieldPath={`${field.name}[${rowIndex}].${child.name}`}
+                  value={row[child.name] as MappingValue | undefined}
+                  onChange={(childValue) => {
+                    const nextRows = [...rows];
+                    const nextRow = { ...row, [child.name]: childValue };
+                    nextRows[rowIndex] = nextRow;
+                    onChange(nextRows);
+                  }}
+                  rootInputMapping={rootInputMapping}
+                  fieldOptions={fieldOptions}
+                  stepId={stepId}
                   disabled={disabled}
-                  className="h-7 px-2 text-gray-500 hover:text-destructive"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {fieldChildren?.map((child) => (
-                  <div key={`${idPrefix}-row-${rowIndex}-${child.name}`} className="space-y-1.5">
-                    <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
-                      <span>{child.name}</span>
-                      {child.required && <span className="text-gray-500">*</span>}
-                    </div>
-                    <LiteralValueEditor
-                      value={row[child.name] as MappingValue | undefined}
-                      onChange={(childValue) => {
-                        const nextRows = [...rows];
-                        const nextRow = { ...row, [child.name]: childValue };
-                        nextRows[rowIndex] = nextRow;
-                        onChange(nextRows);
-                      }}
-                      fieldType={child.type}
-                      fieldEnum={child.enum}
-                      fieldChildren={child.children}
-                      fieldConstraints={child.constraints}
-                      idPrefix={`${idPrefix}-literal-row-${rowIndex}-${child.name}`}
-                      disabled={disabled}
-                    />
-                    {child.description && (
-                      <p className="text-[11px] text-gray-500">{child.description}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+                  sourceTypeMap={sourceTypeMap}
+                  expressionContext={expressionContext}
+                  referenceBrowseContext={referenceBrowseContext}
+                />
+              ))}
+            </StructuredLiteralGroup>
           ))}
 
           <Button
             id={`${idPrefix}-literal-array-add`}
             variant="outline"
             size="sm"
+            type="button"
             onClick={addRow}
             disabled={disabled}
             className="w-full justify-center"
@@ -1222,9 +1333,104 @@ const LiteralValueEditor: React.FC<{
       );
     };
 
+    const renderStructuredDynamicArrayEditor = () => {
+      const rows = Array.isArray(value) ? value : [];
+      const itemField: ActionInputField = {
+        name: 'item',
+        type: fieldConstraints?.itemType ?? 'unknown',
+      };
+
+      const addRow = () => {
+        const defaultMode = getDefaultWorkflowActionInputSourceMode(itemField);
+        const nextItem = createWorkflowActionInputValueForMode(
+          itemField,
+          undefined,
+          defaultMode
+        );
+        onChange([...rows, nextItem]);
+      };
+
+      return (
+        <div className="space-y-3">
+          {rows.map((rowValue, rowIndex) => (
+            <StructuredLiteralGroup
+              key={`${idPrefix}-dynamic-row-${rowIndex}`}
+              id={`${idPrefix}-literal-dynamic-row-${rowIndex}`}
+              title={`Item ${rowIndex + 1}`}
+              actions={
+                <div className="flex items-center gap-1">
+                  <Button
+                    id={`${idPrefix}-literal-dynamic-row-reset-${rowIndex}`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => {
+                      const nextRows = [...rows];
+                      nextRows[rowIndex] = createWorkflowActionInputValueForMode(
+                        itemField,
+                        undefined,
+                        getDefaultWorkflowActionInputSourceMode(itemField)
+                      );
+                      onChange(nextRows);
+                    }}
+                    disabled={disabled}
+                    className="h-7 px-2 text-gray-500 hover:text-gray-900"
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    id={`${idPrefix}-literal-dynamic-row-remove-${rowIndex}`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => onChange(rows.filter((_, idx) => idx !== rowIndex))}
+                    disabled={disabled}
+                    className="h-7 px-2 text-gray-500 hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              }
+            >
+              <MappingFieldEditor
+                field={itemField}
+                fieldPath={`${field.name}[${rowIndex}]`}
+                value={rowValue as MappingValue | undefined}
+                onChange={(nextRowValue) => {
+                  const nextRows = [...rows];
+                  nextRows[rowIndex] = nextRowValue;
+                  onChange(nextRows);
+                }}
+                rootInputMapping={rootInputMapping}
+                fieldOptions={fieldOptions}
+                stepId={stepId}
+                disabled={disabled}
+                sourceTypeMap={sourceTypeMap}
+                expressionContext={expressionContext}
+                referenceBrowseContext={referenceBrowseContext}
+              />
+            </StructuredLiteralGroup>
+          ))}
+
+          <Button
+            id={`${idPrefix}-literal-dynamic-array-add`}
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={addRow}
+            disabled={disabled}
+            className="w-full justify-center"
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            Add item
+          </Button>
+        </div>
+      );
+    };
+
     const showStructured = supportsStructuredEditor && editorMode === 'structured';
 
-    return (
+    return wrapNullableEditor(
       <div className="space-y-2">
         {supportsStructuredEditor && (
           <CustomSelect
@@ -1240,6 +1446,7 @@ const LiteralValueEditor: React.FC<{
         {showStructured && hasStructuredObjectEditor && renderStructuredObjectEditor()}
         {showStructured && hasStructuredArrayObjectEditor && renderStructuredArrayObjectEditor()}
         {showStructured && hasStructuredPrimitiveArrayEditor && renderStructuredPrimitiveArrayEditor()}
+        {showStructured && hasStructuredDynamicArrayEditor && renderStructuredDynamicArrayEditor()}
         {!showStructured && renderJsonEditor()}
       </div>
     );
@@ -1247,7 +1454,20 @@ const LiteralValueEditor: React.FC<{
 
   // Default to string
   const stringInputType = fieldConstraints?.format === 'email' ? 'email' : 'text';
-  return (
+  const isMultilineString = inlineEditorMode === 'textarea';
+  const showSingleLineStringInput =
+    inlineEditorMode === 'input' ||
+    (!fieldEditor?.inline && fieldEditor?.dialog === undefined);
+  const inlineStringEditor = isMultilineString ? (
+    <TextArea
+      id={`${idPrefix}-literal-str`}
+      value={typeof value === 'string' ? value : ''}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Enter value..."
+      rows={5}
+      disabled={disabled}
+    />
+  ) : showSingleLineStringInput ? (
     <Input
       id={`${idPrefix}-literal-str`}
       type={stringInputType}
@@ -1255,6 +1475,16 @@ const LiteralValueEditor: React.FC<{
       onChange={(e) => onChange(e.target.value)}
       placeholder="Enter value..."
       disabled={disabled}
+    />
+  ) : null;
+  return wrapNullableEditor(
+    <FixedValueEditorShell
+      field={field}
+      idPrefix={idPrefix}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      inlineEditor={inlineStringEditor}
     />
   );
 };
@@ -1331,8 +1561,8 @@ function findAutoMappingSuggestions(
 /**
  * InputMappingEditor component
  *
- * Provides a visual editor for mapping action inputs using expressions,
- * secrets, or literal values.
+ * Provides a visual editor for mapping action inputs using structured references
+ * or literal values.
  */
 export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   value,
@@ -1340,56 +1570,22 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   targetFields,
   fieldOptions,
   stepId,
-  positionsHandlers,
   sourceTypeMap,
   disabled,
-  expressionContext: providedExpressionContext
+  expressionContext: providedExpressionContext,
+  referenceBrowseContext,
 }) => {
-  const [secrets, setSecrets] = useState<Array<{ name: string; description?: string }>>([]);
-  const [showUnmapped, setShowUnmapped] = useState(true);
-
-  // §19.2 - Drag-and-drop state
-  const [dndState, dndHandlers] = useMappingDnd({
-    onCreateMapping: (targetFieldName, sourcePath) => {
-      // Create expression mapping from dropped item
-      onChange({ ...value, [targetFieldName]: { $expr: sourcePath } });
-    }
-  });
-
-  // Fetch available secrets
-  useEffect(() => {
-    let mounted = true;
-    listTenantSecrets()
-      .then(secretList => {
-        if (mounted && secretList) {
-          setSecrets(secretList.map(s => ({
-            name: s.name,
-            description: s.description ?? undefined
-          })));
-        }
-      })
-      .catch(err => {
-        console.error('Failed to fetch secrets:', err);
-      });
-
-    return () => { mounted = false; };
-  }, []);
-
-  // Separate mapped and unmapped fields
-  const { mappedFields, unmappedFields } = useMemo(() => {
-    const mappedNames = new Set(Object.keys(value));
-    return {
-      mappedFields: targetFields.filter(f => mappedNames.has(f.name)),
-      unmappedFields: targetFields.filter(f => !mappedNames.has(f.name))
-    };
-  }, [targetFields, value]);
-
   const missingRequiredCount = useMemo(() => {
     return targetFields.filter((field) => {
       if (!field.required) return false;
       return !isMappingValueSet(value[field.name], field.type);
     }).length;
   }, [targetFields, value]);
+
+  const filledFieldCount = useMemo(
+    () => targetFields.filter((field) => isMappingValueSet(value[field.name], field.type)).length,
+    [targetFields, value]
+  );
 
   // §17.3.3 - Auto-mapping suggestions
   const suggestions = useMemo(() =>
@@ -1403,8 +1599,6 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     return map;
   }, [suggestions]);
 
-  // §20 - Build expression context for Monaco editor
-  // Use provided context if available, otherwise fall back to building from fieldOptions
   const expressionContext = useMemo(() => {
     if (providedExpressionContext) {
       return providedExpressionContext;
@@ -1440,9 +1634,14 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   }, [value, onChange]);
 
   const handleAddMapping = useCallback((fieldName: string) => {
-    // Default to expression for new mappings
-    onChange({ ...value, [fieldName]: { $expr: '' } });
-  }, [value, onChange]);
+    const field = targetFields.find((candidate) => candidate.name === fieldName);
+    if (!field) return;
+    const defaultMode = getDefaultWorkflowActionInputSourceMode(field);
+    onChange({
+      ...value,
+      [fieldName]: createWorkflowActionInputValueForMode(field, undefined, defaultMode),
+    });
+  }, [onChange, targetFields, value]);
 
   const handleRemoveMapping = useCallback((fieldName: string) => {
     const next = { ...value };
@@ -1451,14 +1650,10 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   }, [value, onChange]);
 
   // §17.3 - Keyboard navigation
-  // Build ordered list of all field names (mapped first, then unmapped)
-  const allFieldNames = useMemo(() => {
-    const mappedNames = Object.keys(value);
-    const unmappedNames = targetFields
-      .filter(f => !mappedNames.includes(f.name))
-      .map(f => f.name);
-    return [...mappedNames, ...unmappedNames];
-  }, [value, targetFields]);
+  const allFieldNames = useMemo(
+    () => targetFields.map((field) => field.name),
+    [targetFields]
+  );
 
   const [keyboardState, keyboardHandlers] = useMappingKeyboard({
     fieldCount: targetFields.length,
@@ -1482,7 +1677,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   if (targetFields.length === 0) {
     return (
       <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded border border-gray-200">
-        This action has no input fields to map.
+        This action has no input fields.
       </div>
     );
   }
@@ -1494,26 +1689,26 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
       onFocus={keyboardHandlers.activate}
       onBlur={keyboardHandlers.deactivate}
       role="listbox"
-      aria-label="Input mapping fields"
+      aria-label="Action input fields"
       aria-activedescendant={
         keyboardState.focusedIndex >= 0
           ? `mapping-field-${stepId}-${allFieldNames[keyboardState.focusedIndex]}`
           : undefined
       }
     >
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold">Input Mapping</Label>
-        <div className="flex items-center gap-3">
-          <div className="text-xs text-gray-500" title="Fields marked with * are required">
-            <span className="text-[11px] text-gray-500" aria-hidden>*</span> required
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+          <div>
+            {filledFieldCount} of {targetFields.length} fields filled
           </div>
           {missingRequiredCount > 0 && (
             <div className="text-xs text-destructive flex items-center gap-1" title="Required fields are missing values">
               <AlertTriangle className="w-3 h-3" />
-              {missingRequiredCount} missing
+              {missingRequiredCount} required missing
             </div>
           )}
-          {/* §17.3.3 - Auto-map button */}
+        </div>
+        <div className="flex flex-col items-start gap-1">
           {suggestions.length > 0 && (
             <Button
               id={`auto-map-${stepId}`}
@@ -1524,10 +1719,9 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               <Wand2 className="w-3.5 h-3.5 mr-1" />
-              Auto-map ({suggestions.length})
+              Apply suggestions ({suggestions.length})
             </Button>
           )}
-          {/* §17.3 - Clear all button */}
           {Object.keys(value).length > 0 && (
             <Button
               id={`clear-all-mappings-${stepId}`}
@@ -1538,30 +1732,29 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               className="text-xs text-gray-500 hover:text-destructive"
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
-              Clear all
+              Clear values
             </Button>
           )}
-          <div className="text-xs text-gray-500">
-            {Object.keys(value).length} / {targetFields.length} fields mapped
-          </div>
         </div>
       </div>
 
-      {/* Mapped fields */}
-      {mappedFields.length > 0 && (
-        <div className="space-y-2" role="group" aria-label="Mapped fields">
-          {mappedFields.map((field, idx) => {
-            const fieldIndex = allFieldNames.indexOf(field.name);
-            const isFocused = keyboardState.isActive && keyboardState.focusedIndex === fieldIndex;
-            const fieldProps = keyboardHandlers.getFieldProps(fieldIndex);
+      <div className="space-y-2" role="group" aria-label="Action input fields list">
+        {targetFields.map((field) => {
+          const suggestion = suggestionMap.get(field.name);
+          const isMissingRequired = Boolean(field.required) && !isMappingValueSet(value[field.name], field.type);
+          const fieldIndex = allFieldNames.indexOf(field.name);
+          const isFocused = keyboardState.isActive && keyboardState.focusedIndex === fieldIndex;
+          const fieldProps = keyboardHandlers.getFieldProps(fieldIndex);
+          const fieldValue = value[field.name];
+          const hasConfiguredValue = Object.prototype.hasOwnProperty.call(value, field.name);
 
+          if (hasConfiguredValue) {
             return (
               <div
                 key={field.name}
                 id={`mapping-field-${stepId}-${field.name}`}
                 role="option"
                 className={`relative group transition-all ${fieldProps.className}`}
-                ref={(el) => positionsHandlers.registerTargetRef(field.name, el)}
                 tabIndex={fieldProps.tabIndex}
                 aria-selected={fieldProps['aria-selected']}
                 onFocus={fieldProps.onFocus}
@@ -1569,14 +1762,15 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               >
                 <MappingFieldEditor
                   field={field}
-                  value={value[field.name]}
+                  value={fieldValue}
                   onChange={(v) => handleFieldChange(field.name, v)}
+                  rootInputMapping={value}
                   fieldOptions={fieldOptions}
-                  secrets={secrets}
                   stepId={stepId}
                   disabled={disabled}
                   sourceTypeMap={sourceTypeMap}
                   expressionContext={expressionContext}
+                  referenceBrowseContext={referenceBrowseContext}
                 />
                 <button
                   onClick={() => handleRemoveMapping(field.name)}
@@ -1591,145 +1785,68 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                 </button>
               </div>
             );
-          })}
-        </div>
-      )}
+          }
 
-      {/* Unmapped fields */}
-      {unmappedFields.length > 0 && (
-        <div className="space-y-2">
-          <button
-            onClick={() => setShowUnmapped(!showUnmapped)}
-            className="flex items-center gap-2 text-xs font-medium text-gray-600 hover:text-gray-800"
-          >
-            {showUnmapped ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            Unmapped fields ({unmappedFields.length})
-          </button>
-
-          {showUnmapped && (
-            <div className="space-y-1 pl-5" role="group" aria-label="Unmapped fields">
-                  {unmappedFields.map((field, idx) => {
-                    const suggestion = suggestionMap.get(field.name);
-                    const isDropTarget = dndState.isDragging;
-                    const isActiveDropTarget = dndState.dropTarget === field.name;
-                    const isMissingRequired = Boolean(field.required) && !isMappingValueSet(value[field.name], field.type);
-
-                    // §19.2 - Calculate type compatibility for drop feedback
-                    const dropCompatibility = dndState.draggedItem?.type && field.type
-                      ? getTypeCompatibility(dndState.draggedItem.type, field.type)
-                      : null;
-
-                const dropClasses = isActiveDropTarget && dropCompatibility
-                  ? getCompatibilityClasses(dropCompatibility)
-                  : null;
-
-                // §17.3 - Keyboard navigation props
-                const fieldIndex = allFieldNames.indexOf(field.name);
-                const isFocused = keyboardState.isActive && keyboardState.focusedIndex === fieldIndex;
-                const fieldProps = keyboardHandlers.getFieldProps(fieldIndex);
-
-                return (
-                  <div
-                    key={field.name}
-                    id={`mapping-field-${stepId}-${field.name}`}
-                    role="option"
-                    ref={(el) => positionsHandlers.registerTargetRef(field.name, el)}
-                    tabIndex={fieldProps.tabIndex}
-                    aria-selected={fieldProps['aria-selected']}
-                    onFocus={fieldProps.onFocus}
-                    onKeyDown={fieldProps.onKeyDown}
-                    className={`flex items-center justify-between py-1.5 px-2 rounded transition-all ${
-                      suggestion ? 'bg-primary-50 border border-primary-100' : ''
-                    } ${isDropTarget ? 'border-2 border-dashed border-gray-300' : ''} ${
-                      isActiveDropTarget && dropClasses
-                        ? `${dropClasses.bg} ${dropClasses.border} border-solid`
-                        : isActiveDropTarget
-                          ? 'bg-primary-50 border-primary-300 border-solid'
-                          : 'hover:bg-gray-50'
-                    } ${isFocused ? 'ring-2 ring-primary-500 ring-offset-1' : ''}`}
-                    onDragOver={(e) => {
-                      if (disabled) return;
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'copy';
-                      dndHandlers.handleDragOver(field.name, field.type);
-                    }}
-                    onDragLeave={() => {
-                      dndHandlers.handleDragLeave();
-                    }}
-                    onDrop={(e) => {
-                      if (disabled) return;
-                      e.preventDefault();
-                      dndHandlers.handleDrop(field.name);
-                    }}
+          return (
+            <div
+              key={field.name}
+              id={`mapping-field-${stepId}-${field.name}`}
+              role="option"
+              tabIndex={fieldProps.tabIndex}
+              aria-selected={fieldProps['aria-selected']}
+              onFocus={fieldProps.onFocus}
+              onKeyDown={fieldProps.onKeyDown}
+              className={`rounded px-2.5 py-2 transition-all ${
+                suggestion ? 'bg-primary-50 border border-primary-100' : ''
+              } hover:bg-gray-50 ${isFocused ? 'ring-2 ring-primary-500 ring-offset-1' : ''}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <WorkflowActionInputFieldInfo
+                    field={field}
+                    isMissingRequired={isMissingRequired}
+                    compact
+                  />
+                  {suggestion && (
+                    <span className="flex min-w-0 items-center gap-1 text-xs text-primary-600">
+                      <Sparkles className="w-3 h-3" />
+                      <span className="truncate">← {suggestion.sourcePath}</span>
+                      {suggestion.confidence === 'fuzzy' && (
+                        <span className="text-primary-400">(fuzzy)</span>
+                      )}
+                    </span>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {suggestion && (
+                    <Button
+                      id={`apply-suggestion-${stepId}-${field.name}`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleApplySuggestion(suggestion)}
+                      disabled={disabled}
+                      className="text-xs text-primary-600"
+                      title={`Apply suggestion: ${suggestion.sourcePath}`}
+                    >
+                      <Wand2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  <Button
+                    id={`add-mapping-${stepId}-${field.name}`}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleAddMapping(field.name)}
+                    disabled={disabled}
                   >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {/* §19.2 - Drop zone indicator */}
-                      {isDropTarget && (
-                        <LinkIcon className={`w-3.5 h-3.5 ${isActiveDropTarget ? 'text-primary-500' : 'text-gray-400'}`} />
-                      )}
-                      <span className="text-sm text-gray-700">{field.name}</span>
-                      {field.required && (
-                        <span
-                          className={`text-[11px] ${isMissingRequired ? 'text-destructive' : 'text-gray-500'}`}
-                          aria-hidden
-                          title={isMissingRequired ? 'Required field is missing a value' : 'Required'}
-                        >
-                          *
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-400">{field.type}</span>
-                      {/* §17.3.3 - Show suggestion indicator */}
-                      {suggestion && !isDropTarget && (
-                        <span className="text-xs text-primary-600 flex items-center gap-1 truncate">
-                          <Sparkles className="w-3 h-3" />
-                          <span className="truncate">← {suggestion.sourcePath}</span>
-                          {suggestion.confidence === 'fuzzy' && (
-                            <span className="text-primary-400">(fuzzy)</span>
-                          )}
-                        </span>
-                      )}
-                      {/* §19.2 - Show dragged item info when hovering */}
-                      {isActiveDropTarget && dndState.draggedItem && (
-                        <span className="text-xs text-primary-600 flex items-center gap-1 truncate">
-                          <LinkIcon className="w-3 h-3" />
-                          <span className="truncate">← {dndState.draggedItem.path}</span>
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {suggestion && !isDropTarget && (
-                        <Button
-                          id={`apply-suggestion-${stepId}-${field.name}`}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleApplySuggestion(suggestion)}
-                          disabled={disabled}
-                          className="text-xs text-primary-600"
-                          title={`Apply suggestion: ${suggestion.sourcePath}`}
-                        >
-                          <Wand2 className="w-3.5 h-3.5" />
-                        </Button>
-                      )}
-                      {!isDropTarget && (
-                        <Button
-                          id={`add-mapping-${stepId}-${field.name}`}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleAddMapping(field.name)}
-                          disabled={disabled}
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-1" />
-                          Map
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Fill
+                  </Button>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 };

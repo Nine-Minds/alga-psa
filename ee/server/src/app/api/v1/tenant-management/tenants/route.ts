@@ -105,12 +105,13 @@ export async function GET(req: NextRequest) {
     const tenants = await knex('tenants as t')
       .leftJoin('stripe_subscriptions as s', function () {
         this.on('t.tenant', '=', 's.tenant')
-          .andOn('s.status', '=', knex.raw("'active'"));
+          .andOnIn('s.status', ['active', 'trialing', 'past_due', 'unpaid']);
       })
       .select([
         't.tenant',
         't.client_name',
         't.email',
+        't.plan',
         't.created_at',
         's.status as subscription_status',
       ])

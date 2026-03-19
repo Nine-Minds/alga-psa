@@ -239,6 +239,51 @@ describe('processInboundEmailInApp additional authorship paths', () => {
     );
   });
 
+  it('T018: reply-token path promotes exact internal-user email matches to internal authorship', async () => {
+    findContactByEmailMock.mockResolvedValue({
+      user_id: 'internal-user-1',
+      user_type: 'internal',
+      email: 'robert@nineminds.com',
+      name: 'Robert Isaacs',
+    });
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'reply-token-1' },
+    });
+    findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-reply-1' });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-reply-internal-1',
+        from: { email: 'ROBERT@NINEMINDS.COM', name: 'Robert Isaacs' },
+      }),
+    });
+
+    expect(result).toMatchObject({
+      outcome: 'replied',
+      matchedBy: 'reply_token',
+      ticketId: 'ticket-reply-1',
+    });
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-reply-1',
+        author_type: 'internal',
+        author_id: 'internal-user-1',
+        contact_id: undefined,
+      }),
+      'tenant-1'
+    );
+  });
+
   it('T019: thread-header path without sender contact keeps fallback behavior', async () => {
     findContactByEmailMock.mockResolvedValue(null);
     findTicketByReplyTokenMock.mockResolvedValue(null);

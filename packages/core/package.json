@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.0.8-rc3",
+  "version": "1.0.12-rc4",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -56,6 +56,7 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "node-vault": "^0.10.2",
+    "posthog-node": "^4.18.0",
     "redis": "^4.6.10",
     "uuid": "^9.0.1",
     "winston": "^3.13.1",

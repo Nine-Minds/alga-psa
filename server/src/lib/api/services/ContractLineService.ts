@@ -11,7 +11,7 @@ import { IContract, IContractLineMapping, IClientContract } from 'server/src/int
 import { IContractLineServiceConfiguration } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { cloneTemplateContractLine } from 'server/src/lib/billing/utils/templateClone';
+import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
 
 // Import existing models and actions for integration
 import ContractLine from '@alga-psa/billing/models/contractLine';

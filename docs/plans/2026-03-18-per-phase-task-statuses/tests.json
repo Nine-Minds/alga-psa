@@ -1,0 +1,86 @@
+[
+  {
+    "id": "TB01",
+    "description": "Database migrations: phase_id column exists and is nullable on project_status_mappings; template_phase_id exists on project_template_status_mappings; FK cascades on delete (deleting a phase removes its status mappings); index on (tenant, project_id, phase_id); existing rows have phase_id = NULL",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003", "F004"],
+    "covers": ["T001", "T002", "T003", "T004", "T005", "T006"]
+  },
+  {
+    "id": "TB02",
+    "description": "Type safety: IProjectStatusMapping and ProjectStatus interfaces include optional phase_id in both packages/types and server/src/interfaces",
+    "implemented": true,
+    "featureIds": ["F005", "F006"],
+    "covers": ["T007", "T008"]
+  },
+  {
+    "id": "TB03",
+    "description": "Effective status resolution: returns phase-specific statuses when configured; falls back to project defaults (phase_id IS NULL) when phase has none; returns project defaults for null/undefined phaseId; never mixes phase and project statuses; tenant isolation in all queries",
+    "implemented": true,
+    "featureIds": ["F007", "F008", "F009"],
+    "covers": ["T009", "T010", "T011", "T012", "T013", "T014", "T060"]
+  },
+  {
+    "id": "TB04",
+    "description": "Status CRUD actions with phase support: addStatusToProject creates mapping with/without phaseId correctly; reorderProjectStatuses scopes to phase or project level; getProjectStatusMappings filters by phaseId; getProjectTaskStatuses uses effective resolution with phaseId",
+    "implemented": true,
+    "featureIds": ["F010", "F011", "F012", "F015"],
+    "covers": ["T015", "T016", "T017", "T018"]
+  },
+  {
+    "id": "TB05",
+    "description": "Copy and remove phase statuses: copyProjectStatusesToPhase creates phase copies preserving status_id/custom_name/display_order/is_visible with new mapping IDs; removePhaseStatuses deletes all phase mappings and effective resolution reverts to project defaults; tasks in phase retain valid mapping or are remapped",
+    "implemented": true,
+    "featureIds": ["F013", "F014"],
+    "covers": ["T019", "T020", "T021", "T022", "T023", "T024"]
+  },
+  {
+    "id": "TB06",
+    "description": "Cross-phase task movement: same status name in target → keeps equivalent; no match + open source → first open by display_order; no match + closed source → first closed by display_order; both phases on defaults → status unchanged; source custom/target defaults → remapped; cross-project moves unchanged; edge cases (all-closed phase, all-open phase)",
+    "implemented": true,
+    "featureIds": ["F016", "F017", "F018", "F019", "F040"],
+    "covers": ["T025", "T026", "T027", "T028", "T029", "T030", "T031", "T063", "T064"]
+  },
+  {
+    "id": "TB07",
+    "description": "MSP Kanban and task UI: ProjectDetail fetches phase-effective statuses on phase switch; status columns update; task counts and completed counts use phase-effective statuses; KanbanBoard renders correct column count; TaskStatusSelect dropdown matches phase statuses",
+    "implemented": true,
+    "featureIds": ["F021", "F022", "F023", "F024"],
+    "covers": ["T034", "T035", "T036", "T037", "T038"]
+  },
+  {
+    "id": "TB08",
+    "description": "Settings UI: phase selector shows 'Project Defaults' + all phases; uncustomized phase shows default toggle state; toggling to custom enables controls; 'Copy from project defaults' creates matching phase mappings; reverting to defaults confirms then deletes; AddStatusDialog passes phaseId; prevents removing last status from phase",
+    "implemented": true,
+    "featureIds": ["F025", "F026", "F027", "F028", "F029"],
+    "covers": ["T039", "T040", "T041", "T042", "T043", "T044", "T045", "T062"]
+  },
+  {
+    "id": "TB09",
+    "description": "Client portal: getClientProjectStatuses returns phase-effective statuses with phaseId and project-level without; switching phase updates ClientKanbanBoard columns; ClientTaskListView groups under correct phase-effective status headers",
+    "implemented": true,
+    "featureIds": ["F020", "F030", "F031", "F032"],
+    "covers": ["T032", "T033", "T046", "T047"]
+  },
+  {
+    "id": "TB10",
+    "description": "Template support: template_phase_id stored on template status mappings; TemplateStatusManager shows phase selector; TemplateStatusColumnsStep supports per-phase config; project creation from template copies phase-specific mappings with correct phase_id; template without phase statuses creates project-level mappings only",
+    "implemented": true,
+    "featureIds": ["F033", "F034", "F035", "F036"],
+    "covers": ["T048", "T049", "T050", "T051", "T052"]
+  },
+  {
+    "id": "TB11",
+    "description": "Supporting systems: CSV import resolves status names against phase-effective statuses and assigns correct mapping IDs; event payloads include phaseId when applicable, undefined at project level; ProjectTaskStatusEditor/Selector handle template phase statuses during project creation",
+    "implemented": true,
+    "featureIds": ["F037", "F038", "F039"],
+    "covers": ["T053", "T054", "T055", "T056", "T065"]
+  },
+  {
+    "id": "TB12",
+    "description": "Backward compatibility: existing projects with no phase statuses show project-level columns for all phases; existing tasks retain valid project_status_mapping_id after migration; settings UI shows project-level statuses without regression; phase cascade deletion cleans up correctly",
+    "implemented": true,
+    "featureIds": ["F040"],
+    "covers": ["T057", "T058", "T059", "T061"]
+  }
+]

@@ -50,8 +50,10 @@ export interface FetchStripeDetailsInput {
 export interface FetchStripeDetailsResult {
   stripeCustomerId: string;
   stripeSubscriptionId?: string;
-  stripeSubscriptionItemId?: string;
-  stripePriceId?: string;
+  stripeSubscriptionItemId?: string;  // Per-user item
+  stripePriceId?: string;             // Per-user price
+  stripeBaseItemId?: string;          // Base fee item (multi-item only)
+  stripeBasePriceId?: string;         // Base fee price (multi-item only)
   licenseCount?: number;
 }
 
@@ -109,20 +111,61 @@ export async function fetchStripeDetailsFromCheckout(
         { expand: ['items.data.price'] }
       );
 
-      const subscriptionItem = subscription.items.data[0];
+      const items = subscription.items.data;
 
-      if (!subscriptionItem) {
+      if (items.length === 0) {
         log.warn('Subscription has no items', { subscriptionId: subscription.id });
-      } else {
+      } else if (items.length === 1) {
+        // Legacy single-item subscription (per-user only)
+        const subscriptionItem = items[0];
         result.stripeSubscriptionId = subscription.id;
         result.stripeSubscriptionItemId = subscriptionItem.id;
         result.stripePriceId = subscriptionItem.price.id;
         result.licenseCount = subscriptionItem.quantity || 1;
 
-        log.info('Subscription details retrieved', {
+        log.info('Legacy subscription details retrieved', {
           subscriptionId: subscription.id,
           subscriptionItemId: subscriptionItem.id,
           priceId: subscriptionItem.price.id,
+          quantity: result.licenseCount,
+        });
+      } else {
+        // Multi-item subscription (base fee + per-user)
+        // The per-user item has quantity > 1 or is the one with a quantity matching license count
+        // The base fee item has quantity === 1 and a different price
+        result.stripeSubscriptionId = subscription.id;
+
+        // Known per-user price IDs from env
+        const knownUserPriceIds = [
+          process.env.STRIPE_LICENSE_PRICE_ID,
+          process.env.STRIPE_PRO_USER_PRICE_ID,
+          process.env.STRIPE_PREMIUM_USER_PRICE_ID,
+        ].filter(Boolean);
+
+        let userItem = items.find(item => knownUserPriceIds.includes(item.price.id));
+        let baseItem = items.find(item => !knownUserPriceIds.includes(item.price.id));
+
+        // Fallback: if no known price matched, use quantity heuristic
+        if (!userItem) {
+          userItem = items.find(item => (item.quantity || 0) > 1) || items[items.length - 1];
+          baseItem = items.find(item => item.id !== userItem!.id);
+        }
+
+        result.stripeSubscriptionItemId = userItem.id;
+        result.stripePriceId = userItem.price.id;
+        result.licenseCount = userItem.quantity || 1;
+
+        if (baseItem) {
+          result.stripeBaseItemId = baseItem.id;
+          result.stripeBasePriceId = baseItem.price.id;
+        }
+
+        log.info('Multi-item subscription details retrieved', {
+          subscriptionId: subscription.id,
+          userItemId: userItem.id,
+          userPriceId: userItem.price.id,
+          baseItemId: baseItem?.id,
+          basePriceId: baseItem?.price.id,
           quantity: result.licenseCount,
         });
       }

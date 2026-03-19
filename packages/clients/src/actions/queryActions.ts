@@ -98,6 +98,7 @@ const CONTACT_SORT_COLUMNS = {
   full_name: 'contacts.full_name',
   created_at: 'contacts.created_at',
   email: 'contacts.email',
+  client_name: 'clients.client_name',
   phone_number: 'contacts.created_at'
 } as const;
 
@@ -130,13 +131,17 @@ function sortContacts(contacts: IContact[], sortBy: string, sortDirection: 'asc'
 export type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
 export const getContactsByClient = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   status: ContactFilterStatus = 'active',
   sortBy: string = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> => {
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -144,7 +149,7 @@ export const getContactsByClient = withAuth(async (
       throw new Error('VALIDATION_ERROR: Client ID is required');
     }
 
-    const allowedSortBy = ['full_name', 'created_at', 'email', 'phone_number'];
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number'];
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
@@ -205,12 +210,16 @@ export const getContactsByClient = withAuth(async (
 });
 
 export const getAllContacts = withAuth(async (
-  _user,
+  user,
   { tenant },
   status: ContactFilterStatus = 'active',
   sortBy: string = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> => {
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -218,7 +227,7 @@ export const getAllContacts = withAuth(async (
       throw new Error('VALIDATION_ERROR: Invalid status filter provided');
     }
 
-    const allowedSortBy = ['full_name', 'created_at', 'email', 'phone_number'];
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number'];
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
@@ -227,6 +236,10 @@ export const getAllContacts = withAuth(async (
     let contacts: any[] = [];
     try {
       contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const dbSortBy = safeSortBy === 'client_name'
+          ? 'full_name'
+          : CONTACT_SORT_COLUMNS_ALIASED[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS_ALIASED] || 'full_name';
+
         const fetchedContacts = await trx('contacts')
           .select('*')
           .where('tenant', tenant)
@@ -235,7 +248,7 @@ export const getAllContacts = withAuth(async (
               queryBuilder.where('is_inactive', status === 'inactive');
             }
           })
-          .orderBy(CONTACT_SORT_COLUMNS_ALIASED[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS_ALIASED] || 'full_name', safeSortDirection);
+          .orderBy(dbSortBy, safeSortDirection);
 
         console.log('[getAllContacts] Found', fetchedContacts.length, 'contacts');
 

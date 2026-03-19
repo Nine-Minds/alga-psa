@@ -13,13 +13,13 @@ import { v4 as uuidv4 } from 'uuid'
 import { getConnection } from '@/lib/db/db'
 
 import { TaxService } from '@alga-psa/billing/services/taxService'
-import { NumberingService } from 'server/src/lib/services/numberingService'
+import { NumberingService } from '@shared/services/numberingService'
 import {
   calculateAndDistributeTax,
   getClientDetails,
   persistManualInvoiceCharges,
   updateInvoiceTotalsAndRecordTransaction,
-} from 'server/src/lib/services/invoiceService'
+} from '@alga-psa/billing/services/invoiceService'
 
 export interface ManualInvoiceItemInput {
   serviceId: string
@@ -79,7 +79,7 @@ export async function createManualInvoice(
 ): Promise<CreateManualInvoiceResult> {
   const knex = await getConnection(ctx.tenantId)
   const taxService = new TaxService()
-  const numberingService = new NumberingService()
+  const numberingService = new NumberingService({ knex, tenant: ctx.tenantId })
 
   try {
     const invoiceId = uuidv4()

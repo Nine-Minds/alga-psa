@@ -358,6 +358,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${DB_HOST_DOCKER:-postgres}
       DB_PORT: ${DB_PORT:-5432}
+      AI_DOCUMENT_API_URL: ${AI_DOCUMENT_API_URL:-http://server:3000/api/v1/ai/document-assist}
+      AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
     volumes:
       - type: bind
         source: ./secrets/db_password_server

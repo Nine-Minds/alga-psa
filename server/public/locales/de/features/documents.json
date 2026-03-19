@@ -185,5 +185,38 @@
     "nameLabel": "Ordnername",
     "namePlaceholder": "Ordnernamen eingeben",
     "willCreateIn": "Wird erstellt in: {{folder}}"
+  },
+  "portal": {
+    "subtitle": "Sehen und laden Sie Ihre freigegebenen Dokumente herunter",
+    "searchPlaceholder": "Dokumente suchen...",
+    "showing": "{{count}} Dokumente",
+    "loadError": "Fehler beim Laden der Dokumente. Bitte versuchen Sie es erneut."
+  },
+  "kb": {
+    "title": "Wissensdatenbank",
+    "subtitle": "Finden Sie Antworten auf häufige Fragen und Anleitungen",
+    "categories": "Kategorien",
+    "allArticles": "Alle Artikel",
+    "searchPlaceholder": "Artikel suchen...",
+    "articleCount": "{{count}} Artikel",
+    "noArticles": "Keine Artikel gefunden",
+    "loadError": "Fehler beim Laden der Artikel. Bitte versuchen Sie es erneut.",
+    "noContent": "Kein Inhalt verfügbar",
+    "articleNotFound": "Artikel nicht gefunden",
+    "backToArticles": "Zurück zu den Artikeln",
+    "views": "Aufrufe",
+    "wasHelpful": "War dieser Artikel hilfreich?",
+    "yes": "Ja",
+    "no": "Nein",
+    "feedbackThanks": "Vielen Dank für Ihr Feedback!",
+    "feedbackError": "Fehler beim Senden des Feedbacks",
+    "filterByTags": "Nach Tags filtern..."
+  },
+  "visibility": {
+    "cascadeTitle": "Dokumentensichtbarkeit aktualisieren",
+    "cascadeMakeVisible": "Möchten Sie auch alle {{count}} Dokument(e) in \"{{name}}\" für das Kundenportal sichtbar machen?",
+    "cascadeMakeHidden": "Möchten Sie auch alle {{count}} Dokument(e) in \"{{name}}\" im Kundenportal ausblenden?",
+    "cascadeYes": "Ja, Dokumente aktualisieren",
+    "cascadeNo": "Nein, nur Ordner"
   }
 }

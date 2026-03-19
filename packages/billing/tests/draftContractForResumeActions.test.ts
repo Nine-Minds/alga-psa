@@ -31,7 +31,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
 }));
 
-vi.mock('@shared/workflow/streams/domainEventBuilders/contractEventBuilders', () => ({
+vi.mock('@alga-psa/workflow-streams/domainEventBuilders/contractEventBuilders', () => ({
   buildContractCreatedPayload: vi.fn(() => ({})),
   buildContractRenewalUpcomingPayload: vi.fn(() => ({})),
   computeContractRenewalUpcoming: vi.fn(() => null),

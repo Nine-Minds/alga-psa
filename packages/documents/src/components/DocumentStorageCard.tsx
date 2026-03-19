@@ -25,10 +25,13 @@ import {
     Eye,
     X,
     Play,
-    FolderInput
+    FolderInput,
+    Share2
 } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
+import VisibilityToggle from './VisibilityToggle';
 
 // Helper component for video previews with browser compatibility checking
 interface VideoPreviewProps {
@@ -233,6 +236,10 @@ export interface DocumentStorageCardProps {
     hideActions?: boolean;
     showDisassociate?: boolean;
     showMove?: boolean;
+    showVisibilityControls?: boolean;
+    onToggleVisibility?: (document: IDocument, nextValue: boolean) => void | Promise<void>;
+    isVisibilityUpdating?: boolean;
+    onShare?: (document: IDocument) => void;
     onClick?: () => void;
     isContentDocument?: boolean;
     forceRefresh?: number; // Timestamp to trigger preview refresh
@@ -287,6 +294,10 @@ function DocumentStorageCardComponent({
     hideActions = false,
     showDisassociate = false,
     showMove = false,
+    showVisibilityControls = false,
+    onToggleVisibility,
+    isVisibilityUpdating = false,
+    onShare,
     onClick,
     isContentDocument = false,
     forceRefresh
@@ -355,7 +366,14 @@ function DocumentStorageCardComponent({
         previewQueue.add(async () => {
             try {
                 setIsLoading(true);
-                const preview = await getDocumentPreview(identifierForPreview);
+                // Timeout preview generation to prevent indefinite hangs
+                const timeoutMs = 15000;
+                const preview = await Promise.race([
+                    getDocumentPreview(identifierForPreview),
+                    new Promise<never>((_, reject) =>
+                        setTimeout(() => reject(new Error('Preview generation timed out')), timeoutMs)
+                    ),
+                ]);
                 if (isActionPermissionError(preview)) {
                     throw new Error(preview.permissionError);
                 }
@@ -598,6 +616,33 @@ function DocumentStorageCardComponent({
                                     Type: {document.type_name}
                                 </p>
                             )}
+                            {showVisibilityControls && (
+                                <div className="mt-2 flex items-center gap-2">
+                                    <span
+                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                            document.is_client_visible
+                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                                                : 'bg-gray-100 text-gray-700 dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-400))]'
+                                        }`}
+                                    >
+                                        {document.is_client_visible
+                                            ? t('documents.visibility.clientVisible', 'Client visible')
+                                            : t('documents.visibility.internalOnly', 'Internal')}
+                                    </span>
+                                    {onToggleVisibility && (
+                                        <div onClick={(e) => e.stopPropagation()}>
+                                            <VisibilityToggle
+                                                id={`document-card-visibility-${document.document_id}`}
+                                                isClientVisible={Boolean(document.is_client_visible)}
+                                                onToggle={(nextValue) => {
+                                                    void onToggleVisibility(document, nextValue);
+                                                }}
+                                                disabled={isVisibilityUpdating || isLoading}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -689,88 +734,109 @@ function DocumentStorageCardComponent({
                 </div>
 
                 {!hideActions && (
-                    <div className="mt-4 pt-3 flex flex-col space-y-1.5 items-end border-t border-[rgb(var(--color-border-100))]">
-                        <Button
-                            id={`download-document-${document.document_id}-button`}
-                            variant="ghost"
-                            size="sm"
-                            onClick={async (e) => {
-                                e.stopPropagation();
-                                const isPdfTarget = document.type_name === 'text/plain' ||
-                                                    document.type_name === 'text/markdown' ||
-                                                    (!document.type_name && !document.file_id);
-                                
-                                let downloadUrl = '#';
-                                if (isPdfTarget) {
-                                    downloadUrl = `/api/documents/download/${document.document_id}?format=pdf`;
-                                } else if (document.document_id) {
-                                    downloadUrl = `/api/documents/download/${document.document_id}`;
-                                }
-                                
-                                if (downloadUrl !== '#') {
-                                    const filename = isPdfTarget ? 
-                                        `${document.document_name || 'document'}.pdf` : 
-                                        (document.document_name || 'download');
-                                    try {
-                                        await downloadDocument(downloadUrl, filename, true);
-                                    } catch (error) {
-                                        console.error('Download failed:', error);
-                                    }
-                                }
-                            }}
-                            disabled={isLoading}
-                            className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] inline-flex items-center"
-                        >
-                            <Download className="w-4 h-4 mr-2" />
-                            {t('documents.download', 'Download')}
-                        </Button>
-                        {showDisassociate && onDisassociate && (
+                    <div className="mt-4 pt-3 flex flex-row flex-wrap gap-1 justify-end border-t border-[rgb(var(--color-border-100))]">
+                        <Tooltip content={t('documents.download', 'Download')}>
                             <Button
-                                id={`disassociate-document-${document.document_id}-button`}
+                                id={`download-document-${document.document_id}-button`}
                                 variant="ghost"
                                 size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation(); // Prevent event bubbling to parent
-                                    handleDisassociate();
+                                onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const isPdfTarget = document.type_name === 'text/plain' ||
+                                                        document.type_name === 'text/markdown' ||
+                                                        (!document.type_name && !document.file_id);
+
+                                    let downloadUrl = '#';
+                                    if (isPdfTarget) {
+                                        downloadUrl = `/api/documents/download/${document.document_id}?format=pdf`;
+                                    } else if (document.document_id) {
+                                        downloadUrl = `/api/documents/download/${document.document_id}`;
+                                    }
+
+                                    if (downloadUrl !== '#') {
+                                        const filename = isPdfTarget ?
+                                            `${document.document_name || 'document'}.pdf` :
+                                            (document.document_name || 'download');
+                                        try {
+                                            await downloadDocument(downloadUrl, filename, true);
+                                        } catch (error) {
+                                            console.error('Download failed:', error);
+                                        }
+                                    }
                                 }}
-                                disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-500/10 inline-flex items-center"
+                                disabled={isDeleteProcessing}
+                                className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] p-1.5"
                             >
-                                <Unlink className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading', 'Loading...') : t('documents.detach', 'Detach')}
+                                <Download className="w-4 h-4" />
                             </Button>
+                        </Tooltip>
+                        {onShare && (
+                            <Tooltip content={t('documents.share', 'Share')}>
+                                <Button
+                                    id={`share-document-${document.document_id}-button`}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onShare(document);
+                                    }}
+                                    disabled={isDeleteProcessing}
+                                    className="text-[rgb(var(--color-text-600))] hover:text-blue-600 hover:bg-blue-500/10 p-1.5"
+                                >
+                                    <Share2 className="w-4 h-4" />
+                                </Button>
+                            </Tooltip>
+                        )}
+                        {showDisassociate && onDisassociate && (
+                            <Tooltip content={t('documents.detach', 'Detach')}>
+                                <Button
+                                    id={`disassociate-document-${document.document_id}-button`}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDisassociate();
+                                    }}
+                                    disabled={isDeleteProcessing}
+                                    className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-500/10 p-1.5"
+                                >
+                                    <Unlink className="w-4 h-4" />
+                                </Button>
+                            </Tooltip>
                         )}
                         {showMove && onMove && (
-                            <Button
-                                id={`move-document-${document.document_id}-button`}
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation(); // Prevent event bubbling to parent
-                                    onMove(document);
-                                }}
-                                disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-500/10 inline-flex items-center"
-                            >
-                                <FolderInput className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading', 'Loading...') : t('documents.move', 'Move')}
-                            </Button>
+                            <Tooltip content={t('documents.move', 'Move')}>
+                                <Button
+                                    id={`move-document-${document.document_id}-button`}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onMove(document);
+                                    }}
+                                    disabled={isDeleteProcessing}
+                                    className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-500/10 p-1.5"
+                                >
+                                    <FolderInput className="w-4 h-4" />
+                                </Button>
+                            </Tooltip>
                         )}
                         {onDelete && (
-                            <Button
-                                id={`delete-document-${document.document_id}-button`}
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation(); // Prevent event bubbling to parent
-                                    handleDelete();
-                                }}
-                                disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-500/10 inline-flex items-center"
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading', 'Loading...') : t('documents.deletePermanently', 'Delete Permanently')}
-                            </Button>
+                            <Tooltip content={t('documents.deletePermanently', 'Delete Permanently')}>
+                                <Button
+                                    id={`delete-document-${document.document_id}-button`}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete();
+                                    }}
+                                    disabled={isDeleteProcessing}
+                                    className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-500/10 p-1.5"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </Tooltip>
                         )}
                     </div>
                 )}
@@ -891,7 +957,12 @@ const DocumentStorageCard = memo(DocumentStorageCardComponent, (prevProps, nextP
         prevProps.hideActions === nextProps.hideActions &&
         prevProps.showDisassociate === nextProps.showDisassociate &&
         prevProps.showMove === nextProps.showMove &&
-        prevProps.isContentDocument === nextProps.isContentDocument
+        prevProps.isContentDocument === nextProps.isContentDocument &&
+        prevProps.onShare === nextProps.onShare &&
+        prevProps.showVisibilityControls === nextProps.showVisibilityControls &&
+        prevProps.onToggleVisibility === nextProps.onToggleVisibility &&
+        prevProps.isVisibilityUpdating === nextProps.isVisibilityUpdating &&
+        prevProps.document.is_client_visible === nextProps.document.is_client_visible
     );
 });
 

@@ -468,6 +468,13 @@
     "responseSource": {
       "clientPortal": "Reçu via le Portail Client",
       "inboundEmail": "Reçu via e-mail"
+    },
+    "origin": {
+      "internal": "Créé en interne",
+      "clientPortal": "Créé via le portail client",
+      "inboundEmail": "Créé via e-mail entrant",
+      "api": "Créé via API",
+      "other": "Créé via autre"
     }
   },
   "surveys": {
@@ -562,7 +569,8 @@
           "boards": "Tableaux",
           "statuses": "Statuts",
           "priorities": "Priorités",
-          "any": "Tous"
+          "any": "Tous",
+          "unrestricted": "S'applique à chaque ticket et projet"
         },
         "status": {
           "enabled": "Activé",
@@ -613,38 +621,27 @@
         },
         "noTemplates": "Créez un modèle d’enquête avant d’ajouter des déclencheurs.",
         "prioritiesMixed": "Les tableaux sélectionnés utilisent différents types de priorité. Toutes les priorités sont affichées."
-      },
-      "response": {
-        "invalidTitle": "Sondage indisponible",
-        "invalidMessage": "Ce lien de feedback n’est plus valide ou a déjà été utilisé.",
-        "ratingPrompt": "Comment s’est passée votre expérience ?",
-        "ratingAssistive": "Sélectionnez une note de 1 à {{scale}}",
-        "commentLabel": "Commentaires supplémentaires (facultatif)",
-        "submitButton": "Envoyer le retour",
-        "submitting": "Envoi du retour…",
-        "submittedTitle": "Merci pour votre réponse !",
-        "submittedMessage": "{{thankYouText}}",
-        "retryButton": "Réessayer",
-        "ratingSubmitted": "Retour envoyé",
-        "errorMessage": "Impossible d’enregistrer votre retour. Merci de réessayer.",
-        "selectRatingError": "Sélectionnez une note avant d’envoyer.",
-        "supportMessage": "Pour toute question, contactez votre technicien."
       }
     },
     "response": {
-      "pageTitle": "Sondage de satisfaction client"
+      "pageTitle": "Enquête de satisfaction client",
+      "invalidTitle": "Sondage indisponible",
+      "invalidMessage": "Ce lien de feedback n'est plus valide ou a déjà été utilisé.",
+      "ratingPrompt": "Comment s'est passée votre expérience ?",
+      "ratingAssistive": "Sélectionnez une note de 1 à {{scale}}",
+      "commentLabel": "Commentaires supplémentaires (facultatif)",
+      "submitButton": "Envoyer le retour",
+      "submitting": "Envoi du retour…",
+      "submittedTitle": "Merci pour votre réponse !",
+      "submittedMessage": "{{thankYouText}}",
+      "retryButton": "Réessayer",
+      "ratingSubmitted": "Retour envoyé",
+      "errorMessage": "Impossible d'enregistrer votre retour. Merci de réessayer.",
+      "selectRatingError": "Sélectionnez une note avant d'envoyer.",
+      "supportMessage": "Pour toute question, contactez votre technicien."
     }
   },
-  "notifications": {
-    "viewAll": "Voir toutes les notifications",
-    "categories": {
-      "Authentication": "Authentification",
-      "Invoices": "Factures",
-      "Projects": "Projets",
-      "Tickets": "Tickets",
-      "Time Entries": "Saisies de temps"
-    }
-  },
+  "notifications": {},
   "availability": {
     "settings": {
       "title": "Paramètres de disponibilité",
@@ -875,6 +872,8 @@
     "required": "Obligatoire",
     "optional": "Optionnel",
     "notSpecified": "Non spécifié",
-    "unknown": "Inconnu"
+    "unknown": "Inconnu",
+    "uploading": "Téléchargement...",
+    "submitting": "Envoi..."
   }
 }

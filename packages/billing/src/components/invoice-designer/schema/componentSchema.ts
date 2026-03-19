@@ -1,10 +1,10 @@
+import { DEFAULT_INVOICE_PRINT_SETTINGS, resolveInvoiceTemplatePrintSettings } from '@alga-psa/types';
 import type {
   DesignerComponentType,
   DesignerContainerLayout,
   DesignerNodeStyle,
   Size,
 } from '../state/designerStore';
-import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 import type { DesignerInspectorSchema } from './inspectorSchema';
 
 export type DesignerComponentCategory = 'Structure' | 'Content' | 'Media' | 'Dynamic';
@@ -21,6 +21,10 @@ export type DesignerComponentHierarchy = {
   allowedChildren: DesignerComponentType[];
   allowedParents: DesignerComponentType[];
 };
+
+const DEFAULT_RESOLVED_PRINT_SETTINGS = resolveInvoiceTemplatePrintSettings({
+  printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
+});
 
 export interface DesignerComponentSchema {
   type: DesignerComponentType;
@@ -566,7 +570,10 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Structure',
     defaults: {
       name: 'Document',
-      size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+      size: {
+        width: DEFAULT_RESOLVED_PRINT_SETTINGS.pageWidthPx,
+        height: DEFAULT_RESOLVED_PRINT_SETTINGS.pageHeightPx,
+      },
       layout: {
         display: 'flex',
         flexDirection: 'column',
@@ -589,12 +596,15 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     description: 'A single invoice page.',
     category: 'Structure',
     defaults: {
-      size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+      size: {
+        width: DEFAULT_RESOLVED_PRINT_SETTINGS.pageWidthPx,
+        height: DEFAULT_RESOLVED_PRINT_SETTINGS.pageHeightPx,
+      },
       layout: {
         display: 'flex',
         flexDirection: 'column',
         gap: '32px',
-        padding: '40px',
+        padding: `${DEFAULT_RESOLVED_PRINT_SETTINGS.marginPx}px`,
         justifyContent: 'flex-start',
         alignItems: 'stretch',
       },

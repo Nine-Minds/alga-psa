@@ -6,7 +6,7 @@ import {
   buildEmailComplaintReceivedPayload,
   buildEmailDeliveredPayload,
   buildEmailUnsubscribedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/emailFeedbackEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 type ResendWebhookEvent = {
   type?: string;
@@ -274,4 +274,3 @@ export function logResendWebhookMappingOutcome(params: {
     });
   }
 }
-

@@ -1,25 +1,29 @@
+export { lightTheme, darkTheme } from "./themes";
+export { ThemeProvider, useTheme, useColors, useThemePreference } from "./ThemeContext";
+export type { Theme } from "./themes";
+
+/**
+ * Legacy re-exports for backward compatibility during migration.
+ * These pull values from the light theme so that any non-hook imports
+ * still compile.  New code should use the useTheme() / useColors() hooks.
+ */
+import { lightTheme } from "./themes";
+
 export const colors = {
-  background: "#FFFFFF",
-  text: "#111827",
-  mutedText: "#4B5563",
-  danger: "#B91C1C",
-  card: "#F9FAFB",
-  border: "#E5E7EB",
-  primary: "#111827",
-  primaryText: "#FFFFFF",
+  background: lightTheme.colors.background,
+  text: lightTheme.colors.text,
+  mutedText: lightTheme.colors.textSecondary,
+  danger: lightTheme.colors.danger,
+  card: lightTheme.colors.card,
+  border: lightTheme.colors.border,
+  primary: lightTheme.colors.primary,
+  primaryText: lightTheme.colors.textInverse,
 } as const;
 
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-} as const;
+export const spacing = lightTheme.spacing;
 
 export const typography = {
-  title: { fontSize: 20, fontWeight: "600" as const },
-  body: { fontSize: 14, fontWeight: "400" as const },
-  caption: { fontSize: 12, fontWeight: "400" as const },
+  title: { fontSize: lightTheme.typography.title.fontSize, fontWeight: lightTheme.typography.title.fontWeight },
+  body: { fontSize: lightTheme.typography.body.fontSize, fontWeight: lightTheme.typography.body.fontWeight },
+  caption: { fontSize: lightTheme.typography.caption.fontSize, fontWeight: lightTheme.typography.caption.fontWeight },
 } as const;
-

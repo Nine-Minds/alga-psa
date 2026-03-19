@@ -1,0 +1,4206 @@
+[
+  {
+    "id": "T001",
+    "description": "Happy path: Microsoft profiles: tenant-owned named Microsoft profiles exist as the shared credential model for Teams.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: tenant-owned named microsoft profiles exist as the shared credential model for teams.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Happy path: Microsoft profiles: profile persistence stores tenant-scoped profile ID, display name, client ID, client secret reference, tenant ID, and readiness metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: profile persistence stores tenant-scoped profile id, display name, client id, client secret reference, tenant id, and readiness metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Happy path: Microsoft profiles: profile names are unique within a tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: profile names are unique within a tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Happy path: Microsoft profiles: one profile can be marked as the tenant default for legacy Microsoft consumers.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: one profile can be marked as the tenant default for legacy microsoft consumers.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Happy path: Microsoft profiles: migrating from the singleton Microsoft configuration creates a default named profile automatically.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: migrating from the singleton microsoft configuration creates a default named profile automatically.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Happy path: Microsoft profiles: migration preserves the current `microsoft_client_id` value for the default profile.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: migration preserves the current `microsoft_client_id` value for the default profile.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Happy path: Microsoft profiles: migration preserves the current `microsoft_client_secret` value for the default profile.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: migration preserves the current `microsoft_client_secret` value for the default profile.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Happy path: Microsoft profiles: migration preserves the current `microsoft_tenant_id` value for the default profile.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: migration preserves the current `microsoft_tenant_id` value for the default profile.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Happy path: Microsoft profiles: profile reads return masked secret state instead of raw secret material.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: profile reads return masked secret state instead of raw secret material.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Happy path: Microsoft profiles: profile readiness captures whether required credentials exist and whether consumer-specific setup can proceed.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: profile readiness captures whether required credentials exist and whether consumer-specific setup can proceed.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Happy path: Microsoft profiles: profile records can be archived without destroying historical consumer bindings.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: profile records can be archived without destroying historical consumer bindings.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Happy path: Microsoft profiles: profile listing returns only the current tenant's profiles.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: profile listing returns only the current tenant's profiles.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Happy path: Microsoft profiles: profile creation validates required display name, client ID, client secret, and tenant ID fields.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: profile creation validates required display name, client id, client secret, and tenant id fields.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Happy path: Microsoft profiles: profile update supports rotating the client secret without forcing the UI to display the previous secret.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: profile update supports rotating the client secret without forcing the ui to display the previous secret.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Happy path: Microsoft profiles: deleting or archiving a profile that is still actively bound to a consumer is blocked until the binding is changed.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: deleting or archiving a profile that is still actively bound to a consumer is blocked until the binding is changed.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Happy path: Microsoft profiles: the secret provider remains the storage system of record for profile credential material.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: the secret provider remains the storage system of record for profile credential material.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Happy path: Microsoft profiles: profile reads and writes remain fully tenant-scoped.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: profile reads and writes remain fully tenant-scoped.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Happy path: Microsoft profiles: helper resolution returns the tenant default profile for compatibility paths when a consumer has no explicit binding.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: helper resolution returns the tenant default profile for compatibility paths when a consumer has no explicit binding.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Happy path: Microsoft settings UI: the existing singleton Microsoft settings screen becomes a profile manager.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the existing singleton microsoft settings screen becomes a profile manager.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Happy path: Microsoft settings UI: the profile manager lists all profiles with display name, tenant ID, default state, and readiness state.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the profile manager lists all profiles with display name, tenant id, default state, and readiness state.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Happy path: Microsoft settings UI: admins can create a new named Microsoft profile from the settings screen.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: admins can create a new named microsoft profile from the settings screen.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Happy path: Microsoft settings UI: admins can edit an existing named Microsoft profile from the settings screen.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: admins can edit an existing named microsoft profile from the settings screen.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Happy path: Microsoft settings UI: admins can archive an existing named Microsoft profile from the settings screen.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: admins can archive an existing named microsoft profile from the settings screen.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Happy path: Microsoft settings UI: admins can mark a named Microsoft profile as the default profile.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: admins can mark a named microsoft profile as the default profile.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Happy path: Microsoft settings UI: the form captures display name, client ID, client secret, and tenant ID.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the form captures display name, client id, client secret, and tenant id.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Happy path: Microsoft settings UI: the form preserves the existing client secret when the admin edits metadata without rotating the secret.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the form preserves the existing client secret when the admin edits metadata without rotating the secret.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Happy path: Microsoft settings UI: the screen continues to show the Microsoft Entra outbound link.",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen continues to show the microsoft entra outbound link.",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "Happy path: Microsoft settings UI: the screen shows Teams-required redirect URIs for each profile.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen shows teams-required redirect uris for each profile.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Happy path: Microsoft settings UI: the screen shows existing email, calendar, and MSP SSO redirect URIs for each profile.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen shows existing email, calendar, and msp sso redirect uris for each profile.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Happy path: Microsoft settings UI: the screen shows Teams-required scope guidance for each profile.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen shows teams-required scope guidance for each profile.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "Happy path: Microsoft settings UI: the screen shows which consumers are currently bound to each profile.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen shows which consumers are currently bound to each profile.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "Happy path: Microsoft settings UI: the screen surfaces readiness or validation errors inline per profile.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen surfaces readiness or validation errors inline per profile.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Happy path: Microsoft settings UI: the screen has an explicit empty state when no Microsoft profiles exist.",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen has an explicit empty state when no microsoft profiles exist.",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Happy path: Microsoft settings UI: the screen retains a refresh path for reloading readiness and masked secret state.",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen retains a refresh path for reloading readiness and masked secret state.",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Happy path: Microsoft settings UI: destructive archive or delete actions require confirmation.",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: destructive archive or delete actions require confirmation.",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Happy path: Microsoft settings UI: the Teams setup surface can be reached directly from profile management.",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the teams setup surface can be reached directly from profile management.",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "Happy path: Consumer bindings: a tenant-scoped consumer binding model exists for Microsoft-profile consumers.",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for consumer bindings: a tenant-scoped consumer binding model exists for microsoft-profile consumers.",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "Happy path: Consumer bindings: the model supports at least MSP SSO, email, calendar, and Teams as consumer types.",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for consumer bindings: the model supports at least msp sso, email, calendar, and teams as consumer types.",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "Happy path: Consumer bindings: each consumer can reference exactly one selected Microsoft profile per tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for consumer bindings: each consumer can reference exactly one selected microsoft profile per tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "Happy path: Consumer bindings: migration creates compatibility bindings so existing Microsoft consumers continue to work after profile introduction.",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for consumer bindings: migration creates compatibility bindings so existing microsoft consumers continue to work after profile introduction.",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "Happy path: Consumer bindings: Teams requires an explicit selected profile instead of silently falling back to unrelated global Microsoft credentials.",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for consumer bindings: teams requires an explicit selected profile instead of silently falling back to unrelated global microsoft credentials.",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "Happy path: Teams setup: a tenant-scoped Teams integration record exists.",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: a tenant-scoped teams integration record exists.",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "Happy path: Teams setup: the Teams integration record stores the selected Microsoft profile ID.",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the teams integration record stores the selected microsoft profile id.",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "Happy path: Teams setup: the Teams integration record stores install/configuration status for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the teams integration record stores install/configuration status for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "Happy path: Teams setup: the Teams integration record stores enabled Teams capabilities for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the teams integration record stores enabled teams capabilities for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "Happy path: Teams setup: the Teams integration record stores personal-notification category preferences for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the teams integration record stores personal-notification category preferences for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "Happy path: Teams setup: the Teams integration record stores allowed action configuration for Teams quick actions.",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the teams integration record stores allowed action configuration for teams quick actions.",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T095",
+    "description": "Happy path: Teams setup: a tenant-admin Teams setup UI exists.",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T096",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: a tenant-admin teams setup ui exists.",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T097",
+    "description": "Happy path: Teams setup: the UI requires selecting one Microsoft profile before Teams can be activated.",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T098",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui requires selecting one microsoft profile before teams can be activated.",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T099",
+    "description": "Happy path: Teams setup: the UI shows the selected profile's app-registration values, redirect URIs, and scope guidance.",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T100",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui shows the selected profile's app-registration values, redirect uris, and scope guidance.",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T101",
+    "description": "Happy path: Teams setup: the UI shows install / consent / readiness checklist state for Teams.",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T102",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui shows install / consent / readiness checklist state for teams.",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T103",
+    "description": "Happy path: Teams setup: the UI can save draft setup progress before Teams is fully activated.",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T104",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui can save draft setup progress before teams is fully activated.",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T105",
+    "description": "Happy path: Teams setup: the UI can activate Teams once required setup is complete.",
+    "implemented": true,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T106",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui can activate teams once required setup is complete.",
+    "implemented": true,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T107",
+    "description": "Happy path: Teams setup: the UI can deactivate Teams without deleting the underlying Microsoft profile.",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T108",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui can deactivate teams without deleting the underlying microsoft profile.",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T109",
+    "description": "Happy path: Teams setup: the UI shows the currently selected profile, current capability toggles, and notification categories.",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T110",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui shows the currently selected profile, current capability toggles, and notification categories.",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T111",
+    "description": "Happy path: Teams setup: the UI links back to Microsoft profile management when no eligible profile exists or the selected profile is invalid.",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T112",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui links back to microsoft profile management when no eligible profile exists or the selected profile is invalid.",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T113",
+    "description": "Happy path: Teams setup: the settings navigation includes a Teams integration entry.",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T114",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the settings navigation includes a teams integration entry.",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T115",
+    "description": "Happy path: Teams setup: a tenant without an eligible Microsoft profile receives a guided setup state instead of a blank error.",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T116",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: a tenant without an eligible microsoft profile receives a guided setup state instead of a blank error.",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T117",
+    "description": "Happy path: Teams app package: a Teams app manifest/package model exists for PSA.",
+    "implemented": true,
+    "featureIds": [
+      "F059"
+    ]
+  },
+  {
+    "id": "T118",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: a teams app manifest/package model exists for psa.",
+    "implemented": true,
+    "featureIds": [
+      "F059"
+    ]
+  },
+  {
+    "id": "T119",
+    "description": "Happy path: Teams app package: the manifest declares a personal tab.",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T120",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest declares a personal tab.",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T121",
+    "description": "Happy path: Teams app package: the manifest declares a personal-scope bot.",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T122",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest declares a personal-scope bot.",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T123",
+    "description": "Happy path: Teams app package: the manifest declares a message extension.",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T124",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest declares a message extension.",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T125",
+    "description": "Happy path: Teams app package: the manifest declares activity-feed notification capability.",
+    "implemented": true,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T126",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest declares activity-feed notification capability.",
+    "implemented": true,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T127",
+    "description": "Happy path: Teams app package: the manifest uses the selected Microsoft profile's application identity and `webApplicationInfo` metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T128",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest uses the selected microsoft profile's application identity and `webapplicationinfo` metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T129",
+    "description": "Happy path: Teams app package: the manifest supports personal scope for the tab and bot.",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T130",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest supports personal scope for the tab and bot.",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T131",
+    "description": "Happy path: Teams app package: the manifest supports message and compose contexts needed for message-extension flows.",
+    "implemented": true,
+    "featureIds": [
+      "F066"
+    ]
+  },
+  {
+    "id": "T132",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest supports message and compose contexts needed for message-extension flows.",
+    "implemented": true,
+    "featureIds": [
+      "F066"
+    ]
+  },
+  {
+    "id": "T133",
+    "description": "Happy path: Teams app package: the manifest omits channel-routing-specific notification requirements in v1.",
+    "implemented": true,
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T134",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest omits channel-routing-specific notification requirements in v1.",
+    "implemented": true,
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T135",
+    "description": "Happy path: Teams app package: tenant install state supports at least not-configured, install-pending, active, and error states.",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T136",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: tenant install state supports at least not-configured, install-pending, active, and error states.",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T137",
+    "description": "Happy path: Teams app package: setup surfaces can retrieve the tenant's current package/install metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T138",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: setup surfaces can retrieve the tenant's current package/install metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T139",
+    "description": "Happy path: Teams app package: bot IDs, app IDs, and package metadata are stored with the Teams integration record as needed.",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T140",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: bot ids, app ids, and package metadata are stored with the teams integration record as needed.",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T141",
+    "description": "Happy path: Teams app package: environment-specific base URLs are generated correctly for local, staging, and production packaging flows.",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ]
+  },
+  {
+    "id": "T142",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: environment-specific base urls are generated correctly for local, staging, and production packaging flows.",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ]
+  },
+  {
+    "id": "T143",
+    "description": "Happy path: Teams app package: changing the selected Teams profile invalidates stale package/install readiness state.",
+    "implemented": true,
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T144",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: changing the selected teams profile invalidates stale package/install readiness state.",
+    "implemented": true,
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T145",
+    "description": "Happy path: Teams app package: setup surfaces can present a package download or install handoff for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F073"
+    ]
+  },
+  {
+    "id": "T146",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: setup surfaces can present a package download or install handoff for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F073"
+    ]
+  },
+  {
+    "id": "T147",
+    "description": "Happy path: Teams app package: deep-link targets used by notifications and action results stay consistent with the manifest capabilities.",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T148",
+    "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: deep-link targets used by notifications and action results stay consistent with the manifest capabilities.",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T149",
+    "description": "Happy path: Teams identity: Teams authentication uses the tenant-selected Microsoft profile instead of an unrelated global Microsoft credential path.",
+    "implemented": true,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T150",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: teams authentication uses the tenant-selected microsoft profile instead of an unrelated global microsoft credential path.",
+    "implemented": true,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T151",
+    "description": "Happy path: Teams identity: tab SSO resolves PSA tenant and MSP user context.",
+    "implemented": true,
+    "featureIds": [
+      "F076"
+    ]
+  },
+  {
+    "id": "T152",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: tab sso resolves psa tenant and msp user context.",
+    "implemented": true,
+    "featureIds": [
+      "F076"
+    ]
+  },
+  {
+    "id": "T153",
+    "description": "Happy path: Teams identity: bot SSO resolves PSA tenant and MSP user context.",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T154",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: bot sso resolves psa tenant and msp user context.",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T155",
+    "description": "Happy path: Teams identity: message extension SSO resolves PSA tenant and MSP user context.",
+    "implemented": true,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T156",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: message extension sso resolves psa tenant and msp user context.",
+    "implemented": true,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T157",
+    "description": "Happy path: Teams identity: only MSP users are accepted into Teams flows in v1.",
+    "implemented": true,
+    "featureIds": [
+      "F079"
+    ]
+  },
+  {
+    "id": "T158",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: only msp users are accepted into teams flows in v1.",
+    "implemented": true,
+    "featureIds": [
+      "F079"
+    ]
+  },
+  {
+    "id": "T159",
+    "description": "Happy path: Teams identity: client-portal users are rejected from Teams flows in v1.",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T160",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: client-portal users are rejected from teams flows in v1.",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T161",
+    "description": "Happy path: Teams identity: Teams-authenticated requests reuse existing NextAuth/MSP SSO user resolution patterns where possible.",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T162",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: teams-authenticated requests reuse existing nextauth/msp sso user resolution patterns where possible.",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T163",
+    "description": "Happy path: Teams identity: missing, inactive, or unready selected profiles block Teams auth with admin-readable remediation state.",
+    "implemented": true,
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T164",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: missing, inactive, or unready selected profiles block teams auth with admin-readable remediation state.",
+    "implemented": true,
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T165",
+    "description": "Happy path: Teams identity: user mapping can associate a Teams user identity to the correct PSA user within the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ]
+  },
+  {
+    "id": "T166",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: user mapping can associate a teams user identity to the correct psa user within the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ]
+  },
+  {
+    "id": "T167",
+    "description": "Happy path: Teams identity: requests from the wrong Microsoft / Teams tenant are rejected for the PSA tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T168",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: requests from the wrong microsoft / teams tenant are rejected for the psa tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T169",
+    "description": "Happy path: Teams identity: deep-link entry points can bootstrap the destination without a separate PSA sign-in prompt inside Teams.",
+    "implemented": true,
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T170",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: deep-link entry points can bootstrap the destination without a separate psa sign-in prompt inside teams.",
+    "implemented": true,
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T171",
+    "description": "Happy path: Teams identity: expired or invalid sessions return a Teams-safe reauthentication path instead of raw OAuth errors.",
+    "implemented": true,
+    "featureIds": [
+      "F086"
+    ]
+  },
+  {
+    "id": "T172",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: expired or invalid sessions return a teams-safe reauthentication path instead of raw oauth errors.",
+    "implemented": true,
+    "featureIds": [
+      "F086"
+    ]
+  },
+  {
+    "id": "T173",
+    "description": "Happy path: Teams identity: tenant resolution works correctly for Teams entry points across multiple vanity hosts or tenant slugs.",
+    "implemented": true,
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T174",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: tenant resolution works correctly for teams entry points across multiple vanity hosts or tenant slugs.",
+    "implemented": true,
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T175",
+    "description": "Happy path: Teams identity: rebinding Teams to a new Microsoft profile invalidates stale auth assumptions for future requests.",
+    "implemented": true,
+    "featureIds": [
+      "F088"
+    ]
+  },
+  {
+    "id": "T176",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: rebinding teams to a new microsoft profile invalidates stale auth assumptions for future requests.",
+    "implemented": true,
+    "featureIds": [
+      "F088"
+    ]
+  },
+  {
+    "id": "T177",
+    "description": "Happy path: Teams identity: authorization checks still run after Teams authentication before entity access is granted.",
+    "implemented": true,
+    "featureIds": [
+      "F089"
+    ]
+  },
+  {
+    "id": "T178",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: authorization checks still run after teams authentication before entity access is granted.",
+    "implemented": true,
+    "featureIds": [
+      "F089"
+    ]
+  },
+  {
+    "id": "T179",
+    "description": "Happy path: Teams identity: the selected profile takes precedence over broad app/global Microsoft env credentials for Teams-specific flows.",
+    "implemented": true,
+    "featureIds": [
+      "F090"
+    ]
+  },
+  {
+    "id": "T180",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: the selected profile takes precedence over broad app/global microsoft env credentials for teams-specific flows.",
+    "implemented": true,
+    "featureIds": [
+      "F090"
+    ]
+  },
+  {
+    "id": "T181",
+    "description": "Happy path: Teams identity: Teams surface handlers can distinguish unauthenticated, unauthorized, and not-configured tenant states.",
+    "implemented": true,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T182",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: teams surface handlers can distinguish unauthenticated, unauthorized, and not-configured tenant states.",
+    "implemented": true,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T183",
+    "description": "Happy path: Teams identity: Teams-facing auth errors remain safe to show inside Teams UI constraints.",
+    "implemented": true,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T184",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: teams-facing auth errors remain safe to show inside teams ui constraints.",
+    "implemented": true,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T185",
+    "description": "Happy path: Personal tab: a Teams personal tab entry point exists for PSA.",
+    "implemented": true,
+    "featureIds": [
+      "F093"
+    ]
+  },
+  {
+    "id": "T186",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: a teams personal tab entry point exists for psa.",
+    "implemented": true,
+    "featureIds": [
+      "F093"
+    ]
+  },
+  {
+    "id": "T187",
+    "description": "Happy path: Personal tab: the default landing view opens a PSA \u201cmy work\u201d style starting point for technicians.",
+    "implemented": true,
+    "featureIds": [
+      "F094"
+    ]
+  },
+  {
+    "id": "T188",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the default landing view opens a psa \u201cmy work\u201d style starting point for technicians.",
+    "implemented": true,
+    "featureIds": [
+      "F094"
+    ]
+  },
+  {
+    "id": "T189",
+    "description": "Happy path: Personal tab: deep links can open a specific ticket view.",
+    "implemented": true,
+    "featureIds": [
+      "F095"
+    ]
+  },
+  {
+    "id": "T190",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: deep links can open a specific ticket view.",
+    "implemented": true,
+    "featureIds": [
+      "F095"
+    ]
+  },
+  {
+    "id": "T191",
+    "description": "Happy path: Personal tab: deep links can open a specific project task view.",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T192",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: deep links can open a specific project task view.",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T193",
+    "description": "Happy path: Personal tab: deep links can open a specific approval view.",
+    "implemented": true,
+    "featureIds": [
+      "F097"
+    ]
+  },
+  {
+    "id": "T194",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: deep links can open a specific approval view.",
+    "implemented": true,
+    "featureIds": [
+      "F097"
+    ]
+  },
+  {
+    "id": "T195",
+    "description": "Happy path: Personal tab: deep links can open a specific time-entry-related workflow view.",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T196",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: deep links can open a specific time-entry-related workflow view.",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T197",
+    "description": "Happy path: Personal tab: deep links can open related contact or client context when invoked from Teams message workflows.",
+    "implemented": true,
+    "featureIds": [
+      "F099"
+    ]
+  },
+  {
+    "id": "T198",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: deep links can open related contact or client context when invoked from teams message workflows.",
+    "implemented": true,
+    "featureIds": [
+      "F099"
+    ]
+  },
+  {
+    "id": "T199",
+    "description": "Happy path: Personal tab: the initial tab load shows enough record context to confirm the user landed on the intended PSA entity.",
+    "implemented": true,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T200",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the initial tab load shows enough record context to confirm the user landed on the intended psa entity.",
+    "implemented": true,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T201",
+    "description": "Happy path: Personal tab: inaccessible or deleted entities fall back to a safe PSA landing state with an explanatory message.",
+    "implemented": true,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T202",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: inaccessible or deleted entities fall back to a safe psa landing state with an explanatory message.",
+    "implemented": true,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T203",
+    "description": "Happy path: Personal tab: the tab offers an \u201copen in full PSA\u201d path when the user needs richer context or unsupported functionality.",
+    "implemented": true,
+    "featureIds": [
+      "F102"
+    ]
+  },
+  {
+    "id": "T204",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the tab offers an \u201copen in full psa\u201d path when the user needs richer context or unsupported functionality.",
+    "implemented": true,
+    "featureIds": [
+      "F102"
+    ]
+  },
+  {
+    "id": "T205",
+    "description": "Happy path: Personal tab: the Teams tab preserves PSA authorization semantics for every rendered entity or action.",
+    "implemented": true,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T206",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the teams tab preserves psa authorization semantics for every rendered entity or action.",
+    "implemented": true,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T207",
+    "description": "Happy path: Personal tab: the tab prefers reusing existing PSA screens/components instead of building parallel Teams-only record UIs.",
+    "implemented": true,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T208",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the tab prefers reusing existing psa screens/components instead of building parallel teams-only record uis.",
+    "implemented": true,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T209",
+    "description": "Happy path: Personal tab: Teams bootstrap passes user and tenant context into existing PSA UI composition safely.",
+    "implemented": true,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T210",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: teams bootstrap passes user and tenant context into existing psa ui composition safely.",
+    "implemented": true,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T211",
+    "description": "Happy path: Personal tab: activity-feed notification deep links open the correct tab destination.",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T212",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: activity-feed notification deep links open the correct tab destination.",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T213",
+    "description": "Happy path: Personal tab: bot action results can open the correct tab destination.",
+    "implemented": true,
+    "featureIds": [
+      "F107"
+    ]
+  },
+  {
+    "id": "T214",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: bot action results can open the correct tab destination.",
+    "implemented": true,
+    "featureIds": [
+      "F107"
+    ]
+  },
+  {
+    "id": "T215",
+    "description": "Happy path: Personal tab: message extension results can open the correct tab destination.",
+    "implemented": true,
+    "featureIds": [
+      "F108"
+    ]
+  },
+  {
+    "id": "T216",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: message extension results can open the correct tab destination.",
+    "implemented": true,
+    "featureIds": [
+      "F108"
+    ]
+  },
+  {
+    "id": "T217",
+    "description": "Happy path: Personal tab: the landing experience handles cold-start setup or not-configured tenants gracefully.",
+    "implemented": true,
+    "featureIds": [
+      "F109"
+    ]
+  },
+  {
+    "id": "T218",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the landing experience handles cold-start setup or not-configured tenants gracefully.",
+    "implemented": true,
+    "featureIds": [
+      "F109"
+    ]
+  },
+  {
+    "id": "T219",
+    "description": "Happy path: Personal tab: the tab remains the escalation path for workflows that are too complex for cards or dialogs.",
+    "implemented": true,
+    "featureIds": [
+      "F110"
+    ]
+  },
+  {
+    "id": "T220",
+    "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the tab remains the escalation path for workflows that are too complex for cards or dialogs.",
+    "implemented": true,
+    "featureIds": [
+      "F110"
+    ]
+  },
+  {
+    "id": "T221",
+    "description": "Happy path: Teams action layer: a shared Teams action registry exists for bot commands, message-extension actions, and card/dialog submits.",
+    "implemented": true,
+    "featureIds": [
+      "F111"
+    ]
+  },
+  {
+    "id": "T222",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: a shared teams action registry exists for bot commands, message-extension actions, and card/dialog submits.",
+    "implemented": true,
+    "featureIds": [
+      "F111"
+    ]
+  },
+  {
+    "id": "T223",
+    "description": "Happy path: Teams action layer: each supported action declares its required inputs and target entity types.",
+    "implemented": true,
+    "featureIds": [
+      "F112"
+    ]
+  },
+  {
+    "id": "T224",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: each supported action declares its required inputs and target entity types.",
+    "implemented": true,
+    "featureIds": [
+      "F112"
+    ]
+  },
+  {
+    "id": "T225",
+    "description": "Happy path: Teams action layer: shared entity resolvers handle tickets, tasks, contacts, approvals, and time-entry targets.",
+    "implemented": true,
+    "featureIds": [
+      "F113"
+    ]
+  },
+  {
+    "id": "T226",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: shared entity resolvers handle tickets, tasks, contacts, approvals, and time-entry targets.",
+    "implemented": true,
+    "featureIds": [
+      "F113"
+    ]
+  },
+  {
+    "id": "T227",
+    "description": "Happy path: Teams action layer: shared authorization checks wrap the underlying PSA services or server actions.",
+    "implemented": true,
+    "featureIds": [
+      "F114"
+    ]
+  },
+  {
+    "id": "T228",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: shared authorization checks wrap the underlying psa services or server actions.",
+    "implemented": true,
+    "featureIds": [
+      "F114"
+    ]
+  },
+  {
+    "id": "T229",
+    "description": "Happy path: Teams action layer: shared result mappers return Teams-safe summaries, buttons, and deep links.",
+    "implemented": true,
+    "featureIds": [
+      "F115"
+    ]
+  },
+  {
+    "id": "T230",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: shared result mappers return teams-safe summaries, buttons, and deep links.",
+    "implemented": true,
+    "featureIds": [
+      "F115"
+    ]
+  },
+  {
+    "id": "T231",
+    "description": "Happy path: Teams action layer: validation errors use one consistent response shape across bot, message extension, and cards/dialogs.",
+    "implemented": true,
+    "featureIds": [
+      "F116"
+    ]
+  },
+  {
+    "id": "T232",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: validation errors use one consistent response shape across bot, message extension, and cards/dialogs.",
+    "implemented": true,
+    "featureIds": [
+      "F116"
+    ]
+  },
+  {
+    "id": "T233",
+    "description": "Happy path: Teams action layer: action execution records the invoking surface so downstream PSA behavior can distinguish bot, message extension, and tab contexts.",
+    "implemented": true,
+    "featureIds": [
+      "F117"
+    ]
+  },
+  {
+    "id": "T234",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: action execution records the invoking surface so downstream psa behavior can distinguish bot, message extension, and tab contexts.",
+    "implemented": true,
+    "featureIds": [
+      "F117"
+    ]
+  },
+  {
+    "id": "T235",
+    "description": "Happy path: Teams action layer: deep-link generation reuses existing PSA deep-link helpers instead of building Teams-specific URL logic.",
+    "implemented": true,
+    "featureIds": [
+      "F118"
+    ]
+  },
+  {
+    "id": "T236",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: deep-link generation reuses existing psa deep-link helpers instead of building teams-specific url logic.",
+    "implemented": true,
+    "featureIds": [
+      "F118"
+    ]
+  },
+  {
+    "id": "T237",
+    "description": "Happy path: Teams action layer: actions can distinguish read-only lookups from mutating operations.",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ]
+  },
+  {
+    "id": "T238",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: actions can distinguish read-only lookups from mutating operations.",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ]
+  },
+  {
+    "id": "T239",
+    "description": "Happy path: Teams action layer: actions reuse existing PSA ticket, task, approval, contact, and time-entry business operations where possible.",
+    "implemented": true,
+    "featureIds": [
+      "F120"
+    ]
+  },
+  {
+    "id": "T240",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: actions reuse existing psa ticket, task, approval, contact, and time-entry business operations where possible.",
+    "implemented": true,
+    "featureIds": [
+      "F120"
+    ]
+  },
+  {
+    "id": "T241",
+    "description": "Happy path: Teams action layer: actions can expose allowed-action metadata for a user and entity.",
+    "implemented": true,
+    "featureIds": [
+      "F121"
+    ]
+  },
+  {
+    "id": "T242",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: actions can expose allowed-action metadata for a user and entity.",
+    "implemented": true,
+    "featureIds": [
+      "F121"
+    ]
+  },
+  {
+    "id": "T243",
+    "description": "Happy path: Teams action layer: Teams input payloads are normalized into PSA-ready requests before execution.",
+    "implemented": true,
+    "featureIds": [
+      "F122"
+    ]
+  },
+  {
+    "id": "T244",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: teams input payloads are normalized into psa-ready requests before execution.",
+    "implemented": true,
+    "featureIds": [
+      "F122"
+    ]
+  },
+  {
+    "id": "T245",
+    "description": "Happy path: Teams action layer: duplicate card/dialog submissions can be handled safely without creating duplicate mutations.",
+    "implemented": true,
+    "featureIds": [
+      "F123"
+    ]
+  },
+  {
+    "id": "T246",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: duplicate card/dialog submissions can be handled safely without creating duplicate mutations.",
+    "implemented": true,
+    "featureIds": [
+      "F123"
+    ]
+  },
+  {
+    "id": "T247",
+    "description": "Happy path: Teams action layer: partial-failure results return user-readable remediation guidance.",
+    "implemented": true,
+    "featureIds": [
+      "F124"
+    ]
+  },
+  {
+    "id": "T248",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: partial-failure results return user-readable remediation guidance.",
+    "implemented": true,
+    "featureIds": [
+      "F124"
+    ]
+  },
+  {
+    "id": "T249",
+    "description": "Happy path: Teams action layer: Teams capability gating can disable unsupported actions centrally.",
+    "implemented": true,
+    "featureIds": [
+      "F125"
+    ]
+  },
+  {
+    "id": "T250",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: teams capability gating can disable unsupported actions centrally.",
+    "implemented": true,
+    "featureIds": [
+      "F125"
+    ]
+  },
+  {
+    "id": "T251",
+    "description": "Happy path: Teams action layer: action definitions are reused instead of reimplementing each workflow per Teams surface.",
+    "implemented": true,
+    "featureIds": [
+      "F126"
+    ]
+  },
+  {
+    "id": "T252",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: action definitions are reused instead of reimplementing each workflow per teams surface.",
+    "implemented": true,
+    "featureIds": [
+      "F126"
+    ]
+  },
+  {
+    "id": "T253",
+    "description": "Happy path: Personal bot: a Teams personal-scope bot exists for PSA.",
+    "implemented": true,
+    "featureIds": [
+      "F127"
+    ]
+  },
+  {
+    "id": "T254",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: a teams personal-scope bot exists for psa.",
+    "implemented": true,
+    "featureIds": [
+      "F127"
+    ]
+  },
+  {
+    "id": "T255",
+    "description": "Happy path: Personal bot: a command router parses supported bot commands.",
+    "implemented": true,
+    "featureIds": [
+      "F128"
+    ]
+  },
+  {
+    "id": "T256",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: a command router parses supported bot commands.",
+    "implemented": true,
+    "featureIds": [
+      "F128"
+    ]
+  },
+  {
+    "id": "T257",
+    "description": "Happy path: Personal bot: unsupported commands return a help-oriented response instead of silently failing.",
+    "implemented": true,
+    "featureIds": [
+      "F129"
+    ]
+  },
+  {
+    "id": "T258",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: unsupported commands return a help-oriented response instead of silently failing.",
+    "implemented": true,
+    "featureIds": [
+      "F129"
+    ]
+  },
+  {
+    "id": "T259",
+    "description": "Happy path: Personal bot: a welcome/help response lists the supported v1 commands.",
+    "implemented": true,
+    "featureIds": [
+      "F130"
+    ]
+  },
+  {
+    "id": "T260",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: a welcome/help response lists the supported v1 commands.",
+    "implemented": true,
+    "featureIds": [
+      "F130"
+    ]
+  },
+  {
+    "id": "T261",
+    "description": "Happy path: Personal bot: bot responses can render buttons or cards that open the tab or quick actions.",
+    "implemented": true,
+    "featureIds": [
+      "F131"
+    ]
+  },
+  {
+    "id": "T262",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: bot responses can render buttons or cards that open the tab or quick actions.",
+    "implemented": true,
+    "featureIds": [
+      "F131"
+    ]
+  },
+  {
+    "id": "T263",
+    "description": "Happy path: Personal bot: the bot respects tenant-level allowed-action configuration.",
+    "implemented": true,
+    "featureIds": [
+      "F132"
+    ]
+  },
+  {
+    "id": "T264",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: the bot respects tenant-level allowed-action configuration.",
+    "implemented": true,
+    "featureIds": [
+      "F132"
+    ]
+  },
+  {
+    "id": "T265",
+    "description": "Happy path: Personal bot: explicit entity references in commands are resolved consistently.",
+    "implemented": true,
+    "featureIds": [
+      "F133"
+    ]
+  },
+  {
+    "id": "T266",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: explicit entity references in commands are resolved consistently.",
+    "implemented": true,
+    "featureIds": [
+      "F133"
+    ]
+  },
+  {
+    "id": "T267",
+    "description": "Happy path: Personal bot: unsupported non-personal contexts return a clear \u201cpersonal scope only\u201d response for v1.",
+    "implemented": true,
+    "featureIds": [
+      "F134"
+    ]
+  },
+  {
+    "id": "T268",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: unsupported non-personal contexts return a clear \u201cpersonal scope only\u201d response for v1.",
+    "implemented": true,
+    "featureIds": [
+      "F134"
+    ]
+  },
+  {
+    "id": "T269",
+    "description": "Happy path: Personal bot command `my tickets`: returns the technician's relevant tickets.",
+    "implemented": true,
+    "featureIds": [
+      "F135"
+    ]
+  },
+  {
+    "id": "T270",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `my tickets`: returns the technician's relevant tickets.",
+    "implemented": true,
+    "featureIds": [
+      "F135"
+    ]
+  },
+  {
+    "id": "T271",
+    "description": "Happy path: Personal bot command `my tickets`: response items include enough summary data to act or click through.",
+    "implemented": true,
+    "featureIds": [
+      "F136"
+    ]
+  },
+  {
+    "id": "T272",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `my tickets`: response items include enough summary data to act or click through.",
+    "implemented": true,
+    "featureIds": [
+      "F136"
+    ]
+  },
+  {
+    "id": "T273",
+    "description": "Happy path: Personal bot command `my tickets`: response items include deep links into the Teams tab or PSA web app.",
+    "implemented": true,
+    "featureIds": [
+      "F137"
+    ]
+  },
+  {
+    "id": "T274",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `my tickets`: response items include deep links into the teams tab or psa web app.",
+    "implemented": true,
+    "featureIds": [
+      "F137"
+    ]
+  },
+  {
+    "id": "T275",
+    "description": "Happy path: Personal bot command `ticket <id>`: returns a ticket summary for a valid ticket reference.",
+    "implemented": true,
+    "featureIds": [
+      "F138"
+    ]
+  },
+  {
+    "id": "T276",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `ticket <id>`: returns a ticket summary for a valid ticket reference.",
+    "implemented": true,
+    "featureIds": [
+      "F138"
+    ]
+  },
+  {
+    "id": "T277",
+    "description": "Happy path: Personal bot command `ticket <id>`: returns a clear not-found or not-authorized response for invalid references.",
+    "implemented": true,
+    "featureIds": [
+      "F139"
+    ]
+  },
+  {
+    "id": "T278",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `ticket <id>`: returns a clear not-found or not-authorized response for invalid references.",
+    "implemented": true,
+    "featureIds": [
+      "F139"
+    ]
+  },
+  {
+    "id": "T279",
+    "description": "Happy path: Personal bot command `assign ticket`: supports assigning a ticket to a technician.",
+    "implemented": true,
+    "featureIds": [
+      "F140"
+    ]
+  },
+  {
+    "id": "T280",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `assign ticket`: supports assigning a ticket to a technician.",
+    "implemented": true,
+    "featureIds": [
+      "F140"
+    ]
+  },
+  {
+    "id": "T281",
+    "description": "Happy path: Personal bot command `assign ticket`: can resolve the target ticket from command input or current bot workflow context.",
+    "implemented": true,
+    "featureIds": [
+      "F141"
+    ]
+  },
+  {
+    "id": "T282",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `assign ticket`: can resolve the target ticket from command input or current bot workflow context.",
+    "implemented": true,
+    "featureIds": [
+      "F141"
+    ]
+  },
+  {
+    "id": "T283",
+    "description": "Happy path: Personal bot command `assign ticket`: can resolve the target assignee from available PSA users.",
+    "implemented": true,
+    "featureIds": [
+      "F142"
+    ]
+  },
+  {
+    "id": "T284",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `assign ticket`: can resolve the target assignee from available psa users.",
+    "implemented": true,
+    "featureIds": [
+      "F142"
+    ]
+  },
+  {
+    "id": "T285",
+    "description": "Happy path: Personal bot command `assign ticket`: returns the updated assignment summary after success.",
+    "implemented": true,
+    "featureIds": [
+      "F143"
+    ]
+  },
+  {
+    "id": "T286",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `assign ticket`: returns the updated assignment summary after success.",
+    "implemented": true,
+    "featureIds": [
+      "F143"
+    ]
+  },
+  {
+    "id": "T287",
+    "description": "Happy path: Personal bot command `add note`: supports appending an internal note to a target ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F144"
+    ]
+  },
+  {
+    "id": "T288",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `add note`: supports appending an internal note to a target ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F144"
+    ]
+  },
+  {
+    "id": "T289",
+    "description": "Happy path: Personal bot command `add note`: can resolve the target ticket from explicit input or current workflow context.",
+    "implemented": true,
+    "featureIds": [
+      "F145"
+    ]
+  },
+  {
+    "id": "T290",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `add note`: can resolve the target ticket from explicit input or current workflow context.",
+    "implemented": true,
+    "featureIds": [
+      "F145"
+    ]
+  },
+  {
+    "id": "T291",
+    "description": "Happy path: Personal bot command `add note`: returns the saved note result and deep link after success.",
+    "implemented": true,
+    "featureIds": [
+      "F146"
+    ]
+  },
+  {
+    "id": "T292",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `add note`: returns the saved note result and deep link after success.",
+    "implemented": true,
+    "featureIds": [
+      "F146"
+    ]
+  },
+  {
+    "id": "T293",
+    "description": "Happy path: Personal bot command `reply to contact`: supports adding a customer-facing reply for a target ticket/contact context.",
+    "implemented": true,
+    "featureIds": [
+      "F147"
+    ]
+  },
+  {
+    "id": "T294",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `reply to contact`: supports adding a customer-facing reply for a target ticket/contact context.",
+    "implemented": true,
+    "featureIds": [
+      "F147"
+    ]
+  },
+  {
+    "id": "T295",
+    "description": "Happy path: Personal bot command `reply to contact`: can prefill or resolve the ticket/contact context before submit.",
+    "implemented": true,
+    "featureIds": [
+      "F148"
+    ]
+  },
+  {
+    "id": "T296",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `reply to contact`: can prefill or resolve the ticket/contact context before submit.",
+    "implemented": true,
+    "featureIds": [
+      "F148"
+    ]
+  },
+  {
+    "id": "T297",
+    "description": "Happy path: Personal bot command `reply to contact`: returns the reply result and follow-up deep link after success.",
+    "implemented": true,
+    "featureIds": [
+      "F149"
+    ]
+  },
+  {
+    "id": "T298",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `reply to contact`: returns the reply result and follow-up deep link after success.",
+    "implemented": true,
+    "featureIds": [
+      "F149"
+    ]
+  },
+  {
+    "id": "T299",
+    "description": "Happy path: Personal bot command `log time`: supports creating a time entry against a ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F150"
+    ]
+  },
+  {
+    "id": "T300",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `log time`: supports creating a time entry against a ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F150"
+    ]
+  },
+  {
+    "id": "T301",
+    "description": "Happy path: Personal bot command `log time`: supports creating a time entry against a project task.",
+    "implemented": true,
+    "featureIds": [
+      "F151"
+    ]
+  },
+  {
+    "id": "T302",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `log time`: supports creating a time entry against a project task.",
+    "implemented": true,
+    "featureIds": [
+      "F151"
+    ]
+  },
+  {
+    "id": "T303",
+    "description": "Happy path: Personal bot command `log time`: collects minimal duration, note, and work-context data.",
+    "implemented": true,
+    "featureIds": [
+      "F152"
+    ]
+  },
+  {
+    "id": "T304",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `log time`: collects minimal duration, note, and work-context data.",
+    "implemented": true,
+    "featureIds": [
+      "F152"
+    ]
+  },
+  {
+    "id": "T305",
+    "description": "Happy path: Personal bot command approvals: returns the technician's pending approvals.",
+    "implemented": true,
+    "featureIds": [
+      "F153"
+    ]
+  },
+  {
+    "id": "T306",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command approvals: returns the technician's pending approvals.",
+    "implemented": true,
+    "featureIds": [
+      "F153"
+    ]
+  },
+  {
+    "id": "T307",
+    "description": "Happy path: Personal bot command approvals: can execute approve/reject or request-change actions for supported approval items.",
+    "implemented": true,
+    "featureIds": [
+      "F154"
+    ]
+  },
+  {
+    "id": "T308",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command approvals: can execute approve/reject or request-change actions for supported approval items.",
+    "implemented": true,
+    "featureIds": [
+      "F154"
+    ]
+  },
+  {
+    "id": "T309",
+    "description": "Happy path: Message extension: a Teams message extension exists for PSA.",
+    "implemented": true,
+    "featureIds": [
+      "F155"
+    ]
+  },
+  {
+    "id": "T310",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: a teams message extension exists for psa.",
+    "implemented": true,
+    "featureIds": [
+      "F155"
+    ]
+  },
+  {
+    "id": "T311",
+    "description": "Happy path: Message extension: search commands can look up PSA tickets.",
+    "implemented": true,
+    "featureIds": [
+      "F156"
+    ]
+  },
+  {
+    "id": "T312",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search commands can look up psa tickets.",
+    "implemented": true,
+    "featureIds": [
+      "F156"
+    ]
+  },
+  {
+    "id": "T313",
+    "description": "Happy path: Message extension: search commands can look up PSA tasks.",
+    "implemented": true,
+    "featureIds": [
+      "F157"
+    ]
+  },
+  {
+    "id": "T314",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search commands can look up psa tasks.",
+    "implemented": true,
+    "featureIds": [
+      "F157"
+    ]
+  },
+  {
+    "id": "T315",
+    "description": "Happy path: Message extension: search commands can look up PSA contacts.",
+    "implemented": true,
+    "featureIds": [
+      "F158"
+    ]
+  },
+  {
+    "id": "T316",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search commands can look up psa contacts.",
+    "implemented": true,
+    "featureIds": [
+      "F158"
+    ]
+  },
+  {
+    "id": "T317",
+    "description": "Happy path: Message extension: search commands can look up approval-related work items needed for v1.",
+    "implemented": true,
+    "featureIds": [
+      "F159"
+    ]
+  },
+  {
+    "id": "T318",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search commands can look up approval-related work items needed for v1.",
+    "implemented": true,
+    "featureIds": [
+      "F159"
+    ]
+  },
+  {
+    "id": "T319",
+    "description": "Happy path: Message extension: search commands work from compose and command-box contexts.",
+    "implemented": true,
+    "featureIds": [
+      "F160"
+    ]
+  },
+  {
+    "id": "T320",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search commands work from compose and command-box contexts.",
+    "implemented": true,
+    "featureIds": [
+      "F160"
+    ]
+  },
+  {
+    "id": "T321",
+    "description": "Happy path: Message extension: action commands work from message context.",
+    "implemented": true,
+    "featureIds": [
+      "F161"
+    ]
+  },
+  {
+    "id": "T322",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: action commands work from message context.",
+    "implemented": true,
+    "featureIds": [
+      "F161"
+    ]
+  },
+  {
+    "id": "T323",
+    "description": "Happy path: Message extension: search queries remain tenant-scoped.",
+    "implemented": true,
+    "featureIds": [
+      "F162"
+    ]
+  },
+  {
+    "id": "T324",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search queries remain tenant-scoped.",
+    "implemented": true,
+    "featureIds": [
+      "F162"
+    ]
+  },
+  {
+    "id": "T325",
+    "description": "Happy path: Message extension: search queries respect the invoking user's PSA permissions.",
+    "implemented": true,
+    "featureIds": [
+      "F163"
+    ]
+  },
+  {
+    "id": "T326",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search queries respect the invoking user's psa permissions.",
+    "implemented": true,
+    "featureIds": [
+      "F163"
+    ]
+  },
+  {
+    "id": "T327",
+    "description": "Happy path: Message extension: search results support pagination or continuation for longer result sets.",
+    "implemented": true,
+    "featureIds": [
+      "F164"
+    ]
+  },
+  {
+    "id": "T328",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search results support pagination or continuation for longer result sets.",
+    "implemented": true,
+    "featureIds": [
+      "F164"
+    ]
+  },
+  {
+    "id": "T329",
+    "description": "Happy path: Message extension: search results show compact summary information appropriate to Teams.",
+    "implemented": true,
+    "featureIds": [
+      "F165"
+    ]
+  },
+  {
+    "id": "T330",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search results show compact summary information appropriate to teams.",
+    "implemented": true,
+    "featureIds": [
+      "F165"
+    ]
+  },
+  {
+    "id": "T331",
+    "description": "Happy path: Message extension: search results include deep links to open the selected record in the Teams tab or PSA web app.",
+    "implemented": true,
+    "featureIds": [
+      "F166"
+    ]
+  },
+  {
+    "id": "T332",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search results include deep links to open the selected record in the teams tab or psa web app.",
+    "implemented": true,
+    "featureIds": [
+      "F166"
+    ]
+  },
+  {
+    "id": "T333",
+    "description": "Happy path: Message extension: search results can surface allowed quick actions where supported.",
+    "implemented": true,
+    "featureIds": [
+      "F167"
+    ]
+  },
+  {
+    "id": "T334",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search results can surface allowed quick actions where supported.",
+    "implemented": true,
+    "featureIds": [
+      "F167"
+    ]
+  },
+  {
+    "id": "T335",
+    "description": "Happy path: Message extension: unsupported message types or contexts return a clear, recoverable response.",
+    "implemented": true,
+    "featureIds": [
+      "F168"
+    ]
+  },
+  {
+    "id": "T336",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: unsupported message types or contexts return a clear, recoverable response.",
+    "implemented": true,
+    "featureIds": [
+      "F168"
+    ]
+  },
+  {
+    "id": "T337",
+    "description": "Happy path: Message extension: the extension is unavailable when the tenant Teams integration is not active.",
+    "implemented": true,
+    "featureIds": [
+      "F169"
+    ]
+  },
+  {
+    "id": "T338",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: the extension is unavailable when the tenant teams integration is not active.",
+    "implemented": true,
+    "featureIds": [
+      "F169"
+    ]
+  },
+  {
+    "id": "T339",
+    "description": "Happy path: Message extension: the extension respects tenant-level allowed-action configuration.",
+    "implemented": true,
+    "featureIds": [
+      "F170"
+    ]
+  },
+  {
+    "id": "T340",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: the extension respects tenant-level allowed-action configuration.",
+    "implemented": true,
+    "featureIds": [
+      "F170"
+    ]
+  },
+  {
+    "id": "T341",
+    "description": "Happy path: Message extension: Teams-authenticated context is available to search and action commands.",
+    "implemented": true,
+    "featureIds": [
+      "F171"
+    ]
+  },
+  {
+    "id": "T342",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: teams-authenticated context is available to search and action commands.",
+    "implemented": true,
+    "featureIds": [
+      "F171"
+    ]
+  },
+  {
+    "id": "T343",
+    "description": "Happy path: Message extension: users can open a matching ticket directly from search results.",
+    "implemented": true,
+    "featureIds": [
+      "F172"
+    ]
+  },
+  {
+    "id": "T344",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: users can open a matching ticket directly from search results.",
+    "implemented": true,
+    "featureIds": [
+      "F172"
+    ]
+  },
+  {
+    "id": "T345",
+    "description": "Happy path: Message extension: users can open a matching task directly from search results.",
+    "implemented": true,
+    "featureIds": [
+      "F173"
+    ]
+  },
+  {
+    "id": "T346",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: users can open a matching task directly from search results.",
+    "implemented": true,
+    "featureIds": [
+      "F173"
+    ]
+  },
+  {
+    "id": "T347",
+    "description": "Happy path: Message extension: users can open a matching contact or approval directly from search results when permitted.",
+    "implemented": true,
+    "featureIds": [
+      "F174"
+    ]
+  },
+  {
+    "id": "T348",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: users can open a matching contact or approval directly from search results when permitted.",
+    "implemented": true,
+    "featureIds": [
+      "F174"
+    ]
+  },
+  {
+    "id": "T349",
+    "description": "Happy path: Message extension: command definitions remain focused on lookup and message-driven actions rather than general chat.",
+    "implemented": true,
+    "featureIds": [
+      "F175"
+    ]
+  },
+  {
+    "id": "T350",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: command definitions remain focused on lookup and message-driven actions rather than general chat.",
+    "implemented": true,
+    "featureIds": [
+      "F175"
+    ]
+  },
+  {
+    "id": "T351",
+    "description": "Happy path: Message extension: result rendering reuses the shared Teams action/result model.",
+    "implemented": true,
+    "featureIds": [
+      "F176"
+    ]
+  },
+  {
+    "id": "T352",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: result rendering reuses the shared teams action/result model.",
+    "implemented": true,
+    "featureIds": [
+      "F176"
+    ]
+  },
+  {
+    "id": "T353",
+    "description": "Happy path: Message extension: command invocation records which surface triggered the action for downstream processing.",
+    "implemented": true,
+    "featureIds": [
+      "F177"
+    ]
+  },
+  {
+    "id": "T354",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: command invocation records which surface triggered the action for downstream processing.",
+    "implemented": true,
+    "featureIds": [
+      "F177"
+    ]
+  },
+  {
+    "id": "T355",
+    "description": "Happy path: Message extension: search behavior prefers existing PSA data-access patterns rather than Teams-specific record indexes.",
+    "implemented": true,
+    "featureIds": [
+      "F178"
+    ]
+  },
+  {
+    "id": "T356",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search behavior prefers existing psa data-access patterns rather than teams-specific record indexes.",
+    "implemented": true,
+    "featureIds": [
+      "F178"
+    ]
+  },
+  {
+    "id": "T357",
+    "description": "Happy path: Message action `create ticket from message`: supports creating a new PSA ticket from a Teams message.",
+    "implemented": true,
+    "featureIds": [
+      "F179"
+    ]
+  },
+  {
+    "id": "T358",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `create ticket from message`: supports creating a new psa ticket from a teams message.",
+    "implemented": true,
+    "featureIds": [
+      "F179"
+    ]
+  },
+  {
+    "id": "T359",
+    "description": "Happy path: Message action `create ticket from message`: captures subject/summary/body data from the Teams message context.",
+    "implemented": true,
+    "featureIds": [
+      "F180"
+    ]
+  },
+  {
+    "id": "T360",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `create ticket from message`: captures subject/summary/body data from the teams message context.",
+    "implemented": true,
+    "featureIds": [
+      "F180"
+    ]
+  },
+  {
+    "id": "T361",
+    "description": "Happy path: Message action `create ticket from message`: supports minimal admin-approved ticket fields such as board, status, and client/contact context.",
+    "implemented": true,
+    "featureIds": [
+      "F181"
+    ]
+  },
+  {
+    "id": "T362",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `create ticket from message`: supports minimal admin-approved ticket fields such as board, status, and client/contact context.",
+    "implemented": true,
+    "featureIds": [
+      "F181"
+    ]
+  },
+  {
+    "id": "T363",
+    "description": "Happy path: Message action `create ticket from message`: stores Teams source-message reference metadata with the created work item.",
+    "implemented": true,
+    "featureIds": [
+      "F182"
+    ]
+  },
+  {
+    "id": "T364",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `create ticket from message`: stores teams source-message reference metadata with the created work item.",
+    "implemented": true,
+    "featureIds": [
+      "F182"
+    ]
+  },
+  {
+    "id": "T365",
+    "description": "Happy path: Message action `create ticket from message`: confirms success with a deep link to the created ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F183"
+    ]
+  },
+  {
+    "id": "T366",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `create ticket from message`: confirms success with a deep link to the created ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F183"
+    ]
+  },
+  {
+    "id": "T367",
+    "description": "Happy path: Message action `create ticket from message`: guards against duplicate submit behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F184"
+    ]
+  },
+  {
+    "id": "T368",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `create ticket from message`: guards against duplicate submit behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F184"
+    ]
+  },
+  {
+    "id": "T369",
+    "description": "Happy path: Message action `update from message`: supports targeting an existing ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F185"
+    ]
+  },
+  {
+    "id": "T370",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: supports targeting an existing ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F185"
+    ]
+  },
+  {
+    "id": "T371",
+    "description": "Happy path: Message action `update from message`: supports targeting an existing task when appropriate.",
+    "implemented": true,
+    "featureIds": [
+      "F186"
+    ]
+  },
+  {
+    "id": "T372",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: supports targeting an existing task when appropriate.",
+    "implemented": true,
+    "featureIds": [
+      "F186"
+    ]
+  },
+  {
+    "id": "T373",
+    "description": "Happy path: Message action `update from message`: supports appending an internal note derived from the Teams message.",
+    "implemented": true,
+    "featureIds": [
+      "F187"
+    ]
+  },
+  {
+    "id": "T374",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: supports appending an internal note derived from the teams message.",
+    "implemented": true,
+    "featureIds": [
+      "F187"
+    ]
+  },
+  {
+    "id": "T375",
+    "description": "Happy path: Message action `update from message`: supports appending a customer-visible reply when the user has permission and the record state allows it.",
+    "implemented": true,
+    "featureIds": [
+      "F188"
+    ]
+  },
+  {
+    "id": "T376",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: supports appending a customer-visible reply when the user has permission and the record state allows it.",
+    "implemented": true,
+    "featureIds": [
+      "F188"
+    ]
+  },
+  {
+    "id": "T377",
+    "description": "Happy path: Message action `update from message`: stores Teams source-message reference metadata with the update.",
+    "implemented": true,
+    "featureIds": [
+      "F189"
+    ]
+  },
+  {
+    "id": "T378",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: stores teams source-message reference metadata with the update.",
+    "implemented": true,
+    "featureIds": [
+      "F189"
+    ]
+  },
+  {
+    "id": "T379",
+    "description": "Happy path: Message action `update from message`: confirms success with a deep link to the updated record.",
+    "implemented": true,
+    "featureIds": [
+      "F190"
+    ]
+  },
+  {
+    "id": "T380",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: confirms success with a deep link to the updated record.",
+    "implemented": true,
+    "featureIds": [
+      "F190"
+    ]
+  },
+  {
+    "id": "T381",
+    "description": "Happy path: Message action `update from message`: validates target-record permission before mutating PSA data.",
+    "implemented": true,
+    "featureIds": [
+      "F191"
+    ]
+  },
+  {
+    "id": "T382",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: validates target-record permission before mutating psa data.",
+    "implemented": true,
+    "featureIds": [
+      "F191"
+    ]
+  },
+  {
+    "id": "T383",
+    "description": "Happy path: Message action `update from message`: supports dialog handoff when more fields are needed than fit a one-click action.",
+    "implemented": true,
+    "featureIds": [
+      "F192"
+    ]
+  },
+  {
+    "id": "T384",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: supports dialog handoff when more fields are needed than fit a one-click action.",
+    "implemented": true,
+    "featureIds": [
+      "F192"
+    ]
+  },
+  {
+    "id": "T385",
+    "description": "Happy path: Message action `update from message`: prefills action forms from the selected Teams message context.",
+    "implemented": true,
+    "featureIds": [
+      "F193"
+    ]
+  },
+  {
+    "id": "T386",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: prefills action forms from the selected teams message context.",
+    "implemented": true,
+    "featureIds": [
+      "F193"
+    ]
+  },
+  {
+    "id": "T387",
+    "description": "Happy path: Message action `create ticket from message`: can hand off to a richer tab flow when the selected message needs more complex ticket creation context.",
+    "implemented": true,
+    "featureIds": [
+      "F194"
+    ]
+  },
+  {
+    "id": "T388",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `create ticket from message`: can hand off to a richer tab flow when the selected message needs more complex ticket creation context.",
+    "implemented": true,
+    "featureIds": [
+      "F194"
+    ]
+  },
+  {
+    "id": "T389",
+    "description": "Happy path: Message action `update from message`: can hand off to the personal tab when the mutation is too complex for a dialog.",
+    "implemented": true,
+    "featureIds": [
+      "F195"
+    ]
+  },
+  {
+    "id": "T390",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: can hand off to the personal tab when the mutation is too complex for a dialog.",
+    "implemented": true,
+    "featureIds": [
+      "F195"
+    ]
+  },
+  {
+    "id": "T391",
+    "description": "Happy path: Message-driven actions: both create and update flows reuse the shared Teams action layer instead of bespoke handlers.",
+    "implemented": true,
+    "featureIds": [
+      "F196"
+    ]
+  },
+  {
+    "id": "T392",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message-driven actions: both create and update flows reuse the shared teams action layer instead of bespoke handlers.",
+    "implemented": true,
+    "featureIds": [
+      "F196"
+    ]
+  },
+  {
+    "id": "T393",
+    "description": "Happy path: Quick actions: a shared adaptive-card/dialog submission path exists for Teams quick actions.",
+    "implemented": true,
+    "featureIds": [
+      "F197"
+    ]
+  },
+  {
+    "id": "T394",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: a shared adaptive-card/dialog submission path exists for teams quick actions.",
+    "implemented": true,
+    "featureIds": [
+      "F197"
+    ]
+  },
+  {
+    "id": "T395",
+    "description": "Happy path: Quick actions: assign-ticket cards/dialogs collect the minimum required assignee and note inputs.",
+    "implemented": true,
+    "featureIds": [
+      "F198"
+    ]
+  },
+  {
+    "id": "T396",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: assign-ticket cards/dialogs collect the minimum required assignee and note inputs.",
+    "implemented": true,
+    "featureIds": [
+      "F198"
+    ]
+  },
+  {
+    "id": "T397",
+    "description": "Happy path: Quick actions: add-note cards/dialogs collect the minimum required note inputs.",
+    "implemented": true,
+    "featureIds": [
+      "F199"
+    ]
+  },
+  {
+    "id": "T398",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: add-note cards/dialogs collect the minimum required note inputs.",
+    "implemented": true,
+    "featureIds": [
+      "F199"
+    ]
+  },
+  {
+    "id": "T399",
+    "description": "Happy path: Quick actions: reply-to-contact cards/dialogs collect the minimum required reply inputs.",
+    "implemented": true,
+    "featureIds": [
+      "F200"
+    ]
+  },
+  {
+    "id": "T400",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: reply-to-contact cards/dialogs collect the minimum required reply inputs.",
+    "implemented": true,
+    "featureIds": [
+      "F200"
+    ]
+  },
+  {
+    "id": "T401",
+    "description": "Happy path: Quick actions: log-time cards/dialogs collect the minimum required time-entry inputs.",
+    "implemented": true,
+    "featureIds": [
+      "F201"
+    ]
+  },
+  {
+    "id": "T402",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: log-time cards/dialogs collect the minimum required time-entry inputs.",
+    "implemented": true,
+    "featureIds": [
+      "F201"
+    ]
+  },
+  {
+    "id": "T403",
+    "description": "Happy path: Quick actions: approval cards/dialogs collect approval outcome and optional comment inputs.",
+    "implemented": true,
+    "featureIds": [
+      "F202"
+    ]
+  },
+  {
+    "id": "T404",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: approval cards/dialogs collect approval outcome and optional comment inputs.",
+    "implemented": true,
+    "featureIds": [
+      "F202"
+    ]
+  },
+  {
+    "id": "T405",
+    "description": "Happy path: Quick actions: forms can prefill fields from the invoking entity or Teams message context.",
+    "implemented": true,
+    "featureIds": [
+      "F203"
+    ]
+  },
+  {
+    "id": "T406",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms can prefill fields from the invoking entity or teams message context.",
+    "implemented": true,
+    "featureIds": [
+      "F203"
+    ]
+  },
+  {
+    "id": "T407",
+    "description": "Happy path: Quick actions: forms validate required fields before submission.",
+    "implemented": true,
+    "featureIds": [
+      "F204"
+    ]
+  },
+  {
+    "id": "T408",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms validate required fields before submission.",
+    "implemented": true,
+    "featureIds": [
+      "F204"
+    ]
+  },
+  {
+    "id": "T409",
+    "description": "Happy path: Quick actions: forms submit through the shared Teams action layer.",
+    "implemented": true,
+    "featureIds": [
+      "F205"
+    ]
+  },
+  {
+    "id": "T410",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms submit through the shared teams action layer.",
+    "implemented": true,
+    "featureIds": [
+      "F205"
+    ]
+  },
+  {
+    "id": "T411",
+    "description": "Happy path: Quick actions: forms return success confirmations in Teams after submit.",
+    "implemented": true,
+    "featureIds": [
+      "F206"
+    ]
+  },
+  {
+    "id": "T412",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms return success confirmations in teams after submit.",
+    "implemented": true,
+    "featureIds": [
+      "F206"
+    ]
+  },
+  {
+    "id": "T413",
+    "description": "Happy path: Quick actions: forms return recoverable validation or state errors in Teams after submit.",
+    "implemented": true,
+    "featureIds": [
+      "F207"
+    ]
+  },
+  {
+    "id": "T414",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms return recoverable validation or state errors in teams after submit.",
+    "implemented": true,
+    "featureIds": [
+      "F207"
+    ]
+  },
+  {
+    "id": "T415",
+    "description": "Happy path: Quick actions: forms support cancel/dismiss without side effects.",
+    "implemented": true,
+    "featureIds": [
+      "F208"
+    ]
+  },
+  {
+    "id": "T416",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms support cancel/dismiss without side effects.",
+    "implemented": true,
+    "featureIds": [
+      "F208"
+    ]
+  },
+  {
+    "id": "T417",
+    "description": "Happy path: Quick actions: users only see quick actions they are allowed to perform.",
+    "implemented": true,
+    "featureIds": [
+      "F209"
+    ]
+  },
+  {
+    "id": "T418",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: users only see quick actions they are allowed to perform.",
+    "implemented": true,
+    "featureIds": [
+      "F209"
+    ]
+  },
+  {
+    "id": "T419",
+    "description": "Happy path: Quick actions: the UI can redirect the user into the tab when the action exceeds quick-action complexity limits.",
+    "implemented": true,
+    "featureIds": [
+      "F210"
+    ]
+  },
+  {
+    "id": "T420",
+    "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: the ui can redirect the user into the tab when the action exceeds quick-action complexity limits.",
+    "implemented": true,
+    "featureIds": [
+      "F210"
+    ]
+  },
+  {
+    "id": "T421",
+    "description": "Happy path: Teams notifications: a Teams delivery channel exists alongside existing PSA notification generation.",
+    "implemented": true,
+    "featureIds": [
+      "F211"
+    ]
+  },
+  {
+    "id": "T422",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: a teams delivery channel exists alongside existing psa notification generation.",
+    "implemented": true,
+    "featureIds": [
+      "F211"
+    ]
+  },
+  {
+    "id": "T423",
+    "description": "Happy path: Teams notifications: tenant Teams setup stores category preferences for supported personal notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F212"
+    ]
+  },
+  {
+    "id": "T424",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: tenant teams setup stores category preferences for supported personal notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F212"
+    ]
+  },
+  {
+    "id": "T425",
+    "description": "Happy path: Teams notifications: Teams delivery reuses existing notification payload generation rather than introducing a separate trigger catalog.",
+    "implemented": true,
+    "featureIds": [
+      "F213"
+    ]
+  },
+  {
+    "id": "T426",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: teams delivery reuses existing notification payload generation rather than introducing a separate trigger catalog.",
+    "implemented": true,
+    "featureIds": [
+      "F213"
+    ]
+  },
+  {
+    "id": "T427",
+    "description": "Happy path: Teams notifications: Teams delivery reuses existing PSA deep-link resolution rather than building a second link system.",
+    "implemented": true,
+    "featureIds": [
+      "F214"
+    ]
+  },
+  {
+    "id": "T428",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: teams delivery reuses existing psa deep-link resolution rather than building a second link system.",
+    "implemented": true,
+    "featureIds": [
+      "F214"
+    ]
+  },
+  {
+    "id": "T429",
+    "description": "Happy path: Teams notifications: recipient resolution can map an eligible PSA MSP user to a Teams user identity.",
+    "implemented": true,
+    "featureIds": [
+      "F215"
+    ]
+  },
+  {
+    "id": "T430",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: recipient resolution can map an eligible psa msp user to a teams user identity.",
+    "implemented": true,
+    "featureIds": [
+      "F215"
+    ]
+  },
+  {
+    "id": "T431",
+    "description": "Happy path: Teams notifications: delivery only targets users who have a valid Teams linkage/setup state.",
+    "implemented": true,
+    "featureIds": [
+      "F216"
+    ]
+  },
+  {
+    "id": "T432",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: delivery only targets users who have a valid teams linkage/setup state.",
+    "implemented": true,
+    "featureIds": [
+      "F216"
+    ]
+  },
+  {
+    "id": "T433",
+    "description": "Happy path: Teams notifications: assignment-related events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F217"
+    ]
+  },
+  {
+    "id": "T434",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: assignment-related events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F217"
+    ]
+  },
+  {
+    "id": "T435",
+    "description": "Happy path: Teams notifications: customer-reply events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F218"
+    ]
+  },
+  {
+    "id": "T436",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: customer-reply events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F218"
+    ]
+  },
+  {
+    "id": "T437",
+    "description": "Happy path: Teams notifications: approval-request events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F219"
+    ]
+  },
+  {
+    "id": "T438",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: approval-request events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F219"
+    ]
+  },
+  {
+    "id": "T439",
+    "description": "Happy path: Teams notifications: escalation events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F220"
+    ]
+  },
+  {
+    "id": "T440",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: escalation events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F220"
+    ]
+  },
+  {
+    "id": "T441",
+    "description": "Happy path: Teams notifications: SLA-risk events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F221"
+    ]
+  },
+  {
+    "id": "T442",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: sla-risk events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "featureIds": [
+      "F221"
+    ]
+  },
+  {
+    "id": "T443",
+    "description": "Happy path: Teams notifications: payloads include enough title/body/entity context to identify the work item in Teams.",
+    "implemented": true,
+    "featureIds": [
+      "F222"
+    ]
+  },
+  {
+    "id": "T444",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: payloads include enough title/body/entity context to identify the work item in teams.",
+    "implemented": true,
+    "featureIds": [
+      "F222"
+    ]
+  },
+  {
+    "id": "T445",
+    "description": "Happy path: Teams notifications: payloads include deep links to the exact PSA record or workflow destination.",
+    "implemented": true,
+    "featureIds": [
+      "F223"
+    ]
+  },
+  {
+    "id": "T446",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: payloads include deep links to the exact psa record or workflow destination.",
+    "implemented": true,
+    "featureIds": [
+      "F223"
+    ]
+  },
+  {
+    "id": "T447",
+    "description": "Happy path: Teams notifications: category disablement at the tenant level suppresses Teams delivery for that category.",
+    "implemented": true,
+    "featureIds": [
+      "F224"
+    ]
+  },
+  {
+    "id": "T448",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: category disablement at the tenant level suppresses teams delivery for that category.",
+    "implemented": true,
+    "featureIds": [
+      "F224"
+    ]
+  },
+  {
+    "id": "T449",
+    "description": "Happy path: Teams notifications: missing user linkage suppresses Teams delivery without breaking the underlying PSA event.",
+    "implemented": true,
+    "featureIds": [
+      "F225"
+    ]
+  },
+  {
+    "id": "T450",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: missing user linkage suppresses teams delivery without breaking the underlying psa event.",
+    "implemented": true,
+    "featureIds": [
+      "F225"
+    ]
+  },
+  {
+    "id": "T451",
+    "description": "Happy path: Teams notifications: delivery state is captured in a reusable sent/delivered/failed model where available.",
+    "implemented": true,
+    "featureIds": [
+      "F226"
+    ]
+  },
+  {
+    "id": "T452",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: delivery state is captured in a reusable sent/delivered/failed model where available.",
+    "implemented": true,
+    "featureIds": [
+      "F226"
+    ]
+  },
+  {
+    "id": "T453",
+    "description": "Happy path: Teams notifications: clicking a notification opens the intended Teams tab or PSA web deep link destination.",
+    "implemented": true,
+    "featureIds": [
+      "F227"
+    ]
+  },
+  {
+    "id": "T454",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: clicking a notification opens the intended teams tab or psa web deep link destination.",
+    "implemented": true,
+    "featureIds": [
+      "F227"
+    ]
+  },
+  {
+    "id": "T455",
+    "description": "Happy path: Teams notifications: no queue-to-channel or board-to-channel mapping is required in v1.",
+    "implemented": true,
+    "featureIds": [
+      "F228"
+    ]
+  },
+  {
+    "id": "T456",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: no queue-to-channel or board-to-channel mapping is required in v1.",
+    "implemented": true,
+    "featureIds": [
+      "F228"
+    ]
+  },
+  {
+    "id": "T457",
+    "description": "Happy path: Teams notifications: Teams delivery remains personal-notification-only in v1.",
+    "implemented": true,
+    "featureIds": [
+      "F229"
+    ]
+  },
+  {
+    "id": "T458",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: teams delivery remains personal-notification-only in v1.",
+    "implemented": true,
+    "featureIds": [
+      "F229"
+    ]
+  },
+  {
+    "id": "T459",
+    "description": "Happy path: Teams notifications: the existing event bus/workflow infrastructure remains the notification trigger source.",
+    "implemented": true,
+    "featureIds": [
+      "F230"
+    ]
+  },
+  {
+    "id": "T460",
+    "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: the existing event bus/workflow infrastructure remains the notification trigger source.",
+    "implemented": true,
+    "featureIds": [
+      "F230"
+    ]
+  },
+  {
+    "id": "T461",
+    "description": "Happy path: Permissions: only authorized tenant admins can manage Microsoft profiles and Teams setup.",
+    "implemented": true,
+    "featureIds": [
+      "F231"
+    ]
+  },
+  {
+    "id": "T462",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for permissions: only authorized tenant admins can manage microsoft profiles and teams setup.",
+    "implemented": true,
+    "featureIds": [
+      "F231"
+    ]
+  },
+  {
+    "id": "T463",
+    "description": "Happy path: Permissions: tab, bot, message extension, and quick actions all enforce existing PSA authorization rules for the target entity/action.",
+    "implemented": true,
+    "featureIds": [
+      "F232"
+    ]
+  },
+  {
+    "id": "T464",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for permissions: tab, bot, message extension, and quick actions all enforce existing psa authorization rules for the target entity/action.",
+    "implemented": true,
+    "featureIds": [
+      "F232"
+    ]
+  },
+  {
+    "id": "T465",
+    "description": "Happy path: Permissions: read-only users cannot execute mutating Teams actions.",
+    "implemented": true,
+    "featureIds": [
+      "F233"
+    ]
+  },
+  {
+    "id": "T466",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for permissions: read-only users cannot execute mutating teams actions.",
+    "implemented": true,
+    "featureIds": [
+      "F233"
+    ]
+  },
+  {
+    "id": "T467",
+    "description": "Happy path: Permissions: records outside the user's tenant or scope never appear in Teams search or lookup results.",
+    "implemented": true,
+    "featureIds": [
+      "F234"
+    ]
+  },
+  {
+    "id": "T468",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for permissions: records outside the user's tenant or scope never appear in teams search or lookup results.",
+    "implemented": true,
+    "featureIds": [
+      "F234"
+    ]
+  },
+  {
+    "id": "T469",
+    "description": "Happy path: Compatibility: migrating to named Microsoft profiles preserves current email, calendar, and MSP SSO behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F235"
+    ]
+  },
+  {
+    "id": "T470",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: migrating to named microsoft profiles preserves current email, calendar, and msp sso behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F235"
+    ]
+  },
+  {
+    "id": "T471",
+    "description": "Happy path: Compatibility: a default Microsoft profile binding exists immediately after migration.",
+    "implemented": true,
+    "featureIds": [
+      "F236"
+    ]
+  },
+  {
+    "id": "T472",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: a default microsoft profile binding exists immediately after migration.",
+    "implemented": true,
+    "featureIds": [
+      "F236"
+    ]
+  },
+  {
+    "id": "T473",
+    "description": "Happy path: Compatibility: rebinding Teams to a different Microsoft profile does not silently rebind unrelated Microsoft consumers.",
+    "implemented": true,
+    "featureIds": [
+      "F237"
+    ]
+  },
+  {
+    "id": "T474",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: rebinding teams to a different microsoft profile does not silently rebind unrelated microsoft consumers.",
+    "implemented": true,
+    "featureIds": [
+      "F237"
+    ]
+  },
+  {
+    "id": "T475",
+    "description": "Happy path: Compatibility: archiving the currently selected Teams profile is blocked until Teams is rebound or deactivated.",
+    "implemented": true,
+    "featureIds": [
+      "F238"
+    ]
+  },
+  {
+    "id": "T476",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: archiving the currently selected teams profile is blocked until teams is rebound or deactivated.",
+    "implemented": true,
+    "featureIds": [
+      "F238"
+    ]
+  },
+  {
+    "id": "T477",
+    "description": "Happy path: Compatibility: deleting the currently selected Teams profile is blocked until Teams is rebound or deactivated.",
+    "implemented": true,
+    "featureIds": [
+      "F239"
+    ]
+  },
+  {
+    "id": "T478",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: deleting the currently selected teams profile is blocked until teams is rebound or deactivated.",
+    "implemented": true,
+    "featureIds": [
+      "F239"
+    ]
+  },
+  {
+    "id": "T479",
+    "description": "Happy path: Compatibility: switching the selected Teams profile invalidates stale Teams auth or install readiness state.",
+    "implemented": true,
+    "featureIds": [
+      "F240"
+    ]
+  },
+  {
+    "id": "T480",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: switching the selected teams profile invalidates stale teams auth or install readiness state.",
+    "implemented": true,
+    "featureIds": [
+      "F240"
+    ]
+  },
+  {
+    "id": "T481",
+    "description": "Happy path: Permissions: client-portal user sign-in attempts are rejected explicitly for Teams v1.",
+    "implemented": true,
+    "featureIds": [
+      "F241"
+    ]
+  },
+  {
+    "id": "T482",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for permissions: client-portal user sign-in attempts are rejected explicitly for teams v1.",
+    "implemented": true,
+    "featureIds": [
+      "F241"
+    ]
+  },
+  {
+    "id": "T483",
+    "description": "Happy path: Fallback: a tenant without Teams install/setup receives guided readiness messaging instead of raw errors in Teams surfaces.",
+    "implemented": true,
+    "featureIds": [
+      "F242"
+    ]
+  },
+  {
+    "id": "T484",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: a tenant without teams install/setup receives guided readiness messaging instead of raw errors in teams surfaces.",
+    "implemented": true,
+    "featureIds": [
+      "F242"
+    ]
+  },
+  {
+    "id": "T485",
+    "description": "Happy path: Fallback: unsupported bot contexts return a clear personal-scope guidance response.",
+    "implemented": true,
+    "featureIds": [
+      "F243"
+    ]
+  },
+  {
+    "id": "T486",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: unsupported bot contexts return a clear personal-scope guidance response.",
+    "implemented": true,
+    "featureIds": [
+      "F243"
+    ]
+  },
+  {
+    "id": "T487",
+    "description": "Happy path: Fallback: unsupported commands return a help response rather than a dead end.",
+    "implemented": true,
+    "featureIds": [
+      "F244"
+    ]
+  },
+  {
+    "id": "T488",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: unsupported commands return a help response rather than a dead end.",
+    "implemented": true,
+    "featureIds": [
+      "F244"
+    ]
+  },
+  {
+    "id": "T489",
+    "description": "Happy path: Fallback: selected profiles missing required Teams setup or consent show actionable admin remediation state.",
+    "implemented": true,
+    "featureIds": [
+      "F245"
+    ]
+  },
+  {
+    "id": "T490",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: selected profiles missing required teams setup or consent show actionable admin remediation state.",
+    "implemented": true,
+    "featureIds": [
+      "F245"
+    ]
+  },
+  {
+    "id": "T491",
+    "description": "Happy path: Fallback: Teams actions are unavailable when the selected profile or Teams integration is inactive.",
+    "implemented": true,
+    "featureIds": [
+      "F246"
+    ]
+  },
+  {
+    "id": "T492",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: teams actions are unavailable when the selected profile or teams integration is inactive.",
+    "implemented": true,
+    "featureIds": [
+      "F246"
+    ]
+  },
+  {
+    "id": "T493",
+    "description": "Happy path: Fallback: both bot and message extension respect the tenant's allowed-action configuration.",
+    "implemented": true,
+    "featureIds": [
+      "F247"
+    ]
+  },
+  {
+    "id": "T494",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: both bot and message extension respect the tenant's allowed-action configuration.",
+    "implemented": true,
+    "featureIds": [
+      "F247"
+    ]
+  },
+  {
+    "id": "T495",
+    "description": "Happy path: Compatibility: legacy singleton Microsoft settings APIs keep a migration-safe compatibility path while profile-based consumers are introduced.",
+    "implemented": true,
+    "featureIds": [
+      "F248"
+    ]
+  },
+  {
+    "id": "T496",
+    "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: legacy singleton microsoft settings apis keep a migration-safe compatibility path while profile-based consumers are introduced.",
+    "implemented": true,
+    "featureIds": [
+      "F248"
+    ]
+  },
+  {
+    "id": "T497",
+    "description": "Tenant migration creates a default Microsoft profile, preserves existing Microsoft credentials, and leaves legacy email/calendar/MSP SSO consumers working.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F017",
+      "F018",
+      "F231",
+      "F232"
+    ]
+  },
+  {
+    "id": "T498",
+    "description": "Tenant admin can create multiple named Microsoft profiles, mark one default, and bind a different selected profile specifically to Teams.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F004",
+      "F022",
+      "F023",
+      "F024",
+      "F028",
+      "F029",
+      "F030",
+      "F035",
+      "F036"
+    ]
+  },
+  {
+    "id": "T499",
+    "description": "Tenant admin sees Teams setup blocked with clear remediation when no eligible Microsoft profile exists.",
+    "implemented": true,
+    "featureIds": [
+      "F039",
+      "F040"
+    ]
+  },
+  {
+    "id": "T500",
+    "description": "Tenant-specific Teams package metadata uses the selected Microsoft profile identity and correct environment URLs.",
+    "implemented": true,
+    "featureIds": [
+      "F041",
+      "F046",
+      "F053"
+    ]
+  },
+  {
+    "id": "T501",
+    "description": "MSP technician can open the Teams personal tab via SSO without a second PSA sign-in prompt and land on the my-work view.",
+    "implemented": true,
+    "featureIds": [
+      "F057",
+      "F060",
+      "F066"
+    ]
+  },
+  {
+    "id": "T502",
+    "description": "Activity-feed deep link opens the intended ticket inside the Teams tab for an authorized MSP user.",
+    "implemented": true,
+    "featureIds": [
+      "F071",
+      "F074",
+      "F130",
+      "F132",
+      "F191",
+      "F193"
+    ]
+  },
+  {
+    "id": "T503",
+    "description": "Bot command `my tickets` returns authorized ticket results with action links for the signed-in MSP technician.",
+    "implemented": true,
+    "featureIds": [
+      "F097",
+      "F098",
+      "F099"
+    ]
+  },
+  {
+    "id": "T504",
+    "description": "Bot command `ticket <id>` returns a summary for an authorized ticket and a not-found response for an invalid ID.",
+    "implemented": true,
+    "featureIds": [
+      "F100",
+      "F101"
+    ]
+  },
+  {
+    "id": "T505",
+    "description": "Bot command `assign ticket` updates the assignee through the shared Teams action layer and confirms the result.",
+    "implemented": true,
+    "featureIds": [
+      "F081",
+      "F090",
+      "F102",
+      "F103",
+      "F104",
+      "F105"
+    ]
+  },
+  {
+    "id": "T506",
+    "description": "Bot command `add note` appends an internal note to the target ticket and returns a follow-up deep link.",
+    "implemented": true,
+    "featureIds": [
+      "F106",
+      "F107",
+      "F108"
+    ]
+  },
+  {
+    "id": "T507",
+    "description": "Bot command `reply to contact` creates a customer-facing reply when permitted and blocks the action when not permitted.",
+    "implemented": true,
+    "featureIds": [
+      "F109",
+      "F110",
+      "F111",
+      "F233"
+    ]
+  },
+  {
+    "id": "T508",
+    "description": "Bot command `log time` creates a time entry against a ticket or task using the quick-action form flow.",
+    "implemented": true,
+    "featureIds": [
+      "F112",
+      "F113",
+      "F114",
+      "F163",
+      "F166"
+    ]
+  },
+  {
+    "id": "T509",
+    "description": "Bot approvals command lists pending approvals and completes approve/reject actions through the shared action layer.",
+    "implemented": true,
+    "featureIds": [
+      "F115",
+      "F116",
+      "F080"
+    ]
+  },
+  {
+    "id": "T510",
+    "description": "Message extension search returns tenant-scoped ticket, task, contact, and approval matches only when the invoking user has permission.",
+    "implemented": true,
+    "featureIds": [
+      "F118",
+      "F119",
+      "F120",
+      "F121",
+      "F124",
+      "F125"
+    ]
+  },
+  {
+    "id": "T511",
+    "description": "Message action `create ticket from message` creates a ticket with Teams source metadata and returns a deep link.",
+    "implemented": true,
+    "featureIds": [
+      "F140",
+      "F141",
+      "F142",
+      "F143",
+      "F144",
+      "F145"
+    ]
+  },
+  {
+    "id": "T512",
+    "description": "Message action `update from message` appends an internal note to an existing ticket with Teams source metadata and returns a deep link.",
+    "implemented": true,
+    "featureIds": [
+      "F146",
+      "F148",
+      "F150",
+      "F151"
+    ]
+  },
+  {
+    "id": "T513",
+    "description": "Shared quick-action dialogs validate required fields, submit through the shared action layer, and show success/failure responses in Teams.",
+    "implemented": true,
+    "featureIds": [
+      "F157",
+      "F164",
+      "F165",
+      "F166"
+    ]
+  },
+  {
+    "id": "T514",
+    "description": "Assignment, customer-reply, approval-request, escalation, and SLA-risk events each produce personal Teams notifications when enabled.",
+    "implemented": true,
+    "featureIds": [
+      "F190",
+      "F191",
+      "F192",
+      "F193",
+      "F194",
+      "F195",
+      "F196",
+      "F197",
+      "F198",
+      "F199"
+    ]
+  },
+  {
+    "id": "T515",
+    "description": "Teams personal notifications are suppressed safely when the tenant category is disabled or the user lacks Teams linkage.",
+    "implemented": true,
+    "featureIds": [
+      "F200",
+      "F201",
+      "F204"
+    ]
+  },
+  {
+    "id": "T516",
+    "description": "Unauthorized, wrong-tenant, or client-portal users are rejected across tab, bot, and message extension entry points.",
+    "implemented": true,
+    "featureIds": [
+      "F059",
+      "F060",
+      "F229",
+      "F241"
+    ]
+  }
+]

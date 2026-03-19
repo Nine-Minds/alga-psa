@@ -8,6 +8,7 @@ import { BrandingProvider } from "@alga-psa/tenancy/components";
 import type { Session } from "next-auth";
 import type { TenantBranding } from "@alga-psa/tenancy/actions";
 import type { SupportedLocale } from "@alga-psa/core/i18n/config";
+import { ClientPortalDocumentsProvider } from "./ClientPortalDocumentsProvider";
 
 interface Props {
   children: React.ReactNode;
@@ -22,9 +23,11 @@ export function ClientPortalLayoutClient({ children, session, branding, initialL
       <PostHogUserIdentifier />
       <I18nWrapper portal="client" initialLocale={initialLocale || undefined}>
         <BrandingProvider initialBranding={branding}>
-          <ClientPortalLayout>
-            {children}
-          </ClientPortalLayout>
+          <ClientPortalDocumentsProvider>
+            <ClientPortalLayout>
+              {children}
+            </ClientPortalLayout>
+          </ClientPortalDocumentsProvider>
         </BrandingProvider>
       </I18nWrapper>
     </AppSessionProvider>

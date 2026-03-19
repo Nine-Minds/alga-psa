@@ -25,12 +25,14 @@ import { StatusDialog } from '@alga-psa/reference-data/components';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
 import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
 import { DeleteConfirmationDialog } from '@alga-psa/ui/components/settings/dialogs/DeleteConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface StatusSettingsProps {
   initialStatusType?: string | null;
 }
 
 const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   // Note: This component now only manages ticket statuses
   // 'project' type moved to Settings > Projects > Project Statuses
@@ -93,7 +95,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
         s.status_id !== updatedStatus.status_id && s.is_closed
       );
       if (otherClosedStatuses.length === 0) {
-        toast.error('At least one status must remain marked as closed');
+        toast.error(t('ticketing.statuses.messages.error.lastClosed'));
         return;
       }
     }
@@ -116,7 +118,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
           s.status_id !== statusId && s.is_closed && s.status_type === status.status_type
         );
         if (otherClosedStatuses.length === 0) {
-          toast.error('Cannot delete the last closed status for this type.');
+          toast.error(t('ticketing.statuses.messages.error.deleteLastClosed'));
           return;
         }
       }
@@ -131,7 +133,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
     try {
       await deleteStatus(statusToDelete.status_id);
       setStatuses(statuses.filter(s => s.status_id !== statusToDelete.status_id));
-      toast.success('Status deleted successfully');
+      toast.success(t('ticketing.statuses.messages.success.deleted'));
     } catch (error) {
       handleError(error, 'Failed to delete status');
     } finally {
@@ -224,18 +226,18 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
   // Column definitions for ticket statuses
   const statusColumns: ColumnDefinition<IStatus>[] = [
     {
-      title: 'Name',
+      title: t('ticketing.statuses.table.name'),
       dataIndex: 'name',
       width: '30%',
     },
     {
-      title: 'Status',
+      title: t('ticketing.statuses.table.status'),
       dataIndex: 'is_closed',
       width: '25%',
       render: (_value, record) => (
         <div className="flex items-center space-x-2 text-gray-500">
           <span className="text-sm mr-2">
-            {record.is_closed ? 'Closed' : 'Open'}
+            {record.is_closed ? t('ticketing.statuses.statusLabels.closed') : t('ticketing.statuses.statusLabels.open')}
           </span>
           <Switch
             checked={record.is_closed}
@@ -244,15 +246,15 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
           />
           <span className="text-xs text-gray-400 ml-2">
             {record.is_closed
-              ? 'Tickets with this status will be marked as closed'
-              : 'Tickets with this status will remain open'
+              ? t('ticketing.statuses.statusLabels.closedHelp')
+              : t('ticketing.statuses.statusLabels.openHelp')
             }
           </span>
         </div>
       ),
     },
     {
-      title: 'Default',
+      title: t('ticketing.statuses.table.default'),
       dataIndex: 'is_default',
       width: '25%',
       render: (_value, record) => (
@@ -285,7 +287,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
                   );
 
                   if (defaultStatuses.length === 0) {
-                    toast.error('Cannot remove default status from the last default status');
+                    toast.error(t('ticketing.statuses.messages.error.removeDefault'));
                     return;
                   }
 
@@ -307,13 +309,13 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
             className="data-[state=checked]:bg-primary-500"
           />
           <span className="text-xs text-gray-400 ml-2">
-            {record.is_default ? 'Default status for new tickets from client portal' : ''}
+            {record.is_default ? t('ticketing.statuses.statusLabels.defaultHelp') : ''}
           </span>
         </div>
       ),
     },
     {
-      title: 'Order',
+      title: t('ticketing.statuses.table.order'),
       dataIndex: 'order_number',
       width: '10%',
       render: (value) => value || 0,
@@ -324,21 +326,19 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
     <div>
       <Alert variant="info" className="mb-4">
         <AlertDescription>
-          <strong>Default Status:</strong> When clients create tickets through the client portal,
-          they will automatically be assigned the status marked as default. Only one status can
-          be set as default at a time.
+          {t('ticketing.statuses.alert')}
         </AlertDescription>
       </Alert>
 
       {/* Statuses Section */}
       <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Ticket Statuses</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">{t('ticketing.statuses.title')}</h3>
         
         <DataTable
           id="statuses-table"
           data={statuses.filter(s => s.status_type === selectedStatusType).sort((a, b) => (a.order_number || 0) - (b.order_number || 0))}
           columns={[...statusColumns, {
-            title: 'Actions',
+            title: t('ticketing.statuses.table.actions'),
             dataIndex: 'action',
             width: '10%',
             render: (_, item) => (
@@ -363,7 +363,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
                       setShowStatusDialog(true);
                     }}
                   >
-                    Edit
+                    {t('ticketing.statuses.actions.edit')}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     id={`delete-status-${item.status_id}`}
@@ -373,7 +373,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
                       handleDeleteStatusRequest(item.status_id);
                     }}
                   >
-                    Delete
+                    {t('ticketing.statuses.actions.delete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -395,14 +395,14 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Status
+            <Plus className="h-4 w-4 mr-2" /> {t('ticketing.statuses.actions.addStatus')}
           </Button>
           <Button 
             id='import-statuses-button' 
             onClick={handleImportStatuses} 
             variant="outline"
           >
-            Import from Standard Statuses
+            {t('ticketing.statuses.actions.importStandard')}
           </Button>
         </div>
       </div>

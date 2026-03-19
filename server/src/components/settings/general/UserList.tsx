@@ -20,6 +20,7 @@ import {
   DropdownMenuSeparator,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface UserListProps {
   users: IUser[];
@@ -29,6 +30,7 @@ interface UserListProps {
 }
 
 const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, selectedClientId = null }) => {
+  const { t } = useTranslation('msp/settings');
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -216,7 +218,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
 
   const columns = [
     {
-      title: 'First Name',
+      title: t('users.table.firstName'),
       dataIndex: 'first_name',
       width: '15%',
       render: (firstName: string, record: IUser) => (
@@ -232,27 +234,27 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
       ),
     },
     {
-      title: 'Last Name',
+      title: t('users.table.lastName'),
       dataIndex: 'last_name',
       width: '15%'
     },
     {
-      title: 'Email',
+      title: t('users.table.email'),
       dataIndex: 'email',
       width: '18%'
     },
     ...(hasClientUsers
       ? [{
-          title: 'Client',
+          title: t('users.table.client'),
           dataIndex: 'client',
           width: '15%',
           render: (_: any, record: IUser) => {
             const client = userClients[record.user_id];
             if (client === undefined) {
-              return <span className="text-gray-400">Loading...</span>;
+              return <span className="text-gray-400">{t('users.table.loading')}</span>;
             }
             if (!client) {
-              return <span className="text-gray-400">No Client</span>;
+              return <span className="text-gray-400">{t('users.table.noClient')}</span>;
             }
             return (
               <button
@@ -270,12 +272,12 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
         }]
       : []),
     {
-      title: 'Role',
+      title: t('users.table.role'),
       dataIndex: 'roles',
       width: '12%',
       render: (roles: any[], record: IUser) => {
         if (!roles || roles.length === 0) {
-          return <span>No Role</span>;
+          return <span>{t('users.table.noRole')}</span>;
         }
 
         if (roles.length === 1) {
@@ -287,12 +289,12 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
       },
     },
     {
-      title: 'Last Login',
+      title: t('users.table.lastLogin'),
       dataIndex: 'last_login_at',
       width: '17%',
       render: (lastLoginAt: string | null, record: IUser) => {
         if (!lastLoginAt) {
-          return <span className="text-gray-400 text-sm">Never</span>;
+          return <span className="text-gray-400 text-sm">{t('users.table.never')}</span>;
         }
         const date = new Date(lastLoginAt);
         const formattedDate = date.toLocaleDateString('en-US', {
@@ -304,14 +306,14 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
           <div className="flex flex-col">
             <span className="text-sm">{formattedDate}</span>
             {record.last_login_method && (
-              <span className="text-xs text-gray-500">via {record.last_login_method}</span>
+              <span className="text-xs text-gray-500">{t('users.table.viaMethod', { method: record.last_login_method })}</span>
             )}
           </div>
         );
       },
     },
     {
-      title: 'Actions',
+      title: t('users.table.actions'),
       dataIndex: 'user_id',
       width: '10%',
       render: (_: string, record: IUser) => (
@@ -323,7 +325,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
               id={`user-actions-menu-${record.user_id}`}
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('users.table.openMenu')}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -337,7 +339,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
               className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
             >
               <Pen size={14} className="mr-2" />
-              Edit
+              {t('users.table.edit')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`remove-user-menu-item-${record.user_id}`}
@@ -348,7 +350,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
               className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center text-destructive"
             >
               <Trash2 size={14} className="mr-2" />
-              Remove
+              {t('users.table.remove')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

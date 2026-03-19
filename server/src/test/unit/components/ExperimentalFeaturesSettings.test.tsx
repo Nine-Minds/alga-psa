@@ -11,10 +11,39 @@ import { toast } from 'react-hot-toast';
 import ExperimentalFeaturesSettings from '../../../components/settings/general/ExperimentalFeaturesSettings';
 import { canEnableAiAssistant, getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
 
+const translationMap: Record<string, string> = {
+  'experimentalFeatures.loading': 'Loading experimental features...',
+  'experimentalFeatures.title': 'Experimental Features',
+  'experimentalFeatures.description': 'Enable or disable experimental features for your tenant.',
+  'experimentalFeatures.alert.title': 'Experimental',
+  'experimentalFeatures.alert.description': 'Experimental features may change or be removed without notice.',
+  'experimentalFeatures.features.aiAssistant.name': 'AI Assistant',
+  'experimentalFeatures.features.aiAssistant.description': 'Enable AI-powered Quick Ask and Chat sidebar.',
+  'experimentalFeatures.features.aiAssistant.restriction': 'Only available for whitelisted tenants.',
+  'experimentalFeatures.features.workflowAutomation.name': 'Workflow Automation',
+  'experimentalFeatures.features.workflowAutomation.description':
+    'Enable experimental workflow automation features in the workflow control panel and editor.',
+  'experimentalFeatures.actions.save': 'Save',
+  'experimentalFeatures.actions.saving': 'Saving...',
+  'experimentalFeatures.actions.retry': 'Retry',
+  'experimentalFeatures.messages.success.saved':
+    'Experimental feature settings saved. Reload the page to apply changes.',
+  'experimentalFeatures.messages.error.loadFailed': 'Failed to load experimental feature settings.',
+  'experimentalFeatures.messages.error.saveFailed': 'Failed to save experimental feature settings.',
+};
+
+const translate = (key: string): string => translationMap[key] ?? key;
+
 vi.mock('@alga-psa/tenancy/actions', () => ({
   getExperimentalFeatures: vi.fn().mockResolvedValue({ aiAssistant: false, workflowAutomation: false }),
   canEnableAiAssistant: vi.fn().mockResolvedValue(true),
   updateExperimentalFeatures: vi.fn(),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: translate,
+  }),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -290,6 +319,6 @@ describe('ExperimentalFeaturesSettings', () => {
     expect(toggle.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(toggle);
     expect(toggle.getAttribute('aria-checked')).toBe('false');
-    expect(await screen.findByText('Only available for the master billing tenant.')).toBeInTheDocument();
+    expect(await screen.findByText('Only available for whitelisted tenants.')).toBeInTheDocument();
   });
 });

@@ -19,6 +19,8 @@ interface DocumentUploadProps {
     folderPath?: string | null;
     onUploadComplete: (result: { success: boolean; document: IDocument }) => void;
     onCancel: () => void;
+    /** Override the default folder-fetching function (e.g. for client portal) */
+    getFoldersFn?: () => Promise<string[]>;
 }
 
 interface UploadOptions {
@@ -46,7 +48,8 @@ export default function DocumentUpload({
     entityType,
     folderPath,
     onUploadComplete,
-    onCancel
+    onCancel,
+    getFoldersFn
 }: DocumentUploadProps): React.JSX.Element {
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -341,6 +344,9 @@ export default function DocumentUpload({
                     })
                     : t('documents.folderSelector.defaultDescription', 'Choose where to save this document')
             }
+            entityId={entityId}
+            entityType={entityType}
+            getFoldersFn={getFoldersFn}
         />
         </>
     );

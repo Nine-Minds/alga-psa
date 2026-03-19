@@ -14,10 +14,10 @@ describe('workflow step expression validation wiring', () => {
     expect(source.includes('validateExpressionPath')).toBe(false);
   });
 
-  it('flags unknown roots and missing vars paths via shared validator diagnostics', () => {
+  it('T284: preserves shared diagnostics for non-inputMapping expressions after the inline editor refactor', () => {
     const validations = validateStepExpressions(
       {
-        inputMapping: {
+        customConfig: {
           customerId: { $expr: 'unknown.root' },
           existingId: { $expr: 'vars.previous.id' },
           missingId: { $expr: 'vars.missing.id' },
@@ -48,6 +48,43 @@ describe('workflow step expression validation wiring', () => {
     expect(diagnosticPaths).toContain('unknown.root');
     expect(diagnosticPaths).toContain('vars.missing.id');
     expect(diagnosticPaths).not.toContain('vars.previous.id');
+  });
+
+  it('skips diagnostics for structured input mappings', () => {
+    const validations = validateStepExpressions(
+      {
+        inputMapping: {
+          text: { $expr: 'vars.contactsFindResult.contact.email' },
+          missing: { $expr: 'vars.missing.id' },
+        },
+      },
+      {
+        payloadSchema: {
+          type: 'object',
+          properties: {
+            payloadId: { type: 'string' },
+          },
+        },
+        steps: [
+          {
+            saveAs: 'contactsFindResult',
+            outputSchema: {
+              type: 'object',
+              properties: {
+                contact: {
+                  type: 'object',
+                  properties: {
+                    email: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      }
+    );
+
+    expect(validations).toEqual([]);
   });
 
   it('partitions shared diagnostics by severity for panel rendering', () => {

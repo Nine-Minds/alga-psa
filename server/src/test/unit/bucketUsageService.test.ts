@@ -9,7 +9,7 @@ import {
   updateBucketUsageMinutes,
   reconcileBucketUsageRecord,
   // Assuming calculatePeriod is exported if direct testing is needed, otherwise test via findOrCreate
-} from 'server/src/lib/services/bucketUsageService';
+} from '@alga-psa/billing/services/bucketUsageService';
 
 // Mock data and setup
 const mockTenant = 'test-tenant';

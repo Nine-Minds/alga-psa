@@ -4,7 +4,7 @@ import {
   EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
   getSchemaRegistry,
   initializeWorkflowRuntimeV2
-} from '@shared/workflow/runtime';
+} from '@alga-psa/workflows/runtime';
 
 describe('workflow empty payload schema', () => {
   beforeEach(() => {

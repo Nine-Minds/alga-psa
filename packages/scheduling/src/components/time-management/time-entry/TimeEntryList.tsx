@@ -25,6 +25,8 @@ interface TimeEntryListProps {
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
   onAddEntry: () => void;
   date?: Date;
+  savingEntryIndex: number | null;
+  disableSaveActions: boolean;
 }
 
 const TimeEntryList = memo(function TimeEntryList({
@@ -43,7 +45,9 @@ const TimeEntryList = memo(function TimeEntryList({
   onUpdateEntry,
   onUpdateTimeInputs,
   onAddEntry,
-  date
+  date,
+  savingEntryIndex,
+  disableSaveActions
 }: TimeEntryListProps) {
   return (
     <div className="space-y-4">
@@ -66,6 +70,8 @@ const TimeEntryList = memo(function TimeEntryList({
               lastNoteInputRef={lastNoteInputRef}
               date={date}
               isNewEntry={entry.isNew || false}
+              isSaving={savingEntryIndex === index}
+              disableSave={disableSaveActions}
             />
           ) : (
             <TimeEntryReadOnly

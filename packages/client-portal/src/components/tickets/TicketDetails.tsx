@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket details intentionally compose ticket feature UI for customer-facing support workflows. */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -16,6 +18,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   getClientTicketDetails,
   getClientTicketDocuments,
+  getClientDocumentFolders,
   addClientTicketComment,
   updateClientTicketComment,
   deleteClientTicketComment,
@@ -63,7 +66,7 @@ export function TicketDetails({
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
-  const [activeTab, setActiveTab] = useState(t('messages.comments', 'Comments'));
+  const [activeTab, setActiveTab] = useState('all-comments');
   const [isEditing, setIsEditing] = useState(false);
   const [currentComment, setCurrentComment] = useState<IComment | null>(null);
   const [editorKey, setEditorKey] = useState(0);
@@ -87,6 +90,20 @@ export function TicketDetails({
       styles: {}
     }]
   }]);
+  // Client-scoped folder fetcher: returns only folders from client-visible documents
+  const getClientFolders = useCallback(async (): Promise<string[]> => {
+    const folderTree = await getClientDocumentFolders();
+    const paths: string[] = [];
+    const collectPaths = (nodes: typeof folderTree) => {
+      for (const node of nodes) {
+        paths.push(node.path);
+        if (node.children?.length) collectPaths(node.children);
+      }
+    };
+    collectPaths(folderTree);
+    return paths.sort();
+  }, []);
+
   const refreshTicketDocuments = useCallback(async () => {
     if (!ticketId) return;
     try {
@@ -705,7 +722,7 @@ export function TicketDetails({
                 userMap={ticket.userMap || {}}
                 contactMap={ticket.contactMap || {}}
                 currentUser={currentUser}
-                activeTab={activeTab === 'Internal' ? t('messages.comments', 'Comments') : activeTab}
+                activeTab={activeTab === 'internal' ? 'all-comments' : activeTab}
                 hideInternalTab={true}
                 isEditing={isEditing}
                 currentComment={currentComment}
@@ -713,7 +730,7 @@ export function TicketDetails({
                 onNewCommentContentChange={handleNewCommentContentChange}
                 onAddNewComment={handleAddNewComment}
                 onTabChange={(tab) => {
-                  if (tab !== 'Internal') {
+                  if (tab !== 'internal') {
                     setActiveTab(tab);
                   }
                 }}
@@ -741,6 +758,7 @@ export function TicketDetails({
                     const docs = await getClientTicketDocuments(ticketId);
                     setDocuments(docs);
                   }}
+                  getFoldersFn={getClientFolders}
                 />
               </Card>
             </div>

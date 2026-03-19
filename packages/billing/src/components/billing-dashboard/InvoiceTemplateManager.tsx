@@ -112,7 +112,7 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
       {selectedTemplate && selectedSampleInvoice && (
         <div className="space-y-4">
           <h3 className="text-xl font-semibold">Template Preview</h3>
-          <PaperInvoice>
+          <PaperInvoice templateAst={selectedTemplate.templateAst ?? null}>
             <TemplateRenderer template={selectedTemplate} invoiceData={selectedSampleInvoice} />
           </PaperInvoice>
         </div>

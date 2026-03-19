@@ -12,7 +12,9 @@
     "signOut": "Wyloguj się",
     "clientPortal": "Portal klienta",
     "portal": "Portal",
-    "notifications": "Powiadomienia"
+    "notifications": "Powiadomienia",
+    "documents": "Dokumenty",
+    "knowledgeBase": "Baza wiedzy"
   },
   "dashboard": {
     "title": "Panel",

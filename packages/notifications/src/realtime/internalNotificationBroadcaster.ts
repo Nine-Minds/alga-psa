@@ -5,7 +5,8 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationDeliveredPayload,
   buildNotificationFailedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/notificationEventBuilders';
+} from '@alga-psa/workflow-streams';
+import { deliverTeamsNotification } from './teamsNotificationDelivery';
 
 /**
  * Broadcast internal notifications via Redis Pub/Sub.
@@ -33,7 +34,7 @@ function safePublishNotificationWorkflowEvent(params: Parameters<typeof publishW
   });
 }
 
-export async function broadcastNotification(notification: InternalNotification): Promise<void> {
+async function broadcastInAppNotification(notification: InternalNotification): Promise<void> {
   const now = new Date().toISOString();
   try {
     const client = await getRedisClient();
@@ -97,6 +98,22 @@ export async function broadcastNotification(notification: InternalNotification):
         correlationId: notification.internal_notification_id,
       },
       idempotencyKey: `notification:${notification.internal_notification_id}:failed`,
+    });
+  }
+}
+
+export async function broadcastNotification(notification: InternalNotification): Promise<void> {
+  const results = await Promise.allSettled([
+    broadcastInAppNotification(notification),
+    deliverTeamsNotification(notification),
+  ]);
+
+  if (results[1]?.status === 'rejected') {
+    logger.warn('[NotificationBroadcaster] Teams notification delivery crashed unexpectedly', {
+      notificationId: notification.internal_notification_id,
+      tenant: notification.tenant,
+      userId: notification.user_id,
+      error: normalizeErrorMessage(results[1].reason),
     });
   }
 }

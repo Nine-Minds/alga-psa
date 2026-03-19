@@ -55,6 +55,8 @@
     "@alga-psa/event-bus": "*",
     "@alga-psa/integrations": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
+    "@alga-psa/workflows": "*",
     "zod": "^3.22.4"
   },
   "peerDependencies": {

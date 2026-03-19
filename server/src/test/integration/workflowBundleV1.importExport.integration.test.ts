@@ -11,9 +11,13 @@ import {
   TEST_SCHEMA_REF
 } from '../helpers/workflowRuntimeV2TestHelpers';
 import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWorkflowBundleV1';
-import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { ensureWorkflowScheduleStateTable, resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
+import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth';
+import {
+  createTenantKnex as createCompatibilityTenantKnex,
+  getCurrentTenantId as getCompatibilityCurrentTenantId
+} from 'server/src/lib/db';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
@@ -23,25 +27,72 @@ import {
 import { NextRequest } from 'next/server';
 import { GET as exportBundleRoute } from 'server/src/app/api/workflow-definitions/[workflowId]/export/route';
 import { POST as importBundleRoute } from 'server/src/app/api/workflow-definitions/import/route';
-import { stringifyCanonicalJson } from '@shared/workflow/bundle/canonicalJson';
+import { stringifyCanonicalJson } from '@alga-psa/workflows/bundle/canonicalJson';
 import { exportWorkflowBundleV1ForWorkflowId } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
+
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(),
+    getCurrentTenantId: vi.fn(),
+    auditLog: vi.fn().mockResolvedValue(undefined)
+  };
+});
 
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(),
   getCurrentTenantId: vi.fn()
 }));
 
-vi.mock('@alga-psa/users/actions', () => ({
-  getCurrentUser: vi.fn()
-}));
+vi.mock('@alga-psa/auth', () => {
+  const withAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    );
+  const withOptionalAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    );
+  const withAuthCheck = (action: (user: any, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      ...args
+    );
 
-vi.mock('server/src/lib/auth/rbac', () => ({
-  hasPermission: vi.fn().mockResolvedValue(true)
-}));
+  return {
+    withAuth,
+    withOptionalAuth,
+    withAuthCheck,
+    AuthenticationError: class AuthenticationError extends Error {},
+    hasPermission: vi.fn().mockResolvedValue(true),
+    checkMultiplePermissions: vi.fn().mockResolvedValue(true),
+    getCurrentUser: vi.fn(),
+    preCheckDeletion: vi.fn()
+  };
+});
 
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
 const mockedGetCurrentUser = vi.mocked(getCurrentUser);
+const mockedCreateCompatibilityTenantKnex = vi.mocked(createCompatibilityTenantKnex);
+const mockedGetCompatibilityCurrentTenantId = vi.mocked(getCompatibilityCurrentTenantId);
 
 let db: Knex;
 let tenantId: string;
@@ -66,15 +117,19 @@ const normalizeBundleForComparison = (bundle: any) => {
 beforeAll(async () => {
   ensureWorkflowRuntimeV2TestRegistrations();
   db = await createTestDbConnection();
+  await ensureWorkflowScheduleStateTable(db);
 });
 
 beforeEach(async () => {
+  await ensureWorkflowScheduleStateTable(db);
   await resetWorkflowRuntimeTables(db);
   tenantId = uuidv4();
   userId = uuidv4();
   mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
   mockedGetCurrentTenantId.mockReturnValue(tenantId);
-  mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
+  mockedCreateCompatibilityTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
+  mockedGetCompatibilityCurrentTenantId.mockResolvedValue(tenantId);
+  mockedGetCurrentUser.mockResolvedValue({ user_id: userId, tenant: tenantId, roles: [] } as any);
 });
 
 afterAll(async () => {
@@ -586,6 +641,147 @@ describe('workflow bundle v1 import/export', () => {
     const imported = await importWorkflowBundleV1(db, exported1);
     const newId = imported.createdWorkflows[0].workflowId;
     const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, newId);
+
+    expect(normalizeBundleForComparison(exported2)).toEqual(normalizeBundleForComparison(exported1));
+  });
+
+  it('T032/T033/T045: AI inline schema config round-trips through bundle export/import without creating schema-ref dependencies', async () => {
+    const aiStepConfig = {
+      designerGroupKey: 'ai',
+      designerTileKind: 'ai',
+      actionId: 'ai.infer',
+      version: 1,
+      saveAs: 'classificationResult',
+      inputMapping: {
+        prompt: { $expr: 'payload.foo' },
+      },
+      aiOutputSchemaMode: 'advanced',
+      aiOutputSchemaText: JSON.stringify({
+        type: 'object',
+        properties: {
+          category: { type: 'string' },
+          confidence: { type: 'number' },
+        },
+        required: ['category'],
+        additionalProperties: false,
+      }, null, 2),
+      aiOutputSchema: {
+        type: 'object',
+        properties: {
+          category: { type: 'string' },
+          confidence: { type: 'number' },
+        },
+        required: ['category'],
+        additionalProperties: false,
+      },
+    };
+    const bundle = {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [
+        {
+          key: 'test.ai-bundle-roundtrip',
+          metadata: {
+            name: 'AI Bundle Round Trip',
+            description: null,
+            payloadSchemaRef: TEST_SCHEMA_REF,
+            payloadSchemaMode: 'pinned',
+            pinnedPayloadSchemaRef: TEST_SCHEMA_REF,
+            trigger: null,
+            isSystem: false,
+            isVisible: true,
+            isPaused: false,
+            concurrencyLimit: null,
+            autoPauseOnFailure: false,
+            failureRateThreshold: null,
+            failureRateMinRuns: null,
+            retentionPolicyOverride: null,
+          },
+          dependencies: {
+            actions: [{ actionId: 'ai.infer', version: 1 }],
+            nodeTypes: ['action.call'],
+            schemaRefs: [TEST_SCHEMA_REF],
+          },
+          draft: {
+            draftVersion: 1,
+            definition: {
+              id: uuidv4(),
+              ...buildWorkflowDefinition({
+                steps: [
+                  {
+                    id: 'ai-step',
+                    type: 'action.call',
+                    config: aiStepConfig,
+                  },
+                  returnStep('done'),
+                ],
+                payloadSchemaRef: TEST_SCHEMA_REF,
+              }),
+            },
+          },
+          publishedVersions: [
+            {
+              version: 1,
+              definition: {
+                id: uuidv4(),
+                ...buildWorkflowDefinition({
+                  steps: [
+                    {
+                      id: 'ai-step',
+                      type: 'action.call',
+                      config: aiStepConfig,
+                    },
+                    returnStep('done'),
+                  ],
+                  payloadSchemaRef: TEST_SCHEMA_REF,
+                }),
+              },
+              payloadSchemaJson: null,
+            },
+          ],
+        },
+      ],
+    };
+
+    const imported = await importWorkflowBundleV1(db, bundle);
+    const exported1 = await exportWorkflowBundleV1ForWorkflowId(db, imported.createdWorkflows[0].workflowId);
+    const exportedWorkflow = exported1.workflows[0];
+
+    expect(exportedWorkflow?.dependencies.actions).toEqual(
+      expect.arrayContaining([{ actionId: 'ai.infer', version: 1 }])
+    );
+    expect(exportedWorkflow?.dependencies.schemaRefs).toEqual([TEST_SCHEMA_REF]);
+    expect(exportedWorkflow?.draft.definition.steps[0]).toMatchObject({
+      type: 'action.call',
+      config: {
+        actionId: 'ai.infer',
+        aiOutputSchemaMode: 'advanced',
+        inputMapping: {
+          prompt: { $expr: 'payload.foo' },
+        },
+        aiOutputSchema: {
+          type: 'object',
+          properties: {
+            category: { type: 'string' },
+            confidence: { type: 'number' },
+          },
+        },
+      },
+    });
+    expect(exportedWorkflow?.publishedVersions[0]?.definition.steps[0]).toMatchObject({
+      type: 'action.call',
+      config: {
+        actionId: 'ai.infer',
+        aiOutputSchemaMode: 'advanced',
+      },
+    });
+
+    await resetWorkflowRuntimeTables(db);
+
+    const reimported = await importWorkflowBundleV1(db, exported1);
+    const importedWorkflowId = reimported.createdWorkflows[0].workflowId;
+    const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, importedWorkflowId);
 
     expect(normalizeBundleForComparison(exported2)).toEqual(normalizeBundleForComparison(exported1));
   });

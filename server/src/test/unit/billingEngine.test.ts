@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import { BillingEngine } from '@alga-psa/billing/services';
 import { getConnection } from 'server/src/lib/db/db';
 import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, IClientContractLine, IDiscount, IFixedPriceCharge, ITimeBasedCharge, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
 import { ISO8601String } from '../../types/types.d';

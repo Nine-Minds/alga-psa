@@ -9,6 +9,81 @@ import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 // Re-export EntityType for external consumers
 export type { EntityType };
 
+/**
+ * Returns the entity-scoped folder path for avatar/logo uploads.
+ * Clients and teams use /Logos, users and contacts use /Avatars.
+ */
+function getImageFolderPath(entityType: EntityType): string {
+  switch (entityType) {
+    case 'client':
+      return '/Clients/Logos';
+    case 'team':
+      return '/Teams/Logos';
+    case 'tenant':
+      return '/Logos';
+    case 'user':
+      return '/Users/Avatars';
+    case 'contact':
+      return '/Contacts/Avatars';
+    default:
+      return '/Avatars';
+  }
+}
+
+/**
+ * Returns the display name for the avatar/logo folder.
+ */
+function getImageFolderName(entityType: EntityType): string {
+  switch (entityType) {
+    case 'client':
+    case 'team':
+    case 'tenant':
+      return 'Logos';
+    case 'user':
+    case 'contact':
+      return 'Avatars';
+    default:
+      return 'Avatars';
+  }
+}
+
+/**
+ * Ensures the entity-scoped avatar/logo folder exists, creating it if needed.
+ * Returns the folder_path to assign to the document.
+ */
+async function ensureImageFolder(
+  trx: Knex.Transaction,
+  tenant: string,
+  entityType: EntityType,
+  entityId: string,
+): Promise<string> {
+  const folderPath = getImageFolderPath(entityType);
+
+  const existing = await trx('document_folders')
+    .where({
+      tenant,
+      folder_path: folderPath,
+      entity_id: entityId,
+      entity_type: entityType,
+    })
+    .first();
+
+  if (!existing) {
+    await trx('document_folders').insert({
+      tenant,
+      folder_id: uuidv4(),
+      folder_path: folderPath,
+      folder_name: getImageFolderName(entityType),
+      parent_folder_id: null,
+      entity_id: entityId,
+      entity_type: entityType,
+      is_client_visible: false,
+    });
+  }
+
+  return folderPath;
+}
+
 interface UploadResult {
   success: boolean;
   message?: string;
@@ -69,8 +144,16 @@ export async function uploadEntityImage(
     };
 
     const createdDocument = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Ensure entity-scoped avatar/logo folder exists and file into it
+      let folderPath: string | undefined;
+      try {
+        folderPath = await ensureImageFolder(trx, tenant, entityType, entityId);
+      } catch {
+        // Best-effort: if folder creation fails, document still lands in root
+      }
+
       const [document] = await trx('documents')
-        .insert(documentData)
+        .insert({ ...documentData, folder_path: folderPath })
         .returning(['document_id']);
 
       if (!document?.document_id) {

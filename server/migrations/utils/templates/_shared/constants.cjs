@@ -19,6 +19,10 @@ const BADGE_BG = 'rgba(138,77,234,0.12)';
 const INFO_BOX_BG = '#f8f5ff';
 const INFO_BOX_BORDER = '#e6deff';
 
+const COMMENT_BOX_BG = '#eff6ff';
+const COMMENT_BOX_BORDER = '#bfdbfe';
+const COMMENT_LABEL_COLOR = '#1e40af';
+
 const FONT_STACK = "Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
 const HEADING_FONT = "Poppins,system-ui,sans-serif";
 
@@ -36,6 +40,9 @@ module.exports = {
   BADGE_BG,
   INFO_BOX_BG,
   INFO_BOX_BORDER,
+  COMMENT_BOX_BG,
+  COMMENT_BOX_BORDER,
+  COMMENT_LABEL_COLOR,
   FONT_STACK,
   HEADING_FONT,
   SUPPORTED_LANGUAGES,

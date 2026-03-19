@@ -1,22 +1,22 @@
 import { ActivityIndicator, Text, View } from "react-native";
-import { colors, spacing, typography } from "../theme";
+import { useTheme } from "../ThemeContext";
 
-export function LoadingState({ message = "Loading…" }: { message?: string }) {
+export function LoadingState({ message = "Loading..." }: { message?: string }) {
+  const theme = useTheme();
   return (
     <View
       style={{
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        padding: spacing.xl,
-        backgroundColor: colors.background,
+        padding: theme.spacing.xl,
+        backgroundColor: theme.colors.background,
       }}
     >
-      <ActivityIndicator />
-      <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.mutedText }}>
+      <ActivityIndicator color={theme.colors.primary} />
+      <Text style={{ ...theme.typography.body, marginTop: theme.spacing.md, color: theme.colors.textSecondary }}>
         {message}
       </Text>
     </View>
   );
 }
-

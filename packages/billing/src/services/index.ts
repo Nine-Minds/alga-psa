@@ -5,7 +5,9 @@
  */
 
 export { TaxService } from './taxService';
+export { BillingEngine } from '../lib/billing/billingEngine';
 export { ContractLineServiceConfigurationService } from './contractLineServiceConfigurationService';
+export { ClientContractServiceConfigurationService } from './clientContractServiceConfigurationService';
 
 // Accounting export services
 export { AccountingExportService, type ExternalTaxImporter } from './accountingExportService';
@@ -37,3 +39,8 @@ export {
   type BatchImportResult,
   type ReconciliationResult
 } from './externalTaxImportService';
+export {
+  resolveInvoicePdfPrintOptionsFromAst,
+  resolveInvoicePrintResolutionInputFromAst,
+  resolveInvoiceTemplatePrintSettingsFromAst,
+} from '../lib/invoice-template-ast/printSettings';

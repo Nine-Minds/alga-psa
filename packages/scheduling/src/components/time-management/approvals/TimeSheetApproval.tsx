@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ITimeSheet, 
+import {
   ITimeEntry, 
-  ITimeSheetComment, 
-  ITimeSheetApproval, 
   ITimeSheetApprovalView,
   ITimeEntryWithWorkItem, 
   TimeSheetStatus 
@@ -16,9 +13,12 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { IUser } from '@alga-psa/types';
-import { fetchWorkItemsForTimeSheet, saveTimeEntry } from '../../../actions/timeEntryActions';
+import { fetchWorkItemsForTimeSheet, updateTimeEntryApprovalStatus } from '../../../actions/timeEntryActions';
 import { parseISO } from 'date-fns';
-import { Temporal } from '@js-temporal/polyfill';
+import {
+  TimeEntryChangeRequestIndicator,
+  TimeEntryChangeRequestPanel,
+} from '../time-entry/time-sheet/TimeEntryChangeRequestFeedback';
 
 interface TimeSheetApprovalProps {
   timeSheet: ITimeSheetApprovalView;
@@ -32,7 +32,11 @@ interface TimeSheetApprovalProps {
 
 interface TimeEntryDetailPanelProps {
   entry: ITimeEntryWithWorkItem;
-  onUpdateApprovalStatus: (entryId: string, status: TimeSheetStatus) => void;
+  onUpdateApprovalStatus: (
+    entryId: string,
+    status: TimeSheetStatus,
+    changeRequestComment?: string,
+  ) => Promise<void>;
 }
 
 
@@ -70,11 +74,18 @@ const formatDuration = (decimalHours: number) => {
 };
 
 const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUpdateApprovalStatus }) => {
-  const [approvalStatus, setApprovalStatus] = useState<TimeSheetStatus>(entry.approval_status);
+  const [changeRequestComment, setChangeRequestComment] = useState('');
 
-  const handleStatusChange = (newStatus: TimeSheetStatus) => {
-    setApprovalStatus(newStatus);
-    onUpdateApprovalStatus(entry.entry_id as string, newStatus);
+  const handleStatusChange = async (newStatus: TimeSheetStatus) => {
+    await onUpdateApprovalStatus(
+      entry.entry_id as string,
+      newStatus,
+      newStatus === 'CHANGES_REQUESTED' ? changeRequestComment.trim() || undefined : undefined,
+    );
+
+    if (newStatus === 'CHANGES_REQUESTED') {
+      setChangeRequestComment('');
+    }
   };
 
   const statusButtons: Array<{
@@ -110,12 +121,21 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
           <p className="text-sm whitespace-pre-wrap text-[rgb(var(--color-text-600))] mt-1">{entry.notes}</p>
         </div>
       )}
+      <TimeEntryChangeRequestPanel changeRequests={entry.change_requests} />
+      <div className="mb-3">
+        <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">Entry Change Suggestion</span>
+        <TextArea
+          value={changeRequestComment}
+          onChange={(event) => setChangeRequestComment(event.target.value)}
+          placeholder="Tell the employee exactly what to fix on this entry"
+        />
+      </div>
       <div className="flex space-x-2 pt-3 border-t border-[rgb(var(--color-border-200))]">
         {statusButtons.map(({ status, icon: Icon, label, variant }): React.JSX.Element => (
           <Button
             id={`update-status-${status}-btn`}
             key={status}
-            onClick={() => handleStatusChange(status)}
+            onClick={() => void handleStatusChange(status)}
             variant={variant}
             disabled={entry.approval_status === status}
           >
@@ -138,8 +158,6 @@ export function TimeSheetApproval({
 }: TimeSheetApprovalProps) {
   const [timeSheet, setTimeSheet] = useState<ITimeSheetApprovalView>(initialTimeSheet);
   const [newComment, setNewComment] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [workItems, setWorkItems] = useState<IWorkItem[]>([]);
   const [entriesWithWorkItems, setEntriesWithWorkItems] = useState<ITimeEntryWithWorkItem[]>([]);
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
   const [isAddingComment, setIsAddingComment] = useState(false);
@@ -149,29 +167,55 @@ export function TimeSheetApproval({
     setExpandedEntryId(expandedEntryId === entryId ? null : entryId);
   };
 
-  const handleUpdateApprovalStatus = async (entryId: string, status: TimeSheetStatus) => {
+  const handleUpdateApprovalStatus = async (
+    entryId: string,
+    status: TimeSheetStatus,
+    changeRequestComment?: string,
+  ) => {
     try {
-      // Find the entry to update
       const entryToUpdate = entriesWithWorkItems.find(entry => entry.entry_id === entryId);
 
       if (!entryToUpdate) {
         throw new Error('Time entry not found');
       }
 
-      // Create an updated entry object
-      const { ...entryWithoutWorkItem } = entryToUpdate;
-      const updatedEntry: ITimeEntry = {
-        ...entryWithoutWorkItem,
-        approval_status: status,
-      };
+      await updateTimeEntryApprovalStatus({
+        entryId,
+        approvalStatus: status,
+        changeRequestComment,
+      });
 
-      // Call the API to update the time entry
-      await saveTimeEntry(updatedEntry);
+      if (status === 'CHANGES_REQUESTED' && timeSheet.approval_status !== 'CHANGES_REQUESTED') {
+        setTimeSheet(prevTimeSheet => ({
+          ...prevTimeSheet,
+          approval_status: 'CHANGES_REQUESTED',
+        }));
+      }
 
-      // Update the local state
       setEntriesWithWorkItems(prevEntries =>
         prevEntries.map((entry):ITimeEntryWithWorkItem =>
-          entry.entry_id === entryId ? { ...entry, approval_status: status } : entry
+          entry.entry_id === entryId ? {
+            ...entry,
+            approval_status: status,
+            change_requests: status === 'CHANGES_REQUESTED' && changeRequestComment
+              ? [
+                {
+                  change_request_id: `local-${Date.now()}`,
+                  time_entry_id: entryId,
+                  time_sheet_id: entry.time_sheet_id as string,
+                  comment: changeRequestComment,
+                  created_at: new Date().toISOString(),
+                  created_by: currentUser.user_id,
+                  created_by_name: `${currentUser.first_name} ${currentUser.last_name}`.trim(),
+                  tenant: entry.tenant,
+                },
+                ...(entry.change_requests ?? []),
+              ]
+              : entry.change_requests,
+            change_request_state: status === 'CHANGES_REQUESTED'
+              ? 'unresolved'
+              : entry.change_request_state,
+          } : entry
         )
       );
 
@@ -198,7 +242,6 @@ export function TimeSheetApproval({
   useEffect(() => {
     async function fetchWorkItems() {
       const fetchedWorkItems = await fetchWorkItemsForTimeSheet(timeSheet.id);
-      setWorkItems(fetchedWorkItems);
 
       // Combine time entries with work items
       const combinedEntries = timeEntries.map((entry):ITimeEntryWithWorkItem => {
@@ -380,7 +423,10 @@ export function TimeSheetApproval({
                     <td className="py-2.5 pr-3">{new Date(entry.end_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</td>
                     <td className="py-2.5 pr-3 font-medium">{formatDuration(entry.billable_duration / 60)}</td>
                     <td className="py-2.5 pr-3 text-center">
-                      <StatusIcon status={entry.approval_status} />
+                      <div className="flex flex-col items-center gap-1">
+                        <StatusIcon status={entry.approval_status} />
+                        <TimeEntryChangeRequestIndicator changeRequests={entry.change_requests} />
+                      </div>
                     </td>
                     <td>
                       <Button

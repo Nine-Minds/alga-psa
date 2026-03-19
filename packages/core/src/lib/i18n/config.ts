@@ -127,10 +127,15 @@ export const ROUTE_NAMESPACES = {
   '/client-portal/projects': ['common', 'client-portal', 'features/projects'],
   '/client-portal/billing': ['common', 'client-portal', 'features/billing'],
   '/client-portal/documents': ['common', 'client-portal', 'features/documents'],
+  '/client-portal/kb': ['common', 'client-portal', 'features/documents'],
   '/client-portal/appointments': ['common', 'client-portal', 'features/appointments'],
   '/msp': ['common', 'msp/core'],
+  '/msp/knowledge-base': ['common', 'msp/core', 'features/documents'],
   '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
-  '/msp/settings': ['common', 'msp/core'],
+  '/msp/projects': ['common', 'msp/core', 'features/projects'],
+  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'features/projects'],
+  '/msp/profile': ['common', 'msp/core', 'msp/settings'],
+  '/msp/security-settings': ['common', 'msp/core', 'msp/settings'],
 } as const;
 
 /**

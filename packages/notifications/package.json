@@ -28,12 +28,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/event-bus": "*",
+    "@alga-psa/shared": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/user-composition": "*",
-    "@alga-psa/validation": "*"
+    "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
+    "@alga-psa/workflows": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

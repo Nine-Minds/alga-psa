@@ -183,7 +183,7 @@ export class AlgaPSAClient {
 
   constructor(config: AlgaPSAClientConfig) {
     this.httpClient = new HttpClient({
-      baseUrl: config.baseUrl || 'https://api.algapsa.com',
+      baseUrl: config.baseUrl || 'https://algapsa.com',
       apiKey: config.apiKey,
       timeout: config.timeout || 30000,
       retries: config.retries || 3
@@ -969,7 +969,7 @@ import { AlgaPSAClient } from '${config.packageName}';
 
 const client = new AlgaPSAClient({
   apiKey: 'your-api-key-here',
-  baseUrl: 'https://api.algapsa.com' // optional
+  baseUrl: 'https://algapsa.com' // optional
 });
 
 // List teams
@@ -1034,7 +1034,7 @@ try {
 \`\`\`typescript
 const client = new AlgaPSAClient({
   apiKey: 'your-api-key',
-  baseUrl: 'https://api.algapsa.com',
+  baseUrl: 'https://algapsa.com',
   timeout: 30000,  // 30 seconds
   retries: 3       // retry failed requests 3 times
 });
@@ -1087,7 +1087,7 @@ MIT License - see LICENSE file for details.
 async function basicExample() {
   const client = new AlgaPSAClient({
     apiKey: process.env.ALGA_PSA_API_KEY!,
-    baseUrl: 'https://api.algapsa.com'
+    baseUrl: 'https://algapsa.com'
   });
 
   try {

@@ -127,7 +127,12 @@ function deriveGuidedStepState(params: {
   return { currentStep: 'sync', isConnected, hasDiscovery, hasConfirmedMappings };
 }
 
-export default function EntraIntegrationSettings() {
+interface EntraIntegrationSettingsProps {
+  /** Whether the user can use CIPP (premium feature). Defaults to true. */
+  canUseCipp?: boolean;
+}
+
+export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = true }: EntraIntegrationSettingsProps) {
   const uiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
   const cippFlag = useFeatureFlag('entra-integration-cipp', { defaultValue: false });
   const fieldSyncFlag = useFeatureFlag('entra-integration-field-sync', { defaultValue: false });
@@ -229,7 +234,7 @@ export default function EntraIntegrationSettings() {
     return new Date(parsed).toLocaleString();
   };
 
-  const connectionOptions = buildEntraConnectionOptions(cippFlag.enabled);
+  const connectionOptions = buildEntraConnectionOptions(cippFlag.enabled && canUseCippTier);
   const mappedTenantCount = Math.max(status?.mappedTenantCount ?? 0, mappingSummary.mapped);
   const guidedStepState = deriveGuidedStepState({
     status,

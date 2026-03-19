@@ -1,0 +1,2558 @@
+[
+  {
+    "id": "F001",
+    "description": "Provide a designer-facing action catalog abstraction separate from the runtime action registry",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Represent built-in grouped palette entries as stable core-object catalog records",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Represent the Transform grouping as a stable transform catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog",
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Represent external grouped palette entries as stable app catalog records",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog",
+      "Requirements > Plugin/App Support"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Store a stable group key for each built-in catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Store a display label for each grouped catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Store a display icon token for each grouped catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Store tile kind metadata that differentiates core-object, transform, and app records",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Store the allowed actionId list for each grouped catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Allow a grouped catalog record to declare an optional default actionId",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog",
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Allow a grouped catalog record to declare an optional description shown in the palette tooltip",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Map built-in ticket actions into a Ticket catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Map built-in contact actions into a Contact catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Map built-in client actions into a Client catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Map built-in communication actions into a Communication catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Map built-in scheduling actions into a Scheduling catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Map built-in project actions into a Project catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Map built-in time actions into a Time catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Map built-in CRM actions into a CRM catalog record",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Expose the grouped catalog to the workflow designer through a server-side projection or API response",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Render grouped palette tiles instead of one tile per business action",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Keep control blocks rendered as dedicated non-grouped palette entries",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Render Ticket as a top-level core-object palette tile",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Render Contact as a top-level core-object palette tile",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Render Client as a top-level core-object palette tile",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Render Communication as a top-level core-object palette tile",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Render Scheduling as a top-level core-object palette tile",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Render Project as a top-level core-object palette tile",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Render Time as a top-level core-object palette tile",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Render CRM as a top-level core-object palette tile",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Render Transform as a top-level transform palette tile",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model",
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Render app/plugin catalog records as top-level app palette tiles",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model",
+      "Requirements > Plugin/App Support"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Use grouped tile icons consistently in drag and click insertion flows",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Use grouped tile labels consistently in drag and click insertion flows",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Display grouped tile descriptions in hover or tooltip content",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Keep grouped palette tiles draggable onto any valid workflow pipe target",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Keep grouped palette tiles clickable for insert-at-selected-pipe behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Preserve the existing floating palette container while swapping its contents to grouped tiles",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Preserve grouped palette usability when the action registry is temporarily unavailable",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model",
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Preserve grouped palette usability in read-only designer sessions",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Match grouped tiles by contained action label during palette search",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model",
+      "Requirements > Grouped Palette and Designer Action Catalog"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Match grouped tiles by contained actionId during palette search",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Match grouped tiles by contained input field names during palette search",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Match grouped tiles by contained output field names during palette search",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Match grouped tiles by the group label itself during palette search",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Match grouped tiles by the group description itself during palette search",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Search for create-ticket terms should resolve to the Ticket tile rather than a hidden action tile",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Search for find-contact terms should resolve to the Contact tile rather than a hidden action tile",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Search for truncate-text terms should resolve to the Transform tile rather than a hidden action tile",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Search results should continue to include control blocks when they match the query",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Empty search state should show the full grouped palette in stable category order",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Search results should preserve stable grouped ordering instead of falling back to arbitrary registry order",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Palette search should include app/plugin tile contents as well as built-in tile contents",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Plugin/App Support",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Palette search should continue working while a grouped tile is being dragged from the palette",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Palette search should continue working after a grouped tile has been inserted into the workflow",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Palette search should continue working for legacy node entries that remain individually rendered",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Palette search should be able to match grouped tiles by singular or plural business object labels",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Palette search should be able to match grouped tiles by common verb-object phrases such as create ticket or assign ticket",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Palette search results should not duplicate a grouped tile once per contained action",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Palette search should clear back to the full grouped catalog without losing selection or drag state",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Dropping a core-object tile should create an action.call step scoped to that group",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Dropping the Transform tile should create an action.call step scoped to the transform group",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Dropping an app tile should create an action.call step scoped to that app",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Plugin/App Support"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Clicking a core-object tile should create an action.call step scoped to that group",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Clicking the Transform tile should create an action.call step scoped to the transform group",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Clicking an app tile should create an action.call step scoped to that app",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Plugin/App Support"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "A newly inserted grouped action step should initially preserve the current step selection behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "A newly inserted grouped action step should initially preserve the current pipe insertion behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "A grouped action step should keep step.type equal to action.call for runtime compatibility",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "A grouped action step should keep actionId stored under config.actionId for runtime compatibility",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "A grouped action step should keep action version stored under config.version for runtime compatibility",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "A grouped action step should allow additive storage of group metadata for authoring convenience",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "A grouped action step should allow additive storage of app metadata for authoring convenience",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Plugin/App Support"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Legacy action.call steps without additive group metadata should infer their group from actionId when hydrated in the designer",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Legacy action.call steps without additive app metadata should infer their app scope from actionId when hydrated in the designer",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Plugin/App Support"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "A grouped action step should remain reorderable within the pipeline like existing action.call steps",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "A grouped action step should remain movable across control-block branches like existing action.call steps",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "A grouped action step should preserve delete behavior already used for existing steps",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "A grouped action step should preserve the current absence of duplicate or copy behavior because existing workflow steps expose no duplicate affordance",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "A grouped action step should preserve saveAs generation behavior already used for action.call steps",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "The step properties panel should show the grouped tile label before an action is chosen",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Step Properties Model"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "The step properties panel should show an action dropdown limited to the allowed actions for the selected group",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "UX / UI Notes > Step Properties Model"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "The step properties panel should show an action dropdown limited to the allowed actions for the selected app tile",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Plugin/App Support",
+      "UX / UI Notes > Step Properties Model"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "A newly created grouped action step should allow no selected action until the user makes an explicit choice",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "A grouped action step should optionally auto-select a default action when the catalog record declares one",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Choosing an action should update the displayed step label to match the chosen action",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "UX / UI Notes > Step Properties Model"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Choosing an action should update the displayed step description to match the chosen action",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Choosing an action should update the step input schema used by the properties panel",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Choosing an action should update the step output schema used by downstream data-context exposure",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Choosing an action should update the step required-field completion count",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Choosing an action should update the step picker metadata set used by the field editor",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Choosing an action should update type-compatibility hints shown for mapped fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Changing from one chosen action to another should safely preserve any still-valid input mappings",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Changing from one chosen action to another should safely discard or isolate stale mappings that no longer match any field",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Changing from one chosen action to another should recalculate output schema exposure for downstream steps immediately",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Changing from one chosen action to another should recalculate saveAs suggestions when the step output name is auto-generated",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "The step properties panel should surface an invalid state when no required action has been chosen yet",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "The step properties panel should surface action-level schema references for the chosen action when available",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Grouped Action Step Model",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "The step properties panel should keep step name editing available regardless of whether an action has been chosen",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Step Properties Model"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "The step properties panel should keep save-output controls available regardless of whether an action has been chosen",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes > Step Properties Model"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Render each chosen action input field as a visible inline field row or field group in the properties panel",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "UX / UI Notes > Field Authoring Model"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Render required-field indicators directly on inline field rows",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Render optional-field indicators directly on inline field rows where useful",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Render field descriptions directly in the inline field editor when schema descriptions exist",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "Render the current required-field completion summary above the inline field editor",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Keep the inline field editor mounted in the right-side properties panel rather than behind a modal dialog",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Step Properties Model",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Render a source-mode selector on each editable field",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "UX / UI Notes > Field Authoring Model"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Support Reference as an explicit per-field source mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "Support Fixed value as an explicit per-field source mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Support Advanced as an explicit per-field source mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "Requirements > Advanced Expressions"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Default new editable fields to the structured source mode chosen by the field type and metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Serialize Reference-mode values into the existing expression-backed inputMapping representation",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "Serialize Fixed-mode values into the existing literal inputMapping representation",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Serialize Advanced expression values into the existing expression-backed inputMapping representation",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "Requirements > Advanced Expressions"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Serialize Advanced secret values into the existing secret-backed inputMapping representation",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "Requirements > Advanced Expressions"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Render validation messaging inline on individual field rows when values are missing or invalid",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "Render type-compatibility messaging inline on individual field rows when references are coercible or incompatible",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "Render unset required fields as visibly incomplete even before any value mode is chosen",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "Render the chosen action's example or schema defaults where they improve field authoring clarity",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "Keep the current step-level validation summary in sync with the inline field editor state",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "Render nested object inputs as expandable inline field groups",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "UX / UI Notes > Field Authoring Model"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "Render nested array inputs as expandable inline field groups when the item schema is object-like",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "Render primitive array inputs with an inline fixed-value authoring affordance that does not require raw JSON entry by default",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "Allow nested object fields to choose source modes independently from their parent object field",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "Allow nested object groups to collapse without losing authored child values",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "Allow nested array groups to collapse without losing authored child values",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "Calculate required-field completion correctly for nested required object fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "Calculate required-field completion correctly for nested required array item fields when item objects are authored inline",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "Expose enum-backed fields as structured fixed-value controls rather than raw text inputs in fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "Expose boolean-backed fields as structured fixed-value controls rather than raw text inputs in fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "Expose number-backed fields as numeric fixed-value controls rather than raw text inputs in fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "Expose string-backed fields as string fixed-value controls when no picker metadata or enum metadata exists",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "Expose nullable fields in a way that allows the builder to intentionally set null where the schema allows it",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "Preserve authored nested values when switching a field from Fixed mode to Advanced mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "Requirements > Advanced Expressions"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "Preserve authored nested values when switching a field from Reference mode to Advanced mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor",
+      "Requirements > Advanced Expressions"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "Safely clear authored child values when a builder explicitly resets a nested field group",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "Safely rehydrate nested authored values when reopening a saved workflow draft",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "Expose field constraints such as format, minLength, maxLength, and pattern in inline field help",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "Expose item-type hints for array fields in inline field help",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "Expose default values from schema metadata where that helps builders understand unconfigured fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "Reference mode should expose workflow payload fields as selectable sources",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "Reference mode should expose previous step outputs as selectable sources",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "Reference mode should expose workflow metadata fields as selectable sources",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "Reference mode should expose catch-block error fields as selectable sources when editing inside catch context",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F145",
+    "description": "Reference mode should expose forEach item and index fields as selectable sources when editing inside loop context",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F146",
+    "description": "Reference mode should expose previous step outputs grouped by producing step or saveAs name",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model",
+      "UX / UI Notes > Field Authoring Model"
+    ]
+  },
+  {
+    "id": "F147",
+    "description": "Reference mode should allow direct selection of a step output root object where the target field accepts object-like input",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F148",
+    "description": "Reference mode should allow direct selection of a nested property path where the target field accepts a primitive input",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F149",
+    "description": "Reference mode should continue to feed the expression-editor autocomplete context from the selected workflow data sources",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model",
+      "Requirements > Advanced Expressions"
+    ]
+  },
+  {
+    "id": "F150",
+    "description": "Reference mode should continue to feed type-compatibility hints from the selected workflow data sources",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F151",
+    "description": "Reference mode should generate a direct field-reference expression when a builder chooses a single source path",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F152",
+    "description": "Reference mode should rehydrate a previously saved direct field-reference expression back into the structured picker view when possible",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F153",
+    "description": "Reference mode should gracefully fall back to Advanced mode when a saved expression cannot be represented as a single structured reference",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model",
+      "Requirements > Advanced Expressions"
+    ]
+  },
+  {
+    "id": "F154",
+    "description": "Reference mode should keep hidden or unavailable source fields out of the selectable list when no schema information exists for them",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F155",
+    "description": "Reference mode should refresh step-output sources immediately when an upstream chosen action changes its output schema",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model",
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F156",
+    "description": "Reference mode should refresh step-output sources immediately when an upstream saveAs value changes",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F157",
+    "description": "Reference mode should preserve current path selections when unrelated upstream steps change",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F158",
+    "description": "Reference mode should show no previous-step output sources for the first action step in a workflow when none exist yet",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F159",
+    "description": "Reference mode should allow builders to inspect the root source group before drilling into nested fields",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Field Authoring Model",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F160",
+    "description": "Reference mode should preserve the current catch and forEach contextual sources when grouped action steps are moved within the same block",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Reference Source Model",
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F161",
+    "description": "Extend exported action-schema field metadata with an additive picker kind annotation",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F162",
+    "description": "Extend exported action-schema field metadata with an additive dependency annotation for scoped pickers",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F163",
+    "description": "Extend exported action-schema field metadata with an additive UI hint annotation for fixed-value editing",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F164",
+    "description": "Preserve additive picker annotations when converting runtime action schemas to designer JSON schema",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F165",
+    "description": "Extract picker annotations into the designer's ActionInputField representation",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F166",
+    "description": "Render picker-backed fields in Fixed mode using the annotated picker kind rather than the plain primitive type",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F167",
+    "description": "Allow picker-backed fields to switch back to Reference mode without losing the field's picker metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F168",
+    "description": "Allow picker-backed fields to switch to Advanced mode without losing the field's picker metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "Requirements > Advanced Expressions"
+    ]
+  },
+  {
+    "id": "F169",
+    "description": "Support a board picker annotation on ticket board identifier fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F170",
+    "description": "Support a client picker annotation on ticket client identifier fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F171",
+    "description": "Support a contact picker annotation on ticket contact identifier fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F172",
+    "description": "Support a ticket status picker annotation on ticket status identifier fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F173",
+    "description": "Support a ticket priority picker annotation on ticket priority identifier fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F174",
+    "description": "Support a user-or-team picker annotation on ticket assignment fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F175",
+    "description": "Support a ticket category picker annotation on ticket category identifier fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F176",
+    "description": "Support a ticket subcategory picker annotation on ticket subcategory identifier fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F177",
+    "description": "Support a client-location picker annotation on ticket location identifier fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F178",
+    "description": "Allow picker annotations to declare that a field remains eligible for dynamic references as well as fixed values",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F179",
+    "description": "Allow picker annotations to declare the field dependencies required for fixed-value narrowing",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F180",
+    "description": "Surface picker metadata through the chosen action's field editor without changing the persisted inputMapping contract",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F181",
+    "description": "Render board_id in ticket create/update actions as a fixed-value board picker in Fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F182",
+    "description": "Render client_id in ticket create/update actions as a fixed-value client picker in Fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F183",
+    "description": "Render contact_id in ticket create/update actions as a fixed-value contact picker in Fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F184",
+    "description": "Render status_id in ticket create/update actions as a fixed-value status picker in Fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F185",
+    "description": "Render priority_id in ticket create/update actions as a fixed-value priority picker in Fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F186",
+    "description": "Render assigned_to in ticket create/update actions as a fixed-value user picker in Fixed mode when appropriate",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F187",
+    "description": "Render assignee.id in ticket create/update actions as a fixed-value user-or-team picker in Fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F188",
+    "description": "Render category_id in ticket create/update actions as a fixed-value category picker in Fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F189",
+    "description": "Render subcategory_id in ticket create/update actions as a fixed-value subcategory picker in Fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F190",
+    "description": "Render location_id in ticket create/update actions as a fixed-value client-location picker in Fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F191",
+    "description": "Allow board_id fields to fall back to Reference mode instead of forcing a fixed board selection",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F192",
+    "description": "Allow client_id fields to fall back to Reference mode instead of forcing a fixed client selection",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F193",
+    "description": "Allow contact_id fields to fall back to Reference mode instead of forcing a fixed contact selection",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F194",
+    "description": "Allow status_id fields to fall back to Reference mode instead of forcing a fixed status selection",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F195",
+    "description": "Allow priority_id fields to fall back to Reference mode instead of forcing a fixed priority selection",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F196",
+    "description": "Allow assignee fields to fall back to Reference mode instead of forcing a fixed assignee selection",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F197",
+    "description": "Allow category_id fields to fall back to Reference mode instead of forcing a fixed category selection",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F198",
+    "description": "Allow subcategory_id fields to fall back to Reference mode instead of forcing a fixed subcategory selection",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F199",
+    "description": "Allow location_id fields to fall back to Reference mode instead of forcing a fixed location selection",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F200",
+    "description": "Persist selected fixed ticket picker values as literal identifier values inside the existing inputMapping contract",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F201",
+    "description": "Narrow fixed contact picker options by selected fixed client when both fields are authored in fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "Narrow fixed location picker options by selected fixed client when both fields are authored in fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "Narrow fixed category picker options by selected fixed board when both fields are authored in fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "Narrow fixed subcategory picker options by selected fixed category when both fields are authored in fixed mode",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "Narrow fixed subcategory picker options by selected fixed board when board-scoped subcategories are required",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F206",
+    "description": "Show an explanatory disabled state for the fixed contact picker when no fixed client is selected and client scoping is required",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F207",
+    "description": "Show an explanatory disabled state for the fixed location picker when no fixed client is selected and client scoping is required",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F208",
+    "description": "Show an explanatory disabled state for the fixed category picker when no fixed board is selected and board scoping is required",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "Show an explanatory disabled state for the fixed subcategory picker when required upstream board or category selections are missing",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F210",
+    "description": "Treat a dynamically referenced client_id as insufficient to unlock a fixed contact picker option list",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F211",
+    "description": "Treat a dynamically referenced client_id as insufficient to unlock a fixed location picker option list",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F212",
+    "description": "Treat a dynamically referenced board_id as insufficient to unlock a fixed category picker option list",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F213",
+    "description": "Treat a dynamically referenced category_id as insufficient to unlock a fixed subcategory picker option list",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F214",
+    "description": "Recalculate dependent picker option lists immediately when a fixed upstream picker value changes",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F215",
+    "description": "Clear no-longer-valid fixed dependent picker selections when an upstream fixed picker value changes scope",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F216",
+    "description": "Preserve still-valid fixed dependent picker selections when an upstream fixed picker value changes but the selection remains in scope",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes > Picker UX",
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F217",
+    "description": "Rehydrate dependent picker selections correctly when loading a saved workflow draft with valid fixed upstream values",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F218",
+    "description": "Rehydrate dependent picker disabled states correctly when loading a saved workflow draft with dynamic upstream references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F219",
+    "description": "Allow dependent ticket picker fields to switch back to Reference mode when fixed-scope narrowing is not available",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Picker Metadata and Fixed Value Authoring",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F220",
+    "description": "Keep dependent picker behavior limited to ticket-core identifiers in the first implementation pass",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F221",
+    "description": "Expose Transform as a grouped tile that behaves like any other grouped action source in the designer",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "UX / UI Notes > Transform UX"
+    ]
+  },
+  {
+    "id": "F222",
+    "description": "Allow Transform grouped steps to choose a specific transform action from a filtered action dropdown",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "UX / UI Notes > Transform UX"
+    ]
+  },
+  {
+    "id": "F223",
+    "description": "Allow Transform grouped steps to expose schema-driven inputs through the same inline field editor used by business actions",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "UX / UI Notes > Transform UX"
+    ]
+  },
+  {
+    "id": "F224",
+    "description": "Allow Transform grouped steps to expose schema-driven outputs through the same saveAs and downstream data-context model used by business actions",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F225",
+    "description": "Keep Transform grouped steps stored as action.call steps for runtime compatibility",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F226",
+    "description": "Register transform actions in the runtime action registry like other first-class actions",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F227",
+    "description": "Give each transform action an explicit input schema that can drive the inline field editor",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F228",
+    "description": "Give each transform action an explicit output schema that can drive downstream reference selection",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F229",
+    "description": "Allow transform actions to participate in the same grouped-catalog search model as business actions",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "UX / UI Notes > Palette Model"
+    ]
+  },
+  {
+    "id": "F230",
+    "description": "Allow transform actions to participate in the same validation model as business actions",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F231",
+    "description": "Allow transform actions to be named and saved for downstream reference like other grouped action steps",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F232",
+    "description": "Allow transform actions to appear in prior-step source pickers using their output schema and saveAs name",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F233",
+    "description": "Preserve transform grouped-step hydration when loading legacy drafts after transform actions are introduced",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F234",
+    "description": "Keep transform grouped steps movable and reorderable like existing action.call steps",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F235",
+    "description": "Keep transform grouped steps available inside control blocks just like existing action.call steps",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F236",
+    "description": "Allow transform grouped steps to use the same Reference, Fixed, and Advanced source modes inside their own input fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F237",
+    "description": "Allow transform grouped steps to use the same type-compatibility hints inside their own input fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F238",
+    "description": "Allow transform grouped steps to use the same step-level validation summary inside the properties panel",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F239",
+    "description": "Allow transform grouped steps to show action descriptions that explain the resulting output shape",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "UX / UI Notes > Transform UX"
+    ]
+  },
+  {
+    "id": "F240",
+    "description": "Keep transform grouped-step behavior consistent enough that new transform actions can be added without new one-off designer surfaces",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F241",
+    "description": "Provide a truncate-text transform action that accepts a source string and truncation settings",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F242",
+    "description": "Allow truncate-text to express truncation length through explicit schema-backed fields rather than raw expression syntax",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F243",
+    "description": "Allow truncate-text to express truncation direction or strategy through explicit schema-backed fields rather than raw expression syntax",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F244",
+    "description": "Provide a concat-text transform action that accepts multiple source values and a separator",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F245",
+    "description": "Provide a replace-text transform action that accepts a source string, search value, and replacement value",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F246",
+    "description": "Provide a split-text transform action that accepts a source string and delimiter",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F247",
+    "description": "Provide a join-text transform action that accepts an array of strings and delimiter",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F248",
+    "description": "Provide a lowercase-text transform action that accepts a source string",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F249",
+    "description": "Provide an uppercase-text transform action that accepts a source string",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F250",
+    "description": "Provide a trim-text transform action that accepts a source string",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F251",
+    "description": "Expose truncate-text output as a typed string field for downstream references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F252",
+    "description": "Expose concat-text output as a typed string field for downstream references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F253",
+    "description": "Expose replace-text output as a typed string field for downstream references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F254",
+    "description": "Expose split-text output as a typed array field for downstream references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F255",
+    "description": "Expose join-text output as a typed string field for downstream references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F256",
+    "description": "Expose lowercase-text output as a typed string field for downstream references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F257",
+    "description": "Expose uppercase-text output as a typed string field for downstream references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F258",
+    "description": "Expose trim-text output as a typed string field for downstream references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F259",
+    "description": "Let text transform actions use structured source references for their source string inputs",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F260",
+    "description": "Let text transform actions use fixed literal configuration for transform-specific parameters such as separator or maximum length",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F261",
+    "description": "Provide a coalesce-value transform action that accepts ordered candidate inputs and returns the first usable value",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F262",
+    "description": "Provide a build-object transform action that accepts named fields and returns an object",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F263",
+    "description": "Allow build-object to assign user-chosen output field names without requiring expression syntax",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F264",
+    "description": "Provide a pick-fields transform action that accepts an input object and a selected subset of fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F265",
+    "description": "Provide a rename-fields transform action that accepts an input object and an explicit field rename mapping",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F266",
+    "description": "Provide an append-array transform action that accepts an input array and one or more values to append",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F267",
+    "description": "Provide a build-array transform action that accepts ordered item inputs and returns an array",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F268",
+    "description": "Expose coalesce-value output with a schema type compatible with downstream references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F269",
+    "description": "Expose build-object output as an object schema that downstream references can browse",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F270",
+    "description": "Expose pick-fields output as an object schema that downstream references can browse",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F271",
+    "description": "Expose rename-fields output as an object schema that downstream references can browse using the renamed field names",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F272",
+    "description": "Expose append-array output as an array schema that downstream references can browse",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F273",
+    "description": "Expose build-array output as an array schema that downstream references can browse",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F274",
+    "description": "Allow object-building transform inputs to use structured references for each output field source",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F275",
+    "description": "Allow object-building transform inputs to use fixed literal values for each output field source",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F276",
+    "description": "Allow rename-fields transform inputs to express renamed field labels through explicit schema-backed fields rather than raw expression syntax",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F277",
+    "description": "Allow pick-fields transform inputs to choose a fixed list of output fields through explicit schema-backed fields rather than raw expression syntax",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F278",
+    "description": "Allow coalesce-value transform inputs to accept multiple structured references without requiring raw expression syntax",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F279",
+    "description": "Allow array-building transform inputs to accept multiple structured references without requiring raw expression syntax",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions"
+    ]
+  },
+  {
+    "id": "F280",
+    "description": "Allow object/value transform outputs to participate in downstream picker and reference flows exactly like business-action outputs",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Transform Actions",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F281",
+    "description": "Keep Advanced mode available for fields whose saved value cannot be represented as a structured reference or fixed value",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Advanced Expressions"
+    ]
+  },
+  {
+    "id": "F282",
+    "description": "Keep Advanced mode available for fields that still need secret references",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Advanced Expressions"
+    ]
+  },
+  {
+    "id": "F283",
+    "description": "De-emphasize Advanced mode in the UI so structured references and transform actions are the primary authoring path",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Advanced Expressions",
+      "UX / UI Notes > Field Authoring Model"
+    ]
+  },
+  {
+    "id": "F284",
+    "description": "Preserve existing expression validation behavior for advanced field values after the editor refactor",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Advanced Expressions",
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F285",
+    "description": "Preserve existing secret validation behavior for advanced field values after the editor refactor",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Advanced Expressions",
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F286",
+    "description": "Preserve existing runtime mapping resolution behavior for advanced field values after the editor refactor",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Advanced Expressions",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F287",
+    "description": "Keep existing workflows with advanced expressions editable even when they no longer fit the structured field-authoring path",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Advanced Expressions",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F288",
+    "description": "Preserve current save, reload, and publish behavior for workflows that mix structured fields and advanced values",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F289",
+    "description": "Preserve current action output data-context generation when grouped steps are saved and reloaded",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation",
+      "Requirements > Reference Source Model"
+    ]
+  },
+  {
+    "id": "F290",
+    "description": "Preserve current import and export compatibility for workflow definitions that only rely on the existing action.call runtime contract",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F291",
+    "description": "Expose app/plugin grouped tiles only for catalog records available to the current deployment and tenant context",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Plugin/App Support",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F292",
+    "description": "Allow app/plugin grouped steps to use the same grouped-step hydration model as built-in grouped steps",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Plugin/App Support",
+      "Requirements > Grouped Action Step Model"
+    ]
+  },
+  {
+    "id": "F293",
+    "description": "Allow app/plugin grouped steps to use the same inline field editor model as built-in grouped steps when their schemas are compatible",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Plugin/App Support",
+      "Requirements > Inline Field-Based Action Input Editor"
+    ]
+  },
+  {
+    "id": "F294",
+    "description": "Allow app/plugin grouped steps to use the same picker-metadata model as built-in grouped steps when their schemas provide annotations",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Plugin/App Support",
+      "Requirements > Picker Metadata and Fixed Value Authoring"
+    ]
+  },
+  {
+    "id": "F295",
+    "description": "Prevent read-only workflow users from changing grouped tiles, selected actions, or inline field values",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F296",
+    "description": "Allow read-only workflow users to inspect grouped tiles, selected actions, field values, and transform outputs",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F297",
+    "description": "Restrict fixed picker option retrieval to business data the current workflow authoring user is already permitted to read",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "UX / UI Notes > Picker UX"
+    ]
+  },
+  {
+    "id": "F298",
+    "description": "Keep grouped-step validation errors visible in the properties panel after save and reload",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation"
+    ]
+  },
+  {
+    "id": "F299",
+    "description": "Keep grouped-step publish validation consistent with the existing runtime contract after the designer refactor",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Compatibility, Save/Load, and Validation",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F300",
+    "description": "Keep this first implementation limited to grouped palette, inline action inputs, ticket-core pickers, and transform actions without expanding into unrelated workflow-authoring features",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Non-goals"
+    ]
+  }
+]

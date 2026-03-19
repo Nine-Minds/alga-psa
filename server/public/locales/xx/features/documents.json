@@ -1,0 +1,222 @@
+{
+  "title": "11111",
+  "noDocuments": "11111",
+  "upload": "11111",
+  "download": "11111",
+  "remove": "11111",
+  "preview": "11111",
+  "linkDocuments": "11111",
+  "editDocument": "11111",
+  "viewDocument": "11111",
+  "downloadToPlay": "11111",
+  "delete": "11111",
+  "previewUnavailable": "11111",
+  "newDocument": "11111",
+  "uploadFile": "11111",
+  "deleteTitle": "11111",
+  "deleteMessage": "11111 {{name}} 11111",
+  "deleteVideoTitle": "11111",
+  "deleteVideoMessage": "11111 {{name}} 11111",
+  "removeTitle": "11111",
+  "removeMessage": "11111 {{name}} 11111",
+  "removeVideoTitle": "11111",
+  "removeVideoMessage": "11111 {{name}} 11111",
+  "downloadFile": "11111",
+  "videoUnsupported": "11111 {{mimeType}} 11111",
+  "videoTagUnsupported": "11111",
+  "unnamed": "11111",
+  "videoDownloadInfo": "11111",
+  "previewUnavailableNoId": "11111",
+  "previewLoadFailed": "11111",
+  "videoCodecWarning": "11111",
+  "messages": {
+    "fetchFailed": "11111",
+    "folderCreated": "11111 {{name}} 11111",
+    "folderCreateFailed": "11111",
+    "moveDocumentsSuccess_one": "11111 {{count}} 11111 {{destination}} 11111",
+    "moveDocumentsSuccess_other": "11111 {{count}} 11111 {{destination}} 11111",
+    "moveDocumentsFailed": "11111",
+    "deleteSuccess": "11111 {{name}} 11111",
+    "deleteFailed": "11111",
+    "removeAssociationFailed": "11111",
+    "moveDocumentSuccess": "11111 {{name}} 11111",
+    "moveDocumentFailed": "11111",
+    "createFailed": "11111",
+    "saveFailed": "11111",
+    "loadContentFailed": "11111",
+    "downloadFailed": "11111",
+    "bulkDeleteFailed": "11111",
+    "bulkDeleteSuccess_one": "11111 {{count}} 11111",
+    "bulkDeleteSuccess_other": "11111 {{count}} 11111"
+  },
+  "validation": {
+    "nameRequired": "11111"
+  },
+  "bulkActions": {
+    "selected_one": "11111 {{count}} 11111",
+    "selected_other": "11111 {{count}} 11111",
+    "moveToFolder": "11111",
+    "deleteSelected": "11111",
+    "clearSelection": "11111"
+  },
+  "prompts": {
+    "confirmBulkDelete_one": "11111 {{count}} 11111",
+    "confirmBulkDelete_other": "11111 {{count}} 11111"
+  },
+  "pagination": {
+    "perPage": "11111 {{count}} 11111"
+  },
+  "folderSelector": {
+    "defaultTitle": "11111",
+    "defaultDescription": "11111",
+    "newDocumentTitle": "11111",
+    "newDocumentDescription": "11111",
+    "moveTitle": "11111",
+    "moveDescriptionWithName": "11111 {{name}} 11111",
+    "moveDescription": "11111",
+    "bulkMoveTitle": "11111",
+    "bulkMoveDescription_one": "11111 {{count}} 11111",
+    "bulkMoveDescription_other": "11111 {{count}} 11111",
+    "errors": {
+      "nameRequired": "11111",
+      "invalidCharacters": "11111",
+      "createFailed": "11111"
+    },
+    "creating": "11111",
+    "createButton": "11111",
+    "newFolderButton": "11111",
+    "parentLabel": "11111 {{folder}} 11111",
+    "rootLabel": "11111",
+    "namePlaceholder": "11111",
+    "loading": "11111",
+    "rootOption": "11111",
+    "empty": "11111"
+  },
+  "filters": {
+    "searchLabel": "11111",
+    "searchPlaceholder": "11111",
+    "typeLabel": "11111",
+    "entityTypeLabel": "11111",
+    "uploadedByLabel": "11111",
+    "uploadedByPlaceholder": "11111",
+    "updatedStartLabel": "11111",
+    "updatedEndLabel": "11111",
+    "startDatePlaceholder": "11111",
+    "endDatePlaceholder": "11111",
+    "sortByLabel": "11111",
+    "clear": "11111",
+    "typeOptions": {
+      "all": "11111",
+      "pdf": "11111",
+      "image": "11111",
+      "text": "11111",
+      "video": "11111",
+      "other": "11111"
+    },
+    "sortOptions": {
+      "updated_at": "11111",
+      "document_name": "11111",
+      "file_size": "11111",
+      "created_by_full_name": "11111"
+    },
+    "sortOrder": {
+      "default": {
+        "asc": "11111",
+        "desc": "11111"
+      },
+      "document_name": {
+        "asc": "11111",
+        "desc": "11111"
+      },
+      "updated_at": {
+        "asc": "11111",
+        "desc": "11111"
+      },
+      "file_size": {
+        "asc": "11111",
+        "desc": "11111"
+      },
+      "created_by_full_name": {
+        "asc": "11111",
+        "desc": "11111"
+      }
+    }
+  },
+  "selector": {
+    "title": "11111",
+    "reflectionLabel": "11111",
+    "searchPlaceholder": "11111",
+    "foldersLabel": "11111",
+    "folderHint": "11111 {{folder}} 11111",
+    "saving": "11111",
+    "selectDocument": "11111",
+    "associateSelected": "11111",
+    "errors": {
+      "configuration": "11111",
+      "invalidData": "11111",
+      "load": "11111",
+      "save": "11111"
+    },
+    "configErrorTitle": "11111",
+    "configErrorMessage": "11111"
+  },
+  "uploadSection": {
+    "reflectionLabel": "11111",
+    "dragDrop": "11111",
+    "browse": "11111",
+    "uploading": "11111",
+    "error": "11111",
+    "fileError": "11111"
+  },
+  "folders": {
+    "root": "11111",
+    "loadFailed": "11111",
+    "deleteConfirm": "11111 {{name}} 11111",
+    "deleteSuccess": "11111 {{name}} 11111",
+    "deleteFailed": "11111",
+    "deleteAction": "11111",
+    "loading": "11111",
+    "title": "11111",
+    "collapse": "11111",
+    "allDocuments": "11111"
+  },
+  "folderManager": {
+    "title": "11111",
+    "nameLabel": "11111",
+    "namePlaceholder": "11111",
+    "willCreateIn": "11111 {{folder}} 11111"
+  },
+  "portal": {
+    "subtitle": "11111",
+    "searchPlaceholder": "11111",
+    "showing": "11111 {{count}} 11111",
+    "loadError": "11111"
+  },
+  "kb": {
+    "title": "11111",
+    "subtitle": "11111",
+    "categories": "11111",
+    "allArticles": "11111",
+    "searchPlaceholder": "11111",
+    "articleCount": "11111 {{count}} 11111",
+    "noArticles": "11111",
+    "loadError": "11111",
+    "noContent": "11111",
+    "articleNotFound": "11111",
+    "backToArticles": "11111",
+    "views": "11111",
+    "wasHelpful": "11111",
+    "yes": "11111",
+    "no": "11111",
+    "feedbackThanks": "11111",
+    "feedbackError": "11111",
+    "filterByTags": "11111"
+  },
+  "visibility": {
+    "cascadeTitle": "11111",
+    "cascadeMakeVisible": "11111 {{count}} 11111 {{name}} 11111",
+    "cascadeMakeHidden": "11111 {{count}} 11111 {{name}} 11111",
+    "cascadeYes": "11111",
+    "cascadeNo": "11111"
+  }
+}

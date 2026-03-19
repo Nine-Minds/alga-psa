@@ -2,6 +2,7 @@
 
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
+import { featureFlags } from '@alga-psa/core/server';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
@@ -28,14 +29,7 @@ const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
   workflowAutomation: false,
 };
 
-function isMasterBillingTenant(tenant: string): boolean {
-  const masterBillingTenantId = process.env.MASTER_BILLING_TENANT_ID;
-  if (!masterBillingTenantId) {
-    return false;
-  }
-
-  return tenant === masterBillingTenantId;
-}
+const AI_ASSISTANT_ACTIVATION_FLAG = 'ai-assistant-activation';
 
 function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
   if (!value || typeof value !== 'object') {
@@ -60,6 +54,16 @@ const getTenantSettingsForTenant = async (tenant: string): Promise<TenantSetting
   return settings || null;
 };
 
+async function canTenantActivateAiAssistant(
+  tenant: string,
+  user?: Pick<IUserWithRoles, 'user_id' | 'user_type'>
+): Promise<boolean> {
+  return featureFlags.isEnabled(AI_ASSISTANT_ACTIVATION_FLAG, {
+    tenantId: tenant,
+    userId: user?.user_id,
+  });
+}
+
 export const getTenantSettings = withAuth(async (
   _user: IUserWithRoles,
   { tenant }: AuthContext
@@ -74,10 +78,13 @@ export async function getTenantSettingsByTenantId(tenantId: string): Promise<Ten
   return getTenantSettingsForTenant(tenantId);
 }
 
-const getExperimentalFeaturesForTenant = async (tenant: string): Promise<ExperimentalFeatures> => {
+export const getExperimentalFeaturesForTenant = async (
+  tenant: string,
+  user?: Pick<IUserWithRoles, 'user_id' | 'user_type'>
+): Promise<ExperimentalFeatures> => {
   const settings = await getTenantSettingsForTenant(tenant);
   const features = normalizeExperimentalFeatures(settings?.settings?.experimentalFeatures);
-  if (!isMasterBillingTenant(tenant)) {
+  if (!(await canTenantActivateAiAssistant(tenant, user))) {
     features.aiAssistant = false;
   }
 
@@ -85,21 +92,21 @@ const getExperimentalFeaturesForTenant = async (tenant: string): Promise<Experim
 };
 
 export const getExperimentalFeatures = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<ExperimentalFeatures> => {
-  return getExperimentalFeaturesForTenant(tenant);
+  return getExperimentalFeaturesForTenant(tenant, user);
 });
 
 export const canEnableAiAssistant = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<boolean> => {
-  return isMasterBillingTenant(tenant);
+  return canTenantActivateAiAssistant(tenant, user);
 });
 
 export const updateExperimentalFeatures = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   features: Partial<ExperimentalFeatures>
 ): Promise<void> => {
@@ -109,11 +116,11 @@ export const updateExperimentalFeatures = withAuth(async (
       throw new Error('Permission denied: Cannot update settings');
     }
 
-    if (features.aiAssistant === true && !isMasterBillingTenant(tenant)) {
+    if (features.aiAssistant === true && !(await canTenantActivateAiAssistant(tenant, user))) {
       throw new Error('Permission denied: Cannot enable AI Assistant for this tenant');
     }
 
-    const current = await getExperimentalFeaturesForTenant(tenant);
+    const current = await getExperimentalFeaturesForTenant(tenant, user);
     const merged: ExperimentalFeatures = {
       ...current,
       ...features,
@@ -129,11 +136,11 @@ export const updateExperimentalFeatures = withAuth(async (
 });
 
 export const isExperimentalFeatureEnabled = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   featureKey: string
 ): Promise<boolean> => {
-  const features = await getExperimentalFeaturesForTenant(tenant);
+  const features = await getExperimentalFeaturesForTenant(tenant, user);
   return (features as unknown as Record<string, unknown>)[featureKey] === true;
 });
 

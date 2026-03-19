@@ -6,6 +6,10 @@ import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource } from '../expressionEngine';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { validateInputMapping, validateInputMappingSchema, collectSecretRefsFromConfig } from './mappingValidator';
+import {
+  isWorkflowAiInferAction,
+  resolveWorkflowAiSchemaFromConfig,
+} from '../ai/aiSchema';
 
 export type PublishValidationResult = {
   ok: boolean;
@@ -225,6 +229,27 @@ function validateNodeStep(
             errors.push(...mappingResult.errors);
             warnings.push(...mappingResult.warnings);
             mappingResult.secretRefs.forEach((ref) => secretRefs.add(ref));
+          }
+
+          if (isWorkflowAiInferAction(config.actionId)) {
+            const resolvedAiSchema = resolveWorkflowAiSchemaFromConfig(config);
+            if (!resolvedAiSchema.mode) {
+              errors.push({
+                severity: 'error',
+                stepPath,
+                stepId: step.id,
+                code: 'INVALID_AI_OUTPUT_SCHEMA',
+                message: 'AI inference steps require aiOutputSchemaMode and an inline aiOutputSchema.',
+              });
+            } else if (resolvedAiSchema.errors.length > 0 || !resolvedAiSchema.schema) {
+              errors.push({
+                severity: 'error',
+                stepPath,
+                stepId: step.id,
+                code: 'INVALID_AI_OUTPUT_SCHEMA',
+                message: resolvedAiSchema.errors[0] ?? 'AI inference output schema is invalid.',
+              });
+            }
           }
 
           const actionSchemaJson = zodToJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }) as Record<string, unknown>;

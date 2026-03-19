@@ -24,6 +24,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Card } from '@alga-psa/ui/components/Card';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TeamDetailsProps {
   teamId: string;
@@ -41,6 +42,7 @@ function parseAvatarUrlsMap(avatarUrls: Map<string, string | null> | Record<stri
 }
 
 const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [team, setTeam] = useState<ITeam | null>(null);
   const [teamName, setTeamName] = useState('');
   const [allUsers, setAllUsers] = useState<IUserWithRoles[]>([]);
@@ -108,7 +110,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
       void fetchTeamAvatarUrl(fetchedTeam);
     } catch (err) {
       console.error('Error fetching team details:', err);
-      setError('Failed to fetch team details');
+      setError(t('teams.messages.error.loadFailed'));
       onUpdate(null);
     } finally {
       setLoading(false);
@@ -121,7 +123,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
       setAllUsers(users);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError('Failed to fetch users');
+      setError(t('teams.messages.error.fetchUsers'));
     }
   };
 
@@ -221,7 +223,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator
           layout="stacked"
-          text="Loading team details..."
+          text={t('teams.details.loading')}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -229,7 +231,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
   }
 
   if (!team) {
-    return <div className="text-text-600">No team found</div>;
+    return <div className="text-text-600">{t('teams.details.notFound')}</div>;
   }
 
   const managerUser = allUsers.find(u => u.user_id === selectedManagerId);
@@ -264,7 +266,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
 
   const memberColumns: ColumnDefinition<ITeamMember>[] = [
     {
-      title: 'Member',
+      title: t('teams.details.table.member'),
       dataIndex: 'user_id',
       render: (_value: unknown, member: ITeamMember) => {
         const isPending = pendingAdditions.includes(member.user_id);
@@ -280,14 +282,14 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
               {member.first_name} {member.last_name}
             </span>
             {isPending && (
-              <Badge variant="outline" size="sm">New</Badge>
+              <Badge variant="outline" size="sm">{t('teams.details.badge.new')}</Badge>
             )}
           </div>
         );
       },
     },
     {
-      title: 'Role',
+      title: t('teams.details.table.role'),
       dataIndex: 'role',
       width: '120px',
       render: (_value: unknown, member: ITeamMember) => {
@@ -298,7 +300,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
         return (
           <div className="flex items-center gap-2">
             {isLead && (
-              <Badge variant="primary" size="sm">Lead</Badge>
+              <Badge variant="primary" size="sm">{t('teams.details.badge.lead')}</Badge>
             )}
             <span className="text-sm text-text-600">
               {member.roles.map((role): string => role.role_name).join(', ')}
@@ -320,7 +322,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
           onClick={() => handlePendingRemoveMember(member.user_id)}
           className="text-destructive hover:text-destructive"
         >
-          Remove
+          {t('teams.details.actions.remove')}
         </Button>
       ),
     },
@@ -357,7 +359,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
                   autoFocus
                   className="text-xl font-bold flex-1"
                   containerClassName="mb-0 flex-1"
-                  placeholder="Enter team name"
+                  placeholder={t('teams.details.placeholders.teamName')}
                 />
                 <Button
                   id="save-team-name-btn"
@@ -365,7 +367,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
                   size="sm"
                   onClick={() => void handleNameSubmit()}
                   className="flex-shrink-0"
-                  title="Save name"
+                  title={t('teams.details.actions.saveName')}
                 >
                   <Check className="w-4 h-4" />
                 </Button>
@@ -375,7 +377,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
                   size="sm"
                   onClick={handleNameCancel}
                   className="flex-shrink-0"
-                  title="Cancel"
+                  title={t('teams.details.actions.cancel')}
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -388,7 +390,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
                 <button
                   onClick={() => setIsEditingName(true)}
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 flex-shrink-0"
-                  title="Edit name"
+                  title={t('teams.details.actions.editName')}
                 >
                   <Pencil className="w-4 h-4 text-gray-500" />
                 </button>
@@ -396,8 +398,8 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
             )}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {displayMembers.length} member{displayMembers.length !== 1 ? 's' : ''}
-            {managerName && <> &middot; Lead: {managerName}</>}
+            {t('teams.details.memberCount', { count: displayMembers.length })}
+            {managerName && <> &middot; {t('teams.details.leadName', { name: managerName })}</>}
           </p>
         </div>
       </div>
@@ -407,7 +409,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
       {/* Team Lead + Add Member on one row */}
       <div className="flex gap-4">
         <div>
-          <Label className="mb-2 block">Team Lead</Label>
+          <Label className="mb-2 block">{t('teams.details.fields.teamLead')}</Label>
           <UserPicker
             id="team-lead-picker"
             value={selectedManagerId || ''}
@@ -417,11 +419,11 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
             labelStyle="none"
             buttonWidth="fit"
             size="sm"
-            placeholder="Select a team lead"
+            placeholder={t('teams.details.placeholders.selectTeamLead')}
           />
         </div>
         <div>
-          <Label className="mb-2 block">Add Member</Label>
+          <Label className="mb-2 block">{t('teams.details.fields.addMember')}</Label>
           <UserPicker
             id="add-member-picker"
             value=""
@@ -431,7 +433,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
             labelStyle="none"
             buttonWidth="fit"
             size="sm"
-            placeholder="Select a user to add"
+            placeholder={t('teams.details.placeholders.selectUserToAdd')}
           />
         </div>
       </div>
@@ -440,7 +442,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
       {hasUnsavedChanges && (
         <Alert variant="info" id="unsaved-changes-alert">
           <AlertDescription className="flex items-center justify-between">
-            <span>You have unsaved changes</span>
+            <span>{t('teams.details.alert.unsavedChanges')}</span>
             <div className="flex gap-2">
               <Button
                 id="discard-changes-btn"
@@ -449,7 +451,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
                 onClick={handleDiscardChanges}
                 disabled={isSaving}
               >
-                Discard
+                {t('teams.details.actions.discard')}
               </Button>
               <Button
                 id="save-team-changes-btn"
@@ -457,7 +459,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
                 onClick={() => void handleSaveAll()}
                 disabled={isSaving}
               >
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? t('experimentalFeatures.actions.saving') : t('teams.details.actions.saveChanges')}
               </Button>
             </div>
           </AlertDescription>
@@ -468,7 +470,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
 
       {/* Team Members */}
       <div>
-        <Label className="mb-2">Team Members</Label>
+        <Label className="mb-2">{t('teams.details.table.teamMembers')}</Label>
         <DataTable
           columns={memberColumns}
           data={displayMembers}

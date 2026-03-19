@@ -16,3 +16,4 @@ export * from './resend-welcome-email-workflow.js';
 export * from './tenant-deletion-workflow.js';
 export * from './tenant-export-workflow.js';
 export * from './sla-ticket-workflow.js';
+export * from './premium-trial-expiry-workflow.js';

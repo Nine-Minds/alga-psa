@@ -1,6 +1,6 @@
 
 import { z } from 'zod';
-import { timeEntrySchema } from '../schemas/timeSheet.schemas';
+import { timeEntrySchema, timeSheetStatusSchema } from '../schemas/timeSheet.schemas';
 
 export const fetchTimeEntriesParamsSchema = z.object({
   timeSheetId: z.string().min(1, "Time sheet ID is required"),
@@ -19,6 +19,14 @@ export const saveTimeEntryParamsSchema = timeEntrySchema.superRefine((data, ctx)
 });
 
 export type SaveTimeEntryParams = z.infer<typeof saveTimeEntryParamsSchema>;
+
+export const updateTimeEntryApprovalStatusParamsSchema = z.object({
+  entryId: z.string().min(1, 'Time entry ID is required'),
+  approvalStatus: timeSheetStatusSchema,
+  changeRequestComment: z.string().trim().optional(),
+});
+
+export type UpdateTimeEntryApprovalStatusParams = z.infer<typeof updateTimeEntryApprovalStatusParamsSchema>;
 
 export const addWorkItemParamsSchema = z.object({
   work_item_id: z.string(),

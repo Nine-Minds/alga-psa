@@ -1,9 +1,10 @@
 import crypto from 'crypto';
 import { z } from 'zod';
 import { getConnection } from '../db/db';
-import { ApiKeyService } from '../services/apiKeyService';
+import { ApiKeyService } from '@alga-psa/auth';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
+
 import { UnauthorizedError } from '../api/middleware/apiMiddleware';
 import { auditLog } from '../logging/auditLog';
 import { enforceMobileOttExchangeLimit, enforceMobileRefreshLimit } from '../security/mobileAuthRateLimiting';
@@ -231,7 +232,7 @@ export type ExchangeOttResult = {
   refreshToken: string;
   expiresInSec: number;
   tenantId: string;
-  user?: { id: string; email?: string; name?: string };
+  user?: { id: string; email?: string; name?: string; avatarUrl?: string };
 };
 
 export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSchema>): Promise<ExchangeOttResult> {
@@ -308,7 +309,7 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
       refreshToken,
       expiresInSec: config.accessTtlSec,
       tenantId,
-      user: user ? { id: userId, email: user.email ?? undefined, name } : { id: userId },
+      user: user ? { id: userId, email: user.email ?? undefined, name, avatarUrl: user.avatarUrl ?? undefined } : { id: userId },
     };
   } catch (e) {
     // Best-effort cleanup: don't leave an active API key if refresh token creation fails.

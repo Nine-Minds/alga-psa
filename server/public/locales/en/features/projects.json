@@ -33,7 +33,60 @@
   "phases": {
     "title": "Project Phases",
     "completion": "Complete",
-    "noPhases": "No phases to display"
+    "noPhases": "No phases to display",
+    "statusColumns": "Status columns",
+    "statusColumnsProjectDefaults": "Project defaults",
+    "statusColumnsCustom": "Custom ({{count}} statuses)",
+    "configureStatuses": "Configure"
+  },
+  "settings": {
+    "statuses": {
+      "project": {
+        "title": "Task Status Columns",
+        "description": "Configure which status columns are available for tasks",
+        "add_from_library": "Add Status"
+      },
+      "closed": "Closed",
+      "confirm_delete_title": "Delete Status",
+      "confirm_delete": "Remove \"{{statusName}}\"?",
+      "delete_error": "Failed to delete status",
+      "scope_label": "Status Scope",
+      "scope_placeholder": "Select a status scope",
+      "scope_project_defaults": "Project Defaults",
+      "use_project_defaults": "Use project defaults",
+      "custom_statuses": "Custom statuses",
+      "phase_uses_defaults": "This phase uses the project default status columns.",
+      "copy_from_defaults": "Copy from project defaults",
+      "add_custom_status": "Add custom status",
+      "revert_title": "Revert to Project Defaults",
+      "revert_message": "Remove this phase's custom statuses and revert to project defaults?",
+      "revert_confirm": "Revert",
+      "copy_failed": "Failed to copy project defaults to this phase.",
+      "revert_failed": "Failed to revert this phase to project defaults.",
+      "delete_has_tasks": "\"{{statusName}}\" has {{count}} task(s). Move them to:",
+      "delete_and_move": "Move & Delete"
+    }
+  },
+  "templates": {
+    "statuses": {
+      "manage_title": "Manage Status Columns",
+      "manage_description": "Define the status columns for tasks in this template. Drag to reorder.",
+      "template_defaults": "Template Defaults",
+      "added": "Status column added",
+      "removed": "Status column removed",
+      "copied_to_phase": "Template defaults copied to phase",
+      "reverted": "Phase reverted to template defaults",
+      "revert_message": "Remove this phase's custom status columns and fall back to the template defaults?",
+      "remove_title": "Remove Status Column",
+      "remove_message": "Remove this status column? Tasks in this column will be moved to the first column.",
+      "remove_confirm": "Remove",
+      "empty": "No status columns yet",
+      "empty_hint": "Add status columns to organize tasks",
+      "add_title": "Add Status Column",
+      "select_placeholder": "Select a status...",
+      "all_in_use": "All available statuses are in use",
+      "create_new": "Create New"
+    }
   },
   "documents": {
     "title": "Attachments",

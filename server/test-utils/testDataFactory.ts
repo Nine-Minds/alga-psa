@@ -27,7 +27,7 @@ export async function createTenant(
     payment_platform_id: `test-platform-${tenantId.substring(0, 8)}`,
     payment_method_id: `test-method-${tenantId.substring(0, 8)}`,
     auth_service_id: `test-auth-${tenantId.substring(0, 8)}`,
-    plan: 'test'
+    plan: 'pro'
   });
 
   return tenantId;

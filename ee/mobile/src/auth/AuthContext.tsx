@@ -5,7 +5,7 @@ export type MobileSession = {
   refreshToken: string;
   expiresAtMs: number;
   tenantId?: string;
-  user?: { id: string; email?: string; name?: string };
+  user?: { id: string; email?: string; name?: string; avatarUrl?: string };
 };
 
 export type AuthContextValue = {

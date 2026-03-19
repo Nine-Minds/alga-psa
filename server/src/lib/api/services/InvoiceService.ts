@@ -26,11 +26,10 @@ import {
 import { buildPaymentAppliedPayload, buildPaymentRecordedPayload, buildPaymentRefundedPayload } from './paymentWorkflowEvents';
 
 // Import existing service functions
-import * as invoiceService from '../../services/invoiceService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
-import { BillingEngine } from '../../billing/billingEngine';
+import { BillingEngine } from '@alga-psa/billing/services';
 import { TaxService } from '@alga-psa/billing/services/taxService';
-import { NumberingService } from '../../services/numberingService';
+import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '../../../services/pdf-generation.service';
 import { StorageService } from '../../storage/StorageService';
 
@@ -75,7 +74,7 @@ import {
   persistManualInvoiceCharges,
   calculateAndDistributeTax,
   updateInvoiceTotalsAndRecordTransaction
-} from '../../services/invoiceService';
+} from '@alga-psa/billing/services/invoiceService';
 
 export interface InvoiceServiceContext extends ServiceContext {
   permissions?: string[];
@@ -1533,7 +1532,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const { knex, tenant } = await this.getKnex();
     const invoiceId = uuidv4();
-    const numberingService = new NumberingService();
+    const numberingService = new NumberingService({ knex, tenant });
     const invoiceNumber = await numberingService.getNextNumber('INVOICE');
     const currentDate = Temporal.Now.plainDateISO().toString();
     const sessionLike = { user: { id: context.userId } } as { user: { id: string } };

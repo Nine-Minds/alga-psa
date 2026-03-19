@@ -2,13 +2,12 @@ import { beforeAll, afterAll, beforeEach, describe, expect, it, vi, waitFor } fr
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig.ts';
-import { addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '../../../lib/actions/scheduleActions';
+import { addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '@alga-psa/scheduling/actions/scheduleActions';
 import { registerCalendarSyncSubscriber } from '../../../lib/eventBus/subscribers/calendarSyncSubscriber';
 
 const modulePaths = vi.hoisted(() => {
-  const calendarActionsModuleUrl = new URL('../../../lib/actions/calendarActions.ts', import.meta.url);
-  const libDbModulePath = new URL('../../lib/db/index.tsx', calendarActionsModuleUrl).pathname;
-  const rootDbModulePath = new URL('../../db.ts', calendarActionsModuleUrl).pathname;
+  const libDbModulePath = new URL('../../../lib/db/index.tsx', import.meta.url).pathname;
+  const rootDbModulePath = new URL('../../../db.ts', import.meta.url).pathname;
   const eventBusIndexModulePath = new URL('../../../lib/eventBus/index.ts', import.meta.url).pathname;
 
   return {
@@ -107,7 +106,7 @@ vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUserPermissions: vi.fn(async () => shared.permissions),
 }));
 
-vi.mock('@/services/calendar/CalendarSyncService', () => ({
+vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
   CalendarSyncService: class {
     async syncScheduleEntryToExternal(entryId: string, providerId: string) {
       shared.syncCalls.push({ entryId, providerId });
@@ -126,7 +125,7 @@ vi.mock('@/services/calendar/CalendarSyncService', () => ({
   },
 }));
 
-vi.mock('@/services/calendar/CalendarProviderService', () => ({
+vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: class {
     async getProviders(filter: { tenant: string; isActive?: boolean }) {
       if (!shared.db) throw new Error('Database not initialized');
@@ -144,8 +143,13 @@ describe('Schedule entry creation triggers calendar sync', () => {
   const userId = uuidv4();
   const providerId = uuidv4();
   let db: Knex;
+  const originalEdition = process.env.EDITION;
+  const originalPublicEdition = process.env.NEXT_PUBLIC_EDITION;
 
   beforeAll(async () => {
+    process.env.EDITION = 'ee';
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
     eventHandlers.clear();
     db = await createTestDbConnection();
     await db.migrate.latest();
@@ -200,6 +204,18 @@ describe('Schedule entry creation triggers calendar sync', () => {
   });
 
   afterAll(async () => {
+    if (originalEdition === undefined) {
+      delete process.env.EDITION;
+    } else {
+      process.env.EDITION = originalEdition;
+    }
+
+    if (originalPublicEdition === undefined) {
+      delete process.env.NEXT_PUBLIC_EDITION;
+    } else {
+      process.env.NEXT_PUBLIC_EDITION = originalPublicEdition;
+    }
+
     if (db) {
       await db('calendar_providers').where({ tenant: tenantId }).del();
       await db('schedule_entries').where({ tenant: tenantId }).del();

@@ -1,0 +1,1259 @@
+{
+  "page": {
+    "title": "Beheerdersinstellingen"
+  },
+  "tabs": {
+    "general": "Algemeen",
+    "experimentalFeatures": "Experimentele functies",
+    "clientPortal": "Klantenportaal",
+    "users": "Gebruikers",
+    "teams": "Teams",
+    "language": "Taal",
+    "ticketing": "Ticketing",
+    "projects": "Projecten",
+    "interactions": "Interacties",
+    "notifications": "Meldingen",
+    "timeEntry": "Tijdregistratie",
+    "billing": "Facturatie",
+    "secrets": "Geheimen",
+    "importExport": "Import/Export",
+    "email": "E-mail",
+    "integrations": "Integraties",
+    "extensions": "Extensies"
+  },
+  "unsavedChanges": {
+    "title": "Niet-opgeslagen wijzigingen",
+    "message": "U heeft niet-opgeslagen wijzigingen. Weet u zeker dat u wilt vertrekken? Uw wijzigingen gaan verloren."
+  },
+  "general": {
+    "title": "Algemene instellingen",
+    "description": "Beheer uw organisatienaam en standaardklant. De standaardklant wordt gebruikt voor configuratiedoeleinden en vertegenwoordigt uw MSP.",
+    "fields": {
+      "organizationName": {
+        "label": "Organisatienaam"
+      },
+      "defaultTimezone": {
+        "label": "Standaard tijdzone",
+        "help": "Wordt gebruikt voor e-mails en meldingen wanneer een gebruiker geen eigen tijdzone heeft ingesteld."
+      }
+    },
+    "actions": {
+      "saveOrganizationName": "Organisatienaam opslaan",
+      "saveDefaultTimezone": "Standaard tijdzone opslaan"
+    },
+    "clients": {
+      "title": "Klanten",
+      "table": {
+        "name": "Naam",
+        "default": "Standaard",
+        "actions": "Acties"
+      },
+      "placeholder": "Selecteer een klant om toe te voegen",
+      "addClient": "Klant toevoegen"
+    },
+    "messages": {
+      "success": {
+        "tenantNameUpdated": "Tenantnaam succesvol bijgewerkt",
+        "timezoneUpdated": "Standaard tijdzone succesvol bijgewerkt",
+        "clientAdded": "Klant succesvol toegevoegd",
+        "clientRemoved": "Klant succesvol verwijderd",
+        "defaultClientUpdated": "Standaardklant succesvol bijgewerkt"
+      },
+      "error": {
+        "loadTenantData": "Kan tenantgegevens niet laden",
+        "updateTenantName": "Kan tenantnaam niet bijwerken",
+        "updateTimezone": "Kan tijdzone niet bijwerken",
+        "selectClient": "Selecteer een klant",
+        "clientNotFound": "Klant niet gevonden",
+        "addClient": "Kan klant niet toevoegen",
+        "removeClient": "Kan klant niet verwijderen",
+        "setDefaultClient": "Kan standaardklant niet instellen",
+        "loadClients": "Kan klanten niet laden"
+      }
+    }
+  },
+  "experimentalFeatures": {
+    "title": "Experimentele functies",
+    "description": "Schakel experimentele functies in of uit voor uw tenant.",
+    "alert": {
+      "title": "Experimenteel",
+      "description": "Experimentele functies kunnen zonder voorafgaande kennisgeving worden gewijzigd of verwijderd."
+    },
+    "features": {
+      "aiAssistant": {
+        "name": "AI-assistent",
+        "description": "Schakel AI-gestuurde Snel Vragen en Chat-zijbalk in.",
+        "restriction": "Alleen beschikbaar voor de hoofd-facturatietenant."
+      },
+      "workflowAutomation": {
+        "name": "Workflowautomatisering",
+        "description": "Schakel experimentele workflowautomatiseringsfuncties in het workflowbedieningspaneel en de editor in."
+      }
+    },
+    "actions": {
+      "save": "Opslaan",
+      "saving": "Opslaan...",
+      "retry": "Opnieuw proberen"
+    },
+    "loading": "Experimentele functies laden...",
+    "messages": {
+      "success": {
+        "saved": "Instellingen voor experimentele functies opgeslagen. Herlaad de pagina om de wijzigingen toe te passen."
+      },
+      "error": {
+        "loadFailed": "Kan instellingen voor experimentele functies niet laden.",
+        "saveFailed": "Kan experimentele functie-instellingen niet opslaan."
+      }
+    }
+  },
+  "users": {
+    "title": "Gebruikersbeheer",
+    "description": {
+      "msp": "Beheer MSP-gebruikers en -machtigingen",
+      "client": "Beheer klantenportaalgebruikers en hun toegang"
+    },
+    "viewSwitcher": {
+      "msp": "MSP",
+      "clientPortal": "Klantenportaal"
+    },
+    "license": {
+      "usage": "MSP-gebruikers: {{used}}{{limit}} licenties gebruikt",
+      "noLimit": " (Geen limiet)",
+      "ofLimit": " van {{limit}}",
+      "addLicensePrompt": "Om een nieuwe gebruiker toe te voegen moet u aanvullende licenties aanschaffen",
+      "addLicense": "Licentie toevoegen"
+    },
+    "search": "Gebruikers zoeken",
+    "filter": {
+      "all": "Alle gebruikers",
+      "active": "Actieve gebruikers",
+      "inactive": "Inactieve gebruikers",
+      "selectStatus": "Status selecteren"
+    },
+    "tabs": {
+      "list": "Lijst",
+      "structure": "Structuur",
+      "listDescription": "Beheer individuele gebruikers, rollen en machtigingen.",
+      "structureDescription": "Visualiseer en beheer de organisatorische rapportagehiërarchie."
+    },
+    "actions": {
+      "createNewUser": "Nieuwe gebruiker aanmaken",
+      "createNewClientUser": "Nieuwe klantgebruiker aanmaken",
+      "copyPortalLink": "Portaalinloglink kopiëren",
+      "copying": "Kopiëren...",
+      "createUser": "Gebruiker aanmaken",
+      "sendInvitation": "Portaaluitnodiging verzenden",
+      "cancel": "Annuleren"
+    },
+    "form": {
+      "title": {
+        "msp": "Nieuwe MSP-gebruiker aanmaken",
+        "client": "Nieuwe klantenportaalgebruiker aanmaken"
+      },
+      "fields": {
+        "firstName": "Voornaam",
+        "lastName": "Achternaam",
+        "email": "E-mail",
+        "client": "Klant",
+        "clientOptional": "(optioneel)",
+        "primaryRole": "Primaire rol",
+        "selectRole": "Rol selecteren",
+        "reportsTo": "Rapporteert aan",
+        "reportsToOptional": "(optioneel)",
+        "selectManager": "Manager selecteren",
+        "existingContact": "Bestaand contactpersoon",
+        "existingContactOptional": "(optioneel)",
+        "selectExistingContact": "Bestaand contactpersoon selecteren (optioneel)",
+        "selectExistingContactRequired": "Bestaand contactpersoon selecteren",
+        "selectContactToInvite": "Contactpersoon selecteren om uit te nodigen",
+        "password": "Wachtwoord",
+        "passwordOptional": "(Laat leeg om een uitnodiging te verzenden)",
+        "passwordPlaceholder": {
+          "msp": "Wachtwoord invoeren",
+          "client": "Laat leeg om een uitnodiging te verzenden"
+        },
+        "selectClient": "Klant selecteren"
+      },
+      "passwordAlert": {
+        "withPassword": "Door een wachtwoord in te stellen wordt de gebruiker direct aangemaakt. De gebruiker kan meteen inloggen.",
+        "withoutPassword": "Geen wachtwoord vereist — wij sturen een portaaluitnodiging zodat de gebruiker het zelf kan instellen."
+      },
+      "requirePasswordChange": "Wachtwoordwijziging vereisen bij eerste aanmelding"
+    },
+    "table": {
+      "firstName": "Voornaam",
+      "lastName": "Achternaam",
+      "email": "E-mail",
+      "client": "Klant",
+      "role": "Rol",
+      "lastLogin": "Laatste aanmelding",
+      "actions": "Acties",
+      "noClient": "Geen klant",
+      "noRole": "Geen rol",
+      "never": "Nooit",
+      "viaMethod": "via {{method}}",
+      "loading": "Laden...",
+      "openMenu": "Menu openen",
+      "edit": "Bewerken",
+      "remove": "Verwijderen"
+    },
+    "loading": "Gebruikers laden...",
+    "messages": {
+      "success": {
+        "portalInvitationSent": "Portaaluitnodiging succesvol verzonden!",
+        "clientPortalUserCreated": "Klantenportaalgebruiker succesvol aangemaakt!",
+        "copiedVanityLink": "Aangepaste portaalinloglink gekopieerd naar klembord",
+        "copiedCanonicalLink": "Canonieke portaalinloglink gekopieerd naar klembord"
+      },
+      "error": {
+        "fetchUsers": "Kan gebruikers niet ophalen",
+        "fetchRoles": "Kan rollen niet ophalen",
+        "fetchClients": "Kan klanten niet ophalen",
+        "createUser": "Kan gebruiker niet aanmaken",
+        "sendInvitation": "Kan uitnodiging niet verzenden",
+        "sendInvitationManual": "Kan uitnodiging niet verzenden. U kunt deze handmatig verzenden vanuit de gebruikerslijst.",
+        "createClientPortalUser": "Kan klantenportaalgebruiker niet aanmaken",
+        "clipboardUnavailable": "Klembord-API is niet beschikbaar in deze browser.",
+        "copyPortalLink": "Kan portaalinloglink niet kopiëren",
+        "fillRequiredFields": "Vul alle verplichte velden in",
+        "fixValidationErrors": "Corrigeer de validatiefouten voordat u verdergaat",
+        "fixValidationBeforeInvitation": "Corrigeer de validatiefouten voordat u de uitnodiging verstuurt",
+        "emailAlreadyInUse": "Dit e-mailadres is al in gebruik. Gebruik een ander e-mailadres.",
+        "portalUserExists": "Er bestaat al een portaalgebruiker voor dit contactpersoon of e-mailadres.",
+        "portalUserExistsForContact": "Er bestaat al een portaalgebruiker voor dit contactpersoon. Gebruik wachtwoord herstellen voor de bestaande gebruiker.",
+        "selectAppropriateRole": "Selecteer een geschikte rol voor dit gebruikerstype",
+        "contactMissingEmail": "Contactpersoon \"{{name}}\" heeft geen e-mailadres. Werk het e-mailadres van het contactpersoon bij voordat u een uitnodiging verstuurt.",
+        "licenseLimit": "Kan gebruiker niet activeren: licentielimiet bereikt. Deactiveer een andere gebruiker of upgrade uw licentie."
+      }
+    }
+  },
+  "userDetails": {
+    "title": "Gebruikersgegevens",
+    "fields": {
+      "firstName": {
+        "label": "Voornaam",
+        "placeholder": "Voornaam invoeren"
+      },
+      "lastName": {
+        "label": "Achternaam",
+        "placeholder": "Achternaam invoeren"
+      },
+      "email": {
+        "label": "E-mail",
+        "placeholder": "E-mail invoeren"
+      },
+      "reportsTo": {
+        "label": "Rapporteert aan",
+        "placeholder": "Manager selecteren"
+      },
+      "lastLogin": "Laatste aanmelding",
+      "roles": "Rollen",
+      "status": "Status",
+      "statusHelp": "Stel de status van het gebruikersaccount in",
+      "newPassword": "Nieuw wachtwoord"
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "inactiveTag": "(Inactief)"
+    },
+    "actions": {
+      "addRole": "Rol toevoegen",
+      "selectRoleToAdd": "Selecteer rol om toe te voegen",
+      "removeRole": "Verwijderen",
+      "setPassword": "Wachtwoord instellen",
+      "cancel": "Annuleren",
+      "saveChanges": "Wijzigingen opslaan"
+    },
+    "dialog": {
+      "setPassword": {
+        "title": "Gebruikerswachtwoord instellen (Beheerder)"
+      }
+    },
+    "messages": {
+      "success": {
+        "passwordChanged": "Wachtwoord succesvol gewijzigd",
+        "userUpdated": "Gebruiker succesvol bijgewerkt"
+      },
+      "error": {
+        "userNotFound": "Gebruiker niet gevonden",
+        "loadFailed": "Kan gebruikersgegevens niet laden. Probeer het opnieuw.",
+        "addRoleFailed": "Kan rol niet toevoegen. Probeer het opnieuw.",
+        "removeRoleFailed": "Kan rol niet verwijderen. Probeer het opnieuw.",
+        "updateUserNotFound": "Kan gebruiker niet bijwerken. Gebruiker niet gevonden.",
+        "updateFailed": "Kan gebruiker niet bijwerken. Probeer het opnieuw.",
+        "passwordTooShort": "Wachtwoord moet minimaal 8 tekens lang zijn",
+        "passwordChangeFailed": "Kan wachtwoord niet wijzigen",
+        "passwordChangeError": "Er is een fout opgetreden bij het wijzigen van het wachtwoord"
+      }
+    }
+  },
+  "teams": {
+    "title": "Teambeheer",
+    "description": "Maak en beheer teams, wijs teamleiders toe en organiseer leden binnen uw organisatie",
+    "loading": "Teams laden...",
+    "emptyState": "Selecteer een team om leden te beheren",
+    "list": {
+      "title": "Teams",
+      "addNewTeam": "Nieuw team toevoegen",
+      "createTeam": "Team aanmaken",
+      "cancel": "Annuleren",
+      "delete": "Verwijderen",
+      "placeholder": "Nieuwe teamnaam invoeren",
+      "selectManager": "Selecteer een manager"
+    },
+    "details": {
+      "loading": "Teamgegevens laden...",
+      "notFound": "Geen team gevonden",
+      "fields": {
+        "teamLead": "Teamleider",
+        "addMember": "Lid toevoegen"
+      },
+      "placeholders": {
+        "teamName": "Teamnaam invoeren",
+        "selectTeamLead": "Selecteer een teamleider",
+        "selectUserToAdd": "Selecteer een gebruiker om toe te voegen"
+      },
+      "alert": {
+        "unsavedChanges": "U heeft niet-opgeslagen wijzigingen"
+      },
+      "actions": {
+        "discard": "Verwerpen",
+        "saveChanges": "Wijzigingen opslaan",
+        "saveName": "Naam opslaan",
+        "cancel": "Annuleren",
+        "editName": "Naam bewerken",
+        "remove": "Verwijderen"
+      },
+      "table": {
+        "teamMembers": "Teamleden",
+        "member": "Lid",
+        "role": "Rol"
+      },
+      "badge": {
+        "new": "Nieuw",
+        "lead": "Leider"
+      },
+      "memberCount": "{{count}} lid",
+      "memberCount_plural": "{{count}} leden",
+      "leadName": "Leider: {{name}}"
+    },
+    "messages": {
+      "error": {
+        "loadFailed": "Kan teams niet laden. Probeer het opnieuw.",
+        "fetchUsers": "Kan gebruikers niet ophalen",
+        "createFailed": "Kan team niet aanmaken: {{error}}",
+        "deleteFailed": "Kan team niet verwijderen"
+      }
+    }
+  },
+  "ticketing": {
+    "title": "Ticketinstellingen",
+    "tabs": {
+      "display": "Weergave",
+      "ticketNumbering": "Ticketnummering",
+      "boards": "Borden",
+      "statuses": "Statussen",
+      "priorities": "Prioriteiten",
+      "categories": "Categorieën"
+    },
+    "numbering": {
+      "title": "Nummerformaat",
+      "description": "Definieer het voorvoegsel, het aantal cijfers en de huidige reeks",
+      "fields": {
+        "prefix": {
+          "label": "Ticketnummer-voorvoegsel",
+          "placeholder": "TK-",
+          "help": "Optioneel voorvoegsel voor ticketnummers. Laat leeg voor geen voorvoegsel of voer een aangepast voorvoegsel in (bijv. 'TK-')"
+        },
+        "minimumDigits": {
+          "label": "Minimum aantal cijfers",
+          "help": "Minimaal aantal cijfers voor het volgnummer. Bijvoorbeeld, 6 maakt van '1' '000001'"
+        },
+        "initialValue": {
+          "label": "Beginwaarde",
+          "placeholder": "Waarde invoeren",
+          "help": "Stel het startnummer voor de reeks in. Dit kan slechts eenmaal worden ingesteld."
+        },
+        "lastUsedNumber": {
+          "label": "Laatst gebruikt nummer",
+          "help": "Het laatst toegewezen nummer. Het volgende nummer zal één hoger zijn dan deze waarde."
+        },
+        "nextPreview": {
+          "label": "Voorbeeld volgend ticketnummer",
+          "help": "Dit is het nummer dat aan het volgende ticket wordt toegewezen"
+        }
+      },
+      "actions": {
+        "saveChanges": "Wijzigingen opslaan",
+        "cancel": "Annuleren"
+      },
+      "dialog": {
+        "title": "Ticketnummerinstellingen bijwerken",
+        "message": "Het wijzigen van deze instellingen heeft invloed op hoe nieuwe ticketnummers worden gegenereerd. Deze wijziging heeft geen invloed op bestaande tickets. Weet u zeker dat u wilt doorgaan?",
+        "confirm": "Instellingen bijwerken"
+      },
+      "loading": "Laden...",
+      "messages": {
+        "error": {
+          "noSettings": "Geen ticketnummerinstellingen gevonden. Neem contact op met uw beheerder.",
+          "loadFailed": "Kan ticketnummerinstellingen niet laden",
+          "updateFailed": "Kan instellingen niet bijwerken"
+        },
+        "success": {
+          "updated": "Ticketnummerinstellingen succesvol bijgewerkt"
+        }
+      }
+    },
+    "statuses": {
+      "title": "Ticketstatussen",
+      "alert": "Standaardstatus: Wanneer klanten tickets aanmaken via het klantenportaal, wordt automatisch de status toegewezen die als standaard is gemarkeerd. Er kan slechts één status tegelijk als standaard worden ingesteld.",
+      "table": {
+        "name": "Naam",
+        "status": "Status",
+        "default": "Standaard",
+        "order": "Volgorde",
+        "actions": "Acties"
+      },
+      "statusLabels": {
+        "closed": "Gesloten",
+        "open": "Open",
+        "closedHelp": "Tickets met deze status worden als gesloten gemarkeerd",
+        "openHelp": "Tickets met deze status blijven open",
+        "defaultHelp": "Standaardstatus voor nieuwe tickets vanuit het klantenportaal"
+      },
+      "actions": {
+        "addStatus": "Status toevoegen",
+        "importStandard": "Importeren vanuit standaardstatussen",
+        "edit": "Bewerken",
+        "delete": "Verwijderen"
+      },
+      "messages": {
+        "success": {
+          "deleted": "Status succesvol verwijderd",
+          "updated": "Status succesvol bijgewerkt"
+        },
+        "error": {
+          "lastClosed": "Ten minste één status moet als gesloten gemarkeerd blijven",
+          "deleteLastClosed": "Kan de laatste gesloten status voor dit type niet verwijderen.",
+          "removeDefault": "Kan de standaardstatus niet verwijderen van de laatste standaardstatus"
+        }
+      }
+    },
+    "boards": {
+      "title": "Borden",
+      "alert": "Borden organiseren tickets in logische groepen. Elk bord kan een eigen standaardagent, prioriteit en SLA-beleid hebben.",
+      "table": {
+        "name": "Naam",
+        "description": "Beschrijving",
+        "status": "Status",
+        "default": "Standaard",
+        "defaultAgent": "Standaardagent",
+        "defaultPriority": "Standaardprioriteit",
+        "boardManager": "Bordverantwoordelijke",
+        "order": "Volgorde",
+        "itilBoard": "ITIL-bord",
+        "actions": "Acties"
+      },
+      "statusLabels": {
+        "active": "Actief",
+        "inactive": "Inactief"
+      },
+      "actions": {
+        "addBoard": "Bord toevoegen",
+        "importStandard": "Importeren vanuit standaardborden",
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "close": "Sluiten",
+        "create": "Aanmaken",
+        "update": "Bijwerken",
+        "importSelected": "Selectie importeren"
+      },
+      "fields": {
+        "boardName": {
+          "label": "Bordnaam",
+          "placeholder": "Voer de bordnaam in"
+        },
+        "description": {
+          "label": "Beschrijving",
+          "placeholder": "Voer de bordbeschrijving in"
+        },
+        "displayOrder": {
+          "label": "Weergavevolgorde",
+          "placeholder": "Voer de weergavevolgorde in",
+          "help": "Bepaalt de volgorde waarin borden in de lijst verschijnen"
+        },
+        "inactive": "Markeer als inactief",
+        "itilCompliant": "ITIL-conform",
+        "boardConfiguration": "Bordconfiguratie",
+        "boardManager": {
+          "label": "Bordverantwoordelijke",
+          "placeholder": "Selecteer een bordverantwoordelijke",
+          "help": "De gebruiker die verantwoordelijk is voor het beheer van dit bord"
+        },
+        "defaultAssignedAgent": {
+          "label": "Standaard toegewezen agent",
+          "placeholder": "Selecteer standaardagent",
+          "help": "Nieuwe tickets op dit bord worden standaard aan deze agent toegewezen"
+        },
+        "defaultPriority": {
+          "label": "Standaardprioriteit",
+          "placeholder": "Selecteer standaardprioriteit",
+          "help": "Nieuwe tickets op dit bord gebruiken standaard deze prioriteit",
+          "none": "Geen"
+        },
+        "slaPolicy": {
+          "label": "SLA-beleid",
+          "placeholder": "Selecteer SLA-beleid",
+          "help": "Het SLA-beleid dat op tickets op dit bord wordt toegepast",
+          "none": "Geen"
+        }
+      },
+      "dialog": {
+        "addBoard": "Bord toevoegen",
+        "editBoard": "Bord bewerken",
+        "deleteBoardTitle": "Bord verwijderen",
+        "deleteBoardMessage": "Hiermee wordt het bord permanent verwijderd.",
+        "cleanupItilTitle": "ITIL-bord opschonen",
+        "cleanupItilMessage": "Hiermee worden de ITIL-categorieën en prioriteitsmatrix verwijderd die aan dit bord zijn gekoppeld.",
+        "deleteOnly": "Alleen verwijderen",
+        "deleteAndCleanup": "Verwijderen en opschonen",
+        "deleteAll": "Alles verwijderen",
+        "importTitle": "Standaardborden importeren",
+        "importDescription": "Selecteer standaardborden om in uw organisatie te importeren:",
+        "importEmpty": "Geen standaardborden beschikbaar om te importeren.",
+        "conflictsTitle": "Importconflicten oplossen",
+        "conflictsDescription": "De volgende items hebben conflicten die moeten worden opgelost:",
+        "nameConflict": "Naam bestaat al",
+        "skipItem": "Dit item overslaan",
+        "importNewName": "Importeren met een andere naam:",
+        "importWithResolutions": "Importeren met oplossingen",
+        "orderConflict": "Volgorde {{order}} is al in gebruik",
+        "importWithOrder": "Importeren met volgorde {{order}}"
+      },
+      "importTable": {
+        "active": "Actief"
+      },
+      "itilInfo": {
+        "title": "ITIL-informatie",
+        "tooltip": "Dit bord volgt ITIL-best-practices",
+        "categoriesTitle": "ITIL-categorieën",
+        "priorityMatrixTitle": "Prioriteitsmatrix",
+        "impactDescription": "Impactniveaus definiëren de reikwijdte van het probleem",
+        "urgencyDescription": "Urgentieniveaus definiëren hoe snel het probleem moet worden opgelost",
+        "priorityDescription": "Prioriteit wordt berekend op basis van impact en urgentie"
+      },
+      "messages": {
+        "success": {
+          "created": "Bord succesvol aangemaakt",
+          "updated": "Bord succesvol bijgewerkt",
+          "deleted": "Bord succesvol verwijderd",
+          "imported": "Borden succesvol geïmporteerd"
+        },
+        "error": {
+          "fetchFailed": "Kan borden niet laden",
+          "fetchAvailableFailed": "Kan beschikbare borden voor import niet ophalen",
+          "nameRequired": "Bordnaam is verplicht",
+          "saveFailed": "Kan bord niet opslaan",
+          "lastDefault": "Kan het laatste standaardbord niet verwijderen"
+        }
+      }
+    }
+  },
+  "interactions": {
+    "title": "Interactie-instellingen",
+    "tabs": {
+      "types": "Interactietypen",
+      "statuses": "Interactiestatussen"
+    },
+    "types": {
+      "title": "Interactietypen",
+      "loading": "Interactietypen laden...",
+      "table": {
+        "name": "Naam",
+        "order": "Volgorde",
+        "actions": "Acties"
+      },
+      "actions": {
+        "addType": "Interactietype toevoegen",
+        "importStandard": "Importeren vanuit standaard interactietypen",
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "importSelected": "Geselecteerde importeren"
+      },
+      "dialog": {
+        "import": {
+          "title": "Standaard interactietypen importeren",
+          "description": "Selecteer standaard interactietypen om te importeren in uw organisatie:",
+          "empty": "Geen standaard interactietypen beschikbaar om te importeren."
+        },
+        "conflicts": {
+          "title": "Importconflicten oplossen",
+          "description": "De volgende items hebben conflicten die moeten worden opgelost:",
+          "nameConflict": "Naam bestaat al",
+          "orderConflict": "Volgorde {{order}} is al in gebruik",
+          "skipItem": "Dit item overslaan",
+          "importDifferentName": "Importeren met andere naam:",
+          "importDifferentOrder": "Importeren met volgorde {{order}}",
+          "resolve": "Importeren met oplossingen"
+        }
+      },
+      "messages": {
+        "success": {
+          "deleted": "Interactietype verwijderd",
+          "imported": "{{count}} interactietype geïmporteerd",
+          "imported_plural": "{{count}} interactietypen geïmporteerd"
+        },
+        "error": {
+          "fetchFailed": "Kan interactietypen niet ophalen",
+          "validateDeleteFailed": "Kan verwijdering van interactietype niet valideren",
+          "deleteFailed": "Kan interactietype niet verwijderen",
+          "checkConflicts": "Kan conflicten niet controleren",
+          "importFailed": "Kan interactietypen niet importeren",
+          "fetchAvailable": "Kan beschikbare interactietypen voor import niet ophalen"
+        }
+      }
+    },
+    "statuses": {
+      "title": "Interactiestatussen",
+      "alert": "Interactiestatussen: Volg de status van klantinteracties zoals gesprekken, e-mails en vergaderingen.",
+      "table": {
+        "name": "Naam",
+        "status": "Status",
+        "order": "Volgorde",
+        "actions": "Acties"
+      },
+      "statusLabels": {
+        "closedHelp": "Interacties met deze status worden als gesloten gemarkeerd",
+        "openHelp": "Interacties met deze status blijven open"
+      },
+      "actions": {
+        "addStatus": "Status toevoegen",
+        "importStandard": "Importeren vanuit standaard",
+        "edit": "Bewerken",
+        "delete": "Verwijderen"
+      },
+      "messages": {
+        "success": {
+          "updated": "Status succesvol bijgewerkt",
+          "deleted": "Status succesvol verwijderd",
+          "imported": "{{count}} statussen succesvol geïmporteerd"
+        },
+        "error": {
+          "lastClosed": "Ten minste één status moet als gesloten gemarkeerd blijven",
+          "deleteLastClosed": "Kan de laatste gesloten status voor dit type niet verwijderen."
+        }
+      }
+    },
+    "quickAdd": {
+      "dialog": {
+        "createTitle": "Interactietype aanmaken",
+        "editTitle": "Interactietype bewerken"
+      },
+      "fields": {
+        "name": {
+          "label": "Naam interactietype:",
+          "placeholder": "bijv. 'Klant onboarding-gesprek', 'Verkoopdemo', 'Projectevaluatie'"
+        },
+        "displayOrder": {
+          "label": "Weergavevolgorde:",
+          "placeholder": "bijv. 1, 2, 3..."
+        },
+        "icon": {
+          "label": "Kies een pictogram:"
+        }
+      },
+      "preview": {
+        "title": "Voorbeeld:",
+        "empty": "Voer hierboven een typenaam in"
+      },
+      "actions": {
+        "cancel": "Annuleren",
+        "create": "Type aanmaken",
+        "update": "Type bijwerken",
+        "creating": "Aanmaken...",
+        "updating": "Bijwerken..."
+      },
+      "messages": {
+        "error": {
+          "nameRequired": "Voer een naam in voor het interactietype.",
+          "saveFailed": "Kan interactietype niet {{action}}. Probeer het opnieuw."
+        }
+      }
+    }
+  },
+  "clientPortal": {
+    "language": {
+      "title": "Taalinstellingen",
+      "description": "Configureer de standaard taalinstellingen voor uw klantenportaal. Deze instellingen gelden voor alle gebruikers en klanten tenzij ze worden overschreven.",
+      "fields": {
+        "defaultLanguage": "Standaardtaal",
+        "availableLanguages": "Beschikbare talen"
+      },
+      "help": {
+        "defaultLanguage": "Dit wordt de standaardtaal voor alle klantenportaalgebruikers en e-mailmeldingen tenzij overschreven door een klantinstelling of individuele gebruikersvoorkeur",
+        "availableLanguages": "Selecteer welke talen beschikbaar zijn voor gebruikers om uit te kiezen"
+      },
+      "hierarchy": {
+        "title": "Taalvoorkeurhiërarchie",
+        "description": "Deze hiërarchie is van toepassing op zowel de klantenportaalinterface als e-mailmeldingen die naar klantenportaalgebruikers worden verzonden:",
+        "userPreference": "Individuele gebruikersvoorkeur (hoogste prioriteit)",
+        "clientDefault": "Standaardtaal van de klant",
+        "orgDefault": "Standaard van de organisatie (hier geconfigureerd)",
+        "systemDefault": "Systeemstandaard (Engels)",
+        "note": "Opmerking: Interne MSP-gebruikers ontvangen e-mails altijd in het Engels"
+      }
+    },
+    "branding": {
+      "title": "Huisstijl en uiterlijk",
+      "description": "Pas het uiterlijk van uw klantenportaal aan met uw bedrijfshuisstijl.",
+      "fields": {
+        "companyName": "Bedrijfsnaam",
+        "companyLogo": "Bedrijfslogo",
+        "colorPalette": "Kleurenpalet",
+        "primaryColor": "Primaire kleur",
+        "secondaryColor": "Secundaire kleur"
+      },
+      "help": {
+        "companyName": "Dit wordt weergegeven in de koptekst van het klantenportaal",
+        "companyLogo": "Aanbevolen: PNG of SVG, maximaal 2 MB, transparante achtergrond",
+        "primaryColor": "Wordt gebruikt voor knoppen, links en accenten",
+        "secondaryColor": "Wordt gebruikt voor accenten en secundaire acties"
+      },
+      "preview": "Voorbeeld",
+      "previewDarkMode": "Voorbeeld donkere modus",
+      "actions": {
+        "saveBranding": "Huisstijlinstellingen opslaan",
+        "previewDashboard": "Voorbeeld klantendashboard",
+        "hideDashboard": "Klantendashboard verbergen",
+        "previewSignIn": "Voorbeeld aanmeldpagina",
+        "hideSignIn": "Aanmeldpagina verbergen"
+      },
+      "customDomainRequired": "Aangepast domein moet zijn ingesteld"
+    },
+    "dashboardPreview": {
+      "title": "Uw klantenportaal",
+      "welcome": "Welkom terug!",
+      "subtitle": "Hier is een overzicht van uw accountactiviteit",
+      "openTickets": "Open tickets",
+      "activeProjects": "Actieve projecten",
+      "invoices": "Facturen",
+      "urgent": "{{count}} urgent",
+      "nearDeadline": "{{count}} bijna op deadline",
+      "dueThisMonth": "Verschuldigd deze maand",
+      "recentActivity": "Recente activiteit",
+      "ticketUpdated": "Ticket #1234 is bijgewerkt",
+      "hoursAgo": "{{count}} uur geleden",
+      "newInvoice": "Nieuwe factuur gegenereerd",
+      "milestoneCompleted": "Projectmijlpaal voltooid",
+      "dayAgo": "1 dag geleden",
+      "createTicket": "Ticket aanmaken",
+      "viewProjects": "Projecten bekijken"
+    },
+    "signInPreview": {
+      "portalTitle": "Klantenportaal",
+      "welcome": "Welkom bij uw klantenportaal",
+      "subtitle": "Beheer uw supporttickets en blijf verbonden",
+      "features": {
+        "submitTickets": {
+          "title": "Supporttickets indienen",
+          "description": "Maak en beheer uw supportverzoeken"
+        },
+        "trackStatus": {
+          "title": "Ticketstatus volgen",
+          "description": "Volg de voortgang in realtime"
+        },
+        "ticketHistory": {
+          "title": "Ticketgeschiedenis",
+          "description": "Bekijk uw volledige supportgeschiedenis"
+        },
+        "documentation": {
+          "title": "Toegang tot documentatie",
+          "description": "Bekijk gedeelde documenten en bronnen"
+        }
+      },
+      "signIn": {
+        "title": "Aanmelden",
+        "description": "Voer uw inloggegevens in om toegang te krijgen tot uw account.",
+        "email": "E-mail",
+        "emailPlaceholder": "Voer uw e-mailadres in",
+        "password": "Wachtwoord",
+        "passwordPlaceholder": "Voer uw wachtwoord in",
+        "forgotPassword": "Wachtwoord vergeten?",
+        "mspStaffLogin": "MSP-medewerker? Log hier in →"
+      }
+    }
+  },
+  "mspLanguage": {
+    "title": "Taal",
+    "description": "Configureer de standaard taalinstellingen voor het MSP-portaal. Deze instellingen gelden voor alle MSP-gebruikers tenzij ze worden overschreven door individuele voorkeuren.",
+    "fields": {
+      "defaultLanguage": "Standaardtaal",
+      "availableLanguages": "Beschikbare talen"
+    },
+    "help": {
+      "defaultLanguage": "Dit wordt de standaardtaal voor alle MSP-portaalgebruikers tenzij overschreven door hun persoonlijke voorkeur.",
+      "availableLanguages": "Selecteer welke talen beschikbaar zijn voor MSP-gebruikers om uit te kiezen"
+    },
+    "hierarchy": {
+      "title": "Taalvoorkeurhiërarchie",
+      "userPreference": "Individuele gebruikersvoorkeur (hoogste prioriteit)",
+      "orgDefault": "Standaard van de organisatie (hier geconfigureerd)",
+      "systemDefault": "Systeemstandaard (Engels)"
+    }
+  },
+  "notifications": {
+    "title": "Meldingsinstellingen",
+    "description": {
+      "email": "Configureer hoe uw tenant e-mailmeldingen verstuurt",
+      "internal": "Configureer hoe uw tenant interne meldingen verstuurt"
+    },
+    "viewSwitcher": {
+      "email": "E-mailmeldingen",
+      "internal": "Interne meldingen"
+    },
+    "emailTabs": {
+      "settings": "Instellingen",
+      "emailTemplates": "E-mailsjablonen",
+      "categories": "Categorieën",
+      "telemetry": "Telemetrie"
+    },
+    "internalTabs": {
+      "categories": "Categorieën"
+    },
+    "sections": {
+      "globalSettings": {
+        "title": "Globale instellingen",
+        "description": "Configureer globale meldingsinstellingen"
+      },
+      "emailTemplates": {
+        "title": "E-mailsjablonen",
+        "description": "Beheer e-mailmeldingssjablonen"
+      },
+      "categories": {
+        "title": "Meldingscategorieën",
+        "description": "Beheer meldingscategorieën en -typen"
+      },
+      "internalCategories": {
+        "title": "Interne meldingscategorieën",
+        "description": "Beheer interne meldingscategorieën en -typen"
+      },
+      "telemetry": {
+        "title": "Telemetrie en analyse",
+        "description": "Beheer uw telemetrie- en analysevoorkeuren"
+      }
+    }
+  },
+  "timeEntry": {
+    "title": "Tijdregistratie-instellingen",
+    "description": "Beheer uw tijdregistratie-instellingen en tijdperiodes"
+  },
+  "billing": {
+    "title": "Facturatie-instellingen",
+    "description": "Beheer uw facturatie en abonnement"
+  },
+  "secrets": {
+    "title": "Geheimenbeheer",
+    "description": "Beheer versleutelde geheimen voor gebruik in workflows. Geheimen kunnen worden gerefereerd in workflowacties met de $secret-syntaxis.",
+    "list": {
+      "title": "Geheimen",
+      "description": "Beheer geheimen voor gebruik in workflows. Geheimen zijn versleuteld en kunnen worden gerefereerd met { $secret: \"SECRET_NAME\" }",
+      "search": "Geheimen zoeken...",
+      "createSecret": "Geheim aanmaken",
+      "table": {
+        "name": "Naam",
+        "description": "Beschrijving",
+        "lastUpdated": "Laatst bijgewerkt",
+        "lastAccessed": "Laatst geopend",
+        "actions": "Acties",
+        "never": "Nooit",
+        "empty": "-"
+      },
+      "tooltips": {
+        "edit": "Geheim bewerken",
+        "delete": "Geheim verwijderen"
+      }
+    },
+    "dialog": {
+      "createTitle": "Geheim aanmaken",
+      "editTitle": "Geheim bewerken",
+      "deleteTitle": "Geheim verwijderen",
+      "fields": {
+        "name": {
+          "label": "Naam *",
+          "placeholder": "MY_API_KEY",
+          "help": "Gebruik alleen hoofdletters, cijfers en underscores"
+        },
+        "value": {
+          "label": "Waarde *",
+          "placeholder": "Geheime waarde invoeren",
+          "editPlaceholder": "Nieuwe waarde invoeren om bij te werken",
+          "editHelp": "Laat leeg om de huidige waarde te behouden"
+        },
+        "description": {
+          "label": "Beschrijving",
+          "placeholder": "Waarvoor wordt dit geheim gebruikt?"
+        }
+      },
+      "delete": {
+        "confirmation": "Weet u zeker dat u het geheim {{name}} wilt verwijderen?",
+        "usedByWorkflows": "Dit geheim wordt gebruikt door {{count}} workflow(s)",
+        "usedByWarning": "Het verwijderen ervan zal ervoor zorgen dat die workflows mislukken wanneer ze dit geheim proberen te openen.",
+        "cannotUndo": "Deze actie kan niet ongedaan worden gemaakt.",
+        "typeToConfirm": "Typ {{name}} ter bevestiging:",
+        "placeholder": "Geheime naam invoeren"
+      },
+      "actions": {
+        "cancel": "Annuleren",
+        "create": "Geheim aanmaken",
+        "update": "Geheim bijwerken",
+        "delete": "Geheim verwijderen",
+        "saving": "Opslaan...",
+        "deleting": "Verwijderen..."
+      }
+    },
+    "messages": {
+      "success": {
+        "created": "Geheim \"{{name}}\" aangemaakt",
+        "updated": "Geheim \"{{name}}\" bijgewerkt",
+        "deleted": "Geheim \"{{name}}\" verwijderd"
+      },
+      "error": {
+        "loadFailed": "Kan geheimen niet laden",
+        "deleteFailed": "Kan geheim niet verwijderen",
+        "saveFailed": "Kan geheim niet opslaan",
+        "nameRequired": "Geheime naam is vereist",
+        "valueRequired": "Geheime waarde is vereist",
+        "noChanges": "Geen wijzigingen om op te slaan",
+        "fixValidation": "Corrigeer de validatiefouten"
+      }
+    }
+  },
+  "importExport": {
+    "title": "Import & Export werkruimte",
+    "description": "Configureer imports, exports en geautomatiseerde gegevensstromen vanuit één centraal punt.",
+    "history": {
+      "title": "Import- & exportgeschiedenis",
+      "description": "Bekijk elke import- of exporttaak op één plek.",
+      "empty": "Geen import- of exporttaken gevonden. Genereer een voorbeeld om de eerste taak aan te maken.",
+      "table": {
+        "date": "Datum",
+        "source": "Bron",
+        "file": "Bestand",
+        "status": "Status",
+        "created": "Aangemaakt",
+        "duplicates": "Duplicaten",
+        "errors": "Fouten"
+      }
+    },
+    "tabs": {
+      "assetImport": "Asset-import",
+      "assetExport": "Asset-export",
+      "templatesAutomation": "Sjablonen en automatisering"
+    },
+    "import": {
+      "fields": {
+        "importSource": "Importbron",
+        "uploadFile": "Bestand uploaden",
+        "fieldMapping": "Veldtoewijzing",
+        "rememberMapping": "Deze toewijzing onthouden voor toekomstige imports"
+      },
+      "placeholders": {
+        "noSources": "Geen importbronnen beschikbaar",
+        "selectSource": "Selecteer een importbron",
+        "sourceColumn": "Naam bronkolom",
+        "example": "bijv. {{example}}"
+      },
+      "help": {
+        "fieldMapping": "Voer de kolomnamen uit uw bestand in die overeenkomen met elk vereist assetveld. Laat optionele velden leeg om ze over te slaan."
+      },
+      "alerts": {
+        "selectSource": "Selecteer een importbron om verder te gaan.",
+        "chooseFile": "Kies een CSV- of XLSX-bestand om verder te gaan.",
+        "validationIssues": "Validatieproblemen gedetecteerd."
+      },
+      "actions": {
+        "generatePreview": "Voorbeeld genereren",
+        "preparingPreview": "Voorbeeld voorbereiden…",
+        "proceedWithImport": "Doorgaan met import",
+        "startingImport": "Import starten…",
+        "refresh": "Vernieuwen",
+        "refreshing": "Vernieuwen…",
+        "cancel": "Annuleren",
+        "importSelected": "Geselecteerde importeren"
+      },
+      "preview": {
+        "title": "Importvoorbeeld",
+        "description": "Toont maximaal de eerste 10 rijen van {{totalRows}} totaal records.",
+        "stats": {
+          "total": "Totaal",
+          "valid": "Geldig",
+          "duplicates": "Duplicaten",
+          "errors": "Fouten"
+        },
+        "table": {
+          "row": "Rij",
+          "values": "Waarden",
+          "issues": "Problemen"
+        },
+        "empty": "Geen voorbeeldrijen beschikbaar."
+      }
+    },
+    "export": {
+      "comingSoon": "Asset-exporttools komen binnenkort beschikbaar. Geplande mogelijkheden omvatten het exporteren van gefilterde assetlijsten, auditgegevens en toewijzingssjablonen rechtstreeks naar CSV/XLSX."
+    },
+    "templates": {
+      "comingSoon": "Toewijzingssjablonen en geplande imports komen hier. Sla kolomtoewijzingen op, deel ze met het team en configureer terugkerende taken."
+    },
+    "jobDetails": {
+      "title": "Importtaakdetails",
+      "stats": {
+        "totalRows": "Totaal rijen",
+        "processed": "Verwerkt",
+        "created": "Aangemaakt",
+        "updated": "Bijgewerkt",
+        "duplicates": "Duplicaten",
+        "errors": "Fouten"
+      },
+      "sections": {
+        "summary": "Samenvatting",
+        "records": "Records ({{count}})",
+        "errors": "Fouten ({{count}})",
+        "duplicates": "Duplicaten ({{count}})"
+      },
+      "fields": {
+        "source": "Bron",
+        "originalFileName": "Oorspronkelijke bestandsnaam",
+        "storedFileId": "Opgeslagen bestands-ID",
+        "documentId": "Document-ID",
+        "documentAssociation": "Documentassociatie",
+        "clientAssociation": "Klantassociatie",
+        "associatedClient": "Gekoppelde klant",
+        "defaultClientContext": "Standaard klantcontext",
+        "tenantClientFallback": "Tenant-klant terugvaloptie",
+        "externalId": "Extern ID",
+        "status": "Status",
+        "sampleValues": "Voorbeeldwaarden",
+        "error": "Fout",
+        "duplicateMatch": "Duplicaatovereenkomst"
+      },
+      "empty": {
+        "noRecords": "Nog geen verwerkte records.",
+        "noErrors": "Er zijn geen validatiefouten vastgelegd.",
+        "noDuplicates": "Er zijn geen duplicaten gedetecteerd voor deze taak.",
+        "noValues": "Geen waarden"
+      },
+      "truncated": "Toont de eerste {{count}} records. Download de taakresultaten voor de volledige geschiedenis."
+    }
+  },
+  "email": {
+    "title": "E-mailconfiguratie",
+    "description": "Configureer e-mailproviders, domeinen en instellingen"
+  },
+  "extensions": {
+    "title": "Extensiebeheer",
+    "description": "Installeer, configureer en beheer extensies om de functionaliteit van Alga PSA uit te breiden.",
+    "tabs": {
+      "manage": "Beheren",
+      "install": "Installeren"
+    },
+    "enterpriseOnly": {
+      "title": "Enterprise-functie",
+      "description": "Extensies zijn beschikbaar in de Enterprise-editie van Alga PSA."
+    },
+    "links": {
+      "needLogs": "Extensielogs nodig?",
+      "debugConsole": "Service Proxy Demo Debug Console openen"
+    },
+    "loading": {
+      "extensions": "Extensies laden...",
+      "installer": "Installatieprogramma laden..."
+    }
+  },
+  "security": {
+    "title": "Beveiligingsinstellingen",
+    "tabs": {
+      "roles": "Rollen",
+      "sessions": "Sessies",
+      "sso": "Single Sign-On",
+      "permissions": "Machtigingen",
+      "userRoles": "Gebruikersrollen",
+      "policies": "Beleidsregels",
+      "apiKeys": "API-sleutels"
+    },
+    "loading": {
+      "roles": "Rolconfiguratie laden...",
+      "permissions": "Machtigingsconfiguratie laden...",
+      "userRoles": "Gebruikersrolconfiguratie laden...",
+      "policies": "Beleidsregelconfiguratie laden...",
+      "apiKeys": "API-sleutelconfiguratie laden...",
+      "sso": "SSO-beheertools laden...",
+      "sessions": "Actieve sessies laden..."
+    },
+    "userRoles": {
+      "title": "Rollen toewijzen aan gebruikers",
+      "description": {
+        "msp": "Beheer gebruikersroltoewijzingen voor MSP-gebruikers",
+        "client": "Beheer gebruikersroltoewijzingen voor klantenportaalgebruikers"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Klantenportaal"
+      },
+      "showInactive": "Inactieve gebruikers tonen",
+      "fields": {
+        "selectUser": "Gebruiker selecteren",
+        "selectRole": "Rol selecteren"
+      },
+      "actions": {
+        "assignRole": "Rol toewijzen"
+      },
+      "table": {
+        "user": "Gebruiker",
+        "email": "E-mail",
+        "roles": "Rollen",
+        "actions": "Acties"
+      },
+      "noRolesAssigned": "Geen rollen toegewezen",
+      "removeRole": "{{role}} verwijderen",
+      "emptyState": {
+        "noUsers": "Geen {{type}}-gebruikers gevonden",
+        "inactiveHidden": "(inactieve gebruikers verborgen)"
+      },
+      "inactiveTag": "(Inactief)"
+    },
+    "sessions": {
+      "title": "Alle gebruikerssessies",
+      "subtitle": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
+      "subtitle_plural": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers",
+      "filters": {
+        "search": "Zoeken",
+        "searchPlaceholder": "Zoeken op naam, e-mail, apparaat of IP...",
+        "user": "Gebruiker",
+        "allUsers": "Alle gebruikers",
+        "loginMethod": "Aanmeldmethode",
+        "allMethods": "Alle methoden",
+        "userType": "Gebruikerstype",
+        "allTypes": "Alle typen",
+        "from": "Van",
+        "to": "Tot",
+        "selectDate": "Datum selecteren",
+        "reset": "Herstellen"
+      },
+      "loginMethods": {
+        "password": "Wachtwoord",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Intern",
+        "client": "Klant"
+      },
+      "session": {
+        "yourSession": "Uw sessie",
+        "unknownDevice": "Onbekend apparaat",
+        "lastActive": "Laatst actief {{time}} geleden",
+        "logout": "Uitloggen",
+        "revoke": "Intrekken",
+        "revoking": "Intrekken..."
+      },
+      "oauthWarning": "Het intrekken van deze sessie zal de {{provider}} OAuth-toegang niet intrekken. Trek de toegang in via uw {{provider}}-accountinstellingen.",
+      "confirmLogout": "Weet u zeker dat u wilt uitloggen van dit apparaat?",
+      "messages": {
+        "loggingOut": "Uitloggen...",
+        "revoked": "Sessie succesvol ingetrokken"
+      },
+      "emptyState": {
+        "loading": "Sessies laden...",
+        "noMatch": "Geen sessies gevonden die overeenkomen met uw zoekopdracht",
+        "noSessions": "Geen actieve sessies gevonden"
+      }
+    }
+  },
+  "profile": {
+    "tabs": {
+      "profile": "Profiel",
+      "security": "Beveiliging",
+      "sso": "Single Sign-On",
+      "apiKeys": "API-sleutels",
+      "notifications": "Meldingen",
+      "calendar": "Agenda"
+    },
+    "basicInfo": {
+      "title": "Basisinformatie"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Voornaam *"
+      },
+      "lastName": {
+        "label": "Achternaam *"
+      },
+      "email": {
+        "label": "E-mail *"
+      },
+      "phoneNumber": {
+        "label": "Telefoonnummer"
+      },
+      "timeZone": {
+        "label": "Tijdzone"
+      }
+    },
+    "actions": {
+      "saveChanges": "Wijzigingen opslaan"
+    },
+    "notifications": {
+      "title": "Meldingsvoorkeuren",
+      "viewSwitcher": {
+        "email": "E-mail",
+        "internal": "Intern"
+      }
+    },
+    "loading": "Profiel laden...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profiel succesvol bijgewerkt"
+      },
+      "error": {
+        "userNotFound": "Gebruiker niet gevonden",
+        "fillRequiredFields": "Vul alle verplichte velden in"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "Voornaam is vereist",
+      "lastNameRequired": "Achternaam is vereist"
+    },
+    "pageTitle": "Uw profiel"
+  },
+  "password": {
+    "changePassword": "Wachtwoord wijzigen",
+    "fields": {
+      "currentPassword": "Huidig wachtwoord",
+      "newPassword": "Nieuw wachtwoord",
+      "confirmNewPassword": "Nieuw wachtwoord bevestigen"
+    },
+    "messages": {
+      "success": {
+        "changed": "Wachtwoord succesvol gewijzigd"
+      },
+      "error": {
+        "mismatch": "Nieuwe wachtwoorden komen niet overeen",
+        "tooShort": "Wachtwoord moet minimaal 8 tekens lang zijn",
+        "changeFailed": "Er is een fout opgetreden bij het wijzigen van het wachtwoord"
+      }
+    }
+  },
+  "orgChart": {
+    "emptyState": "Geen gebruikers beschikbaar.",
+    "roles": {
+      "client": "Klantgebruiker",
+      "internal": "Interne gebruiker"
+    },
+    "badge": {
+      "inactive": "Inactief"
+    }
+  }
+}

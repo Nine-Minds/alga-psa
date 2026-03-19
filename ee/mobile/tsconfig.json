@@ -1,6 +1,35 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
-  }
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@blocknote/core": [
+        "./node_modules/@blocknote/core"
+      ],
+      "@tiptap/core": [
+        "./node_modules/@tiptap/core"
+      ],
+      "@tiptap/extension-image": [
+        "./node_modules/@tiptap/extension-image"
+      ],
+      "@tiptap/starter-kit": [
+        "./node_modules/@tiptap/starter-kit"
+      ],
+      "zod": [
+        "./node_modules/zod"
+      ]
+    }
+  },
+  "include": [
+    "App.tsx",
+    "index.ts",
+    "scripts/**/*",
+    "src/**/*",
+    "test/**/*",
+    "vitest.setup.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

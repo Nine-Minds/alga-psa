@@ -1,0 +1,27 @@
+Reference locale (en): 8 files
+
+Checking locales: de, es, fr, it, nl, pl
+Checking pseudo-locales: xx, yy (key structure only)
+
+--- de ---
+
+--- es ---
+
+--- fr ---
+
+--- it ---
+
+--- nl ---
+
+--- pl ---
+
+--- xx (pseudo) ---
+
+--- yy (pseudo) ---
+
+=== Summary ===
+Locales checked: 8
+Errors: 0
+Warnings: 0
+
+PASSED

@@ -1,19 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { AccountingMappingContext, AccountingMappingModule } from './types';
 import { AccountingMappingModuleView } from './AccountingMappingModuleView';
-
-// Helper function to convert tab label to URL-safe slug (kebab-case)
-function toSlug(label: string): string {
-  return label
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
-}
 
 type AccountingMappingManagerProps = {
   modules: AccountingMappingModule[];
@@ -39,48 +31,25 @@ export function AccountingMappingManager({
   const paramKey = urlParamKey ?? 'tab';
   const tabParam = searchParams?.get(paramKey);
 
-  // Build mapping between URL slugs and tab labels
-  const { slugToLabelMap, labelToSlugMap } = useMemo(() => {
-    const slugToLabel: Record<string, string> = {};
-    const labelToSlug: Record<string, string> = {};
+  const defaultTab = defaultTabId ?? modules[0]?.id ?? '';
 
-    modules.forEach((module) => {
-      const label = module.labels.tab;
-      const slug = toSlug(label);
-      slugToLabel[slug] = label;
-      labelToSlug[label] = slug;
-    });
-
-    return { slugToLabelMap: slugToLabel, labelToSlugMap: labelToSlug };
-  }, [modules]);
-
-  // Determine default tab label
-  const defaultLabel = defaultTabId ?? modules[0]?.labels.tab ?? '';
-
-  // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const initialLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
-    return initialLabel || defaultLabel;
+    return tabParam?.toLowerCase() || defaultTab;
   });
 
-  // Update active tab when URL parameter changes
   useEffect(() => {
-    const currentLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || defaultLabel;
+    const targetTab = tabParam?.toLowerCase() || defaultTab;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
-  }, [tabParam, activeTab, slugToLabelMap, defaultLabel]);
+  }, [tabParam, activeTab, defaultTab]);
 
-  const updateURL = (tabLabel: string) => {
-    const urlSlug = labelToSlugMap[tabLabel];
-    const defaultSlug = labelToSlugMap[defaultLabel];
-
+  const updateURL = (tabId: string) => {
     // Build new URL with tab parameter
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== defaultSlug) {
-      currentSearchParams.set(paramKey, urlSlug);
+    if (tabId && tabId !== defaultTab) {
+      currentSearchParams.set(paramKey, tabId);
     } else {
       currentSearchParams.delete(paramKey);
     }
@@ -97,6 +66,7 @@ export function AccountingMappingManager({
   }
 
   const tabs: TabContent[] = modules.map((module) => ({
+    id: module.id,
     label: module.labels.tab,
     content: (
       <AccountingMappingModuleView
@@ -113,9 +83,9 @@ export function AccountingMappingManager({
       tabs={tabs}
       defaultTab={activeTab}
       tabStyles={tabStyles}
-      onTabChange={(tab) => {
-        setActiveTab(tab);
-        updateURL(tab);
+      onTabChange={(tabId) => {
+        setActiveTab(tabId);
+        updateURL(tabId);
       }}
       data-automation-type="accounting-mapping-tabs"
     />

@@ -30,6 +30,8 @@ export default defineConfig({
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
       { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/$1') },
+      { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../formatting/src/index.ts') },
+      { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../formatting/src/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../auth/src/index.ts') },
       { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../auth/src/components/SsoProviderButtons.tsx') },
       { find: /^@alga-psa\/auth\/(.*)$/, replacement: path.resolve(__dirname, '../auth/src/$1') },

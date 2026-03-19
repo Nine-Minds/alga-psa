@@ -1,0 +1,206 @@
+[
+  {
+    "id": "T001",
+    "description": "Component: The approval entry detail panel renders a dedicated input for entry-level change suggestions.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Component: Requesting changes from an entry panel submits the entry id and entry-specific suggestion together.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Integration: Approver request-changes happy path creates an entry feedback record and updates the entry approval status to CHANGES_REQUESTED.",
+    "implemented": true,
+    "featureIds": ["F002", "F003", "F004"]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration: Creating entry-level feedback persists author, timestamps, and unresolved handled metadata in the migrated schema.",
+    "implemented": true,
+    "featureIds": ["F003", "F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Permission/guard: A user without timesheet approval permission cannot create entry-level feedback.",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: Multiple request-change cycles on the same entry preserve older feedback records instead of overwriting them.",
+    "implemented": true,
+    "featureIds": ["F005", "F016"]
+  },
+  {
+    "id": "T007",
+    "description": "Selector/unit: The employee feedback presenter chooses the most recent relevant feedback as the prominent inline message.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T008",
+    "description": "Component: The time entry editor shows the prominent latest feedback banner when an entry has feedback.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T009",
+    "description": "Component: The time entry editor hides the prominent feedback banner when an entry has no feedback.",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T010",
+    "description": "Component: The time entry editor renders an expandable feedback history section for entries with multiple feedback records.",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T011",
+    "description": "Component: Expanding feedback history shows older handled and unresolved comments in chronological order.",
+    "implemented": true,
+    "featureIds": ["F005", "F007"]
+  },
+  {
+    "id": "T012",
+    "description": "Integration: Timesheet employee data loading returns per-entry feedback information alongside entry data for downstream views.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T013",
+    "description": "Component: The timesheet list view shows the unresolved-feedback marker for entries with an open change suggestion.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T014",
+    "description": "Component: The timesheet list view shows the handled-feedback marker for entries whose latest change suggestion was addressed.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T015",
+    "description": "Component: The timesheet list view shows no marker for entries without entry-level feedback.",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T016",
+    "description": "Component: The timesheet grid view shows an X icon on entry blocks with unresolved change suggestions.",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T017",
+    "description": "Component: The timesheet grid view shows a check icon on entry blocks whose latest change suggestion was handled.",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T018",
+    "description": "Component: The timesheet grid view shows no feedback icon for entry blocks without entry-level feedback.",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T019",
+    "description": "Interaction contract: List-view feedback markers do not override existing row click behavior for editing entries.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T020",
+    "description": "Interaction contract: Grid-view feedback markers do not override existing cell click behavior for editing entries.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T021",
+    "description": "Integration: Saving an edited entry during CHANGES_REQUESTED auto-marks the latest unresolved feedback for that same entry as handled.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T022",
+    "description": "DB integration: Auto-handle writes handled metadata to the latest unresolved feedback record for the edited entry.",
+    "implemented": true,
+    "featureIds": ["F004", "F014"]
+  },
+  {
+    "id": "T023",
+    "description": "Guard: Editing an unrelated entry does not mark feedback handled for a different entry.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T024",
+    "description": "Guard: Saving an entry outside the change-requested flow does not incorrectly mark historical feedback handled.",
+    "implemented": true,
+    "featureIds": ["F014", "F015"]
+  },
+  {
+    "id": "T025",
+    "description": "Integration: A second approver change request on a previously handled entry creates a new unresolved feedback record.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T026",
+    "description": "Integration: The employee-facing prominent feedback updates to the new latest request after a second review cycle.",
+    "implemented": true,
+    "featureIds": ["F006", "F016"]
+  },
+  {
+    "id": "T027",
+    "description": "Regression: Timesheet-level comments continue to render and post independently from entry-level feedback.",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T028",
+    "description": "Regression: Requesting entry-level changes does not remove or merge existing timesheet-level comments.",
+    "implemented": true,
+    "featureIds": ["F003", "F017"]
+  },
+  {
+    "id": "T029",
+    "description": "Permission/guard: Employees cannot create entry-level approver feedback through normal time-entry save flows.",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T030",
+    "description": "Permission/guard: Authorized employee and delegated editor views can read only feedback for entries they are already permitted to access.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T031",
+    "description": "DB integration: Fetching feedback for one tenant or timesheet does not leak feedback records from another tenant or sheet.",
+    "implemented": true,
+    "featureIds": ["F018", "F019"]
+  },
+  {
+    "id": "T032",
+    "description": "Regression: Approval drawer and employee timesheet views render unchanged for entries and timesheets that have no per-entry feedback.",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T033",
+    "description": "Regression: Existing per-entry approval status actions still work when no change suggestion is attached.",
+    "implemented": true,
+    "featureIds": ["F002", "F020"]
+  },
+  {
+    "id": "T034",
+    "description": "End-to-end sanity: An approver requests changes on one entry, the employee sees the marker and inline note, edits the entry, and the marker changes to handled.",
+    "implemented": true,
+    "featureIds": ["F002", "F006", "F009", "F011", "F014"]
+  }
+]

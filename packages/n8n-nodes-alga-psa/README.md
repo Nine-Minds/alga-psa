@@ -10,6 +10,7 @@ This package adds one node to n8n:
 - Credential: `Alga PSA API`
 - Resources:
   - Ticket
+  - Contact
   - Client
   - Board
   - Status
@@ -45,7 +46,7 @@ For manual/custom installation paths, follow n8n's manual community-node install
 
 Create credential type `Alga PSA API` with:
 
-- `Base URL` example: `https://api.algapsa.com`
+- `Base URL` example: `https://algapsa.com`
 - `API Key` your Alga PSA key (sent as `x-api-key` header)
 - Field names in node credentials: `baseUrl`, `apiKey`
 
@@ -54,6 +55,7 @@ Create credential type `Alga PSA API` with:
 | Resource | Operations |
 | --- | --- |
 | Ticket | Create, Get, List, List Comments, Search, Update, Add Comment, Update Status, Update Assignment, Delete |
+| Contact | Create, Get, List, Update, Delete |
 | Client | List |
 | Board | List |
 | Status | List |
@@ -71,6 +73,31 @@ Ticket create requires:
 
 Create/Update optional fields are grouped under additional options.
 
+## Contact Field Requirements
+
+Contact create requires:
+
+- `full_name`
+
+Contact create/update optional fields:
+
+- `email`
+- `client_id`
+- `role`
+- `notes`
+- `is_inactive`
+- `phone_numbers`
+
+Contact list supports:
+
+- `Page`
+- `Limit`
+- `client_id`
+- `search_term`
+- `is_inactive`
+
+`phone_numbers` is authored as JSON in the first pass and must be an array of objects with a required `phone_number` field.
+
 ## Ticket Comment Operations
 
 Ticket comment support stays under the `Ticket` resource:
@@ -81,7 +108,7 @@ Ticket comment support stays under the `Ticket` resource:
 
 ## Lookup Fields and Manual Fallback
 
-For `client_id`, `board_id`, `status_id`, and `priority_id`:
+For ticket `client_id`, `board_id`, `status_id`, and `priority_id`, plus contact `client_id`:
 
 - Use dynamic list lookups (`From List`) when available.
 - Use manual UUID input (`By ID`) if lookups fail or if you already know the ID.
@@ -89,20 +116,22 @@ For `client_id`, `board_id`, `status_id`, and `priority_id`:
 ## Output and Error Behavior
 
 - API responses unwrap `{ data: ... }` for easier downstream use.
-- Paginated list responses preserve `pagination` metadata.
-- Delete returns a non-empty success object containing `success`, `id`, and `deleted`.
+- Paginated list responses, including `Contact -> List`, preserve `pagination` metadata.
+- Delete, including `Contact -> Delete`, returns a non-empty success object containing `success`, `id`, and `deleted`.
 - Continue On Fail is supported with item-level error objects containing `error.code`, `error.message`, and `error.details` when available.
 
 ## Example Workflows
 
-Three minimal importable examples are included:
+Four minimal importable examples are included:
 
 - `examples/create-update-assignment.workflow.json`
 - `examples/search-update-status.workflow.json`
 - `examples/add-comment-then-list-comments.workflow.json`
+- `examples/create-update-contact.workflow.json`
 
 These demonstrate:
 
 1. Ticket create -> update assignment
 2. Ticket search -> update status
 3. Ticket add comment -> list comments
+4. Contact create -> update

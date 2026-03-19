@@ -8,6 +8,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { changeOwnPassword } from '@alga-psa/users/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface CollapsiblePasswordChangeFormProps {
   onSuccess?: () => void;
@@ -15,6 +16,7 @@ interface CollapsiblePasswordChangeFormProps {
 }
 
 export default function CollapsiblePasswordChangeForm({ onSuccess, className }: CollapsiblePasswordChangeFormProps) {
+  const { t } = useTranslation('msp/settings');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,19 +33,19 @@ export default function CollapsiblePasswordChangeForm({ onSuccess, className }: 
     setPasswordSuccess(null);
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('New passwords do not match');
+      setPasswordError(t('password.messages.error.mismatch'));
       return;
     }
 
     if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
+      setPasswordError(t('password.messages.error.tooShort'));
       return;
     }
 
     try {
       const result = await changeOwnPassword(currentPassword, newPassword);
       if (result.success) {
-        setPasswordSuccess('Password changed successfully');
+        setPasswordSuccess(t('password.messages.success.changed'));
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
@@ -54,10 +56,10 @@ export default function CollapsiblePasswordChangeForm({ onSuccess, className }: 
           setPasswordSuccess(null);
         }, 2000);
       } else {
-        setPasswordError(result.error || 'Failed to change password');
+        setPasswordError(result.error || t('password.messages.error.changeFailed'));
       }
     } catch (err) {
-      setPasswordError('An error occurred while changing password');
+      setPasswordError(t('password.messages.error.changeFailed'));
     }
   };
 
@@ -69,7 +71,7 @@ export default function CollapsiblePasswordChangeForm({ onSuccess, className }: 
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full flex items-center justify-between text-left hover:bg-gray-50 p-2 rounded-md transition-colors"
         >
-          <span className="text-base font-medium">Change Password</span>
+          <span className="text-base font-medium">{t('password.changePassword')}</span>
           {isExpanded ? (
             <ChevronUp className="h-5 w-5 text-gray-500" />
           ) : (
@@ -81,7 +83,7 @@ export default function CollapsiblePasswordChangeForm({ onSuccess, className }: 
         <CardContent className="pt-0">
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div>
-              <Label htmlFor="currentPassword">Current Password</Label>
+              <Label htmlFor="currentPassword">{t('password.fields.currentPassword')}</Label>
               <div className="relative">
                 <Input
                   id="currentPassword"
@@ -106,7 +108,7 @@ export default function CollapsiblePasswordChangeForm({ onSuccess, className }: 
               </div>
             </div>
             <div>
-              <Label htmlFor="newPassword">New Password</Label>
+              <Label htmlFor="newPassword">{t('password.fields.newPassword')}</Label>
               <div className="relative">
                 <Input
                   id="newPassword"
@@ -131,7 +133,7 @@ export default function CollapsiblePasswordChangeForm({ onSuccess, className }: 
               </div>
             </div>
             <div>
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword">{t('password.fields.confirmNewPassword')}</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -162,7 +164,7 @@ export default function CollapsiblePasswordChangeForm({ onSuccess, className }: 
               <div className="text-success text-sm">{passwordSuccess}</div>
             )}
             <Button id="change-password-button" type="submit" variant="default">
-              Change Password
+              {t('password.changePassword')}
             </Button>
           </form>
         </CardContent>

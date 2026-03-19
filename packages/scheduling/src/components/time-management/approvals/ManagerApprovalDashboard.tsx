@@ -14,12 +14,12 @@ import { Users } from 'lucide-react';
 import {
   fetchTimeSheetsForApproval,
   bulkApproveTimeSheets,
-  fetchTimeEntriesForTimeSheet,
   approveTimeSheet,
   requestChangesForTimeSheet,
   fetchTimeSheetComments,
   reverseTimeSheetApproval
 } from '../../../actions/timeSheetActions';
+import { fetchTimeEntriesForTimeSheet } from '../../../actions/timeEntryActions';
 import { useTeamAuth } from '@alga-psa/teams/hooks';
 import { IUser } from '@alga-psa/types';
 import { TimeSheetApproval } from './TimeSheetApproval';

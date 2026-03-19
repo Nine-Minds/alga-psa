@@ -223,6 +223,46 @@ describe('processInboundEmailInApp', () => {
     );
   });
 
+  it('new inbound email with matched internal user keeps routing defaults but stores internal authorship', async () => {
+    findContactByEmailMock.mockResolvedValue({
+      user_id: 'internal-user-123',
+      user_type: 'internal',
+      email: 'robert@nineminds.com',
+      name: 'Robert Isaacs',
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'ROBERT@NINEMINDS.COM', name: 'Robert Isaacs' },
+      }),
+    });
+
+    expect(result.outcome).toBe('created');
+    expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        client_id: 'default-client-id',
+        contact_id: undefined,
+      }),
+      'tenant-1'
+    );
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-1',
+        author_type: 'internal',
+        author_id: 'internal-user-123',
+        contact_id: undefined,
+        metadata: expect.objectContaining({
+          unmatchedSender: true,
+        }),
+      }),
+      'tenant-1'
+    );
+  });
+
   it('new inbound email with matched contact-only sender forwards contact_id and omits author_id', async () => {
     findContactByEmailMock.mockResolvedValue({
       contact_id: 'contact-only-123',

@@ -143,6 +143,15 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     return compactContactPhoneNumbers(rows).find((row) => row.is_default)?.phone_number ?? '';
   };
 
+  const hasAnyContactData = (data: CreateContactData): boolean => {
+    return !!(
+      data.full_name.trim() ||
+      (data.email ?? '').trim() ||
+      compactContactPhoneNumbers(data.phone_numbers).length > 0 ||
+      (data.role ?? '').trim()
+    );
+  };
+
   useEffect(() => {
     if (open) {
       const fetchUsers = async () => {
@@ -373,6 +382,18 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       contactPhone: getPrimaryContactPhone(contactData.phone_numbers),
       notes: formData.notes
     });
+
+    // Cross-field validation: if any contact field is filled, require name and email
+    if (hasAnyContactData(contactData)) {
+      if (!contactData.full_name.trim()) {
+        validationResult.isValid = false;
+        validationResult.errors.contact_name = 'Full name is required when adding a contact';
+      }
+      if (!(contactData.email ?? '').trim()) {
+        validationResult.isValid = false;
+        validationResult.errors.contact_email = 'Email is required when adding a contact';
+      }
+    }
 
     const currentContactPhoneErrors = validateContactPhoneNumbers(contactData.phone_numbers);
     setContactPhoneValidationErrors(currentContactPhoneErrors);
@@ -619,7 +640,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       if (addressError) return false;
     }
 
-    // Contact validations - only if they have content
+    // Contact validations - if any contact field is filled, require name and email
+    if (hasAnyContactData(contactData)) {
+      if (!contactData.full_name.trim()) return false;
+      if (!(contactData.email ?? '').trim()) return false;
+    }
+
     if (contactData.full_name && contactData.full_name.trim()) {
       const nameError = validateField('contact_name', contactData.full_name, undefined, false);
       if (nameError) return false;
@@ -970,7 +996,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               
               <div>
                 <Label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
+                  Name{hasAnyContactData(contactData) ? ' *' : ''}
                 </Label>
                 <Input
                   id="contact-name"
@@ -991,7 +1017,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="client-contact-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
+                    Email{hasAnyContactData(contactData) ? ' *' : ''}
                   </Label>
                   <Input
                     id="client-contact-email"

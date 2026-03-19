@@ -185,5 +185,38 @@
     "nameLabel": "Nazwa folderu",
     "namePlaceholder": "Wprowadź nazwę folderu",
     "willCreateIn": "Zostanie utworzony w: {{folder}}"
+  },
+  "portal": {
+    "subtitle": "Przeglądaj i pobieraj udostępnione dokumenty",
+    "searchPlaceholder": "Szukaj dokumentów...",
+    "showing": "{{count}} dokumentów",
+    "loadError": "Nie udało się załadować dokumentów. Spróbuj ponownie."
+  },
+  "kb": {
+    "title": "Baza wiedzy",
+    "subtitle": "Znajdź odpowiedzi na często zadawane pytania i poradniki",
+    "categories": "Kategorie",
+    "allArticles": "Wszystkie artykuły",
+    "searchPlaceholder": "Szukaj artykułów...",
+    "articleCount": "{{count}} artykułów",
+    "noArticles": "Nie znaleziono artykułów",
+    "loadError": "Nie udało się załadować artykułów. Spróbuj ponownie.",
+    "noContent": "Brak dostępnej treści",
+    "articleNotFound": "Nie znaleziono artykułu",
+    "backToArticles": "Powrót do artykułów",
+    "views": "wyświetleń",
+    "wasHelpful": "Czy ten artykuł był pomocny?",
+    "yes": "Tak",
+    "no": "Nie",
+    "feedbackThanks": "Dziękujemy za opinię!",
+    "feedbackError": "Nie udało się przesłać opinii",
+    "filterByTags": "Filtruj po tagach..."
+  },
+  "visibility": {
+    "cascadeTitle": "Zaktualizuj widoczność dokumentów",
+    "cascadeMakeVisible": "Czy chcesz również udostępnić {{count}} dokument(ów) w \"{{name}}\" w portalu klienta?",
+    "cascadeMakeHidden": "Czy chcesz również ukryć {{count}} dokument(ów) w \"{{name}}\" w portalu klienta?",
+    "cascadeYes": "Tak, zaktualizuj dokumenty",
+    "cascadeNo": "Nie, tylko folder"
   }
 }

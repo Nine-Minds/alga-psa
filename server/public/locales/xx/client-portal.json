@@ -1,0 +1,463 @@
+{
+  "nav": {
+    "dashboard": "11111",
+    "tickets": "11111",
+    "projects": "11111",
+    "appointments": "11111",
+    "billing": "11111",
+    "assets": "11111",
+    "clientSettings": "11111",
+    "profile": "11111",
+    "account": "11111",
+    "signOut": "11111",
+    "clientPortal": "11111",
+    "portal": "11111",
+    "notifications": "11111",
+    "documents": "11111",
+    "knowledgeBase": "11111"
+  },
+  "dashboard": {
+    "title": "11111",
+    "welcome": "11111",
+    "loading": "11111",
+    "error": "11111",
+    "metrics": {
+      "openTickets": "11111",
+      "activeProjects": "11111",
+      "pendingInvoices": "11111",
+      "activeAssets": "11111"
+    },
+    "quickActions": {
+      "title": "11111",
+      "createTicket": "11111",
+      "requestAppointment": "11111",
+      "viewLatestInvoice": "11111"
+    },
+    "appointments": {
+      "title": "11111",
+      "noUpcoming": "11111",
+      "requestButton": "11111",
+      "viewAll": "11111",
+      "technician": "11111"
+    },
+    "recentActivity": {
+      "title": "11111"
+    },
+    "viewAll": "11111 {{item}} 11111"
+  },
+  "auth": {
+    "signIn": "11111",
+    "signOut": "11111",
+    "email": "11111",
+    "password": "11111",
+    "emailPlaceholder": "11111",
+    "passwordPlaceholder": "11111",
+    "signingIn": "11111",
+    "rememberMe": "11111",
+    "forgotPasswordLink": "11111",
+    "forgotPasswordPage": {
+      "title": "11111",
+      "subtitle": "11111",
+      "logoAlt": "11111",
+      "emailLabel": "11111",
+      "emailPlaceholder": "11111",
+      "sendResetButton": "11111",
+      "backToLogin": "11111",
+      "resetLinkSent": "11111"
+    },
+    "resetPassword": "11111",
+    "backToSignIn": "11111",
+    "sendResetLink": "11111",
+    "resetLinkSent": "11111",
+    "invalidCredentials": "11111",
+    "loginError": "11111",
+    "sessionExpired": "11111",
+    "welcomeTitle": "11111",
+    "welcomeSubtitle": "11111",
+    "signInDescription": "11111",
+    "clientLogin": "11111",
+    "mspStaffLogin": "11111",
+    "accessDeniedTitle": "11111",
+    "accessDeniedMessage": "11111",
+    "registrationSuccessTitle": "11111",
+    "registrationSuccessMessage": "11111",
+    "portalSetup": {
+      "title": "11111",
+      "subtitle": "11111",
+      "loading": "11111",
+      "invalidInvitation": "11111",
+      "invalidInvitationDescription": "11111",
+      "invalidTokenMessage": "11111",
+      "noTokenProvided": "11111",
+      "invalidOrExpiredToken": "11111",
+      "verificationFailed": "11111",
+      "goToPortalSignIn": "11111",
+      "accountInformation": "11111",
+      "name": "11111",
+      "email": "11111",
+      "client": "11111",
+      "password": "11111",
+      "passwordPlaceholder": "11111",
+      "confirmPassword": "11111",
+      "confirmPasswordPlaceholder": "11111",
+      "passwordRequirements": "11111",
+      "requirements": {
+        "minLength": "11111",
+        "hasUppercase": "11111",
+        "hasLowercase": "11111",
+        "hasNumber": "11111",
+        "hasSpecialChar": "11111",
+        "passwordsMatch": "11111"
+      },
+      "createAccount": "11111",
+      "creatingAccount": "11111",
+      "alreadyHaveAccount": "11111",
+      "signInToPortal": "11111",
+      "requirementsNotMet": "11111",
+      "accountReady": "11111",
+      "accountCreatedSuccess": "11111",
+      "welcome": "11111",
+      "createFailed": "11111"
+    },
+    "features": {
+      "submitTickets": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "trackStatus": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "ticketHistory": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "documentation": {
+        "title": "11111",
+        "description": "11111"
+      }
+    },
+    "forgotPassword": "11111"
+  },
+  "account": {
+    "title": "11111",
+    "licenseManagement": {
+      "title": "11111",
+      "subtitle": "11111",
+      "howToPurchaseTitle": "11111",
+      "step1": "11111",
+      "step2": "11111",
+      "step3": "11111",
+      "step4": "11111",
+      "needHelpTitle": "11111",
+      "needHelpDescription": "11111",
+      "backToDashboard": "11111",
+      "goToMSPPortal": "11111",
+      "signingOut": "11111"
+    },
+    "services": {
+      "loadError": "11111",
+      "loadContractLinesError": "11111",
+      "updateError": "11111",
+      "loading": "11111",
+      "activeTitle": "11111",
+      "empty": "11111",
+      "columns": {
+        "service": "11111",
+        "description": "11111",
+        "status": "11111",
+        "currentContractLine": "11111",
+        "nextBilling": "11111"
+      },
+      "actions": {
+        "manage": "11111",
+        "upgrade": "11111",
+        "downgrade": "11111"
+      },
+      "manageTitle": "11111 {{service}} 11111",
+      "genericServiceLabel": "11111",
+      "currentContractLine": "11111",
+      "availableContractLines": "11111",
+      "catalog": {
+        "title": "11111",
+        "learnMore": "11111",
+        "managedIt": {
+          "title": "11111",
+          "description": "11111",
+          "price": "11111"
+        },
+        "cloudBackup": {
+          "title": "11111",
+          "description": "11111",
+          "price": "11111"
+        },
+        "cybersecurity": {
+          "title": "11111",
+          "description": "11111",
+          "price": "11111"
+        }
+      }
+    },
+    "billing": {
+      "loadError": "11111",
+      "addPaymentError": "11111",
+      "removePaymentError": "11111",
+      "setDefaultError": "11111",
+      "loadingBillingInfo": "11111",
+      "overviewTitle": "11111",
+      "paymentMethodsTitle": "11111",
+      "noPaymentMethods": "11111",
+      "billingCycleTitle": "11111",
+      "noBillingCycle": "11111",
+      "recentInvoicesTitle": "11111",
+      "billingHistoryTitle": "11111",
+      "labels": {
+        "defaultTag": "11111"
+      },
+      "actions": {
+        "setDefault": "11111",
+        "remove": "11111",
+        "addPaymentMethod": "11111",
+        "adding": "11111",
+        "view": "11111"
+      },
+      "fields": {
+        "cardNumber": "11111",
+        "expiryMonth": "11111",
+        "expiryYear": "11111",
+        "cvv": "11111",
+        "setAsDefault": "11111"
+      },
+      "history": {
+        "period": "11111",
+        "startDate": "11111",
+        "endDate": "11111",
+        "status": "11111",
+        "empty": "11111"
+      },
+      "validation": {
+        "cardNumber": "11111",
+        "expMonth": "11111",
+        "expYear": "11111",
+        "cvv": "11111"
+      }
+    }
+  },
+  "profile": {
+    "title": "11111",
+    "personalInfo": "11111",
+    "contactInfo": "11111",
+    "clientInfo": "11111",
+    "preferences": "11111",
+    "security": "11111",
+    "activity": "11111",
+    "notificationSettings": "11111",
+    "fields": {
+      "firstName": "11111",
+      "lastName": "11111",
+      "email": "11111",
+      "phone": "11111",
+      "mobile": "11111",
+      "title": "11111",
+      "department": "11111",
+      "client": "11111",
+      "address": "11111",
+      "city": "11111",
+      "state": "11111",
+      "postalCode": "11111",
+      "country": "11111",
+      "timezone": "11111",
+      "language": "11111",
+      "dateFormat": "11111",
+      "avatar": "11111",
+      "notes": "11111"
+    },
+    "changePassword": {
+      "title": "11111",
+      "current": "11111",
+      "new": "11111",
+      "confirm": "11111",
+      "requirements": "11111",
+      "submit": "11111",
+      "success": "11111",
+      "error": "11111",
+      "passwordMismatch": "11111",
+      "unknownError": "11111"
+    },
+    "twoFactorAuth": {
+      "title": "11111",
+      "enable": "11111",
+      "disable": "11111",
+      "status": "11111",
+      "enabled": "11111",
+      "disabled": "11111"
+    },
+    "notifications": {
+      "title": "11111",
+      "email": "11111",
+      "ticketUpdates": "11111",
+      "projectUpdates": "11111",
+      "invoices": "11111",
+      "announcements": "11111",
+      "emailPreferences": "11111",
+      "internalPreferences": "11111"
+    },
+    "actions": {
+      "save": "11111",
+      "cancel": "11111",
+      "edit": "11111",
+      "uploadPhoto": "11111",
+      "removePhoto": "11111"
+    },
+    "messages": {
+      "updateSuccess": "11111",
+      "updateError": "11111",
+      "photoUploaded": "11111",
+      "photoRemoved": "11111",
+      "userNotFound": "11111",
+      "loadError": "11111",
+      "loading": "11111",
+      "avatarDescription": "11111"
+    },
+    "imageUpload": {
+      "uploadAvatar": "11111",
+      "uploadLogo": "11111",
+      "uploadingAvatar": "11111",
+      "uploadingLogo": "11111",
+      "deleteAvatar": "11111",
+      "deleteLogo": "11111",
+      "deleteProfilePicture": "11111",
+      "delete": "11111",
+      "deleting": "11111",
+      "deleteLogoConfirm": "11111",
+      "deleteAvatarConfirm": "11111",
+      "edit": "11111",
+      "invalidType": "11111",
+      "sizeLimit": "11111",
+      "maxSize": "11111",
+      "uploadSuccess": "11111",
+      "uploadError": "11111",
+      "deleteSuccess": "11111",
+      "deleteError": "11111",
+      "deleteConfirm": "11111"
+    },
+    "validation": {
+      "clientNameRequired": "11111",
+      "emailRequired": "11111",
+      "emailInvalid": "11111",
+      "phoneInvalid": "11111",
+      "addressInvalid": "11111"
+    }
+  },
+  "clientSettings": {
+    "title": "11111",
+    "details": "11111",
+    "billing": "11111",
+    "description": "11111",
+    "tabs": {
+      "account": "11111",
+      "clientDetails": "11111",
+      "userManagement": "11111"
+    },
+    "fields": {
+      "clientLogo": "11111",
+      "clientName": "11111",
+      "clientLocations": "11111",
+      "manageLocations": "11111",
+      "mainOffice": "11111",
+      "warehouse": "11111",
+      "website": "11111",
+      "industry": "11111",
+      "companySize": "11111",
+      "company_size": "11111",
+      "annualRevenue": "11111",
+      "size": "11111",
+      "taxId": "11111",
+      "billingAddress": "11111",
+      "primaryContact": "11111",
+      "uploadLogo": "11111",
+      "deleteLogo": "11111"
+    },
+    "users": {
+      "title": "11111",
+      "searchUsers": "11111",
+      "addNewUser": "11111",
+      "addUser": "11111",
+      "editUser": "11111",
+      "removeUser": "11111",
+      "firstName": "11111",
+      "lastName": "11111",
+      "email": "11111",
+      "phone": "11111",
+      "roles": "11111",
+      "status": "11111",
+      "actions": "11111",
+      "active": "11111",
+      "inactive": "11111",
+      "selectRole": "11111",
+      "createUser": "11111",
+      "invite": "11111",
+      "resendInvite": "11111",
+      "lastLogin": "11111",
+      "never": "11111",
+      "via": "11111",
+      "userNotFound": "11111",
+      "failedToLoad": "11111",
+      "failedToUpdate": "11111",
+      "failedToAssignRole": "11111",
+      "failedToRemoveRole": "11111",
+      "statusDescription": "11111",
+      "noRolesAssigned": "11111",
+      "assignRole": "11111",
+      "resetPassword": "11111",
+      "clientNotFound": "11111",
+      "permissionError": "11111",
+      "loadError": "11111",
+      "emailExists": "11111",
+      "createError": "11111",
+      "deleteError": "11111"
+    },
+    "messages": {
+      "saveChanges": "11111",
+      "failedToLoad": "11111",
+      "updateSuccess": "11111",
+      "userAdded": "11111",
+      "userRemoved": "11111",
+      "inviteSent": "11111",
+      "noPermission": "11111",
+      "clientNotFound": "11111",
+      "detailsLoadError": "11111",
+      "updateError": "11111"
+    }
+  },
+  "notifications": {
+    "title": "11111",
+    "markAsRead": "11111",
+    "markAllAsRead": "11111",
+    "noNotifications": "11111",
+    "settings": "11111",
+    "viewAll": "11111",
+    "tabs": {
+      "unread": "11111",
+      "all": "11111",
+      "read": "11111"
+    },
+    "preferences": {
+      "title": "11111",
+      "description": "11111",
+      "loading": "11111",
+      "loadError": "11111",
+      "saveError": "11111",
+      "noCategories": "11111",
+      "emailPreferences": "11111",
+      "internalPreferences": "11111"
+    },
+    "categories": {
+      "tickets": "11111",
+      "invoices": "11111",
+      "messages": "11111",
+      "projects": "11111",
+      "system": "11111"
+    }
+  }
+}

@@ -8,28 +8,20 @@ import { TenantProjectTaskStatusSettings } from './projects/TenantProjectTaskSta
 import { ProjectStatusSettings } from './projects/ProjectStatusSettings';
 import TaskPrioritySettings from './projects/TaskPrioritySettings';
 
+const DEFAULT_TAB = 'project-numbering';
+
 const ProjectSettings = (): React.JSX.Element => {
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
 
-  // Map URL slugs to tab labels
-  const sectionToLabelMap: Record<string, string> = {
-    'project-numbering': 'Project Numbering',
-    'project-statuses': 'Project Statuses',
-    'task-statuses': 'Task Statuses',
-    'task-priorities': 'Task Priorities'
-  };
-
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    return initialLabel || 'Project Numbering'; // Default to 'Project Numbering'
+    return sectionParam?.toLowerCase() || DEFAULT_TAB;
   });
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const currentLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'Project Numbering';
+    const targetTab = sectionParam?.toLowerCase() || DEFAULT_TAB;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
@@ -37,37 +29,33 @@ const ProjectSettings = (): React.JSX.Element => {
 
   const tabs = [
     {
+      id: 'project-numbering',
       label: "Project Numbering",
       content: <NumberingSettings entityType="PROJECT" />
     },
     {
+      id: 'project-statuses',
       label: "Project Statuses",
       content: <ProjectStatusSettings />
     },
     {
+      id: 'task-statuses',
       label: "Task Statuses",
       content: <TenantProjectTaskStatusSettings />
     },
     {
+      id: 'task-priorities',
       label: "Task Priorities",
       content: <TaskPrioritySettings />
     }
   ];
 
-  const updateURL = (tabLabel: string) => {
-    // Map tab labels back to URL slugs
-    const labelToSlugMap: Record<string, string> = Object.entries(sectionToLabelMap).reduce((acc, [slug, label]) => {
-      acc[label] = slug;
-      return acc;
-    }, {} as Record<string, string>);
-
-    const urlSlug = labelToSlugMap[tabLabel];
-
+  const updateURL = (tabId: string) => {
     // Build new URL with tab and section parameters
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== 'project-numbering') {
-      currentSearchParams.set('section', urlSlug);
+    if (tabId !== DEFAULT_TAB) {
+      currentSearchParams.set('section', tabId);
     } else {
       currentSearchParams.delete('section');
     }

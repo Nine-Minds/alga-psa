@@ -11,6 +11,7 @@ export const CURRENCY_OPTIONS: CurrencyOption[] = [
   { value: 'CAD', label: 'CAD (C$)', symbol: 'C$' },
   { value: 'AUD', label: 'AUD (A$)', symbol: 'A$' },
   { value: 'NZD', label: 'NZD (NZ$)', symbol: 'NZ$' },
+  { value: 'ARS', label: 'ARS ($)', symbol: '$' },
   { value: 'JPY', label: 'JPY (¥)', symbol: '¥' },
 ];
 

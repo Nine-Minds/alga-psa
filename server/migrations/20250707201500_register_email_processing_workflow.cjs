@@ -15,10 +15,10 @@ const emailProcessingWorkflowDefinition = {
   },
   executeFn: `
     async function execute(context) {
-      // This is a placeholder - the actual execution happens in
-      // @shared/workflow/workflows/system-email-processing-workflow.ts
-      const { systemEmailProcessingWorkflow } = await import('@shared/workflow/workflows/system-email-processing-workflow.js');
-      return await systemEmailProcessingWorkflow(context);
+      // This registration migration seeds a temporary placeholder only.
+      // Later migrations replace the DB-stored code with the canonical
+      // system email-processing workflow implementation.
+      throw new Error('System Email Processing workflow bootstrap placeholder should be replaced by later migrations before execution.');
     }
   `,
 };

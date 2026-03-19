@@ -17,12 +17,14 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectTaskStatusEditorProps {
   projectId: string;
+  phaseId?: string | null;
   error?: string;
   onChange?: () => void;
 }
 
 export function ProjectTaskStatusEditor({
   projectId,
+  phaseId,
   error,
   onChange
 }: ProjectTaskStatusEditorProps) {
@@ -38,7 +40,7 @@ export function ProjectTaskStatusEditor({
       try {
         setIsLoading(true);
         const [mappings, tenantStatuses] = await Promise.all([
-          getProjectStatusMappings(projectId),
+          getProjectStatusMappings(projectId, phaseId),
           getTenantProjectStatuses()
         ]);
         setProjectStatusMappings(mappings);
@@ -50,7 +52,7 @@ export function ProjectTaskStatusEditor({
       }
     };
     fetchData();
-  }, [projectId]);
+  }, [projectId, phaseId]);
 
   // Get status details by ID from tenant library
   const getStatusDetails = (statusId: string) => {
@@ -68,7 +70,7 @@ export function ProjectTaskStatusEditor({
       const newMapping = await addStatusToProject(projectId, {
         status_id: statusId,
         is_visible: true
-      });
+      }, phaseId);
 
       setProjectStatusMappings([...projectStatusMappings, newMapping]);
 
@@ -113,7 +115,8 @@ export function ProjectTaskStatusEditor({
     }));
 
     try {
-      await reorderProjectStatuses(projectId, statusOrder);
+      await reorderProjectStatuses(projectId, statusOrder, phaseId);
+      
 
       // Update local state with new order
       const reordered = newMappings.map((m, idx) => ({
@@ -141,7 +144,8 @@ export function ProjectTaskStatusEditor({
     }));
 
     try {
-      await reorderProjectStatuses(projectId, statusOrder);
+      await reorderProjectStatuses(projectId, statusOrder, phaseId);
+      
 
       // Update local state with new order
       const reordered = newMappings.map((m, idx) => ({
@@ -164,7 +168,7 @@ export function ProjectTaskStatusEditor({
     return (
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          Task Statuses
+          {phaseId ? 'Phase Task Statuses' : 'Task Statuses'}
         </label>
         <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded-lg border">
           Loading...
@@ -177,7 +181,7 @@ export function ProjectTaskStatusEditor({
     <div className="space-y-2">
       <div className="flex justify-between items-center">
         <label className="block text-sm font-medium text-gray-700">
-          Task Statuses
+          {phaseId ? 'Phase Task Statuses' : 'Task Statuses'}
         </label>
         {!isExpanded && (
           <Button
@@ -217,7 +221,9 @@ export function ProjectTaskStatusEditor({
       {isExpanded && (
         <>
           <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-gray-600">Customize task statuses for this project</span>
+            <span className="text-xs text-gray-600">
+              {phaseId ? 'Customize task statuses for this phase' : 'Customize task statuses for this project'}
+            </span>
             {unselectedStatuses.length > 0 && (
               <Button
                 type="button"

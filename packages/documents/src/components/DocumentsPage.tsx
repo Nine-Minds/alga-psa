@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { DocumentFilters as DocumentFilterType } from '@alga-psa/types';
 import Documents from './Documents';
 import { Card } from '@alga-psa/ui/components/Card';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getDistinctEntityTypes } from '../actions/documentActions';
@@ -13,9 +14,11 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import DocumentFilters from './DocumentFilters';
 import DocumentsPageSkeleton from './DocumentsPageSkeleton';
-import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { DocumentTemplatesSettings } from './settings';
+import { ChevronRight, Settings2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 
 const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
@@ -38,6 +41,8 @@ export default function DocumentsPage() {
     }
   );
 
+  const { enabled: folderTemplatesEnabled } = useFeatureFlag('document-folder-templates', { defaultValue: false });
+  const [showDefaultFolders, setShowDefaultFolders] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [allUsersData, setAllUsersData] = useState<IUser[]>([]);
@@ -218,93 +223,121 @@ export default function DocumentsPage() {
     <UnsavedChangesProvider>
     <div className="p-6">
       <div className="mb-6">
-        <div className="flex items-center gap-2 text-2xl font-semibold">
-          <button
-            onClick={() => handleFolderNavigate(null)}
-            className="flex items-center gap-2 hover:text-blue-600 transition-colors"
-          >
-            <span>Documents</span>
-          </button>
-          {currentFolder && (
-            <>
-              {currentFolder.split('/').filter(p => p).map((part, index, parts) => {
-                const path = '/' + parts.slice(0, index + 1).join('/');
-                return (
-                  <React.Fragment key={path}>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                    <button
-                      onClick={() => handleFolderNavigate(path)}
-                      className="hover:text-blue-600 transition-colors"
-                    >
-                      {part}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
-            </>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-2xl font-semibold">
+            <button
+              onClick={() => { handleFolderNavigate(null); setShowDefaultFolders(false); }}
+              className="flex items-center gap-2 hover:text-blue-600 transition-colors"
+            >
+              <span>Documents</span>
+            </button>
+            {showDefaultFolders && (
+              <>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <span className="text-lg font-medium text-gray-600 dark:text-[rgb(var(--color-text-400))]">Default Folders</span>
+              </>
+            )}
+            {!showDefaultFolders && currentFolder && (
+              <>
+                {currentFolder.split('/').filter(p => p).map((part, index, parts) => {
+                  const path = '/' + parts.slice(0, index + 1).join('/');
+                  return (
+                    <React.Fragment key={path}>
+                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                      <button
+                        onClick={() => handleFolderNavigate(path)}
+                        className="hover:text-blue-600 transition-colors"
+                      >
+                        {part}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+              </>
+            )}
+          </div>
+          {folderTemplatesEnabled && (
+            <button
+              onClick={() => setShowDefaultFolders(prev => !prev)}
+              className={`p-2 rounded-md border transition-colors ${
+                showDefaultFolders
+                  ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300'
+                  : 'border-gray-200 dark:border-[rgb(var(--color-border-200))] text-gray-500 dark:text-[rgb(var(--color-text-400))] hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-50))]'
+              }`}
+              title="Configure default folders"
+            >
+              <Settings2 className="w-5 h-5" />
+            </button>
           )}
         </div>
       </div>
 
-      <div className="flex gap-6">
-        {/* Collapsed Filters Button */}
-        {isFiltersPaneCollapsed && (
-          <div className="flex-shrink-0">
-            <button
-              onClick={() => setIsFiltersPaneCollapsed(false)}
-              className="p-2 hover:bg-gray-100 rounded border border-gray-200 flex items-center gap-2"
-              title="Show filters"
-            >
-              <Filter className="w-4 h-4" />
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Left Column - Filters */}
-        {!isFiltersPaneCollapsed && (
-          <div className="w-80 relative">
-            <div className="absolute top-2 right-2 z-10">
-              <button
-                onClick={() => setIsFiltersPaneCollapsed(true)}
-                className="p-1 hover:bg-gray-100 rounded"
-                title="Collapse filters"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            </div>
-            <DocumentFilters
-              filters={filterInputs}
-              onFiltersChange={handleFiltersChange}
-              onClearFilters={handleClearFilters}
-              entityTypeOptions={entityTypeOptions}
-              allUsersData={allUsersData}
-              onShowAllDocuments={handleShowAllDocuments}
-              showAllDocumentsButton={true}
-            />
-          </div>
-        )}
-
-        {/* Right Column - Documents */}
-        <div className="flex-1">
-          <Card className="p-4">
-            {displayError ? (
-              <Alert variant="destructive">
-                <AlertDescription>{displayError}</AlertDescription>
-              </Alert>
-            ) : (
-              <Documents
-                id='documents'
-                documents={[]}
-                gridColumns={3}
-                userId={currentUserId}
-                searchTermFromParent={filterInputs.searchTerm}
-                filters={filterInputs}
+      {showDefaultFolders && folderTemplatesEnabled ? (
+        <Card className="p-6">
+          <DocumentTemplatesSettings />
+        </Card>
+      ) : (
+        <div className="flex gap-6">
+          {/* Collapsed Filters Button */}
+          {isFiltersPaneCollapsed && (
+            <div className="flex-shrink-0">
+              <CollapseToggleButton
+                id="documents-show-filters-button"
+                isCollapsed={true}
+                collapsedLabel="Show filters"
+                expandedLabel="Collapse filters"
+                expandDirection="right"
+                onClick={() => setIsFiltersPaneCollapsed(false)}
               />
-            )}
-          </Card>
+            </div>
+          )}
+
+          {/* Left Column - Filters */}
+          {!isFiltersPaneCollapsed && (
+            <div className="w-80 relative">
+              <div className="absolute top-2 right-2 z-10">
+                <CollapseToggleButton
+                  id="documents-collapse-filters-button"
+                  isCollapsed={false}
+                  collapsedLabel="Show filters"
+                  expandedLabel="Collapse filters"
+                  expandDirection="right"
+                  onClick={() => setIsFiltersPaneCollapsed(true)}
+                />
+              </div>
+              <DocumentFilters
+                filters={filterInputs}
+                onFiltersChange={handleFiltersChange}
+                onClearFilters={handleClearFilters}
+                entityTypeOptions={entityTypeOptions}
+                allUsersData={allUsersData}
+                onShowAllDocuments={handleShowAllDocuments}
+                showAllDocumentsButton={true}
+              />
+            </div>
+          )}
+
+          {/* Right Column - Documents */}
+          <div className="flex-1">
+            <Card className="p-4">
+              {displayError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{displayError}</AlertDescription>
+                </Alert>
+              ) : (
+                <Documents
+                  id='documents'
+                  documents={[]}
+                  gridColumns={3}
+                  userId={currentUserId}
+                  searchTermFromParent={filterInputs.searchTerm}
+                  filters={filterInputs}
+                />
+              )}
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
     </div>
     </UnsavedChangesProvider>
   );

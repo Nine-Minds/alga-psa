@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Text, View } from "react-native";
-import { colors, spacing, typography } from "../ui/theme";
+import { useTheme } from "../ui/ThemeContext";
 import { ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { authenticateForUnlock, setBiometricGateEnabled } from "../auth/biometricGate";
 
 export function BiometricLockView({ onUnlocked }: { onUnlocked: () => void }) {
+  const theme = useTheme();
   const [status, setStatus] = useState<"idle" | "authenticating">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +27,7 @@ export function BiometricLockView({ onUnlocked }: { onUnlocked: () => void }) {
   }, [unlock]);
 
   if (status === "authenticating") {
-    return <LoadingState message="Unlocking…" />;
+    return <LoadingState message="Unlocking..." />;
   }
 
   if (error) {
@@ -37,7 +38,7 @@ export function BiometricLockView({ onUnlocked }: { onUnlocked: () => void }) {
         action={
           <View>
             <PrimaryButton onPress={() => void unlock()}>Try again</PrimaryButton>
-            <View style={{ height: spacing.md }} />
+            <View style={{ height: theme.spacing.md }} />
             <PrimaryButton
               onPress={() => {
                 void (async () => {
@@ -60,15 +61,15 @@ export function BiometricLockView({ onUnlocked }: { onUnlocked: () => void }) {
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        padding: spacing.xl,
-        backgroundColor: colors.background,
+        padding: theme.spacing.xl,
+        backgroundColor: theme.colors.background,
       }}
     >
-      <Text style={{ ...typography.title, textAlign: "center", color: colors.text }}>Locked</Text>
-      <Text style={{ ...typography.body, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
+      <Text style={{ ...theme.typography.title, textAlign: "center", color: theme.colors.text }}>Locked</Text>
+      <Text style={{ ...theme.typography.body, marginTop: theme.spacing.md, textAlign: "center", color: theme.colors.textSecondary }}>
         Unlock with biometrics to continue.
       </Text>
-      <View style={{ marginTop: spacing.lg }}>
+      <View style={{ marginTop: theme.spacing.lg }}>
         <PrimaryButton onPress={() => void unlock()}>Unlock</PrimaryButton>
       </View>
     </View>

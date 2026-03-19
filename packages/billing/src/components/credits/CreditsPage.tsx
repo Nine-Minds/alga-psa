@@ -191,6 +191,7 @@ export default async function CreditsPage({ params }: { params: Promise<{ client
 
   const tabs = [
     {
+      id: 'active',
       label: 'Active Credits',
       content: (
         <Suspense fallback={<CreditsListSkeleton />}>
@@ -199,6 +200,7 @@ export default async function CreditsPage({ params }: { params: Promise<{ client
       ),
     },
     {
+      id: 'all',
       label: 'All Credits',
       content: (
         <Suspense fallback={<CreditsListSkeleton />}>
@@ -210,6 +212,7 @@ export default async function CreditsPage({ params }: { params: Promise<{ client
 
   if (settings.enable_credit_expiration) {
     tabs.push({
+      id: 'expired',
       label: 'Expired Credits',
       content: (
         <Suspense fallback={<CreditsListSkeleton />}>

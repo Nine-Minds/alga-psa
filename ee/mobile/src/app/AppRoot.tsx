@@ -21,9 +21,12 @@ import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { ToastProvider } from "../ui/toast/ToastProvider";
+import { ThemeProvider } from "../ui/ThemeContext";
+import { I18nProvider } from "../i18n/I18nProvider";
 import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume, shouldRunRevocationCheck } from "./bootstrapUtils";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { getActiveRouteName } from "../navigation/activeRoute";
+import { t } from "../i18n/i18n";
 
 export function AppRoot() {
   const config = useMemo(() => getAppConfig(), []);
@@ -255,19 +258,21 @@ export function AppRoot() {
 
   if (!config.ok) {
     return (
-      <ErrorState title="Configuration error" description={config.error} />
+      <ErrorState title={t("common:configurationError")} description={config.error} />
     );
   }
 
   if (bootStatus === "booting") {
-    return <LoadingState message="Loading…" />;
+    return <LoadingState message={t("common:loadingEllipsis")} />;
   }
 
   if (!navStateLoaded) {
-    return <LoadingState message="Restoring state…" />;
+    return <LoadingState message={t("common:restoringState")} />;
   }
 
   return (
+    <ThemeProvider>
+    <I18nProvider>
     <ToastProvider>
       <AuthContext.Provider
         value={{
@@ -305,5 +310,7 @@ export function AppRoot() {
         )}
       </AuthContext.Provider>
     </ToastProvider>
+    </I18nProvider>
+    </ThemeProvider>
   );
 }

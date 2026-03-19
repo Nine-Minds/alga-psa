@@ -35,6 +35,9 @@ const activities = proxyActivities<{
     stripeSubscriptionId?: string;
     stripeSubscriptionItemId?: string;
     stripePriceId?: string;
+    stripeBaseItemId?: string;
+    stripeBasePriceId?: string;
+    addons?: string[];
   }): Promise<CreateTenantActivityResult>;
   createAdminUser(input: {
     tenantId: string;
@@ -91,6 +94,8 @@ const activities = proxyActivities<{
     stripeSubscriptionId?: string;
     stripeSubscriptionItemId?: string;
     stripePriceId?: string;
+    stripeBaseItemId?: string;
+    stripeBasePriceId?: string;
     licenseCount?: number;
   }>;
 }>({
@@ -209,6 +214,8 @@ export async function tenantCreationWorkflow(
       stripeSubscriptionId: input.stripeSubscriptionId,
       stripeSubscriptionItemId: input.stripeSubscriptionItemId,
       stripePriceId: input.stripePriceId,
+      stripeBaseItemId: input.stripeBaseItemId,
+      stripeBasePriceId: input.stripeBasePriceId,
       licenseCount: input.licenseCount,
     };
 
@@ -272,6 +279,9 @@ export async function tenantCreationWorkflow(
       stripeSubscriptionId: stripeDetails.stripeSubscriptionId,
       stripeSubscriptionItemId: stripeDetails.stripeSubscriptionItemId,
       stripePriceId: stripeDetails.stripePriceId,
+      stripeBaseItemId: stripeDetails.stripeBaseItemId,
+      stripeBasePriceId: stripeDetails.stripeBasePriceId,
+      addons: input.addons,
     });
     
     tenantCreated = true;

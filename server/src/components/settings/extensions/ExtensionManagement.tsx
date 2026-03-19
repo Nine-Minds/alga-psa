@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
@@ -44,12 +45,13 @@ const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
 ) : () => null;
 
 export default function ExtensionManagement() {
+  const { t } = useTranslation('msp/settings');
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Extension Management</CardTitle>
+        <CardTitle>{t('extensions.title')}</CardTitle>
         <CardDescription>
-          Install, configure, and manage extensions to extend Alga PSA functionality.
+          {t('extensions.description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -58,26 +60,28 @@ export default function ExtensionManagement() {
             <CustomTabs
               tabs={[
                 {
+                  id: 'manage',
                   label: "Manage",
                   content: (
                     <div className="py-2 space-y-3">
                       <DynamicExtensionsComponent />
                       <div className="flex items-center justify-end gap-2 text-[10px]">
                         <span className="text-slate-500">
-                          Need extension logs?
+                          {t('extensions.links.needLogs')}
                         </span>
                         <Link
                           href="/msp/extensions/d773f8f7-c46d-4c9d-a79b-b55903dd5074/debug"
                           className="inline-flex items-center gap-1 px-2 py-1 rounded border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors"
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          Open Service Proxy Demo Debug Console
+                          {t('extensions.links.debugConsole')}
                         </Link>
                       </div>
                     </div>
                   )
                 },
                 {
+                  id: 'install',
                   label: "Install",
                   content: (
                     <div className="py-2">
@@ -86,14 +90,14 @@ export default function ExtensionManagement() {
                   )
                 }
               ] as TabContent[]}
-              defaultTab="Manage"
+              defaultTab="manage"
             />
           </div>
         ) : (
           <div className="text-center py-10">
-            <div className="text-lg font-medium text-gray-900">Enterprise feature</div>
+            <div className="text-lg font-medium text-gray-900">{t('extensions.enterpriseOnly.title')}</div>
             <p className="text-sm text-gray-600 mt-2">
-              Extensions are available in the Enterprise edition of Alga PSA.
+              {t('extensions.enterpriseOnly.description')}
             </p>
           </div>
         )}

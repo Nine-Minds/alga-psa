@@ -10,6 +10,9 @@ const {
   BADGE_BG,
   BRAND_DARK,
   BRAND_PRIMARY,
+  COMMENT_BOX_BG,
+  COMMENT_BOX_BORDER,
+  COMMENT_LABEL_COLOR,
 } = require('../../_shared/constants.cjs');
 
 const TEMPLATE_NAME = 'ticket-comment-added';
@@ -24,10 +27,6 @@ const SUBJECTS = {
   it: 'Nuovo commento • {{ticket.title}}',
   pl: 'Nowy komentarz • {{ticket.title}}',
 };
-
-const COMMENT_BOX_BG = '#eff6ff';
-const COMMENT_BOX_BORDER = '#bfdbfe';
-const COMMENT_LABEL_COLOR = '#1e40af';
 
 /* eslint-disable max-len */
 const COPY = {

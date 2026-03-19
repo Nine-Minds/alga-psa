@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, Text, View } from "react-native";
-import { colors, spacing, typography } from "../theme";
+import { useTheme } from "../ThemeContext";
 
 type ToastTone = "info" | "success" | "error";
 
@@ -24,6 +24,7 @@ type ToastContextValue = {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const theme = useTheme();
   const [toast, setToast] = useState<Toast | null>(null);
   const hideHandle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
@@ -62,7 +63,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(() => ({ showToast }), [showToast]);
-  const palette = toast ? toastPalette[toast.tone] : toastPalette.info;
+  const palette = toast ? theme.colors.toast[toast.tone] : theme.colors.toast.info;
 
   return (
     <ToastContext.Provider value={value}>
@@ -73,9 +74,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             pointerEvents="box-none"
             style={{
               position: "absolute",
-              left: spacing.lg,
-              right: spacing.lg,
-              bottom: spacing.lg,
+              left: theme.spacing.lg,
+              right: theme.spacing.lg,
+              bottom: theme.spacing.lg,
               opacity,
               transform: [{ translateY }],
             }}
@@ -90,15 +91,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             >
               <View
                 style={{
-                  paddingVertical: spacing.sm,
-                  paddingHorizontal: spacing.md,
-                  borderRadius: 12,
+                  paddingVertical: theme.spacing.sm,
+                  paddingHorizontal: theme.spacing.md,
+                  borderRadius: theme.borderRadius.lg,
                   borderWidth: 1,
                   borderColor: palette.border,
                   backgroundColor: palette.bg,
                 }}
               >
-                <Text style={{ ...typography.body, color: palette.text, fontWeight: "600" }}>{toast.message}</Text>
+                <Text style={{ ...theme.typography.body, color: palette.text, fontWeight: "600" }}>{toast.message}</Text>
               </View>
             </Pressable>
           </Animated.View>
@@ -113,10 +114,3 @@ export function useToast(): ToastContextValue {
   if (!ctx) throw new Error("useToast must be used within a ToastProvider");
   return ctx;
 }
-
-const toastPalette: Record<ToastTone, { bg: string; border: string; text: string }> = {
-  info: { bg: colors.card, border: colors.border, text: colors.text },
-  success: { bg: "#DCFCE7", border: "#86EFAC", text: "#14532D" },
-  error: { bg: "#FEE2E2", border: "#FCA5A5", text: "#7F1D1D" },
-} as const;
-

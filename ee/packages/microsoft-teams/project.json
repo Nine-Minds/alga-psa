@@ -1,0 +1,26 @@
+{
+  "name": "@alga-psa/ee-microsoft-teams",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "ee/packages/microsoft-teams/src",
+  "projectType": "library",
+  "tags": ["scope:ee-microsoft-teams", "type:vertical"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/ee/packages/microsoft-teams"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["ee/packages/microsoft-teams/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

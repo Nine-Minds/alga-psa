@@ -4,7 +4,7 @@ import knex, { Knex } from 'knex';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
-import { cloneTemplateContractLine } from '../src/lib/billing/utils/templateClone';
+import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
 
 const require = createRequire(import.meta.url);
 const knexConfig = require('../knexfile.cjs');

@@ -11,6 +11,9 @@ import type {
   JsonObject,
 } from 'n8n-workflow';
 import {
+  buildContactCreatePayload,
+  buildContactListQuery,
+  buildContactUpdatePayload,
   buildTicketCommentListQuery,
   buildTicketCommentPayload,
   buildTicketCreatePayload,
@@ -28,8 +31,9 @@ import {
 } from './helpers';
 import { algaApiRequest } from './transport';
 
-type Resource = 'ticket' | 'client' | 'board' | 'status' | 'priority';
+type Resource = 'ticket' | 'contact' | 'client' | 'board' | 'status' | 'priority';
 type StatusType = 'ticket' | 'project' | 'project_task' | 'interaction';
+type ContactOperation = 'create' | 'get' | 'list' | 'update' | 'delete';
 type TicketOperation =
   | 'create'
   | 'get'
@@ -43,6 +47,7 @@ type TicketOperation =
   | 'delete';
 
 const LOOKUP_PAGE_SIZE = 100;
+type HelperResource = Exclude<Resource, 'ticket' | 'contact'>;
 
 function ensureDataArray(response: unknown): IDataObject[] {
   const normalized = normalizeSuccessResponse(response);
@@ -125,6 +130,8 @@ function getOperationParameterName(resource: Resource): string {
   switch (resource) {
     case 'ticket':
       return 'ticketOperation';
+    case 'contact':
+      return 'contactOperation';
     case 'client':
       return 'clientOperation';
     case 'board':
@@ -136,7 +143,7 @@ function getOperationParameterName(resource: Resource): string {
   }
 }
 
-function getHelperEndpoint(resource: Exclude<Resource, 'ticket'>): string {
+function getHelperEndpoint(resource: HelperResource): string {
   switch (resource) {
     case 'client':
       return '/api/v1/clients';
@@ -157,8 +164,8 @@ export class AlgaPsa implements INodeType {
     group: ['transform'],
     version: 1,
     subtitle:
-      '={{$parameter["resource"] + ": " + ($parameter["ticketOperation"] || $parameter["clientOperation"] || $parameter["boardOperation"] || $parameter["statusOperation"] || $parameter["priorityOperation"])}}',
-    description: 'Create and manage Alga PSA tickets and lookup resources',
+      '={{$parameter["resource"] + ": " + ($parameter["ticketOperation"] || $parameter["contactOperation"] || $parameter["clientOperation"] || $parameter["boardOperation"] || $parameter["statusOperation"] || $parameter["priorityOperation"])}}',
+    description: 'Create and manage Alga PSA tickets, contacts, and lookup resources',
     defaults: {
       name: 'Alga PSA',
     },
@@ -178,6 +185,7 @@ export class AlgaPsa implements INodeType {
         noDataExpression: true,
         options: [
           { name: 'Ticket', value: 'ticket' },
+          { name: 'Contact', value: 'contact' },
           { name: 'Client', value: 'client' },
           { name: 'Board', value: 'board' },
           { name: 'Status', value: 'status' },
@@ -222,6 +230,25 @@ export class AlgaPsa implements INodeType {
             action: 'Update ticket assignment',
           },
           { name: 'Delete', value: 'delete', action: 'Delete a ticket' },
+        ],
+        default: 'create',
+      },
+      {
+        displayName: 'Operation',
+        name: 'contactOperation',
+        type: 'options',
+        noDataExpression: true,
+        displayOptions: {
+          show: {
+            resource: ['contact'],
+          },
+        },
+        options: [
+          { name: 'Create', value: 'create', action: 'Create a contact' },
+          { name: 'Get', value: 'get', action: 'Get a contact' },
+          { name: 'List', value: 'list', action: 'List contacts' },
+          { name: 'Update', value: 'update', action: 'Update a contact' },
+          { name: 'Delete', value: 'delete', action: 'Delete a contact' },
         ],
         default: 'create',
       },
@@ -958,6 +985,213 @@ export class AlgaPsa implements INodeType {
         ],
       },
 
+      // Contact fields
+      {
+        displayName: 'Full Name',
+        name: 'full_name',
+        type: 'string',
+        required: true,
+        default: '',
+        displayOptions: {
+          show: {
+            resource: ['contact'],
+            contactOperation: ['create'],
+          },
+        },
+      },
+      {
+        displayName: 'Contact ID',
+        name: 'contactId',
+        type: 'string',
+        required: true,
+        default: '',
+        displayOptions: {
+          show: {
+            resource: ['contact'],
+            contactOperation: ['get', 'update', 'delete'],
+          },
+        },
+      },
+      {
+        displayName: 'Create Additional Fields',
+        name: 'contactCreateAdditionalFields',
+        type: 'collection',
+        default: {},
+        placeholder: 'Add Field',
+        displayOptions: {
+          show: {
+            resource: ['contact'],
+            contactOperation: ['create'],
+          },
+        },
+        options: [
+          { displayName: 'Email', name: 'email', type: 'string', default: '' },
+          {
+            displayName: 'Client ID',
+            name: 'client_id',
+            type: 'resourceLocator',
+            default: { mode: 'list', value: '' },
+            modes: [
+              {
+                displayName: 'From List',
+                name: 'list',
+                type: 'list',
+                typeOptions: {
+                  searchListMethod: 'searchClients',
+                },
+              },
+              {
+                displayName: 'By ID',
+                name: 'id',
+                type: 'string',
+                placeholder: '00000000-0000-0000-0000-000000000000',
+              },
+            ],
+          },
+          { displayName: 'Role', name: 'role', type: 'string', default: '' },
+          {
+            displayName: 'Notes',
+            name: 'notes',
+            type: 'string',
+            default: '',
+            typeOptions: {
+              rows: 4,
+            },
+          },
+          {
+            displayName: 'Is Inactive',
+            name: 'is_inactive',
+            type: 'boolean',
+            default: false,
+          },
+          {
+            displayName: 'Phone Numbers (JSON)',
+            name: 'phone_numbers',
+            type: 'json',
+            default: '[]',
+            description: 'Array of objects with required phone_number and optional metadata',
+          },
+        ],
+      },
+      {
+        displayName: 'Update Additional Fields',
+        name: 'contactUpdateAdditionalFields',
+        type: 'collection',
+        default: {},
+        placeholder: 'Add Field',
+        displayOptions: {
+          show: {
+            resource: ['contact'],
+            contactOperation: ['update'],
+          },
+        },
+        options: [
+          { displayName: 'Full Name', name: 'full_name', type: 'string', default: '' },
+          { displayName: 'Email', name: 'email', type: 'string', default: '' },
+          {
+            displayName: 'Client ID',
+            name: 'client_id',
+            type: 'resourceLocator',
+            default: { mode: 'list', value: '' },
+            modes: [
+              {
+                displayName: 'From List',
+                name: 'list',
+                type: 'list',
+                typeOptions: {
+                  searchListMethod: 'searchClients',
+                },
+              },
+              {
+                displayName: 'By ID',
+                name: 'id',
+                type: 'string',
+                placeholder: '00000000-0000-0000-0000-000000000000',
+              },
+            ],
+          },
+          { displayName: 'Role', name: 'role', type: 'string', default: '' },
+          {
+            displayName: 'Notes',
+            name: 'notes',
+            type: 'string',
+            default: '',
+            typeOptions: {
+              rows: 4,
+            },
+          },
+          {
+            displayName: 'Is Inactive',
+            name: 'is_inactive',
+            type: 'boolean',
+            default: false,
+          },
+          {
+            displayName: 'Phone Numbers (JSON)',
+            name: 'phone_numbers',
+            type: 'json',
+            default: '[]',
+            description: 'Array of objects with required phone_number and optional metadata',
+          },
+        ],
+      },
+      {
+        displayName: 'Contact List Filters',
+        name: 'contactListFilters',
+        type: 'collection',
+        default: {},
+        placeholder: 'Add Filter',
+        displayOptions: {
+          show: {
+            resource: ['contact'],
+            contactOperation: ['list'],
+          },
+        },
+        options: [
+          { displayName: 'Client ID', name: 'client_id', type: 'string', default: '' },
+          { displayName: 'Search Term', name: 'search_term', type: 'string', default: '' },
+          {
+            displayName: 'Is Inactive',
+            name: 'is_inactive',
+            type: 'boolean',
+            default: false,
+          },
+        ],
+      },
+      {
+        displayName: 'Page',
+        name: 'contactPage',
+        type: 'number',
+        default: 1,
+        typeOptions: {
+          minValue: 1,
+          numberPrecision: 0,
+        },
+        displayOptions: {
+          show: {
+            resource: ['contact'],
+            contactOperation: ['list'],
+          },
+        },
+      },
+      {
+        displayName: 'Limit',
+        name: 'contactLimit',
+        type: 'number',
+        default: 25,
+        typeOptions: {
+          minValue: 1,
+          maxValue: 100,
+          numberPrecision: 0,
+        },
+        displayOptions: {
+          show: {
+            resource: ['contact'],
+            contactOperation: ['list'],
+          },
+        },
+      },
+
       // Helper list parameters
       {
         displayName: 'Page',
@@ -1067,9 +1301,11 @@ export class AlgaPsa implements INodeType {
         const responseJson =
           resource === 'ticket'
             ? await executeTicketOperation(this, itemIndex, operation as TicketOperation)
+            : resource === 'contact'
+              ? await executeContactOperation(this, itemIndex, operation as ContactOperation)
             : await executeHelperOperation(
                 this,
-                resource as Exclude<Resource, 'ticket'>,
+                resource as HelperResource,
                 itemIndex,
                 operation,
               );
@@ -1121,7 +1357,7 @@ export class AlgaPsa implements INodeType {
 
 async function executeHelperOperation(
   context: IExecuteFunctions,
-  resource: Exclude<Resource, 'ticket'>,
+  resource: HelperResource,
   itemIndex: number,
   operation: string,
 ): Promise<IDataObject> {
@@ -1149,6 +1385,120 @@ async function executeHelperOperation(
 
   const response = await algaApiRequest(context, 'GET', endpoint, query);
   return normalizeSuccessResponse(response);
+}
+
+async function executeContactOperation(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  operation: ContactOperation,
+): Promise<IDataObject> {
+  switch (operation) {
+    case 'create': {
+      const fullName = requireNonEmpty(
+        context,
+        context.getNodeParameter('full_name', itemIndex) as string,
+        'full_name',
+        itemIndex,
+      );
+      const rawAdditionalFields = context.getNodeParameter(
+        'contactCreateAdditionalFields',
+        itemIndex,
+        {},
+      ) as IDataObject;
+      const additionalFields = {
+        ...rawAdditionalFields,
+        client_id: extractResourceLocatorValue(rawAdditionalFields.client_id),
+      } as IDataObject;
+
+      const payload = buildWithOperationValidation(context, itemIndex, () =>
+        buildContactCreatePayload({
+          fullName,
+          additionalFields,
+        }),
+      );
+
+      const response = await algaApiRequest(context, 'POST', '/api/v1/contacts', undefined, payload);
+      return normalizeSuccessResponse(response);
+    }
+
+    case 'get': {
+      const contactId = requireUuid(
+        context,
+        context.getNodeParameter('contactId', itemIndex) as string,
+        'contactId',
+        itemIndex,
+      );
+
+      const response = await algaApiRequest(context, 'GET', `/api/v1/contacts/${contactId}`);
+      return normalizeSuccessResponse(response);
+    }
+
+    case 'list': {
+      const page = context.getNodeParameter('contactPage', itemIndex, 1) as number;
+      const limit = context.getNodeParameter('contactLimit', itemIndex, 25) as number;
+      const filters = context.getNodeParameter('contactListFilters', itemIndex, {}) as IDataObject;
+
+      const query = buildWithOperationValidation(context, itemIndex, () =>
+        buildContactListQuery({
+          page,
+          limit,
+          filters,
+        }),
+      );
+
+      const response = await algaApiRequest(context, 'GET', '/api/v1/contacts', query);
+      return normalizeSuccessResponse(response);
+    }
+
+    case 'update': {
+      const contactId = requireUuid(
+        context,
+        context.getNodeParameter('contactId', itemIndex) as string,
+        'contactId',
+        itemIndex,
+      );
+      const rawAdditionalFields = context.getNodeParameter(
+        'contactUpdateAdditionalFields',
+        itemIndex,
+        {},
+      ) as IDataObject;
+      const additionalFields = {
+        ...rawAdditionalFields,
+        client_id: extractResourceLocatorValue(rawAdditionalFields.client_id),
+      } as IDataObject;
+
+      const payload = buildWithOperationValidation(context, itemIndex, () =>
+        buildContactUpdatePayload(additionalFields),
+      );
+
+      if (Object.keys(payload).length === 0) {
+        throw new NodeOperationError(context.getNode(), 'At least one update field is required', {
+          itemIndex,
+        });
+      }
+
+      const response = await algaApiRequest(
+        context,
+        'PUT',
+        `/api/v1/contacts/${contactId}`,
+        undefined,
+        payload,
+      );
+      return normalizeSuccessResponse(response);
+    }
+
+    case 'delete': {
+      const contactId = requireUuid(
+        context,
+        context.getNodeParameter('contactId', itemIndex) as string,
+        'contactId',
+        itemIndex,
+      );
+
+      const response = await algaApiRequest(context, 'DELETE', `/api/v1/contacts/${contactId}`);
+      return normalizeDeleteSuccess(contactId, response);
+    }
+  }
 }
 
 async function executeTicketOperation(
@@ -1469,6 +1819,20 @@ function requireUuid(
 ): string {
   try {
     return ensureUuid(value, fieldName);
+  } catch (error) {
+    throw new NodeOperationError(context.getNode(), (error as Error).message, {
+      itemIndex,
+    });
+  }
+}
+
+function buildWithOperationValidation<T>(
+  context: IExecuteFunctions,
+  itemIndex: number,
+  builder: () => T,
+): T {
+  try {
+    return builder();
   } catch (error) {
     throw new NodeOperationError(context.getNode(), (error as Error).message, {
       itemIndex,

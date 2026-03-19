@@ -37,6 +37,7 @@ import {
   ImapEmailProviderConfig,
   MicrosoftEmailProviderConfig,
 } from './types';
+import { isMicrosoftConsumerEnterpriseEdition } from '../../lib/microsoftConsumerVisibility';
 
 export interface EmailProviderConfigurationProps {
   onProviderAdded?: (provider: EmailProvider) => void;
@@ -49,6 +50,7 @@ function EmailProviderConfigurationContent({
   onProviderUpdated,
   onProviderDeleted
 }: EmailProviderConfigurationProps) {
+  const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   const [providers, setProviders] = useState<EmailProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -234,6 +236,11 @@ function EmailProviderConfigurationContent({
   };
 
   const openEditDrawer = (provider: EmailProvider) => {
+    if (!isEnterpriseEdition && provider.providerType === 'microsoft') {
+      setError('Microsoft 365 inbound email is only available in Enterprise Edition.');
+      return;
+    }
+
     openDrawer(
       (
         <div className="space-y-4">
@@ -284,6 +291,9 @@ function EmailProviderConfigurationContent({
 
   // Build right-hand content for Providers section
   const renderProvidersContent = () => {
+    const visibleProviders = isEnterpriseEdition
+      ? providers
+      : providers.filter((provider) => provider.providerType !== 'microsoft');
     const providerCounts = providers.reduce(
       (acc, provider) => {
         acc[provider.providerType] = (acc[provider.providerType] || 0) + 1;
@@ -298,10 +308,14 @@ function EmailProviderConfigurationContent({
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Email Provider Configuration</h2>
             <p className="text-muted-foreground">
-              Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets
+              {isEnterpriseEdition
+                ? 'Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets'
+                : 'Configure Gmail or IMAP providers to receive and process inbound emails as tickets'}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Gmail: {providerCounts.google || 0} · Microsoft: {providerCounts.microsoft || 0} · IMAP: {providerCounts.imap || 0}
+              {isEnterpriseEdition
+                ? `Gmail: ${providerCounts.google || 0} · Microsoft: ${providerCounts.microsoft || 0} · IMAP: ${providerCounts.imap || 0}`
+                : `Gmail: ${providerCounts.google || 0} · IMAP: ${providerCounts.imap || 0}`}
             </p>
           </div>
           <Button
@@ -320,7 +334,7 @@ function EmailProviderConfigurationContent({
         )}
 
         <EmailProviderList
-          providers={providers}
+          providers={visibleProviders}
           onEdit={openEditDrawer}
           onDelete={handleProviderDeleted}
           onTestConnection={handleTestConnection}
@@ -340,15 +354,17 @@ function EmailProviderConfigurationContent({
             <CardTitle>Setup Instructions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-medium mb-2">Microsoft 365 Setup</h4>
-              <p className="text-sm text-muted-foreground">
-                1. Register an application in Azure AD<br/>
-                2. Configure API permissions for Mail.Read<br/>
-                3. Set up the redirect URL in your app registration<br/>
-                4. Use the Client ID and Client Secret in the form above
-              </p>
-            </div>
+            {isEnterpriseEdition && (
+              <div>
+                <h4 className="font-medium mb-2">Microsoft 365 Setup</h4>
+                <p className="text-sm text-muted-foreground">
+                  1. Register an application in Azure AD<br/>
+                  2. Configure API permissions for Mail.Read<br/>
+                  3. Set up the redirect URL in your app registration<br/>
+                  4. Use the Client ID and Client Secret in the form above
+                </p>
+              </div>
+            )}
             <div>
               <h4 className="font-medium mb-2">Gmail Setup</h4>
               <p className="text-sm text-muted-foreground">

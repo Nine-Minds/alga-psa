@@ -1,5 +1,7 @@
 'use server'
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
+
 import { validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -277,7 +279,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         })
         .orderBy('created_at', 'asc'),
 
-        // Get documents
+        // Get client-visible documents only
         trx('documents as d')
         .select('d.*')
         .join('document_associations as da', function() {
@@ -287,7 +289,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket',
-          'd.tenant': tenant
+          'd.tenant': tenant,
+          'd.is_client_visible': true,
         }),
 
         // Get all users involved in the ticket, including avatar file_id
@@ -831,7 +834,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
         throw new Error('Ticket not found or access denied');
       }
 
-      // Get documents for the ticket
+      // Get client-visible documents for the ticket
       return trx('documents as d')
         .select('d.*')
         .join('document_associations as da', function() {
@@ -841,7 +844,8 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket',
-          'd.tenant': tenant
+          'd.tenant': tenant,
+          'd.is_client_visible': true,
         });
     });
 

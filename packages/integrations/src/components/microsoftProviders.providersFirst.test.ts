@@ -12,7 +12,10 @@ function read(relativePathFromComponents: string): string {
 
 describe('Microsoft providers-first form contracts', () => {
   const emailFormSource = read('./email/MicrosoftProviderForm.tsx');
-  const calendarFormSource = read('./calendar/MicrosoftCalendarProviderForm.tsx');
+  const calendarFormSource = fs.readFileSync(
+    path.resolve(testDir, '../../../../ee/packages/calendar/src/components/calendar/MicrosoftCalendarProviderForm.tsx'),
+    'utf8'
+  );
   const emailActionsSource = fs.readFileSync(
     path.resolve(actionsDir, 'email-actions/emailProviderActions.ts'),
     'utf8'

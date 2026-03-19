@@ -7,6 +7,7 @@ import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHog
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
 import { I18nWrapper } from "@alga-psa/tenancy/components";
 import { AIChatContextProvider } from '@product/chat/context';
+import { TierProvider } from "@/context/TierContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { Session } from "next-auth";
@@ -45,33 +46,35 @@ export function MspLayoutClient({
 
   const content = (
     <AppSessionProvider session={session}>
-      <PostHogUserIdentifier />
-      <TagProvider>
-        <AIChatContextProvider>
-          <ClientUIStateProvider
-            initialPageState={{
-              id: 'msp-portal',
-              title: 'MSP Portal',
-              components: []
-            }}
-          >
-            {isOnboardingPage ? children : (
-              <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
-                {children}
-              </DefaultLayout>
-            )}
-          </ClientUIStateProvider>
-        </AIChatContextProvider>
-      </TagProvider>
+      <TierProvider>
+        <PostHogUserIdentifier />
+        <TagProvider>
+          <AIChatContextProvider>
+            <ClientUIStateProvider
+              initialPageState={{
+                id: 'msp-portal',
+                title: 'MSP Portal',
+                components: []
+              }}
+            >
+              {isOnboardingPage ? children : (
+                <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
+                  {children}
+                </DefaultLayout>
+              )}
+            </ClientUIStateProvider>
+          </AIChatContextProvider>
+        </TagProvider>
+      </TierProvider>
     </AppSessionProvider>
   );
 
-  if (!i18nEnabled) {
-    return content;
-  }
-
   return (
-    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} showPseudoLocales={i18nEnabled}>
+    <I18nWrapper
+      portal="msp"
+      initialLocale={i18nEnabled ? (initialLocale || undefined) : 'en'}
+      showPseudoLocales={i18nEnabled}
+    >
       {content}
     </I18nWrapper>
   );

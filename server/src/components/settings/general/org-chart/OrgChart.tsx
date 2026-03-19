@@ -8,6 +8,7 @@ import { useDrawer } from '@alga-psa/ui';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import UserDetails from '../UserDetails';
 import OrgChartNode, { type OrgChartNodeData } from './OrgChartNode';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const OrgChartFlow = dynamic(() => import('./OrgChartFlow'), { ssr: false });
 
@@ -23,6 +24,7 @@ const HORIZONTAL_GAP = 40;
 const VERTICAL_GAP = 120;
 
 const OrgChart = ({ users, onUserUpdated, searchTerm = '' }: OrgChartProps) => {
+  const { t } = useTranslation('msp/settings');
   const { openDrawer } = useDrawer();
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
 
@@ -129,7 +131,7 @@ const OrgChart = ({ users, onUserUpdated, searchTerm = '' }: OrgChartProps) => {
         data: {
           user,
           avatarUrl: avatarUrls[user.user_id] ?? null,
-          roleLabel: user.user_type === 'client' ? 'Client User' : 'Internal User',
+          roleLabel: user.user_type === 'client' ? t('orgChart.roles.client') : t('orgChart.roles.internal'),
           isHighlighted,
         },
       });
@@ -164,14 +166,14 @@ const OrgChart = ({ users, onUserUpdated, searchTerm = '' }: OrgChartProps) => {
     });
 
     return { nodes: positionedNodes, edges: positionedEdges };
-  }, [users, avatarUrls, searchTerm]);
+  }, [users, avatarUrls, searchTerm, t]);
 
   const nodeTypes: NodeTypes = useMemo(() => ({
     orgChartNode: OrgChartNode,
   }), []);
 
   if (users.length === 0) {
-    return <div className="text-sm text-muted-foreground">No users available.</div>;
+    return <div className="text-sm text-muted-foreground">{t('orgChart.emptyState')}</div>;
   }
 
   return (

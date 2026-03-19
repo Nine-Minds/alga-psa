@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IconPicker, getIconComponent } from '@alga-psa/ui/components/IconPicker';
 import { createInteractionType, updateInteractionType, getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { IInteractionType } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface QuickAddInteractionTypeProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
   onSuccess,
   editingType
 }) => {
+  const { t } = useTranslation('msp/settings');
   const [typeName, setTypeName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<string>('');
   const [displayOrder, setDisplayOrder] = useState<number>(0);
@@ -68,7 +70,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
   const handleSubmit = async () => {
     setHasAttemptedSubmit(true);
     if (!typeName.trim()) {
-      setError('Please enter a name for the interaction type.');
+      setError(t('interactions.quickAdd.messages.error.nameRequired'));
       return;
     }
 
@@ -95,7 +97,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
       handleClose();
     } catch (error) {
       console.error('Error saving interaction type:', error);
-      setError(`Failed to ${editingType ? 'update' : 'create'} interaction type. Please try again.`);
+      setError(t('interactions.quickAdd.messages.error.saveFailed', { action: editingType ? 'update' : 'create' }));
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +109,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
     <Dialog 
       isOpen={isOpen} 
       onClose={handleClose}
-      title={editingType ? "Edit Interaction Type" : "Create Interaction Type"}
+      title={editingType ? t('interactions.quickAdd.dialog.editTitle') : t('interactions.quickAdd.dialog.createTitle')}
       id={editingType ? "edit-interaction-type-dialog" : "add-interaction-type-dialog"}
       className="max-w-xl"
     >
@@ -122,13 +124,13 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
         {/* Type Name */}
         <div className="space-y-2">
           <Label htmlFor="type-name" className="text-sm font-medium">
-            Interaction Type Name: *
+            {t('interactions.quickAdd.fields.name.label')}
           </Label>
           <Input
             id="type-name"
             value={typeName}
             onChange={(e) => setTypeName(e.target.value)}
-            placeholder="e.g., 'Client Onboarding Call', 'Sales Demo', 'Project Review'"
+            placeholder={t('interactions.quickAdd.fields.name.placeholder')}
             className={`w-full ${hasAttemptedSubmit && !typeName.trim() ? 'border-destructive' : ''}`}
           />
         </div>
@@ -136,7 +138,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
         {/* Display Order */}
         <div className="space-y-2">
           <Label htmlFor="display-order" className="text-sm font-medium">
-            Display Order:
+            {t('interactions.quickAdd.fields.displayOrder.label')}
           </Label>
           <Input
             id="display-order"
@@ -144,7 +146,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
             min="1"
             value={displayOrder}
             onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
-            placeholder="e.g., 1, 2, 3..."
+            placeholder={t('interactions.quickAdd.fields.displayOrder.placeholder')}
             className="w-full"
           />
         </div>
@@ -152,7 +154,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
         {/* Icon Selection */}
         <div className="space-y-3">
           <Label className="text-sm font-medium">
-            Choose an Icon:
+            {t('interactions.quickAdd.fields.icon.label')}
           </Label>
           <IconPicker
             value={selectedIcon}
@@ -163,13 +165,13 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
 
         {/* Preview */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h4 className="font-medium text-sm mb-3 text-gray-700">Preview:</h4>
+          <h4 className="font-medium text-sm mb-3 text-gray-700">{t('interactions.quickAdd.preview.title')}</h4>
           <div className="flex items-center gap-2">
             {selectedIcon && SelectedIconComponent && (
               <SelectedIconComponent className="h-4 w-4 text-gray-600" />
             )}
             <span className="font-medium">
-              {typeName || 'Enter type name above'}
+              {typeName || t('interactions.quickAdd.preview.empty')}
             </span>
           </div>
         </div>
@@ -182,7 +184,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
             onClick={handleClose}
             disabled={isLoading}
           >
-            Cancel
+            {t('interactions.quickAdd.actions.cancel')}
           </Button>
           <Button
             id={editingType ? "update-interaction-type" : "create-interaction-type"}
@@ -190,9 +192,9 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
             disabled={isLoading}
             className={`bg-primary-500 text-white hover:bg-primary-600 ${!typeName.trim() ? 'opacity-50' : ''}`}
           >
-            {isLoading 
-              ? (editingType ? 'Updating...' : 'Creating...') 
-              : (editingType ? 'Update Type' : 'Create Type')
+            {isLoading
+              ? (editingType ? t('interactions.quickAdd.actions.updating') : t('interactions.quickAdd.actions.creating'))
+              : (editingType ? t('interactions.quickAdd.actions.update') : t('interactions.quickAdd.actions.create'))
             }
           </Button>
         </div>

@@ -9,7 +9,7 @@ import InteractionModel from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildInteractionLoggedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/crmInteractionNoteEventBuilders';
+import { buildInteractionLoggedPayload } from '@alga-psa/workflow-streams';
 
 import { createTenantKnex } from '@alga-psa/db';
 

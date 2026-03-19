@@ -17,7 +17,6 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions';
 import { IContact } from '@alga-psa/types';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -27,8 +26,7 @@ import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
-import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
-import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
+import { useClientIntegration } from '../context/ClientIntegrationContext';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -37,6 +35,7 @@ interface ProjectQuickAddProps {
 }
 
 const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdded, clients }) => {
+  const { getContactsByClient, getAllContacts, renderQuickAddContact, renderQuickAddClient } = useClientIntegration();
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -392,26 +391,26 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         </DialogContent>
     </Dialog>
 
-      <QuickAddContact
-        isOpen={isQuickAddContactOpen}
-        onClose={() => setIsQuickAddContactOpen(false)}
-        onContactAdded={(newContact) => {
+      {renderQuickAddContact({
+        isOpen: isQuickAddContactOpen,
+        onClose: () => setIsQuickAddContactOpen(false),
+        onContactAdded: (newContact) => {
           setContacts(prev => [...prev, newContact]);
           setSelectedContactId(newContact.contact_name_id);
-        }}
-        clients={mergedClients}
-        selectedClientId={selectedClientId || null}
-      />
+        },
+        clients: mergedClients,
+        selectedClientId: selectedClientId || null,
+      })}
 
-      <QuickAddClient
-        open={isQuickAddClientOpen}
-        onOpenChange={setIsQuickAddClientOpen}
-        onClientAdded={(newClient) => {
+      {renderQuickAddClient({
+        open: isQuickAddClientOpen,
+        onOpenChange: setIsQuickAddClientOpen,
+        onClientAdded: (newClient) => {
           setLocalClients(prev => [...prev, newClient]);
           setSelectedClientId(newClient.client_id);
-        }}
-        skipSuccessDialog
-      />
+        },
+        skipSuccessDialog: true,
+      })}
     </>
   );
 };

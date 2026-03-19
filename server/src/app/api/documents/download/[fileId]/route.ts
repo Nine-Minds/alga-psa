@@ -21,11 +21,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // The URL parameter is named fileId but it's actually the document_id
-  const documentId = resolvedParams.fileId;
+  // The URL parameter may be either a document_id or file_id
+  const lookupId = resolvedParams.fileId;
   const format = req.nextUrl.searchParams.get('format');
 
-  if (!documentId || typeof documentId !== 'string') {
+  if (!lookupId || typeof lookupId !== 'string') {
      logger.error('Invalid document ID received for download/PDF generation.');
     return NextResponse.json({ error: 'Invalid document ID.' }, { status: 400 });
   }
@@ -34,17 +34,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
   return await runWithTenant(session.user.tenant, async () => {
     // --- PDF Generation Logic ---
     if (format === 'pdf') {
-      logger.info(`PDF generation requested for document ID: ${documentId}`);
+      logger.info(`PDF generation requested for document ID: ${lookupId}`);
 
       try {
         // Get document to verify it exists and belongs to the user's tenant
         const { knex } = await createTenantKnex();
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await Document.get(trx, documentId);
+          // Try by document_id first, then by file_id
+          const doc = await Document.get(trx, lookupId);
+          if (doc) return doc;
+          return await trx('documents')
+            .where({ file_id: lookupId, tenant: session.user.tenant })
+            .first();
         });
 
         if (!document || document.tenant !== session.user.tenant) {
-          logger.warn(`Document not found or tenant mismatch for PDF generation. ID: ${documentId}, Tenant: ${session.user.tenant}`);
+          logger.warn(`Document not found or tenant mismatch for PDF generation. ID: ${lookupId}, Tenant: ${session.user.tenant}`);
           return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 
@@ -53,14 +58,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
 
         try {
           const fileRecord = await pdfService.generateAndStore({
-            documentId: documentId,
+            documentId: document.document_id,
             userId: session.user.id
           });
 
           // Download the generated PDF
           const result = await StorageService.downloadFile(fileRecord.file_id);
           if (!result) {
-            logger.error(`Failed to download generated PDF for document ${documentId}`);
+            logger.error(`Failed to download generated PDF for document ${lookupId}`);
             return NextResponse.json({ error: 'Failed to download generated PDF.' }, { status: 500 });
           }
 
@@ -73,39 +78,43 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
 
           return new Response(result.buffer as any, { status: 200, headers });
         } catch (pdfError) {
-          logger.error(`Error generating PDF for document ${documentId}:`, pdfError);
+          logger.error(`Error generating PDF for document ${lookupId}:`, pdfError);
           return NextResponse.json({ error: 'Failed to generate PDF.' }, { status: 500 });
         }
 
       } catch (error) {
-        logger.error(`Error generating PDF for document ${documentId}:`, error);
+        logger.error(`Error generating PDF for document ${lookupId}:`, error);
         return NextResponse.json({ error: 'Failed to generate PDF.' }, { status: 500 });
       }
     } else {
       // --- Original File Download Logic ---
-      logger.info(`Standard file download requested for document ID: ${documentId}`);
+      logger.info(`Standard file download requested for document ID: ${lookupId}`);
       try {
-        // First, get the document to find its file_id
+        // First, get the document to find its file_id (lookup by document_id or file_id)
         const { knex } = await createTenantKnex();
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await Document.get(trx, documentId);
+          const doc = await Document.get(trx, lookupId);
+          if (doc) return doc;
+          return await trx('documents')
+            .where({ file_id: lookupId, tenant: session.user.tenant })
+            .first();
         });
 
         if (!document || document.tenant !== session.user.tenant) {
-          logger.warn(`Document not found or tenant mismatch. ID: ${documentId}, Tenant: ${session.user.tenant}`);
+          logger.warn(`Document not found or tenant mismatch. ID: ${lookupId}, Tenant: ${session.user.tenant}`);
           return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 
         // If document exists, use its file_id with downloadDocument
         if (!document.file_id) {
-          logger.warn(`Document has no associated file. Document ID: ${documentId}`);
+          logger.warn(`Document has no associated file. Document ID: ${lookupId}`);
           return NextResponse.json({ error: 'Document has no associated file.' }, { status: 404 });
         }
 
         // Use the file_id from the document, not the document_id
         return await downloadDocument(document.file_id);
       } catch (error) {
-        logger.error(`Error in standard download route for document ${documentId}:`, error);
+        logger.error(`Error in standard download route for document ${lookupId}:`, error);
         // Ensure a standard Response object is returned on error
         const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
         return new Response(JSON.stringify({ error: errorMessage }), {

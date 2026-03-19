@@ -1,166 +1,153 @@
-'use server'
+'use server';
 
+import logger from '@alga-psa/core/logger';
 import { withAuth } from '@alga-psa/auth';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
-import { generateGoogleCalendarAuthUrl, generateMicrosoftCalendarAuthUrl, generateCalendarNonce, encodeCalendarState } from '../utils/calendar/oauthHelpers';
-import { resolveCalendarRedirectUri } from '../utils/calendar/redirectUri';
-import { storeCalendarOAuthState } from '../utils/calendar/oauthStateStore';
-import { CalendarProviderService } from '../services/calendar/CalendarProviderService';
-import { GoogleCalendarAdapter } from '../services/calendar/providers/GoogleCalendarAdapter';
-import { MicrosoftCalendarAdapter } from '../services/calendar/providers/MicrosoftCalendarAdapter';
-import { CalendarSyncService } from '../services/calendar/CalendarSyncService';
-import { CalendarWebhookMaintenanceService } from '../services/calendar/CalendarWebhookMaintenanceService';
-import type { CalendarProviderConfig, CalendarSyncStatus, CalendarConflictResolution } from '@alga-psa/types';
+import { isCalendarEnterpriseEdition } from '../lib/calendarAvailability';
+import type {
+  CalendarProviderConfig,
+  CalendarSyncStatus,
+  CalendarConflictResolution,
+} from '@alga-psa/types';
 
-function isClientPortalUser(user: any): boolean {
-  return user?.user_type === 'client';
-}
-
-async function getOwnedCalendarProviderOrNull(params: {
+type CalendarActionContext = {
   tenant: string;
-  userId: string;
-  calendarProviderId: string;
-  includeSecrets?: boolean;
-}): Promise<CalendarProviderConfig | null> {
-  const { tenant, userId, calendarProviderId, includeSecrets } = params;
-  const providerService = new CalendarProviderService();
-  const provider = await providerService.getProvider(calendarProviderId, tenant, { includeSecrets: includeSecrets ?? false });
-  if (!provider) return null;
-  if (provider.user_id !== userId) return null;
-  return provider;
+};
+
+type CalendarOAuthParams = {
+  provider: 'google' | 'microsoft';
+  calendarProviderId?: string;
+  redirectUri?: string;
+  isPopup?: boolean;
+};
+
+type CalendarProviderCreateParams = {
+  providerType: 'google' | 'microsoft';
+  providerName: string;
+  calendarId: string;
+  syncDirection: 'bidirectional' | 'to_external' | 'from_external';
+  vendorConfig: any;
+};
+
+type CalendarProviderUpdateParams = {
+  providerName?: string;
+  calendarId?: string;
+  syncDirection?: 'bidirectional' | 'to_external' | 'from_external';
+  isActive?: boolean;
+  vendorConfig?: any;
+};
+
+type EeCalendarActionsModule = {
+  initiateCalendarOAuthImpl?: (
+    user: any,
+    context: CalendarActionContext,
+    params: CalendarOAuthParams
+  ) => Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }>;
+  getCalendarProvidersImpl?: (
+    user: any,
+    context: CalendarActionContext
+  ) => Promise<{ success: boolean; providers?: CalendarProviderConfig[]; error?: string }>;
+  createCalendarProviderImpl?: (
+    user: any,
+    context: CalendarActionContext,
+    params: CalendarProviderCreateParams
+  ) => Promise<{ success: boolean; provider?: CalendarProviderConfig; error?: string }>;
+  updateCalendarProviderImpl?: (
+    user: any,
+    context: CalendarActionContext,
+    calendarProviderId: string,
+    params: CalendarProviderUpdateParams
+  ) => Promise<{ success: boolean; provider?: CalendarProviderConfig; error?: string }>;
+  deleteCalendarProviderImpl?: (
+    user: any,
+    context: CalendarActionContext,
+    calendarProviderId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  syncScheduleEntryToCalendarImpl?: (
+    user: any,
+    context: CalendarActionContext,
+    entryId: string,
+    calendarProviderId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  syncExternalEventToScheduleImpl?: (
+    user: any,
+    context: CalendarActionContext,
+    externalEventId: string,
+    calendarProviderId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  resolveCalendarConflictImpl?: (
+    user: any,
+    context: CalendarActionContext,
+    resolution: CalendarConflictResolution
+  ) => Promise<{ success: boolean; error?: string }>;
+  getScheduleEntrySyncStatusImpl?: (
+    user: any,
+    context: CalendarActionContext,
+    entryId: string
+  ) => Promise<{ success: boolean; status?: CalendarSyncStatus[]; error?: string }>;
+  syncCalendarProviderImpl?: (
+    user: any,
+    context: CalendarActionContext,
+    calendarProviderId: string
+  ) => Promise<{ success: boolean; started?: boolean; error?: string }>;
+  retryMicrosoftCalendarSubscriptionRenewalImpl?: (
+    user: any,
+    context: CalendarActionContext,
+    providerId: string
+  ) => Promise<{ success: boolean; message?: string; error?: string }>;
+};
+
+const CALENDAR_UNAVAILABLE_ERROR = 'Calendar sync is only available in Enterprise Edition.';
+
+let eeCalendarActionsPromise: Promise<EeCalendarActionsModule> | null = null;
+
+function calendarUnavailable<T extends object = {}>(extra?: T): { success: false; error: string } & T {
+  return {
+    success: false,
+    error: CALENDAR_UNAVAILABLE_ERROR,
+    ...(extra ?? ({} as T)),
+  };
 }
 
-/**
- * Initiate OAuth flow for calendar provider
- */
+async function loadEeCalendarActions(): Promise<EeCalendarActionsModule> {
+  if (!eeCalendarActionsPromise) {
+    eeCalendarActionsPromise = import('@alga-psa/ee-calendar/actions')
+      .then((mod) => mod as EeCalendarActionsModule)
+      .catch((error) => {
+        logger.warn('[CalendarActions] Failed to load EE calendar action implementation', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return {} as EeCalendarActionsModule;
+      });
+  }
+
+  return eeCalendarActionsPromise;
+}
+
 export const initiateCalendarOAuth = withAuth(async (
   user,
   { tenant },
-  params: {
-    provider: 'google' | 'microsoft';
-    calendarProviderId?: string;
-    redirectUri?: string;
-    isPopup?: boolean;
-  }
+  params: CalendarOAuthParams
 ): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }> => {
-  try {
-    // Calendar integrations are user-owned. Any MSP user may initiate OAuth for their own provider.
-    if (isClientPortalUser(user)) {
-      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
-    }
-
-    // If calendarProviderId is specified, ensure it belongs to the caller's tenant
-    if (params.calendarProviderId) {
-      const owned = await getOwnedCalendarProviderOrNull({
-        tenant,
-        userId: user.user_id,
-        calendarProviderId: params.calendarProviderId,
-        includeSecrets: true
-      });
-      if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
-    }
-
-    const { provider, calendarProviderId, redirectUri: requestedRedirectUri, isPopup } = params;
-    const secretProvider = await getSecretProviderInstance();
-
-    let existingRedirectUri: string | undefined;
-    let existingProviderConfig: CalendarProviderConfig['provider_config'] | undefined;
-    if (calendarProviderId) {
-      const owned = await getOwnedCalendarProviderOrNull({
-        tenant,
-        userId: user.user_id,
-        calendarProviderId,
-        includeSecrets: true
-      });
-      if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
-      existingRedirectUri = owned.provider_config?.redirectUri;
-      existingProviderConfig = owned.provider_config;
-    }
-
-    let clientId: string | null = null;
-
-    if (provider === 'google') {
-      // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
-      clientId =
-        (await secretProvider.getTenantSecret(tenant, 'google_calendar_client_id')) ||
-        (await secretProvider.getTenantSecret(tenant, 'google_client_id')) ||
-        null;
-    } else {
-      clientId = process.env.MICROSOFT_CLIENT_ID
-        || (await secretProvider.getTenantSecret(tenant, 'microsoft_client_id'))
-        || (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID'))
-        || null;
-    }
-
-    if (!clientId && existingProviderConfig && provider === 'microsoft') {
-      clientId = existingProviderConfig.clientId || null;
-    }
-
-    if (!clientId) {
-      return { success: false, error: `${provider} OAuth client ID not configured` };
-    }
-
-    const redirectUri = await resolveCalendarRedirectUri({
-      tenant,
-      provider,
-      secretProvider,
-      hosted: false,
-      requestedRedirectUri,
-      existingRedirectUri
-    });
-
-    const state = {
-      tenant,
-      provider,
-      calendarProviderId,
-      nonce: generateCalendarNonce(),
-      redirectUri,
-      timestamp: Date.now(),
-      hosted: false,
-      isPopup
-    };
-    const encodedState = encodeCalendarState(state);
-
-    // For multi-tenant Azure AD apps, always use 'common' for the authorization URL
-    // This allows users from any Azure AD tenant to authenticate
-    const msTenantAuthority = 'common';
-
-    const authUrl = provider === 'microsoft'
-      ? await generateMicrosoftCalendarAuthUrl({
-          clientId,
-          redirectUri: state.redirectUri,
-          state: encodedState,
-          tenantId: msTenantAuthority
-        })
-      : await generateGoogleCalendarAuthUrl({
-          clientId,
-          redirectUri: state.redirectUri,
-          state: encodedState
-        });
-
-    await storeCalendarOAuthState(state.nonce, state, 10 * 60);
-
-    return { 
-      success: true, 
-      authUrl, 
-      state: encodedState 
-    };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to initiate OAuth' };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
+
+  const ee = await loadEeCalendarActions();
+  if (!ee.initiateCalendarOAuthImpl) {
+    return calendarUnavailable();
+  }
+
+  return ee.initiateCalendarOAuthImpl(user, { tenant }, params);
 });
 
-// Backwards-compatible helpers.
 export async function getGoogleAuthUrl(params: {
   calendarProviderId?: string;
   redirectUri?: string;
   isPopup?: boolean;
 } = {}): Promise<string> {
   const result = await initiateCalendarOAuth({ provider: 'google', ...params });
-  if (!result.success) {
-    throw new Error((result as { success: false; error: string }).error);
+  if (result.success === false) {
+    throw new Error(result.error);
   }
   return result.authUrl;
 }
@@ -171,16 +158,12 @@ export async function getMicrosoftAuthUrl(params: {
   isPopup?: boolean;
 } = {}): Promise<string> {
   const result = await initiateCalendarOAuth({ provider: 'microsoft', ...params });
-  if (!result.success) {
-    throw new Error((result as { success: false; error: string }).error);
+  if (result.success === false) {
+    throw new Error(result.error);
   }
   return result.authUrl;
 }
 
-/**
- * Get calendar providers for current user
- * Each user has their own calendar sync configuration
- */
 export const getCalendarProviders = withAuth(async (
   user,
   { tenant }
@@ -189,150 +172,61 @@ export const getCalendarProviders = withAuth(async (
   providers?: CalendarProviderConfig[];
   error?: string;
 }> => {
-  try {
-    const providerService = new CalendarProviderService();
-    const providers = await providerService.getProviders({
-      tenant,
-      userId: user.user_id
-    });
-
-    return { success: true, providers };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to fetch calendar providers' };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
+
+  const ee = await loadEeCalendarActions();
+  if (!ee.getCalendarProvidersImpl) {
+    return calendarUnavailable();
+  }
+
+  return ee.getCalendarProvidersImpl(user, { tenant });
 });
 
-/**
- * Create calendar provider
- */
 export const createCalendarProvider = withAuth(async (
   user,
   { tenant },
-  params: {
-    providerType: 'google' | 'microsoft';
-    providerName: string;
-    calendarId: string;
-    syncDirection: 'bidirectional' | 'to_external' | 'from_external';
-    vendorConfig: any;
-  }
+  params: CalendarProviderCreateParams
 ): Promise<{
   success: boolean;
   provider?: CalendarProviderConfig;
   error?: string;
 }> => {
-  if (isClientPortalUser(user)) {
-    return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
 
-  try {
-    const providerService = new CalendarProviderService();
-
-    // Reuse existing provider when unique constraint would be violated
-    // Each user can only have one provider per type
-    const existingProviders = await providerService.getProviders({
-      tenant,
-      userId: user.user_id,
-      providerType: params.providerType,
-      calendarId: params.calendarId
-    });
-
-    if (existingProviders.length > 0) {
-      const existing = existingProviders[0];
-      const needsUpdate =
-        existing.name !== params.providerName ||
-        existing.sync_direction !== params.syncDirection ||
-        !existing.active;
-
-      if (needsUpdate) {
-        await providerService.updateProvider(existing.id, tenant, {
-          providerName: params.providerName,
-          calendarId: params.calendarId,
-          syncDirection: params.syncDirection,
-          isActive: true
-        });
-        const updated = await providerService.getProvider(existing.id, tenant, { includeSecrets: false });
-        return { success: true, provider: updated ?? existing };
-      }
-
-      return { success: true, provider: existing };
-    }
-
-    const provider = await providerService.createProvider({
-      tenant,
-      userId: user.user_id,
-      providerType: params.providerType,
-      providerName: params.providerName,
-      calendarId: params.calendarId,
-      isActive: true,
-      syncDirection: params.syncDirection,
-      vendorConfig: params.vendorConfig
-    });
-
-    return { success: true, provider };
-  } catch (error: any) {
-    // Handle race where provider created concurrently
-    // Check for both old and new unique constraint names
-    if (typeof error?.message === 'string' &&
-        (error.message.includes('calendar_providers_tenant_calendar_id_provider_type_unique') ||
-         error.message.includes('calendar_providers_tenant_user_provider_unique'))) {
-      try {
-        const providerService = new CalendarProviderService();
-        const existingProviders = await providerService.getProviders({
-          tenant,
-          userId: user.user_id,
-          providerType: params.providerType
-        });
-        const existing = existingProviders[0];
-        if (existing) {
-          return { success: true, provider: existing };
-        }
-      } catch {
-        // fall through to default error handling
-      }
-    }
-    return { success: false, error: error?.message || 'Failed to create calendar provider' };
+  const ee = await loadEeCalendarActions();
+  if (!ee.createCalendarProviderImpl) {
+    return calendarUnavailable();
   }
+
+  return ee.createCalendarProviderImpl(user, { tenant }, params);
 });
 
-/**
- * Update calendar provider
- */
 export const updateCalendarProvider = withAuth(async (
   user,
   { tenant },
   calendarProviderId: string,
-  params: {
-    providerName?: string;
-    calendarId?: string;
-    syncDirection?: 'bidirectional' | 'to_external' | 'from_external';
-    isActive?: boolean;
-    vendorConfig?: any;
-  }
+  params: CalendarProviderUpdateParams
 ): Promise<{
   success: boolean;
   provider?: CalendarProviderConfig;
   error?: string;
 }> => {
-  try {
-    if (isClientPortalUser(user)) {
-      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
-    }
-
-    const owned = await getOwnedCalendarProviderOrNull({ tenant, userId: user.user_id, calendarProviderId });
-    if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
-
-    const providerService = new CalendarProviderService();
-    const provider = await providerService.updateProvider(calendarProviderId, tenant, params);
-
-    return { success: true, provider };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to update calendar provider' };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
+
+  const ee = await loadEeCalendarActions();
+  if (!ee.updateCalendarProviderImpl) {
+    return calendarUnavailable();
+  }
+
+  return ee.updateCalendarProviderImpl(user, { tenant }, calendarProviderId, params);
 });
 
-/**
- * Delete calendar provider
- */
 export const deleteCalendarProvider = withAuth(async (
   user,
   { tenant },
@@ -341,26 +235,18 @@ export const deleteCalendarProvider = withAuth(async (
   success: boolean;
   error?: string;
 }> => {
-  try {
-    if (isClientPortalUser(user)) {
-      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
-    }
-
-    const owned = await getOwnedCalendarProviderOrNull({ tenant, userId: user.user_id, calendarProviderId });
-    if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
-
-    const providerService = new CalendarProviderService();
-    await providerService.deleteProvider(calendarProviderId, tenant);
-
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to delete calendar provider' };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
+
+  const ee = await loadEeCalendarActions();
+  if (!ee.deleteCalendarProviderImpl) {
+    return calendarUnavailable();
+  }
+
+  return ee.deleteCalendarProviderImpl(user, { tenant }, calendarProviderId);
 });
 
-/**
- * Sync schedule entry to external calendar
- */
 export const syncScheduleEntryToCalendar = withAuth(async (
   user,
   { tenant },
@@ -370,26 +256,18 @@ export const syncScheduleEntryToCalendar = withAuth(async (
   success: boolean;
   error?: string;
 }> => {
-  try {
-    if (isClientPortalUser(user)) {
-      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
-    }
-
-    const owned = await getOwnedCalendarProviderOrNull({ tenant, userId: user.user_id, calendarProviderId });
-    if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
-
-    const syncService = new CalendarSyncService();
-    const result = await syncService.syncScheduleEntryToExternal(entryId, calendarProviderId);
-
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to sync schedule entry' };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
+
+  const ee = await loadEeCalendarActions();
+  if (!ee.syncScheduleEntryToCalendarImpl) {
+    return calendarUnavailable();
+  }
+
+  return ee.syncScheduleEntryToCalendarImpl(user, { tenant }, entryId, calendarProviderId);
 });
 
-/**
- * Sync external calendar event to schedule entry
- */
 export const syncExternalEventToSchedule = withAuth(async (
   user,
   { tenant },
@@ -399,26 +277,18 @@ export const syncExternalEventToSchedule = withAuth(async (
   success: boolean;
   error?: string;
 }> => {
-  try {
-    if (isClientPortalUser(user)) {
-      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
-    }
-
-    const owned = await getOwnedCalendarProviderOrNull({ tenant, userId: user.user_id, calendarProviderId });
-    if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
-
-    const syncService = new CalendarSyncService();
-    const result = await syncService.syncExternalEventToSchedule(externalEventId, calendarProviderId);
-
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to sync external event' };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
+
+  const ee = await loadEeCalendarActions();
+  if (!ee.syncExternalEventToScheduleImpl) {
+    return calendarUnavailable();
+  }
+
+  return ee.syncExternalEventToScheduleImpl(user, { tenant }, externalEventId, calendarProviderId);
 });
 
-/**
- * Resolve calendar sync conflict
- */
 export const resolveCalendarConflict = withAuth(async (
   user,
   { tenant },
@@ -427,42 +297,18 @@ export const resolveCalendarConflict = withAuth(async (
   success: boolean;
   error?: string;
 }> => {
-  try {
-    if (isClientPortalUser(user)) {
-      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
-    }
-
-    // Ensure the mapping being resolved belongs to one of the caller's providers.
-    const { knex } = await createTenantKnex();
-    const mapping = await withTransaction(knex, async (trx) => {
-      return await trx('calendar_event_mappings as cem')
-        .join('calendar_providers as cp', function (this: any) {
-          this.on('cp.id', '=', 'cem.calendar_provider_id')
-            .andOn('cp.tenant', '=', 'cem.tenant');
-        })
-        .where('cem.tenant', tenant)
-        .andWhere('cem.id', resolution.mappingId)
-        .andWhere('cp.user_id', user.user_id)
-        .first(['cem.id']);
-    });
-    if (!mapping) return { success: false, error: 'Forbidden: mapping not found or not owned by user' };
-
-    const syncService = new CalendarSyncService();
-    const result = await syncService.resolveConflict(
-      resolution.mappingId,
-      resolution.resolution,
-      resolution.mergeData
-    );
-
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to resolve conflict' };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
+
+  const ee = await loadEeCalendarActions();
+  if (!ee.resolveCalendarConflictImpl) {
+    return calendarUnavailable();
+  }
+
+  return ee.resolveCalendarConflictImpl(user, { tenant }, resolution);
 });
 
-/**
- * Get sync status for a schedule entry
- */
 export const getScheduleEntrySyncStatus = withAuth(async (
   user,
   { tenant },
@@ -472,64 +318,18 @@ export const getScheduleEntrySyncStatus = withAuth(async (
   status?: CalendarSyncStatus[];
   error?: string;
 }> => {
-  try {
-    if (isClientPortalUser(user)) {
-      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
-    }
-
-    const { knex } = await createTenantKnex();
-
-    // Get mappings for this entry, scoped to the caller's providers.
-    const mappings = await withTransaction(knex, async (trx) => {
-      return await trx('calendar_event_mappings as cem')
-        .join('calendar_providers as cp', function (this: any) {
-          this.on('cp.id', '=', 'cem.calendar_provider_id')
-            .andOn('cp.tenant', '=', 'cem.tenant');
-        })
-        .where('cem.schedule_entry_id', entryId)
-        .andWhere('cem.tenant', tenant)
-        .andWhere('cp.user_id', user.user_id)
-        .select('cem.*');
-    });
-
-    // Get providers for each mapping
-    const providerService = new CalendarProviderService();
-    const statuses: CalendarSyncStatus[] = [];
-
-    for (const mapping of mappings) {
-      const provider = await providerService.getProvider(
-        mapping.calendar_provider_id,
-        tenant,
-        { includeSecrets: false }
-      );
-      if (provider) {
-        statuses.push({
-          providerId: provider.id,
-          providerName: provider.name,
-          providerType: provider.provider_type,
-          isActive: provider.active,
-          lastSyncAt: mapping.last_synced_at,
-          syncDirection: provider.sync_direction,
-          errorMessage: mapping.sync_error_message,
-          entrySyncStatus: {
-            entryId: mapping.schedule_entry_id,
-            syncStatus: mapping.sync_status,
-            externalEventId: mapping.external_event_id
-          }
-        });
-      }
-    }
-
-    return { success: true, status: statuses };
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to get sync status' };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
+
+  const ee = await loadEeCalendarActions();
+  if (!ee.getScheduleEntrySyncStatusImpl) {
+    return calendarUnavailable();
+  }
+
+  return ee.getScheduleEntrySyncStatusImpl(user, { tenant }, entryId);
 });
 
-/**
- * Manual sync trigger for a calendar provider
- * Validates the request synchronously, then kicks off sync in the background
- */
 export const syncCalendarProvider = withAuth(async (
   user,
   { tenant },
@@ -539,229 +339,31 @@ export const syncCalendarProvider = withAuth(async (
   started?: boolean;
   error?: string;
 }> => {
-  try {
-    if (isClientPortalUser(user)) {
-      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
-    }
-
-    const providerService = new CalendarProviderService();
-    const provider = await providerService.getProvider(calendarProviderId, tenant);
-
-    if (!provider) {
-      return { success: false, error: 'Calendar provider not found' };
-    }
-
-    if (provider.user_id !== user.user_id) {
-      return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
-    }
-
-    // Capture user context for background processing
-    const tenantId = tenant;
-
-    // Kick off sync in background and return immediately
-    setImmediate(async () => {
-      console.log(`[calendarActions] Starting background sync for provider ${calendarProviderId}`);
-      const startTime = Date.now();
-
-      try {
-        const syncService = new CalendarSyncService();
-        const failures: string[] = [];
-        let pushed = 0;
-        let pulled = 0;
-
-        const allowPush = provider.sync_direction === 'bidirectional' || provider.sync_direction === 'to_external';
-        const allowPull = provider.sync_direction === 'bidirectional' || provider.sync_direction === 'from_external';
-
-        await runWithTenant(tenantId, async () => {
-          const { knex } = await createTenantKnex(tenantId);
-
-          // Define sync window: 2 days ago to 15 days from now
-          // This avoids bulk syncing historical or far-future entries
-          const now = new Date();
-          const windowStart = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
-          const windowEnd = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000); // 15 days from now
-
-          // Get mappings for entries within the sync window
-          const mappings = await withTransaction(knex, async (trx) => {
-            return await trx('calendar_event_mappings as cem')
-              .join('schedule_entries as se', function (this: any) {
-                this.on('se.entry_id', '=', 'cem.schedule_entry_id')
-                  .andOn('se.tenant', '=', 'cem.tenant');
-              })
-              .where('cem.tenant', tenantId)
-              .andWhere('cem.calendar_provider_id', calendarProviderId)
-              .andWhere(function (this: any) {
-                // Entry overlaps with sync window
-                this.where('se.scheduled_start', '<=', windowEnd)
-                  .andWhere('se.scheduled_end', '>=', windowStart);
-              })
-              .select('cem.schedule_entry_id', 'cem.external_event_id');
-          });
-
-          // Sync existing mappings within window
-          for (const mapping of mappings) {
-            if (allowPush) {
-              const result = await syncService.syncScheduleEntryToExternal(mapping.schedule_entry_id, calendarProviderId, true);
-              if (result.success) {
-                pushed += 1;
-              } else {
-                failures.push(`Push ${mapping.schedule_entry_id}: ${result.error || 'unknown error'}`);
-              }
-            }
-
-            if (allowPull) {
-              const result = await syncService.syncExternalEventToSchedule(mapping.external_event_id, calendarProviderId, true);
-              if (result.success) {
-                pulled += 1;
-              } else {
-                failures.push(`Pull ${mapping.external_event_id}: ${result.error || 'unknown error'}`);
-              }
-            }
-          }
-
-          // Push unmapped Alga entries within the sync window
-          if (allowPush) {
-            const recentEntries = await withTransaction(knex, async (trx) => {
-              return await trx('schedule_entries')
-                .where('schedule_entries.tenant', tenantId)
-                // Filter to sync window
-                .andWhere('schedule_entries.scheduled_start', '<=', windowEnd)
-                .andWhere('schedule_entries.scheduled_end', '>=', windowStart)
-                .leftJoin('calendar_event_mappings as cem', function (this: any) {
-                  this.on('cem.schedule_entry_id', '=', 'schedule_entries.entry_id')
-                    .andOn('cem.tenant', '=', 'schedule_entries.tenant')
-                    .andOn('cem.calendar_provider_id', '=', trx.raw('?', [calendarProviderId]));
-                })
-                .whereNull('cem.id')
-                .limit(100)
-                .select('schedule_entries.entry_id as entry_id');
-            });
-
-            for (const entry of recentEntries) {
-              const result = await syncService.syncScheduleEntryToExternal(entry.entry_id, calendarProviderId, true);
-              if (result.success) {
-                pushed += 1;
-              } else {
-                failures.push(`Push ${entry.entry_id}: ${result.error || 'unknown error'}`);
-              }
-            }
-          }
-
-          // Note: We no longer pull/import external events during manual sync.
-          // External events are only imported via webhooks when they contain the @alga marker.
-          // This avoids importing unwanted historical events.
-
-          // Ensure webhook subscription is active
-          if (allowPull) {
-            const hasProviderSecrets = provider.provider_config && provider.provider_config.clientId;
-            if (hasProviderSecrets) {
-              try {
-                const adapter =
-                  provider.provider_type === 'google'
-                    ? new GoogleCalendarAdapter(provider)
-                    : new MicrosoftCalendarAdapter(provider);
-
-                await adapter.connect();
-                await adapter.registerWebhookSubscription();
-              } catch (subscriptionError: any) {
-                failures.push(`Webhook registration failed: ${subscriptionError?.message || 'unknown error'}`);
-              }
-            }
-          }
-        });
-
-        const duration = Date.now() - startTime;
-
-        if (failures.length === 0) {
-          await providerService.updateProviderStatus(calendarProviderId, tenantId, {
-            status: 'connected',
-            lastSyncAt: new Date().toISOString(),
-            errorMessage: null
-          });
-          console.log(`[calendarActions] Background sync completed successfully in ${duration}ms. Pushed=${pushed}, Pulled=${pulled}`);
-        } else {
-          const summary = `Manual sync completed with ${failures.length} issue(s). Pushed=${pushed}, Pulled=${pulled}.`;
-          await providerService.updateProviderStatus(calendarProviderId, tenantId, {
-            status: 'error',
-            errorMessage: `${summary} Details: ${failures.join('; ').slice(0, 500)}`
-          });
-          console.warn(`[calendarActions] Background sync completed with errors in ${duration}ms: ${summary}`);
-        }
-      } catch (error: any) {
-        const message = error?.message || 'Failed to sync calendar provider';
-        console.error(`[calendarActions] Background sync failed:`, error);
-        try {
-          await providerService.updateProviderStatus(calendarProviderId, tenantId, {
-            status: 'error',
-            errorMessage: message
-          });
-        } catch (statusError) {
-          console.warn('[calendarActions] Failed to update provider status after sync error', statusError);
-        }
-      }
-    });
-
-    // Return immediately - sync is running in background
-    return { success: true, started: true };
-  } catch (error: any) {
-    const message = error?.message || 'Failed to start calendar sync';
-    return { success: false, error: message };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
+
+  const ee = await loadEeCalendarActions();
+  if (!ee.syncCalendarProviderImpl) {
+    return calendarUnavailable();
+  }
+
+  return ee.syncCalendarProviderImpl(user, { tenant }, calendarProviderId);
 });
 
-/**
- * Manually retry Microsoft calendar subscription renewal for a specific provider
- */
 export const retryMicrosoftCalendarSubscriptionRenewal = withAuth(async (
   user,
   { tenant },
   providerId: string
 ): Promise<{ success: boolean; message?: string; error?: string }> => {
-  try {
-    if (isClientPortalUser(user)) {
-      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
-    }
-
-    // Verify provider belongs to user's tenant
-    const { knex } = await createTenantKnex();
-    const provider = await knex('calendar_providers')
-      .where({ id: providerId, tenant })
-      .first();
-
-    if (!provider) {
-      return { success: false, error: 'Provider not found or access denied' };
-    }
-
-    if (provider.user_id !== user.user_id) {
-      return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
-    }
-
-    if (provider.provider_type !== 'microsoft') {
-      return { success: false, error: 'Provider is not a Microsoft calendar provider' };
-    }
-
-    const service = new CalendarWebhookMaintenanceService();
-    const results = await service.renewMicrosoftWebhooks({
-      tenantId: tenant,
-      providerId: providerId,
-      lookAheadMinutes: 0 // Force check regardless of expiration time
-    });
-
-    if (results.length === 0) {
-      return { success: false, error: 'Provider not found or not eligible for renewal' };
-    }
-
-    const result = results[0];
-    if (result.success) {
-      return {
-        success: true,
-        message: `Subscription ${result.action} successfully${result.newExpiration ? ` (expires: ${new Date(result.newExpiration).toLocaleString()})` : ''}`
-      };
-    } else {
-      return { success: false, error: result.error || 'Renewal failed' };
-    }
-  } catch (error: any) {
-    console.error('[calendarActions] Manual renewal failed:', error);
-    return { success: false, error: error.message || 'Internal server error' };
+  if (!isCalendarEnterpriseEdition()) {
+    return calendarUnavailable();
   }
+
+  const ee = await loadEeCalendarActions();
+  if (!ee.retryMicrosoftCalendarSubscriptionRenewalImpl) {
+    return calendarUnavailable();
+  }
+
+  return ee.retryMicrosoftCalendarSubscriptionRenewalImpl(user, { tenant }, providerId);
 });

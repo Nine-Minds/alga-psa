@@ -16,7 +16,7 @@ import {
   buildContactArchivedPayload,
   buildContactCreatedPayload,
   buildContactUpdatedPayload,
-} from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 function maybeUserActor(user: any) {
   const userId = user?.user_id;

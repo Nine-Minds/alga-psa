@@ -40,6 +40,10 @@ export type TenantRolePermissionConfig = {
 export type TenantPreparationOptions = {
   completeOnboarding?: boolean | { completedAt?: Date };
   permissions?: TenantRolePermissionConfig[];
+  experimentalFeatures?: {
+    aiAssistant?: boolean;
+    workflowAutomation?: boolean;
+  };
 };
 
 export type CreateTenantAndLoginOptions = TenantPreparationOptions & {
@@ -254,21 +258,48 @@ export class PlaywrightAuthSessionHelper {
 
     const context = this.page.context();
     const cookies: Array<Parameters<typeof context.addCookies>[0][number]> = [];
+    const issuedAtSeconds = Math.floor(Date.now() / 1000);
+    const expiresAtSeconds = issuedAtSeconds + maxAgeSeconds;
 
-    // Playwright is strict about cookie shapes; prefer a minimal set of URL-scoped cookies
-    // to avoid invalid domain/secure combinations when running on non-standard hosts/ports.
     const parsedBaseUrl = new URL(this.baseUrl);
     parsedBaseUrl.pathname = '/';
     parsedBaseUrl.search = '';
     parsedBaseUrl.hash = '';
-    const cookieUrl = parsedBaseUrl.toString();
+    const normalizedBaseUrl = parsedBaseUrl.toString();
 
-    for (const name of this.cookieNames) {
-      cookies.push({
-        name,
-        value: token,
-        url: cookieUrl,
-      });
+    for (const url of this.cookieHosts.map((host) => {
+      const parsed = new URL(host);
+      parsed.pathname = '/';
+      parsed.search = '';
+      parsed.hash = '';
+      return parsed.toString();
+    })) {
+      for (const name of this.cookieNames) {
+        cookies.push({
+          name,
+          value: token,
+          url,
+          httpOnly: true,
+          secure: this.isHttps,
+          sameSite: 'Lax',
+          expires: expiresAtSeconds,
+        });
+      }
+    }
+
+    for (const domain of this.cookieDomains) {
+      for (const name of this.cookieNames) {
+        cookies.push({
+          name,
+          value: token,
+          domain,
+          path: '/',
+          httpOnly: true,
+          secure: this.isHttps,
+          sameSite: 'Lax',
+          expires: expiresAtSeconds,
+        });
+      }
     }
 
     try {
@@ -276,7 +307,7 @@ export class PlaywrightAuthSessionHelper {
     } catch (error) {
       console.error('[Playwright Auth] Failed to set cookies', {
         baseUrl: this.baseUrl,
-        cookieUrl,
+        cookieUrl: normalizedBaseUrl,
         cookieCount: cookies.length,
         cookies: cookies.map((cookie) => ({
           name: cookie.name,
@@ -390,7 +421,7 @@ export async function prepareTenantForPlaywright(
   tenantId: string,
   options: TenantPreparationOptions = {}
 ): Promise<void> {
-  const { completeOnboarding, permissions } = options;
+  const { completeOnboarding, permissions, experimentalFeatures } = options;
 
   if (completeOnboarding) {
     const completedAt =
@@ -404,6 +435,45 @@ export async function prepareTenantForPlaywright(
     for (const { roleName, permissions: tuples } of permissions) {
       await ensureRoleHasPermission(db, tenantId, roleName, tuples);
     }
+  }
+
+  if (experimentalFeatures) {
+    const existing = await db('tenant_settings')
+      .where({ tenant: tenantId })
+      .first();
+
+    const existingSettings =
+      existing?.settings && typeof existing.settings === 'object'
+        ? existing.settings as Record<string, unknown>
+        : {};
+    const existingExperimentalFeatures =
+      existingSettings.experimentalFeatures && typeof existingSettings.experimentalFeatures === 'object'
+        ? existingSettings.experimentalFeatures as Record<string, unknown>
+        : {};
+
+    const nextSettings = {
+      ...existingSettings,
+      experimentalFeatures: {
+        ...existingExperimentalFeatures,
+        ...experimentalFeatures,
+      },
+    };
+
+    await db('tenant_settings')
+      .insert({
+        tenant: tenantId,
+        onboarding_completed: false,
+        onboarding_skipped: false,
+        onboarding_data: null,
+        settings: nextSettings,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .onConflict('tenant')
+      .merge({
+        settings: nextSettings,
+        updated_at: new Date(),
+      });
   }
 }
 

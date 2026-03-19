@@ -17,6 +17,7 @@ import { Edit2, Info } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TicketNumberSettings {
   prefix: string;
@@ -26,6 +27,7 @@ interface TicketNumberSettings {
 }
 
 const TicketNumberingSettings = () => {
+  const { t } = useTranslation('msp/settings');
   // General state
   const [settings, setSettings] = useState<TicketNumberSettings | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -47,7 +49,7 @@ const TicketNumberingSettings = () => {
         ]);
 
         if (!numberSettings) {
-          setError('No ticket numbering settings found. Please contact your administrator.');
+          setError(t('ticketing.numbering.messages.error.noSettings'));
           return;
         }
 
@@ -55,7 +57,7 @@ const TicketNumberingSettings = () => {
         setFormState(numberSettings);
         setIsAdmin(user?.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? false);
       } catch (err) {
-        setError('Failed to load ticket numbering settings');
+        setError(t('ticketing.numbering.messages.error.loadFailed'));
         console.error('Error:', err);
       }
     };
@@ -106,11 +108,11 @@ const TicketNumberingSettings = () => {
       const updatedSettings = await getTicketNumberSettings();
       setSettings(updatedSettings);
       setFormState(updatedSettings);
-      toast.success('Settings updated successfully');
+      toast.success(t('ticketing.numbering.messages.success.updated'));
       setIsEditing(false);
       setShowConfirmation(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update settings');
+      setError(err instanceof Error ? err.message : t('ticketing.numbering.messages.error.updateFailed'));
       console.error(err);
     }
   };
@@ -122,7 +124,7 @@ const TicketNumberingSettings = () => {
   };
 
   if (!settings) {
-    return <div>Loading...</div>;
+    return <div>{t('ticketing.numbering.loading')}</div>;
   }
 
   const nextNumber = isEditing
@@ -161,8 +163,8 @@ const TicketNumberingSettings = () => {
 
       {/* Section Header */}
       <div className="mb-6">
-        <h3 className="text-base font-semibold text-gray-900">Number Format</h3>
-        <p className="text-sm text-gray-500 mt-1">Define the prefix, digit padding, and current sequence</p>
+        <h3 className="text-base font-semibold text-gray-900">{t('ticketing.numbering.title')}</h3>
+        <p className="text-sm text-gray-500 mt-1">{t('ticketing.numbering.description')}</p>
       </div>
 
       <div className="space-y-6">
@@ -170,9 +172,9 @@ const TicketNumberingSettings = () => {
         <div>
           <div className="flex items-center mb-2">
             <Label htmlFor="ticket-prefix-input" className="text-sm font-medium text-gray-700">
-              Ticket Number Prefix
+              {t('ticketing.numbering.fields.prefix.label')}
             </Label>
-            <InfoTooltip text="Optional prefix for ticket numbers. Leave empty for no prefix or enter a custom prefix (e.g., 'TK-')" />
+            <InfoTooltip text={t('ticketing.numbering.fields.prefix.help')} />
           </div>
           <div className="flex items-center space-x-2">
             <Input
@@ -181,7 +183,7 @@ const TicketNumberingSettings = () => {
               onChange={(e) => handleInputChange('prefix', e.target.value)}
               disabled={!isEditing}
               className="!w-48"
-              placeholder="TK-"
+              placeholder={t('ticketing.numbering.fields.prefix.placeholder')}
             />
             {!isEditing && isAdmin && (
               <Button
@@ -200,9 +202,9 @@ const TicketNumberingSettings = () => {
         <div>
           <div className="flex items-center mb-2">
             <Label htmlFor="ticket-padding-length-input" className="text-sm font-medium text-gray-700">
-              Minimum Digits
+              {t('ticketing.numbering.fields.minimumDigits.label')}
             </Label>
-            <InfoTooltip text="Minimum number of digits for the sequential number. For example, 6 makes '1' become '000001'" />
+            <InfoTooltip text={t('ticketing.numbering.fields.minimumDigits.help')} />
           </div>
           <div className="flex items-center space-x-2">
             <Input
@@ -223,9 +225,9 @@ const TicketNumberingSettings = () => {
           <div>
             <div className="flex items-center mb-2">
               <Label htmlFor="ticket-initial-value-input" className="text-sm font-medium text-gray-700">
-                Initial Value
+                {t('ticketing.numbering.fields.initialValue.label')}
               </Label>
-              <InfoTooltip text="Set the starting number for the sequence. This can only be set once." />
+              <InfoTooltip text={t('ticketing.numbering.fields.initialValue.help')} />
             </div>
             <div className="flex items-center space-x-2">
               <Input
@@ -236,7 +238,7 @@ const TicketNumberingSettings = () => {
                 disabled={!isEditing}
                 className="!w-48"
                 min={1}
-                placeholder="Enter value"
+                placeholder={t('ticketing.numbering.fields.initialValue.placeholder')}
               />
             </div>
           </div>
@@ -246,9 +248,9 @@ const TicketNumberingSettings = () => {
         <div>
           <div className="flex items-center mb-2">
             <Label htmlFor="ticket-last-number-input" className="text-sm font-medium text-gray-700">
-              Last Used Number
+              {t('ticketing.numbering.fields.lastUsedNumber.label')}
             </Label>
-            <InfoTooltip text="The last number that was assigned. The next number will be one higher than this value." />
+            <InfoTooltip text={t('ticketing.numbering.fields.lastUsedNumber.help')} />
           </div>
           <div className="flex items-center space-x-2">
             <Input
@@ -267,9 +269,9 @@ const TicketNumberingSettings = () => {
         <div className="pt-4 border-t">
           <div className="mb-2">
             <Label className="text-sm font-medium text-gray-700">
-              Next Ticket Number Preview
+              {t('ticketing.numbering.fields.nextPreview.label')}
             </Label>
-            <p className="text-xs text-gray-500 mt-1">This is the number that will be assigned to the next ticket</p>
+            <p className="text-xs text-gray-500 mt-1">{t('ticketing.numbering.fields.nextPreview.help')}</p>
           </div>
           <div className="inline-block px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
             <span className="text-2xl font-mono font-semibold text-gray-900">{previewNumber}</span>
@@ -285,14 +287,14 @@ const TicketNumberingSettings = () => {
               onClick={() => setShowConfirmation(true)}
               disabled={!isAdmin}
             >
-              Save Changes
+              {t('ticketing.numbering.actions.saveChanges')}
             </Button>
             <Button
               id="cancel-ticket-settings-button"
               variant="outline"
               onClick={handleCancel}
             >
-              Cancel
+              {t('ticketing.numbering.actions.cancel')}
             </Button>
           </div>
         )}
@@ -303,9 +305,9 @@ const TicketNumberingSettings = () => {
         isOpen={showConfirmation}
         onClose={() => setShowConfirmation(false)}
         onConfirm={handleSave}
-        title="Update Ticket Number Settings"
-        message="Changing these settings will affect how new ticket numbers are generated. This change will not affect existing tickets. Are you sure you want to proceed?"
-        confirmLabel="Update Settings"
+        title={t('ticketing.numbering.dialog.title')}
+        message={t('ticketing.numbering.dialog.message')}
+        confirmLabel={t('ticketing.numbering.dialog.confirm')}
       />
     </div>
   );

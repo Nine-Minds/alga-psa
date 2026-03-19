@@ -78,7 +78,7 @@ export const Tenant = {
     }
   },
 
-  updatePlan: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, plan: string): Promise<void> => {
+  updatePlan: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, plan: ITenant['plan']): Promise<void> => {
     try {
       await knexOrTrx<ITenant>('tenants').where({ tenant }).update({ plan });
     } catch (error) {

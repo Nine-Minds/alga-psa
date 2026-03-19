@@ -4,12 +4,13 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   uploadClientTaskDocument,
-  getClientTaskDocuments
+  getClientTaskDocuments,
+  getClientDocumentFolders
 } from '@alga-psa/client-portal/actions';
 import { format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
 import { Button } from '@alga-psa/ui/components/Button';
-import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import {
   FileText,
   FileImage,
@@ -27,7 +28,6 @@ import {
   X
 } from 'lucide-react';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
 
 interface Document {
   document_id: string;
@@ -81,6 +81,7 @@ function getFileExtension(fileName: string, mimeType: string): string {
 }
 
 export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocumentUploadProps) {
+  const { downloadDocument, getDocumentDownloadUrl, renderFolderSelectorModal } = useDocumentsCrossFeature();
   const { t, i18n } = useTranslation('features/documents');
   const { t: tCommon } = useTranslation('common');
   const dateLocale = getDateFnsLocale(i18n.language);
@@ -98,6 +99,20 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
   // Folder selection state
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+
+  // Client-scoped folder fetcher: returns only folders from client-visible documents
+  const getClientFolders = async (): Promise<string[]> => {
+    const folderTree = await getClientDocumentFolders();
+    const paths: string[] = [];
+    const collectPaths = (nodes: typeof folderTree) => {
+      for (const node of nodes) {
+        paths.push(node.path);
+        if (node.children?.length) collectPaths(node.children);
+      }
+    };
+    collectPaths(folderTree);
+    return paths.sort();
+  };
 
   const fetchDocuments = async () => {
     try {
@@ -179,7 +194,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
     }
 
     // For other files, trigger download using the existing utility
-    const downloadUrl = getDocumentDownloadUrl(doc.file_id);
+    const downloadUrl = await getDocumentDownloadUrl(doc.file_id);
     try {
       await downloadDocument(downloadUrl, doc.document_name, true);
     } catch (err) {
@@ -193,7 +208,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
     e.stopPropagation();
     if (!doc.file_id) return;
 
-    const downloadUrl = getDocumentDownloadUrl(doc.file_id);
+    const downloadUrl = await getDocumentDownloadUrl(doc.file_id);
     try {
       await downloadDocument(downloadUrl, doc.document_name, true);
     } catch (err) {
@@ -468,14 +483,17 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
         <PreviewModal />
 
         {/* Folder Selection Modal */}
-        <FolderSelectorModal
-          isOpen={showFolderModal}
-          onClose={() => {
+        {renderFolderSelectorModal({
+          isOpen: showFolderModal,
+          onClose: () => {
             setShowFolderModal(false);
             setPendingFile(null);
-          }}
-          onSelectFolder={handleFolderSelected}
-        />
+          },
+          onSelectFolder: handleFolderSelected,
+          entityId: taskId,
+          entityType: 'project_task',
+          getFoldersFn: getClientFolders,
+        })}
       </>
     );
   }
@@ -560,14 +578,17 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
       <PreviewModal />
 
       {/* Folder Selection Modal */}
-      <FolderSelectorModal
-        isOpen={showFolderModal}
-        onClose={() => {
+      {renderFolderSelectorModal({
+        isOpen: showFolderModal,
+        onClose: () => {
           setShowFolderModal(false);
           setPendingFile(null);
-        }}
-        onSelectFolder={handleFolderSelected}
-      />
+        },
+        onSelectFolder: handleFolderSelected,
+        entityId: taskId,
+        entityType: 'project_task',
+        getFoldersFn: getClientFolders,
+      })}
     </>
   );
 }

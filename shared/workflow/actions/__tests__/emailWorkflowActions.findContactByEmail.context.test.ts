@@ -4,11 +4,13 @@ const withAdminTransactionMock = vi.fn();
 
 type Scenario = {
   contactRows: any[];
+  internalUserRow: any | null;
   ticketRow: { client_id?: string | null; contact_name_id?: string | null } | null;
 };
 
 const scenario: Scenario = {
   contactRows: [],
+  internalUserRow: null,
   ticketRow: null,
 };
 
@@ -34,17 +36,26 @@ function makeContactsQuery(rows: any[]) {
   return query;
 }
 
+function makePhoneNumbersQuery(rows: any[]) {
+  const query = makeChainable({
+    whereIn: vi.fn().mockReturnThis(),
+  });
+  query.then = (resolve: (value: any[]) => any, reject?: (error: unknown) => any) =>
+    Promise.resolve(rows).then(resolve, reject);
+  return query;
+}
+
 function makeTicketsQuery(row: Scenario['ticketRow']) {
   return makeChainable({
     first: vi.fn().mockResolvedValue(row),
   });
 }
 
-function makeUsersSubquery() {
-  const query = makeChainable({
+function makeUsersQuery(row: Scenario['internalUserRow']) {
+  return makeChainable({
+    first: vi.fn().mockResolvedValue(row),
     as: vi.fn().mockReturnValue('user_id_subquery'),
   });
-  return query;
 }
 
 vi.mock('@alga-psa/db', () => ({
@@ -59,6 +70,7 @@ describe('findContactByEmail context-aware resolution', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     scenario.contactRows = [];
+    scenario.internalUserRow = null;
     scenario.ticketRow = null;
 
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
@@ -69,8 +81,11 @@ describe('findContactByEmail context-aware resolution', () => {
         if (table === 'tickets') {
           return makeTicketsQuery(scenario.ticketRow);
         }
+        if (table === 'contact_phone_numbers as cpn') {
+          return makePhoneNumbersQuery([]);
+        }
         if (table === 'users') {
-          return makeUsersSubquery();
+          return makeUsersQuery(scenario.internalUserRow);
         }
         throw new Error(`Unexpected table in test: ${table}`);
       });
@@ -82,6 +97,7 @@ describe('findContactByEmail context-aware resolution', () => {
   it('returns null for ambiguous multi-client matches without context', async () => {
     scenario.contactRows = [
       {
+        contact_name_id: 'contact-a',
         contact_id: 'contact-a',
         name: 'A',
         email: 'sender@example.com',
@@ -90,6 +106,7 @@ describe('findContactByEmail context-aware resolution', () => {
         client_name: 'Client A',
       },
       {
+        contact_name_id: 'contact-b',
         contact_id: 'contact-b',
         name: 'B',
         email: 'sender@example.com',
@@ -105,9 +122,43 @@ describe('findContactByEmail context-aware resolution', () => {
     expect(result).toBeNull();
   });
 
+  it('prefers an exact internal user email match before contact resolution', async () => {
+    scenario.internalUserRow = {
+      user_id: 'internal-user-1',
+      first_name: 'Robert',
+      last_name: 'Isaacs',
+      email: 'robert@nineminds.com',
+    };
+    scenario.contactRows = [
+      {
+        contact_name_id: 'contact-a',
+        contact_id: 'contact-a',
+        name: 'External Robert',
+        email: 'robert@nineminds.com',
+        client_id: 'client-a',
+        user_id: null,
+        client_name: 'Client A',
+      },
+    ];
+
+    const { findContactByEmail } = await import('../emailWorkflowActions');
+    const result = await findContactByEmail('ROBERT@NINEMINDS.COM', 'tenant-1');
+
+    expect(result).toEqual({
+      contact_id: '',
+      name: 'Robert Isaacs',
+      email: 'robert@nineminds.com',
+      client_id: '',
+      user_id: 'internal-user-1',
+      user_type: 'internal',
+      client_name: '',
+    });
+  });
+
   it('scopes reply matching to ticket client and avoids cross-client attribution', async () => {
     scenario.contactRows = [
       {
+        contact_name_id: 'contact-a',
         contact_id: 'contact-a',
         name: 'A',
         email: 'sender@example.com',
@@ -116,6 +167,7 @@ describe('findContactByEmail context-aware resolution', () => {
         client_name: 'Client A',
       },
       {
+        contact_name_id: 'contact-b',
         contact_id: 'contact-b',
         name: 'B',
         email: 'sender@example.com',
@@ -141,6 +193,7 @@ describe('findContactByEmail context-aware resolution', () => {
   it('prefers direct ticket contact match when available', async () => {
     scenario.contactRows = [
       {
+        contact_name_id: 'contact-a',
         contact_id: 'contact-a',
         name: 'A',
         email: 'sender@example.com',
@@ -149,6 +202,7 @@ describe('findContactByEmail context-aware resolution', () => {
         client_name: 'Client A',
       },
       {
+        contact_name_id: 'contact-b',
         contact_id: 'contact-b',
         name: 'B',
         email: 'sender@example.com',
@@ -173,6 +227,7 @@ describe('findContactByEmail context-aware resolution', () => {
   it('uses default client context for new-ticket disambiguation and normalizes null user_id', async () => {
     scenario.contactRows = [
       {
+        contact_name_id: 'contact-a',
         contact_id: 'contact-a',
         name: 'A',
         email: 'sender@example.com',
@@ -181,6 +236,7 @@ describe('findContactByEmail context-aware resolution', () => {
         client_name: 'Default Client',
       },
       {
+        contact_name_id: 'contact-b',
         contact_id: 'contact-b',
         name: 'B',
         email: 'sender@example.com',

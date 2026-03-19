@@ -1,0 +1,819 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration: Add entity_id and entity_type columns to document_folders table (includes inline distributeIfCitus)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Migration: Replace unique constraint on document_folders to include entity scope (COALESCE-based)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.2"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Migration: Add is_client_visible boolean column to documents table (default false)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.3"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Migration: Add is_client_visible boolean column to document_folders table (default false)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.3"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Migration: Add RLS tenant isolation policies to document_folders (SELECT and INSERT)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.11"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Migration: Add partial index on documents (tenant, is_client_visible) WHERE is_client_visible = true",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.3"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Type: Add is_client_visible to IDocument interface",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.3"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Type: Add entity_id, entity_type, is_client_visible to IDocumentFolder and IFolderNode interfaces",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.1"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Action: getFolderTree() accepts optional entityId/entityType params and filters accordingly",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.4"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Action: getFolderTree() returns only global folders (entity_id IS NULL) when no entity params provided",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.4"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Action: getDocumentsByFolder() respects entity scope parameters",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.5"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Action: createFolder() accepts entityId, entityType, isClientVisible parameters",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.6"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Action: toggleDocumentVisibility(documentIds, isClientVisible) bulk-toggles visibility",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.7"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Action: toggleFolderVisibility(folderId, isClientVisible, cascade?) toggles folder and optionally cascades to documents",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.8"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Action: ensureEntityFolders(entityId, entityType) stub that returns empty tree",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.12"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "UI: Documents component in entity mode shows FolderTreeView sidebar",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.9"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "UI: FolderTreeView accepts optional entityId/entityType props",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.9"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "UI: VisibilityToggle component with eye/eye-off icon",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.10"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "UI: Visibility badge and toggle shown on DocumentListView rows (MSP context only)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.10"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "UI: Visibility badge and toggle shown on DocumentCard (MSP context only)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.10"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "UI: Visibility indicator shown on FolderTreeView folders",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1.10"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Migration: Create document_folder_templates table with tenant, name, entity_type, is_default (includes inline distributeIfCitus)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.1"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Migration: Create document_folder_template_items table with folder tree structure (includes inline distributeIfCitus)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.2"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Migration: Create document_entity_folder_init tracker table (includes inline distributeIfCitus)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.3"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Migration: Partial unique index (tenant, entity_type) WHERE is_default = true on templates",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.4"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Migration: RLS policies on all Phase 2 tables",
+    "implemented": true,
+    "prdRefs": [
+      "NFR-1"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Action: getFolderTemplates(entityType?) returns filtered template list",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.5"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Action: getFolderTemplate(templateId) returns template with items",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.5"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Action: createFolderTemplate(data) creates template and items",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.5"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Action: updateFolderTemplate(templateId, data) updates template and items",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.5"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Action: deleteFolderTemplate(templateId) deletes template (cascades to items)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.5"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Action: setDefaultTemplate(templateId) marks as default, unsets previous default for same entity type",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.4"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Action: applyTemplateToEntity(templateId, entityId, entityType) creates entity-scoped folders from template",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.6"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Action: ensureEntityFolders() checks init tracker and applies default template if uninitialized",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.6"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Action: ensureEntityFolders() is idempotent — skips existing folders on re-run",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.7"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Action: uploadDocument() auto-files into matching entity folder (best-effort, never fails upload)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.8"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "UI: FolderTemplateList component showing templates by entity type with default badge",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.5"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "UI: FolderTemplateEditor component with drag-and-drop reorder, add/remove, visibility toggles",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.9"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "UI: Admin settings page/section for Document Templates",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.5"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "UI: Documents entity mode calls ensureEntityFolders() on mount",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2.10"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Action: getClientDocuments(page, limit, filters) returns paginated client-visible docs for authenticated client",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.3",
+      "FR-3.4"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Action: getClientDocumentFolders() returns folder tree of client-visible folders",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.5"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Action: downloadClientDocument(documentId) verifies visibility and client ownership",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.8"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Action: All client-documents actions wrapped in withAuth() enforcing user_type === 'client'",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.7"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "API: File view route extended to check is_client_visible for client users",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.9"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "API: File view route extended to support contract-associated document access",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.9"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "UI: New client portal documents page at /client-portal/documents",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.1"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "UI: 'Documents' nav link added to ClientPortalLayout between Projects and Appointments",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.2"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "UI: ClientDocumentsPage component with folder tree sidebar and document grid/list",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.6"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "UI: ClientFolderTree component (read-only folder tree for portal)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.6"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "UI: ClientDocumentCard component (view/download only, no edit/delete)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.6"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "UI: ClientDocumentFilters component (search, source type, date range)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.6"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Regression: Existing inline ticket document display continues unchanged",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3.10"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Migration: Create document_share_links table with token, type, password_hash, expiry, limits, revocation (includes inline distributeIfCitus)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.1"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Migration: Create document_share_access_log table (includes inline distributeIfCitus)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.2"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Migration: RLS policies on Phase 4 tables",
+    "implemented": true,
+    "prdRefs": [
+      "NFR-1"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Action: createShareLink(input) generates 256-bit token, hashes password if provided, inserts record",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.3",
+      "FR-4.4"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Action: getShareLinksForDocument(documentId) returns active (non-revoked) links",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.11"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Action: revokeShareLink(shareId) soft-revokes link",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.13"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Action: validateShareToken(token) uses admin connection, validates expiry/revocation/download limits",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.6",
+      "NFR-4"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "API: GET /api/share/[token] serves file for valid public shares without session",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.6"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "API: GET /api/share/[token] verifies password for password-protected shares",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.7"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "API: GET /api/share/[token] verifies portal session for portal-authenticated shares",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.8"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "API: GET /api/share/[token] logs access and increments download_count",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.12"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "API: GET /api/share/[token]/info returns document metadata without download",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.9"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "API: Share routes enforce expiry and max_downloads limits",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.5"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "UI: Public share landing page at /share/[token] with download button and minimal layout",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.10"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "UI: Share landing page shows password input for password-protected links",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.10"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "UI: ShareLinkDialog component with share type selector, password input, expiry picker, max downloads",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.11"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "UI: ShareLinkDialog lists existing share links with copy URL and revoke actions",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.11"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "UI: 'Share' option added to document context menu in DocumentListView and DocumentCard",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.11"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "UI: Share indicator icon shown on documents that have active share links",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4.11"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Migration: Create kb_articles table extending documents with article_type, audience, status, review fields, slug (includes inline distributeIfCitus)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.1",
+      "FR-5.2",
+      "FR-5.3",
+      "FR-5.4"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Migration: Create kb_article_relations table (related/prerequisite/supersedes) (includes inline distributeIfCitus)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.9"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Migration: Create kb_article_templates table with BlockNote JSON template data (includes inline distributeIfCitus)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.10"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Migration: Create kb_article_reviewers table with review status tracking (includes inline distributeIfCitus)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.8"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Migration: RLS policies on all Phase 5 tables",
+    "implemented": true,
+    "prdRefs": [
+      "NFR-1"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Action: createArticle(data) creates both document and kb_articles record in transaction",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.1"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Action: updateArticle(articleId, data) updates KB metadata",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.1"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Action: publishArticle(articleId) sets status=published and auto-sets is_client_visible for client/public audience",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.4",
+      "FR-5.5"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Action: archiveArticle(articleId) sets status=archived and clears is_client_visible",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.4",
+      "FR-5.6"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Action: submitForReview(articleId, reviewerUserIds) creates reviewer assignments",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.8"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Action: completeReview(articleId, status, notes) records reviewer decision",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.8"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Action: getArticles(filters) returns paginated articles with audience/status/type/category filters",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.11"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Action: getArticle(articleId) returns full article with document content",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.11"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Action: getStaleArticles() returns articles past next_review_due",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.7"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Action: recordArticleView(articleId) increments view_count",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.15"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Action: recordArticleFeedback(articleId, helpful) increments helpful_count or not_helpful_count",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.15"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Action: getArticleTemplates() returns KB article templates",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.10"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Action: createArticleFromTicket(ticketId) pre-populates article from ticket resolution data",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.14"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "UI: KBArticleList component with filterable article list (status, audience, type, category)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.11"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "UI: KBArticleEditor component wrapping DocumentEditor with KB metadata sidebar",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.11"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "UI: KBPublishingControls component for status transitions (Draft/Review/Published/Archived)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.4"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "UI: KBReviewDashboard component showing articles awaiting review and overdue reviews",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.7",
+      "FR-5.8"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "UI: KBCategoryTree component for category navigation (reuses standard_categories)",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.11"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "UI: Staleness badge shown on articles past review due date",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.7"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "UI: ClientKBPage component for client portal KB browsing with search and categories",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.12"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "UI: ClientKBArticleView component with read-only rendering and 'Was this helpful?' feedback",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.12"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "UI: KB section added to MSP navigation",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.11"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "UI: Knowledge Base tab/section added to client portal Documents hub",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.12"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Integration: Articles can be tagged via existing tag system with tagged_type = 'knowledge_base_article'",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5.13"
+    ]
+  }
+]

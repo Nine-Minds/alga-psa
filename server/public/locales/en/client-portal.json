@@ -12,7 +12,9 @@
     "signOut": "Sign out",
     "clientPortal": "Client Portal",
     "portal": "Portal",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "documents": "Documents",
+    "knowledgeBase": "Knowledge Base"
   },
   "dashboard": {
     "title": "Dashboard",

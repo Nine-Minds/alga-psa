@@ -1185,6 +1185,17 @@ async function performTicketDelete(
   await deleteEntityTags(trx, ticketId, 'ticket');
 
   // Clean up child records that are owned by the ticket
+  // Delete comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
+  const commentIds = await trx('comments')
+    .where({ ticket_id: ticketId, tenant })
+    .pluck('comment_id');
+  if (commentIds.length > 0) {
+    await trx('comment_reactions')
+      .where({ tenant })
+      .whereIn('comment_id', commentIds)
+      .delete();
+  }
+
   await trx('comments')
     .where({ ticket_id: ticketId, tenant })
     .delete();

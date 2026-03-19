@@ -18,6 +18,8 @@ screenshots/
 *.webp
 *.webm
 *.mp4
+!ee/mobile/assets/
+!ee/mobile/assets/**
 ee/server/playwright-storage/
 .tmp/
 tmp/
@@ -151,8 +153,6 @@ check-*.sql
 check_*.sql
 update-*.sql
 server/.alga-ext-cache/
-server/public/locales/xx/
-server/public/locales/yy/
 
 *draft*.md
 *draft*.txt

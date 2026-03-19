@@ -2,9 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { IProject, IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
-import DonutChart from '@alga-psa/projects/components/DonutChart';
-import HoursProgressBar from '@alga-psa/projects/components/HoursProgressBar';
-import { calculateProjectCompletion, ProjectCompletionMetrics } from '@alga-psa/projects/lib/projectUtils';
+import { ClientPortalProjectMetrics } from '@alga-psa/client-portal-composition';
 import { formatDistanceToNow, format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -73,8 +71,6 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   const { t, i18n } = useTranslation('features/projects');
   const { t: tCommon } = useTranslation('common');
   const dateLocale = getDateFnsLocale(i18n.language);
-  const [metrics, setMetrics] = useState<ProjectCompletionMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
 
   // Initialize viewMode from localStorage
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -112,23 +108,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   // When only phases are enabled (no tasks), force list view
   const effectiveViewMode = showTasks ? viewMode : 'list';
 
-  // Load project metrics
-  useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        const projectMetrics = await calculateProjectCompletion(project.project_id);
-        setMetrics(projectMetrics);
-      } catch (error) {
-        console.error('Error fetching project metrics:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMetrics();
-  }, [project.project_id]);
-
-  // Load phases and statuses
+  // Load phases
   useEffect(() => {
     const fetchData = async () => {
       if (!showPhases && !showTasks) {
@@ -138,10 +118,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
 
       setDataLoading(true);
       try {
-        const [phasesResult, statusesResult] = await Promise.all([
-          showPhases ? getClientProjectPhases(project.project_id) : null,
-          showTasks ? getClientProjectStatuses(project.project_id) : null
-        ]);
+        const phasesResult = showPhases ? await getClientProjectPhases(project.project_id) : null;
 
         if (phasesResult?.phases) {
           setPhases(phasesResult.phases);
@@ -150,19 +127,37 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
             setSelectedPhaseId(phasesResult.phases[0].phase_id);
           }
         }
-
-        if (statusesResult?.statuses) {
-          setStatuses(statusesResult.statuses);
-        }
       } catch (error) {
-        console.error('Error fetching phases/statuses:', error);
+        console.error('Error fetching phases:', error);
       } finally {
         setDataLoading(false);
       }
     };
 
     fetchData();
-  }, [project.project_id, showPhases, showTasks]);
+  }, [project.project_id, selectedPhaseId, showPhases, showTasks]);
+
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      if (!showTasks) {
+        setStatuses([]);
+        return;
+      }
+
+      try {
+        const statusesResult = await getClientProjectStatuses(project.project_id, selectedPhaseId);
+        if (statusesResult?.statuses) {
+          setStatuses(statusesResult.statuses);
+        } else {
+          setStatuses([]);
+        }
+      } catch (error) {
+        console.error('Error fetching phase statuses:', error);
+      }
+    };
+
+    fetchStatuses();
+  }, [project.project_id, selectedPhaseId, showTasks]);
 
   // Load tasks - single function handles both views
   useEffect(() => {
@@ -212,24 +207,6 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
     { value: 'list' as ViewMode, label: t('listView', 'List'), icon: List }
   ], [t]);
 
-  if (loading) {
-    return (
-      <div className="p-6 bg-white rounded-lg shadow">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
-          <div className="flex space-x-4 mb-6">
-            <div className="h-20 w-20 bg-gray-200 rounded-full"></div>
-            <div className="flex-1 space-y-4">
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Project Header Card */}
@@ -239,50 +216,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
           {project.description || t('messages.noDescription', 'No description provided')}
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-4">{t('taskCompletion', 'Task Completion')}</h3>
-            <div className="flex items-center">
-              <div className="mr-4">
-                <DonutChart
-                  percentage={metrics?.taskCompletionPercentage || 0}
-                  tooltipContent="Shows the percentage of completed tasks across the entire project"
-                />
-              </div>
-              <div>
-                <p className="font-medium">{t('percentComplete', '{{percent}}% Complete', { percent: Math.round(metrics?.taskCompletionPercentage || 0) })}</p>
-                <p className="text-sm text-gray-600">
-                  {t('tasksCompleted', '{{completed}} of {{total}} tasks completed', { completed: metrics?.completedTasks || 0, total: metrics?.totalTasks || 0 })}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-4">{t('budgetHours', 'Budget Hours')}</h3>
-            <div className="flex flex-col">
-              <div className="flex flex-col mb-1">
-                <p className="font-medium">{t('budgetUsed', '{{percent}}% of Budget Used', { percent: Math.round(metrics?.hoursCompletionPercentage || 0) })}</p>
-                <p className="text-sm text-gray-600">
-                  {t('hoursUsed', '{{spent}} of {{budgeted}} hours', { spent: (metrics?.spentHours || 0).toFixed(1), budgeted: (metrics?.budgetedHours || 0).toFixed(1) })}
-                </p>
-              </div>
-              <HoursProgressBar
-                percentage={metrics?.hoursCompletionPercentage || 0}
-                width={'100%'}
-                height={8}
-                showTooltip={true}
-                tooltipContent={
-                  <div className="p-2">
-                    <p className="font-medium">{t('hoursUsage', 'Hours Usage')}</p>
-                    <p className="text-sm">{t('hoursUsedDetail', '{{spent}} of {{budgeted}} hours used', { spent: (metrics?.spentHours || 0).toFixed(1), budgeted: (metrics?.budgetedHours || 0).toFixed(1) })}</p>
-                    <p className="text-sm">{t('hoursRemaining', '{{remaining}} hours remaining', { remaining: (metrics?.remainingHours || 0).toFixed(1) })}</p>
-                  </div>
-                }
-              />
-            </div>
-          </div>
-        </div>
+        <ClientPortalProjectMetrics projectId={project.project_id} />
 
         <div>
           <h3 className="text-lg font-semibold mb-2">{t('details')}</h3>

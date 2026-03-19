@@ -1,7 +1,7 @@
 import { useFocusEffect, type CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import type { RootStackParamList, TabsParamList, TicketsStackParamList } from "../navigation/types";
@@ -11,12 +11,15 @@ import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient, type ApiClient } from "../api";
 import { getTicketById, getTicketPriorities, getTicketStats, getTicketStatuses, listTickets, type TicketListItem, type TicketPriority, type TicketStats, type TicketStatus } from "../api/tickets";
-import { colors, spacing, typography } from "../ui/theme";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "../ui/ThemeContext";
+import type { Theme } from "../ui/themes";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { getCachedTicketDetail, getCachedTicketsList, setCachedTicketDetail, setCachedTicketsList } from "../cache/ticketsCache";
+import { getCachedTicketStatuses, setCachedTicketStatuses, getCachedTicketPriorities, setCachedTicketPriorities } from "../cache/referenceDataCache";
 import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
@@ -48,13 +51,13 @@ type TicketsListCacheValue = {
 };
 
 const DEFAULT_FILTERS: TicketListFilters = {
-  status: "any",
+  status: "open",
   statusIds: [],
   assignee: "any",
   priorityName: "",
   updatedSinceDays: null,
   updatedSinceDate: "",
-  sortField: "updated_at",
+  sortField: "entered_at",
   sortOrder: "desc",
 };
 
@@ -68,6 +71,8 @@ function dateOnlyToIsoUtc(dateOnly: string): string | null {
 }
 
 export function TicketsListScreen({ navigation }: Props) {
+  const { t } = useTranslation("tickets");
+  const theme = useTheme();
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession, logout } = useAuth();
   const listAbortRef = useRef<AbortController | null>(null);
@@ -243,11 +248,11 @@ export function TicketsListScreen({ navigation }: Props) {
           return;
         }
         if ((result.error.kind === "network" || result.error.kind === "timeout") && isOffline) {
-          setError("You’re offline. Connect to the internet to load tickets.");
+          setError(t("list.offlineDescription"));
           setPendingOfflineRetry(true);
           return;
         }
-        setError("Unable to load tickets. Please try again.");
+        setError(t("list.unableToLoadDescription"));
         return;
       }
 
@@ -392,131 +397,222 @@ export function TicketsListScreen({ navigation }: Props) {
   }, [client, hasNext, initialLoading, loadPage, page, refreshing, session]);
 
   if (!config.ok) {
-    return <ErrorState title="Configuration error" description={config.error} />;
+    return <ErrorState title={t("common:configurationError")} description={config.error} />;
   }
 
   if (!session) {
-    return <ErrorState title="Signed out" description="Please sign in again." />;
+    return <ErrorState title={t("common:signedOut")} description={t("common:signInAgain")} />;
   }
 
   if (noAccess) {
     return (
       <ErrorState
-        title="No access"
-        description="You don’t have permission to view tickets."
-        action={<PrimaryButton onPress={() => void logout()}>Sign out</PrimaryButton>}
+        title={t("list.noAccess")}
+        description={t("list.noAccessDescription")}
+        action={<PrimaryButton onPress={() => void logout()}>{t("list.signOut")}</PrimaryButton>}
       />
     );
   }
 
   if (initialLoading && items.length === 0) {
-    return <LoadingState message="Loading tickets…" />;
+    return <LoadingState message={t("list.loadingTickets")} />;
   }
 
   if (error && items.length === 0) {
-    const title = pendingOfflineRetry ? "You’re offline" : "Unable to load tickets";
+    const title = pendingOfflineRetry ? t("list.offlineTitle") : t("list.unableToLoad");
     return (
       <ErrorState
         title={title}
         description={error}
         action={
           <PrimaryButton disabled={isOffline} onPress={() => void refresh()}>
-            Retry
+            {t("common:retry")}
           </PrimaryButton>
         }
       />
     );
   }
 
-  if (!error && items.length === 0) {
+  const hasActiveFilters =
+    filters.status !== DEFAULT_FILTERS.status ||
+    filters.statusIds.length > 0 ||
+    filters.assignee !== DEFAULT_FILTERS.assignee ||
+    filters.priorityName.trim() !== "" ||
+    filters.updatedSinceDays !== DEFAULT_FILTERS.updatedSinceDays ||
+    filters.updatedSinceDate.trim() !== "" ||
+    filters.sortField !== DEFAULT_FILTERS.sortField ||
+    filters.sortOrder !== DEFAULT_FILTERS.sortOrder ||
+    search.trim() !== "";
+
+  if (!error && items.length === 0 && !hasActiveFilters) {
     return (
       <EmptyState
-        title="No tickets"
-        description="No tickets matched your current filters."
-        action={<PrimaryButton onPress={() => void refresh()}>Refresh</PrimaryButton>}
+        title={t("list.noTickets")}
+        description={t("list.noTicketsDescription")}
+        action={<PrimaryButton onPress={() => void refresh()}>{t("common:refresh")}</PrimaryButton>}
       />
     );
   }
 
-  const header = useMemo(() => {
+  if (!error && items.length === 0 && hasActiveFilters) {
     return (
-      <View style={{ marginBottom: spacing.md }}>
-        {stats ? (
-          <View
-            style={{
-              padding: spacing.md,
-              borderRadius: 12,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-              marginBottom: spacing.md,
-            }}
-          >
-            <Text style={{ ...typography.caption, color: colors.mutedText }}>Summary</Text>
-            <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
-              Open {stats.open_tickets} • Unassigned {stats.unassigned_tickets} • Overdue {stats.overdue_tickets}
-            </Text>
-          </View>
-        ) : null}
-        <View style={{ flexDirection: "row" }}>
-          <View style={{ flex: 1 }}>
-            <TextInput
-              value={searchInput}
-              onChangeText={setSearchInput}
-              placeholder="Search tickets"
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel="Search tickets"
-              style={{
-                paddingVertical: spacing.sm,
-                paddingHorizontal: spacing.md,
-                borderRadius: 12,
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <View style={{ padding: theme.spacing.lg }}>
+          <View style={{ flexDirection: "row" }}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={searchInput}
+                onChangeText={setSearchInput}
+                placeholder={t("list.searchPlaceholder")}
+                placeholderTextColor={theme.colors.placeholder}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={{
+                  paddingVertical: theme.spacing.sm,
+                  paddingHorizontal: theme.spacing.md,
+                  borderRadius: theme.borderRadius.lg,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.text,
+                }}
+              />
+            </View>
+            <View style={{ width: theme.spacing.sm }} />
+            <Pressable
+              onPress={() => setFiltersOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("list.openFilters")}
+              style={({ pressed }) => ({
+                paddingHorizontal: theme.spacing.md,
+                borderRadius: theme.borderRadius.lg,
                 borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: colors.background,
-                color: colors.text,
-              }}
-            />
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.card,
+                justifyContent: "center",
+                opacity: pressed ? 0.95 : 1,
+              })}
+            >
+              <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>{t("list.filtersButton")}</Text>
+            </Pressable>
           </View>
-          <View style={{ width: spacing.sm }} />
-          <Pressable
+          <FilterChipBar
+            theme={theme}
+            filters={filters}
             onPress={() => setFiltersOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Open filters"
-            style={({ pressed }) => ({
-              paddingHorizontal: spacing.md,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.card,
-              justifyContent: "center",
-              opacity: pressed ? 0.95 : 1,
-            })}
-          >
-            <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>Filters</Text>
-          </Pressable>
+            onClearAll={() => {
+              setFilters({ ...DEFAULT_FILTERS });
+              setSearchInput("");
+            }}
+          />
         </View>
-        <FilterChipBar
-          filters={filters}
-          onPress={() => setFiltersOpen(true)}
-          onClearAll={() => setFilters({ ...DEFAULT_FILTERS })}
+        <EmptyState
+          title={t("list.noTickets")}
+          description={t("list.noTicketsDescription")}
+          action={
+            <PrimaryButton onPress={() => {
+              setFilters({ ...DEFAULT_FILTERS });
+              setSearchInput("");
+            }}>
+              {t("filters.clearAll")}
+            </PrimaryButton>
+          }
         />
-        {lastRefreshedAtIso ? (
-          <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
-            Last refreshed: {formatDateTimeWithRelative(lastRefreshedAtIso)}
-          </Text>
-        ) : null}
-        <QuickFilters
-          onSelect={(kind) => {
-            if (kind === "mine") setFilters({ ...filters, assignee: "me" });
-            if (kind === "unassigned") setFilters({ ...filters, assignee: "unassigned" });
-            if (kind === "highPriority") setFilters({ ...filters, priorityName: "high" });
-            if (kind === "recent") setFilters({ ...filters, updatedSinceDays: 7, updatedSinceDate: "" });
-          }}
+        <FiltersModal
+          theme={theme}
+          visible={filtersOpen}
+          client={client}
+          apiKey={session.accessToken}
+          tenantId={session.tenantId ?? null}
+          filters={filters}
+          setFilters={setFilters}
+          canFilterMe={Boolean(session?.user?.id)}
+          onClose={() => setFiltersOpen(false)}
         />
       </View>
     );
-  }, [filters, searchInput, stats]);
+  }
+
+  const header = (
+    <View style={{ marginBottom: theme.spacing.md }}>
+      {stats ? (
+        <View
+          style={{
+            padding: theme.spacing.md,
+            borderRadius: theme.borderRadius.lg,
+            backgroundColor: theme.colors.card,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            marginBottom: theme.spacing.md,
+          }}
+        >
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{t("list.summary")}</Text>
+          <Text style={{ ...theme.typography.body, color: theme.colors.text, marginTop: 2 }}>
+            {t("list.openCount", { count: stats.open_tickets })} • {t("list.unassignedCount", { count: stats.unassigned_tickets })} • {t("list.overdueCount", { count: stats.overdue_tickets })}
+          </Text>
+        </View>
+      ) : null}
+      <View style={{ flexDirection: "row" }}>
+        <View style={{ flex: 1 }}>
+          <TextInput
+            value={searchInput}
+            onChangeText={setSearchInput}
+            placeholder={t("list.searchPlaceholder")}
+            placeholderTextColor={theme.colors.placeholder}
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel={t("list.searchAccessibility")}
+            style={{
+              paddingVertical: theme.spacing.sm,
+              paddingHorizontal: theme.spacing.md,
+              borderRadius: theme.borderRadius.lg,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+            }}
+          />
+        </View>
+        <View style={{ width: theme.spacing.sm }} />
+        <Pressable
+          onPress={() => setFiltersOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t("list.openFilters")}
+          style={({ pressed }) => ({
+            paddingHorizontal: theme.spacing.md,
+            borderRadius: theme.borderRadius.lg,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.card,
+            justifyContent: "center",
+            opacity: pressed ? 0.95 : 1,
+          })}
+        >
+          <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>{t("list.filtersButton")}</Text>
+        </Pressable>
+      </View>
+      <FilterChipBar
+        theme={theme}
+        filters={filters}
+        onPress={() => setFiltersOpen(true)}
+        onClearAll={() => setFilters({ ...DEFAULT_FILTERS })}
+      />
+      {lastRefreshedAtIso ? (
+        <Text style={{ ...theme.typography.caption, marginTop: theme.spacing.sm, color: theme.colors.textSecondary }}>
+          {t("list.lastRefreshed", { date: formatDateTimeWithRelative(lastRefreshedAtIso) })}
+        </Text>
+      ) : null}
+      <QuickFilters
+        theme={theme}
+        onSelect={(kind) => {
+          if (kind === "mine") setFilters({ ...filters, assignee: "me" });
+          if (kind === "unassigned") setFilters({ ...filters, assignee: "unassigned" });
+          if (kind === "highPriority") setFilters({ ...filters, priorityName: "high" });
+          if (kind === "recent") setFilters({ ...filters, updatedSinceDays: 7, updatedSinceDate: "" });
+        }}
+      />
+    </View>
+  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -524,15 +620,15 @@ export function TicketsListScreen({ navigation }: Props) {
         data={items}
         keyExtractor={keyExtractor}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-        contentContainerStyle={{ padding: spacing.lg, backgroundColor: colors.background }}
+        contentContainerStyle={{ padding: theme.spacing.lg, backgroundColor: theme.colors.background }}
         onEndReached={onEndReached}
         onEndReachedThreshold={NEXT_PAGE_PREFETCH_THRESHOLD}
         ListHeaderComponent={header}
         renderItem={renderItem}
         ListFooterComponent={
           loadingMore ? (
-            <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
-              <ActivityIndicator />
+            <View style={{ paddingVertical: theme.spacing.lg, alignItems: "center" }}>
+              <ActivityIndicator color={theme.colors.primary} />
             </View>
           ) : null
         }
@@ -546,9 +642,11 @@ export function TicketsListScreen({ navigation }: Props) {
       />
 
       <FiltersModal
+        theme={theme}
         visible={filtersOpen}
         client={client}
         apiKey={session.accessToken}
+        tenantId={session.tenantId ?? null}
         filters={filters}
         setFilters={setFilters}
         canFilterMe={Boolean(session?.user?.id)}
@@ -559,92 +657,99 @@ export function TicketsListScreen({ navigation }: Props) {
 }
 
 function FilterChipBar({
+  theme,
   filters,
   onPress,
   onClearAll,
 }: {
+  theme: Theme;
   filters: TicketListFilters;
   onPress: () => void;
   onClearAll: () => void;
 }) {
+  const { t } = useTranslation("tickets");
   const chips: string[] = [];
-  if (filters.statusIds.length > 0) chips.push(`Statuses (${filters.statusIds.length})`);
-  else if (filters.status !== "any") chips.push(`Status: ${filters.status === "open" ? "Open" : "Closed"}`);
-  if (filters.assignee !== "any") chips.push(`Assignee: ${filters.assignee === "me" ? "Me" : "Unassigned"}`);
-  if (filters.priorityName.trim()) chips.push(`Priority: ${filters.priorityName.trim()}`);
+  if (filters.statusIds.length > 0) chips.push(t("filters.statusesCount", { count: filters.statusIds.length }));
+  else if (filters.status !== "any") chips.push(t("filters.statusLabel", { status: filters.status === "open" ? t("filters.open") : t("filters.closed") }));
+  if (filters.assignee !== "any") chips.push(t("filters.assigneeLabel", { assignee: filters.assignee === "me" ? t("filters.me") : t("quickFilters.unassigned") }));
+  if (filters.priorityName.trim()) chips.push(t("filters.priorityLabel", { priority: filters.priorityName.trim() }));
   const dateOnly = filters.updatedSinceDate.trim();
-  if (dateOnly) chips.push(`Updated: ${dateOnly}`);
-  else if (filters.updatedSinceDays) chips.push(`Updated: ${filters.updatedSinceDays}d`);
-  if (filters.sortField !== "updated_at" || filters.sortOrder !== "desc") {
-    chips.push(`Sort: ${filters.sortField} ${filters.sortOrder}`);
+  if (dateOnly) chips.push(t("filters.updatedDate", { date: dateOnly }));
+  else if (filters.updatedSinceDays) chips.push(t("filters.updatedDays", { days: filters.updatedSinceDays }));
+  if (filters.sortField !== DEFAULT_FILTERS.sortField || filters.sortOrder !== DEFAULT_FILTERS.sortOrder) {
+    chips.push(t("filters.sortLabel", { field: filters.sortField, order: filters.sortOrder }));
   }
 
   if (chips.length === 0) return null;
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
       {chips.map((label) => (
-        <View key={label} style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}>
-          <QuickChip label={label} onPress={onPress} />
+        <View key={label} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+          <QuickChip theme={theme} label={label} onPress={onPress} />
         </View>
       ))}
-      <View style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}>
-        <QuickChip label="Clear all" onPress={onClearAll} />
+      <View style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+        <QuickChip theme={theme} label={t("filters.clearAll")} onPress={onClearAll} />
       </View>
     </View>
   );
 }
 
 function QuickFilters({
+  theme,
   onSelect,
 }: {
+  theme: Theme;
   onSelect: (kind: "mine" | "unassigned" | "highPriority" | "recent") => void;
 }) {
+  const { t } = useTranslation("tickets");
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
-      <QuickChip label="My tickets" onPress={() => onSelect("mine")} />
-      <View style={{ width: spacing.sm }} />
-      <QuickChip label="Unassigned" onPress={() => onSelect("unassigned")} />
-      <View style={{ width: spacing.sm }} />
-      <QuickChip label="High priority" onPress={() => onSelect("highPriority")} />
-      <View style={{ width: spacing.sm }} />
-      <QuickChip label="Recently updated" onPress={() => onSelect("recent")} />
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
+      <QuickChip theme={theme} label={t("quickFilters.myTickets")} onPress={() => onSelect("mine")} />
+      <QuickChip theme={theme} label={t("quickFilters.unassigned")} onPress={() => onSelect("unassigned")} />
+      <QuickChip theme={theme} label={t("quickFilters.highPriority")} onPress={() => onSelect("highPriority")} />
+      <QuickChip theme={theme} label={t("quickFilters.recentlyUpdated")} onPress={() => onSelect("recent")} />
     </View>
   );
 }
 
-function QuickChip({ label, onPress }: { label: string; onPress: () => void }) {
+function QuickChip({ theme, label, onPress }: { theme: Theme; label: string; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       style={({ pressed }) => ({
-        paddingHorizontal: spacing.md,
+        paddingHorizontal: theme.spacing.md,
         paddingVertical: 6,
-        borderRadius: 999,
+        borderRadius: theme.borderRadius.full,
         borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: colors.card,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.card,
         opacity: pressed ? 0.95 : 1,
       })}
     >
-      <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>{label}</Text>
+      <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>{label}</Text>
     </Pressable>
   );
 }
 
 function FiltersModal({
+  theme,
   visible,
   client,
   apiKey,
+  tenantId,
   filters,
   setFilters,
   canFilterMe,
   onClose,
 }: {
+  theme: Theme;
   visible: boolean;
   client: ApiClient | null;
   apiKey: string | null;
+  tenantId: string | null;
   filters: {
     status: "any" | "open" | "closed";
     statusIds: string[];
@@ -670,6 +775,7 @@ function FiltersModal({
   canFilterMe: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("tickets");
   const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
   const [statusOptionsLoading, setStatusOptionsLoading] = useState(false);
   const [statusOptionsError, setStatusOptionsError] = useState<string | null>(null);
@@ -683,21 +789,32 @@ function FiltersModal({
       if (!visible) return;
       if (!client || !apiKey) return;
       if (statusOptions.length > 0) return;
-      setStatusOptionsLoading(true);
-      setStatusOptionsError(null);
-      const res = await getTicketStatuses(client, { apiKey });
-      if (canceled) return;
-      if (!res.ok) {
-        setStatusOptionsError("Unable to load statuses.");
+      const cacheKey = tenantId ?? "unknownTenant";
+      const cached = getCachedTicketStatuses(cacheKey);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setStatusOptions(cached as TicketStatus[]);
         return;
       }
-      setStatusOptions(res.data.data);
+      setStatusOptionsLoading(true);
+      setStatusOptionsError(null);
+      try {
+        const res = await getTicketStatuses(client, { apiKey });
+        if (canceled) return;
+        if (!res.ok) {
+          setStatusOptionsError(t("filters.unableToLoadStatuses"));
+          return;
+        }
+        setStatusOptions(res.data.data);
+        setCachedTicketStatuses(cacheKey, res.data.data);
+      } finally {
+        if (!canceled) setStatusOptionsLoading(false);
+      }
     };
     void run();
     return () => {
       canceled = true;
     };
-  }, [apiKey, client, statusOptions.length, visible]);
+  }, [apiKey, client, statusOptions.length, tenantId, visible]);
 
   useEffect(() => {
     let canceled = false;
@@ -705,53 +822,65 @@ function FiltersModal({
       if (!visible) return;
       if (!client || !apiKey) return;
       if (priorityOptions.length > 0) return;
-      setPriorityOptionsLoading(true);
-      setPriorityOptionsError(null);
-      const res = await getTicketPriorities(client, { apiKey });
-      if (canceled) return;
-      if (!res.ok) {
-        setPriorityOptionsError("Unable to load priorities.");
+      const cacheKey = tenantId ?? "unknownTenant";
+      const cached = getCachedTicketPriorities(cacheKey);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setPriorityOptions(cached as TicketPriority[]);
         return;
       }
-      setPriorityOptions(res.data.data);
+      setPriorityOptionsLoading(true);
+      setPriorityOptionsError(null);
+      try {
+        const res = await getTicketPriorities(client, { apiKey });
+        if (canceled) return;
+        if (!res.ok) {
+          setPriorityOptionsError(t("filters.unableToLoadPriorities"));
+          return;
+        }
+        setPriorityOptions(res.data.data);
+        setCachedTicketPriorities(cacheKey, res.data.data);
+      } finally {
+        if (!canceled) setPriorityOptionsLoading(false);
+      }
     };
     void run();
     return () => {
       canceled = true;
     };
-  }, [apiKey, client, priorityOptions.length, visible]);
+  }, [apiKey, client, priorityOptions.length, tenantId, visible]);
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, padding: spacing.lg, backgroundColor: colors.background }}>
-        <Text style={{ ...typography.title, color: colors.text }}>Filters</Text>
+      <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
+        <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{t("filters.title")}</Text>
 
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Status</Text>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.status")}</Text>
         <OptionRow
+          theme={theme}
           options={[
-            { label: "Any", value: "any" },
-            { label: "Open", value: "open" },
-            { label: "Closed", value: "closed" },
+            { label: t("filters.any"), value: "any" },
+            { label: t("filters.open"), value: "open" },
+            { label: t("filters.closed"), value: "closed" },
           ]}
           value={filters.status}
           onChange={(status) => setFilters({ ...filters, status, statusIds: [] })}
         />
 
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.md }}>Specific statuses</Text>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.md }}>{t("filters.specificStatuses")}</Text>
         {statusOptionsLoading ? (
-          <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-            Loading statuses…
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+            {t("filters.loadingStatuses")}
           </Text>
         ) : statusOptionsError ? (
-          <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+          <Text style={{ ...theme.typography.caption, color: theme.colors.danger, marginTop: theme.spacing.sm }}>
             {statusOptionsError}
           </Text>
         ) : statusOptions.length > 0 ? (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
             {statusOptions.map((s) => {
               const selected = filters.statusIds.includes(s.status_id);
               return (
-                <View key={s.status_id} style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}>
+                <View key={s.status_id} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
                   <Pressable
                     onPress={() => {
                       const next = selected
@@ -762,16 +891,16 @@ function FiltersModal({
                     accessibilityRole="button"
                     accessibilityLabel={s.name}
                     style={({ pressed }) => ({
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.sm,
-                      borderRadius: 999,
+                      paddingHorizontal: theme.spacing.md,
+                      paddingVertical: theme.spacing.sm,
+                      borderRadius: theme.borderRadius.full,
                       borderWidth: 1,
-                      borderColor: selected ? colors.primary : colors.border,
-                      backgroundColor: selected ? colors.primary : colors.card,
+                      borderColor: selected ? theme.colors.primary : theme.colors.border,
+                      backgroundColor: selected ? theme.colors.primary : theme.colors.card,
                       opacity: pressed ? 0.95 : 1,
                     })}
                   >
-                    <Text style={{ ...typography.caption, color: selected ? "#fff" : colors.text, fontWeight: "600" }}>
+                    <Text style={{ ...theme.typography.caption, color: selected ? theme.colors.textInverse : theme.colors.text, fontWeight: "600" }}>
                       {selected ? "✓ " : ""}
                       {s.name}
                     </Text>
@@ -781,43 +910,44 @@ function FiltersModal({
             })}
           </View>
         ) : (
-          <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-            No statuses available.
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+            {t("filters.noStatusesAvailable")}
           </Text>
         )}
 
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Assignee</Text>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.assignee")}</Text>
         <OptionRow
+          theme={theme}
           options={[
-            { label: "Any", value: "any" },
-            { label: "Me", value: "me", disabled: !canFilterMe },
-            { label: "Unassigned", value: "unassigned" },
+            { label: t("filters.any"), value: "any" },
+            { label: t("filters.me"), value: "me", disabled: !canFilterMe },
+            { label: t("quickFilters.unassigned"), value: "unassigned" },
           ]}
           value={filters.assignee}
           onChange={(assignee) => setFilters({ ...filters, assignee })}
         />
         {!canFilterMe ? (
-          <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-            “Me” filter requires user identity from sign-in.
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+            {t("filters.meFilterHint")}
           </Text>
         ) : null}
 
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Priority</Text>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.priority")}</Text>
         {priorityOptionsLoading ? (
-          <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-            Loading priorities…
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+            {t("filters.loadingPriorities")}
           </Text>
         ) : priorityOptionsError ? (
-          <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+          <Text style={{ ...theme.typography.caption, color: theme.colors.danger, marginTop: theme.spacing.sm }}>
             {priorityOptionsError}
           </Text>
         ) : priorityOptions.length > 0 ? (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
             {priorityOptions.map((p) => {
               const selected =
                 filters.priorityName.trim().toLowerCase() === p.priority_name.trim().toLowerCase();
               return (
-                <View key={p.priority_id} style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}>
+                <View key={p.priority_id} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
                   <Pressable
                     onPress={() => {
                       setFilters({
@@ -828,16 +958,16 @@ function FiltersModal({
                     accessibilityRole="button"
                     accessibilityLabel={p.priority_name}
                     style={({ pressed }) => ({
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.sm,
-                      borderRadius: 999,
+                      paddingHorizontal: theme.spacing.md,
+                      paddingVertical: theme.spacing.sm,
+                      borderRadius: theme.borderRadius.full,
                       borderWidth: 1,
-                      borderColor: selected ? colors.primary : colors.border,
-                      backgroundColor: selected ? colors.primary : colors.card,
+                      borderColor: selected ? theme.colors.primary : theme.colors.border,
+                      backgroundColor: selected ? theme.colors.primary : theme.colors.card,
                       opacity: pressed ? 0.95 : 1,
                     })}
                   >
-                    <Text style={{ ...typography.caption, color: selected ? "#fff" : colors.text, fontWeight: "600" }}>
+                    <Text style={{ ...theme.typography.caption, color: selected ? theme.colors.textInverse : theme.colors.text, fontWeight: "600" }}>
                       {p.priority_name}
                     </Text>
                   </Pressable>
@@ -846,30 +976,15 @@ function FiltersModal({
             })}
           </View>
         ) : null}
-        <TextInput
-          value={filters.priorityName}
-          onChangeText={(priorityName) => setFilters({ ...filters, priorityName })}
-          placeholder="Priority name (e.g. High)"
-          accessibilityLabel="Priority filter"
-          style={{
-            paddingVertical: spacing.sm,
-            paddingHorizontal: spacing.md,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.background,
-            color: colors.text,
-            marginTop: spacing.sm,
-          }}
-        />
 
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Updated since</Text>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.updatedSince")}</Text>
         <OptionRow
+          theme={theme}
           options={[
-            { label: "Any", value: null },
-            { label: "24h", value: 1 },
-            { label: "7d", value: 7 },
-            { label: "30d", value: 30 },
+            { label: t("filters.any"), value: null },
+            { label: t("filters.option24h"), value: 1 },
+            { label: t("filters.option7d"), value: 7 },
+            { label: t("filters.option30d"), value: 30 },
           ]}
           value={filters.updatedSinceDays}
           onChange={(updatedSinceDays) => setFilters({ ...filters, updatedSinceDays, updatedSinceDate: "" })}
@@ -877,104 +992,98 @@ function FiltersModal({
         <TextInput
           value={filters.updatedSinceDate}
           onChangeText={(updatedSinceDate) => setFilters({ ...filters, updatedSinceDays: null, updatedSinceDate })}
-          placeholder="YYYY-MM-DD"
+          placeholder={t("filters.updatedSinceDatePlaceholder")}
+          placeholderTextColor={theme.colors.placeholder}
           autoCapitalize="none"
           autoCorrect={false}
-          accessibilityLabel="Updated since date"
+          accessibilityLabel={t("filters.updatedSinceDateAccessibility")}
           style={{
-            paddingVertical: spacing.sm,
-            paddingHorizontal: spacing.md,
-            borderRadius: 12,
+            paddingVertical: theme.spacing.sm,
+            paddingHorizontal: theme.spacing.md,
+            borderRadius: theme.borderRadius.lg,
             borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.background,
-            color: colors.text,
-            marginTop: spacing.sm,
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.background,
+            color: theme.colors.text,
+            marginTop: theme.spacing.sm,
           }}
         />
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-          Use a specific date (UTC) or pick a relative range above.
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+          {t("filters.updatedSinceDateHint")}
         </Text>
 
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Sort</Text>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.sort")}</Text>
         <OptionRow
+          theme={theme}
           options={[
-            { label: "Updated", value: "updated_at" },
-            { label: "Created", value: "entered_at" },
-            { label: "Priority", value: "priority_name" },
-            { label: "Status", value: "status_name" },
-            { label: "Client", value: "client_name" },
+            { label: t("filters.updated"), value: "updated_at" },
+            { label: t("filters.created"), value: "entered_at" },
+            { label: t("filters.priority"), value: "priority_name" },
+            { label: t("filters.status"), value: "status_name" },
+            { label: t("filters.client"), value: "client_name" },
           ]}
           value={filters.sortField}
           onChange={(sortField) => setFilters({ ...filters, sortField })}
         />
 
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.lg }}>Order</Text>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.order")}</Text>
         <OptionRow
+          theme={theme}
           options={[
-            { label: "Desc", value: "desc" },
-            { label: "Asc", value: "asc" },
+            { label: t("filters.desc"), value: "desc" },
+            { label: t("filters.asc"), value: "asc" },
           ]}
           value={filters.sortOrder}
           onChange={(sortOrder) => setFilters({ ...filters, sortOrder })}
         />
 
-        <View style={{ flex: 1 }} />
-
-        <View style={{ flexDirection: "row" }}>
+        <View style={{ flexDirection: "row", marginTop: theme.spacing.xl }}>
           <PrimaryButton
             onPress={() =>
-              setFilters({
-                status: "any",
-                statusIds: [],
-                assignee: "any",
-                priorityName: "",
-                updatedSinceDays: null,
-                updatedSinceDate: "",
-                sortField: "updated_at",
-                sortOrder: "desc",
-              })
+              setFilters({ ...DEFAULT_FILTERS })
             }
           >
-            Clear
+            {t("common:clear")}
           </PrimaryButton>
-          <View style={{ width: spacing.sm }} />
-          <PrimaryButton onPress={onClose}>Done</PrimaryButton>
+          <View style={{ width: theme.spacing.sm }} />
+          <PrimaryButton onPress={onClose}>{t("common:done")}</PrimaryButton>
         </View>
-      </View>
+      </ScrollView>
     </Modal>
   );
 }
 
 function OptionRow<T extends string | number | null>({
+  theme,
   options,
   value,
   onChange,
 }: {
+  theme: Theme;
   options: { label: string; value: T; disabled?: boolean }[];
   value: T;
   onChange: (value: T) => void;
 }) {
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
       {options.map((opt) => (
-        <View key={String(opt.value)} style={{ marginRight: spacing.sm, marginBottom: spacing.sm }}>
+        <View key={String(opt.value)} style={{ marginRight: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
           <Pressable
             onPress={() => onChange(opt.value)}
             disabled={opt.disabled}
             accessibilityRole="button"
             accessibilityLabel={opt.label}
             style={({ pressed }) => ({
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.sm,
-              borderRadius: 999,
+              paddingHorizontal: theme.spacing.md,
+              paddingVertical: theme.spacing.sm,
+              borderRadius: theme.borderRadius.full,
               borderWidth: 1,
-              borderColor: value === opt.value ? colors.primary : colors.border,
-              backgroundColor: value === opt.value ? colors.primary : colors.card,
+              borderColor: value === opt.value ? theme.colors.primary : theme.colors.border,
+              backgroundColor: value === opt.value ? theme.colors.primary : theme.colors.card,
               opacity: pressed && !opt.disabled ? 0.95 : opt.disabled ? 0.5 : 1,
             })}
           >
-            <Text style={{ ...typography.caption, color: value === opt.value ? colors.primaryText : colors.text }}>
+            <Text style={{ ...theme.typography.caption, color: value === opt.value ? theme.colors.textInverse : theme.colors.text }}>
               {opt.label}
             </Text>
           </Pressable>
@@ -991,47 +1100,49 @@ const TicketRow = memo(function TicketRow({
   item: TicketListItem;
   onPressTicket: (ticketId: string) => void;
 }) {
+  const { t } = useTranslation("tickets");
+  const theme = useTheme();
   const ticketId = item.ticket_id;
   const handlePress = useCallback(() => onPressTicket(ticketId), [onPressTicket, ticketId]);
 
   const updated = item.updated_at ?? item.entered_at;
   const updatedLabel = useMemo(() => (updated ? formatDateShort(updated) : ""), [updated]);
-  const status = item.status_name ?? "Unknown";
+  const status = item.status_name ?? t("common:unknown");
   const priority = item.priority_name ?? null;
 
   return (
     <Pressable
       onPress={handlePress}
       accessibilityRole="button"
-      accessibilityLabel={`Ticket ${item.ticket_number}: ${item.title}`}
+      accessibilityLabel={t("list.ticketAccessibility", { number: item.ticket_number, title: item.title })}
       style={({ pressed }) => ({
-        padding: spacing.md,
-        marginBottom: spacing.sm,
-        borderRadius: 12,
-        backgroundColor: colors.card,
+        padding: theme.spacing.md,
+        marginBottom: theme.spacing.sm,
+        borderRadius: theme.borderRadius.lg,
+        backgroundColor: theme.colors.card,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: theme.colors.border,
         opacity: pressed ? 0.96 : 1,
       })}
     >
-      <Text style={{ ...typography.caption, color: colors.mutedText }}>
+      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
         {item.ticket_number}
         {item.client_name ? ` • ${item.client_name}` : ""}
         {updatedLabel ? ` • ${updatedLabel}` : ""}
       </Text>
-      <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }} numberOfLines={2}>
+      <Text style={{ ...theme.typography.body, color: theme.colors.text, marginTop: 2 }} numberOfLines={2}>
         {item.title}
       </Text>
 
-      <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
         <Badge label={status} tone={item.status_is_closed ? "neutral" : "info"} />
-        {priority ? <View style={{ width: spacing.sm }} /> : null}
+        {priority ? <View style={{ width: theme.spacing.sm }} /> : null}
         {priority ? <Badge label={priority} tone={priorityTone(priority)} /> : null}
       </View>
 
       {item.assigned_to_name ? (
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-          Assigned to {item.assigned_to_name}
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+          {t("list.assignedTo", { name: item.assigned_to_name })}
         </Text>
       ) : null}
     </Pressable>

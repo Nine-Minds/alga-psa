@@ -30,7 +30,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
-import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -50,6 +50,7 @@ interface ContactsProps {
 const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelectedClientId }) => {
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['contact']);
+  const { getDocumentsByEntity } = useDocumentsCrossFeature();
 
   // Use user preference for page size
   const {
@@ -606,6 +607,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     {
       title: 'Phone Number',
       dataIndex: 'default_phone_number',
+      sortable: false,
       width: '15%',
       render: (value, record): React.ReactNode =>
         record.default_phone_number
@@ -614,7 +616,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     },
     {
       title: 'Client',
-      dataIndex: 'client_id',
+      dataIndex: 'client_name',
       width: '13%',
       render: (value, record): React.ReactNode => {
         const clientId = record.client_id;
@@ -664,6 +666,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     {
       title: 'Tags',
       dataIndex: 'tags',
+      sortable: false,
       width: '15%',
       render: (value, record): React.ReactNode => {
         if (!record.contact_name_id) return null;
@@ -681,6 +684,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     {
       title: 'Actions',
       dataIndex: 'actions',
+      sortable: false,
       width: '3%',
       render: (value, record): React.ReactNode => (
         <DropdownMenu.Root>

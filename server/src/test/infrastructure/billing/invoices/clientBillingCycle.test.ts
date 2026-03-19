@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
+import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
 import { TestContext } from 'server/test-utils/testContext';
 import { dateHelpers } from 'server/test-utils/dateUtils';
 import { Temporal } from '@js-temporal/polyfill';
@@ -66,13 +66,13 @@ vi.mock('@alga-psa/core', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/shared/workflow/persistence', () => ({
+vi.mock('@alga-psa/workflows/persistence', () => ({
   WorkflowEventModel: {
     create: vi.fn(),
   },
 }));
 
-vi.mock('@alga-psa/shared/workflow/streams', () => ({
+vi.mock('@alga-psa/workflow-streams', () => ({
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),

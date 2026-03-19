@@ -266,6 +266,39 @@ describe('Ticket API E2E Tests', () => {
         expect(response.data.data.attributes?.description).toBe('Updated description');
       });
 
+      it('persists serialized rich-text descriptions and returns render-friendly HTML on refetch', async () => {
+        const ticket = await createTestTicket(env.db, env.tenant, {
+          title: 'Rich mobile description',
+          description: 'Legacy plain description',
+          board_id: boardId,
+          status_id: statusIds.open,
+          priority_id: priorityIds.medium
+        });
+
+        const richDescription = JSON.stringify({
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              content: [{ type: 'text', text: 'Updated rich description' }]
+            }
+          ]
+        });
+
+        const updateResponse = await env.apiClient.put(`${API_BASE}/${ticket.ticket_id}`, {
+          attributes: {
+            description: richDescription
+          }
+        });
+        assertSuccess(updateResponse);
+        expect(updateResponse.data.data.attributes?.description).toBe(richDescription);
+
+        const refetchResponse = await env.apiClient.get(`${API_BASE}/${ticket.ticket_id}`);
+        assertSuccess(refetchResponse);
+        expect(refetchResponse.data.data.attributes?.description).toBe(richDescription);
+        expect(refetchResponse.data.data.description_html).toContain('Updated rich description');
+      });
+
       it('should return 404 when updating non-existent ticket', async () => {
         const fakeId = '00000000-0000-0000-0000-000000000000';
         const response = await env.apiClient.put(`${API_BASE}/${fakeId}`, { title: 'New Title' });
@@ -535,6 +568,40 @@ describe('Ticket API E2E Tests', () => {
         comment_text: commentData.comment_text,
         is_internal: commentData.is_internal
       });
+    });
+
+    it('persists serialized rich-text comments and returns render-friendly HTML on refetch', async () => {
+      const richComment = JSON.stringify({
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Rich mobile comment' }]
+          }
+        ]
+      });
+
+      const createResponse = await env.apiClient.post(
+        `${API_BASE}/${testTicket.ticket_id}/comments`,
+        {
+          comment_text: richComment,
+          is_internal: true
+        }
+      );
+      assertSuccess(createResponse, 201);
+      expect(createResponse.data.data.comment_text).toBe(richComment);
+
+      const listResponse = await env.apiClient.get(`${API_BASE}/${testTicket.ticket_id}/comments`);
+      assertSuccess(listResponse);
+
+      expect(listResponse.data.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            comment_text: richComment,
+            comment_html: expect.stringContaining('Rich mobile comment')
+          })
+        ])
+      );
     });
 
     it('should add an internal comment', async () => {

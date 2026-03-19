@@ -12,7 +12,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ContentCard } from '@alga-psa/ui/components';
-import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { ITicketMaterial, IServicePrice } from '@alga-psa/types';
 import {
@@ -21,8 +21,7 @@ import {
   deleteTicketMaterial,
   searchServiceCatalogForPicker,
   getServicePrices,
-  type CatalogPickerItem,
-} from '@alga-psa/billing/actions';
+} from '../../actions/materialCatalogActions';
 
 interface TicketMaterialsCardProps {
   id?: string;
@@ -42,13 +41,12 @@ export default function TicketMaterialsCard({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Add form state
-  const [products, setProducts] = useState<CatalogPickerItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [selectedProductLabel, setSelectedProductLabel] = useState<string>('');
   const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [description, setDescription] = useState<string>('');
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
 
   // Load materials
@@ -70,29 +68,26 @@ export default function TicketMaterialsCard({
     loadMaterials();
   }, [loadMaterials]);
 
-  // Load products when form opens
-  const loadProducts = useCallback(async () => {
-    setIsLoadingProducts(true);
-    try {
+  // Server-side search for products via AsyncSearchableSelect
+  const loadProductOptions = useCallback(
+    async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
       const result = await searchServiceCatalogForPicker({
+        search,
+        page,
+        limit,
         item_kinds: ['product'],
         is_active: true,
-        limit: 100,
       });
-      setProducts(result.items);
-    } catch (error) {
-      handleError(error, 'Failed to load products');
-    } finally {
-      setIsLoadingProducts(false);
-    }
-  }, []);
 
-  // Load products when form opens
-  useEffect(() => {
-    if (showAddForm && products.length === 0) {
-      loadProducts();
-    }
-  }, [showAddForm, products.length, loadProducts]);
+      const options: SelectOption[] = result.items.map((item) => ({
+        value: item.service_id,
+        label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
+      }));
+
+      return { options, total: result.totalCount };
+    },
+    []
+  );
 
   // Load product prices when product is selected
   useEffect(() => {
@@ -160,6 +155,7 @@ export default function TicketMaterialsCard({
       toast.success('Material added');
       setShowAddForm(false);
       setSelectedProductId('');
+      setSelectedProductLabel('');
       setProductPrices([]);
       setSelectedCurrency('');
       setQuantity(1);
@@ -199,11 +195,6 @@ export default function TicketMaterialsCard({
       return acc;
     }, {} as Record<string, number>);
 
-  const productOptions = products.map(p => ({
-    value: p.service_id,
-    label: p.sku ? `${p.service_name} (${p.sku})` : p.service_name,
-  }));
-
   const currencyOptions = productPrices.map(p => ({
     value: p.currency_code,
     label: `${p.currency_code} - ${formatCurrencyFromMinorUnits(p.rate, 'en-US', p.currency_code)}`,
@@ -225,20 +216,24 @@ export default function TicketMaterialsCard({
           <div className="border rounded-md p-4 space-y-4 bg-gray-50">
             <div className="space-y-2">
               <Label htmlFor={`${id}-product-select`}>Product</Label>
-              <SearchableSelect
+              <AsyncSearchableSelect
                 id={`${id}-product-select`}
-                options={productOptions}
                 value={selectedProductId}
-                onChange={(value) => {
+                selectedLabel={selectedProductLabel}
+                onChange={(value, option) => {
                   setSelectedProductId(value);
+                  setSelectedProductLabel(option?.label ?? '');
                   setSelectedCurrency('');
                 }}
+                loadOptions={loadProductOptions}
+                limit={10}
+                debounceMs={300}
                 placeholder="Select a product..."
                 searchPlaceholder="Search products..."
-                emptyMessage={isLoadingProducts ? 'Loading products...' : 'No products found'}
+                emptyMessage="No products found"
                 dropdownMode="overlay"
                 maxListHeight="200px"
-                disabled={isLoadingProducts}
+                showMoreIndicator
               />
             </div>
 
@@ -312,6 +307,7 @@ export default function TicketMaterialsCard({
                 onClick={() => {
                   setShowAddForm(false);
                   setSelectedProductId('');
+                  setSelectedProductLabel('');
                   setProductPrices([]);
                   setSelectedCurrency('');
                   setQuantity(1);

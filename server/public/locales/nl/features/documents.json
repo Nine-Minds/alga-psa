@@ -185,5 +185,38 @@
     "nameLabel": "Mapnaam",
     "namePlaceholder": "Voer de mapnaam in",
     "willCreateIn": "Wordt aangemaakt in: {{folder}}"
+  },
+  "portal": {
+    "subtitle": "Bekijk en download uw gedeelde documenten",
+    "searchPlaceholder": "Documenten zoeken...",
+    "showing": "{{count}} documenten",
+    "loadError": "Laden van documenten mislukt. Probeer het opnieuw."
+  },
+  "kb": {
+    "title": "Kennisbank",
+    "subtitle": "Vind antwoorden op veelgestelde vragen en handleidingen",
+    "categories": "Categorieën",
+    "allArticles": "Alle artikelen",
+    "searchPlaceholder": "Artikelen zoeken...",
+    "articleCount": "{{count}} artikelen",
+    "noArticles": "Geen artikelen gevonden",
+    "loadError": "Laden van artikelen mislukt. Probeer het opnieuw.",
+    "noContent": "Geen inhoud beschikbaar",
+    "articleNotFound": "Artikel niet gevonden",
+    "backToArticles": "Terug naar artikelen",
+    "views": "weergaven",
+    "wasHelpful": "Was dit artikel nuttig?",
+    "yes": "Ja",
+    "no": "Nee",
+    "feedbackThanks": "Bedankt voor uw feedback!",
+    "feedbackError": "Feedback verzenden mislukt",
+    "filterByTags": "Filteren op tags..."
+  },
+  "visibility": {
+    "cascadeTitle": "Documentzichtbaarheid bijwerken",
+    "cascadeMakeVisible": "Wilt u ook alle {{count}} document(en) in \"{{name}}\" zichtbaar maken in het klantenportaal?",
+    "cascadeMakeHidden": "Wilt u ook alle {{count}} document(en) in \"{{name}}\" verbergen in het klantenportaal?",
+    "cascadeYes": "Ja, documenten bijwerken",
+    "cascadeNo": "Nee, alleen map"
   }
 }

@@ -29,8 +29,10 @@ import ClientPortalDomainSettings from '@alga-psa/client-portal/domain-settings/
 import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const ClientPortalSettings = () => {
+  const { t } = useTranslation('msp/settings');
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
   const [enabledLocales, setEnabledLocales] = useState<SupportedLocale[]>([...LOCALE_CONFIG.supportedLocales]);
   const [loading, setLoading] = useState(true);
@@ -231,12 +233,11 @@ const ClientPortalSettings = () => {
           <CardTitle>
             <div className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              Language Settings
+              {t('clientPortal.language.title')}
             </div>
           </CardTitle>
           <CardDescription>
-            Configure the default language settings for your client portal.
-            These settings apply to all users and clients unless overridden.
+            {t('clientPortal.language.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -244,7 +245,7 @@ const ClientPortalSettings = () => {
             <div className="space-y-2">
               <CustomSelect
                 id="tenant-default-language"
-                label="Default Language"
+                label={t('clientPortal.language.fields.defaultLanguage')}
                 options={languageOptions}
                 value={defaultLocale}
                 onValueChange={handleDefaultLanguageChange}
@@ -253,16 +254,16 @@ const ClientPortalSettings = () => {
                 data-automation-id="tenant-default-language-select"
               />
               <p className="text-sm text-gray-500">
-                This will be the default language for all client portal users and email notifications unless overridden by client setting or individual user preferences
+                {t('clientPortal.language.help.defaultLanguage')}
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Available Languages
+                {t('clientPortal.language.fields.availableLanguages')}
               </label>
               <p className="text-sm text-gray-500 mb-2">
-                Select which languages are available for users to choose from
+                {t('clientPortal.language.help.availableLanguages')}
               </p>
               <div className="space-y-2">
                 {visibleLocales.map((locale) => (
@@ -287,18 +288,18 @@ const ClientPortalSettings = () => {
 
             <Alert variant="info">
               <AlertDescription>
-                <h4 className="font-medium mb-2">Language Preference Hierarchy</h4>
+                <h4 className="font-medium mb-2">{t('clientPortal.language.hierarchy.title')}</h4>
                 <p className="mb-2">
-                  This hierarchy applies to both the client portal interface and email notifications sent to client portal users:
+                  {t('clientPortal.language.hierarchy.description')}
                 </p>
                 <ol className="space-y-1 list-decimal list-inside">
-                  <li>Individual user preference (highest priority)</li>
-                  <li>Client default language</li>
-                  <li>Organization default (configured here)</li>
-                  <li>System default (English)</li>
+                  <li>{t('clientPortal.language.hierarchy.userPreference')}</li>
+                  <li>{t('clientPortal.language.hierarchy.clientDefault')}</li>
+                  <li>{t('clientPortal.language.hierarchy.orgDefault')}</li>
+                  <li>{t('clientPortal.language.hierarchy.systemDefault')}</li>
                 </ol>
                 <p className="mt-2 italic">
-                  Note: Internal MSP users always receive emails in English
+                  {t('clientPortal.language.hierarchy.note')}
                 </p>
               </AlertDescription>
             </Alert>
@@ -312,11 +313,11 @@ const ClientPortalSettings = () => {
           <CardTitle>
             <div className="flex items-center gap-2">
               <Palette className="h-5 w-5" />
-              Branding & Appearance
+              {t('clientPortal.branding.title')}
             </div>
           </CardTitle>
           <CardDescription>
-            Customize the look and feel of your client portal with your company branding.
+            {t('clientPortal.branding.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -325,7 +326,7 @@ const ClientPortalSettings = () => {
             <div>
               <Input
                 id="company-name"
-                label="Company Name"
+                label={t('clientPortal.branding.fields.companyName')}
                 type="text"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
@@ -334,14 +335,14 @@ const ClientPortalSettings = () => {
                 containerClassName="mb-1"
               />
               <p className="text-sm text-gray-500">
-                This will be displayed in the client portal header
+                {t('clientPortal.branding.help.companyName')}
               </p>
             </div>
 
             {/* Logo Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Company Logo
+                {t('clientPortal.branding.fields.companyLogo')}
               </label>
               {tenantId && (
                 <EntityImageUpload
@@ -358,20 +359,20 @@ const ClientPortalSettings = () => {
                 />
               )}
               <p className="text-sm text-gray-500 mt-2">
-                Recommended: PNG or SVG, max 2MB, transparent background
+                {t('clientPortal.branding.help.companyLogo')}
               </p>
             </div>
 
             {/* Color Palette */}
             <div className="space-y-4">
               <label className="block text-sm font-medium text-gray-700">
-                Color Palette
+                {t('clientPortal.branding.fields.colorPalette')}
               </label>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-2">
-                    Primary Color
+                    {t('clientPortal.branding.fields.primaryColor')}
                   </label>
                   <ColorPicker
                     currentBackgroundColor={primaryColor || '#8B5CF6'}
@@ -397,13 +398,13 @@ const ClientPortalSettings = () => {
                     colorMode="tag"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Used for buttons, links, and highlights
+                    {t('clientPortal.branding.help.primaryColor')}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-2">
-                    Secondary Color
+                    {t('clientPortal.branding.fields.secondaryColor')}
                   </label>
                   <ColorPicker
                     currentBackgroundColor={secondaryColor || '#6366F1'}
@@ -429,7 +430,7 @@ const ClientPortalSettings = () => {
                     colorMode="tag"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Used for accents and secondary actions
+                    {t('clientPortal.branding.help.secondaryColor')}
                   </p>
                 </div>
               </div>
@@ -437,13 +438,13 @@ const ClientPortalSettings = () => {
 
             {/* Preview Selection Buttons */}
             <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Preview</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">{t('clientPortal.branding.preview')}</h4>
               <div className="flex items-center gap-3 mb-3">
                 <Switch
                   id="branding-preview-theme-toggle"
                   checked={previewTheme === 'dark'}
                   onCheckedChange={(checked) => setPreviewTheme(checked ? 'dark' : 'light')}
-                  label="Preview dark mode"
+                  label={t('clientPortal.branding.previewDarkMode')}
                   aria-label="Branding preview theme mode"
                 />
               </div>
@@ -455,10 +456,10 @@ const ClientPortalSettings = () => {
                   size="sm"
                   onClick={() => setPreviewMode(previewMode === 'dashboard' ? null : 'dashboard')}
                 >
-                  {previewMode === 'dashboard' ? 'Hide Client Dashboard' : 'Preview Client Dashboard'}
+                  {previewMode === 'dashboard' ? t('clientPortal.branding.actions.hideDashboard') : t('clientPortal.branding.actions.previewDashboard')}
                 </Button>
                 {(() => {
-                  const disabledMessage = 'Must have custom domain set up';
+                  const disabledMessage = t('clientPortal.branding.customDomainRequired');
                   const signInButton = (
                     <Button
                       id="preview-signin"
@@ -477,7 +478,7 @@ const ClientPortalSettings = () => {
                       aria-disabled={!hasCustomDomain || undefined}
                       aria-describedby={!hasCustomDomain ? 'preview-signin-disabled-reason' : undefined}
                     >
-                      {previewMode === 'signin' ? 'Hide Sign-in Page' : 'Preview Sign-in Page'}
+                      {previewMode === 'signin' ? t('clientPortal.branding.actions.hideSignIn') : t('clientPortal.branding.actions.previewSignIn')}
                     </Button>
                   );
                   return !hasCustomDomain ? (
@@ -529,15 +530,15 @@ const ClientPortalSettings = () => {
                 <div className="p-4">
                   {/* Welcome Section */}
                   <div className="bg-white rounded-lg p-4 mb-3">
-                    <h2 className="text-base font-semibold text-gray-900 mb-1">Welcome back!</h2>
-                    <p className="text-xs text-gray-600">Here's an overview of your account activity</p>
+                    <h2 className="text-base font-semibold text-gray-900 mb-1">{t('clientPortal.dashboardPreview.welcome')}</h2>
+                    <p className="text-xs text-gray-600">{t('clientPortal.dashboardPreview.subtitle')}</p>
                   </div>
 
                   {/* Stats Cards */}
                   <div className="grid grid-cols-3 gap-3 mb-3">
                     <div className="bg-white rounded-lg p-3 border border-gray-200">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-600">Open Tickets</span>
+                        <span className="text-xs text-gray-600">{t('clientPortal.dashboardPreview.openTickets')}</span>
                         <div
                           className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
                           style={{ backgroundColor: primaryColor || '#8B5CF6' }}
@@ -546,11 +547,11 @@ const ClientPortalSettings = () => {
                         </div>
                       </div>
                       <div className="text-lg font-semibold text-gray-900">3</div>
-                      <div className="text-xs text-gray-500">2 urgent</div>
+                      <div className="text-xs text-gray-500">{t('clientPortal.dashboardPreview.urgent', { count: 2 })}</div>
                     </div>
                     <div className="bg-white rounded-lg p-3 border border-gray-200">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-600">Active Projects</span>
+                        <span className="text-xs text-gray-600">{t('clientPortal.dashboardPreview.activeProjects')}</span>
                         <div
                           className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
                           style={{ backgroundColor: secondaryColor || '#6366F1' }}
@@ -559,47 +560,47 @@ const ClientPortalSettings = () => {
                         </div>
                       </div>
                       <div className="text-lg font-semibold text-gray-900">5</div>
-                      <div className="text-xs text-gray-500">1 near deadline</div>
+                      <div className="text-xs text-gray-500">{t('clientPortal.dashboardPreview.nearDeadline', { count: 1 })}</div>
                     </div>
                     <div className="bg-white rounded-lg p-3 border border-gray-200">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-600">Invoices</span>
+                        <span className="text-xs text-gray-600">{t('clientPortal.dashboardPreview.invoices')}</span>
                         <div className="w-6 h-6 rounded bg-gray-300 flex items-center justify-center text-white text-xs font-bold">
                           $
                         </div>
                       </div>
                       <div className="text-lg font-semibold text-gray-900">$2,450</div>
-                      <div className="text-xs text-gray-500">Due this month</div>
+                      <div className="text-xs text-gray-500">{t('clientPortal.dashboardPreview.dueThisMonth')}</div>
                     </div>
                   </div>
 
                   {/* Recent Activity */}
                   <div className="bg-white rounded-lg p-4 mb-3">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Recent Activity</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('clientPortal.dashboardPreview.recentActivity')}</h3>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs">
                         <div
                           className="w-2 h-2 rounded-full"
                           style={{ backgroundColor: primaryColor || '#8B5CF6' }}
                         />
-                        <span className="text-gray-600">Ticket #1234 was updated</span>
-                        <span className="text-gray-400 ml-auto">2 hours ago</span>
+                        <span className="text-gray-600">{t('clientPortal.dashboardPreview.ticketUpdated')}</span>
+                        <span className="text-gray-400 ml-auto">{t('clientPortal.dashboardPreview.hoursAgo', { count: 2 })}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <div
                           className="w-2 h-2 rounded-full"
                           style={{ backgroundColor: secondaryColor || '#6366F1' }}
                         />
-                        <span className="text-gray-600">New invoice generated</span>
-                        <span className="text-gray-400 ml-auto">5 hours ago</span>
+                        <span className="text-gray-600">{t('clientPortal.dashboardPreview.newInvoice')}</span>
+                        <span className="text-gray-400 ml-auto">{t('clientPortal.dashboardPreview.hoursAgo', { count: 5 })}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <div
                           className="w-2 h-2 rounded-full"
                           style={{ backgroundColor: primaryColor || '#8B5CF6' }}
                         />
-                        <span className="text-gray-600">Project milestone completed</span>
-                        <span className="text-gray-400 ml-auto">1 day ago</span>
+                        <span className="text-gray-600">{t('clientPortal.dashboardPreview.milestoneCompleted')}</span>
+                        <span className="text-gray-400 ml-auto">{t('clientPortal.dashboardPreview.dayAgo')}</span>
                       </div>
                     </div>
                   </div>
@@ -611,7 +612,7 @@ const ClientPortalSettings = () => {
                       style={{ backgroundColor: primaryColor }}
                       disabled
                     >
-                      Create Ticket
+                      {t('clientPortal.dashboardPreview.createTicket')}
                     </button>
                     <button
                       className="px-3 py-1.5 rounded text-xs font-medium border transition-colors"
@@ -621,7 +622,7 @@ const ClientPortalSettings = () => {
                       }}
                       disabled
                     >
-                      View Projects
+                      {t('clientPortal.dashboardPreview.viewProjects')}
                     </button>
                   </div>
                 </div>
@@ -651,7 +652,7 @@ const ClientPortalSettings = () => {
                 onClick={handleSaveBranding}
                 disabled={brandingLoading || brandingSaving}
               >
-                {brandingSaving ? 'Saving...' : 'Save Branding Settings'}
+                {brandingSaving ? 'Saving...' : t('clientPortal.branding.actions.saveBranding')}
               </Button>
             </div>
           </div>

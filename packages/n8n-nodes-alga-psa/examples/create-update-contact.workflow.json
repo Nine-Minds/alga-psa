@@ -1,0 +1,76 @@
+{
+  "name": "Alga PSA - Create then Update Contact",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "contact",
+        "contactOperation": "create",
+        "full_name": "Ada Lovelace",
+        "contactCreateAdditionalFields": {
+          "email": "ada@example.com",
+          "client_id": {
+            "mode": "id",
+            "value": "00000000-0000-0000-0000-000000000001"
+          },
+          "role": "Primary Contact",
+          "phone_numbers": "[{\"phone_number\":\"+1-206-555-0100\",\"canonical_type\":\"mobile\",\"is_default\":true}]"
+        }
+      },
+      "id": "611d2261-0789-4c40-971d-3f3a22a24858",
+      "name": "Create Contact",
+      "type": "n8n-nodes-alga-psa.algaPsa",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ],
+      "credentials": {
+        "algaPsaApi": {
+          "id": "1",
+          "name": "Alga PSA API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "contactOperation": "update",
+        "contactId": "={{$json.contact_name_id}}",
+        "contactUpdateAdditionalFields": {
+          "role": "Automation Escalation Contact",
+          "notes": "Updated by the packaged example workflow"
+        }
+      },
+      "id": "3fbb0f42-c1db-4068-a5c8-1f472b382efa",
+      "name": "Update Contact",
+      "type": "n8n-nodes-alga-psa.algaPsa",
+      "typeVersion": 1,
+      "position": [
+        620,
+        300
+      ],
+      "credentials": {
+        "algaPsaApi": {
+          "id": "1",
+          "name": "Alga PSA API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Create Contact": {
+      "main": [
+        [
+          {
+            "node": "Update Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "b8ca1620-e87b-4c2d-9f47-841639debf57"
+}

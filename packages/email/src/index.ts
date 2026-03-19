@@ -53,6 +53,7 @@ export { sendPortalInvitationEmail } from './sendPortalInvitationEmail';
 export { sendTenantRecoveryEmail } from './clientPortalTenantRecoveryEmail';
 export { sendVerificationEmail } from './sendVerificationEmail';
 export { sendCancellationFeedbackEmail } from './sendCancellationFeedbackEmail';
+export { sendPremiumTrialRequestEmail } from './sendPremiumTrialRequestEmail';
 
 // System email provider factory
 export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory';

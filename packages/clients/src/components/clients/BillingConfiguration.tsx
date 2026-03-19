@@ -16,7 +16,6 @@ import type {
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import {
   getClientContractLine,
   updateClientContractLine,

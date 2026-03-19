@@ -15,8 +15,10 @@ import { getAllClients } from "@alga-psa/clients/actions";
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import { IClient } from "@alga-psa/types";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const GeneralSettings = () => {
+  const { t } = useTranslation('msp/settings');
   const [tenantName, setTenantName] = React.useState('');
   const [tenantTimezone, setTenantTimezoneState] = React.useState('');
   const [clients, setClients] = React.useState<{ id: string; name: string; isDefault: boolean }[]>([]);
@@ -44,16 +46,16 @@ const GeneralSettings = () => {
         isDefault: c.is_default
       })));
     } catch (error) {
-      handleError(error, "Failed to load tenant data");
+      handleError(error, t('general.messages.error.loadTenantData'));
     }
   };
 
   const handleSaveTenantName = async () => {
     try {
       await updateTenantName(tenantName);
-      toast.success("Tenant name updated successfully");
+      toast.success(t('general.messages.success.tenantNameUpdated'));
     } catch (error) {
-      handleError(error, "Failed to update tenant name");
+      handleError(error, t('general.messages.error.updateTenantName'));
     }
   };
 
@@ -61,23 +63,23 @@ const GeneralSettings = () => {
     try {
       if (tenantTimezone) {
         await setTenantTimezone(tenantTimezone);
-        toast.success("Default timezone updated successfully");
+        toast.success(t('general.messages.success.timezoneUpdated'));
       }
     } catch (error) {
-      handleError(error, "Failed to update timezone");
+      handleError(error, t('general.messages.error.updateTimezone'));
     }
   };
 
   const handleAddClient = async () => {
     if (!selectedClientId) {
-      toast.error("Please select a client");
+      toast.error(t('general.messages.error.selectClient'));
       return;
     }
 
     try {
       const clientToAdd = allClients.find(c => c.client_id === selectedClientId);
       if (!clientToAdd) {
-        throw new Error("Client not found");
+        throw new Error(t('general.messages.error.clientNotFound'));
       }
 
       const newClient = {
@@ -94,9 +96,9 @@ const GeneralSettings = () => {
         await setDefaultClient(newClient.id);
       }
 
-      toast.success("Client added successfully");
+      toast.success(t('general.messages.success.clientAdded'));
     } catch (error) {
-      handleError(error, "Failed to add client");
+      handleError(error, t('general.messages.error.addClient'));
     }
   };
 
@@ -106,7 +108,7 @@ const GeneralSettings = () => {
         const clients = await getAllClients();
         setAllClients(clients);
       } catch (error) {
-        handleError(error, "Failed to load clients");
+        handleError(error, t('general.messages.error.loadClients'));
       }
     };
     loadClients();
@@ -116,9 +118,9 @@ const GeneralSettings = () => {
     try {
       await removeClientFromTenant(clientId);
       setClients(clients.filter(c => c.id !== clientId));
-      toast.success("Client removed successfully");
+      toast.success(t('general.messages.success.clientRemoved'));
     } catch (error) {
-      handleError(error, "Failed to remove client");
+      handleError(error, t('general.messages.error.removeClient'));
     }
   };
 
@@ -129,9 +131,9 @@ const GeneralSettings = () => {
         ...c,
         isDefault: c.id === clientId
       })));
-      toast.success("Default client updated successfully");
+      toast.success(t('general.messages.success.defaultClientUpdated'));
     } catch (error) {
-      handleError(error, "Failed to set default client");
+      handleError(error, t('general.messages.error.setDefaultClient'));
     }
   };
 
@@ -140,7 +142,7 @@ const GeneralSettings = () => {
       <CardContent className="space-y-6">
         <div className="space-y-4">
             <div>
-              <Label htmlFor="tenantName">Organization Name</Label>
+              <Label htmlFor="tenantName">{t('general.fields.organizationName.label')}</Label>
               <Input
                 id="tenantName"
                 value={tenantName ?? ''}
@@ -151,15 +153,15 @@ const GeneralSettings = () => {
               id="save-tenant-name-button"
               onClick={handleSaveTenantName}
             >
-              Save Organization Name
+              {t('general.actions.saveOrganizationName')}
             </Button>
           </div>
 
         <div className="space-y-4">
             <div>
-              <Label htmlFor="tenantTimezone">Default Time Zone</Label>
+              <Label htmlFor="tenantTimezone">{t('general.fields.defaultTimezone.label')}</Label>
               <p className="text-sm text-muted-foreground mb-2">
-                Used for emails and notifications when a user has not set their own timezone.
+                {t('general.fields.defaultTimezone.help')}
               </p>
               <TimezonePicker
                 value={tenantTimezone}
@@ -171,18 +173,18 @@ const GeneralSettings = () => {
               onClick={handleSaveTimezone}
               disabled={!tenantTimezone}
             >
-              Save Default Time Zone
+              {t('general.actions.saveDefaultTimezone')}
             </Button>
           </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Clients</h3>
+          <h3 className="text-lg font-semibold">{t('general.clients.title')}</h3>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Default</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t('general.clients.table.name')}</TableHead>
+                <TableHead>{t('general.clients.table.default')}</TableHead>
+                <TableHead>{t('general.clients.table.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -231,7 +233,7 @@ const GeneralSettings = () => {
               onFilterStateChange={setFilterState}
               clientTypeFilter={clientTypeFilter}
               onClientTypeFilterChange={setClientTypeFilter}
-              placeholder="Select a client to add"
+              placeholder={t('general.clients.placeholder')}
               fitContent={true}
             />
             <Button
@@ -240,7 +242,7 @@ const GeneralSettings = () => {
               disabled={!selectedClientId}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Client
+              {t('general.clients.addClient')}
             </Button>
           </div>
         </div>

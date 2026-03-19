@@ -1,0 +1,62 @@
+{
+  "title": "Settings",
+  "sections": {
+    "account": "Account",
+    "diagnostics": "Diagnostics",
+    "security": "Security",
+    "data": "Data",
+    "about": "About"
+  },
+  "account": {
+    "status": "Status",
+    "signedIn": "Signed in",
+    "signedOut": "Signed out",
+    "user": "User",
+    "tenant": "Tenant",
+    "logout": "Logout",
+    "signOut": "Sign out",
+    "signOutConfirmTitle": "Sign out?",
+    "signOutConfirmMessage": "You will need to sign in again to access tickets.",
+    "signingOut": "Signing out…",
+    "signOutFailed": "Logout failed",
+    "signOutFailedMessage": "Unable to sign out. Please try again."
+  },
+  "diagnostics": {
+    "appVersion": "App version",
+    "platform": "Platform",
+    "environment": "Environment",
+    "baseUrl": "Base URL",
+    "invalid": "invalid",
+    "missing": "missing"
+  },
+  "security": {
+    "biometricLock": "Biometric lock",
+    "biometricNotSetUp": "Biometrics are not set up on this device.",
+    "hideSensitiveNotifications": "Hide sensitive notifications",
+    "hideSensitiveHint": "Applies to future push notifications."
+  },
+  "data": {
+    "clearCache": "Clear cache",
+    "clearCacheConfirmTitle": "Clear cache?",
+    "clearCacheConfirmMessage": "This clears in-memory ticket caches on this device. You may need to refresh tickets after.",
+    "cleared": "Cleared",
+    "clearedMessage": "Cache cleared."
+  },
+  "aboutModal": {
+    "title": "About",
+    "app": "App",
+    "appName": "Alga PSA Mobile",
+    "version": "Version",
+    "versionValue": "{{version}} ({{build}})",
+    "baseUrl": "Base URL",
+    "closeAccessibility": "Close about"
+  },
+  "legalModal": {
+    "title": "Legal",
+    "subtitle": "Privacy policy and terms are currently hosted on the Alga web app.",
+    "privacyPolicy": "Privacy policy",
+    "termsOfService": "Terms of service",
+    "closeAccessibility": "Close legal"
+  },
+  "legal": "Legal"
+}

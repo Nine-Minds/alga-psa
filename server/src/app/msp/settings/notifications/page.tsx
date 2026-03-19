@@ -10,30 +10,11 @@ import { UnsavedChangesProvider, useUnsavedChanges } from "@alga-psa/ui";
 
 type NotificationView = 'email' | 'internal';
 
-// Map URL slugs to tab labels for each view
-const EMAIL_TAB_SLUG_TO_LABEL: Record<string, string> = {
-  'settings': 'Settings',
-  'email-templates': 'Email Templates',
-  'categories': 'Categories',
-};
+const EMAIL_NOTIFICATION_TAB_IDS = ['settings', 'email-templates', 'categories'] as const;
+const INTERNAL_NOTIFICATION_TAB_IDS = ['categories-types'] as const;
 
-const INTERNAL_TAB_SLUG_TO_LABEL: Record<string, string> = {
-  'categories-types': 'Categories & Types',
-};
-
-// Map tab labels to URL slugs
-const EMAIL_TAB_LABEL_TO_SLUG: Record<string, string> = {
-  'Settings': 'settings',
-  'Email Templates': 'email-templates',
-  'Categories': 'categories',
-};
-
-const INTERNAL_TAB_LABEL_TO_SLUG: Record<string, string> = {
-  'Categories & Types': 'categories-types',
-};
-
-const DEFAULT_EMAIL_TAB = 'Settings';
-const DEFAULT_INTERNAL_TAB = 'Categories & Types';
+const DEFAULT_EMAIL_TAB = 'settings';
+const DEFAULT_INTERNAL_TAB = 'categories-types';
 
 export default function NotificationsSettingsPage() {
   return (
@@ -59,11 +40,15 @@ function NotificationsSettingsContent() {
   };
 
   const getInitialTab = (view: NotificationView): string => {
-    if (!tabParam) {
-      return view === 'email' ? DEFAULT_EMAIL_TAB : DEFAULT_INTERNAL_TAB;
+    const requestedTab = tabParam?.toLowerCase();
+    const validTabs: readonly string[] = view === 'email' ? EMAIL_NOTIFICATION_TAB_IDS : INTERNAL_NOTIFICATION_TAB_IDS;
+    const defaultTab = view === 'email' ? DEFAULT_EMAIL_TAB : DEFAULT_INTERNAL_TAB;
+
+    if (requestedTab && validTabs.includes(requestedTab)) {
+      return requestedTab;
     }
-    const slugMap = view === 'email' ? EMAIL_TAB_SLUG_TO_LABEL : INTERNAL_TAB_SLUG_TO_LABEL;
-    return slugMap[tabParam.toLowerCase()] || (view === 'email' ? DEFAULT_EMAIL_TAB : DEFAULT_INTERNAL_TAB);
+
+    return defaultTab;
   };
 
   const initialView = getInitialView();
@@ -84,7 +69,7 @@ function NotificationsSettingsContent() {
   }, [viewParam, tabParam, currentView, currentTab]);
 
   // Update URL helper
-  const updateURL = useCallback((view: NotificationView, tabLabel: string) => {
+  const updateURL = useCallback((view: NotificationView, tabId: string) => {
     const currentSearchParams = new URLSearchParams(window.location.search);
 
     // Update view parameter
@@ -95,12 +80,10 @@ function NotificationsSettingsContent() {
     }
 
     // Update tab parameter
-    const slugMap = view === 'email' ? EMAIL_TAB_LABEL_TO_SLUG : INTERNAL_TAB_LABEL_TO_SLUG;
     const defaultTab = view === 'email' ? DEFAULT_EMAIL_TAB : DEFAULT_INTERNAL_TAB;
-    const urlSlug = slugMap[tabLabel];
 
-    if (urlSlug && tabLabel !== defaultTab) {
-      currentSearchParams.set('tab', urlSlug);
+    if (tabId !== defaultTab) {
+      currentSearchParams.set('tab', tabId);
     } else {
       currentSearchParams.delete('tab');
     }
@@ -141,6 +124,7 @@ function NotificationsSettingsContent() {
 
   const emailTabs = [
     {
+      id: 'settings',
       label: "Settings",
       content: (
         <Suspense fallback={<div>Loading settings...</div>}>
@@ -149,6 +133,7 @@ function NotificationsSettingsContent() {
       ),
     },
     {
+      id: 'email-templates',
       label: "Email Templates",
       content: (
         <Suspense fallback={<div>Loading templates...</div>}>
@@ -157,6 +142,7 @@ function NotificationsSettingsContent() {
       ),
     },
     {
+      id: 'categories',
       label: "Categories",
       content: (
         <Suspense fallback={<div>Loading categories...</div>}>
@@ -168,6 +154,7 @@ function NotificationsSettingsContent() {
 
   const internalTabs = [
     {
+      id: 'categories-types',
       label: "Categories & Types",
       content: (
         <Suspense fallback={<div>Loading categories...</div>}>

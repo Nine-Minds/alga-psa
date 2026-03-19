@@ -43,6 +43,8 @@ export interface TimeEntryFormProps {
   timePeriod?: ITimePeriodView;
   date?: Date;
   isNewEntry?: boolean;
+  isSaving?: boolean;
+  disableSave?: boolean;
 }
 
 export interface TimeEntryReadOnlyProps {

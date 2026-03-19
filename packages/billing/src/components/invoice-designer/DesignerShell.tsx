@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Modifier } from '@dnd-kit/core';
 import {
   DndContext,
@@ -17,6 +17,12 @@ import {
 } from '@dnd-kit/core';
 import clsx from 'clsx';
 import { restrictToWindowEdges, createSnapModifier } from '@dnd-kit/modifiers';
+import {
+  clampInvoiceMarginMm,
+  listInvoicePaperPresets,
+  resolveInvoiceTemplatePrintSettings,
+  type InvoiceTemplatePrintSettings,
+} from '@alga-psa/types';
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
@@ -34,7 +40,7 @@ import {
   insertTextIntoValue,
   validateSourcePaths,
   type ExpressionMode,
-} from '@shared/workflow/expression-authoring';
+} from '@alga-psa/workflows/expression-authoring';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -454,6 +460,43 @@ const findNearestScrollableParent = (element: HTMLElement | null): HTMLElement |
   return null;
 };
 
+const parsePxLength = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed.length) {
+      return undefined;
+    }
+    const numeric = Number.parseFloat(trimmed.replace(/px$/i, '').trim());
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }
+  return undefined;
+};
+
+const resolveDesignerShellPrintSettings = (nodes: DesignerNode[]) => {
+  const documentNode = nodes.find((node) => node.type === 'document');
+  const pageNode = documentNode
+    ? nodes.find((node) => node.type === 'page' && node.parentId === documentNode.id)
+    : nodes.find((node) => node.type === 'page');
+  const documentMetadata = documentNode ? getNodeMetadata(documentNode) : {};
+  const pageLayout = pageNode ? getNodeLayout(pageNode) : undefined;
+  const pageStyle = pageNode ? getNodeStyle(pageNode) : undefined;
+
+  return resolveInvoiceTemplatePrintSettings({
+    printSettings:
+      typeof documentMetadata.printSettings === 'object' && documentMetadata.printSettings !== null
+        ? (documentMetadata.printSettings as Partial<InvoiceTemplatePrintSettings>)
+        : undefined,
+    pageWidthPx: pageNode?.size.width ?? parsePxLength(pageStyle?.width),
+    pageHeightPx: pageNode?.size.height ?? parsePxLength(pageStyle?.height),
+    documentWidthPx: documentNode?.size.width,
+    documentHeightPx: documentNode?.size.height,
+    pagePaddingPx: parsePxLength(pageLayout?.padding),
+  });
+};
+
 export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
@@ -467,6 +510,7 @@ export const DesignerShell: React.FC = () => {
   );
   const addNode = useInvoiceDesignerStore((state) => state.addNodeFromPalette);
   const insertPreset = useInvoiceDesignerStore((state) => state.insertPreset);
+  const applyPrintSettings = useInvoiceDesignerStore((state) => state.applyPrintSettings);
   const moveNode = useInvoiceDesignerStore((state) => state.moveNode);
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
   const unsetNodeProp = useInvoiceDesignerStore((state) => state.unsetNodeProp);
@@ -485,6 +529,12 @@ export const DesignerShell: React.FC = () => {
   const redo = useInvoiceDesignerStore((state) => state.redo);
   const metrics = useInvoiceDesignerStore((state) => state.metrics);
   const recordDropResult = useInvoiceDesignerStore((state) => state.recordDropResult);
+  const currentPrintSettings = useMemo(() => resolveDesignerShellPrintSettings(nodes), [nodes]);
+  const [printMarginDraft, setPrintMarginDraft] = useState(() => `${currentPrintSettings.marginMm}`);
+
+  useEffect(() => {
+    setPrintMarginDraft(`${currentPrintSettings.marginMm}`);
+  }, [currentPrintSettings.marginMm]);
 
   const resizeNode = useCallback(
     (id: string, size: Size, commit: boolean = false) => {
@@ -1675,6 +1725,36 @@ export const DesignerShell: React.FC = () => {
     return trimmed.length === 0 ? undefined : raw;
   };
 
+  const handlePaperPresetChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    applyPrintSettings({
+      paperPreset: event.target.value as InvoiceTemplatePrintSettings['paperPreset'],
+    });
+  };
+
+  const handleMarginDraftChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value;
+    setPrintMarginDraft(nextValue);
+  };
+
+  const commitMarginDraft = () => {
+    if (printMarginDraft.trim().length === 0) {
+      setPrintMarginDraft(`${currentPrintSettings.marginMm}`);
+      return;
+    }
+
+    const numeric = Number(printMarginDraft);
+    if (!Number.isFinite(numeric)) {
+      setPrintMarginDraft(`${currentPrintSettings.marginMm}`);
+      return;
+    }
+
+    const normalized = clampInvoiceMarginMm(numeric);
+    setPrintMarginDraft(`${normalized}`);
+    applyPrintSettings({
+      marginMm: normalized,
+    });
+  };
+
   return (
     <div className="flex flex-col h-full border border-slate-200 rounded-lg overflow-hidden">
       <DesignerToolbar
@@ -1883,7 +1963,54 @@ export const DesignerShell: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <p className="text-sm text-slate-500">Select a component to edit its properties.</p>
+            <div className="space-y-4">
+              <div
+                className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-3 space-y-3"
+                data-automation-id="designer-page-setup-panel"
+              >
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Page Setup</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Choose a paper preset and page margin without selecting the hidden page node.
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="designer-paper-preset-select" className="text-xs text-slate-500 block">
+                    Paper Preset
+                  </label>
+                  <select
+                    id="designer-paper-preset-select"
+                    className="w-full rounded border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                    value={currentPrintSettings.paperPreset}
+                    onChange={handlePaperPresetChange}
+                    data-automation-id="designer-paper-preset-select"
+                  >
+                    {listInvoicePaperPresets().map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="designer-margin-mm-input" className="text-xs text-slate-500 block">
+                    Margin (mm)
+                  </label>
+                  <Input
+                    id="designer-margin-mm-input"
+                    type="number"
+                    min={0}
+                    max={50}
+                    step={0.1}
+                    value={printMarginDraft}
+                    onChange={handleMarginDraftChange}
+                    onBlur={commitMarginDraft}
+                    data-automation-id="designer-margin-mm-input"
+                  />
+                </div>
+              </div>
+              <p className="text-sm text-slate-500">Select a component to edit its properties.</p>
+            </div>
           )}
         </aside>
         </div>

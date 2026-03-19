@@ -26,7 +26,6 @@ cp .env.example .env
 ## Environment
 
 - `EXPO_PUBLIC_ALGA_ENV`: `dev|stage|prod`
-- `EXPO_PUBLIC_ALGA_BASE_URL`: hosted base URL (no trailing slash)
 
 ## Run
 

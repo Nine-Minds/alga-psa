@@ -1,5 +1,7 @@
 export type HostedEnvironment = "dev" | "stage" | "prod";
 
+const HARDCODED_BASE_URL = "https://algapsa.com";
+
 export type AppConfig =
   | {
       ok: true;
@@ -39,14 +41,13 @@ function normalizeBaseUrl(raw: string): string | undefined {
 
 export function getAppConfig(): AppConfig {
   const env = parseHostedEnvironment(process.env.EXPO_PUBLIC_ALGA_ENV) ?? "dev";
-  const baseUrl = normalizeBaseUrl(process.env.EXPO_PUBLIC_ALGA_BASE_URL ?? "");
+  const baseUrl = normalizeBaseUrl(HARDCODED_BASE_URL);
 
   if (!baseUrl) {
     return {
       ok: false,
       env,
-      error:
-        "Missing EXPO_PUBLIC_ALGA_BASE_URL. Copy ee/mobile/.env.example to ee/mobile/.env and set the hosted base URL.",
+      error: "Invalid hardcoded hosted base URL.",
     };
   }
 
