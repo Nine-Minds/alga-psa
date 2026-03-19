@@ -212,7 +212,7 @@
   {
     "id": "F036",
     "description": "Project creation from template: copies phase-specific template status mappings to project_status_mappings with correct phase_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8.4"]
   },
   {

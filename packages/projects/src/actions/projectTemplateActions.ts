@@ -485,6 +485,19 @@ export const applyTemplate = withAuth(async (
     // 5. Handle status mappings BEFORE creating tasks (only if copyStatuses is enabled)
     let firstStatusMappingId: string | undefined;
     const templateStatusToProjectStatusMap = new Map<string, string>(); // template_status_mapping_id → project_status_mapping_id
+    const firstStatusMappingIdsByScope = new Map<string, string>();
+
+    const getScopeKey = (templatePhaseId?: string | null) => templatePhaseId ?? '__template_defaults__';
+    const getFallbackStatusMappingIdForPhase = (templatePhaseId?: string | null) => {
+      if (templatePhaseId) {
+        const phaseScopedFallback = firstStatusMappingIdsByScope.get(getScopeKey(templatePhaseId));
+        if (phaseScopedFallback) {
+          return phaseScopedFallback;
+        }
+      }
+
+      return firstStatusMappingIdsByScope.get(getScopeKey()) || firstStatusMappingId;
+    };
 
     if (options.copyStatuses && templateStatuses.length > 0) {
       // No need to delete - we passed empty array to createProject so no status mappings were created
@@ -568,6 +581,11 @@ export const applyTemplate = withAuth(async (
           newMapping.project_status_mapping_id
         );
 
+        const scopeKey = getScopeKey(templateStatus.template_phase_id);
+        if (!firstStatusMappingIdsByScope.has(scopeKey)) {
+          firstStatusMappingIdsByScope.set(scopeKey, newMapping.project_status_mapping_id);
+        }
+
         // Track first status mapping as fallback
         if (!firstStatusMappingId) {
           firstStatusMappingId = newMapping.project_status_mapping_id;
@@ -594,6 +612,10 @@ export const applyTemplate = withAuth(async (
             is_standard: false
           })
           .returning('*');
+
+        if (!firstStatusMappingIdsByScope.has(getScopeKey())) {
+          firstStatusMappingIdsByScope.set(getScopeKey(), newMapping.project_status_mapping_id);
+        }
 
         if (!firstStatusMappingId) {
           firstStatusMappingId = newMapping.project_status_mapping_id;
@@ -643,16 +665,16 @@ export const applyTemplate = withAuth(async (
         : null;
 
       // Determine which status mapping to use for this task
-      let taskStatusMappingId = firstStatusMappingId;
+      let taskStatusMappingId = getFallbackStatusMappingIdForPhase(templateTask.template_phase_id);
       if (templateTask.template_status_mapping_id) {
         // Try to map the template status to the project status
         const mappedStatusId = templateStatusToProjectStatusMap.get(templateTask.template_status_mapping_id);
-        console.log(`[applyTemplate] Task "${templateTask.task_name}": template_status_mapping_id=${templateTask.template_status_mapping_id}, mapped to project_status_mapping_id=${mappedStatusId || 'NOT FOUND'}, using ${mappedStatusId || firstStatusMappingId}`);
+        console.log(`[applyTemplate] Task "${templateTask.task_name}": template_status_mapping_id=${templateTask.template_status_mapping_id}, mapped to project_status_mapping_id=${mappedStatusId || 'NOT FOUND'}, using ${mappedStatusId || taskStatusMappingId}`);
         if (mappedStatusId) {
           taskStatusMappingId = mappedStatusId;
         }
       } else {
-        console.log(`[applyTemplate] Task "${templateTask.task_name}": No template_status_mapping_id, using first status ${firstStatusMappingId}`);
+        console.log(`[applyTemplate] Task "${templateTask.task_name}": No template_status_mapping_id, using first status ${taskStatusMappingId}`);
       }
 
       // Determine assigned_to and assigned_team_id based on assignmentOption
