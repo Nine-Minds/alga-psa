@@ -206,7 +206,7 @@
   {
     "id": "F035",
     "description": "TemplateStatusColumnsStep (wizard): supports phase-aware status setup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8.3"]
   },
   {
