@@ -220,7 +220,8 @@ export const reorderProjectStatuses = withAuth(async (
   user,
   { tenant },
   projectId: string,
-  statusOrder: Array<{ mapping_id: string; display_order: number }>
+  statusOrder: Array<{ mapping_id: string; display_order: number }>,
+  phaseId?: string | null
 ): Promise<void> => {
   // RBAC check
   if (!await hasPermission(user, 'project', 'update')) {
@@ -231,13 +232,20 @@ export const reorderProjectStatuses = withAuth(async (
 
   return await withTransaction(knex, async (trx) => {
     for (const { mapping_id, display_order } of statusOrder) {
-      await trx('project_status_mappings')
+      const query = trx('project_status_mappings')
         .where({
           project_status_mapping_id: mapping_id,
           project_id: projectId,
           tenant
-        })
-        .update({ display_order });
+        });
+
+      if (phaseId) {
+        query.andWhere('phase_id', phaseId);
+      } else {
+        query.whereNull('phase_id');
+      }
+
+      await query.update({ display_order });
     }
 
     // Publish event
