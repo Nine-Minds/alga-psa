@@ -383,6 +383,50 @@ describe('Contract PO UI flows', () => {
     });
   });
 
+  it('T093: compatibility client-cadence PO-overage checks still run through selector-input identity without changing legacy batch behavior', async () => {
+    const [clientRow] = createPeriods();
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      rows: [clientRow],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+    getPurchaseOrderOverageForSelectionInputMock.mockResolvedValue({
+      overage_cents: 900,
+      po_number: 'PO-LEGACY',
+    } as any);
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Alpha Co')).toBeInTheDocument();
+    });
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
+    fireEvent.click(
+      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+    );
+
+    await waitFor(() => {
+      expect(getPurchaseOrderOverageForSelectionInputMock).toHaveBeenCalledWith(clientRow.selectorInput);
+      expect(screen.getByText('Purchase Order Limit Overages')).toBeInTheDocument();
+      expect(screen.getByText(/Alpha Co: over by/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Allow overages (generate all invoices)'));
+    fireEvent.click(document.getElementById('po-overage-batch-decision-confirm')!);
+
+    await waitFor(() => {
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        targets: [expect.objectContaining({ billingCycleId: 'cycle-1' })],
+        allowPoOverage: true,
+      });
+    });
+  });
+
   it('T037/T038: selector-input preview generate supports contract-cadence rows, survives reopen, and submits recurring targets without a billing-cycle bridge', async () => {
     const contractRow = createContractRow();
     getAvailableRecurringDueWorkMock.mockResolvedValue({

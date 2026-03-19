@@ -179,4 +179,46 @@ describe('manual invoice recurring isolation', () => {
       tax_source: 'internal',
     });
   });
+
+  it('T096: non-recurring manual prepayment invoice creation remains unchanged by the service-driven recurring cutover', async () => {
+    const result = await generateManualInvoice({
+      clientId: 'client-1',
+      items: [
+        {
+          service_id: 'service-prepayment',
+          quantity: 1,
+          description: 'Prepaid block',
+          rate: 12000,
+        },
+      ],
+      isPrepayment: true,
+      expirationDate: '2026-12-31',
+      currency_code: 'USD',
+    });
+
+    expect(result).toEqual({
+      success: true,
+      invoice: expect.objectContaining({
+        invoice_id: 'invoice-1',
+        total_amount: 5000,
+      }),
+    });
+    expect(mocks.persistManualInvoiceCharges).toHaveBeenCalledTimes(1);
+    expect(mocks.updateInvoiceTotalsAndRecordTransaction).toHaveBeenCalledWith(
+      mocks.trx,
+      expect.any(String),
+      expect.objectContaining({ client_id: 'client-1' }),
+      'tenant-1',
+      'INV-001',
+      '2026-12-31',
+    );
+    expect(mocks.billingEngineConstructor).not.toHaveBeenCalled();
+    expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).not.toHaveBeenCalled();
+    expect(mocks.insertedInvoices[0]).toMatchObject({
+      client_id: 'client-1',
+      is_manual: true,
+      is_prepayment: true,
+      tax_source: 'internal',
+    });
+  });
 });

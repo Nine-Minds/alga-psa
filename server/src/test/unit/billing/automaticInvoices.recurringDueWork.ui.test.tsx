@@ -310,6 +310,50 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.getAllByText('2025-03-01 to 2025-04-01').length).toBeGreaterThan(0);
   });
 
+  it('T091: legacy billing-cycle compatibility rows still support the ready-table preview and batch-generate flow', async () => {
+    const clientRow = createClientRow();
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      rows: [clientRow],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('No billing cycle bridge')).toBeNull();
+
+    fireEvent.click(document.getElementById(`select-${clientRow.executionIdentityKey}`)!);
+    fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
+
+    await waitFor(() => {
+      expect(previewInvoiceForSelectionInputMock).toHaveBeenCalledWith(clientRow.selectorInput);
+      expect(screen.getByText('Client Details')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Close Preview/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+    );
+
+    await waitFor(() => {
+      expect(generateInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith({
+        targets: [
+          expect.objectContaining({
+            billingCycleId: clientRow.billingCycleId,
+            executionWindow: clientRow.executionWindow,
+          }),
+        ],
+      });
+    });
+  });
+
   it('T032: AutomaticInvoices preview opens for a client-cadence row through the selector-input preview path', async () => {
     const clientRow = createClientRow();
 
@@ -460,6 +504,54 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     await waitFor(() => {
       expect(screen.getByText(/Zenith Health:/i)).toBeInTheDocument();
       expect(screen.getByText(/Contract cadence failure/i)).toBeInTheDocument();
+    });
+  });
+
+  it('T083: recurring generation errors for unbridged rows display execution identity when client-name keys are unavailable', async () => {
+    const contractRow = {
+      ...createContractRow(),
+      clientName: '',
+    };
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      rows: [contractRow],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+    generateInvoicesAsRecurringBillingRunMock.mockResolvedValue({
+      runId: 'run-identity-fallback',
+      selectionKey: 'selection-identity-fallback',
+      retryKey: 'retry-identity-fallback',
+      invoicesCreated: 0,
+      failedCount: 1,
+      failures: [
+        {
+          billingCycleId: null,
+          executionIdentityKey: contractRow.executionIdentityKey,
+          executionWindowKind: 'contract_cadence_window',
+          errorMessage: 'Execution-window keyed failure',
+        },
+      ],
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Contract anniversary')).toBeInTheDocument();
+    });
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
+    fireEvent.click(
+      screen.getByRole('button', { name: /Generate Invoices for Selected Periods \(1\)/i }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText(new RegExp(contractRow.executionIdentityKey, 'i')).length).toBeGreaterThan(0);
+      expect(screen.getByText(/Execution-window keyed failure/i)).toBeInTheDocument();
     });
   });
 

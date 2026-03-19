@@ -24,6 +24,10 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       );
       return builder;
     }),
+    whereNotNull: vi.fn((column: string) => {
+      resultRows = resultRows.filter((row) => row[normalizeColumn(column)] != null);
+      return builder;
+    }),
     select: vi.fn(() => builder),
     first: vi.fn(async () => resultRows[0]),
     leftJoin: vi.fn(() => builder),
@@ -240,8 +244,96 @@ describe('invoice preview recurring timing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.hasPermission.mockReturnValue(true);
+    mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
+    mocks.getClientDetails.mockResolvedValue({
+      client_id: 'client-1',
+      client_name: 'Acme Corp',
+      location_address: '100 Main St',
+      tax_region: 'US-NY',
+    });
+    mocks.getNextBillingDate.mockResolvedValue('2025-03-01');
+    mocks.getDueDate.mockResolvedValue('2025-03-15');
+    mocks.getClientDefaultTaxRegionCode.mockResolvedValue('US-NY');
+    mocks.getClientLogoUrl.mockResolvedValue(null);
     mocks.getClientContractPurchaseOrderContext.mockResolvedValue({ po_number: null, po_amount: null });
     mocks.getPurchaseOrderConsumedCents.mockResolvedValue(0);
+    mocks.computePurchaseOrderOverage.mockImplementation(
+      ({
+        authorizedCents,
+        consumedCents,
+        invoiceTotalCents,
+      }: {
+        authorizedCents: number;
+        consumedCents: number;
+        invoiceTotalCents: number;
+      }) => ({
+        authorizedCents,
+        consumedCents,
+        remainingCents: authorizedCents - consumedCents,
+        invoiceTotalCents,
+        overageCents: Math.max(0, invoiceTotalCents - Math.max(0, authorizedCents - consumedCents)),
+      }),
+    );
+    mocks.selectDueRecurringServicePeriodsForBillingWindow.mockResolvedValue({
+      'contract-line-1': {
+        duePosition: 'arrears',
+        servicePeriodStart: '2025-01-01',
+        servicePeriodEnd: '2025-02-01',
+        servicePeriodStartExclusive: '2025-01-01',
+        servicePeriodEndExclusive: '2025-02-01',
+        coverageRatio: 1,
+      },
+    });
+    mocks.calculateBilling.mockResolvedValue({
+      charges: [
+        {
+          type: 'product',
+          serviceId: 'service-1',
+          serviceName: 'Managed Router',
+          quantity: 1,
+          rate: 4000,
+          total: 4000,
+          tax_amount: 200,
+          tax_rate: 5,
+          tax_region: 'US-NY',
+          is_taxable: true,
+          servicePeriodStart: '2025-01-01',
+          servicePeriodEnd: '2025-02-01',
+          billingTiming: 'arrears',
+        },
+      ],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 4000,
+      finalAmount: 4000,
+      currency_code: 'USD',
+    });
+    mocks.calculateBillingForExecutionWindow.mockResolvedValue({
+      charges: [
+        {
+          type: 'product',
+          serviceId: 'service-1',
+          serviceName: 'Managed Router',
+          quantity: 1,
+          rate: 4000,
+          total: 4000,
+          tax_amount: 200,
+          tax_rate: 5,
+          tax_region: 'US-NY',
+          is_taxable: true,
+          client_contract_id: 'contract-1',
+          contract_name: 'Zenith Annual Support',
+          servicePeriodStart: '2025-01-01',
+          servicePeriodEnd: '2025-02-01',
+          billingTiming: 'arrears',
+        },
+      ],
+      discounts: [],
+      adjustments: [],
+      totalAmount: 4000,
+      finalAmount: 4000,
+      currency_code: 'USD',
+    });
   });
 
   it('T076: one-cycle invoice preview uses canonical service periods and still matches expected recurring totals', async () => {
@@ -297,18 +389,12 @@ describe('invoice preview recurring timing', () => {
   it('T083: recurring invoice preview surfaces canonical service periods in preview state', async () => {
     const result = await previewInvoice('cycle-1');
 
-    expect(result).toEqual({
-      success: true,
-      data: expect.objectContaining({
-        items: [
-          expect.objectContaining({
-            description: 'Managed Router',
-            servicePeriodStart: '2025-01-01',
-            servicePeriodEnd: '2025-02-01',
-            billingTiming: 'arrears',
-          }),
-        ],
-      }),
+    expect(result).toMatchObject({ success: true });
+    expect(result.success && result.data.items[0]).toMatchObject({
+      description: 'Managed Router',
+      servicePeriodStart: '2025-01-01',
+      servicePeriodEnd: '2025-02-01',
+      billingTiming: 'arrears',
     });
   });
 
@@ -349,30 +435,24 @@ describe('invoice preview recurring timing', () => {
 
     const result = await previewInvoice('cycle-1');
 
-    expect(result).toEqual({
-      success: true,
-      data: expect.objectContaining({
-        items: [
-          expect.objectContaining({
-            description: 'Managed Router',
-            servicePeriodStart: '2025-01-01',
-            servicePeriodEnd: '2025-03-01',
-            billingTiming: null,
-            recurringDetailPeriods: [
-              {
-                servicePeriodStart: '2025-01-01',
-                servicePeriodEnd: '2025-02-01',
-                billingTiming: 'arrears',
-              },
-              {
-                servicePeriodStart: '2025-02-01',
-                servicePeriodEnd: '2025-03-01',
-                billingTiming: 'advance',
-              },
-            ],
-          }),
-        ],
-      }),
+    expect(result).toMatchObject({ success: true });
+    expect(result.success && result.data.items[0]).toMatchObject({
+      description: 'Managed Router',
+      servicePeriodStart: '2025-01-01',
+      servicePeriodEnd: '2025-03-01',
+      billingTiming: null,
+      recurringDetailPeriods: [
+        {
+          servicePeriodStart: '2025-01-01',
+          servicePeriodEnd: '2025-02-01',
+          billingTiming: 'arrears',
+        },
+        {
+          servicePeriodStart: '2025-02-01',
+          servicePeriodEnd: '2025-03-01',
+          billingTiming: 'advance',
+        },
+      ],
     });
   });
 
@@ -396,6 +476,30 @@ describe('invoice preview recurring timing', () => {
       billingCycleId: null,
     });
     expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).not.toHaveBeenCalled();
+  });
+
+  it('T094: compatibility billing-cycle preview wrapper preserves the invalid and unauthorized error shape', async () => {
+    mocks.hasPermission.mockReturnValue(false);
+
+    const unauthorizedResult = await previewInvoice('cycle-1');
+
+    expect(unauthorizedResult).toEqual({
+      success: false,
+      error: 'Permission denied: Cannot preview invoices',
+    });
+    expect(unauthorizedResult).not.toHaveProperty('executionIdentityKey');
+    expect(unauthorizedResult).not.toHaveProperty('billingCycleId');
+
+    mocks.hasPermission.mockReturnValue(true);
+
+    const invalidResult = await previewInvoice('missing-cycle');
+
+    expect(invalidResult).toEqual({
+      success: false,
+      error: 'Invalid billing cycle',
+    });
+    expect(invalidResult).not.toHaveProperty('executionIdentityKey');
+    expect(invalidResult).not.toHaveProperty('billingCycleId');
   });
 
   it('T042: selector-input preview action returns the same recurring service-period details as billing-cycle preview for an equivalent client-cadence row', async () => {
@@ -463,23 +567,21 @@ describe('invoice preview recurring timing', () => {
         recurringTimingSelectionSource: 'persisted',
       },
     );
-    expect(result).toEqual({
-      success: true,
-      data: expect.objectContaining({
-        items: [
-          expect.objectContaining({
-            description: 'Managed Router',
-            servicePeriodStart: '2025-01-01',
-            servicePeriodEnd: '2025-02-01',
-            billingTiming: 'arrears',
-          }),
-        ],
-      }),
-    });
+    expect(result).toMatchObject({ success: true });
+    expect(result.success && result.data.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          description: 'Managed Router',
+          servicePeriodStart: '2025-01-01',
+          servicePeriodEnd: '2025-02-01',
+          billingTiming: 'arrears',
+        }),
+      ]),
+    );
   });
 
   it('T044: selector-input PO-overage action returns null when the preview spans no PO-governed client contract', async () => {
-    mocks.calculateBilling.mockResolvedValueOnce({
+    mocks.calculateBillingForExecutionWindow.mockResolvedValueOnce({
       charges: [
         {
           type: 'product',

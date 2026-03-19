@@ -98,6 +98,67 @@ describe('invoice recurring list contract', () => {
     expect(singleParsed.success).toBe(true);
   });
 
+  it('T092: invoice list and detail readers still select recurring service-period summary fields after the service-driven cutover', () => {
+    const summaryBuilder: any = {
+      where: () => summaryBuilder,
+      whereNotNull: () => summaryBuilder,
+      select: () => summaryBuilder,
+      min: () => summaryBuilder,
+      max: () => summaryBuilder,
+      groupBy: () => summaryBuilder,
+      as: () => 'recurring_invoice_summary',
+    };
+
+    const operations: Array<{ type: string; args: unknown[] }> = [];
+    const invoiceBuilder: any = {
+      where: (...args: unknown[]) => {
+        operations.push({ type: 'where', args });
+        return invoiceBuilder;
+      },
+      leftJoin: (...args: unknown[]) => {
+        operations.push({ type: 'leftJoin', args });
+        return invoiceBuilder;
+      },
+      select: (...args: unknown[]) => {
+        operations.push({ type: 'select', args });
+        return invoiceBuilder;
+      },
+    };
+
+    const trx: any = ((tableName: string) => {
+      if (tableName === 'recurring_service_periods as rsp') {
+        return summaryBuilder;
+      }
+      if (tableName === 'invoices') {
+        return invoiceBuilder;
+      }
+      throw new Error(`Unexpected table ${tableName}`);
+    }) as any;
+    trx.raw = (sql: string) => sql;
+
+    const service = new InvoiceService();
+    (service as any).buildBaseQuery(trx, { tenant: 'tenant-1', userId: 'user-1' });
+
+    expect(operations).toEqual(
+      expect.arrayContaining([
+        {
+          type: 'leftJoin',
+          args: ['recurring_invoice_summary', 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id'],
+        },
+      ]),
+    );
+
+    const selectOperation = operations.find((operation) => operation.type === 'select');
+    expect(selectOperation?.args).toEqual(
+      expect.arrayContaining([
+        'recurring_invoice_summary.recurring_service_period_start',
+        'recurring_invoice_summary.recurring_service_period_end',
+        'recurring_invoice_summary.recurring_invoice_window_start',
+        'recurring_invoice_summary.recurring_invoice_window_end',
+      ]),
+    );
+  });
+
   it('T067: invoice list filter can query recurring invoices by execution-window kind or cadence source when provided', () => {
     const parsedFilter = invoiceFilterSchema.parse({
       execution_window_kind: 'contract_cadence_window',

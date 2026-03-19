@@ -268,4 +268,44 @@ describe('recurring service period backfill', () => {
       }),
     ).toThrow('overlaps billed-history boundary 2026-04-10');
   });
+
+  it('T095: rerunning recurring service-period backfill/replenishment does not duplicate active future records when the materialized horizon is already present', () => {
+    const sourceObligation = buildPersistedRecurringObligationRef({
+      obligationId: 'line-idempotent',
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    });
+    const materialized = materializeClientCadenceServicePeriods({
+      asOf: '2026-03-18T00:00:00Z',
+      materializedAt: '2026-03-18T12:00:00.000Z',
+      billingCycle: 'monthly',
+      anchorSettings: { dayOfMonth: 10 },
+      sourceObligation,
+      duePosition: 'advance',
+      sourceRuleVersion: 'contract-line-idempotent:v1',
+      sourceRunKey: 'materialize-2026-03-18',
+    });
+
+    const firstBackfill = backfillRecurringServicePeriods({
+      candidateRecords: materialized.records,
+      existingRecords: [],
+      backfilledAt: '2026-03-18T12:30:00.000Z',
+      sourceRuleVersion: 'contract-line-idempotent:v1',
+      sourceRunKey: 'backfill-2026-03-18',
+    });
+
+    const rerunBackfill = backfillRecurringServicePeriods({
+      candidateRecords: materialized.records,
+      existingRecords: firstBackfill.activeRecords,
+      backfilledAt: '2026-03-18T13:00:00.000Z',
+      sourceRuleVersion: 'contract-line-idempotent:v1',
+      sourceRunKey: 'backfill-rerun-2026-03-18',
+    });
+
+    expect(firstBackfill.backfilledRecords).toHaveLength(materialized.records.length);
+    expect(rerunBackfill.backfilledRecords).toEqual([]);
+    expect(rerunBackfill.realignedRecords).toEqual([]);
+    expect(rerunBackfill.supersededRecords).toEqual([]);
+    expect(rerunBackfill.activeRecords).toEqual(firstBackfill.activeRecords);
+  });
 });
