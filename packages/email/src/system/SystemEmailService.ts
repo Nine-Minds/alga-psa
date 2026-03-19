@@ -70,7 +70,10 @@ export class SystemEmailService extends BaseEmailService {
     return SystemEmailProviderFactory.createProvider();
   }
 
-  protected getFromAddress(): string {
+  protected getFromAddress(params?: BaseEmailParams): string {
+    if (params?.from) {
+      return typeof params.from === 'string' ? params.from : params.from.email;
+    }
     return this.fromAddress || process.env.EMAIL_FROM || 'noreply@localhost';
   }
 

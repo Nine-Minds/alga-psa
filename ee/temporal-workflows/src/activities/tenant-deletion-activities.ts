@@ -1397,7 +1397,7 @@ function createDeactivationEmailContent(tenantName: string, userName: string): {
   textBody: string;
 } {
   const currentYear = new Date().getFullYear();
-  const supportUrl = 'https://portal.nineminds.com/auth/client-portal/signin';
+  const supportEmail = 'info@nineminds.com';
 
   const subject = `Your Alga PSA account has been deactivated`;
 
@@ -1483,16 +1483,7 @@ function createDeactivationEmailContent(tenantName: string, userName: string): {
                       </table>
 
                       <!-- Changed your mind -->
-                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 16px; margin-bottom: 16px;">If you've changed your mind or this was a mistake, please contact our support team as soon as possible and we can restore your account during the grace period.</p>
-
-                      <!-- Support link -->
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin: 28px 0;">
-                        <tr>
-                          <td align="center">
-                            <a href="${supportUrl}" style="background-color: ${EMAIL_COLORS.primary}; color: #ffffff; display: inline-block; padding: 14px 32px; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; font-weight: 600; text-align: center; text-decoration: none; border-radius: 8px;">Contact Support</a>
-                          </td>
-                        </tr>
-                      </table>
+                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 16px; margin-bottom: 16px;">If you've changed your mind or this was a mistake, please contact our support team at <a href="mailto:${supportEmail}" style="color: ${EMAIL_COLORS.primary}; font-weight: 600;">${supportEmail}</a> as soon as possible and we can restore your account during the grace period.</p>
 
                       <!-- Divider -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
@@ -1547,9 +1538,7 @@ WHAT HAPPENS NEXT:
 3. Your data will be retained for a grace period before permanent deletion, in case you change your mind.
 4. A copy of your data has been exported and is available upon request.
 
-If you've changed your mind or this was a mistake, please contact our support team as soon as possible and we can restore your account during the grace period.
-
-Contact Support: ${supportUrl}
+If you've changed your mind or this was a mistake, please contact our support team at ${supportEmail} as soon as possible and we can restore your account during the grace period.
 
 Thank you for being an Alga PSA customer. We truly appreciate your business and hope to work with you again in the future.
 
@@ -1612,6 +1601,7 @@ export async function sendCancellationConfirmationEmail(
     try {
       await emailServiceInstance.sendEmail({
         to: tenant.email,
+        from: 'info@nineminds.com',
         subject,
         html: htmlBody,
         text: textBody,

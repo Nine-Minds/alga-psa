@@ -204,6 +204,7 @@ If you did not request this, please contact support immediately.
 
   await emailService.sendEmail({
     to: data.recipientEmail,
+    from: 'info@nineminds.com',
     subject,
     html: htmlBody,
     text: textBody,
