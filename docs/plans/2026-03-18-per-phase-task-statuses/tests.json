@@ -30,7 +30,7 @@
   {
     "id": "TB05",
     "description": "Copy and remove phase statuses: copyProjectStatusesToPhase creates phase copies preserving status_id/custom_name/display_order/is_visible with new mapping IDs; removePhaseStatuses deletes all phase mappings and effective resolution reverts to project defaults; tasks in phase retain valid mapping or are remapped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F014"],
     "covers": ["T019", "T020", "T021", "T022", "T023", "T024"]
   },
