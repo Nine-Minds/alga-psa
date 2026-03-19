@@ -104,4 +104,38 @@ describe('recurring billing workflow event payloads', () => {
       }),
     );
   });
+
+  it('T068: recurring workflow events identify runs by canonical selection and execution-window identity without bridge fields', () => {
+    const failedAt = '2026-03-17T12:05:00.000Z';
+    const payload = buildRecurringBillingRunFailedPayload({
+      runId: RUN_ID,
+      failedAt,
+      errorMessage: 'Recurring service period lookup failed',
+      retryable: false,
+      selectionKey: 'tenant-1:selection:client-1',
+      retryKey: 'tenant-1:retry:client-1',
+      selectionMode: 'due_service_periods',
+      windowIdentity: 'client_cadence_window',
+      executionWindowKinds: ['client_cadence_window'],
+    });
+
+    expect(payload).toMatchObject({
+      selectionKey: 'tenant-1:selection:client-1',
+      retryKey: 'tenant-1:retry:client-1',
+      selectionMode: 'due_service_periods',
+      windowIdentity: 'client_cadence_window',
+      executionWindowKinds: ['client_cadence_window'],
+    });
+    expect(payload).not.toHaveProperty('billingCycleId');
+    expect(payload).not.toHaveProperty('billing_cycle_id');
+    expect(payload).not.toHaveProperty('hasBillingCycleBridge');
+
+    recurringBillingRunFailedEventPayloadSchema.parse(
+      buildWorkflowPayload(payload as any, {
+        tenantId: TENANT_ID,
+        occurredAt: failedAt,
+        actor: { actorType: 'USER', actorUserId: USER_ID },
+      }),
+    );
+  });
 });

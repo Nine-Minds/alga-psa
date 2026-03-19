@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
@@ -75,5 +77,17 @@ describe('invoiceQueries recurring detail reads', () => {
     expect(mocks.createTenantKnex).toHaveBeenCalledTimes(1);
     expect(mocks.getInvoiceItems).toHaveBeenCalledWith(mocks.knex, 'tenant-1', 'invoice-1');
     expect(result).toEqual(projectedItems);
+  });
+
+  it('T069: invoice query summary readers derive recurring service-period summaries from canonical charge-detail joins rather than bridge assumptions', () => {
+    const invoiceQueriesSource = readFileSync(
+      resolve(__dirname, '../../../../../packages/billing/src/actions/invoiceQueries.ts'),
+      'utf8',
+    );
+
+    expect(invoiceQueriesSource).toContain('FROM invoice_charges ic');
+    expect(invoiceQueriesSource).toContain('JOIN invoice_charge_details iid');
+    expect(invoiceQueriesSource).not.toContain('FROM invoice_charge_details iid\n            WHERE iid.invoice_id = invoices.invoice_id');
+    expect(invoiceQueriesSource).not.toContain('compatibility summary range');
   });
 });

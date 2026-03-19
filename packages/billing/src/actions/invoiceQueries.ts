@@ -254,19 +254,25 @@ export const fetchInvoicesPaginated = withAuth(async (
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
           // Invoice list and summary surfaces flatten canonical recurring detail rows to one
-          // compatibility summary range. Full rerender or preview-refresh flows must use the
+          // summary range. Full rerender or preview-refresh flows must use the
           // detail-aware reader below rather than relying on these list projections alone.
           trx.raw(`(
             SELECT MIN(iid.service_period_start)
-            FROM invoice_charge_details iid
-            WHERE iid.invoice_id = invoices.invoice_id
-              AND iid.tenant = invoices.tenant
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
           ) as service_period_start`),
           trx.raw(`(
             SELECT MAX(iid.service_period_end)
-            FROM invoice_charge_details iid
-            WHERE iid.invoice_id = invoices.invoice_id
-              AND iid.tenant = invoices.tenant
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
           ) as service_period_end`),
           'clients.client_name',
           'clients.properties',
@@ -391,15 +397,21 @@ export const fetchInvoicesByClient = withAuth(async (
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
           trx.raw(`(
             SELECT MIN(iid.service_period_start)
-            FROM invoice_charge_details iid
-            WHERE iid.invoice_id = invoices.invoice_id
-              AND iid.tenant = invoices.tenant
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
           ) as service_period_start`),
           trx.raw(`(
             SELECT MAX(iid.service_period_end)
-            FROM invoice_charge_details iid
-            WHERE iid.invoice_id = invoices.invoice_id
-              AND iid.tenant = invoices.tenant
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
           ) as service_period_end`),
           'clients.client_name',
           'clients.properties',
@@ -491,6 +503,24 @@ export const fetchInvoicesByContract = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
+          trx.raw(`(
+            SELECT MIN(iid.service_period_start)
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
+          ) as service_period_start`),
+          trx.raw(`(
+            SELECT MAX(iid.service_period_end)
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
+          ) as service_period_end`),
           'clients.client_name',
           'clients.properties'
         )

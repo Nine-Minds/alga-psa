@@ -30,6 +30,13 @@ describe('recurring invoicing hard cutover docs', () => {
     expect(architecture).toContain('recurring due-work substrate');
   });
 
+  it('documents recurring service-period storage as required schema instead of rollout-era optional schema', () => {
+    expect(architecture).toContain('## Required Schema Posture');
+    expect(architecture).toContain('recurring-service-period storage as required schema, not rollout-era optional schema');
+    expect(architecture).toContain('missing service-period rows are diagnosed as data repair work');
+    expect(architecture).toContain('code must not catch missing table or missing column errors');
+  });
+
   it('T074: the codebase documents an explicit deprecation posture for invoices.billing_cycle_id in recurring code', () => {
     expect(architecture).toContain('## `invoices.billing_cycle_id` Deprecation Posture');
     expect(architecture).toContain('it is passive historical or client-context metadata only');

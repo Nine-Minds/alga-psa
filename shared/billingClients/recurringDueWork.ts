@@ -166,23 +166,6 @@ export function sortRecurringDueWorkRows(rows: IRecurringDueWorkRow[]): IRecurri
   });
 }
 
-export function mergeRecurringDueWorkRows(input: {
-  persistedRows: IRecurringDueWorkRow[];
-  compatibilityRows: IRecurringDueWorkRow[];
-}): IRecurringDueWorkRow[] {
-  const rowsByExecutionIdentity = new Map<string, IRecurringDueWorkRow>();
-
-  for (const row of input.compatibilityRows) {
-    rowsByExecutionIdentity.set(row.executionIdentityKey, row);
-  }
-
-  for (const row of input.persistedRows) {
-    rowsByExecutionIdentity.set(row.executionIdentityKey, row);
-  }
-
-  return sortRecurringDueWorkRows(Array.from(rowsByExecutionIdentity.values()));
-}
-
 export function buildClientScheduleDueWorkRow(
   input: ClientScheduleDueWorkWindowInput,
 ): IRecurringDueWorkRow {

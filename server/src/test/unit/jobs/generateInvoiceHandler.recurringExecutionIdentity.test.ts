@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -17,7 +19,7 @@ afterEach(() => {
 });
 
 describe('generateInvoiceHandler recurring execution identity', () => {
-  it('T271: source-backed job handling no longer requires a raw billingCycleId when a selector input and contract execution window are provided', async () => {
+  it('T025/T271: recurring invoice job payloads require canonical selectorInput plus executionWindow and do not require a raw billingCycleId', async () => {
     const selectorInput = {
       clientId: 'client-1',
       windowStart: '2025-02-08T00:00:00Z',
@@ -33,6 +35,15 @@ describe('generateInvoiceHandler recurring execution identity', () => {
         identityKey: 'contract_cadence_window:contract:client-1:contract-1:line-1:2025-02-08T00:00:00Z:2025-03-08T00:00:00Z',
       },
     } as any;
+
+    const handlerSource = readFileSync(
+      resolve(__dirname, '../../../lib/jobs/handlers/generateInvoiceHandler.ts'),
+      'utf8',
+    );
+
+    expect(handlerSource).toContain('executionWindow: IRecurringRunExecutionWindowIdentity;');
+    expect(handlerSource).toContain('selectorInput: IRecurringDueSelectionInput;');
+    expect(handlerSource).not.toContain('billingCycleId:');
 
     await generateInvoiceHandler({
       tenantId: 'tenant-1',

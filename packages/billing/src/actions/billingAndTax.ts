@@ -371,16 +371,16 @@ async function fetchPersistedRecurringDueWorkDbRows(
     return [...contractLineRows, ...clientContractLineRows] as PersistedRecurringDueWorkDbRow[];
 }
 
-async function fetchCompatibilityMaterializationGaps(
+async function fetchClientCadenceMaterializationGaps(
     trx: BillingQueryExecutor,
     tenant: string,
-    compatibilityPeriods: BillingPeriodWithMeta[],
+    candidateBillingPeriods: BillingPeriodWithMeta[],
 ): Promise<RecurringDueWorkMaterializationGap[]> {
-    if (compatibilityPeriods.length === 0) {
+    if (candidateBillingPeriods.length === 0) {
         return [];
     }
 
-    const clientIds = Array.from(new Set(compatibilityPeriods.map((period) => period.client_id).filter(Boolean)));
+    const clientIds = Array.from(new Set(candidateBillingPeriods.map((period) => period.client_id).filter(Boolean)));
     if (clientIds.length === 0) {
         return [];
     }
@@ -418,7 +418,7 @@ async function fetchCompatibilityMaterializationGaps(
 
     const materializationGaps: RecurringDueWorkMaterializationGap[] = [];
 
-    for (const period of compatibilityPeriods) {
+    for (const period of candidateBillingPeriods) {
         const recurringRows = recurringClientsById.get(period.client_id) ?? [];
         for (const row of recurringRows) {
             if (!rangesOverlap({
@@ -743,15 +743,15 @@ export const getAvailableRecurringDueWork = withAuth(async (
     const asOf = toISODate(Temporal.Now.plainDateISO());
 
     try {
-        const compatibilityPeriods = await fetchAvailableBillingPeriodsUnpaginated(
+        const candidateBillingPeriods = await fetchAvailableBillingPeriodsUnpaginated(
             knex,
             tenant,
             options,
         );
-        const rawMaterializationGaps = await fetchCompatibilityMaterializationGaps(
+        const rawMaterializationGaps = await fetchClientCadenceMaterializationGaps(
             knex,
             tenant,
-            compatibilityPeriods,
+            candidateBillingPeriods,
         );
         const persistedDbRows = await fetchPersistedRecurringDueWorkDbRows(
             knex,
