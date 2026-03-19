@@ -186,11 +186,11 @@ db:
   host: "postgresql.default.svc.cluster.local"
   port: "5432"
   serverDatabase: "app_server"
-  user: "app_user"
+  user: "app_user_pgbouncer"
   # Secret references for passwords
   serverPasswordSecret:
     name: "db-secrets"
-    key: "server-password"
+    key: "pgbouncer-password"
   adminPasswordSecret:
     name: "db-secrets"
     key: "admin-password"

@@ -274,6 +274,8 @@ spec:
                   key: DB_PASSWORD_HOCUSPOCUS
             - name: DB_USER_SERVER
               value: "app_user"
+            - name: DB_USER_PGBOUNCER
+              value: "app_user_pgbouncer"
             - name: DB_NAME_SERVER
               value: "server"
             - name: DB_PASSWORD_SERVER
@@ -281,6 +283,11 @@ spec:
                 secretKeyRef:
                   name: db-credentials
                   key: DB_PASSWORD_SERVER
+            - name: DB_PASSWORD_PGBOUNCER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD_PGBOUNCER
             {{- else }}
             - name: DB_TYPE
               value: "{{ .Values.config.db.type }}"
@@ -329,6 +336,10 @@ spec:
               {{- end }}
             - name: DB_USER_SERVER
               value: "{{ .Values.config.db.user }}"
+            {{- if .Values.config.db.pgbouncer_user }}
+            - name: DB_USER_PGBOUNCER
+              value: "{{ .Values.config.db.pgbouncer_user }}"
+            {{- end }}
             - name: DB_NAME_SERVER
               value: "{{ .Values.config.db.server_database }}"
             - name: DB_PASSWORD_SERVER
@@ -340,6 +351,16 @@ spec:
               {{- else }}
               value: {{ .Values.config.db.server_password | quote }}
               {{- end }}
+            {{- if .Values.config.db.pgbouncer_password_secret }}
+            - name: DB_PASSWORD_PGBOUNCER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.pgbouncer_password_secret.name | quote }}
+                  key: {{ .Values.config.db.pgbouncer_password_secret.key | quote }}
+            {{- else if .Values.config.db.pgbouncer_password }}
+            - name: DB_PASSWORD_PGBOUNCER
+              value: {{ .Values.config.db.pgbouncer_password | quote }}
+            {{- end }}
             {{- end }}
       restartPolicy: Never
   backoffLimit: 2

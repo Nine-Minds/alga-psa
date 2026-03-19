@@ -57,6 +57,8 @@ spec:
               value: "{{ .Values.postgres.appUser }}"
             - name: POSTGRES_USER
               value: "{{ .Values.postgres.adminUser }}"
+            - name: AUTH_TYPE
+              value: "{{ .Values.authType }}"
             - name: PGBOUNCER_PORT
               value: "{{ .Values.service.port }}"
             - name: POOL_MODE

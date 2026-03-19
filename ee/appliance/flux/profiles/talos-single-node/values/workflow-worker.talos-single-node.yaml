@@ -21,10 +21,10 @@ db:
   host: pgbouncer.msp.svc.cluster.local
   port: "6432"
   serverDatabase: server
-  user: app_user
+  user: app_user_pgbouncer
   serverPasswordSecret:
     name: db-credentials
-    key: DB_PASSWORD_SERVER
+    key: DB_PASSWORD_PGBOUNCER
   adminUser: postgres
   adminPasswordSecret:
     name: db-credentials

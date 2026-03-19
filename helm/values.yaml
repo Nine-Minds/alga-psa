@@ -143,6 +143,11 @@ config:
     password: password
     server_database: server
     hocuspocus_database: hocuspocus
+    pgbouncer_user: ""
+    pgbouncer_password: ""
+    pgbouncer_password_secret:
+      name: ""
+      key: ""
   redis: # Redis configuration only if redis enabled is true
     host: redis
     port: 6379

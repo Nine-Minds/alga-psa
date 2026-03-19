@@ -20,14 +20,16 @@ postgres:
   port: 5432
   appDatabase: server
   adminDatabase: postgres
-  appUser: app_user
+  appUser: app_user_pgbouncer
   adminUser: postgres
   appPasswordSecret:
     name: db-credentials
-    key: DB_PASSWORD_SERVER
+    key: DB_PASSWORD_PGBOUNCER
   adminPasswordSecret:
     name: db-credentials
     key: DB_PASSWORD_SUPERUSER
+
+authType: scram-sha-256
 
 pool:
   mode: transaction

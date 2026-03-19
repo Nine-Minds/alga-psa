@@ -19,9 +19,6 @@ data:
     SERVER_DATABASE="${SERVER_DATABASE:-server}"
     ADMIN_DATABASE="${ADMIN_DATABASE:-postgres}"
 
-    POSTGRES_PASSWORD_MD5=$(printf "%s%s" "$POSTGRES_PWD" "$POSTGRES_SUPERUSER_NAME" | md5sum | awk '{print $1}')
-    DB_PASSWORD_MD5=$(printf "%s%s" "$DB_PASSWORD_SERVER" "$DB_USER_SERVER_NAME" | md5sum | awk '{print $1}')
-
     cat > /work/pgbouncer.ini <<EOF
     [databases]
     ${SERVER_DATABASE} = host=${POSTGRES_HOST} port=${POSTGRES_PORT} dbname=${SERVER_DATABASE}
@@ -30,7 +27,7 @@ data:
     [pgbouncer]
     listen_addr = 0.0.0.0
     listen_port = ${PGBOUNCER_PORT}
-    auth_type = md5
+    auth_type = ${AUTH_TYPE:-scram-sha-256}
     auth_file = /work/userlist.txt
     pool_mode = ${POOL_MODE:-transaction}
     max_client_conn = ${MAX_CLIENT_CONN:-1000}
@@ -47,8 +44,8 @@ data:
     EOF
 
     {
-      printf '"%s" "md5%s"\n' "$DB_USER_SERVER_NAME" "$DB_PASSWORD_MD5"
-      printf '"%s" "md5%s"\n' "$POSTGRES_SUPERUSER_NAME" "$POSTGRES_PASSWORD_MD5"
+      printf '"%s" "%s"\n' "$DB_USER_SERVER_NAME" "$DB_PASSWORD_SERVER"
+      printf '"%s" "%s"\n' "$POSTGRES_SUPERUSER_NAME" "$POSTGRES_PWD"
     } > /work/userlist.txt
 
     chmod 600 /work/userlist.txt
