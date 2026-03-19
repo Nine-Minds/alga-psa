@@ -6,44 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IProjectStatusMapping, IStatus } from '@alga-psa/types';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-
-type ProjectStatusMappingDetails = IProjectStatusMapping & {
-  status_name?: string;
-  name?: string;
-  is_closed?: boolean;
-};
-
-async function getScopedProjectStatusMappings(
-  trx: Knex.Transaction,
-  tenant: string,
-  projectId: string,
-  phaseId?: string | null
-): Promise<ProjectStatusMappingDetails[]> {
-  const query = trx('project_status_mappings as psm')
-    .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
-    .leftJoin('statuses as s', function(this: Knex.JoinClause) {
-      this.on('psm.status_id', 's.status_id')
-        .andOn('psm.tenant', 's.tenant');
-    })
-    .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', 'ss.standard_status_id')
-        .andOn('psm.tenant', 'ss.tenant');
-    })
-    .select(
-      'psm.*',
-      trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
-      trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
-      trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
-    );
-
-  if (phaseId) {
-    query.andWhere('psm.phase_id', phaseId);
-  } else {
-    query.whereNull('psm.phase_id');
-  }
-
-  return query.orderBy('psm.display_order');
-}
+import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
 
 function resolveReplacementStatusMapping(
   sourceMapping: ProjectStatusMappingDetails,
@@ -245,6 +208,8 @@ export const removePhaseStatuses = withAuth(async (
       throw new Error('Cannot remove phase statuses without project default statuses');
     }
 
+    // Group phase mappings by their replacement target to batch updates
+    const updatesByReplacement = new Map<string, string[]>();
     for (const phaseMapping of phaseMappings) {
       const replacementMapping = resolveReplacementStatusMapping(phaseMapping, defaultMappings);
 
@@ -252,15 +217,17 @@ export const removePhaseStatuses = withAuth(async (
         throw new Error('Unable to resolve replacement status mapping for phase task');
       }
 
+      const existing = updatesByReplacement.get(replacementMapping.project_status_mapping_id) || [];
+      existing.push(phaseMapping.project_status_mapping_id);
+      updatesByReplacement.set(replacementMapping.project_status_mapping_id, existing);
+    }
+
+    // Batch update: one UPDATE per replacement target
+    for (const [replacementId, oldIds] of updatesByReplacement) {
       await trx('project_tasks')
-        .where({
-          tenant,
-          phase_id: phaseId,
-          project_status_mapping_id: phaseMapping.project_status_mapping_id
-        })
-        .update({
-          project_status_mapping_id: replacementMapping.project_status_mapping_id
-        });
+        .where({ tenant, phase_id: phaseId })
+        .whereIn('project_status_mapping_id', oldIds)
+        .update({ project_status_mapping_id: replacementId });
     }
 
     await trx('project_status_mappings')

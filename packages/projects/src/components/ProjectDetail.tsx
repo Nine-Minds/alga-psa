@@ -308,7 +308,7 @@ export default function ProjectDetail({
 
     fetchStatusesForPhase();
     return () => { stale = true; };
-  }, [initialStatuses, project.project_id, selectedPhase]);
+  }, [initialStatuses, project.project_id, selectedPhase?.phase_id]);
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -1132,7 +1132,7 @@ export default function ProjectDetail({
 
     fetchPhaseTasks();
     return () => { stale = true; };
-  }, [selectedPhase]);
+  }, [selectedPhase?.phase_id]);
 
   // Fetch avatar URLs for task resources (additional agents)
   useEffect(() => {

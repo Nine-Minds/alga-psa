@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { AddStatusDialog } from './AddStatusDialog';
 import {
   getProjectStatusMappings,
@@ -32,6 +33,9 @@ export function ProjectTaskStatusSettings({ projectId }: ProjectTaskStatusSettin
   const [showCustomSetup, setShowCustomSetup] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isMutating, setIsMutating] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ mappingId: string; statusName: string } | null>(null);
+  const [revertConfirmation, setRevertConfirmation] = useState(false);
 
   const selectedPhaseId = selectedScope === DEFAULT_SCOPE ? null : selectedScope;
 
@@ -50,7 +54,7 @@ export function ProjectTaskStatusSettings({ projectId }: ProjectTaskStatusSettin
   async function loadPhases() {
     try {
       const metadata = await getProjectMetadata(projectId);
-      if (metadata && !('error' in metadata)) {
+      if (metadata && 'phases' in metadata) {
         setPhases(metadata.phases);
       }
     } catch (error) {
@@ -126,20 +130,18 @@ export function ProjectTaskStatusSettings({ projectId }: ProjectTaskStatusSettin
     }
   }
 
-  async function handleDelete(mappingId: string, statusName: string) {
-    if (selectedPhaseId && !hasCustomStatuses) {
-      return;
-    }
+  async function handleDelete() {
+    if (!deleteConfirmation) return;
 
-    if (!confirm(t('projects.settings.statuses.confirm_delete', { statusName }))) {
-      return;
-    }
-
+    setIsMutating(true);
     try {
-      await deleteProjectStatusMapping(mappingId);
-      setStatuses(statuses.filter(s => s.project_status_mapping_id !== mappingId));
+      await deleteProjectStatusMapping(deleteConfirmation.mappingId);
+      setStatuses(statuses.filter(s => s.project_status_mapping_id !== deleteConfirmation.mappingId));
     } catch (error: any) {
       alert(error.message || t('projects.settings.statuses.delete_error'));
+    } finally {
+      setIsMutating(false);
+      setDeleteConfirmation(null);
     }
   }
 
@@ -149,8 +151,9 @@ export function ProjectTaskStatusSettings({ projectId }: ProjectTaskStatusSettin
   }
 
   async function handleCopyDefaultsToPhase() {
-    if (!selectedPhaseId) return;
+    if (!selectedPhaseId || isMutating) return;
 
+    setIsMutating(true);
     try {
       await copyProjectStatusesToPhase(projectId, selectedPhaseId);
       setShowCustomSetup(false);
@@ -158,22 +161,24 @@ export function ProjectTaskStatusSettings({ projectId }: ProjectTaskStatusSettin
     } catch (error) {
       console.error('Failed to copy project defaults to phase:', error);
       alert('Failed to copy project defaults to this phase.');
+    } finally {
+      setIsMutating(false);
     }
   }
 
   async function handleRevertToDefaults() {
     if (!selectedPhaseId || !hasCustomStatuses) return;
 
-    if (!confirm('Remove this phase\'s custom statuses and revert to project defaults?')) {
-      return;
-    }
-
+    setIsMutating(true);
     try {
       await removePhaseStatuses(selectedPhaseId);
       await loadStatuses();
     } catch (error) {
       console.error('Failed to remove phase statuses:', error);
       alert('Failed to revert this phase to project defaults.');
+    } finally {
+      setIsMutating(false);
+      setRevertConfirmation(false);
     }
   }
 
@@ -229,8 +234,8 @@ export function ProjectTaskStatusSettings({ projectId }: ProjectTaskStatusSettin
             <div className="flex flex-wrap gap-2">
               <Button
                 variant={isUsingProjectDefaults ? 'default' : 'outline'}
-                onClick={handleRevertToDefaults}
-                disabled={isUsingProjectDefaults}
+                onClick={() => setRevertConfirmation(true)}
+                disabled={isUsingProjectDefaults || isMutating}
                 id="use-project-defaults-button"
               >
                 Use project defaults
@@ -251,6 +256,7 @@ export function ProjectTaskStatusSettings({ projectId }: ProjectTaskStatusSettin
                   <Button
                     size="sm"
                     onClick={handleCopyDefaultsToPhase}
+                    disabled={isMutating}
                     id="copy-project-defaults-button"
                   >
                     Copy from project defaults
@@ -316,7 +322,7 @@ export function ProjectTaskStatusSettings({ projectId }: ProjectTaskStatusSettin
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(status.project_status_mapping_id, displayName)}
+                    onClick={() => setDeleteConfirmation({ mappingId: status.project_status_mapping_id, statusName: displayName })}
                     id={`delete-status-${status.project_status_mapping_id}`}
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
@@ -335,6 +341,30 @@ export function ProjectTaskStatusSettings({ projectId }: ProjectTaskStatusSettin
           phaseId={selectedPhaseId}
           onClose={() => setShowAddDialog(false)}
           onAdded={loadStatuses}
+        />
+      )}
+
+      {deleteConfirmation && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setDeleteConfirmation(null)}
+          onConfirm={handleDelete}
+          title={t('projects.settings.statuses.confirm_delete_title', { defaultValue: 'Delete Status' })}
+          message={t('projects.settings.statuses.confirm_delete', { statusName: deleteConfirmation.statusName })}
+          confirmLabel={t('common.delete', { defaultValue: 'Delete' })}
+          cancelLabel={t('common.cancel', { defaultValue: 'Cancel' })}
+        />
+      )}
+
+      {revertConfirmation && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setRevertConfirmation(false)}
+          onConfirm={handleRevertToDefaults}
+          title="Revert to Project Defaults"
+          message="Remove this phase's custom statuses and revert to project defaults?"
+          confirmLabel="Revert"
+          cancelLabel="Cancel"
         />
       )}
     </div>

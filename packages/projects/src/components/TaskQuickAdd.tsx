@@ -1,11 +1,10 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import TaskFormSkeleton from '@alga-psa/ui/components/skeletons/TaskFormSkeleton';
-import { getProjectTaskStatuses } from '../actions/projectActions';
 import type { TaskFormPrefillData } from './TaskForm';
 
 // Dynamic import for TaskForm
@@ -45,28 +44,6 @@ export default function TaskQuickAdd({
   prefillData,
   inDrawer
 }: TaskQuickAddProps): React.JSX.Element {
-  const [selectedPhaseStatuses, setSelectedPhaseStatuses] = useState<ProjectStatus[]>(projectStatuses);
-
-  useEffect(() => {
-    let stale = false;
-
-    const fetchPhaseStatuses = async () => {
-      try {
-        const statuses = await getProjectTaskStatuses(phase.project_id, phase.phase_id);
-        if (!stale) {
-          setSelectedPhaseStatuses(statuses);
-        }
-      } catch (error) {
-        if (!stale) {
-          console.error('Error fetching quick add statuses:', error);
-          setSelectedPhaseStatuses(projectStatuses);
-        }
-      }
-    };
-
-    fetchPhaseStatuses();
-    return () => { stale = true; };
-  }, [phase.phase_id, phase.project_id, projectStatuses]);
 
   const handleSubmit = async (resultTask: IProjectTask | null) => {
     // Ensure assigned_to is null if empty string or undefined
@@ -97,7 +74,7 @@ export default function TaskQuickAdd({
           if (!task) onCancel();
         }}
         onSubmit={handleSubmit}
-        projectStatuses={selectedPhaseStatuses}
+        projectStatuses={projectStatuses}
         defaultStatus={defaultStatus}
         users={users}
         mode={task ? 'edit' : 'create'}

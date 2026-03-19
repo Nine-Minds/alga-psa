@@ -444,7 +444,7 @@ export const getImportReferenceData = withAuth(async (
       users,
       priorities,
       services,
-      statusMappings: statusReferenceData.statusMappings,
+      statusMappings: statusReferenceData.statusMappings as IImportReferenceData['statusMappings'],
       userLookup,
       priorityLookup,
       serviceLookup,
@@ -483,7 +483,8 @@ export async function validatePhaseTaskImportDataWithReferenceData(
 
   const unmatchedStatuses: string[] = [];
   csvStatusNames.forEach((phaseScopedStatus) => {
-    const [phaseKey, statusName] = phaseScopedStatus.split('::');
+    const [phaseKey, ...rest] = phaseScopedStatus.split('::');
+    const statusName = rest.join('::');
     const lookup = statusLookupByPhase[phaseKey] || statusLookup;
     if (!lookup[statusName.toLowerCase()]) {
       unmatchedStatuses.push(statusName);
@@ -661,7 +662,8 @@ export const validatePhaseTaskImportData = withAuth(async (
   });
 
   csvStatusNames.forEach((phaseScopedStatus) => {
-    const [phaseKey, statusName] = phaseScopedStatus.split('::');
+    const [phaseKey, ...rest] = phaseScopedStatus.split('::');
+    const statusName = rest.join('::');
     const lookup = statusLookupByPhase[phaseKey] || statusLookup;
     if (!lookup[statusName.toLowerCase()]) {
       unmatchedStatuses.push(statusName);
