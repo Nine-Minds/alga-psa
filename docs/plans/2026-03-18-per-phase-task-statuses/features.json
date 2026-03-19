@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "ProjectTaskStatusSettings: phase selector dropdown/tabs above status list with 'Project Defaults' as first option",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.1", "FR-5.2"]
   },
   {
