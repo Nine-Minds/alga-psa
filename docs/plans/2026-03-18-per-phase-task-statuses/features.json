@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "KanbanBoard renders columns from phase-effective statuses passed via props (minimal change)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.2"]
   },
   {

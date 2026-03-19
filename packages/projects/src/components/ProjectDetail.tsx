@@ -2626,7 +2626,7 @@ export default function ProjectDetail({
             phaseTasks={filteredTasks}
             users={users}
             taskTypes={taskTypes}
-            statuses={projectStatuses}
+            statuses={visibleKanbanStatuses}
             isAddingTask={isAddingTask}
             selectedPhase={!!selectedPhase}
             ticketLinks={phaseTicketLinks}
