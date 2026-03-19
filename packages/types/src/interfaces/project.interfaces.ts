@@ -37,6 +37,7 @@ export const CONFIGURABLE_TASK_FIELDS = [
 export interface IProjectStatusMapping extends TenantEntity {
   project_status_mapping_id: string;
   project_id: string;
+  phase_id?: string;
   status_id?: string;
   standard_status_id?: string;
   is_standard: boolean;

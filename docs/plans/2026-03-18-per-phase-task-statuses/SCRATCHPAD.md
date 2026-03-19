@@ -50,6 +50,8 @@
 - `packages/types/src/interfaces/project.interfaces.ts` — IProjectStatusMapping (L37-50), ProjectStatus (L151-165)
 - `server/src/interfaces/project.interfaces.ts` — duplicate interfaces
 
+- (2026-03-18) Implemented `F005` by adding `phase_id?: string` to `IProjectStatusMapping` in both shared and server-local interface copies. The duplicate interface files still need to stay in sync manually.
+
 ### Key Files — Models & Actions
 - `packages/projects/src/models/project.ts` — getProjectStatusMappings, getProjectTaskStatuses, addProjectStatusMapping
 - `packages/projects/src/actions/projectTaskStatusActions.ts` — addStatusToProject, getProjectStatusMappings, reorderProjectStatuses
