@@ -1825,14 +1825,14 @@ export class InvoiceService extends BaseService<IInvoice> {
         trx.raw(`
           CASE
             WHEN recurring_invoice_summary.recurring_cadence_owner = 'contract' THEN 'contract_cadence_window'
-            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' OR invoices.billing_cycle_id IS NOT NULL THEN 'billing_cycle_window'
+            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' THEN 'client_cadence_window'
             ELSE NULL
           END as recurring_execution_window_kind
         `),
         trx.raw(`
           CASE
             WHEN recurring_invoice_summary.recurring_cadence_owner = 'contract' THEN 'contract_anniversary'
-            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' OR invoices.billing_cycle_id IS NOT NULL THEN 'client_schedule'
+            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' THEN 'client_schedule'
             ELSE NULL
           END as recurring_cadence_source
         `)
@@ -1898,21 +1898,15 @@ export class InvoiceService extends BaseService<IInvoice> {
         case 'execution_window_kind':
           if (value === 'contract_cadence_window') {
             query.where('recurring_invoice_summary.recurring_cadence_owner', 'contract');
-          } else if (value === 'billing_cycle_window') {
-            query.where(function () {
-              this.where('recurring_invoice_summary.recurring_cadence_owner', 'client')
-                .orWhereNotNull('invoices.billing_cycle_id');
-            });
+          } else if (value === 'client_cadence_window') {
+            query.where('recurring_invoice_summary.recurring_cadence_owner', 'client');
           }
           break;
         case 'cadence_source':
           if (value === 'contract_anniversary') {
             query.where('recurring_invoice_summary.recurring_cadence_owner', 'contract');
           } else if (value === 'client_schedule') {
-            query.where(function () {
-              this.where('recurring_invoice_summary.recurring_cadence_owner', 'client')
-                .orWhereNotNull('invoices.billing_cycle_id');
-            });
+            query.where('recurring_invoice_summary.recurring_cadence_owner', 'client');
           }
           break;
         case 'has_credit_applied':

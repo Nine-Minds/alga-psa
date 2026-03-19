@@ -54,7 +54,7 @@ function createFilterRecorder() {
 
 describe('invoice recurring list contract', () => {
   it('T066/T068: invoice list and single-item response contracts accept recurring execution metadata with nullable billing_cycle_id', () => {
-    const recurringInvoice = {
+    const contractRecurringInvoice = {
       invoice_id: '11111111-1111-4111-8111-111111111111',
       client_id: '22222222-2222-4222-8222-222222222222',
       invoice_date: '2026-03-18',
@@ -78,20 +78,27 @@ describe('invoice recurring list contract', () => {
       updated_at: '2026-03-18T00:00:00.000Z',
       tenant: '33333333-3333-4333-8333-333333333333',
     };
+    const clientRecurringInvoice = {
+      ...contractRecurringInvoice,
+      invoice_id: '44444444-4444-4444-8444-444444444444',
+      billing_cycle_id: '55555555-5555-4555-8555-555555555555',
+      recurring_execution_window_kind: 'client_cadence_window',
+      recurring_cadence_source: 'client_schedule',
+    };
 
     const listParsed = invoiceListResponseSchema.safeParse({
-      data: [recurringInvoice],
+      data: [contractRecurringInvoice, clientRecurringInvoice],
       pagination: {
         page: 1,
         limit: 25,
-        total: 1,
+        total: 2,
         totalPages: 1,
         hasNext: false,
         hasPrev: false,
       },
     });
     const singleParsed = singleInvoiceResponseSchema.safeParse({
-      data: recurringInvoice,
+      data: clientRecurringInvoice,
     });
 
     expect(listParsed.success).toBe(true);
@@ -157,12 +164,17 @@ describe('invoice recurring list contract', () => {
         'recurring_invoice_summary.recurring_invoice_window_end',
       ]),
     );
+    const rawSelectSql = (selectOperation?.args ?? [])
+      .filter((arg): arg is string => typeof arg === 'string')
+      .join('\n');
+    expect(rawSelectSql).toContain("WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' THEN 'client_cadence_window'");
+    expect(rawSelectSql).not.toContain('invoices.billing_cycle_id IS NOT NULL');
   });
 
   it('T067: invoice list filter can query recurring invoices by execution-window kind or cadence source when provided', () => {
     const parsedFilter = invoiceFilterSchema.parse({
-      execution_window_kind: 'contract_cadence_window',
-      cadence_source: 'contract_anniversary',
+      execution_window_kind: 'client_cadence_window',
+      cadence_source: 'client_schedule',
     });
     const service = new InvoiceService();
     const { builder, operations } = createFilterRecorder();
@@ -173,13 +185,14 @@ describe('invoice recurring list contract', () => {
       expect.arrayContaining([
         {
           type: 'where',
-          args: ['recurring_invoice_summary.recurring_cadence_owner', 'contract', undefined],
+          args: ['recurring_invoice_summary.recurring_cadence_owner', 'client', undefined],
         },
         {
           type: 'where',
-          args: ['recurring_invoice_summary.recurring_cadence_owner', 'contract', undefined],
+          args: ['recurring_invoice_summary.recurring_cadence_owner', 'client', undefined],
         },
       ]),
     );
+    expect(operations.some((operation) => operation.type === 'whereGroup')).toBe(false);
   });
 });

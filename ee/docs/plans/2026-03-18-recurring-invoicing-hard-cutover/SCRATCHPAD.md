@@ -101,6 +101,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) `generateInvoiceHandler` and `scheduleRecurringWindowInvoiceGeneration` are now selector-input-only. The old `scheduleInvoiceGeneration(...)` helper is left as an explicit hard failure if something still tries to schedule recurring work from a raw `billingCycleId`.
 - (2026-03-18) DB-backed verification for `billingInvoiceTiming.integration.test.ts` could not run locally because PostgreSQL was unavailable on `127.0.0.1:5438` / `::1:5438`. The targeted tests were skipped before any test body executed.
 - (2026-03-18) Recurring preview/generation diagnostics now emit only `executionIdentityKey` for live recurring failures. `billingCycleId` still exists as passive persistence or read-side metadata, but it is no longer part of the recurring preview/generate error contract.
+- (2026-03-18) Invoice API list/detail contracts now distinguish client recurring invoices as `client_cadence_window`, not `billing_cycle_window`. `billing_cycle_id` remains available on invoice DTOs only as optional historical metadata or explicit include-side context, not as the recurring classifier.
 
 ## Commands / Runbooks
 
@@ -117,6 +118,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/billing/recurringIdentityTypes.static.test.ts src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts src/test/unit/billing/recurringDueWork.domain.test.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/jobs/generateInvoiceHandler.recurringExecutionIdentity.test.ts src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T321|T322/T328" --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.duplicate.test.ts src/test/unit/billing/invoiceGeneration.duplicate.static.test.ts src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts src/test/unit/billing/invoiceGeneration.emptyResult.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/api/invoiceRecurringList.contract.test.ts src/test/unit/api/invoiceRecurringSelectorInput.schema.test.ts src/test/unit/api/invoiceService.recurringSelectorInput.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -142,6 +144,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) F028/F029 implemented by removing bridge-only `billingCycleId` and `hasBillingCycleBridge` fields from shared recurring identity interfaces, dropping shared `billing_cycle_window` builders, converting shared client due-work builders to canonical schedule/period selector input, and updating recurring jobs to require canonical selector-input payloads.
 - (2026-03-18) T009 implemented with a static contract test for the shared recurring type file plus domain/UI/job coverage proving client-cadence and contract-cadence shared builders still work after the bridge fields were removed.
 - (2026-03-18) F030 implemented by removing `billingCycleId` from recurring preview/generation error payloads and duplicate errors so live recurring diagnostics key only on canonical `executionIdentityKey`.
+- (2026-03-18) F031/F032/F033/F034 implemented by renaming client recurring invoice DTO execution-window kind to `client_cadence_window`, keeping `billing_cycle_id` only as optional metadata, and cutting `InvoiceService` list/detail projection plus filter classification over to canonical recurring summary data without any `invoices.billing_cycle_id` fallback.
 
 ## Links / References
 

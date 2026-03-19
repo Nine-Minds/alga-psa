@@ -40,7 +40,7 @@ const invoiceStatusSchema = z.enum([
 ]);
 
 const recurringExecutionWindowKindSchema = z.enum([
-  'billing_cycle_window',
+  'client_cadence_window',
   'contract_cadence_window',
 ]);
 

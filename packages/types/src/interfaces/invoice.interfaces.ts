@@ -5,7 +5,7 @@ import type { InvoiceTemplateAst } from '../lib/invoice-template-ast';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
-export type InvoiceRecurringExecutionWindowKind = 'billing_cycle_window' | 'contract_cadence_window';
+export type InvoiceRecurringExecutionWindowKind = 'client_cadence_window' | 'contract_cadence_window';
 export type InvoiceRecurringCadenceSource = 'client_schedule' | 'contract_anniversary';
 
 // Derived tax import state used for UI + workflow gating (separate from invoice status).

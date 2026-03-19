@@ -5,7 +5,7 @@ import type { InvoiceTemplateAst } from '@alga-psa/types';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
-export type InvoiceRecurringExecutionWindowKind = 'billing_cycle_window' | 'contract_cadence_window';
+export type InvoiceRecurringExecutionWindowKind = 'client_cadence_window' | 'contract_cadence_window';
 export type InvoiceRecurringCadenceSource = 'client_schedule' | 'contract_anniversary';
 
 // Derived tax import state used for UI + workflow gating (separate from invoice status).
@@ -337,7 +337,6 @@ export type PreviewInvoiceResponse = {
   success: false;
   error: string;
   executionIdentityKey?: string;
-  billingCycleId?: string | null;
 };
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending' | 'prepayment' | 'partially_applied';
