@@ -72,7 +72,7 @@
   {
     "id": "TB11",
     "description": "Supporting systems: CSV import resolves status names against phase-effective statuses and assigns correct mapping IDs; event payloads include phaseId when applicable, undefined at project level; ProjectTaskStatusEditor/Selector handle template phase statuses during project creation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037", "F038", "F039"],
     "covers": ["T053", "T054", "T055", "T056", "T065"]
   },
