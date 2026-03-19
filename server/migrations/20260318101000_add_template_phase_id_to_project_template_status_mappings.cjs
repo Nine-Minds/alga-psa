@@ -21,3 +21,5 @@ exports.down = async function(knex) {
     table.dropColumn('template_phase_id');
   });
 };
+
+exports.config = { transaction: false };

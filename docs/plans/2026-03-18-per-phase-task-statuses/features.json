@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "EE/Citus companion migration: FK constraints use composite keys (tenant, phase_id) and (tenant, template_phase_id) for distributed tables",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.5"]
   },
   {
