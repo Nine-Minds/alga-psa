@@ -62,6 +62,7 @@
 - (2026-03-18) Implemented `F007` by changing `ProjectModel.getProjectStatusMappings()` to accept `phaseId?: string | null`; omitted/null now explicitly means project defaults (`phase_id IS NULL`) rather than “all mappings for the project.” That keeps legacy callers stable once phase-specific rows exist.
 - (2026-03-18) Implemented `F008` with `ProjectModel.getEffectiveStatusMappings()`, which first looks for phase-scoped mappings and only falls back to project defaults when none exist. This keeps callers from having to manually merge or filter both scopes.
 - (2026-03-18) Implemented `F009` by threading `phaseId` through `ProjectModel.getProjectTaskStatuses()` and copying `mapping.phase_id` onto the returned status objects. Model callers can now request the effective status list for a specific phase without reproducing fallback logic.
+- (2026-03-18) Implemented `F010` by extending `addStatusToProject()` with optional `phaseId`, storing `phase_id` on insert, and scoping the `display_order` lookup to either the target phase or project defaults. This prevents new phase statuses from inheriting order positions from unrelated scopes.
 
 ### Key Files — MSP UI
 - `packages/projects/src/components/ProjectDetail.tsx` — orchestrator, passes statuses to KanbanBoard (L2401-2406), phase selection (L186), task filtering (L346-425)

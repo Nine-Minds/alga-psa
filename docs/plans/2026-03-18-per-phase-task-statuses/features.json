@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Action: addStatusToProject() accepts optional phaseId and stores in mapping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3.1"]
   },
   {
