@@ -23,7 +23,7 @@
   {
     "id": "TB04",
     "description": "Status CRUD actions with phase support: addStatusToProject creates mapping with/without phaseId correctly; reorderProjectStatuses scopes to phase or project level; getProjectStatusMappings filters by phaseId; getProjectTaskStatuses uses effective resolution with phaseId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F011", "F012", "F015"],
     "covers": ["T015", "T016", "T017", "T018"]
   },
