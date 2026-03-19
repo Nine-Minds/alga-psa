@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Model: new getEffectiveStatusMappings(knex, tenant, projectId, phaseId) returns phase statuses if configured, else project defaults (phase_id IS NULL)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.1", "FR-2.2"]
   },
   {

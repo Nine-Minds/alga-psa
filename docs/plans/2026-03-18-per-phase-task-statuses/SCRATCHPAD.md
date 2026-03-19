@@ -60,6 +60,7 @@
 - `packages/projects/src/actions/projectTaskActions.ts` — moveTaskToPhase (L938-1120), updateTaskStatus
 
 - (2026-03-18) Implemented `F007` by changing `ProjectModel.getProjectStatusMappings()` to accept `phaseId?: string | null`; omitted/null now explicitly means project defaults (`phase_id IS NULL`) rather than “all mappings for the project.” That keeps legacy callers stable once phase-specific rows exist.
+- (2026-03-18) Implemented `F008` with `ProjectModel.getEffectiveStatusMappings()`, which first looks for phase-scoped mappings and only falls back to project defaults when none exist. This keeps callers from having to manually merge or filter both scopes.
 
 ### Key Files — MSP UI
 - `packages/projects/src/components/ProjectDetail.tsx` — orchestrator, passes statuses to KanbanBoard (L2401-2406), phase selection (L186), task filtering (L346-425)

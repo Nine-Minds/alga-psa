@@ -615,6 +615,28 @@ const ProjectModel = {
   },
 
   /**
+   * Get the effective project status mappings for a phase.
+   * Returns phase-specific mappings when present, otherwise project defaults.
+   */
+  getEffectiveStatusMappings: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    phaseId?: string | null
+  ): Promise<IProjectStatusMapping[]> => {
+    if (!phaseId) {
+      return ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);
+    }
+
+    const phaseMappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId, phaseId);
+    if (phaseMappings.length > 0) {
+      return phaseMappings;
+    }
+
+    return ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);
+  },
+
+  /**
    * Get projects by client ID.
    */
   getByClientId: async (
