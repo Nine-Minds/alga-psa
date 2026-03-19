@@ -45,6 +45,30 @@ async function getScopedProjectStatusMappings(
   return query.orderBy('psm.display_order');
 }
 
+function resolveReplacementStatusMapping(
+  sourceMapping: ProjectStatusMappingDetails,
+  targetMappings: ProjectStatusMappingDetails[]
+): ProjectStatusMappingDetails | null {
+  const sourceName = sourceMapping.name ?? sourceMapping.status_name ?? null;
+
+  if (sourceName) {
+    const sameNameTarget = targetMappings.find((mapping) => {
+      const targetName = mapping.name ?? mapping.status_name ?? null;
+      return targetName === sourceName;
+    });
+
+    if (sameNameTarget) {
+      return sameNameTarget;
+    }
+  }
+
+  const sameClosedStateTarget = targetMappings.find(
+    (mapping) => Boolean(mapping.is_closed) === Boolean(sourceMapping.is_closed)
+  );
+
+  return sameClosedStateTarget ?? targetMappings[0] ?? null;
+}
+
 /**
  * Add a status to a project
  */
@@ -184,6 +208,63 @@ export const copyProjectStatusesToPhase = withAuth(async (
     return await trx('project_status_mappings')
       .insert(inserts)
       .returning('*');
+  });
+});
+
+/**
+ * Remove all custom statuses for a phase and revert it to project defaults.
+ */
+export const removePhaseStatuses = withAuth(async (
+  user,
+  { tenant },
+  phaseId: string
+): Promise<void> => {
+  if (!await hasPermission(user, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx) => {
+    const phase = await trx('project_phases')
+      .where({ tenant, phase_id: phaseId })
+      .first();
+
+    if (!phase) {
+      throw new Error('Project phase not found');
+    }
+
+    const phaseMappings = await getScopedProjectStatusMappings(trx, tenant, phase.project_id, phaseId);
+    if (phaseMappings.length === 0) {
+      return;
+    }
+
+    const defaultMappings = await getScopedProjectStatusMappings(trx, tenant, phase.project_id);
+    if (defaultMappings.length === 0) {
+      throw new Error('Cannot remove phase statuses without project default statuses');
+    }
+
+    for (const phaseMapping of phaseMappings) {
+      const replacementMapping = resolveReplacementStatusMapping(phaseMapping, defaultMappings);
+
+      if (!replacementMapping) {
+        throw new Error('Unable to resolve replacement status mapping for phase task');
+      }
+
+      await trx('project_tasks')
+        .where({
+          tenant,
+          phase_id: phaseId,
+          project_status_mapping_id: phaseMapping.project_status_mapping_id
+        })
+        .update({
+          project_status_mapping_id: replacementMapping.project_status_mapping_id
+        });
+    }
+
+    await trx('project_status_mappings')
+      .where({ tenant, phase_id: phaseId })
+      .del();
   });
 });
 
