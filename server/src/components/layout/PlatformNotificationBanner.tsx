@@ -62,13 +62,16 @@ export function PlatformNotificationBanner() {
                   Learn More
                 </Button>
               </Link>
-              <button
+              <Button
+                id={`platform-notif-dismiss-${notification.notification_id}`}
+                variant="icon"
+                size="icon"
                 onClick={() => handleDismiss(notification.notification_id)}
-                className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 flex-shrink-0"
                 aria-label="Dismiss notification"
+                className="flex-shrink-0"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           </AlertDescription>
         </Alert>

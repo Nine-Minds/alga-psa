@@ -498,7 +498,7 @@ async function handleResolveRecipients(request: ExecuteRequest, host: HostBindin
     } catch { /* ignore */ }
   }
 
-  const result = await callPlatformApi(host, '/api/v1/platform-notifications/resolve-recipients', body);
+  const result = await callPlatformApi(host, '/api/v1/platform-notifications/resolve-recipients', { ...body as object, __method: 'POST' });
   return jsonResponse(result.data, { status: result.status });
 }
 
