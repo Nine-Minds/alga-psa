@@ -188,7 +188,7 @@
   {
     "id": "F032",
     "description": "Client portal ClientTaskListView: groups tasks by phase-effective status groups",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7.4"]
   },
   {
