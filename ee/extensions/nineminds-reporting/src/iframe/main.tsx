@@ -264,7 +264,7 @@ async function proxyApiCall<T>(
 ): Promise<T> {
   // Map the internal API path to the WASM handler route
   const handlerRoute = mapApiPathToHandlerRoute(route);
-  const method = options?.method?.toUpperCase() || 'POST';
+  const method = options?.method?.toUpperCase() || 'GET';
 
   // For GET requests, append __method=GET to the query string so the ext-proxy
   // converts the POST (forced by iframeBridge) into GET.
@@ -464,7 +464,7 @@ async function callExtensionApi<T>(path: string, options: RequestInit = {}): Pro
     }
 
     const result = await proxyApiCall<any>(route, {
-      method: options.method as string || 'POST',
+      method: options.method as string || 'GET',
       body,
     });
 
@@ -504,7 +504,7 @@ async function callFeatureFlagApi<T>(
     }
 
     const result = await proxyApiCall<any>(route, {
-      method: options.method as string || 'POST',
+      method: options.method as string || 'GET',
       body,
     });
 

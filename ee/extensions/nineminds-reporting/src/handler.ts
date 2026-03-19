@@ -122,12 +122,14 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
 
 async function processRequest(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   const method = request.http.method || 'POST';
-  const url = request.http.url || '/';
+  const fullUrl = request.http.url || '/';
+  const queryIdx = fullUrl.indexOf('?');
+  const url = queryIdx >= 0 ? fullUrl.substring(0, queryIdx) : fullUrl;
   const requestId = request.context.requestId ?? 'n/a';
   const tenantId = request.context.tenantId;
   const extensionId = request.context.extensionId;
 
-  await safeLog(host, 'info', `[nineminds-control-panel] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${url} build=${BUILD_STAMP}`);
+  await safeLog(host, 'info', `[nineminds-control-panel] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${fullUrl} build=${BUILD_STAMP}`);
 
   for (const route of routes) {
     const match = url.match(route.pattern);
