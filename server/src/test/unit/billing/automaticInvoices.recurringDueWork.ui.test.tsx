@@ -290,7 +290,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.getByText('Zenith Health')).toBeInTheDocument();
   });
 
-  it('T011/T026/T029/T030/T039: AutomaticInvoices renders contract-cadence rows with cadence, service-period, invoice-window, contract context, and an unbridged badge', async () => {
+  it('T011/T026/T029/T030/T039: AutomaticInvoices renders contract-cadence rows with cadence, service-period, invoice-window, contract context, and a service-period-backed badge', async () => {
     const contractRow = createContractRow();
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
 
@@ -302,7 +302,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.getByText('2025-04-08 to 2025-05-08')).toBeInTheDocument();
     expect(screen.getByText('Zenith Annual Support')).toBeInTheDocument();
     expect(screen.getByText('Managed Services')).toBeInTheDocument();
-    expect(screen.getByText('No billing cycle bridge')).toBeInTheDocument();
+    expect(screen.getAllByText('Service-period-backed').length).toBeGreaterThan(0);
 
     fireEvent.click(document.getElementById(`select-${contractRow.executionIdentityKey}`)!);
 
@@ -327,6 +327,18 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.getAllByText('2025-03-01 to 2025-04-01').length).toBeGreaterThan(0);
   });
 
+  it('removes bridge-only row menus from ready service-period work', async () => {
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Acme Co')).toBeInTheDocument();
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    expect(screen.queryAllByRole('button', { name: /open menu/i })).toHaveLength(0);
+    expect(screen.queryByText('Delete Cycle')).toBeNull();
+  });
+
   it('T010: AutomaticInvoices can render and act on a client-cadence recurring row whose bridge metadata is null', async () => {
     const clientRow = createClientRow({ billingCycleId: null });
     getAvailableRecurringDueWorkMock.mockResolvedValue({
@@ -345,7 +357,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     });
 
     expect(screen.getByText('Client schedule')).toBeInTheDocument();
-    expect(screen.getByText('No billing cycle bridge')).toBeInTheDocument();
+    expect(screen.getAllByText('Service-period-backed').length).toBeGreaterThan(0);
     expect(clientRow.billingCycleId).toBeNull();
     expect(clientRow.selectorInput.billingCycleId).toBeUndefined();
 
@@ -395,7 +407,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(screen.getByText('Acme Co')).toBeInTheDocument();
     });
 
-    expect(screen.queryByText('No billing cycle bridge')).toBeNull();
+    expect(screen.queryByText('Service-period-backed')).toBeNull();
     expect(clientRow.selectorInput.billingCycleId).toBeUndefined();
     expect(clientRow.selectorInput.executionWindow.kind).toBe('client_cadence_window');
 
@@ -702,7 +714,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.getByText('Recurring Invoice History')).toBeInTheDocument();
     expect(screen.queryByText('Already Invoiced')).toBeNull();
     expect(screen.getAllByText('Contract anniversary').length).toBeGreaterThan(0);
-    expect(screen.getByText('Service-period-backed')).toBeInTheDocument();
+    expect(screen.getAllByText('Service-period-backed').length).toBeGreaterThan(0);
     expect(screen.getAllByText('2025-03-08 to 2025-04-08').length).toBeGreaterThan(0);
     expect(screen.getAllByText('2025-04-08 to 2025-05-08').length).toBeGreaterThan(0);
 
@@ -711,7 +723,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Reverse Billing Cycle')).toBeNull();
-      expect(screen.getByText(/without requiring a client billing cycle row/i)).toBeInTheDocument();
+      expect(screen.getByText(/without requiring client-cycle bridge metadata/i)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Yes, Reverse Invoice/i }));
@@ -743,7 +755,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     fireEvent.click(screen.getByText('Delete Invoice'));
 
     await waitFor(() => {
-      expect(screen.getByText(/linked billing cycle will also be deleted/i)).toBeInTheDocument();
+      expect(screen.getByText(/linked client cadence bridge record will also be deleted/i)).toBeInTheDocument();
     });
 
     fireEvent.click(document.getElementById('delete-recurring-invoice-confirmation-confirm')!);

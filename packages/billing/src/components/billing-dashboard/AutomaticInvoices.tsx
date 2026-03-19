@@ -22,7 +22,6 @@ import {
   getRecurringInvoiceHistoryPaginated,
   reverseRecurringInvoice,
   hardDeleteRecurringInvoice,
-  hardDeleteBillingCycle,
   type RecurringInvoiceHistoryRow,
 } from '@alga-psa/billing/actions/billingCycleActions';
 import { getAvailableRecurringDueWork, type BillingPeriodDateRange } from '@alga-psa/billing/actions/billingAndTax';
@@ -110,7 +109,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     servicePeriodLabel: string;
     cadenceSource: string;
   } | null>(null);
-  // State to hold both preview data and the associated billing cycle ID
+  // State to hold preview data and the canonical selector metadata used to generate it.
   const [previewState, setPreviewState] = useState<{
     data: WasmInvoiceViewModel | null; // Use the directly imported ViewModel type
     billingCycleId: string | null;
@@ -144,14 +143,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     poNumber: null,
   });
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
-  // State for ready-cycle delete confirmation
-  const [showReadyDeleteDialog, setShowReadyDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedReadyCycleToDelete, setSelectedReadyCycleToDelete] = useState<{
-    id: string;
-    client: string;
-    period: string;
-  } | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCycleToDelete, setSelectedCycleToDelete] = useState<{
     invoiceId: string;
@@ -374,7 +366,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   }) => {
     const period = resolveFailurePeriod(failure);
     const clientName = period?.clientName?.trim();
-    return clientName || failure.billingCycleId || failure.executionIdentityKey || 'Recurring billing window';
+    return clientName || failure.billingCycleId || failure.executionIdentityKey || 'Recurring invoice window';
   };
 
   const handlePreviewInvoice = async (period: ReadyPeriod) => {
@@ -542,31 +534,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       onGenerateSuccess();
     } catch (error) {
       setErrors({
-        [selectedCycleToReverse.client]: error instanceof Error ? error.message : 'Failed to reverse billing cycle'
+        [selectedCycleToReverse.client]: error instanceof Error ? error.message : 'Failed to reverse recurring invoice'
       });
     }
     setIsReversing(false);
-  };
-
-  const handleDeleteBillingCycle = async () => {
-    if (!selectedReadyCycleToDelete) return;
-
-    setIsDeleting(true);
-    setErrors({}); // Clear previous errors
-    try {
-      await hardDeleteBillingCycle(selectedReadyCycleToDelete.id);
-      setShowReadyDeleteDialog(false);
-      setSelectedReadyCycleToDelete(null);
-      // Let onGenerateSuccess trigger refresh via refreshTrigger
-      onGenerateSuccess();
-    } catch (error) {
-      setErrors({
-        [selectedReadyCycleToDelete.client]: error instanceof Error ? error.message : 'Failed to delete billing cycle'
-      });
-      // Keep dialog open on error to show message? Or close it? Closing for now.
-      setShowReadyDeleteDialog(false);
-    }
-    setIsDeleting(false);
   };
 
   const handleDeleteRecurringInvoice = async () => {
@@ -864,10 +835,26 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       {record.cadenceSource === 'contract_anniversary' ? 'Contract anniversary' : 'Client schedule'}
                     </Badge>
                     {!hasRecurringBillingCycleBridge(record) ? (
-                      <Badge variant="secondary">No billing cycle bridge</Badge>
+                      <Badge variant="secondary">Service-period-backed</Badge>
                     ) : null}
-                    <div className="text-xs text-muted-foreground">
-                      {record.dueState === 'early' ? 'Early' : 'Due'}
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span>{record.dueState === 'early' ? 'Early' : 'Due'}</span>
+                      {record.isEarly ? (
+                        <Tooltip
+                          content={
+                            <p>
+                              Warning: Current invoice window hasn&apos;t ended yet (ends{' '}
+                              {toPlainDate(record.invoiceWindowEnd).toLocaleString()})
+                            </p>
+                          }
+                          side="top"
+                          className="max-w-xs"
+                        >
+                          <span className="inline-flex items-center cursor-help">
+                            <Info className="h-4 w-4 text-yellow-500" />
+                          </span>
+                        </Tooltip>
+                      ) : null}
                     </div>
                   </div>
                 ),
@@ -899,70 +886,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     </div>
                   );
                 },
-              },
-              {
-                title: 'Actions', // Renamed from Status
-                dataIndex: 'executionIdentityKey',
-                render: (_: unknown, record: ReadyPeriod) => {
-                  // Only show actions if it's a valid, generatable period
-                  if (!record.billingCycleId || !record.canGenerate) {
-                    return null; // Or some placeholder if needed
-                  }
-                  return (
-                    // Centered the content horizontally
-                    <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}> {/* Stop row click propagation */}
-                      {record.isEarly && (
-                        <Tooltip
-                          content={
-                            <p>Warning: Current invoice window hasn't ended yet (ends {toPlainDate(record.invoiceWindowEnd).toLocaleString()})</p>
-                          }
-                          side="top" // Pass side prop to custom component
-                          className="max-w-xs" // Pass className for content styling
-                        >
-                          {/* The trigger element is now the direct child */}
-                          <div className="flex items-center mr-2 cursor-help">
-                            <Info className="h-4 w-4 text-yellow-500" />
-                          </div>
-                        </Tooltip>
-                      )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button id={`actions-trigger-${record.billingCycleId}`} variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {/* Temporarily disabled invoice preview */}
-                          {/* <DropdownMenuItem
-                            id={`preview-invoice-${record.billing_cycle_id}`}
-                            onClick={() => handlePreviewInvoice(record.billing_cycle_id || '')}
-                            disabled={isPreviewLoading} // Disable only during preview loading
-                          >
-                            Preview
-                          </DropdownMenuItem> */}
-                          {/* <DropdownMenuSeparator /> */}
-                          {/* Delete Option Moved Here */}
-                          <DropdownMenuItem
-                            id={`delete-billing-cycle-${record.billingCycleId}`}
-                            className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                            onSelect={(e) => e.preventDefault()} // Prevent closing dropdown immediately
-                            onClick={() => {
-                              setSelectedReadyCycleToDelete({
-                                id: record.billingCycleId || '',
-                                client: record.clientName || 'Unknown client',
-                                period: `${toPlainDate(record.invoiceWindowStart).toLocaleString()} - ${toPlainDate(record.invoiceWindowEnd).toLocaleString()}`
-                              });
-                              setShowReadyDeleteDialog(true); // Open the confirmation dialog
-                            }}
-                          >
-                            Delete Cycle
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  );
-                }
               }
             ]}
             pagination={true}
@@ -1124,8 +1047,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <li>Unmark linked time entries and usage records as invoiced</li>
                 <li>
                   {selectedCycleToReverse?.hasBillingCycleBridge
-                    ? 'Mark the client billing cycle inactive and reopen the linked recurring service periods'
-                    : 'Reopen the linked recurring service periods without requiring a client billing cycle row'}
+                    ? 'Retire the linked client cadence bridge record and reopen the linked recurring service periods'
+                    : 'Reopen the linked recurring service periods without requiring client-cycle bridge metadata'}
                 </li>
               </ul>
               <p className="text-destructive font-semibold mt-4">This action cannot be undone!</p>
@@ -1312,24 +1235,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         </DialogFooter>
       </Dialog>
 
-      {/* Delete Confirmation Dialog - Moved outside the table render loop */}
-      {/* Delete Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={showReadyDeleteDialog}
-        onClose={() => {
-          setShowReadyDeleteDialog(false);
-          setSelectedReadyCycleToDelete(null); // Clear selection on close
-        }}
-        onConfirm={handleDeleteBillingCycle}
-        title="Permanently Delete Billing Cycle?"
-        // Use the 'message' prop (string) instead of 'description'
-        message={`This action cannot be undone. This will permanently delete the billing cycle and any associated invoice data for:\nClient: ${selectedReadyCycleToDelete?.client}\nPeriod: ${selectedReadyCycleToDelete?.period}`}
-        confirmLabel={isDeleting ? 'Deleting...' : 'Yes, Delete Permanently'} // Renamed prop
-        isConfirming={isDeleting}
-        // Removed unsupported props: confirmButtonVariant, icon
-        id="delete-billing-cycle-confirmation" // Added an ID for consistency
-      />
-
       <ConfirmationDialog
         isOpen={showDeleteDialog}
         onClose={() => {
@@ -1338,7 +1243,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }}
         onConfirm={handleDeleteRecurringInvoice}
         title="Permanently Delete Recurring Invoice?"
-        message={`This action cannot be undone. This will permanently delete the recurring invoice for:\nClient: ${selectedCycleToDelete?.client}\nCadence source: ${selectedCycleToDelete?.cadenceSource}\nService period: ${selectedCycleToDelete?.servicePeriodLabel}\n${selectedCycleToDelete?.hasBillingCycleBridge ? 'The linked billing cycle will also be deleted.' : 'Linked recurring service periods will be reopened without touching a billing cycle row.'}`}
+        message={`This action cannot be undone. This will permanently delete the recurring invoice for:\nClient: ${selectedCycleToDelete?.client}\nCadence source: ${selectedCycleToDelete?.cadenceSource}\nService period: ${selectedCycleToDelete?.servicePeriodLabel}\n${selectedCycleToDelete?.hasBillingCycleBridge ? 'The linked client cadence bridge record will also be deleted.' : 'Linked recurring service periods will be reopened without requiring client-cycle bridge metadata.'}`}
         confirmLabel={isDeleting ? 'Deleting...' : 'Yes, Delete Permanently'}
         isConfirming={isDeleting}
         id="delete-recurring-invoice-confirmation"

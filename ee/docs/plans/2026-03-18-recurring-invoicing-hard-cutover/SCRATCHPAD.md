@@ -23,6 +23,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Bucket allowance periods should resolve from canonical `recurring_service_periods` for both client cadence and contract cadence; `client_billing_cycles` should not determine bucket rollover windows once recurring service periods exist.
 - (2026-03-18) Hourly and usage recurring charge queries should always use canonical service-period bounds when a persisted recurring selection is present, even if the invoice window is later or shifted metadata.
 - (2026-03-18) Live accounting export lines should emit canonical recurring detail periods when present and otherwise stay periodless financial documents; invoice-header billing periods remain historical read-side metadata only, not live recurring provenance.
+- (2026-03-18) Ready recurring work should use canonical selection actions only; the dashboard must not keep bridge-only row menus such as “Delete Cycle” that disappear when `billingCycleId` is null.
 
 ## Agent Findings
 
@@ -81,6 +82,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
     - [accountingExportInvoiceSelector.servicePeriods.wiring.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts)
     - [authoritativeRecurringReaders.servicePeriods.wiring.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/tests/authoritativeRecurringReaders.servicePeriods.wiring.test.ts)
     - [invoiceSelection.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/integration/accounting/invoiceSelection.integration.test.ts)
+- Recurring dashboard copy/actions slice completed:
+  - Updated [AutomaticInvoices.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx) so ready recurring rows no longer render a bridge-only delete-cycle menu, unbridged rows share the same service-period-backed badge and selection actions as bridged rows, and reverse/delete dialog copy now describes client-cycle data only as optional bridge metadata instead of the primary recurring object.
+  - Extended [automaticInvoices.recurringDueWork.ui.test.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx) with a regression proving ready service-period rows no longer expose bridge-only row menus while history row actions and service-period-backed copy remain intact.
 
 - Billing UI/actions sweep:
   - `AutomaticInvoices`, due-work selection, recurring run target selection, history, reversal/delete, accounting export, and some authoring/storage helpers still preserve bridge-first recurring behavior.
@@ -194,6 +198,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run ../packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts ../packages/billing/tests/authoritativeRecurringReaders.servicePeriods.wiring.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/recurringInvoiceHistory.static.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -243,6 +249,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T056/T057 implemented with focused billing-engine regressions proving persisted recurring hourly and usage execution still query inside the canonical service window when it differs from the invoice window.
 - (2026-03-18) F057/F058/F059 implemented by cutting live accounting export selection over to canonical recurring detail periods only, removing invoice-header recurring provenance emission from the live selector, and treating invoices without canonical recurring detail as periodless financial documents.
 - (2026-03-18) T058/T059/T060/T061 implemented with integration, unit, and static coverage for client-cadence and contract-cadence canonical export periods plus the legacy no-detail case that now exports without live recurring fallback provenance.
+- (2026-03-18) F060/F061 implemented by removing the ready-table’s bridge-only delete-cycle menu, making bridge-free rows use the same service-period-backed badge and canonical selection flow as other recurring rows, and updating recurring reverse/delete copy to talk about optional bridge metadata instead of treating billing cycles as the primary object.
 
 ## Links / References
 
