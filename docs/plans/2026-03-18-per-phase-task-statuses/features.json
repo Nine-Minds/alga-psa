@@ -236,7 +236,7 @@
   {
     "id": "F040",
     "description": "Backward compatibility: projects with no phase-specific statuses behave identically to before (all phases use project defaults)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["NFR-1"]
   }
 ]

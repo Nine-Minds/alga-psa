@@ -116,6 +116,7 @@
 - (2026-03-18) Implemented `F037` in the phase/task import pipeline. `getImportReferenceData()` and both validation paths now build `statusLookupByPhase` from each existing phase’s effective statuses, `groupRowsIntoPhases()` resolves `status_mapping_id` against the row’s target phase, and the import dialog threads those phase-aware lookups through regrouping after agent resolution.
 - (2026-03-18) Implemented `F038` by adding optional `phaseId` to all published project-status mutation events in `projectTaskStatusActions.ts`. Add, update, delete, and reorder events now preserve scope so downstream listeners can distinguish project defaults from phase-specific changes.
 - (2026-03-18) Implemented `F039` by making `ProjectTaskStatusEditor` and `ProjectTaskStatusSelector` phase-aware primitives. Both components now preserve optional `phaseId` / `phase_id` scope when fetching, adding, deduplicating, and reordering statuses, so a template-driven project creation flow can pass phase-scoped statuses through the same UI without flattening them back to project defaults.
+- (2026-03-18) Implemented `F040` as a cross-cutting compatibility guarantee rather than a new code path. Every new phase-aware entry point now falls back to `phase_id IS NULL` project defaults when no phase override exists, which preserves existing-project behavior until a phase is explicitly customized.
 
 ### Key Files — Import / Events
 - `packages/types/src/interfaces/phaseTaskImport.interfaces.ts` — IImportReferenceData
