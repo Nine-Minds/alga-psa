@@ -2,7 +2,7 @@
   {
     "id": "TB01",
     "description": "Database migrations: phase_id column exists and is nullable on project_status_mappings; template_phase_id exists on project_template_status_mappings; FK cascades on delete (deleting a phase removes its status mappings); index on (tenant, project_id, phase_id); existing rows have phase_id = NULL",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F002", "F003", "F004"],
     "covers": ["T001", "T002", "T003", "T004", "T005", "T006"]
   },
