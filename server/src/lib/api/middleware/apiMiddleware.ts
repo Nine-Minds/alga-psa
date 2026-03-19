@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodSchema, ZodError } from 'zod';
-import { ApiKeyService } from '../../services/apiKeyService';
+import { ApiKeyService } from '@alga-psa/auth';
 import { hasPermission } from '../../auth/rbac';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';

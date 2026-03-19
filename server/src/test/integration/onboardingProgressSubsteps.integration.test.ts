@@ -23,7 +23,7 @@ vi.mock('@/lib/actions/import-actions/importActions', () => ({
   listImportJobs: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('@/lib/actions/calendarActions', () => ({
+vi.mock('@alga-psa/integrations/actions/calendarActions', () => ({
   getCalendarProviders: vi.fn().mockResolvedValue({ success: true, providers: [] }),
 }));
 

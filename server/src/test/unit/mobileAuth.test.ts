@@ -8,7 +8,7 @@ import {
   issueMobileOtt,
   refreshMobileSession,
 } from 'server/src/lib/mobileAuth/mobileAuthService';
-import { ApiKeyService } from 'server/src/lib/services/apiKeyService';
+import { ApiKeyService } from '@alga-psa/auth';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 
 vi.mock('server/src/lib/logging/auditLog', () => ({
