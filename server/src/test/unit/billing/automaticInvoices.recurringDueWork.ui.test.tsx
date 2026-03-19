@@ -5,7 +5,6 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
-  buildClientScheduleDueWorkRow,
   buildServicePeriodRecurringDueWorkRow,
 } from '@alga-psa/shared/billingClients/recurringDueWork';
 import { buildRecurringServicePeriodRecord } from '../../test-utils/recurringTimingFixtures';
@@ -94,14 +93,32 @@ const { default: AutomaticInvoices } = await import(
 );
 
 function createClientRow() {
-  return buildClientScheduleDueWorkRow({
+  return buildServicePeriodRecurringDueWorkRow({
     clientId: 'client-1',
     clientName: 'Acme Co',
     billingCycleId: 'cycle-2025-03',
-    servicePeriodStart: '2025-03-01',
-    servicePeriodEnd: '2025-04-01',
-    invoiceWindowStart: '2025-03-01',
-    invoiceWindowEnd: '2025-04-01',
+    record: buildRecurringServicePeriodRecord({
+      cadenceOwner: 'client',
+      duePosition: 'advance',
+      sourceObligation: {
+        tenant: 'tenant-1',
+        obligationId: 'line-1',
+        obligationType: 'client_contract_line',
+        chargeFamily: 'fixed',
+      },
+      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+      periodKey: 'period:2025-03-01:2025-04-01',
+      invoiceWindow: {
+        start: '2025-03-01',
+        end: '2025-04-01',
+        semantics: 'half_open',
+      },
+      servicePeriod: {
+        start: '2025-03-01',
+        end: '2025-04-01',
+        semantics: 'half_open',
+      },
+    }),
   });
 }
 
@@ -310,7 +327,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.getAllByText('2025-03-01 to 2025-04-01').length).toBeGreaterThan(0);
   });
 
-  it('T091: legacy billing-cycle compatibility rows still support the ready-table preview and batch-generate flow', async () => {
+  it('T091: client-cadence ready rows use canonical selector input while still preserving passive billing-cycle metadata for the table', async () => {
     const clientRow = createClientRow();
     getAvailableRecurringDueWorkMock.mockResolvedValue({
       rows: [clientRow],
@@ -328,6 +345,8 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     });
 
     expect(screen.queryByText('No billing cycle bridge')).toBeNull();
+    expect(clientRow.selectorInput.billingCycleId).toBeUndefined();
+    expect(clientRow.selectorInput.executionWindow.kind).toBe('client_cadence_window');
 
     fireEvent.click(document.getElementById(`select-${clientRow.executionIdentityKey}`)!);
     fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
@@ -352,6 +371,12 @@ describe('AutomaticInvoices recurring due-work UI', () => {
         ],
       });
     });
+
+    const [generateCall] = generateInvoicesAsRecurringBillingRunMock.mock.calls;
+    expect(generateCall?.[0]?.targets?.[0]?.selectorInput?.billingCycleId).toBeUndefined();
+    expect(generateCall?.[0]?.targets?.[0]?.selectorInput?.executionWindow?.kind).toBe(
+      'client_cadence_window',
+    );
   });
 
   it('T032: AutomaticInvoices preview opens for a client-cadence row through the selector-input preview path', async () => {

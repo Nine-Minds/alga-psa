@@ -346,6 +346,30 @@ const recurringDueSelectionInputSchema = z.object({
   billingCycleId: uuidSchema.nullable().optional(),
   executionWindow: recurringExecutionWindowIdentitySchema,
 }).superRefine((value, ctx) => {
+  if (value.executionWindow.kind === 'billing_cycle_window') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'selector_input.executionWindow.kind must use canonical recurring execution windows.',
+      path: ['executionWindow', 'kind'],
+    });
+  }
+
+  if (value.billingCycleId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'selector_input.billingCycleId is not accepted for recurring preview or generate requests.',
+      path: ['billingCycleId'],
+    });
+  }
+
+  if (value.executionWindow.billingCycleId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'selector_input.executionWindow.billingCycleId is not accepted for recurring preview or generate requests.',
+      path: ['executionWindow', 'billingCycleId'],
+    });
+  }
+
   if (value.executionWindow.clientId && value.executionWindow.clientId !== value.clientId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -369,52 +393,11 @@ const recurringDueSelectionInputSchema = z.object({
       path: ['executionWindow', 'windowEnd'],
     });
   }
-
-  if (value.executionWindow.kind === 'billing_cycle_window') {
-    if (!value.billingCycleId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'selector_input.billingCycleId is required for billing_cycle_window requests.',
-        path: ['billingCycleId'],
-      });
-    }
-
-    if (!value.executionWindow.billingCycleId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'selector_input.executionWindow.billingCycleId is required for billing_cycle_window requests.',
-        path: ['executionWindow', 'billingCycleId'],
-      });
-    }
-  }
-
-  if (
-    value.billingCycleId &&
-    value.executionWindow.billingCycleId &&
-    value.executionWindow.billingCycleId !== value.billingCycleId
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'selector_input.executionWindow.billingCycleId must match selector_input.billingCycleId.',
-      path: ['executionWindow', 'billingCycleId'],
-    });
-  }
 });
 
 const recurringInvoiceSelectionRequestSchema = z.object({
-  billing_cycle_id: uuidSchema.optional(),
-  selector_input: recurringDueSelectionInputSchema.optional(),
-}).superRefine((value, ctx) => {
-  const selectionCount = Number(Boolean(value.billing_cycle_id)) + Number(Boolean(value.selector_input));
-
-  if (selectionCount !== 1) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Provide exactly one of billing_cycle_id or selector_input.',
-      path: ['billing_cycle_id'],
-    });
-  }
-});
+  selector_input: recurringDueSelectionInputSchema,
+}).strict('Recurring preview and generate requests require selector_input and do not accept billing_cycle_id.');
 
 // Generate invoice schema
 const generateInvoiceSchema = recurringInvoiceSelectionRequestSchema;

@@ -28,10 +28,8 @@ import { buildPaymentAppliedPayload, buildPaymentRecordedPayload, buildPaymentRe
 
 // Import existing service functions
 import {
-  generateInvoice,
   generateInvoiceForSelectionInput,
   generateInvoiceNumber,
-  previewInvoice,
   previewInvoiceForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '@alga-psa/billing/services';
@@ -1616,12 +1614,22 @@ export class InvoiceService extends BaseService<IInvoice> {
   // Missing Methods - Stub Implementations  
   // ============================================================================
 
-  async generateFromBillingCycle(data: GenerateInvoice, context: InvoiceServiceContext): Promise<IInvoice> {
+  private requireRecurringSelectorInput<T extends { selector_input?: GenerateInvoice['selector_input'] | InvoicePreviewRequest['selector_input'] }>(
+    data: T,
+    action: 'generate' | 'preview',
+  ) {
+    if (!data.selector_input) {
+      throw new Error(`Recurring invoice ${action} requires selector_input.`);
+    }
+
+    return data.selector_input;
+  }
+
+  async generateRecurringInvoice(data: GenerateInvoice, context: InvoiceServiceContext): Promise<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'create');
 
-    const invoice = data.selector_input
-      ? await generateInvoiceForSelectionInput(data.selector_input)
-      : await generateInvoice(data.billing_cycle_id!);
+    const selectorInput = this.requireRecurringSelectorInput(data, 'generate');
+    const invoice = await generateInvoiceForSelectionInput(selectorInput);
 
     if (!invoice) {
       throw new Error('Failed to generate invoice');
@@ -1791,11 +1799,9 @@ export class InvoiceService extends BaseService<IInvoice> {
   async generatePreview(data: InvoicePreviewRequest, context: ServiceContext): Promise<PreviewInvoiceResponse> {
     await this.validatePermissions(context, 'invoice', 'preview');
 
-    if (data.selector_input) {
-      return previewInvoiceForSelectionInput(data.selector_input);
-    }
-
-    return previewInvoice(data.billing_cycle_id!);
+    return previewInvoiceForSelectionInput(
+      this.requireRecurringSelectorInput(data, 'preview'),
+    );
   }
 
   // ============================================================================

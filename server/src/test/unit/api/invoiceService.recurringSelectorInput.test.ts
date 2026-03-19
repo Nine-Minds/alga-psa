@@ -3,17 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InvoiceService } from '../../../lib/api/services/InvoiceService';
 
 const mocks = vi.hoisted(() => ({
-  previewInvoice: vi.fn(),
   previewInvoiceForSelectionInput: vi.fn(),
-  generateInvoice: vi.fn(),
   generateInvoiceForSelectionInput: vi.fn(),
   generateInvoiceNumber: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({
-  previewInvoice: mocks.previewInvoice,
   previewInvoiceForSelectionInput: mocks.previewInvoiceForSelectionInput,
-  generateInvoice: mocks.generateInvoice,
   generateInvoiceForSelectionInput: mocks.generateInvoiceForSelectionInput,
   generateInvoiceNumber: mocks.generateInvoiceNumber,
 }));
@@ -53,14 +49,13 @@ describe('InvoiceService recurring selector-input routing', () => {
     const result = await service.generatePreview({ selector_input: selectorInput }, context);
 
     expect(mocks.previewInvoiceForSelectionInput).toHaveBeenCalledWith(selectorInput);
-    expect(mocks.previewInvoice).not.toHaveBeenCalled();
     expect(result).toEqual({
       success: true,
       data: { invoiceNumber: 'PREVIEW-1' },
     });
   });
 
-  it('T061/T063: API preview service accepts selector-input requests and preserves billing_cycle_id compatibility routing', async () => {
+  it('T014: API preview service rejects billing_cycle_id compatibility routing and requires canonical selector_input', async () => {
     const service = new InvoiceService();
     vi.spyOn(service as any, 'validatePermissions').mockResolvedValue(undefined);
 
@@ -68,47 +63,35 @@ describe('InvoiceService recurring selector-input routing', () => {
       success: true,
       data: { invoiceNumber: 'PREVIEW-SELECTOR' },
     });
-    mocks.previewInvoice.mockResolvedValueOnce({
-      success: true,
-      data: { invoiceNumber: 'PREVIEW-COMPAT' },
-    });
 
     const selectorResult = await service.previewInvoice({ selector_input: selectorInput }, context);
-    const compatibilityResult = await service.previewInvoice({ billing_cycle_id: compatibilityCycleId }, context);
+    await expect(
+      service.previewInvoice({ billing_cycle_id: compatibilityCycleId } as any, context),
+    ).rejects.toThrow('Recurring invoice preview requires selector_input.');
 
     expect(mocks.previewInvoiceForSelectionInput).toHaveBeenCalledWith(selectorInput);
-    expect(mocks.previewInvoice).toHaveBeenCalledWith(compatibilityCycleId);
     expect(selectorResult).toEqual({
       success: true,
       data: { invoiceNumber: 'PREVIEW-SELECTOR' },
     });
-    expect(compatibilityResult).toEqual({
-      success: true,
-      data: { invoiceNumber: 'PREVIEW-COMPAT' },
-    });
   });
 
-  it('T062/T064: API generation service accepts selector-input requests and preserves billing_cycle_id compatibility routing', async () => {
+  it('T015: API generation service rejects billing_cycle_id compatibility routing and requires canonical selector_input', async () => {
     const service = new InvoiceService();
     vi.spyOn(service as any, 'validatePermissions').mockResolvedValue(undefined);
 
     mocks.generateInvoiceForSelectionInput.mockResolvedValueOnce({
       invoice_id: 'invoice-selector-1',
     });
-    mocks.generateInvoice.mockResolvedValueOnce({
-      invoice_id: 'invoice-compat-1',
-    });
 
-    const selectorResult = await service.generateFromBillingCycle({ selector_input: selectorInput }, context);
-    const compatibilityResult = await service.generateFromBillingCycle({ billing_cycle_id: compatibilityCycleId }, context);
+    const selectorResult = await service.generateRecurringInvoice({ selector_input: selectorInput }, context);
+    await expect(
+      service.generateRecurringInvoice({ billing_cycle_id: compatibilityCycleId } as any, context),
+    ).rejects.toThrow('Recurring invoice generate requires selector_input.');
 
     expect(mocks.generateInvoiceForSelectionInput).toHaveBeenCalledWith(selectorInput);
-    expect(mocks.generateInvoice).toHaveBeenCalledWith(compatibilityCycleId);
     expect(selectorResult).toEqual({
       invoice_id: 'invoice-selector-1',
-    });
-    expect(compatibilityResult).toEqual({
-      invoice_id: 'invoice-compat-1',
     });
   });
 });

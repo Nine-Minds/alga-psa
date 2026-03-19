@@ -1,6 +1,6 @@
 /**
  * Invoice Preview API Route
- * POST /api/v1/invoices/preview - Preview invoice before generation
+ * POST /api/v1/invoices/preview - Preview recurring invoice from selector input
  */
 
 import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
@@ -8,7 +8,7 @@ import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceC
 const controller = new ApiInvoiceController();
 
 export async function POST(request: Request) {
-  return controller.previewInvoice()(request as any);
+  return controller.previewRecurringInvoice()(request as any);
 }
 
 export const runtime = 'nodejs';
