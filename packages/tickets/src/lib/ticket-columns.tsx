@@ -10,8 +10,8 @@ import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { MoreVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
-import { SlaIndicator } from '@alga-psa/sla/components';
-import type { SlaTimerStatus } from '@alga-psa/sla/types';
+import type { SlaTimerStatus } from '@alga-psa/types';
+import type { ReactNode } from 'react';
 
 /**
  * Calculate SLA status from ticket data
@@ -126,6 +126,7 @@ interface CreateTicketColumnsOptions {
   teamAvatarUrls?: Record<string, string | null>;
   isBundleExpanded?: (masterTicketId: string) => boolean;
   onToggleBundleExpanded?: (masterTicketId: string) => void;
+  renderSlaIndicator?: (props: { status: SlaTimerStatus; remainingMinutes: number; isPaused: boolean }) => ReactNode;
 }
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
@@ -145,6 +146,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     teamAvatarUrls = {},
     isBundleExpanded,
     onToggleBundleExpanded,
+    renderSlaIndicator,
   } = options;
 
   const columnVisibility = displaySettings?.list?.columnVisibility || {
@@ -347,13 +349,15 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             return <span className="text-gray-400 text-xs">-</span>;
           }
 
-          return (
-            <SlaIndicator
-              status={slaStatus.status}
-              remainingMinutes={slaStatus.remainingMinutes}
-              isPaused={slaStatus.isPaused}
-            />
-          );
+          if (!renderSlaIndicator) {
+            return <span className="text-gray-400 text-xs">-</span>;
+          }
+
+          return renderSlaIndicator({
+            status: slaStatus.status,
+            remainingMinutes: slaStatus.remainingMinutes!,
+            isPaused: slaStatus.isPaused,
+          });
         },
       }
     });
