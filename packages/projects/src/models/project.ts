@@ -588,17 +588,25 @@ const ProjectModel = {
   getProjectStatusMappings: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    projectId: string
+    projectId: string,
+    phaseId?: string | null
   ): Promise<IProjectStatusMapping[]> => {
     if (!tenant) {
       throw new Error('Tenant context is required for getting project status mappings');
     }
 
     try {
-      const mappings = await knexOrTrx<IProjectStatusMapping>('project_status_mappings')
+      const query = knexOrTrx<IProjectStatusMapping>('project_status_mappings')
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
-        .orderBy('display_order');
+        .andWhere('tenant', tenant);
+
+      if (phaseId) {
+        query.andWhere('phase_id', phaseId);
+      } else {
+        query.whereNull('phase_id');
+      }
+
+      const mappings = await query.orderBy('display_order');
       return mappings;
     } catch (error) {
       console.error('Error getting project status mappings:', error);
