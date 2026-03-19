@@ -194,7 +194,7 @@
   {
     "id": "F033",
     "description": "Template: project_template_status_mappings supports template_phase_id for per-phase template statuses",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8.1"]
   },
   {
