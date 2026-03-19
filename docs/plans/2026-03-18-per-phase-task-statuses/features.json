@@ -224,7 +224,7 @@
   {
     "id": "F038",
     "description": "Event payloads for PROJECT_STATUS_ADDED/UPDATED/DELETED/REORDERED include optional phaseId",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.2"]
   },
   {
