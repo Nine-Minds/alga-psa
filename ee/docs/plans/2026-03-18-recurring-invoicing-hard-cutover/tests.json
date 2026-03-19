@@ -46,7 +46,7 @@
   { "id": "T045", "description": "Integration: recurring preview/generation errors map back to canonical execution-window identity only.", "implemented": false, "featureIds": ["F030", "F069"] },
   { "id": "T046", "description": "Integration: invoice modification/finalization does not classify a bridge-less recurring invoice as a prepayment.", "implemented": false, "featureIds": ["F046", "F047"] },
   { "id": "T047", "description": "Integration: true prepayment invoice behavior still works after explicit invoice-kind classification is introduced.", "implemented": false, "featureIds": ["F046", "F048"] },
-  { "id": "T048", "description": "Static validation: recurring/prepayment classification logic no longer keys off null/non-null `billing_cycle_id`.", "implemented": false, "featureIds": ["F046", "F047"] },
+  { "id": "T048", "description": "Static validation: recurring/prepayment classification logic no longer keys off null/non-null `billing_cycle_id`.", "implemented": true, "featureIds": ["F046", "F047"] },
   { "id": "T049", "description": "Integration: billing engine executes a client-cadence recurring invoice without loading or creating `client_billing_cycles` as recurring truth.", "implemented": false, "featureIds": ["F049", "F050", "F051"] },
   { "id": "T050", "description": "Integration: billing engine executes a contract-cadence recurring invoice without consulting `client_billing_cycles`.", "implemented": false, "featureIds": ["F049", "F051"] },
   { "id": "T051", "description": "Static validation: billing engine no longer auto-creates or loads cycle rows to execute recurring work.", "implemented": false, "featureIds": ["F049", "F051"] },

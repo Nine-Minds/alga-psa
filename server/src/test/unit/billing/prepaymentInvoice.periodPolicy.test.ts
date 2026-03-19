@@ -144,6 +144,7 @@ describe('prepayment invoice service-period policy', () => {
       client_id: 'client-1',
       subtotal: 5000,
       total_amount: 5000,
+      is_prepayment: true,
       billing_period_start: expect.any(String),
       billing_period_end: expect.any(String),
     });

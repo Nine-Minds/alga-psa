@@ -16,6 +16,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) This plan is a hard-cutover follow-on to the broader service-period-first plan and the softer service-driven invoicing cutover plan.
 - (2026-03-18) Keep the hard-cutover architecture notes separate from the softer service-driven runbook so the steady-state model is explicit and testable.
 - (2026-03-18) Recurring invoice linkage should derive candidate obligations from canonical persisted detail metadata (`config_id`, service-period window, due position, invoice window) plus contract-line or assignment identity, never from invoice-header `billing_cycle_id`.
+- (2026-03-18) Prepayment classification should use explicit invoice-kind state (`is_prepayment`) rather than the absence of a recurring bridge field; bridge-less recurring invoices and prepayments are separate concepts.
 
 ## Agent Findings
 
@@ -87,6 +88,10 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
   - The linkage helper no longer suppresses missing-relation errors as a rollout-era fallback; required recurring linkage relations are now assumed to exist in steady state.
   - Added persistence coverage in [invoiceService.fixedPersistence.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts) for both client-cadence and contract-cadence rows with null `billing_cycle_id`.
   - Added static guards in [recurringInvoiceLinkage.static.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringInvoiceLinkage.static.test.ts) to lock out `billing_cycle_id`-driven widening and mixed-schema fallback logic.
+- Invoice-kind classification slice completed:
+  - [invoiceModification.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/invoiceModification.ts) now classifies prepayment handling from explicit invoice kind (`is_prepayment`) and negative totals, rather than treating `billing_cycle_id = null` as a proxy.
+  - [creditActions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/creditActions.ts) now persists `is_prepayment: true` when creating prepayment invoices so finalization and later reads use the same explicit kind signal.
+  - Added behavior and static coverage in [invoiceFinalization.kindClassification.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceFinalization.kindClassification.test.ts), plus a prepayment persistence assertion in [prepaymentInvoice.periodPolicy.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts).
 
 ## Discoveries / Constraints
 
@@ -111,6 +116,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) `recurring_projection` was dead compatibility metadata in the clean runtime paths. Canonical recurring reads now key directly off `recurring_detail_periods`; only the already-dirty `billingInvoiceTiming.integration.test.ts` still references the removed field and was intentionally left untouched until that file is clean.
 - (2026-03-18) Live recurring history now loads through `getRecurringInvoiceHistoryPaginated(...)` and labels the surface as recurring invoice history, not invoiced billing cycles. A deprecated `getInvoicedBillingCyclesPaginated(...)` alias remains only so the already-dirty `billingInvoiceTiming.integration.test.ts` harness can be cleaned up separately without mixing in its unrelated edits.
 - (2026-03-18) `invoiceService.ts` no longer uses `invoice.billing_cycle_id` to choose recurring linkage candidates. The next remaining bridge-like misclassification seam is still in [invoiceModification.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/invoiceModification.ts), where null/non-null `billing_cycle_id` is still used for prepayment logic (`F046`/`F047`).
+- (2026-03-18) `invoiceModification.ts` now classifies prepayment behavior from `is_prepayment`, and `creditActions.ts` now persists that flag for new prepayment invoices. Historical rows that predate the explicit flag may still need later read-side or backfill consideration if they relied on the old null-bridge proxy.
 
 ## Commands / Runbooks
 
@@ -134,6 +140,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/billing/recurringInvoiceHistory.static.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/recurringInvoiceLinkage.static.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/invoiceFinalization.kindClassification.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -168,6 +176,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) T012/T013 implemented by extending the existing client-cadence `AutomaticInvoices` UI regression so the same proof covers both preview and generate actions submitting canonical selector input with no `billing_cycle_id`.
 - (2026-03-18) F042/F043/F044/F045 implemented by making `invoiceService.ts` derive recurring linkage candidates from canonical config/window identity, matching both `contract_line` and `client_contract_line` obligations without consulting `invoice.billing_cycle_id`, and deleting the mixed-schema missing-relation fallback guard from recurring linkage persistence.
 - (2026-03-18) T031/T032 implemented with static source guards proving recurring invoice linkage no longer widens or narrows from `invoice.billing_cycle_id` and no longer suppresses missing-relation fallback errors.
+- (2026-03-18) F046/F047/F048 implemented by classifying invoice finalization behavior from explicit `is_prepayment` plus negative totals, persisting `is_prepayment: true` on prepayment creation, and proving bridge-less recurring invoices with null `billing_cycle_id` no longer get routed through prepayment credit logic.
+- (2026-03-18) T048 implemented with a static source guard proving invoice finalization no longer keys recurring or prepayment classification from null/non-null `billing_cycle_id`.
 
 ## Links / References
 

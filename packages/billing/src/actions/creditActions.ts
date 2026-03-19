@@ -506,7 +506,8 @@ export const createPrepaymentInvoice = withAuth(async (
                 billing_period_start: new Date().toISOString(),
                 billing_period_end: new Date().toISOString(),
                 credit_applied: 0,
-                currency_code: clientCurrency
+                currency_code: clientCurrency,
+                is_prepayment: true,
             })
             .returning('*');
 

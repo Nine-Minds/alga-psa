@@ -47,6 +47,23 @@ interface ManualItemsUpdate {
   invoice_number?: string; // Added based on usage in updateManualInvoiceItems
 }
 
+type InvoiceCreditHandlingKind = 'prepayment' | 'negative_total' | 'standard';
+
+function classifyInvoiceCreditHandling(invoice: {
+  is_prepayment?: boolean | null;
+  total_amount?: number | null;
+} | null | undefined): InvoiceCreditHandlingKind {
+  if (invoice?.is_prepayment) {
+    return 'prepayment';
+  }
+
+  if (Number(invoice?.total_amount ?? 0) < 0) {
+    return 'negative_total';
+  }
+
+  return 'standard';
+}
+
 async function hasCanonicalRecurringDetailPeriodsForInvoice(
   trx: Knex | Knex.Transaction,
   tenant: string,
@@ -185,8 +202,10 @@ export async function finalizeInvoiceWithKnex(
     // );
   });
 
-  // Check if this is a prepayment invoice (no billing_cycle_id)
-  if (invoice && !invoice.billing_cycle_id) {
+  // Prepayments and negative invoices use explicit financial-document classification.
+  const invoiceCreditHandlingKind = classifyInvoiceCreditHandling(invoice);
+
+  if (invoice && invoiceCreditHandlingKind === 'prepayment') {
     // For prepayment invoices, update the client's credit balance
     await ClientContractLine.updateClientCredit(invoice.client_id, invoice.subtotal);
 
@@ -194,7 +213,7 @@ export async function finalizeInvoiceWithKnex(
     console.log(`Updated credit balance for client ${invoice.client_id} by ${invoice.subtotal} from prepayment invoice ${invoiceId}`);
   }
   // Handle regular invoices with negative totals
-  else if (invoice && invoice.total_amount < 0) {
+  else if (invoice && invoiceCreditHandlingKind === 'negative_total') {
     // Get absolute value of negative total
     const creditAmount = Math.abs(invoice.total_amount);
 
