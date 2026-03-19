@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Action: getProjectTaskStatuses() in projectActions.ts accepts optional phaseId and uses effective resolution",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.3"]
   },
   {
