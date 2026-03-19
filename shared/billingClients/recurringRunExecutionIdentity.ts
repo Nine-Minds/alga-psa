@@ -34,9 +34,14 @@ export interface ContractCadenceRecurringRunTarget {
   servicePeriodEnd: ISO8601String;
 }
 
-function compactIdentitySegments(segments: Array<string | null | undefined>): string[] {
+function compactIdentitySegments(segments: Array<unknown>): string[] {
   return segments
-    .map((segment) => segment?.trim())
+    .map((segment) => {
+      if (segment == null) {
+        return undefined;
+      }
+      return String(segment).trim();
+    })
     .filter((segment): segment is string => Boolean(segment && segment.length > 0));
 }
 
@@ -47,12 +52,37 @@ export function buildRecurringRunExecutionIdentityKey(
     window.kind,
     window.cadenceOwner,
     window.clientId,
+    window.scheduleKey ?? undefined,
+    window.periodKey ?? undefined,
     window.billingCycleId ?? undefined,
     window.contractId ?? undefined,
     window.contractLineId ?? undefined,
     window.windowStart ?? undefined,
     window.windowEnd ?? undefined,
   ]).join(':');
+}
+
+export function buildClientCadenceExecutionWindow(input: {
+  clientId: string;
+  scheduleKey: string;
+  periodKey: string;
+  windowStart: string;
+  windowEnd: string;
+}): IRecurringRunExecutionWindowIdentity {
+  const baseWindow = {
+    kind: 'client_cadence_window' as const,
+    cadenceOwner: 'client' as const,
+    clientId: input.clientId,
+    scheduleKey: input.scheduleKey,
+    periodKey: input.periodKey,
+    windowStart: input.windowStart,
+    windowEnd: input.windowEnd,
+  };
+
+  return {
+    ...baseWindow,
+    identityKey: buildRecurringRunExecutionIdentityKey(baseWindow),
+  };
 }
 
 export function buildClientBillingCycleExecutionWindow(input: {
@@ -134,6 +164,27 @@ export function buildBillingCycleDueSelectionInput(input: {
     executionWindow: buildClientBillingCycleExecutionWindow({
       billingCycleId: input.billingCycleId,
       clientId: input.clientId,
+      windowStart: input.windowStart,
+      windowEnd: input.windowEnd,
+    }),
+  };
+}
+
+export function buildClientCadenceDueSelectionInput(input: {
+  clientId: string;
+  scheduleKey: string;
+  periodKey: string;
+  windowStart: string;
+  windowEnd: string;
+}): IRecurringDueSelectionInput {
+  return {
+    clientId: input.clientId,
+    windowStart: input.windowStart,
+    windowEnd: input.windowEnd,
+    executionWindow: buildClientCadenceExecutionWindow({
+      clientId: input.clientId,
+      scheduleKey: input.scheduleKey,
+      periodKey: input.periodKey,
       windowStart: input.windowStart,
       windowEnd: input.windowEnd,
     }),

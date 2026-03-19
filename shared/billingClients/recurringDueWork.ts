@@ -7,6 +7,7 @@ import type {
   RecurringDueWorkCadenceSource,
 } from '@alga-psa/types';
 import {
+  buildClientCadenceDueSelectionInput,
   buildBillingCycleDueSelectionInput,
   buildContractCadenceDueSelectionInput,
   buildRecurringRunSelectionIdentity,
@@ -27,6 +28,7 @@ interface BuildRecurringDueWorkRowInput {
   clientName?: string | null;
   canGenerate?: boolean;
   asOf?: ISO8601String;
+  billingCycleId?: string | null;
   scheduleKey?: string | null;
   periodKey?: string | null;
   recordId?: string | null;
@@ -64,6 +66,14 @@ function formatRangeLabel(start: ISO8601String, end: ISO8601String) {
   return `${start} to ${end}`;
 }
 
+function normalizeDueWorkDate(value: unknown): ISO8601String {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10) as ISO8601String;
+  }
+
+  return String(value).slice(0, 10) as ISO8601String;
+}
+
 function buildRecurringDueWorkIdentity(
   executionWindow: IRecurringRunExecutionWindowIdentity,
 ): RecurringDueWorkIdentity {
@@ -82,18 +92,24 @@ function isEarlyInvoiceWindow(windowEnd: ISO8601String, asOf?: ISO8601String) {
     return false;
   }
 
-  return windowEnd.slice(0, 10) > asOf.slice(0, 10);
+  return String(windowEnd).slice(0, 10) > String(asOf).slice(0, 10);
 }
 
 function buildBaseRecurringDueWorkRow(input: BuildRecurringDueWorkRowInput): IRecurringDueWorkRow {
   const executionWindow = input.selectorInput.executionWindow;
   const identity = buildRecurringDueWorkIdentity(executionWindow);
-  const billingCycleId = input.selectorInput.billingCycleId ?? executionWindow.billingCycleId ?? null;
-  const invoiceWindowStart = input.selectorInput.windowStart;
-  const invoiceWindowEnd = input.selectorInput.windowEnd;
+  const billingCycleId =
+    input.billingCycleId
+    ?? input.selectorInput.billingCycleId
+    ?? executionWindow.billingCycleId
+    ?? null;
+  const invoiceWindowStart = normalizeDueWorkDate(input.selectorInput.windowStart);
+  const invoiceWindowEnd = normalizeDueWorkDate(input.selectorInput.windowEnd);
   const contractId = executionWindow.contractId ?? null;
   const contractLineId = executionWindow.contractLineId ?? null;
   const isEarly = isEarlyInvoiceWindow(invoiceWindowEnd, input.asOf);
+  const servicePeriodStart = normalizeDueWorkDate(input.servicePeriodStart);
+  const servicePeriodEnd = normalizeDueWorkDate(input.servicePeriodEnd);
 
   return {
     ...identity,
@@ -109,9 +125,9 @@ function buildBaseRecurringDueWorkRow(input: BuildRecurringDueWorkRowInput): IRe
     clientName: input.clientName ?? null,
     billingCycleId,
     hasBillingCycleBridge: Boolean(billingCycleId),
-    servicePeriodStart: input.servicePeriodStart,
-    servicePeriodEnd: input.servicePeriodEnd,
-    servicePeriodLabel: formatRangeLabel(input.servicePeriodStart, input.servicePeriodEnd),
+    servicePeriodStart,
+    servicePeriodEnd,
+    servicePeriodLabel: formatRangeLabel(servicePeriodStart, servicePeriodEnd),
     invoiceWindowStart,
     invoiceWindowEnd,
     invoiceWindowLabel: formatRangeLabel(invoiceWindowStart, invoiceWindowEnd),
@@ -174,8 +190,10 @@ export function mergeRecurringDueWorkRows(input: {
 export function buildClientScheduleDueWorkRow(
   input: ClientScheduleDueWorkWindowInput,
 ): IRecurringDueWorkRow {
-  const invoiceWindowStart = input.invoiceWindowStart ?? input.servicePeriodStart;
-  const invoiceWindowEnd = input.invoiceWindowEnd ?? input.servicePeriodEnd;
+  const servicePeriodStart = normalizeDueWorkDate(input.servicePeriodStart);
+  const servicePeriodEnd = normalizeDueWorkDate(input.servicePeriodEnd);
+  const invoiceWindowStart = normalizeDueWorkDate(input.invoiceWindowStart ?? servicePeriodStart);
+  const invoiceWindowEnd = normalizeDueWorkDate(input.invoiceWindowEnd ?? servicePeriodEnd);
   const selectorInput = buildBillingCycleDueSelectionInput({
     clientId: input.clientId,
     billingCycleId: input.billingCycleId,
@@ -186,8 +204,8 @@ export function buildClientScheduleDueWorkRow(
   return buildBaseRecurringDueWorkRow({
     selectorInput,
     cadenceSource: 'client_schedule',
-    servicePeriodStart: input.servicePeriodStart,
-    servicePeriodEnd: input.servicePeriodEnd,
+    servicePeriodStart,
+    servicePeriodEnd,
     clientName: input.clientName,
     canGenerate: input.canGenerate,
     asOf: input.asOf,
@@ -198,8 +216,8 @@ export function buildServicePeriodRecurringDueWorkRow(
   input: ServicePeriodDueWorkRecordInput,
 ): IRecurringDueWorkRow {
   const { record } = input;
-  const invoiceWindowStart = record.invoiceWindow.start;
-  const invoiceWindowEnd = record.invoiceWindow.end;
+  const invoiceWindowStart = normalizeDueWorkDate(record.invoiceWindow.start);
+  const invoiceWindowEnd = normalizeDueWorkDate(record.invoiceWindow.end);
   const selectorInput = record.cadenceOwner === 'contract'
     ? buildContractCadenceDueSelectionInput({
         clientId: input.clientId,
@@ -208,28 +226,22 @@ export function buildServicePeriodRecurringDueWorkRow(
         windowStart: invoiceWindowStart,
         windowEnd: invoiceWindowEnd,
       })
-    : (() => {
-        if (!input.billingCycleId) {
-          throw new Error(
-            `Client cadence due-work rows require a billingCycleId bridge for record ${record.recordId}.`,
-          );
-        }
-
-        return buildBillingCycleDueSelectionInput({
+    : buildClientCadenceDueSelectionInput({
           clientId: input.clientId,
-          billingCycleId: input.billingCycleId,
+          scheduleKey: record.scheduleKey,
+          periodKey: record.periodKey,
           windowStart: invoiceWindowStart,
           windowEnd: invoiceWindowEnd,
         });
-      })();
 
   return buildBaseRecurringDueWorkRow({
     selectorInput,
     cadenceSource: record.cadenceOwner === 'contract'
       ? 'contract_anniversary'
       : 'client_schedule',
-    servicePeriodStart: record.servicePeriod.start,
-    servicePeriodEnd: record.servicePeriod.end,
+    billingCycleId: input.billingCycleId ?? null,
+    servicePeriodStart: normalizeDueWorkDate(record.servicePeriod.start),
+    servicePeriodEnd: normalizeDueWorkDate(record.servicePeriod.end),
     clientName: input.clientName,
     canGenerate: input.canGenerate,
     asOf: input.asOf,

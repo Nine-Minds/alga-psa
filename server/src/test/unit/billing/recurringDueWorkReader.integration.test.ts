@@ -183,17 +183,6 @@ describe('recurring due-work reader', () => {
     mocks.rowsByTable.client_billing_cycles = [
       {
         tenant: 'tenant-1',
-        client_id: 'client-1',
-        client_name: 'Acme Co',
-        billing_cycle_id: 'cycle-2025-03',
-        billing_cycle: 'monthly',
-        period_start_date: '2025-03-01',
-        period_end_date: '2025-04-01',
-        effective_date: '2025-03-01',
-        invoice_id: null,
-      },
-      {
-        tenant: 'tenant-1',
         client_id: 'client-2',
         client_name: 'Bravo Co',
         billing_cycle_id: 'cycle-2025-02',
@@ -220,6 +209,7 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         client_id: 'client-1',
+        client_contract_line_id: 'assignment-1',
         contract_line_id: 'assignment-1',
         cadence_owner: 'client',
         billing_frequency: 'monthly',
@@ -230,6 +220,7 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         client_id: 'client-2',
+        client_contract_line_id: 'assignment-2',
         contract_line_id: 'assignment-2',
         cadence_owner: 'client',
         billing_frequency: 'monthly',
@@ -276,7 +267,7 @@ describe('recurring due-work reader', () => {
         invoice_charge_detail_id: null,
         client_id: 'client-1',
         client_name: 'Acme Co',
-        billing_cycle_id: 'cycle-2025-03',
+        billing_cycle_id: null,
         contract_id: 'contract-2',
         contract_name: 'Acme Monthly Support',
         contract_line_id: 'assignment-1',
@@ -306,13 +297,13 @@ describe('recurring due-work reader', () => {
     ];
   });
 
-  it('T009: due-work reader returns mixed client-cadence and contract-cadence recurring rows for one tenant in a deterministic sort order', async () => {
+  it('T001/T002/T003: due-work reader returns only persisted recurring service-period rows for client-cadence and contract-cadence work in deterministic order', async () => {
     const result = await getAvailableRecurringDueWork({
       page: 1,
       pageSize: 10,
     });
 
-    expect(result.total).toBe(3);
+    expect(result.total).toBe(2);
     expect(result.rows.map((row) => ({
       clientName: row.clientName,
       cadenceSource: row.cadenceSource,
@@ -331,14 +322,7 @@ describe('recurring due-work reader', () => {
         cadenceSource: 'client_schedule',
         invoiceWindowEnd: '2025-04-01',
         executionIdentityKey:
-          'billing_cycle_window:client:client-1:cycle-2025-03:2025-03-01:2025-04-01',
-      },
-      {
-        clientName: 'Bravo Co',
-        cadenceSource: 'client_schedule',
-        invoiceWindowEnd: '2025-03-01',
-        executionIdentityKey:
-          'billing_cycle_window:client:client-2:cycle-2025-02:2025-02-01:2025-03-01',
+          'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
       },
     ]);
   });
@@ -346,21 +330,20 @@ describe('recurring due-work reader', () => {
   it('T010: due-work reader pagination remains stable when rows include a mix of bridged and unbridged recurring windows', async () => {
     const firstPage = await getAvailableRecurringDueWork({
       page: 1,
-      pageSize: 2,
+      pageSize: 1,
     });
     const secondPage = await getAvailableRecurringDueWork({
       page: 2,
-      pageSize: 2,
+      pageSize: 1,
     });
 
-    expect(firstPage.total).toBe(3);
+    expect(firstPage.total).toBe(2);
     expect(firstPage.totalPages).toBe(2);
     expect(firstPage.rows.map((row) => row.executionIdentityKey)).toEqual([
       'contract_cadence_window:contract:client-9:contract-1:line-1:2025-04-08:2025-05-08',
-      'billing_cycle_window:client:client-1:cycle-2025-03:2025-03-01:2025-04-01',
     ]);
     expect(secondPage.rows.map((row) => row.executionIdentityKey)).toEqual([
-      'billing_cycle_window:client:client-2:cycle-2025-02:2025-02-01:2025-03-01',
+      'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
     ]);
   });
 
@@ -399,7 +382,7 @@ describe('recurring due-work reader', () => {
     });
   });
 
-  it('T075: due-work reader reports a missing-materialization state when a recurring obligation should exist but no future periods have been generated', async () => {
+  it('T004: due-work reader reports a missing-materialization repair state instead of synthesizing a compatibility due row', async () => {
     const result = await getAvailableRecurringDueWork({
       page: 1,
       pageSize: 10,
@@ -408,11 +391,13 @@ describe('recurring due-work reader', () => {
     expect(result.materializationGaps).toEqual([
       {
         executionIdentityKey:
-          'billing_cycle_window:client:client-2:cycle-2025-02:2025-02-01:2025-03-01',
+          'client_cadence_window:client:client-2:schedule:tenant-1:client_contract_line:assignment-2:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
         selectionKey:
-          'recurring-run-selection:billing_cycle_window:client:client-2:cycle-2025-02:2025-02-01:2025-03-01',
+          'recurring-run-selection:client_cadence_window:client:client-2:schedule:tenant-1:client_contract_line:assignment-2:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
         clientId: 'client-2',
         clientName: 'Bravo Co',
+        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-2:client:advance',
+        periodKey: 'period:2025-02-01:2025-03-01',
         billingCycleId: 'cycle-2025-02',
         invoiceWindowStart: '2025-02-01',
         invoiceWindowEnd: '2025-03-01',
@@ -420,8 +405,9 @@ describe('recurring due-work reader', () => {
         servicePeriodEnd: '2025-03-01',
         reason: 'missing_service_period_materialization',
         detail:
-          'Falling back to a client billing-cycle row because no persisted recurring service periods were materialized for this recurring window.',
+          'Recurring service periods were not materialized for this canonical client-cadence execution window.',
       },
     ]);
+    expect(result.rows.map((row) => row.clientId)).not.toContain('client-2');
   });
 });

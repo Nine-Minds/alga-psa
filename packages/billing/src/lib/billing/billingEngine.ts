@@ -101,8 +101,6 @@ type ContractCadenceGenerator = typeof generateMonthlyContractCadenceServicePeri
 
 const RECURRING_TIMING_ROLLOUT_GUARD_PREFIX =
   "Recurring timing rollout guard blocked mixed legacy/canonical timing state";
-const POSTGRES_UNDEFINED_TABLE = "42P01";
-const POSTGRES_UNDEFINED_COLUMN = "42703";
 
 export class BillingEngine {
   private knex: Knex;
@@ -155,16 +153,6 @@ export class BillingEngine {
         this.knex = previousKnex;
       }
     });
-  }
-
-  private isMissingPersistedServicePeriodRelation(error: unknown): boolean {
-    return Boolean(
-      error &&
-        typeof error === "object" &&
-        "code" in error &&
-        (((error as { code?: string }).code === POSTGRES_UNDEFINED_TABLE) ||
-          ((error as { code?: string }).code === POSTGRES_UNDEFINED_COLUMN)),
-    );
   }
 
   private getNextBillingDateForCycle(
@@ -407,76 +395,68 @@ export class BillingEngine {
       return {};
     }
 
-    try {
-      const dueRows = await this.knex("recurring_service_periods")
+    const dueRows = await this.knex("recurring_service_periods")
+      .where({ tenant: this.tenant })
+      .whereIn("obligation_id", eligibleLineIds)
+      .whereIn("obligation_type", ["contract_line", "client_contract_line"])
+      .whereIn(
+        "lifecycle_state",
+        [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES],
+      )
+      .where("invoice_window_start", billingPeriod.startDate)
+      .where("invoice_window_end", billingPeriod.endDate)
+      .whereNull("invoice_charge_detail_id")
+      .orderBy("obligation_id", "asc")
+      .orderBy("service_period_start", "asc")
+      .orderBy("revision", "asc")
+      .select(
+        "obligation_id",
+        "obligation_type",
+        "charge_family",
+        "cadence_owner",
+        "due_position",
+        "service_period_start",
+        "service_period_end",
+        "activity_window_start",
+        "activity_window_end",
+      );
+
+    if (dueRows.length === 0) {
+      const existingMaterializedRow = await this.knex("recurring_service_periods")
         .where({ tenant: this.tenant })
         .whereIn("obligation_id", eligibleLineIds)
         .whereIn("obligation_type", ["contract_line", "client_contract_line"])
-        .whereIn(
-          "lifecycle_state",
-          [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES],
-        )
-        .where("invoice_window_start", billingPeriod.startDate)
-        .where("invoice_window_end", billingPeriod.endDate)
-        .whereNull("invoice_charge_detail_id")
-        .orderBy("obligation_id", "asc")
-        .orderBy("service_period_start", "asc")
-        .orderBy("revision", "asc")
-        .select(
-          "obligation_id",
-          "obligation_type",
-          "charge_family",
-          "cadence_owner",
-          "due_position",
-          "service_period_start",
-          "service_period_end",
-          "activity_window_start",
-          "activity_window_end",
-        );
+        .whereNotIn("lifecycle_state", ["archived", "superseded"])
+        .first("record_id");
 
-      if (dueRows.length === 0) {
-        const existingMaterializedRow = await this.knex("recurring_service_periods")
-          .where({ tenant: this.tenant })
-          .whereIn("obligation_id", eligibleLineIds)
-          .whereIn("obligation_type", ["contract_line", "client_contract_line"])
-          .whereNotIn("lifecycle_state", ["archived", "superseded"])
-          .first("record_id");
-
-        return existingMaterializedRow ? {} : null;
-      }
-
-      return this.buildRecurringTimingSelectionsFromPersistedRecords(
-        dueRows.map((row) => ({
-          sourceObligation: {
-            tenant: this.tenant!,
-            obligationId: row.obligation_id,
-            obligationType: row.obligation_type,
-            chargeFamily: row.charge_family,
-          },
-          cadenceOwner: row.cadence_owner,
-          duePosition: row.due_position,
-          servicePeriod: {
-            start: toISODate(toPlainDate(row.service_period_start)),
-            end: toISODate(toPlainDate(row.service_period_end)),
-            semantics: RECURRING_RANGE_SEMANTICS,
-          },
-          activityWindow:
-            row.activity_window_start && row.activity_window_end
-              ? {
-                  start: toISODate(toPlainDate(row.activity_window_start)),
-                  end: toISODate(toPlainDate(row.activity_window_end)),
-                  semantics: RECURRING_RANGE_SEMANTICS,
-                }
-              : null,
-        })),
-      );
-    } catch (error) {
-      if (this.isMissingPersistedServicePeriodRelation(error)) {
-        return null;
-      }
-
-      throw error;
+      return existingMaterializedRow ? {} : null;
     }
+
+    return this.buildRecurringTimingSelectionsFromPersistedRecords(
+      dueRows.map((row) => ({
+        sourceObligation: {
+          tenant: this.tenant!,
+          obligationId: row.obligation_id,
+          obligationType: row.obligation_type,
+          chargeFamily: row.charge_family,
+        },
+        cadenceOwner: row.cadence_owner,
+        duePosition: row.due_position,
+        servicePeriod: {
+          start: toISODate(toPlainDate(row.service_period_start)),
+          end: toISODate(toPlainDate(row.service_period_end)),
+          semantics: RECURRING_RANGE_SEMANTICS,
+        },
+        activityWindow:
+          row.activity_window_start && row.activity_window_end
+            ? {
+                start: toISODate(toPlainDate(row.activity_window_start)),
+                end: toISODate(toPlainDate(row.activity_window_end)),
+                semantics: RECURRING_RANGE_SEMANTICS,
+              }
+            : null,
+      })),
+    );
   }
 
   private async calculateBillingInternal(
@@ -763,11 +743,17 @@ export class BillingEngine {
           clientId,
           billingPeriod,
           clientContractLine,
+          cycle,
+          recurringTimingSelections[clientContractLine.client_contract_line_id],
+          options.recurringTimingSelectionSource,
         ),
         this.calculateUsageBasedCharges(
           clientId,
           billingPeriod,
           clientContractLine,
+          cycle,
+          recurringTimingSelections[clientContractLine.client_contract_line_id],
+          options.recurringTimingSelectionSource,
         ),
         this.calculateBucketPlanCharges(
           clientId,
@@ -1925,6 +1911,23 @@ export class BillingEngine {
     );
   }
 
+  private resolveServiceDrivenChargeTiming(
+    billingPeriod: IBillingPeriod,
+    clientContractLine: IClientContractLine,
+    billingCycle: string,
+    recurringTimingSelection?: ResolvedRecurringChargeTiming,
+  ): ResolvedRecurringChargeTiming | null {
+    if (recurringTimingSelection) {
+      return recurringTimingSelection;
+    }
+
+    return this.buildRecurringChargeTimingSelection(
+      billingPeriod,
+      clientContractLine,
+      billingCycle,
+    );
+  }
+
   private buildRecurringTimingSelections(
     billingPeriod: IBillingPeriod,
     clientContractLines: IClientContractLine[],
@@ -2354,6 +2357,9 @@ export class BillingEngine {
     clientId: string,
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
+    billingCycle: string,
+    recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    _recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<ITimeBasedCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
@@ -2393,6 +2399,21 @@ export class BillingEngine {
       await clientConfigService.getConfigurationsForClientContractLine(
         clientContractLine.client_contract_line_id,
       );
+
+    const timingResolution = this.resolveServiceDrivenChargeTiming(
+      billingPeriod,
+      clientContractLine,
+      billingCycle,
+      recurringTimingSelection,
+    );
+    if (!timingResolution) {
+      return [];
+    }
+
+    const servicePeriodStartExclusive = timingResolution.servicePeriodStartExclusive;
+    const servicePeriodEndExclusive = timingResolution.servicePeriodEndExclusive;
+    const servicePeriodStart = timingResolution.servicePeriodStart;
+    const servicePeriodEnd = timingResolution.servicePeriodEnd;
 
     // Create a map of service IDs to their hourly configurations
     const serviceConfigMap = new Map<
@@ -2495,8 +2516,8 @@ export class BillingEngine {
       .where({
         "time_entries.tenant": client.tenant,
       })
-      .where("time_entries.start_time", ">=", billingPeriod.startDate)
-      .where("time_entries.end_time", "<", billingPeriod.endDate)
+      .where("time_entries.start_time", ">=", servicePeriodStartExclusive)
+      .where("time_entries.end_time", "<", servicePeriodEndExclusive)
       .where("time_entries.invoiced", false)
       .where(function (this: Knex.QueryBuilder) {
         // Either the time entry has the specific contract line ID (use contract_line_id for contract associations)
@@ -2652,9 +2673,9 @@ export class BillingEngine {
           tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
           entryId: entry.entry_id,
           is_taxable: isTaxable, // Use derived value
-          servicePeriodStart: billingPeriod.startDate,
-          servicePeriodEnd: billingPeriod.endDate,
-          billingTiming: "arrears",
+          servicePeriodStart,
+          servicePeriodEnd,
+          billingTiming: timingResolution.duePosition,
           // Add contract association information when the plan is covered by a contract assignment
           client_contract_id:
             clientContractLine.client_contract_id || undefined,
@@ -2672,6 +2693,9 @@ export class BillingEngine {
     clientId: string,
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
+    billingCycle: string,
+    recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    _recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<IUsageBasedCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
@@ -2697,6 +2721,21 @@ export class BillingEngine {
       await clientConfigService.getConfigurationsForClientContractLine(
         clientContractLine.client_contract_line_id,
       );
+
+    const timingResolution = this.resolveServiceDrivenChargeTiming(
+      billingPeriod,
+      clientContractLine,
+      billingCycle,
+      recurringTimingSelection,
+    );
+    if (!timingResolution) {
+      return [];
+    }
+
+    const servicePeriodStartExclusive = timingResolution.servicePeriodStartExclusive;
+    const servicePeriodEndExclusive = timingResolution.servicePeriodEndExclusive;
+    const servicePeriodStart = timingResolution.servicePeriodStart;
+    const servicePeriodEnd = timingResolution.servicePeriodEnd;
 
     // Create a map of service IDs to their usage configurations and rate tiers
     const serviceConfigMap = new Map<
@@ -2757,8 +2796,8 @@ export class BillingEngine {
         "usage_tracking.tenant": this.tenant,
         "usage_tracking.invoiced": false,
       })
-      .where("usage_tracking.usage_date", ">=", billingPeriod.startDate)
-      .where("usage_tracking.usage_date", "<", billingPeriod.endDate)
+      .where("usage_tracking.usage_date", ">=", servicePeriodStartExclusive)
+      .where("usage_tracking.usage_date", "<", servicePeriodEndExclusive)
       .where(function (this: Knex.QueryBuilder) {
         // Either the usage record has the specific contract line ID (use contract_line_id for contract associations)
         this.where(
@@ -2876,9 +2915,9 @@ export class BillingEngine {
           tax_rate: taxRate, // Set initial tax rate
           usageId: record.usage_id,
           is_taxable: isTaxable, // Use derived value
-          servicePeriodStart: billingPeriod.startDate,
-          servicePeriodEnd: billingPeriod.endDate,
-          billingTiming: "arrears",
+          servicePeriodStart,
+          servicePeriodEnd,
+          billingTiming: timingResolution.duePosition,
           // Add contract association information when the plan is covered by a contract assignment
           client_contract_id:
             clientContractLine.client_contract_id || undefined,

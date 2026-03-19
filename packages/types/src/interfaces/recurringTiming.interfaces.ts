@@ -4,6 +4,7 @@ export const CADENCE_OWNERS = ['client', 'contract'] as const;
 export type CadenceOwner = (typeof CADENCE_OWNERS)[number];
 
 export const RECURRING_RUN_EXECUTION_WINDOW_KINDS = [
+  'client_cadence_window',
   'billing_cycle_window',
   'contract_cadence_window',
 ] as const;
@@ -360,6 +361,8 @@ export interface IRecurringRunExecutionWindowIdentity {
   cadenceOwner: CadenceOwner;
   clientId?: string;
   billingCycleId?: string | null;
+  scheduleKey?: string | null;
+  periodKey?: string | null;
   contractId?: string | null;
   contractLineId?: string | null;
   windowStart?: ISO8601String | null;

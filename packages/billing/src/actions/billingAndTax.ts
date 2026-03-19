@@ -14,6 +14,7 @@ import {
     ITimeBasedCharge,
     IFixedPriceCharge,
     BillingCycleType,
+    DuePosition,
     IClientContractLineCycle,
     IRecurringDueWorkRow,
 } from '@alga-psa/types';
@@ -21,17 +22,16 @@ import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa
 import { TaxService } from '../services/taxService';
 import { ITaxCalculationResult } from '@alga-psa/types';
 import {
-    buildClientScheduleDueWorkRow,
     buildRecurringDueWorkRow,
-    mergeRecurringDueWorkRows,
 } from '@alga-psa/shared/billingClients/recurringDueWork';
 import {
-    buildBillingCycleDueSelectionInput,
+    buildClientCadenceDueSelectionInput,
     buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
-
-const POSTGRES_UNDEFINED_TABLE = '42P01';
-const POSTGRES_UNDEFINED_COLUMN = '42703';
+import {
+    buildRecurringServicePeriodPeriodKey,
+    buildRecurringServicePeriodScheduleKey,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 
 // Types for paginated billing periods
 export interface BillingPeriodWithMeta extends IClientContractLineCycle {
@@ -78,6 +78,8 @@ export interface RecurringDueWorkMaterializationGap {
     selectionKey: string;
     clientId: string;
     clientName?: string | null;
+    scheduleKey: string;
+    periodKey: string;
     billingCycleId?: string | null;
     invoiceWindowStart: ISO8601String;
     invoiceWindowEnd: ISO8601String;
@@ -108,6 +110,7 @@ interface PersistedRecurringDueWorkDbRow {
 
 interface ClientCadenceRecurringLineActivityRow {
     client_id: string;
+    client_contract_line_id: string;
     start_date?: ISO8601String | null;
     end_date?: ISO8601String | null;
     cadence_owner?: 'client' | 'contract' | null;
@@ -115,15 +118,7 @@ interface ClientCadenceRecurringLineActivityRow {
     billing_timing?: string | null;
 }
 
-function isMissingRecurringDueWorkRelation(error: unknown): boolean {
-    return Boolean(
-        error &&
-        typeof error === 'object' &&
-        'code' in error &&
-        ((((error as { code?: string }).code) === POSTGRES_UNDEFINED_TABLE) ||
-            (((error as { code?: string }).code) === POSTGRES_UNDEFINED_COLUMN))
-    );
-}
+type BillingQueryExecutor = Knex | Knex.Transaction;
 
 function applyBillingPeriodSearchAndDateFilters(
     query: Knex.QueryBuilder,
@@ -150,8 +145,16 @@ function applyBillingPeriodSearchAndDateFilters(
     return query;
 }
 
-function normalizeDateOnly(value?: ISO8601String | null) {
-    return value ? value.slice(0, 10) : null;
+function normalizeDateOnly(value?: unknown) {
+    if (!value) {
+        return null;
+    }
+
+    if (value instanceof Date) {
+        return value.toISOString().slice(0, 10) as ISO8601String;
+    }
+
+    return String(value).slice(0, 10) as ISO8601String;
 }
 
 function rangesOverlap(input: {
@@ -181,7 +184,7 @@ function rangesOverlap(input: {
 }
 
 function buildAvailableBillingPeriodsBaseQuery(
-    trx: Knex.Transaction,
+    trx: BillingQueryExecutor,
     tenant: string,
     options: FetchBillingPeriodsOptions,
 ) {
@@ -205,7 +208,7 @@ function buildAvailableBillingPeriodsBaseQuery(
 }
 
 async function fetchAvailableBillingPeriodsUnpaginated(
-    trx: Knex.Transaction,
+    trx: BillingQueryExecutor,
     tenant: string,
     options: FetchBillingPeriodsOptions,
 ): Promise<BillingPeriodWithMeta[]> {
@@ -254,7 +257,7 @@ async function fetchAvailableBillingPeriodsUnpaginated(
 }
 
 async function fetchPersistedRecurringDueWorkDbRows(
-    trx: Knex.Transaction,
+    trx: BillingQueryExecutor,
     tenant: string,
     options: FetchRecurringDueWorkOptions,
 ): Promise<PersistedRecurringDueWorkDbRow[]> {
@@ -362,26 +365,24 @@ async function fetchPersistedRecurringDueWorkDbRows(
         dateColumn: 'rsp.invoice_window_end',
     });
 
-    const [contractLineRows, clientContractLineRows] = await Promise.all([
-        contractLineRowsQuery,
-        clientContractLineRowsQuery,
-    ]);
+    const contractLineRows = await contractLineRowsQuery;
+    const clientContractLineRows = await clientContractLineRowsQuery as PersistedRecurringDueWorkDbRow[];
 
     return [...contractLineRows, ...clientContractLineRows] as PersistedRecurringDueWorkDbRow[];
 }
 
-async function fetchCompatibilityMaterializationGapKeys(
-    trx: Knex.Transaction,
+async function fetchCompatibilityMaterializationGaps(
+    trx: BillingQueryExecutor,
     tenant: string,
     compatibilityPeriods: BillingPeriodWithMeta[],
-): Promise<Set<string>> {
+): Promise<RecurringDueWorkMaterializationGap[]> {
     if (compatibilityPeriods.length === 0) {
-        return new Set();
+        return [];
     }
 
     const clientIds = Array.from(new Set(compatibilityPeriods.map((period) => period.client_id).filter(Boolean)));
     if (clientIds.length === 0) {
-        return new Set();
+        return [];
     }
 
     const activeRecurringRows = await trx('client_contract_lines as ccl')
@@ -396,6 +397,7 @@ async function fetchCompatibilityMaterializationGapKeys(
         .whereNotNull('cl.billing_timing')
         .select(
             'ccl.client_id',
+            'ccl.client_contract_line_id',
             'ccl.start_date',
             'ccl.end_date',
             'cl.cadence_owner',
@@ -414,39 +416,71 @@ async function fetchCompatibilityMaterializationGapKeys(
         recurringClientsById.set(row.client_id, clientRows);
     }
 
-    const gapKeys = new Set<string>();
+    const materializationGaps: RecurringDueWorkMaterializationGap[] = [];
 
     for (const period of compatibilityPeriods) {
         const recurringRows = recurringClientsById.get(period.client_id) ?? [];
-        const matchesRecurringWindow = recurringRows.some((row) =>
-            rangesOverlap({
+        for (const row of recurringRows) {
+            if (!rangesOverlap({
                 rangeStart: row.start_date ?? null,
                 rangeEnd: row.end_date ?? null,
                 windowStart: period.period_start_date,
                 windowEnd: period.period_end_date,
-            }),
-        );
+            })) {
+                continue;
+            }
 
-        if (!matchesRecurringWindow) {
-            continue;
-        }
-
-        gapKeys.add(
-            buildClientScheduleDueWorkRow({
+            const duePosition = row.billing_timing === 'arrears' ? 'arrears' : 'advance';
+            const scheduleKey = buildRecurringServicePeriodScheduleKey({
+                tenant,
+                obligationType: 'client_contract_line',
+                obligationId: row.client_contract_line_id,
+                cadenceOwner: 'client',
+                duePosition: duePosition as DuePosition,
+            });
+            const periodKey = buildRecurringServicePeriodPeriodKey({
+                start: period.period_start_date,
+                end: period.period_end_date,
+            });
+            const selectorInput = buildClientCadenceDueSelectionInput({
                 clientId: period.client_id,
-                clientName: period.client_name,
-                billingCycleId: period.billing_cycle_id as string,
+                scheduleKey,
+                periodKey,
+                windowStart: period.period_start_date,
+                windowEnd: period.period_end_date,
+            });
+            const dueWorkRow = buildRecurringDueWorkRow({
+                selectorInput,
+                cadenceSource: 'client_schedule',
+                billingCycleId: period.billing_cycle_id ?? null,
                 servicePeriodStart: period.period_start_date,
                 servicePeriodEnd: period.period_end_date,
-                invoiceWindowStart: period.period_start_date,
-                invoiceWindowEnd: period.period_end_date,
-                asOf: toISODate(Temporal.Now.plainDateISO()),
-                canGenerate: period.can_generate,
-            }).executionIdentityKey,
-        );
+                clientName: period.client_name,
+                scheduleKey,
+                periodKey,
+                canGenerate: false,
+            });
+
+            materializationGaps.push({
+                executionIdentityKey: dueWorkRow.executionIdentityKey,
+                selectionKey: dueWorkRow.selectionKey,
+                clientId: dueWorkRow.clientId,
+                clientName: dueWorkRow.clientName ?? null,
+                scheduleKey,
+                periodKey,
+                billingCycleId: dueWorkRow.billingCycleId ?? null,
+                invoiceWindowStart: dueWorkRow.invoiceWindowStart,
+                invoiceWindowEnd: dueWorkRow.invoiceWindowEnd,
+                servicePeriodStart: dueWorkRow.servicePeriodStart,
+                servicePeriodEnd: dueWorkRow.servicePeriodEnd,
+                reason: 'missing_service_period_materialization',
+                detail:
+                    'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+            });
+        }
     }
 
-    return gapKeys;
+    return materializationGaps;
 }
 
 function mapPersistedRecurringDueWorkDbRowsToRows(
@@ -454,26 +488,32 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
     asOf: ISO8601String,
 ): IRecurringDueWorkRow[] {
     return rows.map((row) => {
+        const invoiceWindowStart = normalizeDateOnly(row.invoice_window_start) as ISO8601String;
+        const invoiceWindowEnd = normalizeDateOnly(row.invoice_window_end) as ISO8601String;
+        const servicePeriodStart = normalizeDateOnly(row.service_period_start) as ISO8601String;
+        const servicePeriodEnd = normalizeDateOnly(row.service_period_end) as ISO8601String;
         const selectorInput = row.cadence_owner === 'contract'
             ? buildContractCadenceDueSelectionInput({
                 clientId: row.client_id,
                 contractId: row.contract_id ?? null,
                 contractLineId: row.contract_line_id ?? null,
-                windowStart: row.invoice_window_start,
-                windowEnd: row.invoice_window_end,
+                windowStart: invoiceWindowStart,
+                windowEnd: invoiceWindowEnd,
             })
-            : buildBillingCycleDueSelectionInput({
+            : buildClientCadenceDueSelectionInput({
                 clientId: row.client_id,
-                billingCycleId: row.billing_cycle_id as string,
-                windowStart: row.invoice_window_start,
-                windowEnd: row.invoice_window_end,
+                scheduleKey: row.schedule_key,
+                periodKey: row.period_key,
+                windowStart: invoiceWindowStart,
+                windowEnd: invoiceWindowEnd,
             });
 
         return buildRecurringDueWorkRow({
             selectorInput,
             cadenceSource: row.cadence_owner === 'contract' ? 'contract_anniversary' : 'client_schedule',
-            servicePeriodStart: row.service_period_start,
-            servicePeriodEnd: row.service_period_end,
+            billingCycleId: row.billing_cycle_id ?? null,
+            servicePeriodStart,
+            servicePeriodEnd,
             clientName: row.client_name,
             asOf,
             scheduleKey: row.schedule_key,
@@ -703,78 +743,40 @@ export const getAvailableRecurringDueWork = withAuth(async (
     const asOf = toISODate(Temporal.Now.plainDateISO());
 
     try {
-        return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const compatibilityPeriods = await fetchAvailableBillingPeriodsUnpaginated(
-                trx,
-                tenant,
-                options,
-            );
-            const compatibilityGapKeys = await fetchCompatibilityMaterializationGapKeys(
-                trx,
-                tenant,
-                compatibilityPeriods,
-            );
-            const compatibilityRows = compatibilityPeriods.map((period) =>
-                buildClientScheduleDueWorkRow({
-                    clientId: period.client_id,
-                    clientName: period.client_name,
-                    billingCycleId: period.billing_cycle_id as string,
-                    servicePeriodStart: period.period_start_date,
-                    servicePeriodEnd: period.period_end_date,
-                    invoiceWindowStart: period.period_start_date,
-                    invoiceWindowEnd: period.period_end_date,
-                    asOf,
-                    canGenerate: period.can_generate,
-                }),
-            );
+        const compatibilityPeriods = await fetchAvailableBillingPeriodsUnpaginated(
+            knex,
+            tenant,
+            options,
+        );
+        const rawMaterializationGaps = await fetchCompatibilityMaterializationGaps(
+            knex,
+            tenant,
+            compatibilityPeriods,
+        );
+        const persistedDbRows = await fetchPersistedRecurringDueWorkDbRows(
+            knex,
+            tenant,
+            options,
+        );
+        const persistedRows = mapPersistedRecurringDueWorkDbRowsToRows(persistedDbRows, asOf);
+        const persistedIdentityKeys = new Set(
+            persistedRows.map((row) => row.executionIdentityKey),
+        );
+        const materializationGaps = rawMaterializationGaps.filter(
+            (gap) => !persistedIdentityKeys.has(gap.executionIdentityKey),
+        );
+        const total = persistedRows.length;
+        const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+        const offset = (page - 1) * pageSize;
 
-            let persistedRows: IRecurringDueWorkRow[] = [];
-            try {
-                const persistedDbRows = await fetchPersistedRecurringDueWorkDbRows(
-                    trx,
-                    tenant,
-                    options,
-                );
-                persistedRows = mapPersistedRecurringDueWorkDbRowsToRows(persistedDbRows, asOf);
-            } catch (error) {
-                if (!isMissingRecurringDueWorkRelation(error)) {
-                    throw error;
-                }
-            }
-
-            const mergedRows = mergeRecurringDueWorkRows({
-                persistedRows,
-                compatibilityRows,
-            });
-            const total = mergedRows.length;
-            const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
-            const offset = (page - 1) * pageSize;
-            const materializationGaps = mergedRows
-                .filter((row) => row.recordId == null && compatibilityGapKeys.has(row.executionIdentityKey))
-                .map((row): RecurringDueWorkMaterializationGap => ({
-                    executionIdentityKey: row.executionIdentityKey,
-                    selectionKey: row.selectionKey,
-                    clientId: row.clientId,
-                    clientName: row.clientName ?? null,
-                    billingCycleId: row.billingCycleId ?? null,
-                    invoiceWindowStart: row.invoiceWindowStart,
-                    invoiceWindowEnd: row.invoiceWindowEnd,
-                    servicePeriodStart: row.servicePeriodStart,
-                    servicePeriodEnd: row.servicePeriodEnd,
-                    reason: 'missing_service_period_materialization',
-                    detail:
-                        'Falling back to a client billing-cycle row because no persisted recurring service periods were materialized for this recurring window.',
-                }));
-
-            return {
-                rows: mergedRows.slice(offset, offset + pageSize),
-                materializationGaps,
-                total,
-                page,
-                pageSize,
-                totalPages,
-            };
-        });
+        return {
+            rows: persistedRows.slice(offset, offset + pageSize),
+            materializationGaps,
+            total,
+            page,
+            pageSize,
+            totalPages,
+        };
     } catch (error) {
         console.error('Error in getAvailableRecurringDueWork:', error);
         throw error;

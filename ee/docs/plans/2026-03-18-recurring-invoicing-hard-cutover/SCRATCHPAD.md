@@ -22,6 +22,15 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
   - Added [ARCHITECTURE.md](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/ee/docs/plans/2026-03-18-recurring-invoicing-hard-cutover/ARCHITECTURE.md) to define the hard-cutover invariant, the limited role of `client_billing_cycles`, the required-schema posture, and the `invoices.billing_cycle_id` deprecation posture.
   - Added [RUNBOOK.md](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/ee/docs/plans/2026-03-18-recurring-invoicing-hard-cutover/RUNBOOK.md) to describe the final recurring mental model, missing-materialization diagnosis, and canonical reverse/delete repair expectations.
   - Added [recurringInvoicingHardCutover.runbook.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/docs/recurringInvoicingHardCutover.runbook.test.ts) to lock T072/T073/T074 against regressions.
+- Due-work cutover slice completed:
+  - Updated [billingAndTax.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/billingAndTax.ts) so ready recurring work comes only from persisted `recurring_service_periods`, with client-cadence materialization gaps surfaced separately as repair records instead of compatibility due rows.
+  - Updated [recurringRunExecutionIdentity.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/shared/billingClients/recurringRunExecutionIdentity.ts) to add canonical `client_cadence_window` identity keyed by schedule/period/window instead of `billingCycleId`.
+  - Updated [recurringDueWork.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/shared/billingClients/recurringDueWork.ts) so client-cadence due-work rows can be built bridge-free while still carrying optional `billingCycleId` metadata for display.
+  - Updated [billingEngine.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/lib/billing/billingEngine.ts) to stop treating missing recurring-service-period relations as an acceptable mixed-schema fallback.
+  - Added/updated focused tests:
+    - [recurringDueWork.domain.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringDueWork.domain.test.ts)
+    - [recurringDueWorkReader.integration.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts)
+    - [recurringDueWorkReader.static.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringDueWorkReader.static.test.ts)
 
 - Billing UI/actions sweep:
   - `AutomaticInvoices`, due-work selection, recurring run target selection, history, reversal/delete, accounting export, and some authoring/storage helpers still preserve bridge-first recurring behavior.
@@ -53,9 +62,10 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 ## Discoveries / Constraints
 
 - (2026-03-18) The repo already had an in-progress service-driven runbook/test update in the worktree; the hard-cutover docs were added in separate files to avoid mixing coexistence guidance with the post-bridge model.
+- (2026-03-18) The due-work reader still needs later UI/run-action follow-up because some surfaces continue to use `billingCycleId` for row actions even though due-work identity is now canonical.
 - (2026-03-18) `invoiceModification.ts` still uses null/non-null `billing_cycle_id` to classify prepayment-style invoices, which will misclassify bridge-less recurring invoices.
-- (2026-03-18) `billingAndTax.ts` still merges canonical recurring due work with synthetic compatibility rows and has mixed-schema missing-relation guards.
-- (2026-03-18) `recurringRunExecutionIdentity.ts` still embeds `billingCycleId` into recurring identity and selection contracts.
+- (2026-03-18) `billingAndTax.ts` now sources ready recurring work only from `recurring_service_periods`, but the separate repair-gap surface still needs downstream UI handling so operators can act on missing materialization without relying on compatibility rows.
+- (2026-03-18) `recurringRunExecutionIdentity.ts` now has canonical `client_cadence_window` support, but preview/generate/run callers still need to be migrated off the legacy billing-cycle helper path.
 - (2026-03-18) `billingCycleActions.ts` still frames recurring history and reversal as billing-cycle operations.
 - (2026-03-18) `InvoiceService.ts` still classifies recurring invoice rows via `invoices.billing_cycle_id` in some read paths.
 - (2026-03-18) one API service path still appears to reference old cycle column names (`cycle_id`, `period_start`, `period_end`) and should be rechecked during cleanup.
@@ -69,6 +79,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `rg -n "recurring_projection|hasBillingCycleBridge|billingCycleId" packages/types/src server/src/interfaces server/src/lib/api -g '!**/*.test.*'`
 - `rg -n "billing cycle" packages/billing/src/components packages/billing/src/actions -g '!**/*.test.*'`
 - `cd server && pnpm exec vitest run src/test/unit/docs/recurringInvoicingHardCutover.runbook.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/recurringDueWork.domain.test.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts src/test/unit/billing/recurringDueWorkReader.static.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -77,6 +89,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) F074 implemented by documenting `invoices.billing_cycle_id` as passive historical metadata only in recurring code until later physical removal.
 - (2026-03-18) F080 implemented by adding hard-cutover architecture and operator runbook guidance for the final recurring model.
 - (2026-03-18) T072/T073/T074 implemented with a focused documentation regression test for the final model, client-cycle role, and `billing_cycle_id` deprecation posture.
+- (2026-03-18) F003/F004/F005/F006 implemented by removing recurring due-work compatibility merges, removing recurring mixed-schema fallback guards from the reader/engine, and sourcing ready recurring work only from persisted service-period rows.
+- (2026-03-18) F007/F008/F009 implemented by introducing canonical client-cadence execution identity keyed by schedule/period/window and treating `billingCycleId` only as optional read-side metadata on due-work rows.
+- (2026-03-18) T001/T002/T003/T004/T005/T006 implemented with static, integration, and unit coverage for canonical due-work sourcing and bridge-free client-cadence row identity.
 
 ## Links / References
 
