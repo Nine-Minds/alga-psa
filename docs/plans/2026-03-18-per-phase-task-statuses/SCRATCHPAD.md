@@ -15,6 +15,7 @@
 
 - (2026-03-18) Both `project_status_mappings` and `project_phases` are Citus-distributed on `tenant`, colocated with `tenants`. FK constraints must use composite keys `(tenant, phase_id)`.
 - (2026-03-18) `project_status_mappings` has primary key `(tenant, project_status_mapping_id)`. The FK to `project_phases` must reference `(tenant, phase_id)`.
+- (2026-03-18) Implemented `F001` in `server/migrations/20260318100000_add_phase_id_to_project_status_mappings.cjs`: added nullable `phase_id` plus a composite FK on `(tenant, phase_id)` to `project_phases`. Although the feature text mentions `project_phases(phase_id)`, the schema only exposes `(tenant, phase_id)` as a valid referenced key.
 - (2026-03-18) `moveTaskToPhase()` in `projectTaskActions.ts` (lines 972-1033) currently only resolves statuses for **cross-project** moves. Same-project moves preserve the original status mapping ID. This must change to also handle same-project cross-phase moves when phases have different statuses.
 - (2026-03-18) `ProjectDetail.tsx` is the orchestrator that passes `statuses={projectStatuses}` to KanbanBoard (line ~2406). It fetches statuses once at project level. This is the critical wiring point.
 - (2026-03-18) Client portal has its own separate components (`ClientKanbanBoard`, `ClientTaskListView`, `ProjectDetailView`) — they do NOT reuse MSP-side KanbanBoard. Separate data action `getClientProjectStatuses()`.
@@ -29,6 +30,7 @@
 - Build projects package: `npx nx build projects`
 - Run project tests: `npx vitest run` in `packages/projects/`
 - Run migrations: `npm run migrate`
+- Validate migration syntax quickly: `node -e "require('./server/migrations/20260318100000_add_phase_id_to_project_status_mappings.cjs')"`
 - Citus migrations: applied via Argo workflows in EE environments
 
 ## Links / References
