@@ -10,6 +10,7 @@
 - (2026-03-19) **"AlgaPSA" brand name**: Keep hardcoded — brand names are not translated. Only the alt text ("AlgaPSA Logo") gets a key.
 - (2026-03-19) **Breadcrumb translation**: `getMenuItemNameByPath()` returns `item.name` (English). Once Sidebar translates via `translationKey`, breadcrumbs should also translate. Two options: (a) move translation lookup into `getMenuItemNameByPath` by passing `t` function, or (b) return the translationKey and let breadcrumb component call `t()`. Decision: option (a) — pass `t` to the function or move it into Header component where `t` is available.
 - (2026-03-19) **TIER_LABELS**: TrialBanner uses `TIER_LABELS[tier]` from `@alga-psa/types` for tier display names ("Pro", "Premium"). These are product tier names and should likely stay in English. Only the surrounding text ("Trial:", "days left", "confirm to keep") gets translated.
+- (2026-03-19) **Billing key collision**: `nav.billing` could not remain a plain string once the billing sidebar section and item keys moved under `nav.billing.*`. The top-level billing nav label now uses `nav.billing.label`, while section/item keys stay under `nav.billing.sections.*` and `nav.billing.<item>`.
 
 ## Discoveries / Constraints
 
@@ -48,7 +49,7 @@
 
 ## Commands / Runbooks
 
-- **Validate translations**: `npx ts-node scripts/validate-translations.ts`
+- **Validate translations**: `node scripts/validate-translations.cjs`
 - **Generate pseudo-locales**: `npx ts-node scripts/generate-pseudo-locale.ts --locale xx --fill "1111"`
 - **Italian accent audit**: `grep -n ' e [a-z]\| puo \| gia \| verra \| funzionalita\| necessario' server/public/locales/it/msp/core.json`
 - **Count keys**: `node -e "const o=JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/core.json'));const c=(o,p='')=>{let n=0;for(const[k,v]of Object.entries(o)){if(typeof v==='object'&&v!==null)n+=c(v,p+k+'.');else n++}return n};console.log(c(o))"`
@@ -63,6 +64,15 @@
   - `PlatformNotificationBanner.tsx` now translates the Learn More CTA and dismiss aria-label via `banners.platformNotification.*`.
   - Validation: `cd server && npx vitest run --config vitest.config.ts src/test/unit/layout/PaymentFailedBanner.i18n.test.tsx src/test/unit/layout/RightSidebar.i18n.test.tsx src/test/unit/layout/PlatformNotificationBanner.i18n.test.tsx src/test/unit/layout/QuickCreateDialog.i18n.test.tsx`
   - Gotcha: the platform notification test emits a React warning because the local `next/link` mock forwards `prefetch={false}` to a DOM anchor; behavior is otherwise correct and assertions pass.
+- (2026-03-19) Completed `F031-F043` and `T052-T062`, `T064-T066`.
+  - Rebuilt `server/public/locales/*/msp/core.json` for all 7 production locales plus `xx` and `yy`, adding the new shell/sidebar/header/dialog/banner/quick-create/right-sidebar keys and the nested billing navigation structure.
+  - Added `settings.tabs.language` and `settings.tabs.sla` across all locales and introduced `nav.billing.label` to avoid the string-vs-object collision with nested `nav.billing.sections.*` and `nav.billing.<item>` keys.
+  - Added `server/src/test/unit/i18n/mspCoreBatch2b1.test.ts` to verify the English key inventory, production-locale alignment, pseudo-locale fills, variable preservation, Italian accents, representative `xx` QA coverage, and German overflow-sensitive label lengths.
+  - Extended `Sidebar.i18n.test.tsx` with a feature-flag check that hides the Language item when `msp-i18n-enabled` is off.
+  - Validation:
+    - `node scripts/validate-translations.cjs`
+    - `cd server && npx vitest run --config vitest.config.ts src/test/unit/i18n/mspCoreBatch2b1.test.ts src/test/unit/layout/Sidebar.i18n.test.tsx src/test/unit/layout/menuConfig.i18n.test.ts`
+  - Gotcha: the old `npx ts-node scripts/validate-translations.ts` runbook in this plan is stale; the repository validator lives at `scripts/validate-translations.cjs`.
 
 ## Links / References
 

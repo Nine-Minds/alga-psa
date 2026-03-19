@@ -182,69 +182,69 @@
   {
     "id": "F031",
     "description": "Add all ~80 new keys to en/msp/core.json following the established key naming convention",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1-FR13"]
   },
   {
     "id": "F032",
     "description": "Generate French (fr) translations for all new keys in msp/core.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F033",
     "description": "Generate Spanish (es) translations for all new keys in msp/core.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F034",
     "description": "Generate German (de) translations for all new keys in msp/core.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F035",
     "description": "Generate Dutch (nl) translations for all new keys in msp/core.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F036",
     "description": "Generate Italian (it) translations for all new keys in msp/core.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F037",
     "description": "Generate Polish (pl) translations for all new keys in msp/core.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F038",
     "description": "Update pseudo-locale xx/msp/core.json with all new keys (values = '11111')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F039",
     "description": "Update pseudo-locale yy/msp/core.json with all new keys (values = '55555')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F040",
     "description": "Run Italian accent audit on it/msp/core.json — fix any missing accents",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F041",
     "description": "Cross-check translated nav labels against existing msp/core.json values for consistency across languages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F042",
     "description": "Add 'Language' and 'SLA' settings tab keys to msp/core.json settings.tabs section",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR13"]
   },
   {
     "id": "F043",
     "description": "Verify billing navigation keys (nav.billing.*) are added for all 12 billing sidebar items across all languages",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR12"]
   },
 

@@ -49,7 +49,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.documents',
       'nav.assets',
       'nav.timeManagement',
-      'nav.billing',
+      'nav.billing.label',
       'nav.schedule',
       'nav.technicianDispatch',
       'nav.workflows',

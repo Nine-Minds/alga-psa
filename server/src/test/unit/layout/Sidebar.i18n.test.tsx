@@ -176,4 +176,20 @@ describe('Sidebar i18n wiring', () => {
     expect(screen.getByText('Contrats FR')).toBeInTheDocument();
     expect(screen.getByText('Retour principal')).toBeInTheDocument();
   });
+
+  it('T066: Language settings item is hidden when the MSP i18n flag is off', () => {
+    isMspI18nEnabled = false;
+    translations = {};
+
+    render(
+      <Sidebar
+        sidebarOpen={true}
+        setSidebarOpen={vi.fn()}
+        mode="settings"
+      />
+    );
+
+    expect(screen.getByText('General')).toBeInTheDocument();
+    expect(screen.queryByText('Language')).not.toBeInTheDocument();
+  });
 });

@@ -142,7 +142,7 @@ export const navigationSections: NavigationSection[] = [
       },
       {
         name: 'Billing',
-        translationKey: 'nav.billing',
+        translationKey: 'nav.billing.label',
         icon: CreditCard,
         href: '/msp/billing?tab=client-contracts'
       },
