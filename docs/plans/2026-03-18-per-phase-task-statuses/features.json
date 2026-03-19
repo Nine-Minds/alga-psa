@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Model: getProjectStatusMappings() accepts optional phaseId param and filters by phase_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.3"]
   },
   {
