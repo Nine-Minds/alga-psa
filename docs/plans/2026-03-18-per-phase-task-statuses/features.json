@@ -218,7 +218,7 @@
   {
     "id": "F037",
     "description": "Phase task CSV import: IImportReferenceData.statusMappings resolves against phase-effective statuses",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9.1"]
   },
   {

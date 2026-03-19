@@ -113,6 +113,7 @@
 - (2026-03-18) Implemented `F035` by making `TemplateStatusColumnsStep` phase-aware in wizard state. The step now scopes mappings by `template_phase_id`, supports copying defaults into a phase, uses defaults as fallback when a phase has no overrides, and clears stale task mappings when a scoped column is removed or reset.
 - (2026-03-18) Supporting work for `F035`: `TemplateTasksStep` and `TemplateReviewStep` now resolve effective statuses per selected phase, and `createTemplateFromWizard()` / `updateTemplateFromEditor()` create phases before status mappings so phase-scoped wizard mappings can be persisted with real `template_phase_id` values.
 - (2026-03-18) Implemented `F036` by finishing phase-aware template application in `applyTemplate()`. Project status mappings copied from a template now retain the source `template_phase_id -> phase_id` relationship, and task fallback logic chooses the first effective status for the target phase instead of a project-global first column.
+- (2026-03-18) Implemented `F037` in the phase/task import pipeline. `getImportReferenceData()` and both validation paths now build `statusLookupByPhase` from each existing phase’s effective statuses, `groupRowsIntoPhases()` resolves `status_mapping_id` against the row’s target phase, and the import dialog threads those phase-aware lookups through regrouping after agent resolution.
 
 ### Key Files — Import / Events
 - `packages/types/src/interfaces/phaseTaskImport.interfaces.ts` — IImportReferenceData

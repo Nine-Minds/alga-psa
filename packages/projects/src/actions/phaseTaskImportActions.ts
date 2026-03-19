@@ -110,6 +110,76 @@ function parseImportNumber(numStr: string | undefined): number | null {
   return isNaN(parsed) ? null : parsed;
 }
 
+type ImportStatusMappingRow = IProjectStatusMapping & {
+  phase_id?: string | null;
+  status_name?: string;
+  name?: string;
+};
+
+function buildStatusLookupFromMappings(
+  statusMappings: ImportStatusMappingRow[]
+): Record<string, string> {
+  const statusLookup: Record<string, string> = {};
+
+  statusMappings.forEach((mapping) => {
+    const statusName = mapping.custom_name || mapping.status_name || mapping.name;
+    if (statusName) {
+      statusLookup[statusName.toLowerCase().trim()] = mapping.project_status_mapping_id;
+    }
+  });
+
+  return statusLookup;
+}
+
+async function getImportStatusReferenceData(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  projectId: string
+): Promise<{
+  statusMappings: ImportStatusMappingRow[];
+  statusLookup: Record<string, string>;
+  statusLookupByPhase: Record<string, Record<string, string>>;
+}> {
+  const [phases, statusMappings] = await Promise.all([
+    ProjectModel.getPhases(trx, tenant, projectId),
+    trx('project_status_mappings as psm')
+      .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
+      .leftJoin('statuses as s', function(this: Knex.JoinClause) {
+        this.on('psm.status_id', 's.status_id')
+          .andOn('psm.tenant', 's.tenant');
+      })
+      .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
+        this.on('psm.standard_status_id', 'ss.standard_status_id')
+          .andOn('psm.tenant', 'ss.tenant');
+      })
+      .select(
+        'psm.*',
+        trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+        trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
+        trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+      )
+      .orderBy('psm.display_order'),
+  ]);
+
+  const defaultMappings = statusMappings.filter((mapping) => !mapping.phase_id);
+  const statusLookup = buildStatusLookupFromMappings(defaultMappings);
+  const statusLookupByPhase: Record<string, Record<string, string>> = {};
+
+  phases.forEach((phase) => {
+    const phaseMappings = statusMappings.filter((mapping) => mapping.phase_id === phase.phase_id);
+    const effectiveMappings = phaseMappings.length > 0 ? phaseMappings : defaultMappings;
+    statusLookupByPhase[phase.phase_name.toLowerCase().trim()] = buildStatusLookupFromMappings(
+      effectiveMappings
+    );
+  });
+
+  return {
+    statusMappings,
+    statusLookup,
+    statusLookupByPhase,
+  };
+}
+
 /**
  * Group CSV rows into phases and tasks structure
  * Note: Made async to satisfy Next.js server action requirements.
@@ -120,6 +190,7 @@ export async function groupRowsIntoPhases(
   priorityLookup: Record<string, string>,
   serviceLookup: Record<string, string>,
   statusLookup: Record<string, string> = {},
+  statusLookupByPhase: Record<string, Record<string, string>> = {},
   agentResolutions: IAgentResolution[] = []
 ): Promise<IGroupedPhaseData[]> {
   const phaseMap = new Map<string, IGroupedPhaseData>();
@@ -181,6 +252,7 @@ export async function groupRowsIntoPhases(
     const serviceName = row.service?.toLowerCase().trim() || '';
     const statusName = row.status?.trim() || '';
     const statusNameLower = statusName.toLowerCase();
+    const phaseStatusLookup = statusLookupByPhase[phaseName.toLowerCase().trim()] || statusLookup;
 
     phaseMap.get(phaseName)!.tasks.push({
       task_name: row.task_name.trim(),
@@ -194,7 +266,7 @@ export async function groupRowsIntoPhases(
       service_id: serviceLookup[serviceName] || null,
       task_type_key: row.task_type?.trim() || 'task',
       status_name: statusName || null,
-      status_mapping_id: statusLookup[statusNameLower] || null,
+      status_mapping_id: phaseStatusLookup[statusNameLower] || null,
       tags: row.tags ? row.tags.split(',').map(t => t.trim()).filter(t => t) : [],
     });
   }
@@ -319,7 +391,7 @@ export const getImportReferenceData = withAuth(async (
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     // Fetch all reference data in parallel within the same transaction
-    const [users, priorities, services, statusMappings] = await Promise.all([
+    const [users, priorities, services, statusReferenceData] = await Promise.all([
       // Users (only active internal/MSP agents - exclude client portal users)
       trx('users')
         .select('user_id', 'username', 'first_name', 'last_name', 'email', 'user_type', 'is_inactive', 'tenant')
@@ -342,27 +414,13 @@ export const getImportReferenceData = withAuth(async (
         .where('is_active', true)
         .orderBy('service_name'),
 
-      // Status mappings (only if projectId provided)
       projectId && tenant
-        ? trx('project_status_mappings as psm')
-            .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
-            .leftJoin('statuses as s', function(this: Knex.JoinClause) {
-              this.on('psm.status_id', 's.status_id')
-                .andOn('psm.tenant', 's.tenant');
-            })
-            .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
-              this.on('psm.standard_status_id', 'ss.standard_status_id')
-                .andOn('psm.tenant', 'ss.tenant');
-            })
-            .select(
-              'psm.project_status_mapping_id',
-              'psm.custom_name',
-              trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
-              trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
-              trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
-            )
-            .orderBy('psm.display_order')
-        : Promise.resolve([]),
+        ? getImportStatusReferenceData(trx, tenant, projectId)
+        : Promise.resolve({
+            statusMappings: [],
+            statusLookup: {},
+            statusLookupByPhase: {},
+          }),
     ]);
 
     // Build lookup maps (case-insensitive)
@@ -382,23 +440,16 @@ export const getImportReferenceData = withAuth(async (
       serviceLookup[service.service_name.toLowerCase().trim()] = service.service_id;
     });
 
-    const statusLookup: Record<string, string> = {};
-    statusMappings.forEach((mapping: { project_status_mapping_id: string; status_name?: string; name?: string; custom_name?: string }) => {
-      const statusName = mapping.custom_name || mapping.status_name || mapping.name;
-      if (statusName) {
-        statusLookup[statusName.toLowerCase().trim()] = mapping.project_status_mapping_id;
-      }
-    });
-
     return {
       users,
       priorities,
       services,
-      statusMappings,
+      statusMappings: statusReferenceData.statusMappings,
       userLookup,
       priorityLookup,
       serviceLookup,
-      statusLookup,
+      statusLookup: statusReferenceData.statusLookup,
+      statusLookupByPhase: statusReferenceData.statusLookupByPhase,
     };
   });
 });
@@ -412,20 +463,29 @@ export async function validatePhaseTaskImportDataWithReferenceData(
   rows: ITaskImportRow[],
   referenceData: IImportReferenceData
 ): Promise<IPhaseTaskValidationResponse> {
-  const { userLookup, priorityLookup, serviceLookup, statusLookup } = referenceData;
+  const {
+    userLookup,
+    priorityLookup,
+    serviceLookup,
+    statusLookup,
+    statusLookupByPhase = {},
+  } = referenceData;
 
   // Collect unique status names from CSV that don't match existing statuses
   const csvStatusNames = new Set<string>();
   rows.forEach(row => {
     const statusName = row.status?.trim();
     if (statusName) {
-      csvStatusNames.add(statusName);
+      const phaseKey = row.phase_name?.trim().toLowerCase() || DEFAULT_PHASE_NAME.toLowerCase();
+      csvStatusNames.add(`${phaseKey}::${statusName}`);
     }
   });
 
   const unmatchedStatuses: string[] = [];
-  csvStatusNames.forEach(statusName => {
-    if (!statusLookup[statusName.toLowerCase()]) {
+  csvStatusNames.forEach((phaseScopedStatus) => {
+    const [phaseKey, statusName] = phaseScopedStatus.split('::');
+    const lookup = statusLookupByPhase[phaseKey] || statusLookup;
+    if (!lookup[statusName.toLowerCase()]) {
       unmatchedStatuses.push(statusName);
     }
   });
@@ -533,7 +593,8 @@ export async function validatePhaseTaskImportDataWithReferenceData(
     priorityLookup,
     serviceLookup,
     statusLookup,
-    unmatchedStatuses,
+    statusLookupByPhase,
+    unmatchedStatuses: Array.from(new Set(unmatchedStatuses)),
     unmatchedAgents,
   };
 }
@@ -579,35 +640,14 @@ export const validatePhaseTaskImportData = withAuth(async (
     serviceLookup[service.service_name.toLowerCase().trim()] = service.service_id;
   });
 
-  // Build status lookup if projectId is provided
   const statusLookup: Record<string, string> = {};
+  let statusLookupByPhase: Record<string, Record<string, string>> = {};
   const unmatchedStatuses: string[] = [];
 
   if (projectId && tenant) {
-    // Query with joins to get actual status names
-    const statusMappings = await db('project_status_mappings as psm')
-      .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
-      .leftJoin('statuses as s', function(this: Knex.JoinClause) {
-        this.on('psm.status_id', 's.status_id')
-          .andOn('psm.tenant', 's.tenant');
-      })
-      .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
-        this.on('psm.standard_status_id', 'ss.standard_status_id')
-          .andOn('psm.tenant', 'ss.tenant');
-      })
-      .select(
-        'psm.*',
-        db.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
-        db.raw('COALESCE(psm.custom_name, s.name, ss.name) as name')
-      );
-
-    statusMappings.forEach((mapping: IProjectStatusMapping) => {
-      // Use custom_name if available, otherwise use status_name
-      const statusName = mapping.custom_name || mapping.status_name || mapping.name;
-      if (statusName) {
-        statusLookup[statusName.toLowerCase().trim()] = mapping.project_status_mapping_id;
-      }
-    });
+    const statusReferenceData = await getImportStatusReferenceData(db, tenant, projectId);
+    Object.assign(statusLookup, statusReferenceData.statusLookup);
+    statusLookupByPhase = statusReferenceData.statusLookupByPhase;
   }
 
   // Collect unique status names from CSV that don't match existing statuses
@@ -615,12 +655,15 @@ export const validatePhaseTaskImportData = withAuth(async (
   rows.forEach(row => {
     const statusName = row.status?.trim();
     if (statusName) {
-      csvStatusNames.add(statusName);
+      const phaseKey = row.phase_name?.trim().toLowerCase() || DEFAULT_PHASE_NAME.toLowerCase();
+      csvStatusNames.add(`${phaseKey}::${statusName}`);
     }
   });
 
-  csvStatusNames.forEach(statusName => {
-    if (!statusLookup[statusName.toLowerCase()]) {
+  csvStatusNames.forEach((phaseScopedStatus) => {
+    const [phaseKey, statusName] = phaseScopedStatus.split('::');
+    const lookup = statusLookupByPhase[phaseKey] || statusLookup;
+    if (!lookup[statusName.toLowerCase()]) {
       unmatchedStatuses.push(statusName);
     }
   });
@@ -738,7 +781,8 @@ export const validatePhaseTaskImportData = withAuth(async (
     priorityLookup,
     serviceLookup,
     statusLookup,
-    unmatchedStatuses,
+    statusLookupByPhase,
+    unmatchedStatuses: Array.from(new Set(unmatchedStatuses)),
     unmatchedAgents,
   };
 });
