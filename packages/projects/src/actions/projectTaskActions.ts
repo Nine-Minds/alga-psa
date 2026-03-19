@@ -174,6 +174,11 @@ function resolveSameProjectTargetStatusMapping(
     if (firstOpenMapping) {
       return firstOpenMapping;
     }
+  } else {
+    const firstClosedMapping = targetMappings.find((mapping) => mapping.is_closed);
+    if (firstClosedMapping) {
+      return firstClosedMapping;
+    }
   }
 
   return targetMappings[0] ?? null;

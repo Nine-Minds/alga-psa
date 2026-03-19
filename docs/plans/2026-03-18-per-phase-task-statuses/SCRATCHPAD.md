@@ -70,6 +70,7 @@
 - (2026-03-18) Implemented `F015` by extending the public `getProjectTaskStatuses()` action and its internal helpers with optional `phaseId`, switching them onto `ProjectModel.getEffectiveStatusMappings()`, and carrying `phase_id` into the returned `ProjectStatus` DTOs.
 - (2026-03-18) Implemented `F016` in `moveTaskToPhase()` by splitting same-project cross-phase moves from the existing cross-project branch, fetching target phase-effective mappings, and preserving intent via same-name matches when the original mapping ID is not valid in the destination phase.
 - (2026-03-18) Implemented `F017` by upgrading the same-project phase move fallback: if no same-name mapping exists and the source status is open, the task now lands in the first open target status by `display_order` instead of the first arbitrary column.
+- (2026-03-18) Implemented `F018` by making the fallback symmetric for closed work: if a closed task has no same-name match in the destination phase, `moveTaskToPhase()` now selects the first closed target status before falling back to the first overall column.
 
 ### Key Files — MSP UI
 - `packages/projects/src/components/ProjectDetail.tsx` — orchestrator, passes statuses to KanbanBoard (L2401-2406), phase selection (L186), task filtering (L346-425)
