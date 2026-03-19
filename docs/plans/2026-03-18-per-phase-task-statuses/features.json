@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "moveTaskToPhase(): cross-project moves continue to work as before",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4.2"]
   },
   {
