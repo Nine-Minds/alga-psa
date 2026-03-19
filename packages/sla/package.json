@@ -35,6 +35,16 @@
       "types": "./dist/services/slaNotificationService.d.ts",
       "import": "./dist/services/slaNotificationService.mjs",
       "require": "./dist/services/slaNotificationService.js"
+    },
+    "./services/backends": {
+      "types": "./dist/services/backends/index.d.ts",
+      "import": "./dist/services/backends/index.mjs",
+      "require": "./dist/services/backends/index.js"
+    },
+    "./services/itilSlaService": {
+      "types": "./dist/services/itilSlaService.d.ts",
+      "import": "./dist/services/itilSlaService.mjs",
+      "require": "./dist/services/itilSlaService.js"
     }
   },
   "scripts": {

@@ -5,10 +5,6 @@ import { TicketCrossFeatureProvider } from '@alga-psa/tickets/context/TicketCros
 import type { TicketCrossFeatureCallbacks, SlaStatusBadgeRenderProps, SlaIndicatorRenderProps } from '@alga-psa/tickets/context/TicketCrossFeatureContext';
 import { SlaStatusBadge } from '@alga-psa/sla/components';
 import { SlaIndicator } from '@alga-psa/sla/components';
-import { registerSlaIntegration } from './registerSlaIntegration';
-
-// Register SLA service integrations at module load time
-registerSlaIntegration();
 
 export function MspTicketCrossFeatureProvider({ children }: { children: ReactNode }) {
   const renderSlaStatusBadge = useCallback(
