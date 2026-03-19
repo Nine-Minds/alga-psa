@@ -9,7 +9,7 @@
   {
     "id": "TB02",
     "description": "Type safety: IProjectStatusMapping and ProjectStatus interfaces include optional phase_id in both packages/types and server/src/interfaces",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F006"],
     "covers": ["T007", "T008"]
   },
