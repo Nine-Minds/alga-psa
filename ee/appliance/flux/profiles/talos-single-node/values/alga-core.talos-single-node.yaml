@@ -10,6 +10,8 @@ bootstrap:
 setup:
   runMigrations: true
   runSeeds: true
+  applianceBootstrap:
+    enabled: true
   image:
     name: ghcr.io/nine-minds/alga-psa-ee
     is_private: false

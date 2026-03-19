@@ -18,6 +18,9 @@ spec:
         - name: bootstrap
           image: "{{ .Values.setup.image.name }}:{{ .Values.setup.image.tag }}"
           imagePullPolicy: {{ .Values.setup.pullPolicy }}
+          {{- if .Values.setup.applianceBootstrap.enabled }}
+          command: ["/bin/sh", "/bootstrap/appliance-bootstrap.sh"]
+          {{- else }}
           command: ["/bin/sh", "-ec"]
           args:
             - |
@@ -190,6 +193,7 @@ spec:
               fi
 
               log "Setup completed"
+          {{- end }}
           env:
             - name: APP_NAME
               value: "{{ .Values.nameOverride }}"
@@ -362,6 +366,19 @@ spec:
               value: {{ .Values.config.db.pgbouncer_password | quote }}
             {{- end }}
             {{- end }}
+          {{- if .Values.setup.applianceBootstrap.enabled }}
+          volumeMounts:
+            - name: appliance-bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+          {{- end }}
       restartPolicy: Never
+      {{- if .Values.setup.applianceBootstrap.enabled }}
+      volumes:
+        - name: appliance-bootstrap
+          configMap:
+            name: {{ include "sebastian.fullname" . }}-appliance-bootstrap
+            defaultMode: 0755
+      {{- end }}
   backoffLimit: 2
 {{- end }}
