@@ -52,7 +52,6 @@ import {
 } from '@alga-psa/billing/services/purchaseOrderService';
 import {
   buildBillingCycleDueSelectionInput,
-  buildRecurringRunSelectionIdentity as buildSelectionIdentity,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
@@ -252,8 +251,10 @@ function buildDuplicateRecurringInvoiceError(input: {
   invoiceId: string;
 }): Error {
   const billingCycleId = resolveRecurringInvoiceBridgeId(input.selectorInput);
+  const usesLegacyBillingCycleWindow =
+    input.selectorInput.executionWindow.kind === 'billing_cycle_window';
   const error = new Error(
-    billingCycleId
+    usesLegacyBillingCycleWindow
       ? 'Invoice already exists for this billing cycle'
       : 'Invoice already exists for this recurring execution window',
   );
@@ -273,21 +274,29 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
   tenant: string;
   selectorInput: IRecurringDueSelectionInput;
 }): Promise<{ invoiceId: string } | null> {
-  const billingCycleId = resolveRecurringInvoiceBridgeId(params.selectorInput);
-  if (billingCycleId) {
-    const invoice = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
-      return trx('invoices')
+  const executionWindow = params.selectorInput.executionWindow;
+  if (
+    executionWindow.kind === 'client_cadence_window'
+    && executionWindow.scheduleKey
+    && executionWindow.periodKey
+  ) {
+    const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+      return trx('recurring_service_periods')
         .where({
-          billing_cycle_id: billingCycleId,
           tenant: params.tenant,
+          cadence_owner: 'client',
+          schedule_key: executionWindow.scheduleKey,
+          period_key: executionWindow.periodKey,
+          invoice_window_start: params.selectorInput.windowStart,
+          invoice_window_end: params.selectorInput.windowEnd,
         })
+        .whereNotNull('invoice_id')
         .first('invoice_id');
     });
 
-    return invoice?.invoice_id ? { invoiceId: invoice.invoice_id } : null;
+    return linkedRow?.invoice_id ? { invoiceId: linkedRow.invoice_id } : null;
   }
 
-  const executionWindow = params.selectorInput.executionWindow;
   if (
     executionWindow.kind === 'contract_cadence_window'
     && executionWindow.contractLineId
@@ -306,6 +315,20 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     });
 
     return linkedRow?.invoice_id ? { invoiceId: linkedRow.invoice_id } : null;
+  }
+
+  const billingCycleId = resolveRecurringInvoiceBridgeId(params.selectorInput);
+  if (executionWindow.kind === 'billing_cycle_window' && billingCycleId) {
+    const invoice = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+      return trx('invoices')
+        .where({
+          billing_cycle_id: billingCycleId,
+          tenant: params.tenant,
+        })
+        .first('invoice_id');
+    });
+
+    return invoice?.invoice_id ? { invoiceId: invoice.invoice_id } : null;
   }
 
   return null;
@@ -355,164 +378,22 @@ export async function calculateBillingForSelectionInput(input: {
   billingEngine: BillingEngine;
   selectorInput: IRecurringDueSelectionInput;
 }) {
-  const billingCycleBridgeId = input.selectorInput.billingCycleId ?? null;
   const recurringTimingSelections =
     await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
       input.selectorInput.clientId,
       input.selectorInput.windowStart,
       input.selectorInput.windowEnd,
-      billingCycleBridgeId ?? input.selectorInput.executionWindow.identityKey,
     );
 
-  const canonicalBillingResult = billingCycleBridgeId
-    ? await input.billingEngine.calculateBilling(
-        input.selectorInput.clientId,
-        input.selectorInput.windowStart,
-        input.selectorInput.windowEnd,
-        billingCycleBridgeId,
-        {
-          recurringTimingSelections,
-          recurringTimingSelectionSource: 'persisted',
-        },
-      )
-    : await input.billingEngine.calculateBillingForExecutionWindow(
-        input.selectorInput.clientId,
-        input.selectorInput.windowStart,
-        input.selectorInput.windowEnd,
-        {
-          recurringTimingSelections,
-          recurringTimingSelectionSource: 'persisted',
-        },
-      );
-
-  await runRecurringBillingComparisonMode({
-    billingEngine: input.billingEngine,
-    clientId: input.selectorInput.clientId,
-    cycleStart: input.selectorInput.windowStart,
-    cycleEnd: input.selectorInput.windowEnd,
-    billingCycleId: billingCycleBridgeId,
-    comparisonTrace: {
-      executionIdentityKeys: [input.selectorInput.executionWindow.identityKey],
-      executionWindowKinds: [input.selectorInput.executionWindow.kind],
-      selectionKey: buildSelectionIdentity([input.selectorInput.executionWindow]).selectionKey,
+  return input.billingEngine.calculateBillingForExecutionWindow(
+    input.selectorInput.clientId,
+    input.selectorInput.windowStart,
+    input.selectorInput.windowEnd,
+    {
+      recurringTimingSelections,
+      recurringTimingSelectionSource: 'persisted',
     },
-    canonicalBillingResult,
-  });
-
-  return canonicalBillingResult;
-}
-
-type RecurringBillingComparisonMode = 'off' | 'legacy-vs-canonical';
-
-const RECURRING_COMPARISON_CHARGE_TYPES = new Set<IBillingCharge['type']>([
-  'fixed',
-  'product',
-  'license',
-  'bucket',
-]);
-
-function getRecurringBillingComparisonMode(): RecurringBillingComparisonMode {
-  return process.env.RECURRING_BILLING_COMPARISON_MODE === 'legacy-vs-canonical'
-    ? 'legacy-vs-canonical'
-    : 'off';
-}
-
-function isRecurringComparisonCharge(charge: IBillingCharge): boolean {
-  return Boolean(
-    charge.client_contract_line_id &&
-      RECURRING_COMPARISON_CHARGE_TYPES.has(charge.type),
   );
-}
-
-function createRecurringBillingComparisonSnapshot(billingResult: IBillingResult) {
-  const recurringCharges = (billingResult.charges ?? []).filter(
-    isRecurringComparisonCharge,
-  );
-
-  return {
-    recurringChargeTotal: recurringCharges.reduce(
-      (sum, charge) => sum + (charge.total ?? 0),
-      0,
-    ),
-    recurringChargeCount: recurringCharges.length,
-    charges: recurringCharges
-      .map((charge) => ({
-        type: charge.type,
-        clientContractLineId: charge.client_contract_line_id ?? null,
-        serviceId: charge.serviceId ?? charge.service_id ?? null,
-        total: charge.total ?? 0,
-        servicePeriodStart: charge.servicePeriodStart ?? null,
-        servicePeriodEnd: charge.servicePeriodEnd ?? null,
-        billingTiming: charge.billingTiming ?? null,
-      }))
-      .sort((left, right) =>
-        JSON.stringify(left).localeCompare(JSON.stringify(right)),
-      ),
-  };
-}
-
-function recurringBillingComparisonSnapshotsMatch(
-  canonicalBillingResult: IBillingResult,
-  legacyBillingResult: IBillingResult,
-): boolean {
-  return JSON.stringify(createRecurringBillingComparisonSnapshot(canonicalBillingResult)) ===
-    JSON.stringify(createRecurringBillingComparisonSnapshot(legacyBillingResult));
-}
-
-async function runRecurringBillingComparisonMode(input: {
-  billingEngine: BillingEngine;
-  clientId: string;
-  cycleStart: ISO8601String;
-  cycleEnd: ISO8601String;
-  billingCycleId: string | null;
-  comparisonTrace?: {
-    executionIdentityKeys: string[];
-    executionWindowKinds: string[];
-    selectionKey: string;
-  };
-  canonicalBillingResult: IBillingResult;
-}) {
-  if (getRecurringBillingComparisonMode() !== 'legacy-vs-canonical') {
-    return;
-  }
-
-  if (!input.billingCycleId) {
-    return;
-  }
-
-  try {
-    const legacyBillingResult = await input.billingEngine.calculateBilling(
-      input.clientId,
-      input.cycleStart,
-      input.cycleEnd,
-      input.billingCycleId,
-    );
-
-    if (!recurringBillingComparisonSnapshotsMatch(input.canonicalBillingResult, legacyBillingResult)) {
-      console.warn(
-        '[recurring-billing-comparison] Drift detected between canonical and legacy-style invoice-window billing results.',
-        {
-          billingCycleId: input.billingCycleId,
-          selectionKey: input.comparisonTrace?.selectionKey,
-          executionIdentityKeys: input.comparisonTrace?.executionIdentityKeys,
-          executionWindowKinds: input.comparisonTrace?.executionWindowKinds,
-          canonical: createRecurringBillingComparisonSnapshot(input.canonicalBillingResult),
-          legacy: createRecurringBillingComparisonSnapshot(legacyBillingResult),
-        },
-      );
-    }
-  } catch (error) {
-    console.error(
-      '[recurring-billing-comparison] Comparison mode failed; canonical billing result was preserved.',
-      {
-        billingCycleId: input.billingCycleId,
-        selectionKey: input.comparisonTrace?.selectionKey,
-        executionIdentityKeys: input.comparisonTrace?.executionIdentityKeys,
-        executionWindowKinds: input.comparisonTrace?.executionWindowKinds,
-        error,
-      },
-    );
-  }
 }
 
 export type PurchaseOrderOverageDecision = 'allow' | 'skip';
@@ -794,8 +675,7 @@ async function buildPreviewInvoiceForSelectionInput(params: {
   const { knex, tenant, selectorInput } = params;
   const client_id = selectorInput.clientId;
   const cycleEnd = selectorInput.windowEnd;
-  const previewInvoiceKey =
-    resolveRecurringInvoiceBridgeId(selectorInput) ?? selectorInput.executionWindow.identityKey;
+  const previewInvoiceKey = selectorInput.executionWindow.identityKey;
 
   const clientForValidation = await knex('clients')
     .where({ client_id, tenant })

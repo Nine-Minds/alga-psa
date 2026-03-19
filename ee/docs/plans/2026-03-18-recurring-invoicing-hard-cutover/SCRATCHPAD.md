@@ -43,6 +43,17 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
     - [recurringBillingRunWindowIdentity.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/recurringBillingRunWindowIdentity.test.ts)
     - [automaticInvoices.recurringDueWork.ui.test.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx)
     - [contractPurchaseOrderSupport.ui.test.tsx](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx)
+- Billing-calculation and duplicate-detection slice completed:
+  - Updated [invoiceGeneration.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/invoiceGeneration.ts) so selector-input billing always executes through `calculateBillingForExecutionWindow(...)`, no longer runs rollout-era legacy-vs-canonical comparison mode, and checks client-cadence duplicates via canonical `recurring_service_periods` schedule/period linkage before any legacy billing-cycle fallback.
+  - Updated [billingEngine.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/lib/billing/billingEngine.ts) to remove the unused billing-cycle parameter from persisted recurring due-selection loading.
+  - Added/updated focused tests:
+    - [invoiceGeneration.recurringSelection.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts)
+    - [invoiceGeneration.duplicate.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.duplicate.test.ts)
+    - [invoiceGeneration.duplicate.static.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.duplicate.static.test.ts)
+    - [invoiceGeneration.selectorInputGenerate.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts)
+    - [invoiceGeneration.preview.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.preview.test.ts)
+    - [invoiceGeneration.emptyResult.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.emptyResult.test.ts)
+    - [invoiceGeneration.zeroDollarFinalization.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts)
 
 - Billing UI/actions sweep:
   - `AutomaticInvoices`, due-work selection, recurring run target selection, history, reversal/delete, accounting export, and some authoring/storage helpers still preserve bridge-first recurring behavior.
@@ -78,6 +89,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) `invoiceModification.ts` still uses null/non-null `billing_cycle_id` to classify prepayment-style invoices, which will misclassify bridge-less recurring invoices.
 - (2026-03-18) `billingAndTax.ts` now sources ready recurring work only from `recurring_service_periods`, but the separate repair-gap surface still needs downstream UI handling so operators can act on missing materialization without relying on compatibility rows.
 - (2026-03-18) recurring run selection and `AutomaticInvoices` generation now use canonical selector-input targets, but preview/generate API contracts and shared type unions still carry legacy `billing_cycle_id` or `billing_cycle_window` semantics outside the run-action surface.
+- (2026-03-18) `calculateBillingForSelectionInput(...)` and selector-input duplicate detection are now canonical-first, but the compatibility `generateInvoice(...)` / `previewInvoice(...)` wrappers still materialize `billing_cycle_window` selector inputs until recurring API request-shape cleanup lands.
 - (2026-03-18) `billingCycleActions.ts` still frames recurring history and reversal as billing-cycle operations.
 - (2026-03-18) `InvoiceService.ts` still classifies recurring invoice rows via `invoices.billing_cycle_id` in some read paths.
 - (2026-03-18) one API service path still appears to reference old cycle column names (`cycle_id`, `period_start`, `period_end`) and should be rechecked during cleanup.
@@ -95,6 +107,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/recurringBillingRunActions.static.test.ts src/test/unit/billing/recurringBillingRunWorkflowEvents.test.ts src/test/unit/billing/recurringBillingRunWindowIdentity.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.emptyResult.test.ts src/test/unit/billing/invoiceGeneration.duplicate.test.ts src/test/unit/billing/invoiceGeneration.duplicate.static.test.ts src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -109,6 +122,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) F010/F011/F012/F013 implemented by removing raw-cycle recurring run entrypoints, selecting recurring runs from canonical due-work rows only, and making the recurring run executor invoke selector-input invoice generation for all cadence owners.
 - (2026-03-18) F014/F015 implemented at the run-target boundary by removing required `billingCycleId` from recurring run target contracts and making client-cadence run identity schedule/period/window keyed end to end.
 - (2026-03-18) T007/T008/T023/T024/T026/T027/T028 implemented with unit, integration, static, and UI coverage for bridge-free execution identity keys, canonical recurring run selection, and selector-input-only recurring run execution.
+- (2026-03-18) F016 implemented by removing the billing-cycle-vs-execution-window branch from selector-input billing calculation helpers and using execution-window-first billing for recurring selector inputs and compatibility wrappers alike.
+- (2026-03-18) F017 implemented by deleting the rollout-era recurring comparison-mode branch from `invoiceGeneration.ts`.
+- (2026-03-18) T020/T021/T022 implemented with client-cadence, contract-cadence, and static source coverage showing duplicate detection uses canonical recurring linkage before any legacy billing-cycle fallback.
 
 ## Links / References
 

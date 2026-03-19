@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  buildClientCadenceDueSelectionInput,
+} from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 type Row = Record<string, any>;
 
@@ -18,6 +21,10 @@ function createQueryBuilder(rows: Row[]) {
       resultRows = resultRows.filter((row) =>
         Object.entries(criteria).every(([key, expected]) => row[normalizeColumn(key)] === expected),
       );
+      return builder;
+    }),
+    whereNotNull: vi.fn((column: string) => {
+      resultRows = resultRows.filter((row) => row[normalizeColumn(column)] != null);
       return builder;
     }),
     select: vi.fn(() => builder),
@@ -50,8 +57,20 @@ const mocks = vi.hoisted(() => {
     invoices: [
       {
         invoice_id: 'invoice-1',
-        billing_cycle_id: 'cycle-1',
+        billing_cycle_id: null,
         tenant: 'tenant-1',
+      },
+    ],
+    recurring_service_periods: [
+      {
+        record_id: 'record-1',
+        tenant: 'tenant-1',
+        cadence_owner: 'client',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        period_key: 'period:2025-02-01:2025-03-01',
+        invoice_window_start: '2025-02-01',
+        invoice_window_end: '2025-03-01',
+        invoice_id: 'invoice-1',
       },
     ],
   };
@@ -143,20 +162,31 @@ vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
 }));
 
 const {
-  DUPLICATE_RECURRING_INVOICE_CODE,
-  generateInvoice,
+  generateInvoiceForSelectionInput,
 } = await import('../../../../../packages/billing/src/actions/invoiceGeneration');
+const {
+  DUPLICATE_RECURRING_INVOICE_CODE,
+} = await import('../../../../../packages/billing/src/actions/invoiceGeneration.constants');
 
 describe('invoice generation duplicate prevention', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('T086: duplicate-invoice prevention blocks a second invoice for the same recurring due window with an explicit duplicate error', async () => {
-    await expect(generateInvoice('cycle-1')).rejects.toMatchObject({
-      message: 'Invoice already exists for this billing cycle',
+  it('T020: duplicate-invoice prevention blocks a second invoice for the same client-cadence recurring window without consulting invoices.billing_cycle_id', async () => {
+    const selectorInput = buildClientCadenceDueSelectionInput({
+      clientId: 'client-1',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+      periodKey: 'period:2025-02-01:2025-03-01',
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+    });
+
+    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
+      message: 'Invoice already exists for this recurring execution window',
       code: DUPLICATE_RECURRING_INVOICE_CODE,
-      billingCycleId: 'cycle-1',
+      billingCycleId: null,
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
       invoiceId: 'invoice-1',
     });
   });

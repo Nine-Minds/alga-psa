@@ -77,6 +77,26 @@ const mocks = vi.hoisted(() => {
     createQueryBuilder(rowsByTable[normalizeTableName(tableName)] ?? [], normalizeTableName(tableName)),
   ) as any;
   knex.raw = vi.fn((sql: string) => sql);
+  const calculateBilling = vi.fn(async () => ({
+    charges: [
+      {
+        type: 'fixed',
+        serviceName: 'Managed Support',
+        rate: 0,
+        total: 0,
+        quantity: 1,
+        client_contract_line_id: 'contract-line-1',
+        servicePeriodStart: '2025-02-01',
+        servicePeriodEnd: '2025-03-01',
+        billingTiming: 'advance',
+      },
+    ],
+    discounts: [],
+    adjustments: [],
+    totalAmount: 0,
+    finalAmount: 0,
+    currency_code: 'USD',
+  }));
 
   return {
     rowsByTable,
@@ -106,26 +126,8 @@ const mocks = vi.hoisted(() => {
         coverageRatio: 1,
       },
     })),
-    calculateBilling: vi.fn(async () => ({
-      charges: [
-        {
-          type: 'fixed',
-          serviceName: 'Managed Support',
-          rate: 0,
-          total: 0,
-          quantity: 1,
-          client_contract_line_id: 'contract-line-1',
-          servicePeriodStart: '2025-02-01',
-          servicePeriodEnd: '2025-03-01',
-          billingTiming: 'advance',
-        },
-      ],
-      discounts: [],
-      adjustments: [],
-      totalAmount: 0,
-      finalAmount: 0,
-      currency_code: 'USD',
-    })),
+    calculateBilling,
+    calculateBillingForExecutionWindow: vi.fn(async (...args: any[]) => calculateBilling(...args)),
     getFullInvoiceById: vi.fn(async (_knex: unknown, _tenant: string, invoiceId: string) => ({
       invoice_id: invoiceId,
       status: 'sent',
@@ -208,6 +210,7 @@ vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => (
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;
+    calculateBillingForExecutionWindow = mocks.calculateBillingForExecutionWindow;
     rolloverUnapprovedTime = vi.fn(async () => undefined);
   },
 }));

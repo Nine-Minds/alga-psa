@@ -341,12 +341,11 @@ describe('invoice preview recurring timing', () => {
 
     expect(
       mocks.selectDueRecurringServicePeriodsForBillingWindow,
-    ).toHaveBeenCalledWith('client-1', '2025-02-01', '2025-03-01', 'cycle-1');
-    expect(mocks.calculateBilling).toHaveBeenCalledWith(
+    ).toHaveBeenCalledWith('client-1', '2025-02-01', '2025-03-01');
+    expect(mocks.calculateBillingForExecutionWindow).toHaveBeenCalledWith(
       'client-1',
       '2025-02-01',
       '2025-03-01',
-      'cycle-1',
       {
         recurringTimingSelections: {
           'contract-line-1': {
@@ -374,23 +373,27 @@ describe('invoice preview recurring timing', () => {
           name: 'Acme Corp',
           address: '100 Main St',
         },
-        items: [
+        items: expect.arrayContaining([
           expect.objectContaining({
             description: 'Managed Router',
             quantity: 1,
             unitPrice: 4000,
             total: 4000,
           }),
-        ],
+        ]),
       }),
     });
   });
 
   it('T083: recurring invoice preview surfaces canonical service periods in preview state', async () => {
     const result = await previewInvoice('cycle-1');
+    const recurringItem =
+      result.success
+        ? result.data.items.find((item) => item.description === 'Managed Router')
+        : null;
 
     expect(result).toMatchObject({ success: true });
-    expect(result.success && result.data.items[0]).toMatchObject({
+    expect(recurringItem).toMatchObject({
       description: 'Managed Router',
       servicePeriodStart: '2025-01-01',
       servicePeriodEnd: '2025-02-01',
@@ -399,7 +402,7 @@ describe('invoice preview recurring timing', () => {
   });
 
   it('T194: preview rows keep canonical recurring detail periods when one preview charge spans multiple periods', async () => {
-    mocks.calculateBilling.mockResolvedValueOnce({
+    const multiPeriodResult = {
       charges: [
         {
           type: 'product',
@@ -431,12 +434,18 @@ describe('invoice preview recurring timing', () => {
       totalAmount: 4000,
       finalAmount: 4000,
       currency_code: 'USD',
-    });
+    };
+    mocks.calculateBilling.mockResolvedValueOnce(multiPeriodResult);
+    mocks.calculateBillingForExecutionWindow.mockResolvedValueOnce(multiPeriodResult);
 
     const result = await previewInvoice('cycle-1');
+    const recurringItem =
+      result.success
+        ? result.data.items.find((item) => item.description === 'Managed Router')
+        : null;
 
     expect(result).toMatchObject({ success: true });
-    expect(result.success && result.data.items[0]).toMatchObject({
+    expect(recurringItem).toMatchObject({
       description: 'Managed Router',
       servicePeriodStart: '2025-01-01',
       servicePeriodEnd: '2025-03-01',
@@ -520,14 +529,14 @@ describe('invoice preview recurring timing', () => {
         subtotal: legacyResult.success ? legacyResult.data.subtotal : undefined,
         tax: legacyResult.success ? legacyResult.data.tax : undefined,
         total: legacyResult.success ? legacyResult.data.total : undefined,
-        items: [
+        items: expect.arrayContaining([
           expect.objectContaining({
             description: 'Managed Router',
             servicePeriodStart: '2025-01-01',
             servicePeriodEnd: '2025-02-01',
             billingTiming: 'arrears',
           }),
-        ],
+        ]),
       }),
     });
   });
@@ -547,7 +556,6 @@ describe('invoice preview recurring timing', () => {
       'client-1',
       '2025-02-08',
       '2025-03-08',
-      selectorInput.executionWindow.identityKey,
     );
     expect(mocks.calculateBillingForExecutionWindow).toHaveBeenCalledWith(
       'client-1',

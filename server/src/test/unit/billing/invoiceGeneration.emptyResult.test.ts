@@ -88,6 +88,7 @@ const mocks = vi.hoisted(() => {
     getNextBillingDate,
     selectDueRecurringServicePeriodsForBillingWindow,
     calculateBilling,
+    calculateBillingForExecutionWindow: vi.fn(async (...args: any[]) => calculateBilling(...args)),
     getFullInvoiceById,
   };
 });
@@ -141,6 +142,7 @@ vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => (
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;
+    calculateBillingForExecutionWindow = mocks.calculateBillingForExecutionWindow;
   },
 }));
 
@@ -182,13 +184,11 @@ describe('invoice generation empty recurring selections', () => {
       'client-1',
       '2025-02-01T00:00:00.000Z',
       '2025-03-01T00:00:00.000Z',
-      'cycle-1',
     );
-    expect(mocks.calculateBilling).toHaveBeenCalledWith(
+    expect(mocks.calculateBillingForExecutionWindow).toHaveBeenCalledWith(
       'client-1',
       '2025-02-01T00:00:00.000Z',
       '2025-03-01T00:00:00.000Z',
-      'cycle-1',
       {
         recurringTimingSelections: {},
         recurringTimingSelectionSource: 'persisted',

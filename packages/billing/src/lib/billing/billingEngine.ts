@@ -348,7 +348,6 @@ export class BillingEngine {
     clientId: string,
     startDate: ISO8601String,
     endDate: ISO8601String,
-    _billingCycleId: string,
   ): Promise<RecurringChargeTimingSelections> {
     this.clientDefaultTaxRegionCodeCache.clear();
     return this.withPinnedTransaction(async () => {

@@ -330,7 +330,6 @@ describe('selector-input recurring generation', () => {
       'client-1',
       '2025-02-08',
       '2025-03-08',
-      selectorInput.executionWindow.identityKey,
     );
     expect(mocks.calculateBillingForExecutionWindow).toHaveBeenCalled();
     expect(mocks.rowsByTable.invoices[0]?.billing_cycle_id ?? null).toBeNull();
@@ -346,16 +345,15 @@ describe('selector-input recurring generation', () => {
       'client-1',
       '2025-02-01T00:00:00.000Z',
       '2025-03-01T00:00:00.000Z',
-      'cycle-1',
     );
-    expect(mocks.calculateBilling).toHaveBeenCalled();
+    expect(mocks.calculateBillingForExecutionWindow).toHaveBeenCalled();
     expect(mocks.rowsByTable.invoices[0]?.billing_cycle_id).toBe('cycle-1');
     expect(result).toMatchObject({
       billing_cycle_id: 'cycle-1',
     });
   });
 
-  it('T024: duplicate prevention blocks re-invoicing the same contract-cadence execution window even when there is no billing_cycle_id', async () => {
+  it('T021: duplicate prevention blocks re-invoicing the same contract-cadence execution window even when there is no billing_cycle_id', async () => {
     const selectorInput = buildContractCadenceDueSelectionInput({
       clientId: 'client-1',
       contractId: 'contract-1',
