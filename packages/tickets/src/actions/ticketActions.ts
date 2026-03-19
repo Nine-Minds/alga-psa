@@ -54,7 +54,7 @@ import {
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((ticketId: string) => Promise<void>) | null = null;
 
-export function registerSlaCancellation(fn: (ticketId: string) => Promise<void>): void {
+export async function registerSlaCancellation(fn: (ticketId: string) => Promise<void>): Promise<void> {
   _cancelSlaFn = fn;
 }
 
