@@ -80,12 +80,13 @@ export const addStatusToProject = withAuth(async (
 export const getProjectStatusMappings = withAuth(async (
   _user,
   { tenant },
-  projectId: string
+  projectId: string,
+  phaseId?: string | null
 ): Promise<IProjectStatusMapping[]> => {
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    return await trx('project_status_mappings as psm')
+    const query = trx('project_status_mappings as psm')
       .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
       .leftJoin('statuses as s', function(this: Knex.JoinClause) {
         this.on('psm.status_id', 's.status_id')
@@ -100,8 +101,15 @@ export const getProjectStatusMappings = withAuth(async (
         trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
         trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
         trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
-      )
-      .orderBy('psm.display_order');
+      );
+
+    if (phaseId) {
+      query.andWhere('psm.phase_id', phaseId);
+    } else {
+      query.whereNull('psm.phase_id');
+    }
+
+    return await query.orderBy('psm.display_order');
   });
 });
 
