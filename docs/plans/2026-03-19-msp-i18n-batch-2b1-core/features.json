@@ -2,37 +2,37 @@
   {
     "id": "F001",
     "description": "Add translationKey field to MenuItem and NavigationSection interfaces in menuConfig.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1"]
   },
   {
     "id": "F002",
     "description": "Add translationKey values to all navigationSections items (main nav: Home, Tickets, Projects, etc.)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1"]
   },
   {
     "id": "F003",
     "description": "Add translationKey values to bottomMenuItems (Settings, Support, and sub-items)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1"]
   },
   {
     "id": "F004",
     "description": "Add translationKey values to settingsNavigationSections (section titles + all items including Language, SLA)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1", "FR13"]
   },
   {
     "id": "F005",
     "description": "Add translationKey values to billingNavigationSections (section titles + 12 items)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1", "FR12"]
   },
   {
     "id": "F006",
     "description": "Add translationKey values to extensionsNavigationSections",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1"]
   },
   {

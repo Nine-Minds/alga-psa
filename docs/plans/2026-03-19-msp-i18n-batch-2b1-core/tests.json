@@ -2,55 +2,55 @@
   {
     "id": "T001",
     "description": "menuConfig.ts: MenuItem interface accepts optional translationKey field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
     "id": "T002",
     "description": "menuConfig.ts: NavigationSection interface accepts optional translationKey field for section titles",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
     "id": "T003",
     "description": "menuConfig.ts: all navigationSections items have translationKey matching msp/core nav.* keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
     "id": "T004",
     "description": "menuConfig.ts: all sub-items (Projects > All Projects/Templates, Documents > All Documents/Knowledge Base, etc.) have translationKeys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
     "id": "T005",
     "description": "menuConfig.ts: bottomMenuItems (Settings, Support, sub-items General/Profile/Security) have translationKeys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
     "id": "T006",
     "description": "menuConfig.ts: all 6 settingsNavigationSections section titles have translationKeys matching settings.sections.*",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T007",
     "description": "menuConfig.ts: all settings items including Language and SLA have translationKeys matching settings.tabs.*",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F042"]
   },
   {
     "id": "T008",
     "description": "menuConfig.ts: all 4 billingNavigationSections titles have translationKeys matching nav.billing.sections.*",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T009",
     "description": "menuConfig.ts: all 12 billing items have translationKeys matching nav.billing.*",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F043"]
   },
   {

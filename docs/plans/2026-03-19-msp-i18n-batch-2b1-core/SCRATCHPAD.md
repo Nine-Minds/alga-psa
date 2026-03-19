@@ -33,6 +33,11 @@
 - (2026-03-19) `ROUTE_NAMESPACES` currently maps `/msp` to `['common', 'msp/core']`. Need to add `'msp/dashboard'` to both `/msp` and `/msp/dashboard` routes.
 - (2026-03-19) `DashboardOnboardingSlot.tsx` and `DashboardOnboardingSkeleton.tsx` have no user-visible text — just layout/loading components. No translation needed.
 
+## Progress Log
+
+- (2026-03-19) Completed `F001-F006` and `T001-T009` together in the shared menu config layer. Added optional `translationKey` metadata to `MenuItem` and `NavigationSection`, populated every main/bottom/settings/billing/extensions nav item with stable i18n keys, and added `server/src/test/unit/layout/menuConfig.i18n.test.ts` to lock the mapping in place before Sidebar/Header consume it.
+- (2026-03-19) New core keys implied by the menu config and still pending locale-file work: `nav.documentsAll`, `nav.knowledgeBase`, `nav.controlPanel`, `nav.workflowEditor`, `nav.systemMonitoring`, `nav.jobMonitoring`, `settings.tabs.language`, `settings.tabs.sla`, and all `nav.billing.*` entries.
+
 ## Commands / Runbooks
 
 - **Validate translations**: `npx ts-node scripts/validate-translations.ts`
