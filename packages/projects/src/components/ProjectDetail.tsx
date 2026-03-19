@@ -199,6 +199,7 @@ export default function ProjectDetail({
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
+  const [statusVersion, setStatusVersion] = useState(0);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<ProjectStatus | null>(null);
@@ -285,6 +286,31 @@ export default function ProjectDetail({
       }
     }
   }, [projectPhases, initialTaskId, initialPhaseId]); // Intentionally exclude selectedPhase to avoid re-triggering
+
+  useEffect(() => {
+    let stale = false;
+
+    const fetchStatusesForPhase = async () => {
+      if (!selectedPhase) {
+        setProjectStatuses(initialStatuses);
+        return;
+      }
+
+      try {
+        const statuses = await getProjectTaskStatuses(project.project_id, selectedPhase.phase_id);
+        if (!stale) {
+          setProjectStatuses(statuses);
+        }
+      } catch (error) {
+        if (!stale) {
+          console.error('Error fetching phase-effective statuses:', error);
+        }
+      }
+    };
+
+    fetchStatusesForPhase();
+    return () => { stale = true; };
+  }, [initialStatuses, project.project_id, selectedPhase?.phase_id, statusVersion]);
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -427,11 +453,16 @@ export default function ProjectDetail({
     return tasks;
   }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
 
+  const phaseStatusLookup = useMemo(
+    () => new Map(projectStatuses.map((status) => [status.project_status_mapping_id, status])),
+    [projectStatuses]
+  );
+
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
-      projectStatuses.find(status => status.project_status_mapping_id === task.project_status_mapping_id)?.is_closed === true
+      phaseStatusLookup.get(task.project_status_mapping_id)?.is_closed === true
     ).length;
-  }, [filteredTasks, projectStatuses]);
+  }, [filteredTasks, phaseStatusLookup]);
 
   // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
   useEffect(() => {
@@ -557,6 +588,23 @@ export default function ProjectDetail({
     column: null
   });
   const phasesContainerRef = useRef<HTMLDivElement>(null);
+  const pageContainerRef = useRef<HTMLDivElement>(null);
+
+  // Dynamically set min-height on pageContainer so it fills exactly the remaining
+  // viewport, eliminating the dead-zone scroll caused by a static min-height: 100vh.
+  useEffect(() => {
+    const el = pageContainerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      el.style.minHeight = `calc(100dvh - ${top}px)`;
+    };
+
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -591,16 +639,21 @@ export default function ProjectDetail({
 
   const kanbanColumnWidth = useMemo(() => calculateColumnWidth(kanbanZoomLevel), [kanbanZoomLevel]);
   const visibleKanbanStatuses = useMemo(
-    () => projectStatuses.filter((status) => status.is_visible),
+    () => projectStatuses
+      .filter((status) => status.is_visible)
+      .sort((a, b) => a.display_order - b.display_order),
     [projectStatuses]
   );
   const statusTaskCounts = useMemo(() => {
     return filteredTasks.reduce<Record<string, number>>((counts, task) => {
       const statusId = task.project_status_mapping_id;
+      if (!phaseStatusLookup.has(statusId)) {
+        return counts;
+      }
       counts[statusId] = (counts[statusId] ?? 0) + 1;
       return counts;
     }, {});
-  }, [filteredTasks]);
+  }, [filteredTasks, phaseStatusLookup]);
 
   const getStatusStripStyles = useCallback((status: ProjectStatus, index: number) => {
     if (status.color) {
@@ -1106,7 +1159,7 @@ export default function ProjectDetail({
 
     fetchPhaseTasks();
     return () => { stale = true; };
-  }, [selectedPhase]);
+  }, [selectedPhase?.phase_id, statusVersion]);
 
   // Fetch avatar URLs for task resources (additional agents)
   useEffect(() => {
@@ -2626,7 +2679,7 @@ export default function ProjectDetail({
             phaseTasks={filteredTasks}
             users={users}
             taskTypes={taskTypes}
-            statuses={projectStatuses}
+            statuses={visibleKanbanStatuses}
             isAddingTask={isAddingTask}
             selectedPhase={!!selectedPhase}
             ticketLinks={phaseTicketLinks}
@@ -2646,6 +2699,7 @@ export default function ProjectDetail({
             searchCaseSensitive={searchCaseSensitive}
             searchWholeWord={searchWholeWord}
             zoomLevel={kanbanZoomLevel}
+            hideHeader={showStickyStatusNames}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onAddCard={handleAddCard}
@@ -2666,9 +2720,9 @@ export default function ProjectDetail({
   };
 
   return (
-    <div className={styles.pageContainer}>
+    <div ref={pageContainerRef} className={styles.pageContainer}>
       <Toaster position="top-right" />
-      <div 
+      <div
         className={styles.mainContent}
         onDragOver={handleDragOver}
       >
@@ -2694,6 +2748,7 @@ export default function ProjectDetail({
               <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
                 <ProjectPhases
                   phases={projectPhases}
+                  projectId={project.project_id}
                   selectedPhase={selectedPhase}
                   isAddingTask={isAddingTask}
                   editingPhaseId={editingPhaseId}
@@ -2728,6 +2783,7 @@ export default function ProjectDetail({
                   onDrop={handlePhaseDropZone}
                   onDragStart={handlePhaseDragStart}
                   onDragEnd={handlePhaseDragEnd}
+                  onStatusesChanged={() => setStatusVersion(v => v + 1)}
                   onImport={() => setShowImportDialog(true)}
                 />
               </div>

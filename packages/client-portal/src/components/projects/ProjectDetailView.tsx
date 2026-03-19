@@ -108,7 +108,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   // When only phases are enabled (no tasks), force list view
   const effectiveViewMode = showTasks ? viewMode : 'list';
 
-  // Load phases and statuses
+  // Load phases
   useEffect(() => {
     const fetchData = async () => {
       if (!showPhases && !showTasks) {
@@ -118,10 +118,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
 
       setDataLoading(true);
       try {
-        const [phasesResult, statusesResult] = await Promise.all([
-          showPhases ? getClientProjectPhases(project.project_id) : null,
-          showTasks ? getClientProjectStatuses(project.project_id) : null
-        ]);
+        const phasesResult = showPhases ? await getClientProjectPhases(project.project_id) : null;
 
         if (phasesResult?.phases) {
           setPhases(phasesResult.phases);
@@ -130,19 +127,37 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
             setSelectedPhaseId(phasesResult.phases[0].phase_id);
           }
         }
-
-        if (statusesResult?.statuses) {
-          setStatuses(statusesResult.statuses);
-        }
       } catch (error) {
-        console.error('Error fetching phases/statuses:', error);
+        console.error('Error fetching phases:', error);
       } finally {
         setDataLoading(false);
       }
     };
 
     fetchData();
-  }, [project.project_id, showPhases, showTasks]);
+  }, [project.project_id, selectedPhaseId, showPhases, showTasks]);
+
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      if (!showTasks) {
+        setStatuses([]);
+        return;
+      }
+
+      try {
+        const statusesResult = await getClientProjectStatuses(project.project_id, selectedPhaseId);
+        if (statusesResult?.statuses) {
+          setStatuses(statusesResult.statuses);
+        } else {
+          setStatuses([]);
+        }
+      } catch (error) {
+        console.error('Error fetching phase statuses:', error);
+      }
+    };
+
+    fetchStatuses();
+  }, [project.project_id, selectedPhaseId, showTasks]);
 
   // Load tasks - single function handles both views
   useEffect(() => {

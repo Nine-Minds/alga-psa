@@ -33,7 +33,60 @@
   "phases": {
     "title": "Fasi del progetto",
     "completion": "Completato",
-    "noPhases": "Nessuna fase da visualizzare"
+    "noPhases": "Nessuna fase da visualizzare",
+    "statusColumns": "Colonne di stato",
+    "statusColumnsProjectDefaults": "Predefiniti del progetto",
+    "statusColumnsCustom": "Personalizzato ({{count}} stati)",
+    "configureStatuses": "Configura"
+  },
+  "settings": {
+    "statuses": {
+      "project": {
+        "title": "Colonne di stato attività",
+        "description": "Configura quali colonne di stato sono disponibili per le attività",
+        "add_from_library": "Aggiungi stato"
+      },
+      "closed": "Chiuso",
+      "confirm_delete_title": "Elimina stato",
+      "confirm_delete": "Rimuovere \"{{statusName}}\"?",
+      "delete_error": "Impossibile eliminare lo stato",
+      "scope_label": "Ambito dello stato",
+      "scope_placeholder": "Seleziona un ambito di stato",
+      "scope_project_defaults": "Predefiniti del progetto",
+      "use_project_defaults": "Usa predefiniti del progetto",
+      "custom_statuses": "Stati personalizzati",
+      "phase_uses_defaults": "Questa fase utilizza le colonne di stato predefinite del progetto.",
+      "copy_from_defaults": "Copia dai predefiniti del progetto",
+      "add_custom_status": "Aggiungi stato personalizzato",
+      "revert_title": "Ripristina predefiniti del progetto",
+      "revert_message": "Rimuovere gli stati personalizzati di questa fase e ripristinare i predefiniti del progetto?",
+      "revert_confirm": "Ripristina",
+      "copy_failed": "Impossibile copiare i predefiniti del progetto in questa fase.",
+      "revert_failed": "Impossibile ripristinare i predefiniti del progetto per questa fase.",
+      "delete_has_tasks": "\"{{statusName}}\" ha {{count}} attività. Spostare in:",
+      "delete_and_move": "Sposta ed elimina"
+    }
+  },
+  "templates": {
+    "statuses": {
+      "manage_title": "Gestisci colonne di stato",
+      "manage_description": "Definisci le colonne di stato per le attività in questo modello. Trascina per riordinare.",
+      "template_defaults": "Predefiniti del modello",
+      "added": "Colonna di stato aggiunta",
+      "removed": "Colonna di stato rimossa",
+      "copied_to_phase": "Predefiniti del modello copiati nella fase",
+      "reverted": "Fase ripristinata ai predefiniti del modello",
+      "revert_message": "Rimuovere le colonne di stato personalizzate di questa fase e ripristinare i predefiniti del modello?",
+      "remove_title": "Rimuovi colonna di stato",
+      "remove_message": "Rimuovere questa colonna di stato? Le attività in questa colonna verranno spostate nella prima colonna.",
+      "remove_confirm": "Rimuovi",
+      "empty": "Nessuna colonna di stato ancora",
+      "empty_hint": "Aggiungi colonne di stato per organizzare le attività",
+      "add_title": "Aggiungi colonna di stato",
+      "select_placeholder": "Seleziona uno stato...",
+      "all_in_use": "Tutti gli stati disponibili sono in uso",
+      "create_new": "Crea nuovo"
+    }
   },
   "documents": {
     "title": "Allegati",

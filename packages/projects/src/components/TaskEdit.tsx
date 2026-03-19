@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -38,39 +38,19 @@ export default function TaskEdit({
   projectTreeData = [],
   onCommentCountChange
 }: TaskEditProps): React.JSX.Element {
-  const [statuses, setStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
   const [selectedPhaseStatuses, setSelectedPhaseStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (!initialStatuses) {
-          const projectStatuses = await getProjectTaskStatuses(phase.project_id);
-          setStatuses(projectStatuses);
-          setSelectedPhaseStatuses(projectStatuses);
-        }
-      } catch (error) {
-        console.error('Error fetching task details:', error);
-      }
-    };
-    fetchData();
-  }, [phase.project_id, initialStatuses]);
 
   const handlePhaseChange = async (newPhaseId: string) => {
     if (!phases) return;
     
     const newPhase = phases.find(p => p.phase_id === newPhaseId);
-    if (newPhase && newPhase.project_id !== phase.project_id) {
-      // If moving to a different project, fetch its statuses
+    if (newPhase) {
       try {
-        const newProjectStatuses = await getProjectTaskStatuses(newPhase.project_id);
+        const newProjectStatuses = await getProjectTaskStatuses(newPhase.project_id, newPhase.phase_id);
         setSelectedPhaseStatuses(newProjectStatuses);
       } catch (error) {
         console.error('Error fetching new project statuses:', error);
       }
-    } else {
-      // If moving within the same project, use current statuses
-      setSelectedPhaseStatuses(statuses);
     }
   };
 

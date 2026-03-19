@@ -214,8 +214,8 @@
   },
   "visibility": {
     "cascadeTitle": "55555",
-    "cascadeMakeVisible": "55555",
-    "cascadeMakeHidden": "55555",
+    "cascadeMakeVisible": "55555 {{count}} 55555 {{name}} 55555",
+    "cascadeMakeHidden": "55555 {{count}} 55555 {{name}} 55555",
     "cascadeYes": "55555",
     "cascadeNo": "55555"
   }

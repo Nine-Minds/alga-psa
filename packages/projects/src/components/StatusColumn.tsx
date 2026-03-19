@@ -44,6 +44,7 @@ interface StatusColumnProps {
   columnWidth?: number;
   cardGap?: number;
   zoomLevel?: number;
+  hideHeader?: boolean;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -90,6 +91,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   columnWidth = 350,
   cardGap = 8,
   zoomLevel = 50,
+  hideHeader = false,
   onDrop,
   onDragOver,
   onAddCard,
@@ -332,46 +334,48 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      <div className={`font-bold ${zoomLevel <= 30 ? 'text-xs p-2' : 'text-sm p-3'} rounded-t-lg`}>
-        <div className="flex items-center justify-between gap-2">
-          <div
-            className={`flex ${configuredColor ? '' : darkBackgroundColor} ${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} ${configuredColor ? '' : borderColor} shadow-sm items-center min-w-0 flex-1`}
-            style={configuredColor ? {
-              backgroundColor: isDark ? darkenColor(configuredColor, 0.60) : lightenColor(configuredColor, 0.70),
-              borderColor: isDark ? darkenColor(configuredColor, 0.40) : lightenColor(configuredColor, 0.40)
-            } : undefined}
-          >
-            <span className="flex-shrink-0">{statusIcon}</span>
-            <span className={`${zoomLevel <= 30 ? 'ml-1.5 text-xs leading-tight' : 'ml-2'}`}>
-              {status.custom_name || status.name}
-            </span>
-          </div>
-          <div className={`${styles.statusHeader} flex-shrink-0 flex items-center`}>
-            <Button
-              id={`add-task-button-${status.status_id}`}
-              variant="default"
-              size="sm"
-              onClick={() => onAddCard(status)}
-              disabled={isAddingTask || !selectedPhase}
-              tooltipText="Add Task"
-              tooltip={true}
-              className={zoomLevel <= 30 ? '!w-5 !h-5 !p-0 !min-w-0' : '!w-6 !h-6 !p-0 !min-w-0'}
-              data-project-tree-data={JSON.stringify(projectTreeData)}
-            >
-              <Plus className={zoomLevel <= 30 ? 'w-3 h-3 text-white' : 'w-4 h-4 text-white'} />
-            </Button>
-            <span
-              className={`${zoomLevel <= 30 ? 'text-[10px] px-1.5' : 'text-xs px-2'} font-medium py-0.5 rounded-full`}
+      {!hideHeader && (
+        <div className={`font-bold ${zoomLevel <= 30 ? 'text-xs p-2' : 'text-sm p-3'} rounded-t-lg`}>
+          <div className="flex items-center justify-between gap-2">
+            <div
+              className={`flex ${configuredColor ? '' : darkBackgroundColor} ${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} ${configuredColor ? '' : borderColor} shadow-sm items-center min-w-0 flex-1`}
               style={configuredColor ? {
                 backgroundColor: isDark ? darkenColor(configuredColor, 0.60) : lightenColor(configuredColor, 0.70),
-                color: isDark ? lightenColor(configuredColor, 0.40) : configuredColor
+                borderColor: isDark ? darkenColor(configuredColor, 0.40) : lightenColor(configuredColor, 0.40)
               } : undefined}
             >
-              {displayTasks.length}
-            </span>
+              <span className="flex-shrink-0">{statusIcon}</span>
+              <span className={`${zoomLevel <= 30 ? 'ml-1.5 text-xs leading-tight' : 'ml-2'}`}>
+                {status.custom_name || status.name}
+              </span>
+            </div>
+            <div className={`${styles.statusHeader} flex-shrink-0 flex items-center`}>
+              <Button
+                id={`add-task-button-${status.status_id}`}
+                variant="default"
+                size="sm"
+                onClick={() => onAddCard(status)}
+                disabled={isAddingTask || !selectedPhase}
+                tooltipText="Add Task"
+                tooltip={true}
+                className={zoomLevel <= 30 ? '!w-5 !h-5 !p-0 !min-w-0' : '!w-6 !h-6 !p-0 !min-w-0'}
+                data-project-tree-data={JSON.stringify(projectTreeData)}
+              >
+                <Plus className={zoomLevel <= 30 ? 'w-3 h-3 text-white' : 'w-4 h-4 text-white'} />
+              </Button>
+              <span
+                className={`${zoomLevel <= 30 ? 'text-[10px] px-1.5' : 'text-xs px-2'} font-medium py-0.5 rounded-full`}
+                style={configuredColor ? {
+                  backgroundColor: isDark ? darkenColor(configuredColor, 0.60) : lightenColor(configuredColor, 0.70),
+                  color: isDark ? lightenColor(configuredColor, 0.40) : configuredColor
+                } : undefined}
+              >
+                {displayTasks.length}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
       <div
         className={`${styles.kanbanTasks} ${styles.taskList}`}
         ref={tasksRef}

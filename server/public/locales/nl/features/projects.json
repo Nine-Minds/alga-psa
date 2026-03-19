@@ -33,7 +33,60 @@
   "phases": {
     "title": "Projectfasen",
     "completion": "Voltooid",
-    "noPhases": "Geen fasen om weer te geven"
+    "noPhases": "Geen fasen om weer te geven",
+    "statusColumns": "Statuskolommen",
+    "statusColumnsProjectDefaults": "Projectstandaarden",
+    "statusColumnsCustom": "Aangepast ({{count}} statussen)",
+    "configureStatuses": "Configureren"
+  },
+  "settings": {
+    "statuses": {
+      "project": {
+        "title": "Taakstatuskolommen",
+        "description": "Configureer welke statuskolommen beschikbaar zijn voor taken",
+        "add_from_library": "Status toevoegen"
+      },
+      "closed": "Gesloten",
+      "confirm_delete_title": "Status verwijderen",
+      "confirm_delete": "\"{{statusName}}\" verwijderen?",
+      "delete_error": "Kan status niet verwijderen",
+      "scope_label": "Statusbereik",
+      "scope_placeholder": "Selecteer een statusbereik",
+      "scope_project_defaults": "Projectstandaarden",
+      "use_project_defaults": "Projectstandaarden gebruiken",
+      "custom_statuses": "Aangepaste statussen",
+      "phase_uses_defaults": "Deze fase gebruikt de standaard statuskolommen van het project.",
+      "copy_from_defaults": "Kopiëren van projectstandaarden",
+      "add_custom_status": "Aangepaste status toevoegen",
+      "revert_title": "Terugkeren naar projectstandaarden",
+      "revert_message": "Aangepaste statussen van deze fase verwijderen en terugkeren naar projectstandaarden?",
+      "revert_confirm": "Terugzetten",
+      "copy_failed": "Kan projectstandaarden niet naar deze fase kopiëren.",
+      "revert_failed": "Kan deze fase niet terugzetten naar projectstandaarden.",
+      "delete_has_tasks": "\"{{statusName}}\" heeft {{count}} ta(a)k(en). Verplaatsen naar:",
+      "delete_and_move": "Verplaatsen & verwijderen"
+    }
+  },
+  "templates": {
+    "statuses": {
+      "manage_title": "Statuskolommen beheren",
+      "manage_description": "Definieer de statuskolommen voor taken in dit sjabloon. Sleep om te herordenen.",
+      "template_defaults": "Sjabloonstandaarden",
+      "added": "Statuskolom toegevoegd",
+      "removed": "Statuskolom verwijderd",
+      "copied_to_phase": "Sjabloonstandaarden gekopieerd naar fase",
+      "reverted": "Fase teruggezet naar sjabloonstandaarden",
+      "revert_message": "Aangepaste statuskolommen van deze fase verwijderen en terugkeren naar sjabloonstandaarden?",
+      "remove_title": "Statuskolom verwijderen",
+      "remove_message": "Deze statuskolom verwijderen? Taken in deze kolom worden verplaatst naar de eerste kolom.",
+      "remove_confirm": "Verwijderen",
+      "empty": "Nog geen statuskolommen",
+      "empty_hint": "Voeg statuskolommen toe om taken te organiseren",
+      "add_title": "Statuskolom toevoegen",
+      "select_placeholder": "Selecteer een status...",
+      "all_in_use": "Alle beschikbare statussen zijn in gebruik",
+      "create_new": "Nieuw aanmaken"
+    }
   },
   "documents": {
     "title": "Bijlagen",

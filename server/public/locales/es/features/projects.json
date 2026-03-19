@@ -33,7 +33,60 @@
   "phases": {
     "title": "Fases del proyecto",
     "completion": "Completado",
-    "noPhases": "No hay fases para mostrar"
+    "noPhases": "No hay fases para mostrar",
+    "statusColumns": "Columnas de estado",
+    "statusColumnsProjectDefaults": "Valores predeterminados del proyecto",
+    "statusColumnsCustom": "Personalizado ({{count}} estados)",
+    "configureStatuses": "Configurar"
+  },
+  "settings": {
+    "statuses": {
+      "project": {
+        "title": "Columnas de estado de tareas",
+        "description": "Configure qué columnas de estado están disponibles para las tareas",
+        "add_from_library": "Agregar estado"
+      },
+      "closed": "Cerrado",
+      "confirm_delete_title": "Eliminar estado",
+      "confirm_delete": "¿Eliminar \"{{statusName}}\"?",
+      "delete_error": "Error al eliminar el estado",
+      "scope_label": "Alcance del estado",
+      "scope_placeholder": "Seleccionar un alcance de estado",
+      "scope_project_defaults": "Valores predeterminados del proyecto",
+      "use_project_defaults": "Usar valores predeterminados del proyecto",
+      "custom_statuses": "Estados personalizados",
+      "phase_uses_defaults": "Esta fase utiliza las columnas de estado predeterminadas del proyecto.",
+      "copy_from_defaults": "Copiar de valores predeterminados del proyecto",
+      "add_custom_status": "Agregar estado personalizado",
+      "revert_title": "Volver a valores predeterminados del proyecto",
+      "revert_message": "¿Eliminar los estados personalizados de esta fase y volver a los valores predeterminados del proyecto?",
+      "revert_confirm": "Revertir",
+      "copy_failed": "No se pudieron copiar los valores predeterminados del proyecto a esta fase.",
+      "revert_failed": "No se pudo revertir esta fase a los valores predeterminados del proyecto.",
+      "delete_has_tasks": "\"{{statusName}}\" tiene {{count}} tarea(s). Mover a:",
+      "delete_and_move": "Mover y eliminar"
+    }
+  },
+  "templates": {
+    "statuses": {
+      "manage_title": "Gestionar columnas de estado",
+      "manage_description": "Defina las columnas de estado para las tareas en esta plantilla. Arrastre para reordenar.",
+      "template_defaults": "Valores predeterminados de la plantilla",
+      "added": "Columna de estado agregada",
+      "removed": "Columna de estado eliminada",
+      "copied_to_phase": "Valores predeterminados de la plantilla copiados a la fase",
+      "reverted": "Fase revertida a valores predeterminados de la plantilla",
+      "revert_message": "¿Eliminar las columnas de estado personalizadas de esta fase y volver a los valores predeterminados de la plantilla?",
+      "remove_title": "Eliminar columna de estado",
+      "remove_message": "¿Eliminar esta columna de estado? Las tareas en esta columna se moverán a la primera columna.",
+      "remove_confirm": "Eliminar",
+      "empty": "Aún no hay columnas de estado",
+      "empty_hint": "Agregue columnas de estado para organizar las tareas",
+      "add_title": "Agregar columna de estado",
+      "select_placeholder": "Seleccionar un estado...",
+      "all_in_use": "Todos los estados disponibles están en uso",
+      "create_new": "Crear nuevo"
+    }
   },
   "documents": {
     "title": "Anexos",
