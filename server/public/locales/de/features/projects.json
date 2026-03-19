@@ -33,7 +33,60 @@
   "phases": {
     "title": "Projektphasen",
     "completion": "Abgeschlossen",
-    "noPhases": "Keine Phasen anzuzeigen"
+    "noPhases": "Keine Phasen anzuzeigen",
+    "statusColumns": "Statusspalten",
+    "statusColumnsProjectDefaults": "Projektstandards",
+    "statusColumnsCustom": "Benutzerdefiniert ({{count}} Status)",
+    "configureStatuses": "Konfigurieren"
+  },
+  "settings": {
+    "statuses": {
+      "project": {
+        "title": "Aufgaben-Statusspalten",
+        "description": "Konfigurieren Sie, welche Statusspalten für Aufgaben verfügbar sind",
+        "add_from_library": "Status hinzufügen"
+      },
+      "closed": "Geschlossen",
+      "confirm_delete_title": "Status löschen",
+      "confirm_delete": "\"{{statusName}}\" entfernen?",
+      "delete_error": "Fehler beim Löschen des Status",
+      "scope_label": "Statusbereich",
+      "scope_placeholder": "Statusbereich auswählen",
+      "scope_project_defaults": "Projektstandards",
+      "use_project_defaults": "Projektstandards verwenden",
+      "custom_statuses": "Benutzerdefinierte Status",
+      "phase_uses_defaults": "Diese Phase verwendet die Standard-Statusspalten des Projekts.",
+      "copy_from_defaults": "Aus Projektstandards kopieren",
+      "add_custom_status": "Benutzerdefinierten Status hinzufügen",
+      "revert_title": "Zu Projektstandards zurückkehren",
+      "revert_message": "Benutzerdefinierte Status dieser Phase entfernen und zu Projektstandards zurückkehren?",
+      "revert_confirm": "Zurücksetzen",
+      "copy_failed": "Projektstandards konnten nicht in diese Phase kopiert werden.",
+      "revert_failed": "Phase konnte nicht auf Projektstandards zurückgesetzt werden.",
+      "delete_has_tasks": "\"{{statusName}}\" hat {{count}} Aufgabe(n). Verschieben nach:",
+      "delete_and_move": "Verschieben & Löschen"
+    }
+  },
+  "templates": {
+    "statuses": {
+      "manage_title": "Statusspalten verwalten",
+      "manage_description": "Definieren Sie die Statusspalten für Aufgaben in dieser Vorlage. Ziehen zum Neuanordnen.",
+      "template_defaults": "Vorlagenstandards",
+      "added": "Statusspalte hinzugefügt",
+      "removed": "Statusspalte entfernt",
+      "copied_to_phase": "Vorlagenstandards in Phase kopiert",
+      "reverted": "Phase auf Vorlagenstandards zurückgesetzt",
+      "revert_message": "Benutzerdefinierte Statusspalten dieser Phase entfernen und auf Vorlagenstandards zurücksetzen?",
+      "remove_title": "Statusspalte entfernen",
+      "remove_message": "Diese Statusspalte entfernen? Aufgaben in dieser Spalte werden in die erste Spalte verschoben.",
+      "remove_confirm": "Entfernen",
+      "empty": "Noch keine Statusspalten",
+      "empty_hint": "Statusspalten hinzufügen, um Aufgaben zu organisieren",
+      "add_title": "Statusspalte hinzufügen",
+      "select_placeholder": "Status auswählen...",
+      "all_in_use": "Alle verfügbaren Status werden verwendet",
+      "create_new": "Neu erstellen"
+    }
   },
   "documents": {
     "title": "Anhänge",

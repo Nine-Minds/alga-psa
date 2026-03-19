@@ -33,7 +33,60 @@
   "phases": {
     "title": "Phases du projet",
     "completion": "Terminé",
-    "noPhases": "Aucune phase à afficher"
+    "noPhases": "Aucune phase à afficher",
+    "statusColumns": "Colonnes de statut",
+    "statusColumnsProjectDefaults": "Valeurs par défaut du projet",
+    "statusColumnsCustom": "Personnalisé ({{count}} statuts)",
+    "configureStatuses": "Configurer"
+  },
+  "settings": {
+    "statuses": {
+      "project": {
+        "title": "Colonnes de statut des tâches",
+        "description": "Configurez les colonnes de statut disponibles pour les tâches",
+        "add_from_library": "Ajouter un statut"
+      },
+      "closed": "Fermé",
+      "confirm_delete_title": "Supprimer le statut",
+      "confirm_delete": "Supprimer « {{statusName}} » ?",
+      "delete_error": "Échec de la suppression du statut",
+      "scope_label": "Portée du statut",
+      "scope_placeholder": "Sélectionner une portée de statut",
+      "scope_project_defaults": "Valeurs par défaut du projet",
+      "use_project_defaults": "Utiliser les valeurs par défaut du projet",
+      "custom_statuses": "Statuts personnalisés",
+      "phase_uses_defaults": "Cette phase utilise les colonnes de statut par défaut du projet.",
+      "copy_from_defaults": "Copier depuis les valeurs par défaut du projet",
+      "add_custom_status": "Ajouter un statut personnalisé",
+      "revert_title": "Revenir aux valeurs par défaut du projet",
+      "revert_message": "Supprimer les statuts personnalisés de cette phase et revenir aux valeurs par défaut du projet ?",
+      "revert_confirm": "Rétablir",
+      "copy_failed": "Impossible de copier les valeurs par défaut du projet vers cette phase.",
+      "revert_failed": "Impossible de rétablir les valeurs par défaut du projet pour cette phase.",
+      "delete_has_tasks": "« {{statusName}} » contient {{count}} tâche(s). Déplacer vers :",
+      "delete_and_move": "Déplacer et supprimer"
+    }
+  },
+  "templates": {
+    "statuses": {
+      "manage_title": "Gérer les colonnes de statut",
+      "manage_description": "Définissez les colonnes de statut pour les tâches de ce modèle. Glissez pour réorganiser.",
+      "template_defaults": "Valeurs par défaut du modèle",
+      "added": "Colonne de statut ajoutée",
+      "removed": "Colonne de statut supprimée",
+      "copied_to_phase": "Valeurs par défaut du modèle copiées vers la phase",
+      "reverted": "Phase rétablie aux valeurs par défaut du modèle",
+      "revert_message": "Supprimer les colonnes de statut personnalisées de cette phase et revenir aux valeurs par défaut du modèle ?",
+      "remove_title": "Supprimer la colonne de statut",
+      "remove_message": "Supprimer cette colonne de statut ? Les tâches dans cette colonne seront déplacées vers la première colonne.",
+      "remove_confirm": "Supprimer",
+      "empty": "Pas encore de colonnes de statut",
+      "empty_hint": "Ajoutez des colonnes de statut pour organiser les tâches",
+      "add_title": "Ajouter une colonne de statut",
+      "select_placeholder": "Sélectionner un statut...",
+      "all_in_use": "Tous les statuts disponibles sont utilisés",
+      "create_new": "Créer nouveau"
+    }
   },
   "documents": {
     "title": "Pièces jointes",
