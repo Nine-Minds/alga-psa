@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { usePostHog } from 'posthog-js/react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { usePerformanceTracking } from '@alga-psa/analytics/client';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isEnterprise } from '@/lib/features';
 
 // App shell: dashboard landing container (server-owned, uses analytics).
@@ -23,12 +24,92 @@ interface DashboardContainerProps {
   onboardingSection?: React.ReactNode;
 }
 
-const FeatureCard = ({ icon: Icon, title, description }: { icon: any; title: string; description: string }) => {
+interface FeatureCardProps {
+  icon: any;
+  title: string;
+  description: string;
+  analyticsName: string;
+}
+
+interface FeatureCardDefinition {
+  id: string;
+  icon: any;
+  href?: string;
+  analyticsName: string;
+  titleKey: string;
+  titleDefault: string;
+  descriptionKey: string;
+  descriptionDefault: string;
+}
+
+const featureCards: FeatureCardDefinition[] = [
+  {
+    id: 'tickets',
+    icon: Ticket,
+    href: '/msp/tickets',
+    analyticsName: 'ticket_management',
+    titleKey: 'features.tickets.title',
+    titleDefault: 'Ticket Management',
+    descriptionKey: 'features.tickets.description',
+    descriptionDefault: 'Streamline support with routing, SLA tracking, and guided workflows.',
+  },
+  {
+    id: 'monitoring',
+    icon: HeartPulse,
+    href: '/msp/jobs',
+    analyticsName: 'system_monitoring',
+    titleKey: 'features.monitoring.title',
+    titleDefault: 'System Monitoring',
+    descriptionKey: 'features.monitoring.description',
+    descriptionDefault: 'Watch critical signals across clients and trigger automation when needed.',
+  },
+  {
+    id: 'security',
+    icon: Shield,
+    href: '/msp/security-settings',
+    analyticsName: 'security_management',
+    titleKey: 'features.security.title',
+    titleDefault: 'Security Management',
+    descriptionKey: 'features.security.description',
+    descriptionDefault: 'Manage policies, approvals, and audit responses in one place.',
+  },
+  {
+    id: 'projects',
+    icon: ClipboardList,
+    href: '/msp/projects',
+    analyticsName: 'project_management',
+    titleKey: 'features.projects.title',
+    titleDefault: 'Project Management',
+    descriptionKey: 'features.projects.description',
+    descriptionDefault: 'Organize delivery plans, tasks, and milestones for every engagement.',
+  },
+  {
+    id: 'reports',
+    icon: BarChart3,
+    analyticsName: 'reporting_analytics',
+    titleKey: 'features.reports.title',
+    titleDefault: 'Reporting & Analytics',
+    descriptionKey: 'features.reports.description',
+    descriptionDefault: 'Build rollups on utilization, SLA attainment, and profitability.',
+  },
+  {
+    id: 'schedule',
+    icon: Calendar,
+    href: '/msp/schedule',
+    analyticsName: 'schedule_management',
+    titleKey: 'features.schedule.title',
+    titleDefault: 'Schedule Management',
+    descriptionKey: 'features.schedule.description',
+    descriptionDefault: 'Coordinate onsite visits and remote sessions with bi-directional sync.',
+  },
+];
+
+const FeatureCard = ({ icon: Icon, title, description, analyticsName }: FeatureCardProps) => {
   const posthog = usePostHog();
 
   const handleHover = () => {
     posthog?.capture('feature_card_hovered', {
-      feature_name: title.toLowerCase().replace(/\s+/g, '_'),
+      feature_name: analyticsName,
     });
   };
 
@@ -54,7 +135,7 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: any; title: str
   );
 };
 
-function EnterpriseWelcomeBanner() {
+function EnterpriseWelcomeBanner({ title, description }: { title: string; description: string }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-violet-600 to-cyan-500 px-6 py-5 shadow-[0_10px_30px_rgba(2,6,23,0.12)]">
       <div className="flex items-start gap-4">
@@ -63,10 +144,10 @@ function EnterpriseWelcomeBanner() {
         </div>
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-            Welcome to Your MSP Command Center
+            {title}
           </h1>
           <p className="mt-1 text-sm text-white/80">
-            Track onboarding progress, configure critical services, and keep every client experience consistent.
+            {description}
           </p>
         </div>
       </div>
@@ -74,7 +155,7 @@ function EnterpriseWelcomeBanner() {
   );
 }
 
-function CommunityWelcomeBanner() {
+function CommunityWelcomeBanner({ title, description }: { title: string; description: string }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[rgb(var(--color-border-200))] bg-white px-6 py-5 shadow-sm">
       <div className="flex items-start gap-4">
@@ -83,10 +164,10 @@ function CommunityWelcomeBanner() {
         </div>
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight" style={{ color: 'rgb(var(--color-text-900))' }}>
-            Welcome back
+            {title}
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>
-            Jump into tickets, scheduling, projects, and reporting from your dashboard.
+            {description}
           </p>
         </div>
       </div>
@@ -96,6 +177,7 @@ function CommunityWelcomeBanner() {
 
 const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
   const posthog = usePostHog();
+  const { t } = useTranslation('msp/dashboard');
 
   usePerformanceTracking('dashboard');
 
@@ -110,70 +192,87 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
     });
   }, [posthog]);
 
+  const translatedFeatureCards = featureCards.map((feature) => ({
+    ...feature,
+    title: t(feature.titleKey, { defaultValue: feature.titleDefault }),
+    description: t(feature.descriptionKey, { defaultValue: feature.descriptionDefault }),
+  }));
+
+  const welcomeTitle = t('welcome.title', {
+    defaultValue: 'Welcome to Your MSP Command Center',
+  });
+  const welcomeDescription = t('welcome.description', {
+    defaultValue: 'Track onboarding progress, configure critical services, and keep every client experience consistent.',
+  });
+  const welcomeCommunityTitle = t('welcome.titleCommunity', {
+    defaultValue: 'Welcome back',
+  });
+  const welcomeCommunityDescription = t('welcome.descriptionCommunity', {
+    defaultValue: 'Jump into tickets, scheduling, projects, and reporting from your dashboard.',
+  });
+
   return (
     <ReflectionContainer id="dashboard-main" label="MSP Dashboard">
       <div className="min-h-screen p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col gap-8">
-              {isEnterprise ? <EnterpriseWelcomeBanner /> : <CommunityWelcomeBanner />}
+              {isEnterprise ? (
+                <EnterpriseWelcomeBanner
+                  title={welcomeTitle}
+                  description={welcomeDescription}
+                />
+              ) : (
+                <CommunityWelcomeBanner
+                  title={welcomeCommunityTitle}
+                  description={welcomeCommunityDescription}
+                />
+              )}
 
               {isEnterprise ? onboardingSection : null}
 
               <div>
                 <h2 className="text-xl font-semibold mb-4" style={{ color: 'rgb(var(--color-text-900))' }}>
-                  Platform Features
+                  {t('features.heading', { defaultValue: 'Platform Features' })}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <Link
-                    href="/msp/tickets"
-                    onClick={() =>
-                      posthog?.capture('feature_accessed', {
-                        feature_name: 'ticket_management',
-                        access_method: 'dashboard_card',
-                      })
-                    }
-                  >
-                    <FeatureCard
-                      icon={Ticket}
-                      title="Ticket Management"
-                      description="Streamline support with routing, SLA tracking, and guided workflows."
-                    />
-                  </Link>
-                  <Link href="/msp/jobs">
-                    <FeatureCard
-                      icon={HeartPulse}
-                      title="System Monitoring"
-                      description="Watch critical signals across clients and trigger automation when needed."
-                    />
-                  </Link>
-                  <Link href="/msp/security-settings">
-                    <FeatureCard
-                      icon={Shield}
-                      title="Security Management"
-                      description="Manage policies, approvals, and audit responses in one place."
-                    />
-                  </Link>
-                  <Link href="/msp/projects">
-                    <FeatureCard
-                      icon={ClipboardList}
-                      title="Project Management"
-                      description="Organize delivery plans, tasks, and milestones for every engagement."
-                    />
-                  </Link>
-                  <div onClick={() => toast.success('Coming soon!')} className="cursor-pointer">
-                    <FeatureCard
-                      icon={BarChart3}
-                      title="Reporting & Analytics"
-                      description="Build rollups on utilization, SLA attainment, and profitability."
-                    />
-                  </div>
-                  <Link href="/msp/schedule">
-                    <FeatureCard
-                      icon={Calendar}
-                      title="Schedule Management"
-                      description="Coordinate onsite visits and remote sessions with bi-directional sync."
-                    />
-                  </Link>
+                  {translatedFeatureCards.map((feature) =>
+                    feature.href ? (
+                      <Link
+                        key={feature.id}
+                        href={feature.href}
+                        onClick={() =>
+                          posthog?.capture('feature_accessed', {
+                            feature_name: feature.analyticsName,
+                            access_method: 'dashboard_card',
+                          })
+                        }
+                      >
+                        <FeatureCard
+                          icon={feature.icon}
+                          title={feature.title}
+                          description={feature.description}
+                          analyticsName={feature.analyticsName}
+                        />
+                      </Link>
+                    ) : (
+                      <div
+                        key={feature.id}
+                        onClick={() =>
+                          toast.success(
+                            t('features.comingSoon', { defaultValue: 'Coming soon!' })
+                          )
+                        }
+                        className="cursor-pointer"
+                      >
+                        <FeatureCard
+                          icon={feature.icon}
+                          title={feature.title}
+                          description={feature.description}
+                          analyticsName={feature.analyticsName}
+                        />
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
 
@@ -181,10 +280,12 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                   <div>
                     <h3 className="font-semibold mb-1" style={{ color: 'rgb(var(--color-text-900))' }}>
-                      Need a deeper dive?
+                      {t('knowledgeBase.title', { defaultValue: 'Need a deeper dive?' })}
                     </h3>
                     <p className="text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>
-                      Explore deployment runbooks and best practices in the knowledge base.
+                      {t('knowledgeBase.description', {
+                        defaultValue: 'Explore deployment runbooks and best practices in the knowledge base.',
+                      })}
                     </p>
                   </div>
                   <Link
@@ -193,7 +294,7 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
                     rel="noopener noreferrer"
                     className="inline-block px-4 py-2 rounded-md text-sm font-medium text-white bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] transition-colors"
                   >
-                    Visit resources
+                    {t('knowledgeBase.cta', { defaultValue: 'Visit resources' })}
                   </Link>
                 </div>
               </div>

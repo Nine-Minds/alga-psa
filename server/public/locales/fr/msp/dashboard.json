@@ -1,0 +1,115 @@
+{
+  "welcome": {
+    "title": "Bienvenue dans votre centre de commande MSP",
+    "description": "Suivez la progression de l'onboarding, configurez les services critiques et gardez une expérience client cohérente.",
+    "titleCommunity": "Bon retour",
+    "descriptionCommunity": "Accédez rapidement aux tickets, à la planification, aux projets et aux rapports depuis votre tableau de bord."
+  },
+  "features": {
+    "heading": "Fonctionnalités de la plateforme",
+    "comingSoon": "Bientôt disponible !",
+    "tickets": {
+      "title": "Gestion des tickets",
+      "description": "Optimisez le support avec le routage, le suivi des SLA et des workflows guidés."
+    },
+    "monitoring": {
+      "title": "Supervision système",
+      "description": "Surveillez les signaux critiques chez les clients et déclenchez l'automatisation si nécessaire."
+    },
+    "security": {
+      "title": "Gestion de la sécurité",
+      "description": "Gérez les politiques, les approbations et les réponses d'audit en un seul endroit."
+    },
+    "projects": {
+      "title": "Gestion de projet",
+      "description": "Organisez les plans de livraison, les tâches et les jalons pour chaque engagement."
+    },
+    "reports": {
+      "title": "Rapports et analyses",
+      "description": "Créez des synthèses sur l'utilisation, le respect des SLA et la rentabilité."
+    },
+    "schedule": {
+      "title": "Gestion du planning",
+      "description": "Coordonnez les interventions sur site et les sessions à distance avec une synchronisation bidirectionnelle."
+    }
+  },
+  "knowledgeBase": {
+    "title": "Besoin d'aller plus loin ?",
+    "description": "Explorez les runbooks de déploiement et les bonnes pratiques dans la base de connaissances.",
+    "cta": "Voir les ressources"
+  },
+  "onboarding": {
+    "completeTitle": "Onboarding terminé",
+    "incompleteTitle": "Terminez votre configuration",
+    "completeDescription": "Vous êtes prêt à utiliser l'expérience complète du tableau de bord MSP.",
+    "incompleteDescription": "Suivez chaque étape pour débloquer l'expérience complète du tableau de bord MSP.",
+    "stepLabel": "ÉTAPE {{index}}",
+    "badges": {
+      "complete": "Terminé",
+      "notStarted": "Non commencé",
+      "inProgress": "En cours",
+      "blocked": "Bloqué"
+    },
+    "progress": {
+      "label": "PROGRESSION",
+      "steps": "{{completed}} sur {{total}} étapes",
+      "messageStart": "On commence tout juste !",
+      "messageComplete": "C'est prêt - beau travail !",
+      "messageInProgress": "Continuez - vous êtes sur la bonne voie !"
+    },
+    "substeps": {
+      "dataImport": "Terminez votre premier import OU créez 5 contacts",
+      "createContacts": "Créez vos 5 premiers contacts"
+    },
+    "cta": {
+      "completed": "Terminé",
+      "hiding": "Masquage...",
+      "hide": "Masquer",
+      "dismiss": "Masquer {{title}}",
+      "restoring": "Restauration..."
+    },
+    "hidden": {
+      "title": "Cartes de configuration masquées ({{count}})",
+      "subtitle": "Restaurez une carte si vous en avez besoin plus tard."
+    },
+    "checklist": {
+      "title": "Checklist d'onboarding",
+      "progress": "{{completed}} sur {{total}} tâches terminées",
+      "completeTitle": "Configuration terminée",
+      "completeDescription": "Invitez les clients à découvrir votre portail personnalisé.",
+      "inviteCta": "Inviter des clients",
+      "viewButton": "Voir la checklist d'onboarding"
+    },
+    "steps": {
+      "identity": {
+        "title": "Sécuriser l'identité et le SSO",
+        "description": "Connectez Google Workspace ou Microsoft 365 afin que les administrateurs se connectent avec des identités gérées.",
+        "cta": "Connecter le SSO"
+      },
+      "portal": {
+        "title": "Configurer le portail client",
+        "description": "Configurez votre portail afin que les clients puissent se connecter sur votre domaine avec votre branding.",
+        "cta": "Ouvrir les paramètres du portail"
+      },
+      "dataImport": {
+        "title": "Importer les données de base",
+        "description": "Ajoutez des contacts pour pouvoir commencer à travailler pour les clients et garder les workflows en mouvement.",
+        "cta": "Créer des contacts"
+      },
+      "calendar": {
+        "title": "Synchronisation du calendrier",
+        "description": "Connectez Google ou Outlook Calendar pour garder la répartition et les rendez-vous clients alignés.",
+        "cta": "Configurer le calendrier"
+      },
+      "email": {
+        "title": "Configurer l'e-mail",
+        "description": "Configurez l'e-mail entrant des tickets et vérifiez un domaine d'envoi sortant pour une distribution fiable.",
+        "cta": "Configurer l'e-mail"
+      }
+    },
+    "errors": {
+      "dismissFailed": "Impossible de masquer l'étape d'onboarding.",
+      "restoreFailed": "Impossible de restaurer l'étape d'onboarding."
+    }
+  }
+}

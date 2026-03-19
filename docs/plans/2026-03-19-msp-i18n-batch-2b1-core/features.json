@@ -251,118 +251,124 @@
   {
     "id": "F050",
     "description": "Create en/msp/dashboard.json with all ~110 dashboard keys following naming convention",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR14", "FR15", "FR16", "FR17"]
   },
   {
     "id": "F051",
     "description": "DashboardContainer.tsx: add useTranslation('msp/dashboard') and translate welcome banners (enterprise + community)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR14"]
   },
   {
     "id": "F052",
     "description": "DashboardContainer.tsx: translate 'Platform Features' heading and all 6 feature card titles + descriptions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR14"]
   },
   {
     "id": "F053",
     "description": "DashboardContainer.tsx: translate knowledge base section (title, description, CTA button)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR14"]
   },
   {
     "id": "F054",
     "description": "DashboardContainer.tsx: translate 'Coming soon!' toast message",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR14"]
   },
   {
     "id": "F055",
     "description": "DashboardOnboardingSection.tsx: add useTranslation('msp/dashboard') and translate section headers (complete/incomplete titles, descriptions)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR15"]
   },
   {
     "id": "F056",
     "description": "DashboardOnboardingSection.tsx: translate progress ring labels ('PROGRESS', '{{completed}} of {{total}} Steps', motivational messages)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR15"]
   },
   {
     "id": "F057",
     "description": "DashboardOnboardingSection.tsx: translate step badges (NOT STARTED, IN PROGRESS, COMPLETE, BLOCKED) and step label ('STEP {{index}}')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR15"]
   },
   {
     "id": "F058",
     "description": "DashboardOnboardingSection.tsx: translate action buttons (Completed, Hiding, Hide, Dismiss) and hidden steps panel",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR15"]
   },
   {
     "id": "F059",
     "description": "OnboardingChecklist.tsx: add useTranslation('msp/dashboard') and translate card header, progress, completion banner, and invite CTA",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR16"]
   },
   {
     "id": "F060",
     "description": "stepDefinitions.ts: add translationKey fields to step definitions for title, description, and CTA (5 steps x 3 fields = 15 keys)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR17"]
   },
   {
     "id": "F061",
     "description": "Update ROUTE_NAMESPACES: add 'msp/dashboard' to '/msp' and '/msp/dashboard' routes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR18"]
   },
   {
     "id": "F062",
     "description": "Generate French (fr) translations for all keys in msp/dashboard.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F063",
     "description": "Generate Spanish (es) translations for all keys in msp/dashboard.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F064",
     "description": "Generate German (de) translations for all keys in msp/dashboard.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F065",
     "description": "Generate Dutch (nl) translations for all keys in msp/dashboard.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F066",
     "description": "Generate Italian (it) translations for all keys in msp/dashboard.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F067",
     "description": "Generate Polish (pl) translations for all keys in msp/dashboard.json",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F068",
     "description": "Create pseudo-locale xx/msp/dashboard.json with all keys (values = '11111')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F069",
     "description": "Create pseudo-locale yy/msp/dashboard.json with all keys (values = '55555')",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F070",
     "description": "Run Italian accent audit on it/msp/dashboard.json — fix any missing accents",
-    "implemented": false
+    "implemented": true
+  },
+  {
+    "id": "F071",
+    "description": "DashboardOnboardingSection.tsx: stabilize default initialDismissedStepIds to avoid rerender loops when the prop is omitted",
+    "implemented": true,
+    "prdRefs": ["FR15"]
   }
 ]

@@ -33,6 +33,9 @@
 - (2026-03-19) Feature cards have a "Coming soon!" toast — this fires on click for cards without an href. Simple string, one key.
 - (2026-03-19) `ROUTE_NAMESPACES` currently maps `/msp` to `['common', 'msp/core']`. Need to add `'msp/dashboard'` to both `/msp` and `/msp/dashboard` routes.
 - (2026-03-19) `DashboardOnboardingSlot.tsx` and `DashboardOnboardingSkeleton.tsx` have no user-visible text — just layout/loading components. No translation needed.
+- (2026-03-19) `DashboardOnboardingSection.tsx` had a hidden rerender-loop bug: its `initialDismissedStepIds = []` default created a fresh array every render, retriggering the `useEffect` dependency and causing an infinite update loop when the prop was omitted. Fixed by hoisting a stable empty constant (`F071` / `T101`).
+- (2026-03-19) `DashboardOnboardingSection.tsx` had two additional user-visible hardcoded error fallbacks (`Failed to dismiss onboarding step.`, `Failed to restore onboarding step.`) not enumerated in the PRD tables. Added them to `msp/dashboard.json` under `onboarding.errors.*` because they are user-facing dashboard strings.
+- (2026-03-19) `DashboardContainer.tsx` needed an explicit `FeatureCardDefinition` type; otherwise the translated feature-card array widened into a union where `href` was not guaranteed and `next build` failed during TypeScript.
 
 ## Progress Log
 
@@ -54,6 +57,8 @@
 - **Italian accent audit**: `grep -n ' e [a-z]\| puo \| gia \| verra \| funzionalita\| necessario' server/public/locales/it/msp/core.json`
 - **Count keys**: `node -e "const o=JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/core.json'));const c=(o,p='')=>{let n=0;for(const[k,v]of Object.entries(o)){if(typeof v==='object'&&v!==null)n+=c(v,p+k+'.');else n++}return n};console.log(c(o))"`
 - **Visual QA**: Enable `msp-i18n-enabled` flag locally, switch to `xx` locale, navigate sidebar/header/settings/billing modes
+- **Dashboard component suite**: `cd server && npx vitest run --config vitest.config.ts src/test/unit/i18n/mspDashboardBatch2b1.test.ts src/test/unit/dashboard/DashboardContainer.i18n.test.tsx src/test/unit/onboarding/DashboardOnboardingSection.i18n.test.tsx src/test/unit/onboarding/OnboardingChecklist.i18n.test.tsx`
+- **Full build verification**: `npm run build`
 
 ## Progress Log
 
@@ -102,6 +107,14 @@
 | `packages/onboarding/src/components/dashboard/OnboardingChecklist.tsx` | Alternative checklist view |
 | `packages/onboarding/src/lib/stepDefinitions.ts` | Onboarding step data |
 | `packages/core/src/lib/i18n/config.ts` | ROUTE_NAMESPACES config |
+
+## Progress Log
+
+- (2026-03-19) Completed dashboard namespace batch (`F050-F070`): created `msp/dashboard.json` for all production locales + pseudo-locales, translated `DashboardContainer.tsx`, `DashboardOnboardingSection.tsx`, `OnboardingChecklist.tsx`, and `stepDefinitions.ts`, and updated `ROUTE_NAMESPACES` to load `msp/dashboard` on `/msp` and `/msp/dashboard`.
+- (2026-03-19) Added dashboard i18n verification coverage: `server/src/test/unit/i18n/mspDashboardBatch2b1.test.ts`, `server/src/test/unit/dashboard/DashboardContainer.i18n.test.tsx`, `server/src/test/unit/onboarding/DashboardOnboardingSection.i18n.test.tsx`, and `server/src/test/unit/onboarding/OnboardingChecklist.i18n.test.tsx`. These now cover `T070-T101`.
+- (2026-03-19) Ran `node scripts/validate-translations.cjs` after adding dashboard locales — passed with 0 errors / 0 warnings.
+- (2026-03-19) Ran the dashboard component and locale suite — all 19 dashboard tests passed.
+- (2026-03-19) Ran `npm run build` successfully. Build still emits pre-existing webpack warnings (scheduling star-export conflict, handlebars `require.extensions`, knex/fluent-ffmpeg/Temporal dynamic dependency warnings), but the build completed and closed `T063`.
 
 ## Open Questions
 

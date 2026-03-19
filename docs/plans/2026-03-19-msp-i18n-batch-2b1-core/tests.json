@@ -374,7 +374,7 @@
   {
     "id": "T063",
     "description": "Build verification: npm run build succeeds with no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F007", "F013", "F020"]
   },
   {
@@ -399,187 +399,193 @@
   {
     "id": "T070",
     "description": "en/msp/dashboard.json: all ~110 keys present with correct English values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F050"]
   },
   {
     "id": "T071",
     "description": "DashboardContainer.tsx: enterprise welcome banner title and description are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F051"]
   },
   {
     "id": "T072",
     "description": "DashboardContainer.tsx: community welcome banner title and description are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F051"]
   },
   {
     "id": "T073",
     "description": "DashboardContainer.tsx: 'Platform Features' heading is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F052"]
   },
   {
     "id": "T074",
     "description": "DashboardContainer.tsx: all 6 feature card titles are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F052"]
   },
   {
     "id": "T075",
     "description": "DashboardContainer.tsx: all 6 feature card descriptions are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F052"]
   },
   {
     "id": "T076",
     "description": "DashboardContainer.tsx: knowledge base section title, description, and CTA button are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F053"]
   },
   {
     "id": "T077",
     "description": "DashboardContainer.tsx: 'Coming soon!' toast is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F054"]
   },
   {
     "id": "T078",
     "description": "DashboardOnboardingSection.tsx: 'Onboarding complete' and 'Complete your setup' headings switch correctly and are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F055"]
   },
   {
     "id": "T079",
     "description": "DashboardOnboardingSection.tsx: progress ring shows translated 'PROGRESS' label and '{{completed}} of {{total}} Steps' with interpolation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F056"]
   },
   {
     "id": "T080",
     "description": "DashboardOnboardingSection.tsx: motivational messages change correctly based on progress and are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F056"]
   },
   {
     "id": "T081",
     "description": "DashboardOnboardingSection.tsx: step badges (NOT STARTED, IN PROGRESS, COMPLETE, BLOCKED) are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F057"]
   },
   {
     "id": "T082",
     "description": "DashboardOnboardingSection.tsx: 'STEP {{index}}' label is translated with interpolation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F057"]
   },
   {
     "id": "T083",
     "description": "DashboardOnboardingSection.tsx: action buttons (Completed, Hiding, Hide) are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F058"]
   },
   {
     "id": "T084",
     "description": "DashboardOnboardingSection.tsx: 'Hidden setup cards ({{count}})' panel title is translated with interpolation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F058"]
   },
   {
     "id": "T085",
     "description": "OnboardingChecklist.tsx: card title 'Onboarding checklist' is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F059"]
   },
   {
     "id": "T086",
     "description": "OnboardingChecklist.tsx: progress subtitle '{{completed}} of {{total}} tasks complete' is translated with interpolation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F059"]
   },
   {
     "id": "T087",
     "description": "OnboardingChecklist.tsx: completion banner heading, description, and 'Invite clients' CTA are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F059"]
   },
   {
     "id": "T088",
     "description": "stepDefinitions.ts: all 5 step titles are translatable via translationKey",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F060"]
   },
   {
     "id": "T089",
     "description": "stepDefinitions.ts: all 5 step descriptions are translatable via translationKey",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F060"]
   },
   {
     "id": "T090",
     "description": "stepDefinitions.ts: all 5 step CTA button labels are translatable via translationKey",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F060"]
   },
   {
     "id": "T091",
     "description": "ROUTE_NAMESPACES: '/msp' route loads 'msp/dashboard' namespace",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F061"]
   },
   {
     "id": "T092",
     "description": "ROUTE_NAMESPACES: '/msp/dashboard' route loads 'msp/dashboard' namespace",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F061"]
   },
   {
     "id": "T093",
     "description": "All 7 production locale files for msp/dashboard.json have identical key sets (no missing or extra keys vs English)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F062", "F063", "F064", "F065", "F066", "F067"]
   },
   {
     "id": "T094",
     "description": "xx/msp/dashboard.json: all leaf values are '11111', key structure matches en",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F068"]
   },
   {
     "id": "T095",
     "description": "yy/msp/dashboard.json: all leaf values are '55555', key structure matches en",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F069"]
   },
   {
     "id": "T096",
     "description": "Italian accent audit passes for it/msp/dashboard.json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F070"]
   },
   {
     "id": "T097",
     "description": "Visual QA: switch to xx locale, navigate to /msp/dashboard — welcome banner, feature cards, onboarding all show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F068"]
   },
   {
     "id": "T098",
     "description": "Visual QA: switch to de locale on /msp/dashboard — verify no text overflow on feature card descriptions and onboarding steps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F064"]
   },
   {
     "id": "T099",
     "description": "All {{variables}} in msp/dashboard.json translation values are preserved exactly across all 7 languages",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F062", "F063", "F064", "F065", "F066", "F067"]
   },
   {
     "id": "T100",
     "description": "All msp/dashboard.json files are valid JSON (no syntax errors)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F050", "F062", "F063", "F064", "F065", "F066", "F067", "F068", "F069"]
+  },
+  {
+    "id": "T101",
+    "description": "DashboardOnboardingSection.tsx: rendering without initialDismissedStepIds does not trigger a rerender loop",
+    "implemented": true,
+    "featureIds": ["F071"]
   }
 ]

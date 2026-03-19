@@ -1,0 +1,115 @@
+{
+  "welcome": {
+    "title": "Welcome to Your MSP Command Center",
+    "description": "Track onboarding progress, configure critical services, and keep every client experience consistent.",
+    "titleCommunity": "Welcome back",
+    "descriptionCommunity": "Jump into tickets, scheduling, projects, and reporting from your dashboard."
+  },
+  "features": {
+    "heading": "Platform Features",
+    "comingSoon": "Coming soon!",
+    "tickets": {
+      "title": "Ticket Management",
+      "description": "Streamline support with routing, SLA tracking, and guided workflows."
+    },
+    "monitoring": {
+      "title": "System Monitoring",
+      "description": "Watch critical signals across clients and trigger automation when needed."
+    },
+    "security": {
+      "title": "Security Management",
+      "description": "Manage policies, approvals, and audit responses in one place."
+    },
+    "projects": {
+      "title": "Project Management",
+      "description": "Organize delivery plans, tasks, and milestones for every engagement."
+    },
+    "reports": {
+      "title": "Reporting & Analytics",
+      "description": "Build rollups on utilization, SLA attainment, and profitability."
+    },
+    "schedule": {
+      "title": "Schedule Management",
+      "description": "Coordinate onsite visits and remote sessions with bi-directional sync."
+    }
+  },
+  "knowledgeBase": {
+    "title": "Need a deeper dive?",
+    "description": "Explore deployment runbooks and best practices in the knowledge base.",
+    "cta": "Visit resources"
+  },
+  "onboarding": {
+    "completeTitle": "Onboarding complete",
+    "incompleteTitle": "Complete your setup",
+    "completeDescription": "You're ready to use the full MSP dashboard experience.",
+    "incompleteDescription": "Work through each step to unlock the full MSP dashboard experience.",
+    "stepLabel": "STEP {{index}}",
+    "badges": {
+      "complete": "Complete",
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "blocked": "Blocked"
+    },
+    "progress": {
+      "label": "PROGRESS",
+      "steps": "{{completed}} of {{total}} Steps",
+      "messageStart": "Just getting started!",
+      "messageComplete": "All set - great job!",
+      "messageInProgress": "Keep going - you've got this!"
+    },
+    "substeps": {
+      "dataImport": "Complete your first import OR create 5 contacts",
+      "createContacts": "Create your first 5 contacts"
+    },
+    "cta": {
+      "completed": "Completed",
+      "hiding": "Hiding...",
+      "hide": "Hide",
+      "dismiss": "Dismiss {{title}}",
+      "restoring": "Restoring..."
+    },
+    "hidden": {
+      "title": "Hidden setup cards ({{count}})",
+      "subtitle": "Restore any card if you need it later."
+    },
+    "checklist": {
+      "title": "Onboarding checklist",
+      "progress": "{{completed}} of {{total}} tasks complete",
+      "completeTitle": "Configuration complete",
+      "completeDescription": "Invite clients to experience your branded portal.",
+      "inviteCta": "Invite clients",
+      "viewButton": "View onboarding checklist"
+    },
+    "steps": {
+      "identity": {
+        "title": "Secure Identity & SSO",
+        "description": "Connect Google Workspace or Microsoft 365 so admins sign in with managed identities.",
+        "cta": "Connect SSO"
+      },
+      "portal": {
+        "title": "Set Up Customer Portal",
+        "description": "Configure your portal so customers can sign in on your domain with your branding.",
+        "cta": "Open Portal Settings"
+      },
+      "dataImport": {
+        "title": "Import Core Data",
+        "description": "Add contacts so you can start working for clients and keep workflows moving.",
+        "cta": "Create Contacts"
+      },
+      "calendar": {
+        "title": "Calendar Sync",
+        "description": "Connect Google or Outlook calendars to keep dispatch and client appointments aligned.",
+        "cta": "Configure Calendar"
+      },
+      "email": {
+        "title": "Configure Email",
+        "description": "Set up inbound ticket email and verify an outbound sending domain for reliable delivery.",
+        "cta": "Configure Email"
+      }
+    },
+    "errors": {
+      "dismissFailed": "Failed to dismiss onboarding step.",
+      "restoreFailed": "Failed to restore onboarding step."
+    }
+  }
+}

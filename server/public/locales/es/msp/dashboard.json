@@ -1,0 +1,115 @@
+{
+  "welcome": {
+    "title": "Bienvenido a tu centro de mando MSP",
+    "description": "Sigue el progreso de la incorporación, configura servicios críticos y mantén consistente la experiencia de cada cliente.",
+    "titleCommunity": "Bienvenido de nuevo",
+    "descriptionCommunity": "Accede rápidamente a tickets, programación, proyectos e informes desde tu panel."
+  },
+  "features": {
+    "heading": "Funciones de la plataforma",
+    "comingSoon": "¡Próximamente!",
+    "tickets": {
+      "title": "Gestión de tickets",
+      "description": "Agiliza el soporte con enrutamiento, seguimiento de SLA y flujos guiados."
+    },
+    "monitoring": {
+      "title": "Monitoreo del sistema",
+      "description": "Observa señales críticas en los clientes y activa automatización cuando sea necesario."
+    },
+    "security": {
+      "title": "Gestión de seguridad",
+      "description": "Gestiona políticas, aprobaciones y respuestas de auditoría en un solo lugar."
+    },
+    "projects": {
+      "title": "Gestión de proyectos",
+      "description": "Organiza planes de entrega, tareas e hitos para cada compromiso."
+    },
+    "reports": {
+      "title": "Informes y analítica",
+      "description": "Crea resúmenes sobre utilización, cumplimiento de SLA y rentabilidad."
+    },
+    "schedule": {
+      "title": "Gestión de programación",
+      "description": "Coordina visitas en sitio y sesiones remotas con sincronización bidireccional."
+    }
+  },
+  "knowledgeBase": {
+    "title": "¿Necesitas profundizar más?",
+    "description": "Explora runbooks de implementación y mejores prácticas en la base de conocimientos.",
+    "cta": "Ver recursos"
+  },
+  "onboarding": {
+    "completeTitle": "Incorporación completada",
+    "incompleteTitle": "Completa tu configuración",
+    "completeDescription": "Ya puedes usar la experiencia completa del panel MSP.",
+    "incompleteDescription": "Completa cada paso para desbloquear la experiencia completa del panel MSP.",
+    "stepLabel": "PASO {{index}}",
+    "badges": {
+      "complete": "Completado",
+      "notStarted": "No iniciado",
+      "inProgress": "En progreso",
+      "blocked": "Bloqueado"
+    },
+    "progress": {
+      "label": "PROGRESO",
+      "steps": "{{completed}} de {{total}} pasos",
+      "messageStart": "¡Apenas estás comenzando!",
+      "messageComplete": "¡Todo listo, gran trabajo!",
+      "messageInProgress": "Sigue así, ¡vas muy bien!"
+    },
+    "substeps": {
+      "dataImport": "Completa tu primera importación O crea 5 contactos",
+      "createContacts": "Crea tus primeros 5 contactos"
+    },
+    "cta": {
+      "completed": "Completado",
+      "hiding": "Ocultando...",
+      "hide": "Ocultar",
+      "dismiss": "Ocultar {{title}}",
+      "restoring": "Restaurando..."
+    },
+    "hidden": {
+      "title": "Tarjetas de configuración ocultas ({{count}})",
+      "subtitle": "Restaura cualquier tarjeta si la necesitas más adelante."
+    },
+    "checklist": {
+      "title": "Checklist de incorporación",
+      "progress": "{{completed}} de {{total}} tareas completas",
+      "completeTitle": "Configuración completa",
+      "completeDescription": "Invita a los clientes a conocer tu portal con marca.",
+      "inviteCta": "Invitar clientes",
+      "viewButton": "Ver checklist de incorporación"
+    },
+    "steps": {
+      "identity": {
+        "title": "Protege identidad y SSO",
+        "description": "Conecta Google Workspace o Microsoft 365 para que los administradores inicien sesión con identidades administradas.",
+        "cta": "Conectar SSO"
+      },
+      "portal": {
+        "title": "Configurar portal de clientes",
+        "description": "Configura tu portal para que los clientes puedan iniciar sesión en tu dominio con tu imagen de marca.",
+        "cta": "Abrir configuración del portal"
+      },
+      "dataImport": {
+        "title": "Importar datos principales",
+        "description": "Agrega contactos para empezar a trabajar para los clientes y mantener los flujos en movimiento.",
+        "cta": "Crear contactos"
+      },
+      "calendar": {
+        "title": "Sincronización del calendario",
+        "description": "Conecta calendarios de Google u Outlook para mantener alineados el despacho y las citas con clientes.",
+        "cta": "Configurar calendario"
+      },
+      "email": {
+        "title": "Configurar correo",
+        "description": "Configura el correo entrante de tickets y verifica un dominio de envío saliente para lograr una entrega confiable.",
+        "cta": "Configurar correo"
+      }
+    },
+    "errors": {
+      "dismissFailed": "No se pudo ocultar el paso de incorporación.",
+      "restoreFailed": "No se pudo restaurar el paso de incorporación."
+    }
+  }
+}

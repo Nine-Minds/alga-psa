@@ -1,0 +1,115 @@
+{
+  "welcome": {
+    "title": "Welkom in je MSP-commandocentrum",
+    "description": "Volg de onboardingvoortgang, configureer kritieke diensten en houd de ervaring voor elke klant consistent.",
+    "titleCommunity": "Welkom terug",
+    "descriptionCommunity": "Ga vanaf je dashboard direct naar tickets, planning, projecten en rapportage."
+  },
+  "features": {
+    "heading": "Platformfuncties",
+    "comingSoon": "Binnenkort beschikbaar!",
+    "tickets": {
+      "title": "Ticketbeheer",
+      "description": "Stroomlijn support met routering, SLA-tracking en begeleide workflows."
+    },
+    "monitoring": {
+      "title": "Systeembewaking",
+      "description": "Bewaak kritieke signalen bij klanten en start automatisering wanneer nodig."
+    },
+    "security": {
+      "title": "Beveiligingsbeheer",
+      "description": "Beheer beleid, goedkeuringen en auditreacties op één plek."
+    },
+    "projects": {
+      "title": "Projectbeheer",
+      "description": "Organiseer opleverplannen, taken en mijlpalen voor elke opdracht."
+    },
+    "reports": {
+      "title": "Rapportage en analyse",
+      "description": "Maak overzichten van benutting, SLA-prestaties en winstgevendheid."
+    },
+    "schedule": {
+      "title": "Planningsbeheer",
+      "description": "Coördineer bezoeken op locatie en sessies op afstand met tweerichtingssynchronisatie."
+    }
+  },
+  "knowledgeBase": {
+    "title": "Meer diepgang nodig?",
+    "description": "Verken implementatierunbooks en best practices in de kennisbank.",
+    "cta": "Bronnen bekijken"
+  },
+  "onboarding": {
+    "completeTitle": "Onboarding voltooid",
+    "incompleteTitle": "Voltooi je configuratie",
+    "completeDescription": "Je bent klaar om de volledige MSP-dashboardervaring te gebruiken.",
+    "incompleteDescription": "Werk elke stap af om de volledige MSP-dashboardervaring vrij te schakelen.",
+    "stepLabel": "STAP {{index}}",
+    "badges": {
+      "complete": "Voltooid",
+      "notStarted": "Niet gestart",
+      "inProgress": "Bezig",
+      "blocked": "Geblokkeerd"
+    },
+    "progress": {
+      "label": "VOORTGANG",
+      "steps": "{{completed}} van {{total}} stappen",
+      "messageStart": "Je bent net begonnen!",
+      "messageComplete": "Alles klaar - goed gedaan!",
+      "messageInProgress": "Ga door - je bent goed bezig!"
+    },
+    "substeps": {
+      "dataImport": "Voltooi je eerste import OF maak 5 contacten aan",
+      "createContacts": "Maak je eerste 5 contacten aan"
+    },
+    "cta": {
+      "completed": "Voltooid",
+      "hiding": "Bezig met verbergen...",
+      "hide": "Verbergen",
+      "dismiss": "Verberg {{title}}",
+      "restoring": "Bezig met herstellen..."
+    },
+    "hidden": {
+      "title": "Verborgen setupkaarten ({{count}})",
+      "subtitle": "Herstel een kaart als je die later nodig hebt."
+    },
+    "checklist": {
+      "title": "Onboardingchecklist",
+      "progress": "{{completed}} van {{total}} taken voltooid",
+      "completeTitle": "Configuratie voltooid",
+      "completeDescription": "Nodig klanten uit om je portal met eigen merk te ervaren.",
+      "inviteCta": "Klanten uitnodigen",
+      "viewButton": "Onboardingchecklist bekijken"
+    },
+    "steps": {
+      "identity": {
+        "title": "Identiteit en SSO beveiligen",
+        "description": "Verbind Google Workspace of Microsoft 365 zodat beheerders zich aanmelden met beheerde identiteiten.",
+        "cta": "SSO verbinden"
+      },
+      "portal": {
+        "title": "Klantenportaal instellen",
+        "description": "Configureer je portal zodat klanten op jouw domein kunnen inloggen met jouw branding.",
+        "cta": "Portalinstellingen openen"
+      },
+      "dataImport": {
+        "title": "Kerngegevens importeren",
+        "description": "Voeg contacten toe zodat je voor klanten kunt werken en workflows in beweging houdt.",
+        "cta": "Contacten aanmaken"
+      },
+      "calendar": {
+        "title": "Kalendersynchronisatie",
+        "description": "Verbind Google- of Outlook-agenda's om planning en klantafspraken op elkaar af te stemmen.",
+        "cta": "Kalender configureren"
+      },
+      "email": {
+        "title": "E-mail configureren",
+        "description": "Stel inkomende ticketmail in en verifieer een uitgaand verzenddomein voor betrouwbare aflevering.",
+        "cta": "E-mail configureren"
+      }
+    },
+    "errors": {
+      "dismissFailed": "Onboardingstap kon niet worden verborgen.",
+      "restoreFailed": "Onboardingstap kon niet worden hersteld."
+    }
+  }
+}
