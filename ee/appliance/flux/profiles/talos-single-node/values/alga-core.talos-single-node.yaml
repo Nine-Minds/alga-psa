@@ -4,6 +4,9 @@ edition: enterprise
 host: alga.local
 domainSuffix: alga.local
 
+bootstrap:
+  mode: recover
+
 setup:
   runMigrations: true
   runSeeds: true

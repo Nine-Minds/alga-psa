@@ -6,6 +6,9 @@ nameOverride: ""
 fullnameOverride: ""
 host: "localhost"
 
+bootstrap:
+  mode: recover
+
 # Istio ingress configuration
 istio:
   enabled: false

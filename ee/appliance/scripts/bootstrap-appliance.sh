@@ -4,6 +4,7 @@ set -euo pipefail
 SITE_ID="appliance-single-node"
 PROFILE="talos-single-node"
 RELEASE_VERSION=""
+BOOTSTRAP_MODE=""
 CLUSTER_NAME="alga-appliance"
 HOSTNAME_VALUE=""
 NODE_IP=""
@@ -40,6 +41,7 @@ Options:
   --site-id <id>                 Appliance/site identifier (default: appliance-single-node)
   --release-version <version>    Appliance release version from ee/appliance/releases/
   --profile <name>               Values profile name (default: talos-single-node)
+  --bootstrap-mode <mode>        Bootstrap mode: fresh or recover
   --node-ip <ip>                 Talos node IP for first boot and ongoing access
   --hostname <name>              Appliance hostname
   --cluster-name <name>          Talos cluster name (default: alga-appliance)
@@ -68,6 +70,10 @@ If kubeconfig is not supplied, the script will generate Talos config, apply it t
 the node, bootstrap the cluster, persist talosconfig and kubeconfig under
 ~/nm-kube-config/alga-psa/talos/<site-id>/, install storage, install Flux, apply
 runtime values, and wait for the first-run Alga bootstrap to complete.
+
+Bootstrap modes:
+  fresh    Wipes existing appliance namespaces and local-path data before reinstall
+  recover  Preserves existing appliance state and reuses surviving PVC-backed data
 EOF
 }
 
@@ -230,6 +236,24 @@ resolve_runtime_inputs() {
   if [ ! -f "$KUBECONFIG_PATH" ] && [ -z "$NODE_IP" ]; then
     NODE_IP="$(prompt_value "Talos node IP")"
   fi
+
+  if [ -z "$BOOTSTRAP_MODE" ]; then
+    if is_interactive; then
+      BOOTSTRAP_MODE="$(prompt_value "Bootstrap mode (fresh/recover)" "recover")"
+    else
+      echo "Bootstrap mode is required in non-interactive use. Pass --bootstrap-mode fresh|recover." >&2
+      exit 1
+    fi
+  fi
+
+  case "$BOOTSTRAP_MODE" in
+    fresh|recover)
+      ;;
+    *)
+      echo "Invalid bootstrap mode: $BOOTSTRAP_MODE. Use fresh or recover." >&2
+      exit 1
+      ;;
+  esac
 
   if [ ! -f "$KUBECONFIG_PATH" ] && [ -z "$NETWORK_MODE" ]; then
     NETWORK_MODE="$(prompt_value "Network mode (dhcp/static)" "dhcp")"
@@ -612,6 +636,7 @@ create_runtime_values_dir() {
 
   cp "$source_profile_dir/values/"*.yaml "$values_dir/"
 
+  set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "bootstrap.mode" "$BOOTSTRAP_MODE"
   set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "setup.image.tag" "$ALGA_CORE_TAG"
   set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "server.image.tag" "$ALGA_CORE_TAG"
   set_yaml_value "$values_dir/workflow-worker.$PROFILE.yaml" "image.tag" "$WORKFLOW_WORKER_TAG"
@@ -653,6 +678,19 @@ configMapGenerator:
     files:
       - temporal-worker.$PROFILE.yaml=values/temporal-worker.$PROFILE.yaml
 EOF
+}
+
+reset_appliance_state_if_requested() {
+  if [ "$BOOTSTRAP_MODE" != "fresh" ]; then
+    return 0
+  fi
+
+  if $DRY_RUN; then
+    run_cmd "$REPO_ROOT/ee/appliance/scripts/reset-appliance-data.sh" --kubeconfig "$KUBECONFIG_PATH" --force --dry-run
+    return 0
+  fi
+
+  run_cmd "$REPO_ROOT/ee/appliance/scripts/reset-appliance-data.sh" --kubeconfig "$KUBECONFIG_PATH" --force
 }
 
 install_flux_if_needed() {
@@ -783,6 +821,10 @@ while [ "$#" -gt 0 ]; do
       PROFILE="$2"
       shift 2
       ;;
+    --bootstrap-mode)
+      BOOTSTRAP_MODE="$2"
+      shift 2
+      ;;
     --node-ip)
       NODE_IP="$2"
       shift 2
@@ -897,6 +939,8 @@ if [ ! -f "$KUBECONFIG_PATH" ]; then
   generate_machine_config
   bootstrap_talos_cluster
 fi
+
+reset_appliance_state_if_requested
 
 ensure_namespace "msp"
 ensure_namespace "alga-system"

@@ -68,6 +68,7 @@ The chart currently preserves the secret with a keep policy and avoids recreatin
 The operational rule is simple:
 
 - do not rotate database bootstrap credentials as a side effect of Helm reconciliation
+- if a Postgres PVC already exists and `db-credentials` does not, fail before generating new credentials
 
 ## PVC-Backed State
 
@@ -82,6 +83,20 @@ If those PVCs survive, a restart should return to service without reseeding. If 
 
 For the appliance profile, uninstall and remediation flows should preserve PVCs by default. Failed first-install attempts should not trigger destructive PVC cleanup hooks.
 
+## Bootstrap Modes
+
+The appliance bootstrap flow should expose two explicit operating modes:
+
+- `fresh`: wipes persisted appliance data before reinstalling and expects the database to be empty
+- `recover`: preserves existing appliance data and reuses the surviving credential/state contract
+
+These modes are not just operator labels. They should drive bootstrap behavior:
+
+- `fresh` should fail if existing application database state is detected after connectivity succeeds
+- `recover` should tolerate existing databases and seeded rows, then let migrations and runtime checks converge safely
+
+The bootstrap path should never silently create a new database secret against an existing Postgres volume.
+
 ## Fresh Install Expectations
 
 A correct fresh install should look like this:
@@ -93,6 +108,8 @@ A correct fresh install should look like this:
 5. seeds run once
 6. app pod clears its bootstrap gate
 7. dependent workers reconcile afterward
+
+If a supposed fresh install still finds existing databases or seeded rows, the appliance should fail clearly and tell the operator to wipe persisted data or rerun in recover mode.
 
 ## Restart Expectations
 

@@ -38,14 +38,17 @@ require_file "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh"
 require_file "$ROOT/ee/appliance/scripts/build-images.sh"
 require_file "$ROOT/ee/appliance/scripts/collect-support-bundle.sh"
 require_file "$ROOT/ee/appliance/scripts/install-storage.sh"
+require_file "$ROOT/ee/appliance/scripts/reset-appliance-data.sh"
 
 bash "$ROOT/ee/appliance/scripts/build-images.sh" --help >/dev/null
 bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" --help >/dev/null
 bash "$ROOT/ee/appliance/scripts/collect-support-bundle.sh" --help >/dev/null
 bash "$ROOT/ee/appliance/scripts/install-storage.sh" --help >/dev/null
+bash "$ROOT/ee/appliance/scripts/reset-appliance-data.sh" --help >/dev/null
 bash -n "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh"
 bash -n "$ROOT/ee/appliance/scripts/collect-support-bundle.sh"
 bash -n "$ROOT/ee/appliance/scripts/install-storage.sh"
+bash -n "$ROOT/ee/appliance/scripts/reset-appliance-data.sh"
 
 dry_run_output="$(
   EE_APPLIANCE_SCHEMATIC_ID_OVERRIDE=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
@@ -67,6 +70,7 @@ bootstrap_tmp="$(mktemp -d)"
 bootstrap_dry_run_output="$(
   bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
     --release-version 0.0.1 \
+    --bootstrap-mode fresh \
     --node-ip 192.0.2.10 \
     --hostname alga-appliance \
     --interface enp0s1 \
@@ -82,6 +86,7 @@ bootstrap_dry_run_output="$(
 )"
 
 require_text "$bootstrap_dry_run_output" "talosctl gen config"
+require_text "$bootstrap_dry_run_output" "reset-appliance-data.sh"
 require_text "$bootstrap_dry_run_output" "create source git alga-appliance"
 require_text "$bootstrap_dry_run_output" "install-storage.sh --kubeconfig"
 require_text "$bootstrap_dry_run_output" "collect-support-bundle.sh"

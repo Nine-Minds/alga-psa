@@ -54,11 +54,24 @@ spec:
                 echo "$password" | tr -d '[:space:]'
               }
 
+              psql_quiet() {
+                local database="$1"
+                shift
+                local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+                local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+                local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+                local pg_password
+
+                pg_password="$(get_admin_password)"
+                PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${database}" "$@" 2>&1
+              }
+
               wait_for_postgres() {
                 local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
                 local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
                 local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
                 local pg_password
+                local output
 
                 pg_password="$(get_admin_password)"
                 if [ -z "$pg_password" ]; then
@@ -66,12 +79,68 @@ spec:
                   exit 1
                 fi
 
-                until PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d postgres -c '\q' 2>/dev/null; do
-                  log "PostgreSQL is unavailable at ${pg_admin_host}:${pg_admin_port} - sleeping"
+                while true; do
+                  output="$(PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d postgres -c '\q' 2>&1)" && break
+
+                  case "$output" in
+                    *"password authentication failed"*|*"no password supplied"*|*"SASL authentication failed"*|*"role \""* )
+                      log "ERROR: PostgreSQL authentication failed for ${pg_admin_user} at ${pg_admin_host}:${pg_admin_port}"
+                      log "ERROR: Existing appliance data may not match the current db-credentials secret. Reuse the original credentials in recover mode or wipe appliance data before a fresh install."
+                      exit 1
+                      ;;
+                    *"could not translate host name"*|*"Name or service not known"*|*"Temporary failure in name resolution"* )
+                      log "ERROR: PostgreSQL DNS resolution failed for ${pg_admin_host}"
+                      log "ERROR: ${output}"
+                      exit 1
+                      ;;
+                    *)
+                      log "PostgreSQL is unavailable at ${pg_admin_host}:${pg_admin_port} - sleeping"
+                      ;;
+                  esac
                   sleep 1
                 done
 
                 log "PostgreSQL is up and running"
+              }
+
+              database_exists() {
+                local database_name="$1"
+                psql_quiet postgres -Atqc "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname='${database_name}');" | grep -q '^t$'
+              }
+
+              users_table_exists() {
+                psql_quiet "${DB_NAME_SERVER:-server}" -Atqc "SELECT to_regclass('public.users') IS NOT NULL;" | grep -q '^t$'
+              }
+
+              seed_row_count() {
+                psql_quiet "${DB_NAME_SERVER:-server}" -Atqc "SELECT COUNT(*) FROM users;" | tr -d '[:space:]'
+              }
+
+              preflight_database_state() {
+                local server_db=false
+                local hocuspocus_db=false
+                local users_table=false
+                local user_count=0
+
+                if database_exists "${DB_NAME_SERVER:-server}"; then
+                  server_db=true
+                  if users_table_exists; then
+                    users_table=true
+                    user_count="$(seed_row_count)"
+                  fi
+                fi
+
+                if database_exists "${DB_NAME_HOCUSPOCUS:-hocuspocus}"; then
+                  hocuspocus_db=true
+                fi
+
+                log "Database preflight: bootstrap_mode=${BOOTSTRAP_MODE:-recover} server_db=${server_db} hocuspocus_db=${hocuspocus_db} users_table=${users_table} user_count=${user_count}"
+
+                if [ "${BOOTSTRAP_MODE:-recover}" = "fresh" ] && { [ "$server_db" = "true" ] || [ "$hocuspocus_db" = "true" ] || [ "$user_count" -gt 0 ]; }; then
+                  log "ERROR: Existing application database state detected while bootstrap.mode=fresh."
+                  log "ERROR: Wipe persisted appliance data before a fresh install or rerun in recover mode."
+                  exit 1
+                fi
               }
 
               check_seeds_status() {
@@ -85,6 +154,7 @@ spec:
               }
 
               wait_for_postgres
+              preflight_database_state
 
               log "Creating databases and roles"
               timeout 120 node /app/server/setup/create_database.js
@@ -133,6 +203,8 @@ spec:
               value: {{ ternary "true" "false" .Values.setup.runMigrations | quote }}
             - name: SETUP_RUN_SEEDS
               value: {{ ternary "true" "false" .Values.setup.runSeeds | quote }}
+            - name: BOOTSTRAP_MODE
+              value: {{ .Values.bootstrap.mode | default "recover" | quote }}
 
             # Secret provider configuration for setup jobs
             - name: SECRET_READ_CHAIN

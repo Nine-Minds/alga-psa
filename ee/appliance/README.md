@@ -64,6 +64,7 @@ Use `ee/appliance/scripts/bootstrap-appliance.sh` as the primary operator entryp
 It can:
 
 - generate and persist Talos machine config for a fresh node
+- run in explicit `fresh` or `recover` bootstrap mode
 - bootstrap Talos and write durable `talosconfig` and `kubeconfig`
 - install the local-path storage prerequisite and verify it
 - install Flux and point it at `ee/appliance/flux/base`
@@ -76,6 +77,7 @@ Example fresh bring-up:
 ```bash
 ee/appliance/scripts/bootstrap-appliance.sh \
   --release-version 0.0.1 \
+  --bootstrap-mode fresh \
   --node-ip 192.168.64.5 \
   --hostname alga-appliance \
   --interface enp0s1 \
@@ -89,6 +91,19 @@ ee/appliance/scripts/bootstrap-appliance.sh \
 ```
 
 If you already have a running cluster and kubeconfig, the same script can be used with `--kubeconfig` to skip Talos first-boot work.
+
+Bootstrap mode semantics:
+
+- `fresh`: deletes the appliance namespaces and wipes `/opt/local-path-provisioner` on the node before reinstalling
+- `recover`: preserves existing PVC-backed appliance state and refuses to generate new database credentials against an existing Postgres PVC
+
+Use the destructive reset helper directly when you need to clear persisted appliance data between test runs:
+
+```bash
+ee/appliance/scripts/reset-appliance-data.sh \
+  --kubeconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/kubeconfig \
+  --force
+```
 
 `ee/appliance/scripts/bootstrap-site.sh` remains as a compatibility wrapper around `bootstrap-appliance.sh`.
 
