@@ -224,85 +224,85 @@
   {
     "id": "T038",
     "description": "PaymentFailedBanner.tsx: 'Payment failed — Update payment method' is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
     "id": "T039",
     "description": "PaymentFailedBanner.tsx: 'Failed to open billing portal' toast error is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
     "id": "T040",
     "description": "QuickCreateDialog.tsx: asset success toast is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
     "id": "T041",
     "description": "QuickCreateDialog.tsx: ticket success toast with ticket number interpolation is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
     "id": "T042",
     "description": "QuickCreateDialog.tsx: client success toast with client name interpolation is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
     "id": "T043",
     "description": "QuickCreateDialog.tsx: contact success toast with contact name interpolation is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
     "id": "T044",
     "description": "QuickCreateDialog.tsx: project success toast with project name interpolation is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
     "id": "T045",
     "description": "QuickCreateDialog.tsx: service and product success toasts are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
     "id": "T046",
     "description": "QuickCreateDialog.tsx: 'Add New Contact', 'Add New Project', 'Add New Service' dialog titles are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {
     "id": "T047",
     "description": "QuickCreateDialog.tsx: 'Failed to load clients' and 'Failed to load service types' error messages are translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F028"]
   },
   {
     "id": "T048",
     "description": "RightSidebar.tsx: CE fallback 'Chat' title is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
     "id": "T049",
     "description": "RightSidebar.tsx: CE fallback enterprise-only message is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
     "id": "T050",
     "description": "PlatformNotificationBanner.tsx: 'Learn More' button is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
     "id": "T051",
     "description": "PlatformNotificationBanner.tsx: 'Dismiss notification' aria-label is translated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {

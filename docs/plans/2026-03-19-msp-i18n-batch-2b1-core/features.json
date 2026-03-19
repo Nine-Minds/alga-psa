@@ -146,37 +146,37 @@
   {
     "id": "F025",
     "description": "PaymentFailedBanner.tsx: add useTranslation('msp/core') and translate banner message + portal error toast",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR8"]
   },
   {
     "id": "F026",
     "description": "QuickCreateDialog.tsx: add useTranslation('msp/core') and translate 7 success toast messages with interpolation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR9"]
   },
   {
     "id": "F027",
     "description": "QuickCreateDialog.tsx: translate 3 dialog titles (Add New Contact/Project/Service)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR9"]
   },
   {
     "id": "F028",
     "description": "QuickCreateDialog.tsx: translate 2 error messages (Failed to load clients/service types)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR9"]
   },
   {
     "id": "F029",
     "description": "RightSidebar.tsx: add useTranslation('msp/core') and translate CE fallback 'Chat' title and enterprise-only message",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR10"]
   },
   {
     "id": "F030",
     "description": "PlatformNotificationBanner.tsx: add useTranslation('msp/core') and translate 'Learn More' button + 'Dismiss notification' aria-label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR11"]
   },
   {

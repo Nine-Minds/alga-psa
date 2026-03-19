@@ -2,6 +2,7 @@
 
 import React, { useEffect, Suspense, lazy, useState } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface RightSidebarProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   setIsOpen,
   ...props
 }) => {
+  const { t } = useTranslation('msp/core');
   const [shouldUseEnterpriseSidebar, setShouldUseEnterpriseSidebar] = useState(
     isEnterpriseEditionEnv
   );
@@ -76,9 +78,13 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       >
         <div className="flex flex-col h-full border-l-2 border-gray-200 dark:border-[rgb(var(--color-border-200))]">
           <div className="p-4">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-[rgb(var(--color-text-800))] mb-4">Chat</h2>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-[rgb(var(--color-text-800))] mb-4">
+              {t('rightSidebar.title', { defaultValue: 'Chat' })}
+            </h2>
             <p className="text-gray-600 dark:text-[rgb(var(--color-text-500))]">
-              The chat feature is only available in the Enterprise Edition.
+              {t('rightSidebar.enterpriseOnly', {
+                defaultValue: 'The chat feature is only available in the Enterprise Edition.',
+              })}
             </p>
           </div>
         </div>

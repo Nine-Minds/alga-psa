@@ -54,6 +54,16 @@
 - **Count keys**: `node -e "const o=JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/core.json'));const c=(o,p='')=>{let n=0;for(const[k,v]of Object.entries(o)){if(typeof v==='object'&&v!==null)n+=c(v,p+k+'.');else n++}return n};console.log(c(o))"`
 - **Visual QA**: Enable `msp-i18n-enabled` flag locally, switch to `xx` locale, navigate sidebar/header/settings/billing modes
 
+## Progress Log
+
+- (2026-03-19) Completed `F025-F030` and `T038-T051`.
+  - `PaymentFailedBanner.tsx` now reads `banners.paymentFailed.message` and `banners.paymentFailed.portalError` from `msp/core`.
+  - `QuickCreateDialog.tsx` now translates all success toasts, loading dialog titles, and client/service-type load errors through `msp/core`, preserving interpolation for ticket numbers and entity names.
+  - `RightSidebar.tsx` now translates the CE fallback title/message via `rightSidebar.*`.
+  - `PlatformNotificationBanner.tsx` now translates the Learn More CTA and dismiss aria-label via `banners.platformNotification.*`.
+  - Validation: `cd server && npx vitest run --config vitest.config.ts src/test/unit/layout/PaymentFailedBanner.i18n.test.tsx src/test/unit/layout/RightSidebar.i18n.test.tsx src/test/unit/layout/PlatformNotificationBanner.i18n.test.tsx src/test/unit/layout/QuickCreateDialog.i18n.test.tsx`
+  - Gotcha: the platform notification test emits a React warning because the local `next/link` mock forwards `prefetch={false}` to a DOM anchor; behavior is otherwise correct and assertions pass.
+
 ## Links / References
 
 - Translation plan: `.ai/translation/MSP_i18n_plan.md`
