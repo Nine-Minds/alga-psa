@@ -65,7 +65,7 @@
   {
     "id": "TB10",
     "description": "Template support: template_phase_id stored on template status mappings; TemplateStatusManager shows phase selector; TemplateStatusColumnsStep supports per-phase config; project creation from template copies phase-specific mappings with correct phase_id; template without phase statuses creates project-level mappings only",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033", "F034", "F035", "F036"],
     "covers": ["T048", "T049", "T050", "T051", "T052"]
   },
