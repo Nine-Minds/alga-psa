@@ -12,6 +12,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ActivityDrawerProvider } from "@alga-psa/workflows/components";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
+import { PlatformNotificationBanner } from './PlatformNotificationBanner';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { MspSchedulingProvider } from '@alga-psa/msp-composition/scheduling';
 import { MspTicketIntegrationProvider, MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects';
@@ -427,6 +428,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               rightSidebarOpen={rightSidebarOpen}
               setRightSidebarOpen={setRightSidebarOpen}
             />
+            <PlatformNotificationBanner />
             <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
               {aiAssistantEnabled ? (
