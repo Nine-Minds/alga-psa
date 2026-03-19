@@ -19,7 +19,8 @@ export const addStatusToProject = withAuth(async (
     standard_status_id?: string;  // Standard status
     custom_name?: string;  // Override name
     is_visible?: boolean;
-  }
+  },
+  phaseId?: string | null
 ): Promise<IProjectStatusMapping> => {
   // RBAC check
   if (!await hasPermission(user, 'project', 'update')) {
@@ -30,8 +31,16 @@ export const addStatusToProject = withAuth(async (
 
   return await withTransaction(knex, async (trx) => {
     // Get next display_order
-    const maxOrder = await trx('project_status_mappings')
-      .where({ project_id: projectId, tenant })
+    const maxOrderQuery = trx('project_status_mappings')
+      .where({ project_id: projectId, tenant });
+
+    if (phaseId) {
+      maxOrderQuery.andWhere('phase_id', phaseId);
+    } else {
+      maxOrderQuery.whereNull('phase_id');
+    }
+
+    const maxOrder = await maxOrderQuery
       .max('display_order as max')
       .first();
 
@@ -41,6 +50,7 @@ export const addStatusToProject = withAuth(async (
       .insert({
         tenant,
         project_id: projectId,
+        phase_id: phaseId ?? null,
         status_id: statusData.status_id,
         standard_status_id: statusData.standard_status_id,
         is_standard: !!statusData.standard_status_id,
