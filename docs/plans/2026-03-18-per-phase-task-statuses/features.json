@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "ProjectTaskStatusSettings: per-phase toggle 'Use project defaults' vs 'Custom statuses for this phase'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.3"]
   },
   {
