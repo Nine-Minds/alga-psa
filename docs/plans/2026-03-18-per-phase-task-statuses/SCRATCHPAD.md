@@ -82,6 +82,8 @@
 - `packages/projects/src/components/ProjectTaskStatusEditor.tsx` — project creation status setup
 - `packages/projects/src/components/ProjectTaskStatusSelector.tsx` — status selection for project setup
 
+- (2026-03-18) Implemented `F021` by making `ProjectDetail.tsx` refetch `getProjectTaskStatuses(projectId, selectedPhase.phase_id)` whenever the selected phase changes, while resetting to the initial project-level statuses if no phase is selected.
+
 ### Key Files — Client Portal
 - `packages/client-portal/src/components/projects/ProjectDetailView.tsx` — orchestrator
 - `packages/client-portal/src/components/projects/ClientKanbanBoard.tsx` — kanban view

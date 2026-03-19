@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "ProjectDetail.tsx: fetch phase-effective statuses when selectedPhase changes instead of project-wide statuses",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6.1"]
   },
   {

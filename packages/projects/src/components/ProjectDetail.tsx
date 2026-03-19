@@ -284,6 +284,31 @@ export default function ProjectDetail({
     }
   }, [projectPhases, initialTaskId, initialPhaseId]); // Intentionally exclude selectedPhase to avoid re-triggering
 
+  useEffect(() => {
+    let stale = false;
+
+    const fetchStatusesForPhase = async () => {
+      if (!selectedPhase) {
+        setProjectStatuses(initialStatuses);
+        return;
+      }
+
+      try {
+        const statuses = await getProjectTaskStatuses(project.project_id, selectedPhase.phase_id);
+        if (!stale) {
+          setProjectStatuses(statuses);
+        }
+      } catch (error) {
+        if (!stale) {
+          console.error('Error fetching phase-effective statuses:', error);
+        }
+      }
+    };
+
+    fetchStatusesForPhase();
+    return () => { stale = true; };
+  }, [initialStatuses, project.project_id, selectedPhase]);
+
   // Fetch tags when component mounts
   useEffect(() => {
     let stale = false;
