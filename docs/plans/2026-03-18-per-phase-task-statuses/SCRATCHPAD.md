@@ -88,6 +88,8 @@
 - `packages/client-portal/src/components/projects/ClientTaskListView.tsx` — list view
 - `packages/client-portal/src/actions/client-portal-actions/client-project-details.ts` — getClientProjectStatuses
 
+- (2026-03-18) Implemented `F020` by extending `getClientProjectStatuses()` with optional `phaseId` and the same “phase first, else project defaults” lookup pattern used on the MSP side. The query now also coalesces custom and standard statuses so client portal reads remain backward compatible.
+
 ### Key Files — Templates
 - `packages/projects/src/components/project-templates/TemplateStatusManager.tsx`
 - `packages/projects/src/components/project-templates/wizard-steps/TemplateStatusColumnsStep.tsx`

@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Client portal: getClientProjectStatuses() accepts optional phaseId and uses effective resolution",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7.1"]
   },
   {
