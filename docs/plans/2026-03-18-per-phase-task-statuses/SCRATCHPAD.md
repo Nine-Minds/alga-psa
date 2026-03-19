@@ -51,6 +51,7 @@
 - `server/src/interfaces/project.interfaces.ts` — duplicate interfaces
 
 - (2026-03-18) Implemented `F005` by adding `phase_id?: string` to `IProjectStatusMapping` in both shared and server-local interface copies. The duplicate interface files still need to stay in sync manually.
+- (2026-03-18) Implemented `F006` by adding `phase_id?: string` to `ProjectStatus` in the same two interface files so the flattened status DTO can carry its scope through actions and UI props.
 
 ### Key Files — Models & Actions
 - `packages/projects/src/models/project.ts` — getProjectStatusMappings, getProjectTaskStatuses, addProjectStatusMapping
