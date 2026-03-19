@@ -88,6 +88,7 @@
 - (2026-03-18) Implemented `F024` by making `TaskEdit` and `TaskQuickAdd` fetch phase-effective statuses for their active phase, including same-project phase switches. That ensures `TaskStatusSelect` receives the correct status list via props even when the editor phase differs from the surrounding view state.
 - (2026-03-18) Implemented `F025` in `ProjectTaskStatusSettings` with a scope selector at the top of the panel. `Project Defaults` is the first option, followed by each project phase loaded from `getProjectMetadata(projectId)`.
 - (2026-03-18) Implemented `F026` with phase-level mode controls in `ProjectTaskStatusSettings`: each selected phase now shows `Use project defaults` versus `Custom statuses`, with control enablement derived from whether that phase currently has custom mappings.
+- (2026-03-18) Implemented `F027` by wiring the phase-default state to a `Copy from project defaults` action that calls `copyProjectStatusesToPhase(projectId, phaseId)` and reloads the scoped mappings after success.
 
 ### Key Files — Client Portal
 - `packages/client-portal/src/components/projects/ProjectDetailView.tsx` — orchestrator

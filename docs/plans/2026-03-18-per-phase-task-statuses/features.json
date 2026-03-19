@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "ProjectTaskStatusSettings: toggling to custom offers 'Copy from project defaults' action via copyProjectStatusesToPhase",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5.4"]
   },
   {
