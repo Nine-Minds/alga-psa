@@ -187,7 +187,7 @@ describe('Contract PO UI flows', () => {
     recurringBillingRunActions,
     'generateInvoicesAsRecurringBillingRun'
   );
-  const getInvoicedBillingCyclesPaginatedMock = vi.spyOn(billingCycleActions, 'getInvoicedBillingCyclesPaginated');
+  const getRecurringInvoiceHistoryPaginatedMock = vi.spyOn(billingCycleActions, 'getRecurringInvoiceHistoryPaginated');
   const removeBillingCycleMock = vi.spyOn(billingCycleActions, 'removeBillingCycle');
   const hardDeleteBillingCycleMock = vi.spyOn(billingCycleActions, 'hardDeleteBillingCycle');
   const getAvailableRecurringDueWorkMock = vi.spyOn(billingAndTaxActions, 'getAvailableRecurringDueWork');
@@ -196,14 +196,14 @@ describe('Contract PO UI flows', () => {
     previewInvoiceForSelectionInputMock.mockReset();
     getPurchaseOrderOverageForSelectionInputMock.mockReset();
     generateInvoicesAsRecurringBillingRunMock.mockReset();
-    getInvoicedBillingCyclesPaginatedMock.mockReset();
+    getRecurringInvoiceHistoryPaginatedMock.mockReset();
     removeBillingCycleMock.mockReset();
     hardDeleteBillingCycleMock.mockReset();
     getAvailableRecurringDueWorkMock.mockReset();
 
     // Mock paginated invoiced cycles (empty)
-    getInvoicedBillingCyclesPaginatedMock.mockResolvedValue({
-      cycles: [],
+    getRecurringInvoiceHistoryPaginatedMock.mockResolvedValue({
+      rows: [],
       total: 0,
       page: 1,
       pageSize: 10,

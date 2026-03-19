@@ -164,7 +164,7 @@ function createInvoicedClientRow() {
     billingCycleId: 'cycle-2025-03',
     hasBillingCycleBridge: true,
     cadenceSource: 'client_schedule' as const,
-    executionWindowKind: 'billing_cycle_window' as const,
+    executionWindowKind: 'client_cadence_window' as const,
     servicePeriodStart: '2025-03-01',
     servicePeriodEnd: '2025-04-01',
     servicePeriodLabel: '2025-03-01 to 2025-04-01',
@@ -198,7 +198,7 @@ function createInvoicedContractRow() {
 describe('AutomaticInvoices recurring due-work UI', () => {
   const getAvailableRecurringDueWorkMock = vi.spyOn(billingAndTaxActions, 'getAvailableRecurringDueWork');
   const getAvailableBillingPeriodsMock = vi.spyOn(billingAndTaxActions, 'getAvailableBillingPeriods');
-  const getInvoicedBillingCyclesPaginatedMock = vi.spyOn(billingCycleActions, 'getInvoicedBillingCyclesPaginated');
+  const getRecurringInvoiceHistoryPaginatedMock = vi.spyOn(billingCycleActions, 'getRecurringInvoiceHistoryPaginated');
   const previewInvoiceForSelectionInputMock = vi.spyOn(
     invoiceGenerationActions,
     'previewInvoiceForSelectionInput',
@@ -255,8 +255,8 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       pageSize: 10,
       totalPages: 1,
     });
-    getInvoicedBillingCyclesPaginatedMock.mockResolvedValue({
-      cycles: [],
+    getRecurringInvoiceHistoryPaginatedMock.mockResolvedValue({
+      rows: [],
       total: 0,
       page: 1,
       pageSize: 10,
@@ -290,7 +290,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.getByText('Zenith Health')).toBeInTheDocument();
   });
 
-  it('T026/T029/T030/T039: AutomaticInvoices renders contract-cadence rows with cadence, service-period, invoice-window, contract context, and an unbridged badge', async () => {
+  it('T011/T026/T029/T030/T039: AutomaticInvoices renders contract-cadence rows with cadence, service-period, invoice-window, contract context, and an unbridged badge', async () => {
     const contractRow = createContractRow();
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
 
@@ -684,9 +684,9 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     });
   });
 
-  it('T053/T058: invoiced recurring history renders a contract-cadence row without a billing_cycle_id and shows service-period-backed reverse copy', async () => {
-    getInvoicedBillingCyclesPaginatedMock.mockResolvedValue({
-      cycles: [createInvoicedContractRow()],
+  it('T035/T036/T053/T058: recurring invoice history renders a contract-cadence row without a billing_cycle_id and shows service-period-backed reverse copy', async () => {
+    getRecurringInvoiceHistoryPaginatedMock.mockResolvedValue({
+      rows: [createInvoicedContractRow()],
       total: 1,
       page: 1,
       pageSize: 10,
@@ -699,6 +699,8 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(screen.getByText('INV-2001')).toBeInTheDocument();
     });
 
+    expect(screen.getByText('Recurring Invoice History')).toBeInTheDocument();
+    expect(screen.queryByText('Already Invoiced')).toBeNull();
     expect(screen.getAllByText('Contract anniversary').length).toBeGreaterThan(0);
     expect(screen.getByText('Service-period-backed')).toBeInTheDocument();
     expect(screen.getAllByText('2025-03-08 to 2025-04-08').length).toBeGreaterThan(0);
@@ -708,6 +710,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     fireEvent.click(screen.getByText('Reverse Invoice'));
 
     await waitFor(() => {
+      expect(screen.queryByText('Reverse Billing Cycle')).toBeNull();
       expect(screen.getByText(/without requiring a client billing cycle row/i)).toBeInTheDocument();
     });
 
@@ -722,8 +725,8 @@ describe('AutomaticInvoices recurring due-work UI', () => {
   });
 
   it('renders a bridged client-cadence history row and deletes it through the billing-cycle-compatible wrapper', async () => {
-    getInvoicedBillingCyclesPaginatedMock.mockResolvedValue({
-      cycles: [createInvoicedClientRow()],
+    getRecurringInvoiceHistoryPaginatedMock.mockResolvedValue({
+      rows: [createInvoicedClientRow()],
       total: 1,
       page: 1,
       pageSize: 10,

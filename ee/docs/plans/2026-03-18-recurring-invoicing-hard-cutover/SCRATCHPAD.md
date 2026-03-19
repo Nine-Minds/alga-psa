@@ -103,6 +103,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Recurring preview/generation diagnostics now emit only `executionIdentityKey` for live recurring failures. `billingCycleId` still exists as passive persistence or read-side metadata, but it is no longer part of the recurring preview/generate error contract.
 - (2026-03-18) Invoice API list/detail contracts now distinguish client recurring invoices as `client_cadence_window`, not `billing_cycle_window`. `billing_cycle_id` remains available on invoice DTOs only as optional historical metadata or explicit include-side context, not as the recurring classifier.
 - (2026-03-18) `recurring_projection` was dead compatibility metadata in the clean runtime paths. Canonical recurring reads now key directly off `recurring_detail_periods`; only the already-dirty `billingInvoiceTiming.integration.test.ts` still references the removed field and was intentionally left untouched until that file is clean.
+- (2026-03-18) Live recurring history now loads through `getRecurringInvoiceHistoryPaginated(...)` and labels the surface as recurring invoice history, not invoiced billing cycles. A deprecated `getInvoicedBillingCyclesPaginated(...)` alias remains only so the already-dirty `billingInvoiceTiming.integration.test.ts` harness can be cleaned up separately without mixing in its unrelated edits.
 
 ## Commands / Runbooks
 
@@ -123,6 +124,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/api/invoiceService.recurringDetailProjection.test.ts src/test/unit/api/invoiceResponseSchema.compatibility.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/invoiceQueries.recurringDetailRead.test.ts src/test/unit/billing/manualInvoiceActions.viewing.test.ts src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts src/test/unit/invoiceWorkflowEvents.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts src/test/integration/accounting/invoiceSelection.integration.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/billing/recurringInvoiceHistory.static.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -151,6 +153,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) F031/F032/F033/F034 implemented by renaming client recurring invoice DTO execution-window kind to `client_cadence_window`, keeping `billing_cycle_id` only as optional metadata, and cutting `InvoiceService` list/detail projection plus filter classification over to canonical recurring summary data without any `invoices.billing_cycle_id` fallback.
 - (2026-03-18) F035/F036 implemented by removing `recurring_projection` from invoice charge types, schema contracts, invoice model hydration, and workflow-event provenance so canonical recurring detail reads depend only on `recurring_detail_periods` plus summary parent period fields.
 - (2026-03-18) T010 implemented with a UI regression proving `AutomaticInvoices` can render, preview, and generate a client-cadence row whose `billingCycleId` metadata is null while still sending canonical selector-input targets.
+- (2026-03-18) F037/F038 implemented by renaming the live recurring history reader to `getRecurringInvoiceHistoryPaginated(...)`, removing the remaining billing-cycle cadence fallback from the history query, and updating `AutomaticInvoices` copy from billing-cycle framing to recurring-invoice-history framing.
+- (2026-03-18) T011/T035/T036/T037 implemented with ready-row UI coverage for an unbridged contract-cadence row, recurring-history UI coverage for row actions and service-period/execution-window copy, and a static guard that the live history surface no longer imports or labels itself as invoiced billing cycles.
 
 ## Links / References
 

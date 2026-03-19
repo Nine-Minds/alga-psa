@@ -19,11 +19,11 @@ import {
 import { generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
 import {
-  getInvoicedBillingCyclesPaginated,
+  getRecurringInvoiceHistoryPaginated,
   reverseRecurringInvoice,
   hardDeleteRecurringInvoice,
   hardDeleteBillingCycle,
-  type InvoicedRecurringHistoryRow,
+  type RecurringInvoiceHistoryRow,
 } from '@alga-psa/billing/actions/billingCycleActions';
 import { getAvailableRecurringDueWork, type BillingPeriodDateRange } from '@alga-psa/billing/actions/billingAndTax';
 import { Dialog, DialogContent, DialogFooter, DialogDescription } from '@alga-psa/ui/components/Dialog';
@@ -48,7 +48,7 @@ interface AutomaticInvoicesProps {
 
 type ReadyPeriod = IRecurringDueWorkRow;
 
-type InvoicedPeriod = InvoicedRecurringHistoryRow;
+type InvoicedPeriod = RecurringInvoiceHistoryRow;
 
 // Convert DateRange to API format using YYYY-MM-DD to avoid timezone drift
 const buildDateRangeFilter = (range: DateRange): BillingPeriodDateRange | undefined => {
@@ -270,14 +270,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     setInvoicedCurrentPage(1);
   };
 
-  // Load invoiced billing periods with server-side pagination
+  // Load recurring invoice history with server-side pagination
   useEffect(() => {
     let isMounted = true;
 
     const loadInvoicedPeriods = async () => {
       setIsInvoicedLoading(true);
       try {
-        const result = await getInvoicedBillingCyclesPaginated({
+        const result = await getRecurringInvoiceHistoryPaginated({
           page: invoicedCurrentPage,
           pageSize: invoicedPageSize,
           searchTerm: debouncedInvoicedSearchTerm
@@ -285,7 +285,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         if (!isMounted) return;
 
-        setInvoicedPeriods(result.cycles as InvoicedPeriod[]);
+        setInvoicedPeriods(result.rows as InvoicedPeriod[]);
         setTotalInvoicedPeriods(result.total);
 
         // Clamp page if current page is beyond available pages
@@ -296,7 +296,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       } catch (error) {
         console.error('Error loading invoiced periods:', error);
         if (isMounted) {
-          setLoadError('Failed to load invoiced periods. Please try again.');
+          setLoadError('Failed to load recurring invoice history. Please try again.');
         }
       }
       if (isMounted) {
@@ -978,7 +978,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Already Invoiced</h2>
+            <h2 className="text-lg font-semibold">Recurring Invoice History</h2>
             <Input
               id="filter-invoiced-clients-input"
               type="text"
@@ -1101,7 +1101,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       <Dialog
         isOpen={showReverseDialog}
         onClose={() => setShowReverseDialog(false)}
-        title="Reverse Billing Cycle"
+        title="Reverse Recurring Invoice"
       >
         <DialogContent>
           <div className="flex items-center gap-2 text-red-600 mb-4">

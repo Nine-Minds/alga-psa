@@ -326,7 +326,7 @@ export const hardDeleteBillingCycle = withAuth(async (
   }
 });
 
-export interface InvoicedRecurringHistoryRow {
+export interface RecurringInvoiceHistoryRow {
   invoiceId: string;
   invoiceNumber: string | null;
   invoiceStatus: string | null;
@@ -336,7 +336,7 @@ export interface InvoicedRecurringHistoryRow {
   billingCycleId: string | null;
   hasBillingCycleBridge: boolean;
   cadenceSource: 'client_schedule' | 'contract_anniversary';
-  executionWindowKind: 'billing_cycle_window' | 'contract_cadence_window';
+  executionWindowKind: 'client_cadence_window' | 'contract_cadence_window';
   servicePeriodStart: ISO8601String | null;
   servicePeriodEnd: ISO8601String | null;
   servicePeriodLabel: string;
@@ -344,6 +344,8 @@ export interface InvoicedRecurringHistoryRow {
   invoiceWindowEnd: ISO8601String | null;
   invoiceWindowLabel: string;
 }
+
+export type InvoicedRecurringHistoryRow = RecurringInvoiceHistoryRow;
 
 function formatHistoryRangeLabel(start?: string | null, end?: string | null) {
   if (!start && !end) {
@@ -370,7 +372,7 @@ function normalizeHistoryDate(value: unknown): string | null {
   return null;
 }
 
-function mapRecurringHistoryRow(row: any): InvoicedRecurringHistoryRow {
+function mapRecurringHistoryRow(row: any): RecurringInvoiceHistoryRow {
   const servicePeriodStart = normalizeHistoryDate(row.service_period_start);
   const servicePeriodEnd = normalizeHistoryDate(row.service_period_end);
   const invoiceWindowStart = normalizeHistoryDate(row.invoice_window_start);
@@ -381,7 +383,7 @@ function mapRecurringHistoryRow(row: any): InvoicedRecurringHistoryRow {
     : 'client_schedule';
   const executionWindowKind = row.cadence_owner === 'contract'
     ? 'contract_cadence_window'
-    : 'billing_cycle_window';
+    : 'client_cadence_window';
 
   return {
     invoiceId: row.invoice_id,
@@ -475,11 +477,21 @@ export const getInvoicedBillingCycles = withAuth(async (
 });
 
 // Types for paginated invoiced billing cycles
-export interface FetchInvoicedCyclesOptions {
+export interface FetchRecurringInvoiceHistoryOptions {
   page?: number;
   pageSize?: number;
   searchTerm?: string;
 }
+
+export interface PaginatedRecurringInvoiceHistoryResult {
+  rows: RecurringInvoiceHistoryRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface FetchInvoicedCyclesOptions extends FetchRecurringInvoiceHistoryOptions {}
 
 export interface PaginatedInvoicedCyclesResult {
   cycles: InvoicedRecurringHistoryRow[];
@@ -489,21 +501,16 @@ export interface PaginatedInvoicedCyclesResult {
   totalPages: number;
 }
 
-/**
- * Fetch invoiced billing cycles with server-side pagination and search
- */
-export const getInvoicedBillingCyclesPaginated = withAuth(async (
-  user,
-  { tenant },
-  options: FetchInvoicedCyclesOptions = {}
-): Promise<PaginatedInvoicedCyclesResult> => {
+async function fetchRecurringInvoiceHistoryPage(
+  tenant: string,
+  options: FetchRecurringInvoiceHistoryOptions = {}
+): Promise<PaginatedRecurringInvoiceHistoryResult> {
+  const { knex: conn } = await createTenantKnex();
   const {
     page = 1,
     pageSize = 10,
     searchTerm = ''
   } = options;
-
-  const { knex: conn } = await createTenantKnex();
 
   const result = await withTransaction(conn, async (trx: Knex.Transaction) => {
     const detailServicePeriodStartSql = `
@@ -590,7 +597,7 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
         trx.raw(`coalesce(rsp_summary.service_period_end, (${detailServicePeriodEndSql})) as service_period_end`),
         trx.raw(`coalesce(rsp_summary.invoice_window_start, i.billing_period_start) as invoice_window_start`),
         trx.raw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end) as invoice_window_end`),
-        trx.raw(`coalesce(rsp_summary.cadence_owner, case when i.billing_cycle_id is not null then 'client' else null end) as cadence_owner`)
+        trx.raw(`coalesce(rsp_summary.cadence_owner, 'client') as cadence_owner`)
       )
       .orderByRaw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end, i.invoice_date) desc`)
       .orderBy('i.invoice_id', 'desc')
@@ -598,7 +605,7 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
       .offset(offset);
 
     return {
-      cycles: cycles.map(mapRecurringHistoryRow),
+      rows: cycles.map(mapRecurringHistoryRow),
       total,
       page,
       pageSize,
@@ -607,6 +614,35 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
   });
 
   return result;
+}
+
+/**
+ * Fetch recurring invoice history with server-side pagination and search.
+ */
+export const getRecurringInvoiceHistoryPaginated = withAuth(async (
+  user,
+  { tenant },
+  options: FetchRecurringInvoiceHistoryOptions = {}
+): Promise<PaginatedRecurringInvoiceHistoryResult> => {
+  return fetchRecurringInvoiceHistoryPage(tenant, options);
+});
+
+/**
+ * @deprecated Use getRecurringInvoiceHistoryPaginated.
+ */
+export const getInvoicedBillingCyclesPaginated = withAuth(async (
+  user,
+  { tenant },
+  options: FetchInvoicedCyclesOptions = {}
+): Promise<PaginatedInvoicedCyclesResult> => {
+  const result = await fetchRecurringInvoiceHistoryPage(tenant, options);
+  return {
+    cycles: result.rows,
+    total: result.total,
+    page: result.page,
+    pageSize: result.pageSize,
+    totalPages: result.totalPages,
+  };
 });
 
 export const getAllBillingCycles = withAuth(async (
