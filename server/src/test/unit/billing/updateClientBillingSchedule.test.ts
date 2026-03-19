@@ -2,7 +2,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 type Call =
   | { table: string; method: 'update'; args: unknown[]; where?: unknown[]; andWhere?: unknown[] }
-  | { table: string; method: 'select'; args: unknown[]; where?: unknown[]; andWhere?: unknown[] };
+  | { table: string; method: 'select'; args: unknown[]; where?: unknown[]; andWhere?: unknown[] }
+  | { table: string; method: 'insert'; args: unknown[]; where?: unknown[]; andWhere?: unknown[] };
 
 class FakeQuery {
   private readonly calls: Call[];
@@ -29,6 +30,10 @@ class FakeQuery {
   }
 
   whereIn(): this {
+    return this;
+  }
+
+  whereNotNull(): this {
     return this;
   }
 
@@ -75,6 +80,11 @@ class FakeQuery {
     this.calls.push({ table: this.table, method: 'update', args, where: this.whereClauses, andWhere: this.andWhereClauses });
     return Promise.resolve(1);
   }
+
+  insert(...args: unknown[]): any {
+    this.calls.push({ table: this.table, method: 'insert', args, where: this.whereClauses, andWhere: this.andWhereClauses });
+    return Promise.resolve(1);
+  }
 }
 
 function makeFakeTransaction(responses: Record<string, any>): { trx: any; calls: Call[] } {
@@ -91,20 +101,27 @@ vi.mock('@alga-psa/db', () => ({
     if (!currentTrx) throw new Error('No test transaction configured');
     return await fn(currentTrx);
   },
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: (...args: any[]) => Promise<unknown>) =>
+    (...args: any[]) =>
+      action(
+        {
+          user_id: 'user-1',
+          tenant: 'tenant-1',
+        },
+        { tenant: 'tenant-1' },
+        ...args,
+      ),
   getSession: vi.fn(async () => ({ user: { id: 'user-1' } })),
-}));
-
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
 }));
 
 const mockEnsureClientBillingSettingsRow = vi.fn(async () => undefined);
 
-vi.mock('@alga-psa/billing/actions', async () => {
-  const actual = await vi.importActual<any>('@alga-psa/billing/actions');
+vi.mock('../../../../../packages/billing/src/actions/billingCycleAnchorActions', async () => {
+  const actual = await vi.importActual<any>('../../../../../packages/billing/src/actions/billingCycleAnchorActions');
   return {
     ...actual,
     ensureClientBillingSettingsRow: (...args: any[]) => mockEnsureClientBillingSettingsRow(...args),
@@ -118,14 +135,56 @@ describe('updateClientBillingSchedule', () => {
     vi.resetModules();
   });
 
-  it('updates billing cycle + anchor and deactivates future non-invoiced cycles at/after cutover', async () => {
+  it('T052: updates billing schedule settings and regenerates future recurring service periods beyond billed history instead of mutating future client_billing_cycles', async () => {
     const responses = {
       'clients:select:first': { client_id: 'client-1', billing_cycle: 'monthly' },
-      'client_billing_cycles as cbc:select:first': { period_end_date: '2026-01-01T00:00:00Z' },
+      'client_billing_cycles as cbc:select:first': { period_end_date: '2026-01-10T00:00:00Z' },
+      'client_contract_lines as ccl:select:many': [
+        {
+          client_contract_line_id: 'line-1',
+          start_date: '2025-01-10T00:00:00Z',
+          end_date: null,
+          contract_line_type: 'Fixed',
+          billing_timing: 'arrears',
+        },
+      ],
+      'recurring_service_periods:select:many': [
+        {
+          record_id: 'rsp-1',
+          tenant: 'tenant-1',
+          schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+          period_key: 'period:2026-01-10:2026-02-10',
+          revision: 1,
+          obligation_id: 'line-1',
+          obligation_type: 'client_contract_line',
+          charge_family: 'fixed',
+          cadence_owner: 'client',
+          due_position: 'arrears',
+          lifecycle_state: 'generated',
+          service_period_start: '2026-01-10',
+          service_period_end: '2026-02-10',
+          invoice_window_start: '2026-02-10',
+          invoice_window_end: '2026-03-10',
+          activity_window_start: null,
+          activity_window_end: null,
+          timing_metadata: null,
+          provenance_kind: 'generated',
+          source_rule_version: 'legacy',
+          reason_code: 'initial_materialization',
+          source_run_key: 'legacy-run',
+          supersedes_record_id: null,
+          invoice_id: null,
+          invoice_charge_id: null,
+          invoice_charge_detail_id: null,
+          invoice_linked_at: null,
+          created_at: '2025-12-01T00:00:00Z',
+          updated_at: '2025-12-01T00:00:00Z',
+        },
+      ],
     };
     const { trx, calls } = makeFakeTransaction(responses);
     currentTrx = trx;
-    const { updateClientBillingSchedule: updateWithMock } = await import('@alga-psa/billing/actions');
+    const { updateClientBillingSchedule: updateWithMock } = await import('../../../../../packages/billing/src/actions/billingScheduleActions');
 
     await updateWithMock({
       clientId: 'client-1',
@@ -146,22 +205,68 @@ describe('updateClientBillingSchedule', () => {
       billing_cycle_anchor_month_of_year: 1,
     });
 
-    const deactivateUpdate = calls.find(c => c.method === 'update' && c.table === 'client_billing_cycles') as any;
-    expect(deactivateUpdate).toBeTruthy();
-    expect(deactivateUpdate.args[0]).toMatchObject({ is_active: false });
+    const supersedeUpdate = calls.find(
+      c => c.method === 'update' && c.table === 'recurring_service_periods',
+    ) as any;
+    expect(supersedeUpdate).toBeTruthy();
+    expect(supersedeUpdate.args[0]).toMatchObject({ lifecycle_state: 'superseded' });
 
-    const hasCutoverFilter = (deactivateUpdate.andWhere ?? []).some((clause: any) => clause[0] === 'period_start_date' && clause[1] === '>=' && clause[2] === '2026-01-01T00:00:00Z');
-    expect(hasCutoverFilter).toBe(true);
+    const regeneratedInsert = calls.find(
+      c => c.method === 'insert' && c.table === 'recurring_service_periods',
+    ) as any;
+    expect(regeneratedInsert).toBeTruthy();
+    const insertedRows = regeneratedInsert.args[0];
+    expect(Array.isArray(insertedRows)).toBe(true);
+    expect(insertedRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          obligation_id: 'line-1',
+          obligation_type: 'client_contract_line',
+          cadence_owner: 'client',
+          due_position: 'arrears',
+          provenance_kind: 'regenerated',
+          reason_code: 'billing_schedule_changed',
+          supersedes_record_id: 'rsp-1',
+        }),
+      ]),
+    );
+    expect(insertedRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          obligation_id: 'line-1',
+          obligation_type: 'client_contract_line',
+          cadence_owner: 'client',
+          due_position: 'arrears',
+          provenance_kind: 'generated',
+          reason_code: 'backfill_materialization',
+        }),
+      ]),
+    );
+
+    const deactivateUpdate = calls.find(
+      c => c.method === 'update' && c.table === 'client_billing_cycles',
+    ) as any;
+    expect(deactivateUpdate).toBeFalsy();
   });
 
-  it('does not apply a cutover filter when there are no invoiced cycles', async () => {
+  it('T053: legitimate client billing schedule management still updates client settings while regenerating recurring service periods', async () => {
     const responses = {
       'clients:select:first': { client_id: 'client-1', billing_cycle: 'monthly' },
       'client_billing_cycles as cbc:select:first': null,
+      'client_contract_lines as ccl:select:many': [
+        {
+          client_contract_line_id: 'line-1',
+          start_date: '2025-01-01T00:00:00Z',
+          end_date: null,
+          contract_line_type: 'Fixed',
+          billing_timing: 'arrears',
+        },
+      ],
+      'recurring_service_periods:select:many': [],
     };
     const { trx, calls } = makeFakeTransaction(responses);
     currentTrx = trx;
-    const { updateClientBillingSchedule: updateWithMock } = await import('@alga-psa/billing/actions');
+    const { updateClientBillingSchedule: updateWithMock } = await import('../../../../../packages/billing/src/actions/billingScheduleActions');
 
     await updateWithMock({
       clientId: 'client-1',
@@ -172,10 +277,20 @@ describe('updateClientBillingSchedule', () => {
     const clientUpdate = calls.find(c => c.method === 'update' && c.table === 'clients') as any;
     expect(clientUpdate).toBeFalsy();
 
-    const deactivateUpdate = calls.find(c => c.method === 'update' && c.table === 'client_billing_cycles') as any;
-    expect(deactivateUpdate).toBeTruthy();
+    const regeneratedInsert = calls.find(
+      c => c.method === 'insert' && c.table === 'recurring_service_periods',
+    ) as any;
+    expect(regeneratedInsert).toBeTruthy();
+    expect(regeneratedInsert.args[0][0]).toMatchObject({
+      obligation_id: 'line-1',
+      cadence_owner: 'client',
+      provenance_kind: 'generated',
+      reason_code: 'backfill_materialization',
+    });
 
-    const hasCutoverFilter = (deactivateUpdate.andWhere ?? []).some((clause: any) => clause[0] === 'period_start_date' && clause[1] === '>=');
-    expect(hasCutoverFilter).toBe(false);
+    const deactivateUpdate = calls.find(
+      c => c.method === 'update' && c.table === 'client_billing_cycles',
+    ) as any;
+    expect(deactivateUpdate).toBeFalsy();
   });
 });

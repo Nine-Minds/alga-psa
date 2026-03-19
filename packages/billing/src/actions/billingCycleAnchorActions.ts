@@ -21,6 +21,7 @@ import {
   CLIENT_CADENCE_SCHEDULE_CONTEXT,
   type ClientCadenceScheduleContext
 } from '@shared/billingClients/clientCadenceScheduleContext';
+import { regenerateClientCadenceServicePeriodsForScheduleChange } from './clientCadenceScheduleRegeneration';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -136,43 +137,12 @@ export const updateClientBillingCycleAnchor = withAuth(async (
         updated_at: trx.fn.now()
       });
 
-    // Anchor changes should not retroactively affect already-invoiced periods.
-    // To make sure newly generated cycles reflect the updated anchor, deactivate any
-    // future, non-invoiced cycles at/after the cutover start.
-    const lastInvoiced = await trx('client_billing_cycles as cbc')
-      .join('invoices as i', function () {
-        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
-      })
-      .where('cbc.tenant', tenant)
-      .andWhere('cbc.client_id', input.clientId)
-      .orderBy('cbc.period_end_date', 'desc')
-      .first()
-      .select('cbc.period_end_date');
-
-    const cutoverStart: ISO8601String | null = lastInvoiced?.period_end_date
-      ? normalizeDbIsoUtcMidnight(lastInvoiced.period_end_date)
-      : null;
-
-    const nonInvoicedCycleQuery = trx('client_billing_cycles')
-      .where({ tenant, client_id: input.clientId, is_active: true })
-      .whereNotExists(function () {
-        this.select(1)
-          .from('invoices')
-          .whereRaw('invoices.tenant = client_billing_cycles.tenant')
-          .andWhereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id');
-      });
-
-    if (cutoverStart) {
-      await nonInvoicedCycleQuery.andWhere('period_start_date', '>=', cutoverStart).update({
-        is_active: false,
-        updated_at: trx.fn.now()
-      });
-    } else {
-      await nonInvoicedCycleQuery.update({
-        is_active: false,
-        updated_at: trx.fn.now()
-      });
-    }
+    await regenerateClientCadenceServicePeriodsForScheduleChange(trx, {
+      tenant,
+      clientId: input.clientId,
+      billingCycle,
+      anchor: normalized,
+    });
   });
 
   return { success: true };

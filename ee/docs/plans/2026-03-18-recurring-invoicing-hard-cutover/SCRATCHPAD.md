@@ -19,6 +19,7 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Prepayment classification should use explicit invoice-kind state (`is_prepayment`) rather than the absence of a recurring bridge field; bridge-less recurring invoices and prepayments are separate concepts.
 - (2026-03-18) Persisted recurring execution windows are already canonical recurring truth, so billing-engine validation for selector-input recurring runs must not round-trip back through `client_billing_cycles` or auto-create cycle rows just to validate the window.
 - (2026-03-18) Direct `selector_input` preview/generate requests must normalize and validate against persisted `recurring_service_periods`; treating the caller-provided window as trusted input leaves a gap where mutated windows can bypass canonical service-period authority.
+- (2026-03-18) Client billing schedule edits should regenerate future client-cadence `recurring_service_periods` after the last billed boundary while leaving `client_billing_cycles` available only for schedule administration and historical context.
 
 ## Agent Findings
 
@@ -105,6 +106,10 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
   - [invoiceModification.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/invoiceModification.ts) now classifies prepayment handling from explicit invoice kind (`is_prepayment`) and negative totals, rather than treating `billing_cycle_id = null` as a proxy.
   - [creditActions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/creditActions.ts) now persists `is_prepayment: true` when creating prepayment invoices so finalization and later reads use the same explicit kind signal.
   - Added behavior and static coverage in [invoiceFinalization.kindClassification.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/invoiceFinalization.kindClassification.test.ts), plus a prepayment persistence assertion in [prepaymentInvoice.periodPolicy.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts).
+- Client schedule-regeneration slice completed:
+  - Added [clientCadenceScheduleRegeneration.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/clientCadenceScheduleRegeneration.ts) to derive the last billed client boundary, load client-cadence obligations, and regenerate future `recurring_service_periods` with canonical `billing_schedule_changed` / `backfill_materialization` provenance instead of mutating future `client_billing_cycles`.
+  - Updated [billingScheduleActions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/billingScheduleActions.ts) and [billingCycleAnchorActions.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/billingCycleAnchorActions.ts) so both schedule-edit entrypoints call the new regeneration helper after updating client schedule settings.
+  - Added focused unit coverage in [updateClientBillingSchedule.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/unit/billing/updateClientBillingSchedule.test.ts) and rewrote the DB-backed schedule expectations in [clientBillingCycleAnchors.test.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts) to assert recurring-service-period regeneration and preserved schedule-administration cycles instead of future-cycle deactivation.
 
 ## Discoveries / Constraints
 
@@ -130,6 +135,9 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Live recurring history now loads through `getRecurringInvoiceHistoryPaginated(...)` and labels the surface as recurring invoice history, not invoiced billing cycles. A deprecated `getInvoicedBillingCyclesPaginated(...)` alias remains only so the already-dirty `billingInvoiceTiming.integration.test.ts` harness can be cleaned up separately without mixing in its unrelated edits.
 - (2026-03-18) `invoiceService.ts` no longer uses `invoice.billing_cycle_id` to choose recurring linkage candidates. The next remaining bridge-like misclassification seam is still in [invoiceModification.ts](/Users/roberisaacs/alga-psa.worktrees/feature/client-owned-contracts-simplification/packages/billing/src/actions/invoiceModification.ts), where null/non-null `billing_cycle_id` is still used for prepayment logic (`F046`/`F047`).
 - (2026-03-18) `invoiceModification.ts` now classifies prepayment behavior from `is_prepayment`, and `creditActions.ts` now persists that flag for new prepayment invoices. Historical rows that predate the explicit flag may still need later read-side or backfill consideration if they relied on the old null-bridge proxy.
+- (2026-03-18) The schedule-edit actions still read `client_billing_cycles` only to determine the last invoiced historical boundary. That boundary is now passive historical input to recurring-service-period regeneration; future schedule changes no longer deactivate or redefine recurring work by mutating future cycle rows.
+- (2026-03-18) The DB-backed schedule-management suite now imports action files directly instead of `@alga-psa/billing/actions`, because the broader action index pulls optional jobs infrastructure that is not resolvable in this isolated test harness.
+- (2026-03-18) DB-backed verification for `clientBillingCycleAnchors.test.ts` is currently blocked locally because PostgreSQL is unavailable on `127.0.0.1:5438` / `::1:5438`. The rewritten tests load and compile, but the shared test context aborts before any test body executes.
 
 ## Commands / Runbooks
 
@@ -159,6 +167,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - `cd server && pnpm exec vitest run src/test/unit/billing/billingEngine.recurringExecution.static.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts --coverage.enabled=false`
 - `cd server && pnpm exec vitest run src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/unit/billing/updateClientBillingSchedule.test.ts --coverage.enabled=false`
+- `cd server && pnpm exec vitest run src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts --coverage.enabled=false`
 
 ## Completed Items
 
@@ -200,6 +210,8 @@ Working notes for the hard-cutover plan that removes recurring invoice bridge as
 - (2026-03-18) Added T089 because the original checklist lacked a focused validation test for direct selector-input windows drifting away from persisted recurring service periods; preview and generate both now reject that mismatch explicitly.
 - (2026-03-18) F052 implemented by normalizing client-cadence and contract-cadence selector input against persisted `recurring_service_periods`, so recurring preview/generate validate canonical service-period windows instead of trusting caller-supplied windows or legacy cycle semantics.
 - (2026-03-18) T089 implemented with preview/generate regressions proving selector-input recurring actions reject execution windows that do not match materialized recurring service periods and still surface canonical execution-identity diagnostics.
+- (2026-03-18) F053/F054 implemented by routing both client billing schedule edit actions through canonical client-cadence service-period regeneration, keeping `client_billing_cycles` available for schedule administration while removing the old future-cycle invalidation behavior from recurring execution.
+- (2026-03-18) T052/T053 implemented with focused unit coverage for schedule-driven `recurring_service_periods` regeneration plus a DB-backed schedule suite rewrite that now asserts preserved client-cycle administration and canonical recurring regeneration semantics, although the DB-backed run is currently blocked locally by the missing PostgreSQL test instance.
 
 ## Links / References
 
