@@ -91,6 +91,7 @@
 - (2026-03-18) Implemented `F027` by wiring the phase-default state to a `Copy from project defaults` action that calls `copyProjectStatusesToPhase(projectId, phaseId)` and reloads the scoped mappings after success.
 - (2026-03-18) Implemented `F028` by making the `Use project defaults` path confirm before calling `removePhaseStatuses(phaseId)`, then reloading the phase scope so the UI falls back to the project-level mappings.
 - (2026-03-18) Implemented `F029` by extending `AddStatusDialog` with optional `phaseId` and passing that through to `addStatusToProject(projectId, statusData, phaseId)`, so a phase can start custom status configuration without copying the defaults first.
+- (2026-03-18) Implemented `F030` by separating client-portal phase loading from status loading in `ProjectDetailView`. Statuses are now refetched with `getClientProjectStatuses(projectId, selectedPhaseId)` whenever the selected phase changes.
 
 ### Key Files — Client Portal
 - `packages/client-portal/src/components/projects/ProjectDetailView.tsx` — orchestrator
