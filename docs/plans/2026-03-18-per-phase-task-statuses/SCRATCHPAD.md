@@ -84,6 +84,7 @@
 
 - (2026-03-18) Implemented `F021` by making `ProjectDetail.tsx` refetch `getProjectTaskStatuses(projectId, selectedPhase.phase_id)` whenever the selected phase changes, while resetting to the initial project-level statuses if no phase is selected.
 - (2026-03-18) Implemented `F022` by deriving kanban counts from a lookup of the currently effective phase statuses, sorting visible columns by `display_order`, and ignoring tasks whose mapping IDs are not part of the selected phase’s effective status set.
+- (2026-03-18) Implemented `F023` with a minimal prop-boundary change: `ProjectDetail.tsx` now passes `visibleKanbanStatuses` into `KanbanBoard`, so the board renders from the selected phase’s effective status columns directly.
 
 ### Key Files — Client Portal
 - `packages/client-portal/src/components/projects/ProjectDetailView.tsx` — orchestrator
