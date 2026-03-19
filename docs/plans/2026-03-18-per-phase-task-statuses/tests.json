@@ -51,7 +51,7 @@
   {
     "id": "TB08",
     "description": "Settings UI: phase selector shows 'Project Defaults' + all phases; uncustomized phase shows default toggle state; toggling to custom enables controls; 'Copy from project defaults' creates matching phase mappings; reverting to defaults confirms then deletes; AddStatusDialog passes phaseId; prevents removing last status from phase",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025", "F026", "F027", "F028", "F029"],
     "covers": ["T039", "T040", "T041", "T042", "T043", "T044", "T045", "T062"]
   },
