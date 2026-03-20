@@ -182,7 +182,7 @@
   {
     "id": "F037",
     "description": "Make client-cadence materialization-gap blocking assignment-scoped so one broken assignment does not block every candidate for the same client and invoice window.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F038",

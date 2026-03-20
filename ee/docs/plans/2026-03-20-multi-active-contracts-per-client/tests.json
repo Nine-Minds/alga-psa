@@ -324,7 +324,7 @@
   {
     "id": "T039",
     "description": "A client-cadence materialization gap on one assignment blocks only that assignment’s candidate and not unrelated candidates for the same client window.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]

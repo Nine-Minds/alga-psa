@@ -116,6 +116,8 @@
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts`
 - 2026-03-20: Fixed recurring persistence assignment-separation regression test run
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
+- 2026-03-20: Client-cadence assignment-scoped materialization-gap regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts`
 
 ## Implementation Log
 
@@ -158,6 +160,8 @@
 - 2026-03-20: Fixed fixed-recurring consolidated parent grouping in `persistFixedInvoiceCharges(...)` so grouping identity is `client_contract_id + client_contract_line_id` (assignment-scoped), not line-id-only.
 - 2026-03-20: Updated consolidated-plan metadata lookup to query by source line identity while retaining assignment-scoped grouping keys.
 - 2026-03-20: Added `T038` regression in `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` proving sibling assignments sharing one base contract line persist as separate parent invoice charges with distinct `client_contract_id` attribution.
+- 2026-03-20: Refined client-cadence materialization-gap candidate blocking to match assignment-scoped recurring identities instead of broad `client + invoice window` keys.
+- 2026-03-20: Added `T039` regression in `server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts` proving a materialization gap on one assignment does not block sibling assignment candidates in the same client invoice window.
 
 ## Links / References
 

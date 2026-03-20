@@ -694,4 +694,96 @@ describe('recurring due-work reader', () => {
     expect(result.invoiceCandidates.every((candidate) => candidate.splitReasons.includes('single_contract'))).toBe(true);
     expect(result.invoiceCandidates.every((candidate) => candidate.splitReasons.includes('purchase_order_scope'))).toBe(true);
   });
+
+  it('T039: a client-cadence materialization gap only blocks the matching assignment candidate and does not block sibling assignment candidates in the same client window', async () => {
+    mocks.rowsByTable.client_billing_cycles = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: 'cycle-2025-03',
+        billing_cycle: 'monthly',
+        period_start_date: '2025-03-01',
+        period_end_date: '2025-04-01',
+        effective_date: '2025-03-01',
+        invoice_id: null,
+      },
+    ];
+
+    mocks.rowsByTable.client_contracts = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_contract_line_id: 'assignment-line-ready',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        start_date: '2025-03-01',
+        end_date: null,
+        is_active: true,
+      },
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_contract_line_id: 'assignment-line-gap',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        start_date: '2025-03-01',
+        end_date: null,
+        is_active: true,
+      },
+    ];
+
+    mocks.rowsByTable.recurring_service_periods = [
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-ready',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-line-ready:client:advance',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-03-01',
+        invoice_window_end: '2025-04-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: 'cycle-2025-03',
+        contract_id: 'contract-2',
+        contract_name: 'Acme Monthly Support',
+        contract_line_id: 'assignment-line-ready',
+        contract_line_name: 'Acme Ready',
+        client_contract_id: 'cc-ready',
+        currency_code: 'USD',
+        tax_source: 'internal',
+        export_shape_key: 'default-export',
+      },
+    ];
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      searchTerm: 'Acme',
+    });
+
+    expect(result.materializationGaps).toEqual([
+      expect.objectContaining({
+        clientId: 'client-1',
+        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-line-gap:client:advance',
+        periodKey: 'period:2025-03-01:2025-04-01',
+      }),
+    ]);
+    expect(result.invoiceCandidates).toHaveLength(1);
+    expect(result.invoiceCandidates[0]).toMatchObject({
+      canGenerate: true,
+      blockedReason: null,
+      memberCount: 1,
+    });
+    expect(result.invoiceCandidates[0]?.members[0]?.scheduleKey).toBe(
+      'schedule:tenant-1:client_contract_line:assignment-line-ready:client:advance',
+    );
+  });
 });

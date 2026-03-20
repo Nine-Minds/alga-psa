@@ -442,20 +442,45 @@ async function fetchClientCadenceMaterializationGaps(
     }
 
     const materializationGaps: RecurringDueWorkMaterializationGap[] = [];
+    const sortedPeriodsByClient = new Map<string, BillingPeriodWithMeta[]>();
+
+    for (const period of candidateBillingPeriods) {
+        const clientPeriods = sortedPeriodsByClient.get(period.client_id) ?? [];
+        clientPeriods.push(period);
+        sortedPeriodsByClient.set(period.client_id, clientPeriods);
+    }
+
+    for (const [clientId, periods] of sortedPeriodsByClient) {
+        periods.sort((left, right) => left.period_start_date.localeCompare(right.period_start_date));
+        sortedPeriodsByClient.set(clientId, periods);
+    }
 
     for (const period of candidateBillingPeriods) {
         const recurringRows = recurringClientsById.get(period.client_id) ?? [];
+        const clientPeriods = sortedPeriodsByClient.get(period.client_id) ?? [];
+        const currentPeriodIndex = clientPeriods.findIndex(
+            (candidatePeriod) => candidatePeriod.billing_cycle_id === period.billing_cycle_id,
+        );
+        const previousPeriod = currentPeriodIndex > 0 ? clientPeriods[currentPeriodIndex - 1] ?? null : null;
+
         for (const row of recurringRows) {
+            const duePosition = row.billing_timing === 'arrears' ? 'arrears' : 'advance';
+            const servicePeriodForGap = duePosition === 'arrears' ? previousPeriod : period;
+            const invoiceWindowForGap = duePosition === 'arrears' ? period : period;
+
+            if (!servicePeriodForGap || !invoiceWindowForGap) {
+                continue;
+            }
+
             if (!rangesOverlap({
                 rangeStart: row.start_date ?? null,
                 rangeEnd: row.end_date ?? null,
-                windowStart: period.period_start_date,
-                windowEnd: period.period_end_date,
+                windowStart: servicePeriodForGap.period_start_date,
+                windowEnd: servicePeriodForGap.period_end_date,
             })) {
                 continue;
             }
 
-            const duePosition = row.billing_timing === 'arrears' ? 'arrears' : 'advance';
             const sourceObligation = buildClientCadencePostDropObligationRef({
                 tenant,
                 contractLineId: row.client_contract_line_id,
@@ -469,22 +494,22 @@ async function fetchClientCadenceMaterializationGaps(
                 duePosition: duePosition as DuePosition,
             });
             const periodKey = buildRecurringServicePeriodPeriodKey({
-                start: period.period_start_date,
-                end: period.period_end_date,
+                start: servicePeriodForGap.period_start_date,
+                end: servicePeriodForGap.period_end_date,
             });
             const selectorInput = buildClientCadenceDueSelectionInput({
                 clientId: period.client_id,
                 scheduleKey,
                 periodKey,
-                windowStart: period.period_start_date,
-                windowEnd: period.period_end_date,
+                windowStart: invoiceWindowForGap.period_start_date,
+                windowEnd: invoiceWindowForGap.period_end_date,
             });
             const dueWorkRow = buildRecurringDueWorkRow({
                 selectorInput,
                 cadenceSource: 'client_schedule',
-                billingCycleId: period.billing_cycle_id ?? null,
-                servicePeriodStart: period.period_start_date,
-                servicePeriodEnd: period.period_end_date,
+                billingCycleId: invoiceWindowForGap.billing_cycle_id ?? null,
+                servicePeriodStart: servicePeriodForGap.period_start_date,
+                servicePeriodEnd: servicePeriodForGap.period_end_date,
                 clientName: period.client_name,
                 scheduleKey,
                 periodKey,
@@ -665,8 +690,16 @@ function applyClientCadenceMaterializationGapBlocks(
         return invoiceCandidates;
     }
 
-    const blockedWindowKeys = new Set(
-        materializationGaps.map((gap) => `${gap.clientId}:${gap.invoiceWindowStart}:${gap.invoiceWindowEnd}`),
+    const blockedExecutionIdentityKeys = new Set(
+        materializationGaps.map((gap) => gap.executionIdentityKey),
+    );
+    const blockedSelectionKeys = new Set(
+        materializationGaps.map((gap) => gap.selectionKey),
+    );
+    const blockedSchedulePeriodKeys = new Set(
+        materializationGaps.map((gap) =>
+            `${gap.clientId}:${gap.scheduleKey}:${gap.periodKey}:${gap.invoiceWindowStart}:${gap.invoiceWindowEnd}`,
+        ),
     );
 
     return invoiceCandidates.map((candidate) => {
@@ -675,8 +708,22 @@ function applyClientCadenceMaterializationGapBlocks(
             return candidate;
         }
 
-        const windowKey = `${candidate.clientId}:${candidate.windowStart}:${candidate.windowEnd}`;
-        if (!blockedWindowKeys.has(windowKey)) {
+        const hasBlockedMember = candidate.members.some((member) => {
+            if (blockedExecutionIdentityKeys.has(member.executionIdentityKey)) {
+                return true;
+            }
+            if (blockedSelectionKeys.has(member.selectionKey)) {
+                return true;
+            }
+            if (!member.scheduleKey || !member.periodKey) {
+                return false;
+            }
+
+            const memberSchedulePeriodKey = `${candidate.clientId}:${member.scheduleKey}:${member.periodKey}:${member.invoiceWindowStart}:${member.invoiceWindowEnd}`;
+            return blockedSchedulePeriodKeys.has(memberSchedulePeriodKey);
+        });
+
+        if (!hasBlockedMember) {
             return candidate;
         }
 
@@ -903,7 +950,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
         pageSize = 10,
     } = options;
     const { knex } = await createTenantKnex();
-    const asOf = toISODate(Temporal.Now.plainDateISO());
+    const asOf = options.dateRange?.to ?? toISODate(Temporal.Now.plainDateISO());
 
     try {
         const candidateBillingPeriods = await fetchAvailableBillingPeriodsUnpaginated(
