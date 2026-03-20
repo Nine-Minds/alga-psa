@@ -217,7 +217,7 @@
   {
     "id": "F044",
     "description": "Audit reporting, export, and accounting-adjacent surfaces and record which are already safe under multi-active assignments versus which need wording or behavior changes.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F045",

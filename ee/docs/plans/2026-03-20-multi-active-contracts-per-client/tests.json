@@ -399,7 +399,7 @@
   {
     "id": "T048",
     "description": "Audit notes and focused tests record which reporting/export/accounting surfaces are already assignment-safe and confirm no hidden active-contract selector remains in the targeted files.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044",
       "F048"

@@ -134,6 +134,8 @@
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/bucketUsageService.periods.test.ts`
 - 2026-03-20: Contract reports wording wiring test run
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/ContractReports.summaryCopy.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/contractReportActions.expiration.wiring.test.ts`
+- 2026-03-20: Reporting/export/accounting assignment-safety audit wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.reportingExportAudit.wiring.test.ts`
 
 ## Implementation Log
 
@@ -193,6 +195,12 @@
 - 2026-03-20: Added `T046` regression in `server/src/test/unit/billing/bucketUsageService.periods.test.ts` proving overlapping eligible assignments fail explicitly with actionable assignment context.
 - 2026-03-20: Updated Contract Reports summary wording so assignment-based counts are labeled as `Active assignments` instead of `Billable clients`.
 - 2026-03-20: Added `T047` wiring coverage in `packages/billing/tests/ContractReports.summaryCopy.wiring.test.ts` to prevent report-label regressions that conflate assignment counts with client counts.
+- 2026-03-20: Completed reporting/export/accounting audit with focused assignment-safety checks:
+  - `contractReportActions.ts` summary keeps assignment-grain counting (`countDistinct client_contract_id`) for renewal-decision totals.
+  - `invoiceQueries.ts` PO summary reads invoice header assignment (`invoice.client_contract_id`) and resolves PO context/consumption by that assignment only.
+  - `purchaseOrderService.ts` consumed/authorized PO lookups are scoped to `client_contract_id` (not client-level active-contract selection).
+  - `accountingExportService.ts` contains no active-contract singleton selector/helper usage; export execution remains invoice-line authoritative.
+- 2026-03-20: Added `T048` audit wiring coverage in `packages/billing/tests/multiActiveContracts.reportingExportAudit.wiring.test.ts` to lock audited assignment-safe semantics and fail if singleton selector helpers reappear in targeted files.
 
 ## Links / References
 
