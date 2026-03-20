@@ -424,7 +424,7 @@
   {
     "id": "T051",
     "description": "Legacy tests that query `where({ client_id }).first()` or depend on latest-assignment semantics are updated to assert explicit assignment IDs instead.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]

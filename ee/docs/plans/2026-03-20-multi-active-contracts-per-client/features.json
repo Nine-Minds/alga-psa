@@ -232,7 +232,7 @@
   {
     "id": "F047",
     "description": "Update tests and fixtures that currently read `where({ client_id }).first()` or rely on latest-assignment semantics so they assert against explicit returned assignment IDs.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F048",

@@ -73,7 +73,7 @@ describe('Contract Purchase Order Support', () => {
     await setupBillingPrereqs(clientId);
 
     const poNumber = `PO-${uuidv4().slice(0, 8)}`;
-    await createClientContractFromWizard({
+    const wizardResult = await createClientContractFromWizard({
       contract_name: 'PO Snapshot Contract',
       description: 'Contract used to validate invoice PO snapshot behavior',
       client_id: clientId,
@@ -105,8 +105,7 @@ describe('Contract Purchase Order Support', () => {
     expect(invoiceRow?.client_contract_id).toBeTruthy();
 
     const contractRow = await db('client_contracts')
-      .where({ tenant: tenantId, client_id: clientId })
-      .orderBy('created_at', 'desc')
+      .where({ tenant: tenantId, client_id: clientId, contract_id: wizardResult.contract_id })
       .first();
     expect(invoiceRow?.client_contract_id).toBe(contractRow?.client_contract_id);
 

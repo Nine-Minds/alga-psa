@@ -162,7 +162,7 @@ describe('createClientContractFromWizard', () => {
     createdIds.contractLineId = result.contract_line_id ?? undefined;
 
     const clientContract = await db('client_contracts')
-      .where({ tenant: tenantId, client_id: clientId })
+      .where({ tenant: tenantId, client_id: clientId, contract_id: result.contract_id })
       .first();
     expect(clientContract).toBeTruthy();
     createdIds.clientContractId = clientContract?.client_contract_id;

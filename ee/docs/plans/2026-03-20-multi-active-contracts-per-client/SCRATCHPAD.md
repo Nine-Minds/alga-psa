@@ -140,6 +140,8 @@
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts`
 - 2026-03-20: Direct concurrent-assignment seeding helper wiring test run
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts`
+- 2026-03-20: Legacy test assignment-identity regression wiring test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/multiActiveContracts.legacyAssignmentTestAssumptions.wiring.test.ts src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts`
 
 ## Implementation Log
 
@@ -217,6 +219,10 @@
   - supports per-assignment header/assignment lifecycle overrides
   - intentionally bypasses production write paths for tests that need concurrent states directly
 - 2026-03-20: Added `T050` wiring coverage in `server/src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts` asserting direct concurrent seeding uses `createEntity(...)` on `contracts` and `client_contracts`.
+- 2026-03-20: Updated legacy integration assertions that previously depended on `client_id + first()` / latest-row behavior:
+  - `contractWizard.integration.test.ts` now reads client assignment using explicit `contract_id: result.contract_id`
+  - `contractPurchaseOrderSupport.integration.test.ts` now captures wizard result and reads assignment by explicit `contract_id: wizardResult.contract_id` (removed `orderBy(created_at desc)` fallback)
+- 2026-03-20: Added `T051` wiring coverage in `server/src/test/unit/billing/multiActiveContracts.legacyAssignmentTestAssumptions.wiring.test.ts` to prevent reintroduction of latest-assignment test assumptions in targeted integration suites.
 
 ## Links / References
 
