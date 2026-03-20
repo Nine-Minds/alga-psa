@@ -222,7 +222,7 @@
   {
     "id": "F045",
     "description": "Widen billing test helpers so fixtures can intentionally create multiple concurrent assignments for one client with explicit header and assignment lifecycle controls.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F046",

@@ -136,6 +136,8 @@
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/ContractReports.summaryCopy.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/contractReportActions.expiration.wiring.test.ts`
 - 2026-03-20: Reporting/export/accounting assignment-safety audit wiring test run
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.reportingExportAudit.wiring.test.ts`
+- 2026-03-20: Billing test helper concurrent-assignment fixture wiring test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts`
 
 ## Implementation Log
 
@@ -201,6 +203,13 @@
   - `purchaseOrderService.ts` consumed/authorized PO lookups are scoped to `client_contract_id` (not client-level active-contract selection).
   - `accountingExportService.ts` contains no active-contract singleton selector/helper usage; export execution remains invoice-line authoritative.
 - 2026-03-20: Added `T048` audit wiring coverage in `packages/billing/tests/multiActiveContracts.reportingExportAudit.wiring.test.ts` to lock audited assignment-safe semantics and fail if singleton selector helpers reappear in targeted files.
+- 2026-03-20: Expanded `createFixedPlanAssignment(...)` fixture controls for multi-active scenarios with explicit lifecycle knobs:
+  - contract header lifecycle (`contractHeaderIsActive`, `contractHeaderStatus`)
+  - assignment lifecycle (`assignmentIsActive`, `assignmentStatus`)
+  - assignment PO fields (`assignmentPoRequired`, `assignmentPoNumber`, `assignmentPoAmount`)
+  - assignment-line active toggle (`clientContractLineIsActive`)
+- 2026-03-20: Added `createConcurrentFixedPlanAssignments(...)` helper to seed two or more intentionally concurrent assignment fixtures via one call.
+- 2026-03-20: Added `T049` wiring coverage in `server/src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts` asserting lifecycle knobs and concurrent-assignment helper are present and wired.
 
 ## Links / References
 

@@ -408,7 +408,7 @@
   {
     "id": "T049",
     "description": "`createFixedPlanAssignment` or equivalent billing fixture helper can explicitly seed concurrent assignments with header and assignment lifecycle knobs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]

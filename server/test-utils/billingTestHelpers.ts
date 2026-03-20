@@ -279,6 +279,15 @@ interface CreateFixedPlanOptions {
   enableProration?: boolean;
   billingCycleAlignment?: 'start' | 'end' | 'prorated';
   clientId?: string;
+  customRateCents?: number | null;
+  contractHeaderIsActive?: boolean;
+  contractHeaderStatus?: string;
+  assignmentIsActive?: boolean;
+  assignmentStatus?: string;
+  assignmentPoRequired?: boolean;
+  assignmentPoNumber?: string | null;
+  assignmentPoAmount?: number | null;
+  clientContractLineIsActive?: boolean;
 }
 
 interface AddServiceToPlanOptions {
@@ -498,6 +507,14 @@ export async function createFixedPlanAssignment(
   const targetClientId = options.clientId ?? context.clientId;
   const billingTiming: 'arrears' | 'advance' = options.billingTiming ?? 'arrears';
   const cadenceOwner: CadenceOwner = options.cadenceOwner ?? 'client';
+  const contractHeaderIsActive = options.contractHeaderIsActive ?? true;
+  const contractHeaderStatus = options.contractHeaderStatus ?? 'Active';
+  const assignmentIsActive = options.assignmentIsActive ?? true;
+  const assignmentStatus = options.assignmentStatus ?? 'pending';
+  const assignmentPoRequired = options.assignmentPoRequired ?? false;
+  const assignmentPoNumber = options.assignmentPoNumber ?? null;
+  const assignmentPoAmount = options.assignmentPoAmount ?? null;
+  const clientContractLineIsActive = options.clientContractLineIsActive ?? true;
 
   if (await context.db.schema.hasTable('contracts')) {
     const contractColumns = await context.db('contracts').columnInfo();
@@ -507,8 +524,8 @@ export async function createFixedPlanAssignment(
       contract_name: planName,
       contract_description: `${planName} fixture`,
       billing_frequency: billingFrequency,
-      is_active: true,
-      status: 'Active',
+      is_active: contractHeaderIsActive,
+      status: contractHeaderStatus,
       is_template: false,
       currency_code: 'USD',
       created_at: context.db.fn.now(),
@@ -526,8 +543,8 @@ export async function createFixedPlanAssignment(
         contract_name: contractData.contract_name,
         contract_description: contractData.contract_description,
         billing_frequency: contractData.billing_frequency,
-        is_active: contractData.is_active,
-        status: contractData.status,
+        is_active: contractHeaderIsActive,
+        status: contractHeaderStatus,
         is_template: contractData.is_template,
         currency_code: contractData.currency_code,
         updated_at: context.db.fn.now(),
@@ -544,11 +561,11 @@ export async function createFixedPlanAssignment(
         contract_id: contractId,
         start_date: options.startDate ?? '2025-02-01',
         end_date: options.endDate ?? null,
-        is_active: true,
-        status: 'pending',
-        po_number: null,
-        po_amount: null,
-        po_required: false,
+        is_active: assignmentIsActive,
+        status: assignmentStatus,
+        po_number: assignmentPoNumber,
+        po_amount: assignmentPoAmount,
+        po_required: assignmentPoRequired,
         template_contract_id: null,
         created_at: context.db.fn.now(),
         updated_at: context.db.fn.now()
@@ -559,11 +576,11 @@ export async function createFixedPlanAssignment(
         contract_id: contractId,
         start_date: options.startDate ?? '2025-02-01',
         end_date: options.endDate ?? null,
-        is_active: true,
-        status: 'pending',
-        po_number: null,
-        po_amount: null,
-        po_required: false,
+        is_active: assignmentIsActive,
+        status: assignmentStatus,
+        po_number: assignmentPoNumber,
+        po_amount: assignmentPoAmount,
+        po_required: assignmentPoRequired,
         template_contract_id: null,
         updated_at: context.db.fn.now()
       });
@@ -655,7 +672,7 @@ export async function createFixedPlanAssignment(
         contract_line_id: contractLineId,
         start_date: options.startDate ?? '2025-02-01',
         end_date: options.endDate ?? null,
-        is_active: true
+        is_active: clientContractLineIsActive
       })
       .onConflict(['tenant', 'client_contract_line_id'])
       .merge({
@@ -663,7 +680,7 @@ export async function createFixedPlanAssignment(
         contract_line_id: contractLineId,
         start_date: options.startDate ?? '2025-02-01',
         end_date: options.endDate ?? null,
-        is_active: true
+        is_active: clientContractLineIsActive
       });
   }
 
@@ -747,7 +764,7 @@ export async function createFixedPlanAssignment(
         client_id: targetClientId,
         plan_id: legacyPlanId,
         service_category: null,
-        is_active: true,
+        is_active: assignmentIsActive,
         start_date: options.startDate ?? '2025-02-01',
         end_date: options.endDate ?? null,
         client_bundle_id: null
@@ -756,7 +773,7 @@ export async function createFixedPlanAssignment(
       .merge({
         client_id: targetClientId,
         plan_id: legacyPlanId,
-        is_active: true,
+        is_active: assignmentIsActive,
         start_date: options.startDate ?? '2025-02-01',
         end_date: options.endDate ?? null
       });
@@ -870,6 +887,43 @@ export async function createFixedPlanAssignment(
     contractId,
     clientContractId
   };
+}
+
+export async function createConcurrentFixedPlanAssignments(
+  context: TestContext,
+  serviceId: string,
+  assignments: CreateFixedPlanOptions[]
+): Promise<Array<{
+  planId: string;
+  clientBillingPlanId: string;
+  contractLineId: string;
+  clientContractLineId: string;
+  contractId: string;
+  clientContractId: string;
+}>> {
+  if (assignments.length < 2) {
+    throw new Error('createConcurrentFixedPlanAssignments requires at least two assignments');
+  }
+
+  const seededAssignments: Array<{
+    planId: string;
+    clientBillingPlanId: string;
+    contractLineId: string;
+    clientContractLineId: string;
+    contractId: string;
+    clientContractId: string;
+  }> = [];
+
+  for (const assignmentOptions of assignments) {
+    seededAssignments.push(await createFixedPlanAssignment(context, serviceId, {
+      startDate: '2025-02-01',
+      endDate: null,
+      assignmentIsActive: true,
+      ...assignmentOptions,
+    }));
+  }
+
+  return seededAssignments;
 }
 
 export async function ensureClientPlanBundlesTable(context: TestContext): Promise<void> {
