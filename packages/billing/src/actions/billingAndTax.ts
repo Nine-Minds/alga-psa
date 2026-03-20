@@ -17,6 +17,8 @@ import {
     DuePosition,
     IClientContractLineCycle,
     IRecurringDueWorkInvoiceCandidate,
+    IRecurringDueWorkMaterializationGap,
+    IRecurringDueWorkPaginatedResponse,
     IRecurringDueWorkRow,
     RECURRING_RANGE_SEMANTICS,
 } from '@alga-psa/types';
@@ -70,31 +72,8 @@ export interface PaginatedBillingPeriodsResult {
 }
 
 export interface FetchRecurringDueWorkOptions extends FetchBillingPeriodsOptions {}
-
-export interface PaginatedRecurringDueWorkResult {
-    invoiceCandidates: IRecurringDueWorkInvoiceCandidate[];
-    materializationGaps: RecurringDueWorkMaterializationGap[];
-    total: number;
-    page: number;
-    pageSize: number;
-    totalPages: number;
-}
-
-export interface RecurringDueWorkMaterializationGap {
-    executionIdentityKey: string;
-    selectionKey: string;
-    clientId: string;
-    clientName?: string | null;
-    scheduleKey: string;
-    periodKey: string;
-    billingCycleId?: string | null;
-    invoiceWindowStart: ISO8601String;
-    invoiceWindowEnd: ISO8601String;
-    servicePeriodStart: ISO8601String;
-    servicePeriodEnd: ISO8601String;
-    reason: 'missing_service_period_materialization';
-    detail: string;
-}
+export type PaginatedRecurringDueWorkResult = IRecurringDueWorkPaginatedResponse;
+export type RecurringDueWorkMaterializationGap = IRecurringDueWorkMaterializationGap;
 
 interface PersistedRecurringDueWorkDbRow {
     record_id: string;

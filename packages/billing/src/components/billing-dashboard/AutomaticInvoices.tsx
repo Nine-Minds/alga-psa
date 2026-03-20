@@ -10,7 +10,11 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Search, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
-import type { IRecurringDueSelectionInput, IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
+import type {
+  IRecurringDueSelectionInput,
+  IRecurringDueWorkInvoiceCandidate,
+  IRecurringDueWorkMaterializationGap,
+} from '@alga-psa/types';
 import {
   getPurchaseOrderOverageForSelectionInput,
   previewInvoiceForSelectionInput,
@@ -26,7 +30,6 @@ import {
 import {
   getAvailableRecurringDueWork,
   type BillingPeriodDateRange,
-  type RecurringDueWorkMaterializationGap,
 } from '@alga-psa/billing/actions/billingAndTax';
 import { Dialog, DialogContent, DialogFooter, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { formatCurrency } from '@alga-psa/core';
@@ -180,7 +183,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // Server-side pagination state for "Ready to Invoice"
   const [periods, setPeriods] = useState<ReadyPeriod[]>([]);
-  const [materializationGaps, setMaterializationGaps] = useState<RecurringDueWorkMaterializationGap[]>([]);
+  const [materializationGaps, setMaterializationGaps] = useState<IRecurringDueWorkMaterializationGap[]>([]);
   const [totalPeriods, setTotalPeriods] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 

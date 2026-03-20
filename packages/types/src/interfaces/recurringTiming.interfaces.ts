@@ -495,6 +495,10 @@ export interface IRecurringDueWorkRow {
   canGenerate: boolean;
   clientId: string;
   clientName?: string | null;
+  /**
+   * @deprecated Legacy bridge metadata for compatibility display only.
+   * Canonical recurring identity is execution-window based.
+   */
   billingCycleId?: string | null;
   servicePeriodStart: ISO8601String;
   servicePeriodEnd: ISO8601String;
@@ -510,6 +514,56 @@ export interface IRecurringDueWorkRow {
   contractLineId?: string | null;
   contractName?: string | null;
   contractLineName?: string | null;
+}
+
+export interface IRecurringDueWorkInvoiceCandidate {
+  candidateKey: string;
+  clientId: string;
+  clientName?: string | null;
+  windowStart: ISO8601String;
+  windowEnd: ISO8601String;
+  windowLabel: string;
+  servicePeriodStart: ISO8601String;
+  servicePeriodEnd: ISO8601String;
+  servicePeriodLabel: string;
+  cadenceOwners: CadenceOwner[];
+  cadenceSources: RecurringDueWorkCadenceSource[];
+  contractId?: string | null;
+  contractName?: string | null;
+  splitReasons: RecurringInvoiceSplitReason[];
+  memberCount: number;
+  canGenerate: boolean;
+  blockedReason?: string | null;
+  members: IRecurringDueWorkRow[];
+}
+
+export interface IRecurringDueWorkMaterializationGap {
+  executionIdentityKey: string;
+  selectionKey: string;
+  clientId: string;
+  clientName?: string | null;
+  scheduleKey: string;
+  periodKey: string;
+  /**
+   * @deprecated Legacy bridge metadata for compatibility display only.
+   * Canonical recurring identity is execution-window based.
+   */
+  billingCycleId?: string | null;
+  invoiceWindowStart: ISO8601String;
+  invoiceWindowEnd: ISO8601String;
+  servicePeriodStart: ISO8601String;
+  servicePeriodEnd: ISO8601String;
+  reason: 'missing_service_period_materialization';
+  detail: string;
+}
+
+export interface IRecurringDueWorkPaginatedResponse {
+  invoiceCandidates: IRecurringDueWorkInvoiceCandidate[];
+  materializationGaps: IRecurringDueWorkMaterializationGap[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export interface IRecurringServicePeriodDueSelectionQuery {

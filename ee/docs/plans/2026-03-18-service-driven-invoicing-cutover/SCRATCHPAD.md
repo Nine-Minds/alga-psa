@@ -250,6 +250,12 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - Completed `F085` and `T113` by removing `template_contract_id` backfill writes from `ContractLineService` assignment flow and adding focused unit coverage that assignment cloning still works while proving no `client_contracts` mutation occurs when template provenance is absent.
 - `pnpm exec vitest run --coverage.enabled=false src/test/unit/billing/clientContractLineRuntimeSourceGuards.static.test.ts` (from `server/`; passed)
 - Completed `F086` and `T114` by extending the post-drop static runtime hygiene guard to scan `packages/client-portal/src/actions` and `packages/clients` runtime sources (actions + models) for forbidden `client_contract_lines`/`client_contract_services` table usage.
+- `packages/billing/src/actions/billingAndTax.ts` still owned local paginated due-work/materialization-gap interfaces; `AutomaticInvoices.tsx` imported the gap type from billing actions instead of the shared `@alga-psa/types` contract.
+- `pnpm exec vitest run --coverage.enabled=false src/test/unit/billing/recurringDueWorkTypeContracts.static.test.ts` (from `server/`; passed)
+- `pnpm exec tsc --noEmit -p packages/types/tsconfig.json` (from repo root; passed)
+- `pnpm exec vitest run --coverage.enabled=false src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx` (from `server/`; passed)
+- `pnpm exec tsc --noEmit -p packages/billing/tsconfig.json` (from repo root; still fails on pre-existing unrelated worktree type errors outside this F087/F088 slice)
+- Completed `F087`, `F088`, `T115`, and `T116` by centralizing paginated recurring due-work and materialization-gap interfaces in `@alga-psa/types`, consuming those shared contracts in billing actions/UI, and explicitly tagging `billingCycleId` as deprecated legacy bridge metadata in canonical due-work type contracts.
 
 ## Open Questions
 
