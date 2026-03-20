@@ -8,7 +8,7 @@
       "metadata": {
         "displayName": "List Tickets",
         "summary": "List tickets",
-        "description": "Returns a paginated list of tickets for the current tenant. Use this both for reporting and to sample existing board_id, status_id, priority_id, and assigned_to values before creating a new ticket.",
+        "description": "Returns a paginated list of tickets for the current tenant. Use this both for reporting and to sample existing board_id, status_id, priority_id, and assigned_to values before creating a new ticket. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
         "rbacResource": "ticket",
         "approvalRequired": false,
         "parameters": [
@@ -60,6 +60,20 @@
             "required": false,
             "description": "When true, only open tickets are returned.",
             "schema": { "type": "boolean" }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated list of fields to return. Use only these exact values: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. If you are not sure, omit fields entirely instead of guessing aliases.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "field_ranges[description_html]",
+            "in": "query",
+            "required": false,
+            "description": "Optional UTF-8 byte range for the description_html field, formatted as start-end (for example 0-4095). When returned data is truncated, inspect meta.truncated_fields for continuation offsets.",
+            "schema": { "type": "string", "pattern": "^\\d+-\\d+$" }
           }
         ],
         "responseBodySchema": {
@@ -111,10 +125,51 @@
             "request": {
               "query": {
                 "limit": 5,
+                "fields": "ticket_id,ticket_number,title,board_id,status_id,priority_id,assigned_to,entered_at",
                 "is_open": true
               }
             },
-            "notes": "Inspect the response payload to reuse board_id, status_id, priority_id, and assigned_to values that are known to be valid. If you only need a single set of identifiers, take the first ticket in the data array that has non-null board_id, status_id, and priority_id and reuse those UUIDs for the new ticket."
+            "notes": "Inspect the response payload to reuse board_id, status_id, priority_id, and assigned_to values that are known to be valid. Prefer fields=... to keep payloads compact, but only use the documented field names exactly as written. If you are unsure which field names are valid, omit fields instead of guessing. If you only need a single set of identifiers, take the first ticket in the data array that has non-null board_id, status_id, and priority_id and reuse those UUIDs for the new ticket."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/{id}"
+      },
+      "metadata": {
+        "displayName": "Get Ticket",
+        "summary": "Get ticket by ID",
+        "description": "Returns the full ticket record for a specific ticket. Prefer this over expanding list responses when you already know the ticket_id.",
+        "rbacResource": "ticket",
+        "approvalRequired": false,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket identifier.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "field_ranges[description_html]",
+            "in": "query",
+            "required": false,
+            "description": "Optional UTF-8 byte range for description_html, formatted as start-end (for example 0-4095). When returned data is truncated, inspect meta.truncated_fields for continuation offsets.",
+            "schema": { "type": "string", "pattern": "^\\d+-\\d+$" }
+          }
+        ],
+        "examples": [
+          {
+            "name": "Read one ticket in detail",
+            "request": {
+              "path": {
+                "id": "11111111-1111-1111-1111-111111111111"
+              }
+            },
+            "notes": "Use this endpoint after a list/search call gives you a ticket_id. If description_html is large, fetch it in byte windows with field_ranges[description_html]=start-end instead of asking for a bigger list payload."
           }
         ]
       }
@@ -195,6 +250,79 @@
       }
     }
     ,
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/{id}/comments"
+      },
+      "metadata": {
+        "displayName": "Get Ticket Comments",
+        "summary": "List comments for a ticket",
+        "description": "Returns the comments attached to a ticket. Use small limits and field-scoped byte ranges when comment bodies are large.",
+        "rbacResource": "ticket",
+        "approvalRequired": false,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket identifier.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of comments to return (1-200). Prefer small values when exploring ticket history.",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 200 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Zero-based comment offset.",
+            "schema": { "type": "integer", "minimum": 0 }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "description": "Comment sort order.",
+            "schema": { "type": "string", "enum": ["asc", "desc"] }
+          },
+          {
+            "name": "field_ranges[comment_text]",
+            "in": "query",
+            "required": false,
+            "description": "Optional UTF-8 byte range for comment_text, formatted as start-end (for example 0-4095). Use meta.truncated_fields to continue fetching long comments.",
+            "schema": { "type": "string", "pattern": "^\\d+-\\d+$" }
+          },
+          {
+            "name": "field_ranges[comment_html]",
+            "in": "query",
+            "required": false,
+            "description": "Optional UTF-8 byte range for comment_html, formatted as start-end (for example 0-4095).",
+            "schema": { "type": "string", "pattern": "^\\d+-\\d+$" }
+          }
+        ],
+        "examples": [
+          {
+            "name": "Read recent comments with ranged comment text",
+            "request": {
+              "path": {
+                "id": "11111111-1111-1111-1111-111111111111"
+              },
+              "query": {
+                "limit": 5,
+                "order": "desc",
+                "field_ranges[comment_text]": "0-4095"
+              }
+            },
+            "notes": "Prefer this endpoint over large ticket list payloads when the user asks for comment history or long comment bodies."
+          }
+        ]
+      }
+    },
     {
       "match": {
         "method": "post",
