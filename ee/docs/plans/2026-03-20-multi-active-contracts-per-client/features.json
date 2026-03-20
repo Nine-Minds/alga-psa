@@ -192,7 +192,7 @@
   {
     "id": "F039",
     "description": "Fix recurring preview rendering/grouping so concurrent active contracts with the same display name remain visually distinct and correctly attributed.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F040",

@@ -340,7 +340,7 @@
   {
     "id": "T041",
     "description": "Recurring preview rendering distinguishes concurrent contracts that share the same display name.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]

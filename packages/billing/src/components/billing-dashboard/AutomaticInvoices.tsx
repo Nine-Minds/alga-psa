@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { toPlainDate } from '@alga-psa/core';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -83,6 +84,9 @@ const getTodayDate = (): Date => {
 const buildServicePeriodRepairHref = (scheduleKey: string) =>
   `/msp/billing?tab=service-periods&scheduleKey=${encodeURIComponent(scheduleKey)}`;
 
+const isInvoiceDraftStatus = (status: string | null | undefined): boolean =>
+  (status ?? '').toLowerCase() === 'draft';
+
 const formatCadenceSourceBadge = (
   cadenceSource: string | null | undefined,
 ): { label: string; variant: 'outline' | 'secondary' } => {
@@ -99,7 +103,30 @@ const formatCadenceSourceBadge = (
   }
 };
 
+const getRecurringAssignmentContext = (member: IRecurringDueWorkInvoiceCandidate['members'][number]): string | null => {
+  if (member.contractLineId?.trim()) {
+    return `Assignment line ${member.contractLineId.trim()}`;
+  }
+
+  const scheduleKey = member.scheduleKey?.trim();
+  if (scheduleKey) {
+    const contractLineMatch = scheduleKey.match(/contract_line:([^:]+)/);
+    if (contractLineMatch?.[1]) {
+      return `Assignment line ${contractLineMatch[1]}`;
+    }
+    const clientContractLineMatch = scheduleKey.match(/client_contract_line:([^:]+)/);
+    if (clientContractLineMatch?.[1]) {
+      return `Assignment line ${clientContractLineMatch[1]}`;
+    }
+  }
+
+  return member.executionIdentityKey?.trim()
+    ? `Execution ${member.executionIdentityKey.trim()}`
+    : null;
+};
+
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
+  const router = useRouter();
   // Drawer removed: client details quick view no longer used here
   const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -703,6 +730,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // Removed company drawer handler (migrated to client-only flow)
 
+  const handleRecurringHistoryRowClick = (record: InvoicedPeriod) => {
+    const subtab = isInvoiceDraftStatus(record.invoiceStatus) ? 'drafts' : 'finalized';
+    const params = new URLSearchParams();
+    params.set('tab', 'invoicing');
+    params.set('subtab', subtab);
+    params.set('invoiceId', record.invoiceId);
+    router.push(`/msp/billing?${params.toString()}`);
+  };
+
   // Show combined loading state only during initial load (before any data has loaded)
   const isInitialLoading = !initialLoadDone.current && (isPeriodsLoading || isInvoicedLoading);
 
@@ -1025,6 +1061,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       || missingContractLineName
                     );
                   }).length;
+                  const assignmentContexts = Array.from(
+                    new Set(
+                      record.members
+                        .map((member) => getRecurringAssignmentContext(member))
+                        .filter((value): value is string => Boolean(value)),
+                    ),
+                  );
 
                   if (contractNames.length === 0 && contractLineNames.length === 0 && contractMetadataMissingCount === 0) {
                     return <span className="text-muted-foreground">No contract context</span>;
@@ -1038,6 +1081,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       {contractLineNames.map((lineName) => (
                         <div key={`${record.candidateKey}:${lineName}`} className="text-xs text-muted-foreground">
                           {lineName}
+                        </div>
+                      ))}
+                      {assignmentContexts.map((contextValue) => (
+                        <div
+                          key={`${record.candidateKey}:assignment:${contextValue}`}
+                          className="text-xs text-muted-foreground"
+                          data-testid={`contract-assignment-context-${record.candidateKey}`}
+                        >
+                          {contextValue}
                         </div>
                       ))}
                       {contractMetadataMissingCount > 0 ? (
@@ -1079,6 +1131,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <DataTable
             id="already-invoiced-table"
             data={invoicedPeriods}
+            onRowClick={handleRecurringHistoryRowClick}
             columns={[
               { title: 'Client', dataIndex: 'clientName' },
               {

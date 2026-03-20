@@ -120,6 +120,8 @@
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts`
 - 2026-03-20: Mixed-assignment single-invoice invariant regression test run
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts`
+- 2026-03-20: Recurring preview identity-context wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.recurringPreviewIdentity.wiring.test.ts`
 
 ## Implementation Log
 
@@ -166,6 +168,8 @@
 - 2026-03-20: Added `T039` regression in `server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts` proving a materialization gap on one assignment does not block sibling assignment candidates in the same client invoice window.
 - 2026-03-20: Preserved explicit single-assignment invoice failure behavior by attaching recurring execution-window context when selector-input generation encounters mixed `client_contract_id` charge sets.
 - 2026-03-20: Added `T040` regression in `server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts` proving selector-input generation fails explicitly (with user-readable single-assignment invariant message) when billing charges span multiple assignments.
+- 2026-03-20: Enhanced recurring ready-to-invoice contract rendering with explicit assignment-context labels (assignment line/schedule identity fallback) so same-named concurrent contract candidates remain visually distinct.
+- 2026-03-20: Added `T041` wiring coverage in `packages/billing/tests/multiActiveContracts.recurringPreviewIdentity.wiring.test.ts` asserting assignment-context rendering tokens are present in `AutomaticInvoices`.
 
 ## Links / References
 
