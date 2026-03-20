@@ -1032,6 +1032,36 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     ).toHaveTextContent('Contract metadata missing (1 obligation)');
   });
 
+  it('T101: cadence-source rendering is exhaustive and unknown values render explicit unknown-state copy', async () => {
+    const unknownCadenceRow = {
+      ...createContractRow(),
+      cadenceSource: 'legacy_contract_window' as any,
+    };
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [
+        buildInvoiceCandidate([unknownCadenceRow], { candidateKey: 'candidate-cadence-unknown-t101' }),
+      ],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    const row = within(readyTable).getByText('Zenith Health').closest('tr');
+    expect(row).toBeTruthy();
+    expect(within(row!).getByText('Unknown cadence source (legacy_contract_window)')).toBeInTheDocument();
+    expect(within(row!).queryByText('Client schedule')).toBeNull();
+  });
+
   it('T032: AutomaticInvoices preview opens for a client-cadence row through the selector-input preview path', async () => {
     const clientRow = createClientRow();
     getAvailableRecurringDueWorkMock.mockResolvedValue({

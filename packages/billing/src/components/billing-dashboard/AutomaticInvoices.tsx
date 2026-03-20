@@ -80,6 +80,22 @@ const getTodayDate = (): Date => {
 const buildServicePeriodRepairHref = (scheduleKey: string) =>
   `/msp/billing?tab=service-periods&scheduleKey=${encodeURIComponent(scheduleKey)}`;
 
+const formatCadenceSourceBadge = (
+  cadenceSource: string | null | undefined,
+): { label: string; variant: 'outline' | 'secondary' } => {
+  switch (cadenceSource) {
+    case 'contract_anniversary':
+      return { label: 'Contract anniversary', variant: 'outline' };
+    case 'client_schedule':
+      return { label: 'Client schedule', variant: 'outline' };
+    default:
+      return {
+        label: `Unknown cadence source (${cadenceSource?.trim() ? cadenceSource : 'missing'})`,
+        variant: 'secondary',
+      };
+  }
+};
+
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
   // Drawer removed: client details quick view no longer used here
   const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
@@ -925,11 +941,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 dataIndex: 'cadenceSources',
                 render: (_: unknown, record: ReadyPeriod) => (
                   <div className="space-y-1">
-                    {record.cadenceSources.map((source) => (
-                      <Badge key={`${record.candidateKey}:${source}`} variant="outline">
-                        {source === 'contract_anniversary' ? 'Contract anniversary' : 'Client schedule'}
+                    {record.cadenceSources.map((source) => {
+                      const formattedSource = formatCadenceSourceBadge(source);
+                      return (
+                      <Badge
+                        key={`${record.candidateKey}:${source ?? 'missing'}`}
+                        variant={formattedSource.variant}
+                        data-testid={`cadence-source-${record.candidateKey}-${source ?? 'missing'}`}
+                      >
+                        {formattedSource.label}
                       </Badge>
-                    ))}
+                      );
+                    })}
                     {record.members.some((member) => !member.billingCycleId) ? (
                       <Badge variant="secondary">Service-period-backed</Badge>
                     ) : null}
@@ -1060,8 +1083,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 dataIndex: 'cadenceSource',
                 render: (_: unknown, record: InvoicedPeriod) => (
                   <div className="space-y-1">
-                    <Badge variant="outline">
-                      {record.cadenceSource === 'contract_anniversary' ? 'Contract anniversary' : 'Client schedule'}
+                    <Badge variant={formatCadenceSourceBadge(record.cadenceSource).variant}>
+                      {formatCadenceSourceBadge(record.cadenceSource).label}
                     </Badge>
                     {!record.hasBillingCycleBridge ? (
                       <Badge variant="secondary">Service-period-backed</Badge>
