@@ -207,7 +207,7 @@
   {
     "id": "F042",
     "description": "Replace bucket-usage resolution that currently picks the latest overlapping active assignment with explicit assignment identity or explicit ambiguity failure behavior.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F043",

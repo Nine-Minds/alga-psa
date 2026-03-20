@@ -112,6 +112,7 @@ async function calculatePeriod(
                 .orWhereNull('cc.end_date');
         })
         .select(
+            'cc.client_contract_id',
             'cl.contract_line_id as client_contract_line_id',
             'cl.contract_line_id',
             'cc.start_date', // Use the client-specific assignment start date as the anchor
@@ -120,6 +121,7 @@ async function calculatePeriod(
          )
         .orderBy('cc.start_date', 'desc') // Prefer the most recently started plan if overlaps occur
         .first<{
+            client_contract_id: string;
             client_contract_line_id: string;
             contract_line_id: string;
             start_date: ISO8601String;
@@ -130,6 +132,45 @@ async function calculatePeriod(
     if (!clientPlan) {
         console.warn(`[calculatePeriod] No active contract line with bucket config found. tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
         return null;
+    }
+
+    const conflictingClientPlan = await trx('client_contracts as cc')
+        .join('contracts as ct', function() {
+            this.on('ct.contract_id', '=', 'cc.contract_id')
+                .andOn('ct.tenant', '=', 'cc.tenant');
+        })
+        .join('contract_lines as cl', function() {
+            this.on('cl.contract_id', '=', 'ct.contract_id')
+                .andOn('cl.tenant', '=', 'ct.tenant');
+        })
+        .join('contract_line_service_configuration as psc', function() {
+            this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
+                .andOn('cl.tenant', '=', 'psc.tenant')
+                .andOnVal('psc.service_id', '=', serviceCatalogId);
+        })
+        .join('contract_line_service_bucket_config as psbc', function() {
+            this.on('psc.config_id', '=', 'psbc.config_id')
+                .andOn('psc.tenant', '=', 'psbc.tenant');
+        })
+        .where('cc.client_id', clientId)
+        .andWhere('cc.tenant', tenant)
+        .andWhere('cc.is_active', true)
+        .andWhere('cc.start_date', '<=', targetDateISO)
+        .andWhere(function() {
+            this.where('cc.end_date', '>=', targetDateISO)
+                .orWhereNull('cc.end_date');
+        })
+        .andWhere('cc.client_contract_id', '!=', clientPlan.client_contract_id)
+        .select('cc.client_contract_id')
+        .orderBy('cc.start_date', 'desc')
+        .first<{ client_contract_id: string } | undefined>();
+
+    if (conflictingClientPlan?.client_contract_id) {
+        throw new Error(
+            `Ambiguous bucket usage assignment resolution for client ${clientId}, service ${serviceCatalogId}, date ${targetDateISO}. `
+            + `Matched assignments: ${clientPlan.client_contract_id}, ${conflictingClientPlan.client_contract_id}. `
+            + 'Provide explicit assignment identity before bucket billing.',
+        );
     }
 
     console.debug(`[calculatePeriod] Found clientPlan: contract_line_id=${clientPlan.contract_line_id}, start_date=${clientPlan.start_date}, billing_frequency=${clientPlan.billing_frequency}`);

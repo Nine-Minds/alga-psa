@@ -383,7 +383,7 @@
   {
     "id": "T046",
     "description": "Bucket usage with multiple overlapping eligible assignments fails explicitly or requires disambiguation instead of silently choosing the latest-start assignment.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]

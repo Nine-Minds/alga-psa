@@ -10,8 +10,10 @@ type RecurringServicePeriodRow = {
 
 function buildBucketUsageTransaction(config: {
   cadenceOwner: "client" | "contract";
+  clientContractId?: string;
   clientContractLineId: string;
   contractLineId: string;
+  conflictingClientContractId?: string;
   currentRecurringPeriod: RecurringServicePeriodRow;
   previousRecurringPeriod: RecurringServicePeriodRow;
   previousBucketUsage: {
@@ -29,6 +31,7 @@ function buildBucketUsageTransaction(config: {
 }) {
   const state = {
     bucketUsageFirstCalls: 0,
+    clientContractFirstCalls: 0,
     recurringServicePeriodCalls: 0,
     insertedRecord: null as Record<string, unknown> | null,
     tablesCalled: [] as string[],
@@ -71,7 +74,19 @@ function buildBucketUsageTransaction(config: {
 
     builder.first = vi.fn().mockImplementation(async () => {
       if (tableName === "client_contracts as cc") {
+        state.clientContractFirstCalls += 1;
+        if (state.clientContractFirstCalls > 1) {
+          if (!config.conflictingClientContractId) {
+            return undefined;
+          }
+
+          return {
+            client_contract_id: config.conflictingClientContractId,
+          };
+        }
+
         return {
+          client_contract_id: config.clientContractId ?? "assignment-1",
           client_contract_line_id: config.clientContractLineId,
           contract_line_id: config.contractLineId,
           start_date: "2024-12-15",
@@ -257,6 +272,49 @@ describe("bucketUsageService period selection", () => {
       expect.arrayContaining([
         [{ tenant: "test-tenant", obligation_type: "contract_line", obligation_id: "plan-1" }],
       ]),
+    );
+  });
+
+  it("T046: overlapping bucket-bearing assignments fail explicitly instead of selecting the latest assignment silently", async () => {
+    const { trx } = buildBucketUsageTransaction({
+      cadenceOwner: "client",
+      clientContractId: "assignment-1",
+      conflictingClientContractId: "assignment-2",
+      clientContractLineId: "plan-1",
+      contractLineId: "plan-1",
+      currentRecurringPeriod: {
+        schedule_key: "schedule-client",
+        service_period_start: "2025-02-01",
+        service_period_end: "2025-03-01",
+      },
+      previousRecurringPeriod: {
+        schedule_key: "schedule-client",
+        service_period_start: "2025-01-01",
+        service_period_end: "2025-02-01",
+      },
+      previousBucketUsage: {
+        usage_id: "usage-prev",
+        tenant: "test-tenant",
+        client_id: "client-1",
+        contract_line_id: "plan-1",
+        service_catalog_id: "service-1",
+        period_start: "2025-01-01",
+        period_end: "2025-01-31",
+        minutes_used: 1800,
+        overage_minutes: 0,
+        rolled_over_minutes: 0,
+      },
+    });
+
+    await expect(
+      findOrCreateCurrentBucketUsageRecord(
+        trx,
+        "client-1",
+        "service-1",
+        "2025-02-10T00:00:00Z",
+      ),
+    ).rejects.toThrow(
+      "Ambiguous bucket usage assignment resolution for client client-1, service service-1, date 2025-02-10. Matched assignments: assignment-1, assignment-2. Provide explicit assignment identity before bucket billing.",
     );
   });
 });

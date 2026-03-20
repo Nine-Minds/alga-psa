@@ -130,6 +130,8 @@
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.billingCyclesSummary.wiring.test.ts`
 - 2026-03-20: Recurring PO-scope grouping wiring test run
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.recurringPurchaseOrderScope.wiring.test.ts`
+- 2026-03-20: Bucket usage ambiguity regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/bucketUsageService.periods.test.ts`
 
 ## Implementation Log
 
@@ -185,6 +187,8 @@
 - 2026-03-20: Updated `BillingCycles` assignment summary mapping to retain and render all active `client_contract_id` rows per client (with assignment identity labels) instead of collapsing to the first contract row.
 - 2026-03-20: Added `T045` wiring coverage in `packages/billing/tests/multiActiveContracts.billingCyclesSummary.wiring.test.ts` asserting multi-assignment summary rendering path remains active.
 - 2026-03-20: Added `T044` wiring coverage in `packages/billing/tests/multiActiveContracts.recurringPurchaseOrderScope.wiring.test.ts` asserting recurring candidate grouping retains `purchaseOrderScopeKey = client_contract_id`.
+- 2026-03-20: Replaced implicit bucket assignment fallback in `calculatePeriod(...)` by detecting conflicting active assignment matches and throwing an explicit ambiguity error instead of silently choosing one.
+- 2026-03-20: Added `T046` regression in `server/src/test/unit/billing/bucketUsageService.periods.test.ts` proving overlapping eligible assignments fail explicitly with actionable assignment context.
 
 ## Links / References
 
