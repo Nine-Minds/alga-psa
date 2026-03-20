@@ -124,6 +124,7 @@ SCRIPT
 - (2026-03-20) `F009` completed: wired `packages/scheduling/src/components/technician-dispatch/TimeHeader.tsx` to `useTranslation('msp/dispatch')` so the 12-hour `AM` / `PM` suffixes come from the namespace instead of being hardcoded.
 - (2026-03-20) `F010` completed: wired the technician column action in `packages/scheduling/src/components/technician-dispatch/DailyTechnicianScheduleGrid.tsx` to `useTranslation('msp/dispatch')` for the View Week tooltip and both normal/inactive aria-label variants.
 - (2026-03-20) `F011` completed: added `'/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch']` to `packages/core/src/lib/i18n/config.ts` so the dispatch namespace is route-loaded with the rest of the MSP shell.
+- (2026-03-20) Partial dispatch locale batch: added `server/public/locales/fr/msp/dispatch.json`, `server/public/locales/es/msp/dispatch.json`, and `server/public/locales/it/msp/dispatch.json`. Structural parity against `server/public/locales/en/msp/dispatch.json` passed for all three files. The remaining `de`, `nl`, and `pl` locale files are still pending for the full `F012` batch.
 
 ### Key file paths — Dispatch
 | File | Strings |

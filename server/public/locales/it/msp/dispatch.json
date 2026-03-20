@@ -1,0 +1,152 @@
+{
+  "page": {
+    "title": "Smistamento tecnici",
+    "filteredWorkItems": "Visualizzazione degli elementi di lavoro filtrati"
+  },
+  "workItems": {
+    "title": "Elementi di lavoro",
+    "searchPlaceholder": "Cerca elementi di lavoro...",
+    "filterPlaceholder": "Filtra per stato...",
+    "status": {
+      "unscheduled": "Non pianificati",
+      "scheduled": "Pianificati"
+    },
+    "pagination": {
+      "previous": "Precedente",
+      "next": "Successivo",
+      "pageInfo": "Pagina {{current}} di {{total}}",
+      "showing": "Visualizzati {{count}} di {{total}} elementi"
+    }
+  },
+  "schedule": {
+    "showInactive": "Mostra utenti inattivi",
+    "prev": "< Prec.",
+    "next": "Succ. >",
+    "today": "Oggi",
+    "viewDay": "Giorno",
+    "viewWeek": "Settimana",
+    "prevAria": "Precedente {{mode}}",
+    "nextAria": "Successivo {{mode}}",
+    "viewWeekTooltip": "Visualizza settimana",
+    "viewWeekAria": "Visualizza la settimana di {{name}}",
+    "viewWeekAriaInactive": "Visualizza la settimana di {{name}} (inattivo)",
+    "compareAll": "Confronta tutti",
+    "clearAll": "Cancella tutto",
+    "compare": "Confronta",
+    "stopComparing": "Interrompi confronto",
+    "compareAria": "Confronta {{name}}",
+    "compareAriaInactive": "Confronta {{name}} (inattivo)"
+  },
+  "details": {
+    "appointmentRequest": {
+      "title": "Dettagli della richiesta di appuntamento"
+    },
+    "sections": {
+      "approvalInformation": "Informazioni di approvazione"
+    },
+    "fields": {
+      "service": "Servizio",
+      "status": "Stato",
+      "client": "Cliente",
+      "contact": "Contatto",
+      "company": "Azienda",
+      "requester": "Richiedente",
+      "email": "Email",
+      "phone": "Telefono",
+      "requestedDate": "Data richiesta",
+      "requestedTime": "Ora richiesta",
+      "duration": "Durata",
+      "preferredTechnician": "Tecnico preferito",
+      "description": "Descrizione",
+      "declineReason": "Motivo del rifiuto",
+      "approvedBy": "Approvato da:",
+      "approvedAt": "Approvato il:"
+    },
+    "messages": {
+      "notAvailable": "N/D",
+      "unsupportedWorkItemType": "Tipo di elemento di lavoro non supportato"
+    },
+    "toasts": {
+      "noUsersAvailable": "Nessun utente disponibile nel sistema",
+      "noUserSession": "Nessuna sessione utente trovata",
+      "failedToLoadTicketData": "Impossibile caricare i dati del ticket",
+      "failedToLoadProjectTaskData": "Impossibile caricare i dati della task di progetto",
+      "failedToLoadAdHocEntryData": "Impossibile caricare i dati della voce ad hoc",
+      "failedToLoadInteractionData": "Impossibile caricare i dati dell'interazione",
+      "failedToLoadAppointmentRequestData": "Impossibile caricare i dati della richiesta di appuntamento"
+    },
+    "errors": {
+      "loadUsers": "Impossibile caricare gli utenti. Riprova aggiornando la pagina.",
+      "loadingContent": "Errore durante il caricamento del contenuto",
+      "tryAgain": "Riprova"
+    },
+    "units": {
+      "minutes": "minuti"
+    }
+  },
+  "dashboard": {
+    "filters": {
+      "allOpen": "Tutti aperti",
+      "allClosed": "Tutti chiusi"
+    },
+    "messages": {
+      "accessDenied": "Accesso negato: non hai l'autorizzazione per visualizzare la dashboard di smistamento tecnici.",
+      "unknownError": "Si \u00e8 verificato un errore sconosciuto.",
+      "permissionDeniedSchedule": "Non hai l'autorizzazione per pianificare per questo tecnico.",
+      "couldNotLoadWorkItemDetails": "Impossibile caricare i dettagli dell'elemento di lavoro."
+    },
+    "errors": {
+      "searchWorkItems": "Impossibile cercare gli elementi di lavoro",
+      "loadStatusFilterOptions": "Impossibile caricare le opzioni del filtro di stato.",
+      "refreshScheduleEntries": "Impossibile aggiornare le voci del calendario",
+      "refreshData": "Impossibile aggiornare i dati",
+      "loadPermissions": "Impossibile caricare le autorizzazioni.",
+      "fetchScheduleEntries": "Impossibile recuperare le voci del calendario.",
+      "fetchData": "Impossibile recuperare i dati.",
+      "updateSchedule": "Impossibile aggiornare il calendario",
+      "createScheduleEntry": "Impossibile creare la voce del calendario",
+      "deleteScheduleEntry": "Impossibile eliminare la voce del calendario",
+      "updateTask": "Impossibile aggiornare la task",
+      "updateScheduleEntry": "Impossibile aggiornare la voce del calendario",
+      "saveScheduleEntry": "Impossibile salvare la voce del calendario",
+      "openWorkItemDetails": "Impossibile aprire i dettagli dell'elemento di lavoro."
+    },
+    "success": {
+      "taskUpdated": "Task aggiornata con successo",
+      "scheduleEntryUpdated": "Voce del calendario aggiornata con successo",
+      "scheduleEntryCreated": "Voce del calendario creata con successo"
+    }
+  },
+  "events": {
+    "actions": {
+      "viewDetails": "Visualizza dettagli",
+      "delete": "Elimina",
+      "deleteScheduleEntry": "Elimina voce del calendario"
+    },
+    "fallbacks": {
+      "busy": "Occupato",
+      "unknown": "Sconosciuto",
+      "unassigned": "Non assegnato",
+      "unknownAgent": "Agente sconosciuto",
+      "untitled": "Senza titolo",
+      "thisScheduleEntry": "questa voce del calendario"
+    },
+    "tooltip": {
+      "privateEvent": "Occupato\nInizio: {{start}}\nFine: {{end}}",
+      "eventDetails": "{{title}}\nAssegnato a: {{assigned}}\nInizio: {{start}}\nFine: {{end}}"
+    },
+    "errors": {
+      "validateDeletion": "Impossibile convalidare l'eliminazione. Riprova."
+    }
+  },
+  "badges": {
+    "needsDispatch": "Richiede assegnazione",
+    "needsDispatchFor": "Richiede assegnazione per: {{agents}}"
+  },
+  "time": {
+    "suffixes": {
+      "am": " AM",
+      "pm": " PM"
+    }
+  }
+}
