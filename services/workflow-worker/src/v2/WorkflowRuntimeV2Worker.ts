@@ -1,9 +1,11 @@
 import { getAdminConnection } from '@shared/db/admin';
 import logger from '@shared/core/logger';
-import { WorkflowRuntimeV2 } from '@shared/workflow/runtime';
-import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWaitModelV2';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogModelV2';
+import { WorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
+import {
+  WorkflowRunLogModelV2,
+  WorkflowRunModelV2,
+  WorkflowRunWaitModelV2,
+} from '@alga-psa/workflows/persistence';
 
 export class WorkflowRuntimeV2Worker {
   private intervalId: NodeJS.Timeout | null = null;

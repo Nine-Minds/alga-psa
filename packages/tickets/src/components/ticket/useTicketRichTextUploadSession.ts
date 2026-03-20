@@ -8,6 +8,7 @@ import {
   renameClipboardImageForUpload,
   validateClipboardImageFile,
 } from '../../lib/clipboardImageUtils';
+import { deleteDraftClipboardImages as deleteDraftClipboardImagesInternal } from '../../actions/comment-actions/clipboardImageDraftActions';
 
 export interface TicketRichTextDraftClipboardImage {
   documentId: string;
@@ -31,6 +32,7 @@ interface UseTicketRichTextUploadSessionOptions {
     ticketId: string;
     documentIds: string[];
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
+  deleteDocumentFn?: (documentId: string, userId: string) => Promise<{ success: boolean; deleted?: boolean; message?: string }>;
   toastApi?: Pick<typeof toast, 'error' | 'success'>;
 }
 
@@ -43,6 +45,7 @@ export function useTicketRichTextUploadSession({
   onDiscard,
   uploadDocumentAction,
   deleteDraftClipboardImagesAction,
+  deleteDocumentFn,
   toastApi = toast,
 }: UseTicketRichTextUploadSessionOptions) {
   const [draftClipboardImages, setDraftClipboardImages] = useState<TicketRichTextDraftClipboardImage[]>(
@@ -233,10 +236,13 @@ export function useTicketRichTextUploadSession({
 
     setIsDeletingDraftImages(true);
     try {
+      if (!deleteDraftClipboardImagesAction && !deleteDocumentFn) {
+        throw new Error('Either deleteDraftClipboardImagesAction or deleteDocumentFn is required for draft image cleanup');
+      }
       const activeDeleteDraftClipboardImagesAction =
         deleteDraftClipboardImagesAction ??
-        (await import('../../actions/comment-actions/clipboardImageDraftActions'))
-          .deleteDraftClipboardImages;
+        ((input: { ticketId: string; documentIds: string[] }) =>
+          deleteDraftClipboardImagesInternal({ ...input, deleteDocumentFn: deleteDocumentFn! }));
       const result = await activeDeleteDraftClipboardImagesAction({
         ticketId,
         documentIds: draftClipboardImages.map((image) => image.documentId),

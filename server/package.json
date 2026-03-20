@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.0.6-rc4",
+  "version": "1.0.10-rc4",
   "private": true,
   "type": "module",
   "engines": {
@@ -56,6 +56,7 @@
     "migrate:ee:status": "node scripts/run-ee-migrations.js status"
   },
   "dependencies": {
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@anthropic-ai/sdk": "^0.36.3",
     "@assemblyscript/loader": "^0.27.36",
@@ -196,7 +197,7 @@
     "swr": "^2.2.5",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^3.3.0",
-    "tar": "^7.5.8",
+    "tar": "^7.5.12",
     "tinycolor2": "^1.6.0",
     "ts-morph": "^26.0.0",
     "ua-parser-js": "^2.0.6",
@@ -227,6 +228,7 @@
     "@types/ua-parser-js": "^0.7.39",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
+    "@vitest/coverage-v8": "^4.0.18",
     "as-json": "^1.0.2",
     "assemblyscript": "^0.27.36",
     "copy-webpack-plugin": "^13.0.0",
@@ -239,7 +241,6 @@
     "ts-command-line-args": "^2.5.1",
     "tsx": "^4.20.3",
     "typescript-eslint": "^8.19.1",
-    "@vitest/coverage-v8": "^4.0.18",
     "vitest": "^4.0.18"
   },
   "optionalDependencies": {

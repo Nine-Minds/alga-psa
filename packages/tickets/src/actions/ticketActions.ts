@@ -51,7 +51,12 @@ import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
 } from '../lib/workflowTicketSlaStageEvents';
-import { SlaBackendFactory } from '@alga-psa/sla/services';
+// SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
+let _cancelSlaFn: ((ticketId: string) => Promise<void>) | null = null;
+
+export async function registerSlaCancellation(fn: (ticketId: string) => Promise<void>): Promise<void> {
+  _cancelSlaFn = fn;
+}
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -1281,8 +1286,9 @@ export const deleteTicket = withAuth(async (
 
     if (result.deleted) {
       try {
-        const backend = await SlaBackendFactory.getBackend();
-        await backend.cancelSla(ticketId);
+        if (_cancelSlaFn) {
+          await _cancelSlaFn(ticketId);
+        }
       } catch (error) {
         console.warn('[deleteTicket] Failed to cancel SLA backend workflow:', error);
       }
@@ -1330,8 +1336,9 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
 
       if (result.deleted) {
         try {
-          const backend = await SlaBackendFactory.getBackend();
-          await backend.cancelSla(ticketId);
+          if (_cancelSlaFn) {
+            await _cancelSlaFn(ticketId);
+          }
         } catch (error) {
           console.warn('[deleteTickets] Failed to cancel SLA backend workflow:', error);
         }

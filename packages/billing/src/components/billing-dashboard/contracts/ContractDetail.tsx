@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft, File, Upload, Trash2, Eye } from 'lucide-react';
@@ -38,7 +37,7 @@ import type { IContractSummary } from '@alga-psa/billing/actions/contractActions
 import { updateClientContractForBilling, getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { getAllBoards } from '@alga-psa/tickets/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
-import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
@@ -53,11 +52,6 @@ import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
-// Dynamic import to avoid circular dependency (billing -> documents -> ui -> analytics -> ... -> billing)
-const Documents = dynamic(
-  () => import('@alga-psa/documents/components/Documents').then(mod => mod.default),
-  { ssr: false, loading: () => <LoadingIndicator /> }
-);
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -140,6 +134,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const router = useRouter();
   const contractId = searchParams?.get('contractId') as string;
   const tenant = useTenant()!;
+  const { getDocumentsByContractId, renderDocuments } = useDocumentsCrossFeature();
 
   const [contract, setContract] = useState<IContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -2061,16 +2056,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         </TabsContent>
 
         <TabsContent value="documents">
-          {currentUserId ? (
-            <Documents
-              id="contract-documents"
-              documents={documents}
-              userId={currentUserId}
-              entityId={contractId}
-              entityType="contract"
-              onDocumentCreated={handleDocumentCreated}
-            />
-          ) : (
+          {currentUserId ? renderDocuments({
+              id: "contract-documents",
+              documents,
+              userId: currentUserId,
+              entityId: contractId,
+              entityType: "contract",
+              onDocumentCreated: handleDocumentCreated,
+          }) : (
             <Card>
               <CardContent className="py-6 text-center text-muted-foreground">
                 Loading documents...

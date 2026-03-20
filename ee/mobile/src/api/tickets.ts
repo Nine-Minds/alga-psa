@@ -39,12 +39,17 @@ export type TicketListItem = {
 
 export type TicketRichAttributes = {
   description?: string | null;
+  due_date?: string | null;
+  watcher_user_ids?: string[] | null;
   [key: string]: unknown;
 };
 
 export type TicketDetail = TicketListItem & {
   attributes?: TicketRichAttributes | null;
   description_html?: string | null;
+  priority_id?: string | null;
+  assigned_to?: string | null;
+  due_date?: string | null;
 } & Record<string, unknown>;
 
 export type TicketStats = {
@@ -67,6 +72,8 @@ export type TicketComment = {
   event_type?: string | null;
   event_text?: string | null;
   optimistic?: boolean;
+  reactions?: AggregatedReaction[];
+  reaction_user_names?: Record<string, string>;
 };
 
 export type TicketStatus = {
@@ -291,5 +298,26 @@ export function updateTicketAttributes(
     body: {
       attributes: params.attributes,
     },
+  });
+}
+
+// --- Emoji Reactions ---
+
+export type AggregatedReaction = {
+  emoji: string;
+  count: number;
+  userIds: string[];
+  currentUserReacted: boolean;
+};
+
+export function toggleCommentReaction(
+  client: ApiClient,
+  params: { apiKey: string; ticketId: string; commentId: string; emoji: string },
+): Promise<ApiResult<SuccessResponse<{ added: boolean }>>> {
+  return client.request<SuccessResponse<{ added: boolean }>>({
+    method: "POST",
+    path: `/api/v1/tickets/${params.ticketId}/comments/${params.commentId}/reactions`,
+    headers: { "x-api-key": params.apiKey },
+    body: { emoji: params.emoji },
   });
 }

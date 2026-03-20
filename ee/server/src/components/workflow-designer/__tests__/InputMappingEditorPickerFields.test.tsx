@@ -37,6 +37,203 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
+  BoardPicker: ({
+    id,
+    boards,
+    selectedBoardId,
+    onSelect,
+  }: {
+    id?: string;
+    boards: Array<{ board_id?: string; board_name?: string }>;
+    selectedBoardId: string | null;
+    onSelect: (value: string) => void;
+  }) => (
+    <div id={id ? `${id}-container` : undefined}>
+      <select
+        data-testid={id}
+        value={selectedBoardId ?? ''}
+        onChange={(event) => onSelect(event.target.value)}
+      >
+        <option value="">--</option>
+        {boards.map((board) => (
+          <option key={board.board_id} value={board.board_id}>
+            {board.board_name}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
+  ClientPicker: ({
+    id,
+    clients,
+    selectedClientId,
+    onSelect,
+  }: {
+    id?: string;
+    clients: Array<{ client_id: string; client_name: string }>;
+    selectedClientId: string | null;
+    onSelect: (value: string | null) => void;
+  }) => (
+    <div id={id ? `${id}-container` : undefined}>
+      <select
+        data-testid={id}
+        value={selectedClientId ?? ''}
+        onChange={(event) => onSelect(event.target.value || null)}
+      >
+        <option value="">--</option>
+        {clients.map((client) => (
+          <option key={client.client_id} value={client.client_id}>
+            {client.client_name}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/ContactPicker', () => ({
+  ContactPicker: ({
+    id,
+    contacts,
+    value,
+    onValueChange,
+    clientId,
+  }: {
+    id?: string;
+    contacts: Array<{ contact_name_id: string; full_name: string; client_id?: string | null }>;
+    value: string;
+    onValueChange: (value: string) => void;
+    clientId?: string;
+  }) => (
+    <div id={id ? `${id}-container` : undefined}>
+      <select
+        data-testid={id}
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
+      >
+        <option value="">--</option>
+        {contacts
+          .filter((contact) => !clientId || contact.client_id === clientId)
+          .map((contact) => (
+            <option key={contact.contact_name_id} value={contact.contact_name_id}>
+              {contact.full_name}
+            </option>
+          ))}
+      </select>
+    </div>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/UserPicker', () => ({
+  __esModule: true,
+  default: ({
+    id,
+    users,
+    value,
+    onValueChange,
+  }: {
+    id?: string;
+    users: Array<{ user_id: string; first_name?: string; last_name?: string; username?: string }>;
+    value: string;
+    onValueChange: (value: string) => void;
+  }) => (
+    <div id={id ? `${id}-container` : undefined}>
+      <select
+        data-testid={id}
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
+      >
+        <option value="">--</option>
+        {users.map((user) => (
+          <option key={user.user_id} value={user.user_id}>
+            {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.username || user.user_id}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
+  __esModule: true,
+  default: ({
+    id,
+    users,
+    teams,
+    value,
+    onValueChange,
+    onTeamSelect,
+  }: {
+    id?: string;
+    users: Array<{ user_id: string; first_name?: string; last_name?: string; username?: string }>;
+    teams: Array<{ team_id: string; team_name: string }>;
+    value: string;
+    onValueChange: (value: string) => void;
+    onTeamSelect?: (value: string) => void;
+  }) => (
+    <div id={id ? `${id}-container` : undefined}>
+      <select
+        data-testid={id}
+        value={value}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          if (teams.some((team) => team.team_id === nextValue)) {
+            onTeamSelect?.(nextValue);
+            return;
+          }
+          onValueChange(nextValue);
+        }}
+      >
+        <option value="">--</option>
+        {users.map((user) => (
+          <option key={user.user_id} value={user.user_id}>
+            {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.username || user.user_id}
+          </option>
+        ))}
+        {teams.map((team) => (
+          <option key={team.team_id} value={team.team_id}>
+            {team.team_name}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}));
+
+vi.mock('../../../../../packages/tickets/src/components/CategoryPicker', () => ({
+  __esModule: true,
+  default: ({
+    id,
+    categories,
+    selectedCategories,
+    onSelect,
+  }: {
+    id?: string;
+    categories: Array<{ category_id: string; category_name: string }>;
+    selectedCategories: string[];
+    onSelect: (selected: string[], excluded: string[]) => void;
+  }) => (
+    <div id={id ? `${id}-container` : undefined}>
+      <select
+        data-testid={id}
+        value={selectedCategories[0] ?? ''}
+        onChange={(event) => onSelect(event.target.value ? [event.target.value] : [], [])}
+      >
+        <option value="">--</option>
+        {categories.map((category) => (
+          <option key={category.category_id} value={category.category_id}>
+            {category.category_name}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}));
+
 vi.mock('@alga-psa/integrations/actions', () => ({
   getTicketFieldOptions: vi.fn().mockResolvedValue({
     options: {
@@ -146,6 +343,22 @@ vi.mock('@alga-psa/teams/actions', () => ({
       team_name: 'Dispatch',
     },
   ]),
+  getTeamAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getAllUsersBasic: vi.fn().mockResolvedValue([
+    {
+      user_id: 'user-1',
+      username: 'alex',
+      first_name: 'Alex',
+      last_name: 'Agent',
+      user_type: 'internal',
+      is_inactive: false,
+      tenant: 'tenant-1',
+    },
+  ]),
+  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('@alga-psa/tickets/actions', () => ({

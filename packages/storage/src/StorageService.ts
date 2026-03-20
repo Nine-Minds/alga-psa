@@ -26,17 +26,14 @@ import {
 } from './config/storage';
 import { LocalProviderConfig, S3ProviderConfig } from './types/storage';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { isValidUUID } from '@alga-psa/validation';
 import {
   buildDocumentDeletedPayload,
   buildDocumentUploadedPayload,
-} from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders';
-import {
   buildFileUploadedPayload,
   buildMediaProcessingSucceededPayload,
-} from '@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders';
+} from './workflowEventPayloads';
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return new Promise((resolve, reject) => {

@@ -23,7 +23,7 @@ import {
   buildAppointmentCanceledPayload,
   buildAppointmentCreatedPayload,
   buildAppointmentRescheduledPayload,
-} from '@shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
+} from '@alga-psa/workflow-streams';
 import {
   getAvailableServicesForClient,
   getServicesForPublicBooking,

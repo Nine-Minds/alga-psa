@@ -1,14 +1,21 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Plus, Trash2, AlertTriangle, Wand2, Sparkles, RotateCcw } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, AlertTriangle, Wand2, Sparkles, RotateCcw, Expand } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime/client';
+import type { InputMapping, MappingValue, Expr } from '@alga-psa/workflows/runtime';
 import {
   type ExpressionContext,
   type JsonSchema
@@ -34,378 +41,14 @@ import {
   transitionWorkflowActionInputMode,
   type WorkflowActionInputSourceModeValue,
 } from '../WorkflowActionInputSourceMode';
-
-/**
- * Infer type from a field path
- * Uses heuristics based on common field naming patterns
- */
-function inferTypeFromPath(path: string): string | undefined {
-  if (!path) return undefined;
-
-  const parts = path.split('.');
-  const fieldName = parts[parts.length - 1].toLowerCase();
-
-  // Remove array index notation
-  const cleanName = fieldName.replace(/\[\]$/, '').replace(/\[\d+\]$/, '');
-
-  // Common patterns for specific types
-  if (cleanName.endsWith('id') || cleanName.endsWith('_id') || cleanName === 'id') return 'string';
-  if (cleanName.endsWith('email') || cleanName === 'email') return 'string';
-  if (cleanName.endsWith('name') || cleanName === 'name') return 'string';
-  if (cleanName.endsWith('title') || cleanName === 'title') return 'string';
-  if (cleanName.endsWith('description') || cleanName === 'description') return 'string';
-  if (cleanName.endsWith('message') || cleanName === 'message') return 'string';
-  if (cleanName.endsWith('url') || cleanName === 'url') return 'string';
-  if (cleanName.endsWith('path') || cleanName === 'path') return 'string';
-  if (cleanName.endsWith('text') || cleanName === 'text') return 'string';
-  if (cleanName.endsWith('content') || cleanName === 'content') return 'string';
-  if (cleanName.endsWith('subject') || cleanName === 'subject') return 'string';
-
-  if (cleanName.endsWith('count') || cleanName.endsWith('_count')) return 'number';
-  if (cleanName.endsWith('amount') || cleanName.endsWith('_amount')) return 'number';
-  if (cleanName.endsWith('total') || cleanName.endsWith('_total')) return 'number';
-  if (cleanName.endsWith('number') && !cleanName.includes('phone')) return 'number';
-  if (cleanName === 'index' || cleanName === '$index') return 'number';
-  if (cleanName.endsWith('port')) return 'number';
-  if (cleanName.endsWith('version')) return 'number';
-
-  if (cleanName.startsWith('is_') || cleanName.startsWith('has_')) return 'boolean';
-  if (cleanName.endsWith('enabled') || cleanName.endsWith('_enabled')) return 'boolean';
-  if (cleanName.endsWith('active') || cleanName.endsWith('_active')) return 'boolean';
-  if (cleanName.endsWith('flag') || cleanName.endsWith('_flag')) return 'boolean';
-  if (cleanName === 'required' || cleanName === 'optional') return 'boolean';
-  if (cleanName === 'success' || cleanName === 'valid') return 'boolean';
-
-  if (cleanName.endsWith('date') || cleanName.endsWith('_at')) return 'date';
-  if (cleanName.endsWith('time') || cleanName.endsWith('timestamp')) return 'date';
-  if (cleanName === 'created' || cleanName === 'updated') return 'date';
-
-  if (cleanName.endsWith('list') || cleanName.endsWith('items')) return 'array';
-  if (cleanName.endsWith('[]')) return 'array';
-  if (cleanName === 'attachments' || cleanName === 'files') return 'array';
-  if (cleanName === 'tags' || cleanName === 'labels') return 'array';
-
-  // Root paths
-  if (path === 'payload' || path === 'vars' || path === 'meta' || path === 'error') return 'object';
-
-  // State is typically a string
-  if (path === 'meta.state') return 'string';
-  if (path === 'meta.traceId') return 'string';
-  if (path === 'error.message' || path === 'error.name' || path === 'error.stack') return 'string';
-
-  return undefined;
-}
-
-function extractPrimaryPath(expression: string | undefined): string | null {
-  if (!expression) return null;
-  const trimmed = expression.trim();
-  if (!trimmed) return null;
-  const token = trimmed.split(/[\s+\-*/%()[\]{},<>=!&|?:]+/)[0];
-  return token || null;
-}
-
-type ReferenceSourceScope = 'payload' | 'vars' | 'meta' | 'error' | 'forEach';
-
-type ReferenceFieldOption = {
-  value: string;
-  label: string;
-  type?: string;
-};
-
-type ReferenceStepOption = {
-  value: string;
-  label: string;
-  fields: ReferenceFieldOption[];
-};
-
-type ReferenceSourceModel = {
-  payload: ReferenceFieldOption[];
-  vars: ReferenceStepOption[];
-  meta: ReferenceFieldOption[];
-  error: ReferenceFieldOption[];
-  forEach: ReferenceFieldOption[];
-};
-
-const toRelativeLabel = (path: string, prefix: string, fallback: string): string => {
-  if (path === prefix) return fallback;
-  if (path.startsWith(`${prefix}.`)) return path.slice(prefix.length + 1);
-  return path;
-};
-
-const pushUniqueReferenceField = (
-  target: ReferenceFieldOption[],
-  option: ReferenceFieldOption
-) => {
-  if (target.some((existing) => existing.value === option.value)) return;
-  target.push(option);
-};
-
-const flattenReferenceFields = (
-  fields: DataTreeContext['payload'],
-  labelPrefix: string
-): ReferenceFieldOption[] => {
-  const flattened: ReferenceFieldOption[] = [];
-  const visit = (field: DataTreeContext['payload'][number]) => {
-    pushUniqueReferenceField(flattened, {
-      value: field.path,
-      label: toRelativeLabel(field.path, labelPrefix, field.name),
-      type: field.type,
-    });
-    field.children?.forEach((child) => visit(child));
-  };
-  fields.forEach((field) => visit(field));
-  return flattened;
-};
-
-const resolveReferenceSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
-  if (schema.$ref && root?.definitions) {
-    const refKey = schema.$ref.replace('#/definitions/', '');
-    const resolved = root.definitions?.[refKey];
-    if (resolved) return resolveReferenceSchema(resolved, root);
-  }
-
-  if (schema.anyOf?.length) {
-    const nonNullVariant = schema.anyOf.find(
-      (variant) =>
-        variant.type !== 'null' &&
-        !(Array.isArray(variant.type) && variant.type.length === 1 && variant.type[0] === 'null')
-    );
-    if (nonNullVariant) {
-      const resolved = resolveReferenceSchema(nonNullVariant, root);
-      return {
-        ...resolved,
-        type: Array.isArray(resolved.type)
-          ? resolved.type
-          : resolved.type
-            ? [resolved.type, 'null']
-            : ['null'],
-      };
-    }
-  }
-
-  return schema;
-};
-
-const normalizeReferenceSchemaType = (schema?: JsonSchema): string | undefined => {
-  if (!schema?.type) return undefined;
-  if (Array.isArray(schema.type)) {
-    return schema.type.find((type) => type !== 'null') ?? schema.type[0];
-  }
-  return schema.type;
-};
-
-const collectReferenceSchemaFields = (
-  schema: JsonSchema | undefined,
-  prefix: string,
-  labelPrefix: string,
-  root?: JsonSchema
-): ReferenceFieldOption[] => {
-  if (!schema) return [];
-
-  const resolved = resolveReferenceSchema(schema, root);
-  const type = normalizeReferenceSchemaType(resolved);
-  const options: ReferenceFieldOption[] = [
-    {
-      value: prefix,
-      label: toRelativeLabel(prefix, labelPrefix, prefix),
-      type,
-    },
-  ];
-
-  if (type === 'object' && resolved.properties) {
-    Object.entries(resolved.properties).forEach(([key, childSchema]) => {
-      collectReferenceSchemaFields(childSchema, `${prefix}.${key}`, labelPrefix, root ?? resolved).forEach((option) =>
-        pushUniqueReferenceField(options, option)
-      );
-    });
-    return options;
-  }
-
-  if (type === 'array' && resolved.items) {
-    const arrayPrefix = `${prefix}[]`;
-    pushUniqueReferenceField(options, {
-      value: arrayPrefix,
-      label: toRelativeLabel(arrayPrefix, labelPrefix, arrayPrefix),
-      type: normalizeReferenceSchemaType(resolveReferenceSchema(resolved.items, root ?? resolved)),
-    });
-    collectReferenceSchemaFields(resolved.items, arrayPrefix, labelPrefix, root ?? resolved).forEach((option) =>
-      pushUniqueReferenceField(options, option)
-    );
-  }
-
-  return options;
-};
-
-const buildReferenceSourceModel = (
-  referenceBrowseContext: DataTreeContext | undefined,
-  fieldOptions: SelectOption[],
-  payloadSchema?: JsonSchema
-): ReferenceSourceModel => {
-  const model: ReferenceSourceModel = {
-    payload: [],
-    vars: [],
-    meta: [],
-    error: [],
-    forEach: [],
-  };
-
-  collectReferenceSchemaFields(payloadSchema, 'payload', 'payload', payloadSchema).forEach((option) =>
-    pushUniqueReferenceField(model.payload, option)
-  );
-  referenceBrowseContext?.payload.forEach((field) => {
-    flattenReferenceFields([field], 'payload').forEach((option) =>
-      pushUniqueReferenceField(model.payload, option)
-    );
-  });
-  referenceBrowseContext?.meta.forEach((field) => {
-    flattenReferenceFields([field], 'meta').forEach((option) =>
-      pushUniqueReferenceField(model.meta, option)
-    );
-  });
-  referenceBrowseContext?.error.forEach((field) => {
-    flattenReferenceFields([field], 'error').forEach((option) =>
-      pushUniqueReferenceField(model.error, option)
-    );
-  });
-  referenceBrowseContext?.vars.forEach((step) => {
-    const prefix = `vars.${step.saveAs}`;
-    model.vars.push({
-      value: step.saveAs,
-      label: `${step.stepName} (${step.saveAs})`,
-      fields: flattenReferenceFields(step.fields, prefix),
-    });
-  });
-  if (referenceBrowseContext?.forEach) {
-    const { itemVar, indexVar, itemType } = referenceBrowseContext.forEach;
-    pushUniqueReferenceField(model.forEach, {
-      value: itemVar,
-      label: itemVar,
-      type: itemType,
-    });
-    pushUniqueReferenceField(model.forEach, {
-      value: indexVar,
-      label: indexVar,
-      type: 'number',
-    });
-  }
-
-  fieldOptions.forEach((option) => {
-    const path = option.value;
-    const inferredType = inferTypeFromPath(path);
-
-    if (path.startsWith('payload')) {
-      pushUniqueReferenceField(model.payload, {
-        value: path,
-        label: toRelativeLabel(path, 'payload', 'payload'),
-        type: inferredType,
-      });
-      return;
-    }
-
-    if (path.startsWith('vars.')) {
-      const [, stepKey, ...rest] = path.split('.');
-      if (!stepKey) return;
-      let step = model.vars.find((entry) => entry.value === stepKey);
-      if (!step) {
-        step = {
-          value: stepKey,
-          label: stepKey,
-          fields: [],
-        };
-        model.vars.push(step);
-      }
-      pushUniqueReferenceField(step.fields, {
-        value: path,
-        label: rest.length > 0 ? rest.join('.') : stepKey,
-        type: inferredType,
-      });
-      return;
-    }
-
-    if (path.startsWith('meta')) {
-      pushUniqueReferenceField(model.meta, {
-        value: path,
-        label: toRelativeLabel(path, 'meta', 'meta'),
-        type: inferredType,
-      });
-      return;
-    }
-
-    if (path.startsWith('error')) {
-      pushUniqueReferenceField(model.error, {
-        value: path,
-        label: toRelativeLabel(path, 'error', 'error'),
-        type: inferredType,
-      });
-      return;
-    }
-
-    if (
-      referenceBrowseContext?.forEach &&
-      (path === referenceBrowseContext.forEach.itemVar ||
-        path.startsWith(`${referenceBrowseContext.forEach.itemVar}.`) ||
-        path === referenceBrowseContext.forEach.indexVar)
-    ) {
-      pushUniqueReferenceField(model.forEach, {
-        value: path,
-        label:
-          path === referenceBrowseContext.forEach.itemVar
-            ? referenceBrowseContext.forEach.itemVar
-            : path === referenceBrowseContext.forEach.indexVar
-              ? referenceBrowseContext.forEach.indexVar
-              : path.slice(referenceBrowseContext.forEach.itemVar.length + 1),
-        type: inferredType,
-      });
-    }
-  });
-
-  return model;
-};
-
-const deriveReferenceScope = (
-  path: string | null,
-  referenceBrowseContext: DataTreeContext | undefined
-): { scope: ReferenceSourceScope | ''; step: string } => {
-  if (!path) return { scope: '', step: '' };
-  if (path.startsWith('payload')) return { scope: 'payload', step: '' };
-  if (path.startsWith('vars.')) {
-    const [, step = ''] = path.split('.');
-    return { scope: 'vars', step };
-  }
-  if (path.startsWith('meta')) return { scope: 'meta', step: '' };
-  if (path.startsWith('error')) return { scope: 'error', step: '' };
-  if (
-    referenceBrowseContext?.forEach &&
-    (path === referenceBrowseContext.forEach.itemVar ||
-      path.startsWith(`${referenceBrowseContext.forEach.itemVar}.`) ||
-      path === referenceBrowseContext.forEach.indexVar)
-  ) {
-    return { scope: 'forEach', step: '' };
-  }
-  return { scope: '', step: '' };
-};
-
-const filterReferenceFieldOptions = (
-  options: ReferenceFieldOption[],
-  targetType: string | undefined
-): ReferenceFieldOption[] => {
-  if (!targetType) return options;
-
-  const exact = options.filter(
-    (option) => getTypeCompatibility(option.type, targetType) === TypeCompatibility.EXACT
-  );
-  const coercible = options.filter(
-    (option) => getTypeCompatibility(option.type, targetType) === TypeCompatibility.COERCIBLE
-  );
-  const unknown = options.filter(
-    (option) => getTypeCompatibility(option.type, targetType) === TypeCompatibility.UNKNOWN
-  );
-
-  if (exact.length > 0) return exact;
-  if (coercible.length > 0) return coercible;
-
-  return unknown.length > 0 ? unknown : options;
-};
+import {
+  ReferenceScopeSelector,
+  buildReferenceSourceModel,
+  deriveReferenceScope,
+  extractPrimaryPath,
+  inferTypeFromPath,
+  type ReferenceSourceScope,
+} from '../workflowReferenceSelector';
 
 /**
  * Build ExpressionContext from SelectOption[] for the Monaco expression editor
@@ -427,7 +70,6 @@ function buildExpressionContextFromOptions(fieldOptions: SelectOption[]): Expres
 
     const root = parts[0];
     const restPath = parts.slice(1);
-    const fieldName = restPath[restPath.length - 1];
 
     // Infer type from path
     const inferredType = inferTypeFromPath(path);
@@ -489,127 +131,6 @@ function buildExpressionContextFromOptions(fieldOptions: SelectOption[]): Expres
   };
 }
 
-const ReferenceScopeSelector: React.FC<{
-  idPrefix: string;
-  model: ReferenceSourceModel;
-  targetType: string | undefined;
-  selectedScope: ReferenceSourceScope | '';
-  selectedStep: string;
-  selectedField: string | null;
-  disabled?: boolean;
-  onScopeChange: (scope: ReferenceSourceScope | '') => void;
-  onStepChange: (step: string) => void;
-  onFieldChange: (path: string) => void;
-}> = ({
-  idPrefix,
-  model,
-  targetType,
-  selectedScope,
-  selectedStep,
-  selectedField,
-  disabled,
-  onScopeChange,
-  onStepChange,
-  onFieldChange,
-}) => {
-  const scopeOptions = useMemo<SelectOption[]>(() => {
-    const options: SelectOption[] = [];
-    if (model.payload.length > 0) options.push({ value: 'payload', label: 'Payload' });
-    if (model.vars.length > 0) options.push({ value: 'vars', label: 'Step results' });
-    if (model.meta.length > 0) options.push({ value: 'meta', label: 'Workflow details' });
-    if (model.error.length > 0) options.push({ value: 'error', label: 'Error' });
-    if (model.forEach.length > 0) options.push({ value: 'forEach', label: 'Loop context' });
-    return options;
-  }, [model]);
-
-  const selectedStepOption = selectedScope === 'vars'
-    ? model.vars.find((step) => step.value === selectedStep) ?? null
-    : null;
-
-  const fieldOptions = useMemo<SelectOption[]>(() => {
-    let options: ReferenceFieldOption[] = [];
-    let rootValue: string | null = null;
-    if (selectedScope === 'payload') options = model.payload;
-    if (selectedScope === 'meta') options = model.meta;
-    if (selectedScope === 'error') options = model.error;
-    if (selectedScope === 'forEach') options = model.forEach;
-    if (selectedScope === 'vars' && selectedStepOption) options = selectedStepOption.fields;
-
-    if (selectedScope === 'payload') rootValue = 'payload';
-    if (selectedScope === 'meta') rootValue = 'meta';
-    if (selectedScope === 'error') rootValue = 'error';
-    if (selectedScope === 'vars' && selectedStepOption) rootValue = `vars.${selectedStepOption.value}`;
-    if (selectedScope === 'forEach' && options.length > 0) rootValue = options[0]?.value ?? null;
-
-    const filteredOptions = filterReferenceFieldOptions(options, targetType);
-    if (rootValue) {
-      const rootOption = options.find((option) => option.value === rootValue);
-      if (rootOption && !filteredOptions.some((option) => option.value === rootValue)) {
-        filteredOptions.unshift(rootOption);
-      }
-    }
-
-    return filteredOptions.map((option) => ({
-      value: option.value,
-      label: option.label,
-    }));
-  }, [model, selectedScope, selectedStepOption, targetType]);
-
-  const stepOptions = useMemo<SelectOption[]>(() => {
-    if (selectedScope !== 'vars') return [];
-    return model.vars.map((step) => ({ value: step.value, label: step.label }));
-  }, [model.vars, selectedScope]);
-
-  const selectClassName = 'min-w-0 w-full overflow-hidden whitespace-nowrap';
-
-  return (
-    <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))]">
-      <CustomSelect
-        id={`${idPrefix}-reference-scope`}
-        options={scopeOptions}
-        value={selectedScope || undefined}
-        placeholder="Select source scope..."
-        onValueChange={(value) => onScopeChange(value as ReferenceSourceScope | '')}
-        disabled={disabled}
-        className={selectClassName}
-      />
-      {selectedScope === 'vars' && (
-        <CustomSelect
-          id={`${idPrefix}-reference-step`}
-          options={stepOptions}
-          value={selectedStep || undefined}
-          placeholder="Select step..."
-          onValueChange={onStepChange}
-          disabled={disabled}
-          className={selectClassName}
-        />
-      )}
-      {selectedScope && selectedScope !== 'vars' && (
-        <CustomSelect
-          id={`${idPrefix}-reference-field`}
-          options={fieldOptions}
-          value={selectedField ?? undefined}
-          placeholder="Select field..."
-          onValueChange={onFieldChange}
-          disabled={disabled}
-          className={selectClassName}
-        />
-      )}
-      {selectedScope === 'vars' && selectedStep && (
-        <CustomSelect
-          id={`${idPrefix}-reference-field`}
-          options={fieldOptions}
-          value={selectedField ?? undefined}
-          placeholder="Select field..."
-          onValueChange={onFieldChange}
-          disabled={disabled}
-          className={selectClassName}
-        />
-      )}
-    </div>
-  );
-};
-
 /**
  * Schema field definition for target action inputs
  */
@@ -620,11 +141,29 @@ export interface ActionInputField {
   description?: string;
   required?: boolean;
   examples?: unknown[];
+  editor?: {
+    kind: 'text' | 'picker' | 'color' | 'json' | 'custom';
+    inline?: {
+      mode: 'input' | 'textarea' | 'picker-summary' | 'swatch';
+    };
+    dialog?: {
+      mode: 'large-text';
+    };
+    dependencies?: string[];
+    fixedValueHint?: string;
+    allowsDynamicReference?: boolean;
+    picker?: {
+      resource: string;
+    };
+  };
   picker?: {
     kind: string;
     dependencies?: string[];
     fixedValueHint?: string;
     allowsDynamicReference?: boolean;
+  };
+  presentation?: {
+    inputControl?: 'multiline';
   };
   enum?: Array<string | number | boolean | null>;
   default?: unknown;
@@ -641,6 +180,34 @@ export interface ActionInputField {
   };
   children?: ActionInputField[];
 }
+
+const getWorkflowFieldEditor = (field: ActionInputField): NonNullable<ActionInputField['editor']> | undefined => {
+  if (field.editor) {
+    return field.editor;
+  }
+
+  if (field.picker?.kind) {
+    return {
+      kind: 'picker',
+      inline: { mode: 'picker-summary' },
+      dependencies: field.picker.dependencies,
+      fixedValueHint: field.picker.fixedValueHint,
+      allowsDynamicReference: field.picker.allowsDynamicReference,
+      picker: {
+        resource: field.picker.kind,
+      },
+    };
+  }
+
+  if (field.presentation?.inputControl === 'multiline') {
+    return {
+      kind: 'text',
+      inline: { mode: 'textarea' },
+    };
+  }
+
+  return undefined;
+};
 
 /**
  * Props for the InputMappingEditor component
@@ -1257,6 +824,103 @@ const parsePrimitiveList = (
   return { values, errors };
 };
 
+const FixedValueEditorShell: React.FC<{
+  field: ActionInputField;
+  idPrefix: string;
+  value: MappingValue | undefined;
+  onChange: (value: MappingValue) => void;
+  disabled?: boolean;
+  inlineEditor?: React.ReactNode;
+}> = ({ field, idPrefix, value, onChange, disabled, inlineEditor }) => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [draftValue, setDraftValue] = useState('');
+  const dialogMode = getWorkflowFieldEditor(field)?.dialog?.mode;
+
+  useEffect(() => {
+    if (!isDialogOpen) return;
+    setDraftValue(typeof value === 'string' ? value : '');
+  }, [isDialogOpen, value]);
+
+  const hasDialogEditor = dialogMode === 'large-text';
+
+  if (!hasDialogEditor) {
+    return <>{inlineEditor}</>;
+  }
+
+  const openDialog = () => setIsDialogOpen(true);
+  const closeDialog = () => setIsDialogOpen(false);
+  const applyDialogValue = () => {
+    onChange(draftValue);
+    closeDialog();
+  };
+
+  return (
+    <>
+      <div className="space-y-2">
+        {inlineEditor}
+        <div className="flex justify-end">
+          <Button
+            id={`${idPrefix}-dialog-open`}
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={openDialog}
+            disabled={disabled}
+            className="gap-1"
+          >
+            <Expand className="h-3.5 w-3.5" />
+            Open editor
+          </Button>
+        </div>
+      </div>
+      <Dialog
+        id={`${idPrefix}-dialog`}
+        isOpen={isDialogOpen}
+        onClose={closeDialog}
+        title={`Edit ${field.name}`}
+        className="max-w-4xl"
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {field.name}</DialogTitle>
+            <DialogDescription>
+              Use the larger editor for longer fixed-value content.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <TextArea
+              id={`${idPrefix}-dialog-textarea`}
+              value={draftValue}
+              onChange={(event) => setDraftValue(event.target.value)}
+              rows={18}
+              disabled={disabled}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                id={`${idPrefix}-dialog-cancel`}
+                type="button"
+                variant="outline"
+                onClick={closeDialog}
+                disabled={disabled}
+              >
+                Cancel
+              </Button>
+              <Button
+                id={`${idPrefix}-dialog-save`}
+                type="button"
+                onClick={applyDialogValue}
+                disabled={disabled}
+              >
+                Apply
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 const LiteralValueEditor: React.FC<{
   value: MappingValue | undefined;
   onChange: (value: MappingValue) => void;
@@ -1290,7 +954,9 @@ const LiteralValueEditor: React.FC<{
   expressionContext,
   referenceBrowseContext,
 }) => {
-  const hasPickerEditor = Boolean(field.picker?.kind);
+  const fieldEditor = getWorkflowFieldEditor(field);
+  const inlineEditorMode = fieldEditor?.inline?.mode;
+  const hasPickerEditor = fieldEditor?.kind === 'picker' && inlineEditorMode === 'picker-summary';
   const hasStructuredObjectEditor = fieldType === 'object' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredArrayObjectEditor = fieldType === 'array' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredPrimitiveArrayEditor =
@@ -1380,13 +1046,22 @@ const LiteralValueEditor: React.FC<{
   // Handle enum fields
   if (hasPickerEditor) {
     return wrapNullableEditor(
-      <WorkflowActionInputFixedPicker
+      <FixedValueEditorShell
         field={field}
-        value={typeof value === 'string' ? value : null}
-        onChange={(nextValue) => onChange(nextValue)}
         idPrefix={idPrefix}
-        rootInputMapping={rootInputMapping}
+        value={value}
+        onChange={onChange}
         disabled={disabled}
+        inlineEditor={
+          <WorkflowActionInputFixedPicker
+            field={field}
+            value={typeof value === 'string' ? value : null}
+            onChange={(nextValue) => onChange(nextValue)}
+            idPrefix={idPrefix}
+            rootInputMapping={rootInputMapping}
+            disabled={disabled}
+          />
+        }
       />
     );
   }
@@ -1779,7 +1454,20 @@ const LiteralValueEditor: React.FC<{
 
   // Default to string
   const stringInputType = fieldConstraints?.format === 'email' ? 'email' : 'text';
-  return wrapNullableEditor(
+  const isMultilineString = inlineEditorMode === 'textarea';
+  const showSingleLineStringInput =
+    inlineEditorMode === 'input' ||
+    (!fieldEditor?.inline && fieldEditor?.dialog === undefined);
+  const inlineStringEditor = isMultilineString ? (
+    <TextArea
+      id={`${idPrefix}-literal-str`}
+      value={typeof value === 'string' ? value : ''}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Enter value..."
+      rows={5}
+      disabled={disabled}
+    />
+  ) : showSingleLineStringInput ? (
     <Input
       id={`${idPrefix}-literal-str`}
       type={stringInputType}
@@ -1787,6 +1475,16 @@ const LiteralValueEditor: React.FC<{
       onChange={(e) => onChange(e.target.value)}
       placeholder="Enter value..."
       disabled={disabled}
+    />
+  ) : null;
+  return wrapNullableEditor(
+    <FixedValueEditorShell
+      field={field}
+      idPrefix={idPrefix}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      inlineEditor={inlineStringEditor}
     />
   );
 };

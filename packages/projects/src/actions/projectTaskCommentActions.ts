@@ -2,6 +2,7 @@
 
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { IProjectTaskComment, IProjectTaskCommentWithUser } from '@alga-psa/types';
@@ -252,10 +253,14 @@ export const deleteTaskComment = withAuth(async (
  * Get comment count for a task
  */
 export const getTaskCommentCount = withAuth(async (
-  _user,
+  user,
   { tenant },
   taskId: string
 ): Promise<number> => {
+  if (!await hasPermission(user, 'project_task', 'read')) {
+    throw new Error('Permission denied: cannot read task comments');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   const result = await db('project_task_comments')
@@ -264,4 +269,34 @@ export const getTaskCommentCount = withAuth(async (
     .first();
 
   return parseInt(result?.count as string) || 0;
+});
+
+/**
+ * Get comment counts for multiple tasks in a single query
+ */
+export const getTaskCommentCountsBatch = withAuth(async (
+  user,
+  { tenant },
+  taskIds: string[]
+): Promise<Record<string, number>> => {
+  if (taskIds.length === 0) return {};
+
+  if (!await hasPermission(user, 'project_task', 'read')) {
+    throw new Error('Permission denied: cannot read task comments');
+  }
+
+  const { knex: db } = await createTenantKnex();
+
+  const results = await db('project_task_comments')
+    .whereIn('task_id', taskIds)
+    .where({ tenant })
+    .groupBy('task_id')
+    .select('task_id')
+    .count('* as count');
+
+  const counts: Record<string, number> = {};
+  for (const row of results) {
+    counts[row.task_id as string] = parseInt(row.count as string) || 0;
+  }
+  return counts;
 });

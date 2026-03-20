@@ -12,11 +12,12 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
 interface AddStatusDialogProps {
   projectId: string;
+  phaseId?: string | null;
   onClose: () => void;
   onAdded: () => void;
 }
 
-export function AddStatusDialog({ projectId, onClose, onAdded }: AddStatusDialogProps) {
+export function AddStatusDialog({ projectId, phaseId, onClose, onAdded }: AddStatusDialogProps) {
   const [tenantStatuses, setTenantStatuses] = useState<IStatus[]>([]);
   const [selectedStatusId, setSelectedStatusId] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -40,7 +41,7 @@ export function AddStatusDialog({ projectId, onClose, onAdded }: AddStatusDialog
       // Add existing status from library to project
       await addStatusToProject(projectId, {
         status_id: selectedStatusId
-      });
+      }, phaseId);
 
       onAdded();
       onClose();
@@ -61,7 +62,7 @@ export function AddStatusDialog({ projectId, onClose, onAdded }: AddStatusDialog
     <Dialog
       isOpen={true}
       onClose={onClose}
-      title="Add Status from Library"
+      title={phaseId ? 'Add Phase Status from Library' : 'Add Status from Library'}
       id="add-status-dialog"
     >
       <div className="space-y-4 p-4">

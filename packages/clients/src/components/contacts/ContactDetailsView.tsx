@@ -18,7 +18,7 @@ import { IInteraction } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
 import { getClientById } from '@alga-psa/clients/actions';
 import { updateContact } from '@alga-psa/clients/actions';
-import Documents from '@alga-psa/documents/components/Documents';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import type { IDocument } from '@alga-psa/types';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -93,6 +93,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const { openDrawer, goBack } = useDrawer();
   const clientDrawer = useClientDrawer();
+  const { renderDocuments } = useDocumentsCrossFeature();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -429,15 +430,15 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         {showDocuments && userId && (
           <div className="mt-6">
             <Heading size="4" className="mb-4">Documents</Heading>
-            <Documents
-              id={`${id}-documents`}
-              documents={documents}
-              userId={userId}
-              entityId={contact.contact_name_id}
-              entityType="contact"
-              onDocumentCreated={handleDocumentCreated}
-              isInDrawer={isInDrawer}
-            />
+            {renderDocuments({
+              id: `${id}-documents`,
+              documents,
+              userId,
+              entityId: contact.contact_name_id,
+              entityType: 'contact',
+              onDocumentCreated: handleDocumentCreated,
+              isInDrawer,
+            })}
           </div>
         )}
 

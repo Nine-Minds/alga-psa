@@ -452,7 +452,7 @@ const fetchContacts = async (): Promise<void> => {
         }
       } else {
         // Create MSP user
-        const createdUser = await addUser({
+        const result = await addUser({
           firstName: newUser.firstName,
           lastName: newUser.lastName,
           email: newUser.email,
@@ -461,8 +461,13 @@ const fetchContacts = async (): Promise<void> => {
           reportsTo: newUser.reportsTo || undefined
         });
 
+        if (!result.success) {
+          reportCreateUserError(result.error);
+          return;
+        }
+
         // Fetch the updated user with roles
-        const updatedUser = await getUserWithRoles(createdUser.user_id);
+        const updatedUser = await getUserWithRoles(result.user.user_id);
         if (updatedUser) {
           setUsers([...users, updatedUser]);
         }

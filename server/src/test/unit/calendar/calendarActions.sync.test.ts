@@ -39,7 +39,7 @@ vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
   }))
 }));
 
-import { syncCalendarProvider } from '../../../lib/actions/calendarActions.ts';
+import { syncCalendarProvider } from '@alga-psa/integrations/actions/calendarActions';
 
 function buildQuery(data: any[]) {
   const query: any = {

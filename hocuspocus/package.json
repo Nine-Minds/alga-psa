@@ -11,7 +11,8 @@
     "@hocuspocus/extension-database": "^2.0.0",
     "@hocuspocus/extension-logger": "^2.0.0",
     "pg": "^8.7.1",
-    "redis": "^4.6.7"
+    "redis": "^4.6.7",
+    "yjs": "^13.6.0"
   },
   "main": "server.js",
   "keywords": [],

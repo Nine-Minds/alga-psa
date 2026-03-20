@@ -39,11 +39,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.985.0",
-    "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",
-    "@alga-psa/shared": "*",
+    "@alga-psa/formatting": "*",
     "@alga-psa/validation": "*"
   },
   "devDependencies": {

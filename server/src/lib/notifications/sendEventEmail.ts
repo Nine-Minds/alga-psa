@@ -4,6 +4,7 @@ import { getConnection } from '../db/db';
 import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '@alga-psa/email';
+import { EmailProviderError } from '@alga-psa/types';
 import { getUserInfoForEmail, resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
@@ -438,7 +439,20 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         });
         return;
       }
-      throw new Error(`Failed to send email: ${result.error || 'Unknown error'}`);
+
+      const providerId = result.providerId || params.providerId || 'unknown';
+      const providerType = result.providerType || 'unknown';
+      const isRetryable = result.metadata?.retryable === true;
+      const errorCode = typeof result.metadata?.errorCode === 'string' ? result.metadata.errorCode : undefined;
+
+      throw new EmailProviderError(
+        `Failed to send email: ${result.error || 'Unknown error'}`,
+        providerId,
+        providerType,
+        isRetryable,
+        errorCode,
+        result.metadata
+      );
     }
 
     if (replyPayload) {

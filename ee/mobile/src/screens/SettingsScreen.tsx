@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Linking, Modal, Platform, Pressable, Text, View } from "react-native";
+import { Alert, Linking, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import * as Application from "expo-application";
 import { useTranslation } from "react-i18next";
 import { getAppConfig } from "../config/appConfig";
@@ -81,12 +81,8 @@ export function SettingsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background }}>
-      <Text style={{ ...theme.typography.title, marginBottom: theme.spacing.sm, color: theme.colors.text }}>
-        {t("title")}
-      </Text>
-
-      <View style={{ marginTop: theme.spacing.lg }}>
+    <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={{ padding: theme.spacing.lg }}>
+      <View>
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
           {t("sections.account")}
         </Text>
@@ -272,7 +268,7 @@ export function SettingsScreen() {
         privacyUrl={tryBuildHostedPathUrl(config.ok ? config.baseUrl : null, "/legal/privacy")}
         termsUrl={tryBuildHostedPathUrl(config.ok ? config.baseUrl : null, "/legal/terms")}
       />
-    </View>
+    </ScrollView>
   );
 }
 

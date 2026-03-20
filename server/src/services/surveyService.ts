@@ -15,7 +15,7 @@ import { publishWorkflowEvent } from '../lib/eventBus/publishers';
 import {
   buildSurveyReminderSentPayload,
   buildSurveySentPayload,
-} from '@shared/workflow/streams/domainEventBuilders/surveyEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
 const SURVEY_INVITATION_TABLE = 'survey_invitations';

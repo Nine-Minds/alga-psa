@@ -1,6 +1,12 @@
 import { createTenantKnex } from '../lib/db';
 import { IChat } from '../interfaces/chat.interface';
 
+export interface IChatHistoryItem extends IChat {
+  created_at?: string | Date | null;
+  updated_at?: string | Date | null;
+  preview_text?: string | null;
+}
+
 const Chat = {
   getAll: async (): Promise<IChat[]> => {
     try {
@@ -20,6 +26,35 @@ const Chat = {
       return Chat;
     } catch (error) {
       console.error(`Error getting chat with id ${id}:`, error);
+      throw error;
+    }
+  },
+
+  getRecentByUser: async (userId: string, limit = 20): Promise<IChatHistoryItem[]> => {
+    try {
+      const { knex: db } = await createTenantKnex();
+      const chats = await db<IChatHistoryItem>('chats')
+        .select(
+          'chats.*',
+          db.raw(
+            `(
+              select m.content
+              from messages m
+              where m.chat_id = chats.id
+              and m.tenant = chats.tenant
+              order by m.message_order desc nulls last, m.id desc
+              limit 1
+            ) as preview_text`
+          )
+        )
+        .where({ user_id: userId })
+        .orderByRaw('coalesce(chats.updated_at, chats.created_at) desc nulls last')
+        .orderBy('chats.id', 'desc')
+        .limit(limit);
+
+      return chats;
+    } catch (error) {
+      console.error(`Error getting recent chats for user ${userId}:`, error);
       throw error;
     }
   },
@@ -45,10 +80,49 @@ const Chat = {
     }
   },
 
-  delete: async (id: string): Promise<void> => {
+  updateTitleForUser: async (id: string, userId: string, title: string): Promise<boolean> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      await db<IChat>('chat').where({ id }).del();
+      const { knex: db } = await createTenantKnex();
+      const updatedRows = await db<IChat>('chats')
+        .where({ id, user_id: userId })
+        .update({
+          title_text: title,
+        });
+
+      return updatedRows > 0;
+    } catch (error) {
+      console.error(`Error updating chat title for chat ${id}:`, error);
+      throw error;
+    }
+  },
+
+  deleteForUser: async (id: string, userId: string): Promise<boolean> => {
+    try {
+      const { knex: db, tenant } = await createTenantKnex();
+      const deleted = await db.transaction(async (trx) => {
+        const chat = await trx<IChat>('chats')
+          .select('id', 'tenant')
+          .where({ id, user_id: userId })
+          .first();
+
+        if (!chat) {
+          return false;
+        }
+
+        const scopedTenant = chat.tenant ?? tenant ?? undefined;
+        const messageDeleteFilter = scopedTenant
+          ? { chat_id: id, tenant: scopedTenant }
+          : { chat_id: id };
+        const chatDeleteFilter = scopedTenant
+          ? { id, tenant: scopedTenant }
+          : { id };
+
+        await trx('messages').where(messageDeleteFilter).del();
+        await trx<IChat>('chats').where(chatDeleteFilter).del();
+        return true;
+      });
+
+      return deleted;
     } catch (error) {
       console.error(`Error deleting chat with id ${id}:`, error);
       throw error;

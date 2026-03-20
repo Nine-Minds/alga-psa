@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { CheckCircle, AlertTriangle, XCircle, Circle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import type { PublishError } from '@shared/workflow/runtime/client';
+import type { PublishError } from '@alga-psa/workflows/runtime';
 
 export type ValidationStatus = 'valid' | 'warning' | 'error' | 'incomplete';
 

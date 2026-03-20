@@ -127,8 +127,12 @@ function enrichSteps(stepStates?: OnboardingStepServerState[]): OnboardingStep[]
       status: state?.status ?? 'not_started',
       lastUpdated: state?.lastUpdated ?? null,
       blocker: state?.blocker ?? null,
+      blockerKey: state?.blockerKey ?? null,
+      blockerValues: state?.blockerValues,
       progressValue: state?.progressValue ?? null,
       meta: state?.meta ?? {},
+      substeps: state?.substeps ?? [],
+      dismissed: state?.dismissed ?? false,
       isActionable: state?.status !== 'complete',
     } satisfies OnboardingStep;
   });

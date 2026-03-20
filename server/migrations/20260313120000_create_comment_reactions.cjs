@@ -7,6 +7,79 @@
  * CitusDB-compatible primary keys with tenant co-location.
  */
 
+const PROJECT_TASK_COMMENTS_FKS = [
+  {
+    name: 'project_task_comments_tenant_foreign',
+    sql: `
+      ALTER TABLE project_task_comments
+      ADD CONSTRAINT project_task_comments_tenant_foreign
+      FOREIGN KEY (tenant) REFERENCES tenants(tenant) NOT VALID
+    `,
+  },
+  {
+    name: 'project_task_comments_tenant_task_id_foreign',
+    sql: `
+      ALTER TABLE project_task_comments
+      ADD CONSTRAINT project_task_comments_tenant_task_id_foreign
+      FOREIGN KEY (tenant, task_id)
+      REFERENCES project_tasks(tenant, task_id)
+      ON DELETE CASCADE
+      NOT VALID
+    `,
+  },
+  {
+    name: 'project_task_comments_tenant_user_id_foreign',
+    sql: `
+      ALTER TABLE project_task_comments
+      ADD CONSTRAINT project_task_comments_tenant_user_id_foreign
+      FOREIGN KEY (tenant, user_id)
+      REFERENCES users(tenant, user_id)
+      NOT VALID
+    `,
+  },
+];
+
+async function isTableDistributed(knex, tableName) {
+  const result = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_dist_partition
+      WHERE logicalrelid = ?::regclass
+    ) AS is_distributed;
+  `, [tableName]);
+
+  return Boolean(result.rows?.[0]?.is_distributed);
+}
+
+async function hasConstraint(knex, tableName, constraintName) {
+  const result = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1
+      FROM pg_constraint
+      WHERE conrelid = ?::regclass
+        AND conname = ?
+    ) AS exists;
+  `, [tableName, constraintName]);
+
+  return Boolean(result.rows?.[0]?.exists);
+}
+
+async function dropProjectTaskCommentsForeignKeys(knex) {
+  for (const { name } of PROJECT_TASK_COMMENTS_FKS) {
+    await knex.raw(`
+      ALTER TABLE project_task_comments
+      DROP CONSTRAINT IF EXISTS ${name}
+    `);
+  }
+}
+
+async function ensureProjectTaskCommentsForeignKeys(knex) {
+  for (const fk of PROJECT_TASK_COMMENTS_FKS) {
+    if (!(await hasConstraint(knex, 'project_task_comments', fk.name))) {
+      await knex.raw(fk.sql);
+    }
+  }
+}
+
 exports.up = async function(knex) {
   // ── Ticket comment reactions ──
   if (!(await knex.schema.hasTable('comment_reactions'))) {
@@ -73,19 +146,25 @@ exports.up = async function(knex) {
   `);
 
   if (citusFn.rows?.[0]?.exists) {
+    const projectTaskCommentsExists = await knex.schema.hasTable('project_task_comments');
+
+    if (projectTaskCommentsExists && !(await isTableDistributed(knex, 'project_task_comments'))) {
+      // Existing hosts may contain legacy orphan rows. Drop these FKs before
+      // Citus copies local rows into shards, then re-add them as NOT VALID
+      // after distribution so future writes are still enforced.
+      await dropProjectTaskCommentsForeignKeys(knex);
+    }
+
     // project_task_comments must be distributed before we can distribute
     // project_task_comment_reactions (Citus requires referenced tables to be distributed)
     for (const table of ['project_task_comments', 'comment_reactions', 'project_task_comment_reactions']) {
-      const alreadyDistributed = await knex.raw(`
-        SELECT EXISTS (
-          SELECT 1 FROM pg_dist_partition
-          WHERE logicalrelid = '${table}'::regclass
-        ) AS is_distributed;
-      `);
-
-      if (!alreadyDistributed.rows?.[0]?.is_distributed) {
+      if (!(await isTableDistributed(knex, table))) {
         await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
       }
+    }
+
+    if (await isTableDistributed(knex, 'project_task_comments')) {
+      await ensureProjectTaskCommentsForeignKeys(knex);
     }
   } else {
     console.warn('[create_comment_reactions] Skipping create_distributed_table (function unavailable)');

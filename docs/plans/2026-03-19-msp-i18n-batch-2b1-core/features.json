@@ -1,0 +1,374 @@
+[
+  {
+    "id": "F001",
+    "description": "Add translationKey field to MenuItem and NavigationSection interfaces in menuConfig.ts",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F002",
+    "description": "Add translationKey values to all navigationSections items (main nav: Home, Tickets, Projects, etc.)",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F003",
+    "description": "Add translationKey values to bottomMenuItems (Settings, Support, and sub-items)",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F004",
+    "description": "Add translationKey values to settingsNavigationSections (section titles + all items including Language, SLA)",
+    "implemented": true,
+    "prdRefs": ["FR1", "FR13"]
+  },
+  {
+    "id": "F005",
+    "description": "Add translationKey values to billingNavigationSections (section titles + 12 items)",
+    "implemented": true,
+    "prdRefs": ["FR1", "FR12"]
+  },
+  {
+    "id": "F006",
+    "description": "Add translationKey values to extensionsNavigationSections",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F007",
+    "description": "Sidebar.tsx: add useTranslation('msp/core') and translate item.name display via t(item.translationKey)",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F008",
+    "description": "Sidebar.tsx: translate 'Go to dashboard' aria-label",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F009",
+    "description": "Sidebar.tsx: translate 'AlgaPSA Logo' alt text",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F010",
+    "description": "Sidebar.tsx: translate 'Expand sidebar' and 'Collapse sidebar' labels",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F011",
+    "description": "Sidebar.tsx: translate section titles for settings, billing, and extensions modes via t(section.translationKey)",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F012",
+    "description": "Sidebar.tsx: translate tooltip text for collapsed sidebar items",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F013",
+    "description": "Header.tsx: add useTranslation('msp/core') hook",
+    "implemented": true,
+    "prdRefs": ["FR3", "FR4", "FR5"]
+  },
+  {
+    "id": "F014",
+    "description": "Header.tsx QuickCreateMenu: translate 'Open quick create' aria-label, 'Quick Create' button text, 'Create' heading",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F015",
+    "description": "Header.tsx QuickCreateMenu: translate 7 quick-create option labels and descriptions",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F016",
+    "description": "Header.tsx JobActivityIndicator: translate all 7 strings (aria-label, title, description, active/queued/failed labels, Open Job Center)",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F017",
+    "description": "Header.tsx: translate breadcrumb 'Home' text and aria-label",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F018",
+    "description": "Header.tsx: translate 'Dashboard' fallback in getMenuItemNameByPath()",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F019",
+    "description": "Header.tsx TenantBadge: translate 'Active tenant' aria-label with interpolation",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F020",
+    "description": "DefaultLayout.tsx: add useTranslation('msp/core') and translate AI chat interrupt dialog (4 title/message/confirm/cancel pairs)",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F021",
+    "description": "TrialBanner.tsx: add useTranslation('msp/core') and translate 'Premium confirmed' message",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F022",
+    "description": "TrialBanner.tsx: translate '1 day left' / '{{count}} days left' with interpolation",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F023",
+    "description": "TrialBanner.tsx: translate 'Premium Trial: {{daysLabel}} — confirm to keep'",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F024",
+    "description": "TrialBanner.tsx: translate '{{tier}} Trial: {{daysLabel}}' for Stripe trials",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F025",
+    "description": "PaymentFailedBanner.tsx: add useTranslation('msp/core') and translate banner message + portal error toast",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F026",
+    "description": "QuickCreateDialog.tsx: add useTranslation('msp/core') and translate 7 success toast messages with interpolation",
+    "implemented": true,
+    "prdRefs": ["FR9"]
+  },
+  {
+    "id": "F027",
+    "description": "QuickCreateDialog.tsx: translate 3 dialog titles (Add New Contact/Project/Service)",
+    "implemented": true,
+    "prdRefs": ["FR9"]
+  },
+  {
+    "id": "F028",
+    "description": "QuickCreateDialog.tsx: translate 2 error messages (Failed to load clients/service types)",
+    "implemented": true,
+    "prdRefs": ["FR9"]
+  },
+  {
+    "id": "F029",
+    "description": "RightSidebar.tsx: add useTranslation('msp/core') and translate CE fallback 'Chat' title and enterprise-only message",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F030",
+    "description": "PlatformNotificationBanner.tsx: add useTranslation('msp/core') and translate 'Learn More' button + 'Dismiss notification' aria-label",
+    "implemented": true,
+    "prdRefs": ["FR11"]
+  },
+  {
+    "id": "F031",
+    "description": "Add all ~80 new keys to en/msp/core.json following the established key naming convention",
+    "implemented": true,
+    "prdRefs": ["FR1-FR13"]
+  },
+  {
+    "id": "F032",
+    "description": "Generate French (fr) translations for all new keys in msp/core.json",
+    "implemented": true
+  },
+  {
+    "id": "F033",
+    "description": "Generate Spanish (es) translations for all new keys in msp/core.json",
+    "implemented": true
+  },
+  {
+    "id": "F034",
+    "description": "Generate German (de) translations for all new keys in msp/core.json",
+    "implemented": true
+  },
+  {
+    "id": "F035",
+    "description": "Generate Dutch (nl) translations for all new keys in msp/core.json",
+    "implemented": true
+  },
+  {
+    "id": "F036",
+    "description": "Generate Italian (it) translations for all new keys in msp/core.json",
+    "implemented": true
+  },
+  {
+    "id": "F037",
+    "description": "Generate Polish (pl) translations for all new keys in msp/core.json",
+    "implemented": true
+  },
+  {
+    "id": "F038",
+    "description": "Update pseudo-locale xx/msp/core.json with all new keys (values = '11111')",
+    "implemented": true
+  },
+  {
+    "id": "F039",
+    "description": "Update pseudo-locale yy/msp/core.json with all new keys (values = '55555')",
+    "implemented": true
+  },
+  {
+    "id": "F040",
+    "description": "Run Italian accent audit on it/msp/core.json — fix any missing accents",
+    "implemented": true
+  },
+  {
+    "id": "F041",
+    "description": "Cross-check translated nav labels against existing msp/core.json values for consistency across languages",
+    "implemented": true
+  },
+  {
+    "id": "F042",
+    "description": "Add 'Language' and 'SLA' settings tab keys to msp/core.json settings.tabs section",
+    "implemented": true,
+    "prdRefs": ["FR13"]
+  },
+  {
+    "id": "F043",
+    "description": "Verify billing navigation keys (nav.billing.*) are added for all 12 billing sidebar items across all languages",
+    "implemented": true,
+    "prdRefs": ["FR12"]
+  },
+
+  {
+    "id": "F050",
+    "description": "Create en/msp/dashboard.json with all ~110 dashboard keys following naming convention",
+    "implemented": true,
+    "prdRefs": ["FR14", "FR15", "FR16", "FR17"]
+  },
+  {
+    "id": "F051",
+    "description": "DashboardContainer.tsx: add useTranslation('msp/dashboard') and translate welcome banners (enterprise + community)",
+    "implemented": true,
+    "prdRefs": ["FR14"]
+  },
+  {
+    "id": "F052",
+    "description": "DashboardContainer.tsx: translate 'Platform Features' heading and all 6 feature card titles + descriptions",
+    "implemented": true,
+    "prdRefs": ["FR14"]
+  },
+  {
+    "id": "F053",
+    "description": "DashboardContainer.tsx: translate knowledge base section (title, description, CTA button)",
+    "implemented": true,
+    "prdRefs": ["FR14"]
+  },
+  {
+    "id": "F054",
+    "description": "DashboardContainer.tsx: translate 'Coming soon!' toast message",
+    "implemented": true,
+    "prdRefs": ["FR14"]
+  },
+  {
+    "id": "F055",
+    "description": "DashboardOnboardingSection.tsx: add useTranslation('msp/dashboard') and translate section headers (complete/incomplete titles, descriptions)",
+    "implemented": true,
+    "prdRefs": ["FR15"]
+  },
+  {
+    "id": "F056",
+    "description": "DashboardOnboardingSection.tsx: translate progress ring labels ('PROGRESS', '{{completed}} of {{total}} Steps', motivational messages)",
+    "implemented": true,
+    "prdRefs": ["FR15"]
+  },
+  {
+    "id": "F057",
+    "description": "DashboardOnboardingSection.tsx: translate step badges (NOT STARTED, IN PROGRESS, COMPLETE, BLOCKED) and step label ('STEP {{index}}')",
+    "implemented": true,
+    "prdRefs": ["FR15"]
+  },
+  {
+    "id": "F058",
+    "description": "DashboardOnboardingSection.tsx: translate action buttons (Completed, Hiding, Hide, Dismiss) and hidden steps panel",
+    "implemented": true,
+    "prdRefs": ["FR15"]
+  },
+  {
+    "id": "F059",
+    "description": "OnboardingChecklist.tsx: add useTranslation('msp/dashboard') and translate card header, progress, completion banner, and invite CTA",
+    "implemented": true,
+    "prdRefs": ["FR16"]
+  },
+  {
+    "id": "F060",
+    "description": "stepDefinitions.ts: add translationKey fields to step definitions for title, description, and CTA (5 steps x 3 fields = 15 keys)",
+    "implemented": true,
+    "prdRefs": ["FR17"]
+  },
+  {
+    "id": "F061",
+    "description": "Update ROUTE_NAMESPACES: add 'msp/dashboard' to '/msp' and '/msp/dashboard' routes",
+    "implemented": true,
+    "prdRefs": ["FR18"]
+  },
+  {
+    "id": "F062",
+    "description": "Generate French (fr) translations for all keys in msp/dashboard.json",
+    "implemented": true
+  },
+  {
+    "id": "F063",
+    "description": "Generate Spanish (es) translations for all keys in msp/dashboard.json",
+    "implemented": true
+  },
+  {
+    "id": "F064",
+    "description": "Generate German (de) translations for all keys in msp/dashboard.json",
+    "implemented": true
+  },
+  {
+    "id": "F065",
+    "description": "Generate Dutch (nl) translations for all keys in msp/dashboard.json",
+    "implemented": true
+  },
+  {
+    "id": "F066",
+    "description": "Generate Italian (it) translations for all keys in msp/dashboard.json",
+    "implemented": true
+  },
+  {
+    "id": "F067",
+    "description": "Generate Polish (pl) translations for all keys in msp/dashboard.json",
+    "implemented": true
+  },
+  {
+    "id": "F068",
+    "description": "Create pseudo-locale xx/msp/dashboard.json with all keys (values = '11111')",
+    "implemented": true
+  },
+  {
+    "id": "F069",
+    "description": "Create pseudo-locale yy/msp/dashboard.json with all keys (values = '55555')",
+    "implemented": true
+  },
+  {
+    "id": "F070",
+    "description": "Run Italian accent audit on it/msp/dashboard.json — fix any missing accents",
+    "implemented": true
+  },
+  {
+    "id": "F071",
+    "description": "DashboardOnboardingSection.tsx: stabilize default initialDismissedStepIds to avoid rerender loops when the prop is omitted",
+    "implemented": true,
+    "prdRefs": ["FR15"]
+  }
+]

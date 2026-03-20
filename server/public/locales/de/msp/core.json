@@ -10,19 +10,45 @@
     "clients": "Kunden",
     "contacts": "Kontakte",
     "documents": "Dokumente",
+    "documentsAll": "Alle Dokumente",
+    "knowledgeBase": "Wissensdatenbank",
     "assets": "Assets",
     "timeManagement": "Zeitmanagement",
     "timeEntry": "Zeiterfassung",
     "approvals": "Genehmigungen",
-    "billing": "Abrechnung",
+    "billing": {
+      "label": "Abrechnung",
+      "sections": {
+        "contracts": "Verträge",
+        "invoicing": "Rechnungsstellung",
+        "pricing": "Preise",
+        "trackingReports": "Nachverfolgung & Berichte"
+      },
+      "contractTemplates": "Vertragsvorlagen",
+      "clientContracts": "Kundenverträge",
+      "contractLinePresets": "Vertragspositionsvorlagen",
+      "invoicing": "Rechnungsstellung",
+      "invoiceTemplates": "Rechnungsvorlagen",
+      "billingCycles": "Abrechnungszyklen",
+      "serviceCatalog": "Servicekatalog",
+      "products": "Produkte",
+      "taxRates": "Steuersätze",
+      "usageTracking": "Nutzungsverfolgung",
+      "reports": "Berichte",
+      "accountingExports": "Buchhaltungsexporte"
+    },
     "schedule": "Zeitplan",
     "technicianDispatch": "Techniker-Dispatch",
     "automationHub": "Automatisierungs-Hub",
     "workflows": "Workflows",
+    "controlPanel": "Kontrollzentrum",
+    "workflowEditor": "Workflow-Editor",
     "runs": "Läufe",
     "events": "Ereignisse",
     "deadLetter": "Dead Letter",
     "systemMonitor": "Systemmonitor",
+    "systemMonitoring": "Systemüberwachung",
+    "jobMonitoring": "Jobüberwachung",
     "jobs": "Jobs",
     "emailLogs": "E-Mail-Protokolle",
     "extensions": "Erweiterungen"
@@ -31,7 +57,11 @@
     "backToMain": "Zurück zur Hauptansicht",
     "searchPlaceholder": "Suchen",
     "settings": "Einstellungen",
-    "support": "Support"
+    "support": "Support",
+    "goToDashboard": "Zum Dashboard",
+    "logoAlt": "AlgaPSA-Logo",
+    "expandSidebar": "Seitenleiste erweitern",
+    "collapseSidebar": "Seitenleiste einklappen"
   },
   "settings": {
     "sections": {
@@ -46,8 +76,10 @@
       "general": "Allgemein",
       "users": "Benutzer",
       "teams": "Teams",
+      "language": "Sprache",
       "clientPortal": "Kundenportal",
       "ticketing": "Ticketing",
+      "sla": "SLA",
       "projects": "Projekte",
       "interactions": "Interaktionen",
       "notifications": "Benachrichtigungen",
@@ -68,6 +100,121 @@
     "quickAccess": "Schnellzugriff auf Profil und Konto.",
     "profile": "Profil",
     "account": "Konto",
-    "signOut": "Abmelden"
+    "signOut": "Abmelden",
+    "quickCreate": {
+      "ariaLabel": "Schnellerstellung öffnen",
+      "title": "Schnell erstellen",
+      "heading": "Erstellen",
+      "options": {
+        "ticket": {
+          "label": "Ticket",
+          "description": "Neues Support-Ticket erstellen"
+        },
+        "client": {
+          "label": "Kunde",
+          "description": "Neuen Kunden zu Ihrem System hinzufügen"
+        },
+        "contact": {
+          "label": "Kontakt",
+          "description": "Neue Kontaktperson hinzufügen"
+        },
+        "project": {
+          "label": "Projekt",
+          "description": "Neues Projekt starten"
+        },
+        "asset": {
+          "label": "Asset",
+          "description": "Neues Gerät zu Ihrem Arbeitsbereich hinzufügen"
+        },
+        "service": {
+          "label": "Service",
+          "description": "Neuen abrechenbaren Service hinzufügen"
+        },
+        "product": {
+          "label": "Produkt",
+          "description": "Neues Produkt zu Ihrem Katalog hinzufügen"
+        }
+      }
+    },
+    "jobs": {
+      "ariaLabel": "Aktivität der Hintergrundjobs anzeigen",
+      "title": "Hintergrundjobs",
+      "description": "Importe, Automatisierungsläufe und geplante Arbeit verfolgen.",
+      "active": "Aktive Jobs",
+      "queued": "Wartende Jobs",
+      "failedLast24h": "Fehlgeschlagen in den letzten 24 Std.",
+      "openJobCenter": "Job-Center öffnen"
+    },
+    "breadcrumb": {
+      "home": "Start",
+      "dashboard": "Dashboard"
+    },
+    "tenantBadge": {
+      "ariaLabel": "Aktiver Mandant {{tenant}}"
+    },
+    "themeToggle": {
+      "ariaLabel": "Theme umschalten",
+      "light": "Hell",
+      "dark": "Dunkel",
+      "system": "System",
+      "selected": "Ausgewahlt"
+    }
+  },
+  "dialogs": {
+    "aiInterrupt": {
+      "navigate": {
+        "title": "Seite verlassen und KI-Antwort abbrechen?",
+        "message": "Eine KI-Antwort oder Werkzeugaktion läuft noch. Wenn Sie diese Seite jetzt verlassen, wird sie abgebrochen.",
+        "confirm": "Seite verlassen",
+        "cancel": "Auf der Seite bleiben"
+      },
+      "closeChat": {
+        "title": "Chat schließen und KI-Antwort abbrechen?",
+        "message": "Eine KI-Antwort oder Werkzeugaktion läuft noch. Wenn Sie den Chat jetzt schließen, wird sie abgebrochen.",
+        "confirm": "Chat schließen",
+        "cancel": "Chat geöffnet lassen"
+      }
+    }
+  },
+  "banners": {
+    "trial": {
+      "premiumConfirmed": "Premium bestätigt — startet im nächsten Abrechnungszyklus",
+      "dayLeft": "1 Tag verbleibend",
+      "daysLeft": "{{count}} Tage verbleibend",
+      "premiumTrial": "Premium-Testversion: {{daysLabel}} — bestätigen zum Behalten",
+      "stripeTrial": "{{tier}}-Testversion: {{daysLabel}}"
+    },
+    "paymentFailed": {
+      "message": "Zahlung fehlgeschlagen — Zahlungsmethode aktualisieren",
+      "portalError": "Abrechnungsportal konnte nicht geöffnet werden"
+    },
+    "platformNotification": {
+      "learnMore": "Mehr erfahren",
+      "dismiss": "Benachrichtigung schließen"
+    }
+  },
+  "quickCreate": {
+    "success": {
+      "asset": "Asset erfolgreich erstellt",
+      "ticket": "Ticket #{{number}} erfolgreich erstellt",
+      "client": "Kunde \"{{name}}\" erfolgreich erstellt",
+      "contact": "{{name}} erfolgreich hinzugefügt",
+      "project": "Projekt \"{{name}}\" erfolgreich erstellt",
+      "service": "Service erfolgreich erstellt",
+      "product": "Produkt erfolgreich erstellt"
+    },
+    "errors": {
+      "loadClients": "Kunden konnten nicht geladen werden",
+      "loadServiceTypes": "Servicetypen konnten nicht geladen werden"
+    },
+    "dialogTitles": {
+      "contact": "Neuen Kontakt hinzufügen",
+      "project": "Neues Projekt hinzufügen",
+      "service": "Neuen Service hinzufügen"
+    }
+  },
+  "rightSidebar": {
+    "title": "Chat",
+    "enterpriseOnly": "Die Chatfunktion ist nur in der Enterprise Edition verfügbar."
   }
 }

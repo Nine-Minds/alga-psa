@@ -1,0 +1,391 @@
+[
+  {
+    "id": "T001",
+    "description": "Registry/catalog: the workflow designer catalog includes a stable AI grouped record",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Registry/catalog: the workflow action registry projection includes the AI inference action and its input/output schema metadata",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Designer: dragging or inserting the AI tile creates an `action.call` step rather than a bespoke node type",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Designer: AI step hydration preserves grouped action metadata and can recover the AI group from action id when additive metadata is absent",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F029"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Designer: the AI action prompt field appears in the normal action input section and persists through `inputMapping`",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F006"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Designer: prompt field supports structured reference mode like other action inputs",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Designer: prompt field supports advanced expression mode like other action inputs",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Designer: AI step config persists schema mode and inline output schema fields alongside action-call config",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F020"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Designer: the AI step properties panel renders an output schema authoring section only for the AI inference action",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Simple schema builder: author can add and remove top-level output fields",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Simple schema builder: primitive field type selection updates the generated schema",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F011"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Simple schema builder: required flags are reflected in the generated `required` array",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F011"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Simple schema builder: field descriptions are reflected in the generated JSON Schema",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F011"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Simple schema builder: nested object fields can be authored and serialized correctly",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F011"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Simple schema builder: arrays of primitives can be authored and serialized correctly",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Simple schema builder: arrays of objects can be authored and serialized correctly",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Simple schema builder: root output remains constrained to an object schema",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Advanced mode: author can edit raw inline JSON Schema for the AI output",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Advanced mode: invalid JSON or invalid schema shape shows inline validation feedback before publish",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F018"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Hydration: a saved simple-compatible AI schema reopens in simple mode with the correct field tree",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F020"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Hydration: a saved advanced-only AI schema reopens in advanced mode without lossy conversion",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F020"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Preview: the properties panel schema reference view shows the resolved AI output schema override instead of the static registry schema",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Data context: an upstream AI step contributes its resolved inline output schema to downstream step context",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Reference options: downstream source browsing exposes nested AI output fields under `vars.<saveAs>`",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Expression context: downstream autocomplete exposes AI output fields under the vars namespace",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Designer recompute: changing the AI output schema immediately refreshes downstream reference options for later steps",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Publish validation: AI step publish rejects missing inline output schema",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Publish validation: AI step publish rejects unsupported simple/advanced schema constructs for v1",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F028"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Publish validation: valid inline AI schema passes publish-time validation",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Type inference: publish-time vars typing uses the resolved AI schema instead of the static action-registry output schema",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Persistence: saving and reloading a workflow draft preserves AI prompt, schema mode, and inline output schema",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Bundle export/import: exported workflow bundles preserve inline AI schema config and reimport successfully",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Bundle dependency validation: inline AI schemas do not create missing schema-ref dependency failures in bundle import",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Service: workflow inference service resolves the current provider and model from the existing OpenAI-compatible provider resolver",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F028"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Service: workflow inference service builds a structured-output request using the step's inline JSON Schema",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Service: successful structured AI response is parsed and validated against the inline output schema",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Service: malformed model output that fails schema validation is surfaced as a structured workflow-safe error",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Service: missing provider configuration fails with an actionable inference error",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F028"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Service: transient provider rate-limit behavior is retried or normalized consistently before surfacing failure",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Runtime integration: the `ai.infer` action handler invokes the workflow inference service and returns structured output on success",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Runtime integration: AI action output is validated by the action output schema before persistence",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F026",
+      "F027"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Runtime integration: AI action output saved with `saveAs` is persisted into workflow state and visible to later steps",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Guard: AI support does not change downstream typing or publishing behavior for existing non-AI action-call steps",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Guard: existing transform steps continue to use their current dynamic output-schema inference path after AI support is added",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F029"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Guard: existing non-AI workflows still export, import, publish, and run successfully after AI workflow support is added",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F029"
+    ]
+  }
+]

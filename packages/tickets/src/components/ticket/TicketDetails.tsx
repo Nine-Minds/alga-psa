@@ -39,7 +39,7 @@ import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser } from "@alga-psa/user-composition/actions";
 import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
-import { getDocumentByTicketId } from "@alga-psa/documents/actions/documentActions";
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { updateTicket } from "../../actions/ticketActions";
@@ -218,6 +218,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+    const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
 
     useEffect(() => {
         setHasHydrated(true);
@@ -1446,6 +1447,7 @@ const handleClose = () => {
                     const result = await deleteDraftClipboardImages({
                         ticketId: ticket.ticket_id,
                         documentIds: commentToDelete.imageDocuments.map((document) => document.documentId),
+                        deleteDocumentFn: deleteDocument,
                     });
 
                     const deletedCount = result.deletedDocumentIds.length;

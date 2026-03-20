@@ -36,14 +36,15 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { SlaStatusBadge } from '@alga-psa/sla/components';
-import type { SlaTimerStatus } from '@alga-psa/sla/types';
+import type { SlaTimerStatus } from '@alga-psa/types';
+import { useTicketCrossFeature } from '../../context/TicketCrossFeatureContext';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { ITeam } from '@alga-psa/types';
 import { useSession } from 'next-auth/react';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 
 
 interface TicketInfoProps {
@@ -114,6 +115,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 }) => {
   const { data: session } = useSession();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+  const { deleteDocument } = useDocumentsCrossFeature();
+  const { renderSlaStatusBadge } = useTicketCrossFeature();
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
@@ -449,6 +452,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: discardDescriptionEdit,
+    deleteDocumentFn: deleteDocument,
   });
 
   useEffect(() => {
@@ -1369,14 +1373,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <div className="col-span-2">
                 <h5 className="font-bold mb-2">SLA Status</h5>
                 <div className="flex items-center gap-3">
-                  <SlaStatusBadge
-                    status={slaStatus.status}
-                    responseRemainingMinutes={slaStatus.responseRemainingMinutes}
-                    resolutionRemainingMinutes={slaStatus.resolutionRemainingMinutes}
-                    isPaused={slaStatus.isPaused}
-                    size="md"
-                    showIcon={true}
-                  />
+                  {renderSlaStatusBadge({
+                    status: slaStatus.status,
+                    responseRemainingMinutes: slaStatus.responseRemainingMinutes,
+                    resolutionRemainingMinutes: slaStatus.resolutionRemainingMinutes,
+                    isPaused: slaStatus.isPaused,
+                    size: 'md',
+                    showIcon: true,
+                  })}
                   {ticket.sla_response_met === false && (
                     <span className="text-xs text-[rgb(var(--badge-error-text))] bg-[rgb(var(--badge-error-bg))] border border-[rgb(var(--badge-error-border))] px-2 py-1 rounded-full">
                       Response SLA breached

@@ -11546,6 +11546,752 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {}
     }
+  },
+  {
+    "id": "listKbArticles",
+    "method": "get",
+    "path": "/api/v1/kb-articles",
+    "displayName": "List KB articles",
+    "summary": "List KB articles",
+    "description": "List knowledge base articles with optional filtering by status, audience, type, and category. Returns paginated results with article metadata and document names.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Search by title or slug",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "review",
+            "published",
+            "archived"
+          ]
+        }
+      },
+      {
+        "name": "audience",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "client",
+            "public"
+          ]
+        }
+      },
+      {
+        "name": "article_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "how_to",
+            "faq",
+            "troubleshooting",
+            "reference"
+          ]
+        }
+      },
+      {
+        "name": "category_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "sort",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "order",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/KBArticle"
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "playbooks": [
+      "kb/search-and-read",
+      "kb/find-relevant-articles"
+    ],
+    "examples": [
+      {
+        "name": "List published articles",
+        "request": {
+          "query": {
+            "status": "published",
+            "limit": 10
+          }
+        }
+      },
+      {
+        "name": "Search articles by keyword",
+        "request": {
+          "query": {
+            "search": "password reset"
+          }
+        },
+        "notes": "Searches by title and slug. Use this to find relevant KB articles before answering user questions."
+      },
+      {
+        "name": "List troubleshooting articles for clients",
+        "request": {
+          "query": {
+            "status": "published",
+            "audience": "client",
+            "article_type": "troubleshooting"
+          }
+        },
+        "notes": "Filter by audience and type to find specific article sets."
+      },
+      {
+        "name": "List articles needing review",
+        "request": {
+          "query": {
+            "status": "review"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "createKbArticle",
+    "method": "post",
+    "path": "/api/v1/kb-articles",
+    "displayName": "Create KB article",
+    "summary": "Create KB article",
+    "description": "Create a new KB article. Before creating, call GET /api/v1/kb-articles/categories to find available categories. Content can be markdown text or BlockNote JSON. Articles are created in 'draft' status — call POST /api/v1/kb-articles/{id}/publish to make them visible.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "slug": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "article_type": {
+          "type": "string",
+          "enum": [
+            "how_to",
+            "faq",
+            "troubleshooting",
+            "reference"
+          ],
+          "default": "how_to"
+        },
+        "audience": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "client",
+            "public"
+          ],
+          "default": "internal"
+        },
+        "category_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "review_cycle_days": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "content": {
+          "type": "string",
+          "description": "Article body as markdown text or BlockNote JSON string"
+        },
+        "content_format": {
+          "type": "string",
+          "enum": [
+            "markdown",
+            "blocknote"
+          ],
+          "default": "markdown"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KBArticle"
+        }
+      }
+    },
+    "playbooks": [
+      "kb/create-article",
+      "kb/create-from-resolution"
+    ],
+    "examples": [
+      {
+        "name": "Create a how-to article with markdown content",
+        "request": {
+          "body": {
+            "title": "How to Reset User Password",
+            "article_type": "how_to",
+            "audience": "internal",
+            "content": "# Steps\n\n1. Navigate to Settings > Users\n2. Find the user\n3. Click Reset Password\n4. The user will receive an email with a reset link",
+            "content_format": "markdown"
+          }
+        },
+        "notes": "Always use content_format 'markdown' when generating content. Articles start in 'draft' status — call POST /api/v1/kb-articles/{id}/publish after creation to make them live."
+      },
+      {
+        "name": "Create a troubleshooting article for clients",
+        "request": {
+          "body": {
+            "title": "VPN Connection Issues",
+            "article_type": "troubleshooting",
+            "audience": "client",
+            "content": "# Problem\n\nVPN disconnects frequently.\n\n# Solution\n\n1. Check your internet connection\n2. Restart the VPN client\n3. If the issue persists, contact support",
+            "content_format": "markdown"
+          }
+        },
+        "notes": "Client-audience articles become visible in the client portal once published."
+      },
+      {
+        "name": "Create an FAQ article",
+        "request": {
+          "body": {
+            "title": "How do I change my notification settings?",
+            "article_type": "faq",
+            "audience": "client",
+            "content": "## Question\n\nHow do I change my notification settings?\n\n## Answer\n\nGo to **Settings > Notifications** in the client portal. You can toggle email and in-app notifications for each category.",
+            "content_format": "markdown",
+            "review_cycle_days": 90
+          }
+        },
+        "notes": "FAQ articles should be concise. review_cycle_days ensures articles are reviewed periodically."
+      }
+    ]
+  },
+  {
+    "id": "getKbArticle",
+    "method": "get",
+    "path": "/api/v1/kb-articles/{id}",
+    "displayName": "Get KB article",
+    "summary": "Get KB article",
+    "description": "Get a KB article by ID, including its document name and block content data.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KBArticle"
+        }
+      }
+    }
+  },
+  {
+    "id": "updateKbArticle",
+    "method": "put",
+    "path": "/api/v1/kb-articles/{id}",
+    "displayName": "Update KB article metadata",
+    "summary": "Update KB article metadata",
+    "description": "Update KB article metadata (title, slug, type, audience, category, status). To update the article body content, use PUT /api/v1/kb-articles/{id}/content instead.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "slug": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "article_type": {
+          "type": "string",
+          "enum": [
+            "how_to",
+            "faq",
+            "troubleshooting",
+            "reference"
+          ]
+        },
+        "audience": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "client",
+            "public"
+          ]
+        },
+        "category_id": {
+          "type": "string",
+          "format": "uuid",
+          "nullable": true
+        },
+        "review_cycle_days": {
+          "type": "integer",
+          "minimum": 1,
+          "nullable": true
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "review",
+            "published",
+            "archived"
+          ]
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KBArticle"
+        }
+      }
+    }
+  },
+  {
+    "id": "deleteKbArticle",
+    "method": "delete",
+    "path": "/api/v1/kb-articles/{id}",
+    "displayName": "Delete KB article",
+    "summary": "Delete KB article",
+    "description": "Deletes a KB article and its associated document.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ]
+  },
+  {
+    "id": "publishKbArticle",
+    "method": "post",
+    "path": "/api/v1/kb-articles/{id}/publish",
+    "displayName": "Publish KB article",
+    "summary": "Publish KB article",
+    "description": "Publish a KB article. Sets status to 'published' and auto-enables client visibility for client/public audience articles.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "playbooks": [
+      "kb/create-article",
+      "kb/publish-workflow"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KBArticle"
+        }
+      }
+    }
+  },
+  {
+    "id": "archiveKbArticle",
+    "method": "post",
+    "path": "/api/v1/kb-articles/{id}/archive",
+    "displayName": "Archive KB article",
+    "summary": "Archive KB article",
+    "description": "Sets article status to archived and clears client visibility.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KBArticle"
+        }
+      }
+    }
+  },
+  {
+    "id": "getKbArticleContent",
+    "method": "get",
+    "path": "/api/v1/kb-articles/{id}/content",
+    "displayName": "Get KB article content",
+    "summary": "Get KB article content",
+    "description": "Get the body content of a KB article as readable markdown text. Use this to read what an article currently says. Always call this before answering questions about article content — do not rely on article metadata alone.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "playbooks": [
+      "kb/search-and-read",
+      "kb/find-relevant-articles"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "format": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "updateKbArticleContent",
+    "method": "put",
+    "path": "/api/v1/kb-articles/{id}/content",
+    "displayName": "Update KB article content",
+    "summary": "Update KB article content",
+    "description": "Update the body content of a KB article. Send content as markdown (default) or BlockNote JSON. Markdown is recommended for AI-generated content.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Article body as markdown or BlockNote JSON"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "markdown",
+            "blocknote"
+          ],
+          "default": "markdown"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KBArticle"
+        }
+      }
+    },
+    "playbooks": [
+      "kb/update-article-content"
+    ],
+    "examples": [
+      {
+        "name": "Update content with markdown",
+        "request": {
+          "body": {
+            "content": "# Updated Article\n\nNew content goes here.",
+            "format": "markdown"
+          }
+        },
+        "notes": "Always use format 'markdown' for AI-generated content. Read the existing content first with GET /api/v1/kb-articles/{id}/content to preserve any sections that should remain."
+      },
+      {
+        "name": "Append a troubleshooting section",
+        "request": {
+          "body": {
+            "content": "# Problem\n\nUsers cannot log in after password reset.\n\n# Root Cause\n\nBrowser cached old session cookies.\n\n# Resolution\n\n1. Clear browser cookies for the application domain\n2. Close all browser tabs\n3. Open a new browser window and sign in",
+            "format": "markdown"
+          }
+        },
+        "notes": "When writing troubleshooting articles, structure with Problem, Root Cause, and Resolution sections."
+      }
+    ]
+  },
+  {
+    "id": "listKbArticleCategories",
+    "method": "get",
+    "path": "/api/v1/kb-articles/categories",
+    "displayName": "List KB categories",
+    "summary": "List KB categories",
+    "description": "List available categories for KB articles. Call this before creating articles to find the right category_id.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "category_name": {
+                "type": "string"
+              },
+              "parent_category_uuid": {
+                "type": "string",
+                "nullable": true
+              },
+              "display_order": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "listKbArticleTemplates",
+    "method": "get",
+    "path": "/api/v1/kb-articles/templates",
+    "displayName": "List KB templates",
+    "summary": "List KB templates",
+    "description": "List KB article templates. Templates provide pre-built content structures for different article types.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "article_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "how_to",
+            "faq",
+            "troubleshooting",
+            "reference"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "createKbArticleFromTicket",
+    "method": "post",
+    "path": "/api/v1/kb-articles/from-ticket/{ticketId}",
+    "displayName": "Create KB article from ticket",
+    "summary": "Create KB article from ticket",
+    "description": "Create a KB article pre-populated from a ticket's title, description, and resolution. Useful for turning resolved tickets into knowledge base documentation. The created article will be a 'troubleshooting' type in 'draft' status — review and publish after creation.",
+    "tags": [
+      "Knowledge Base"
+    ],
+    "playbooks": [
+      "kb/create-from-resolution",
+      "kb/capture-ticket-knowledge"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "ticketId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/KBArticle"
+        }
+      }
+    }
   }
 ];
 

@@ -8,20 +8,7 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import EntryPopup from '../../../schedule/EntryPopup';
 import Spinner from '@alga-psa/ui/components/Spinner';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- scheduling drawer reuses the canonical interaction detail experience
-import { getInteractionById } from '@alga-psa/clients/actions';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- scheduling drawer reuses the canonical interaction detail experience
-import InteractionDetails from '@alga-psa/clients/components/interactions/InteractionDetails';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- scheduling drawer reuses the canonical ticket detail experience
-import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- scheduling drawer reuses the canonical ticket detail experience
-import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- scheduling drawer reuses the canonical task edit experience
-import TaskEdit from '@alga-psa/projects/components/TaskEdit';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- scheduling drawer reuses the canonical task edit experience
-import { getTaskById } from '@alga-psa/projects/actions/projectTaskActions';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- scheduling drawer reuses the canonical task edit experience
-import { getProjectMetadata, getProjectPhase, getProjectTreeData } from '@alga-psa/projects/actions/projectActions';
+import { useSchedulingCrossFeature } from '../../../../context/SchedulingCrossFeatureContext';
 
 interface WorkItemDrawerProps {
     workItem: IExtendedWorkItem;
@@ -60,6 +47,7 @@ function ErrorState(): React.JSX.Element {
 }
 
 function InteractionDrawerContent({ workItemId }: { workItemId: string }) {
+    const { getInteractionById, renderInteractionDetails } = useSchedulingCrossFeature();
     const [interaction, setInteraction] = React.useState<IInteraction | null>(null);
     const [loading, setLoading] = React.useState(true);
 
@@ -85,7 +73,7 @@ function InteractionDrawerContent({ workItemId }: { workItemId: string }) {
         return () => {
             isMounted = false;
         };
-    }, [workItemId]);
+    }, [workItemId, getInteractionById]);
 
     if (loading) {
         return <LoadingState />;
@@ -95,7 +83,7 @@ function InteractionDrawerContent({ workItemId }: { workItemId: string }) {
         return <EmptyState message="Interaction not found" />;
     }
 
-    return <InteractionDetails interaction={interaction} isInDrawer={true} />;
+    return <>{renderInteractionDetails({ interaction, isInDrawer: true })}</>;
 }
 
 export function WorkItemDrawer({
@@ -104,6 +92,16 @@ export function WorkItemDrawer({
     onTaskUpdate,
     onScheduleUpdate
 }: WorkItemDrawerProps): React.JSX.Element {
+    const {
+        getConsolidatedTicketData,
+        getTaskById,
+        getProjectPhase,
+        getProjectMetadata,
+        getProjectTreeData,
+        renderTicketDetails,
+        renderTaskEdit,
+    } = useSchedulingCrossFeature();
+
     const [content, setContent] = React.useState<React.JSX.Element | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
 
@@ -128,32 +126,11 @@ export function WorkItemDrawer({
 
                     return (
                         <div className="min-w-auto h-full bg-white">
-                            <TicketDetails
-                                isInDrawer={true}
-                                initialTicket={ticketData.ticket}
-                                initialBundle={ticketData.bundle}
-                                aggregatedChildClientComments={ticketData.aggregatedChildClientComments}
-                                initialComments={ticketData.comments}
-                                initialDocuments={ticketData.documents}
-                                initialBoard={ticketData.board}
-                                initialClient={ticketData.client}
-                                initialContacts={ticketData.contacts}
-                                initialContactInfo={ticketData.contactInfo}
-                                initialCreatedByUser={ticketData.createdByUser}
-                                initialAdditionalAgents={ticketData.additionalAgents}
-                                initialAvailableAgents={ticketData.availableAgents}
-                                initialUserMap={ticketData.userMap}
-                                initialContactMap={ticketData.contactMap}
-                                statusOptions={ticketData.options.status}
-                                agentOptions={ticketData.options.agent}
-                                boardOptions={ticketData.options.board}
-                                priorityOptions={ticketData.options.priority}
-                                initialCategories={ticketData.categories}
-                                initialClients={ticketData.clients}
-                                initialLocations={ticketData.locations}
-                                initialAgentSchedules={ticketData.agentSchedules}
-                                currentUser={currentUser}
-                            />
+                            {renderTicketDetails({
+                                isInDrawer: true,
+                                consolidatedData: ticketData,
+                                currentUser,
+                            })}
                         </div>
                     );
                 }
@@ -183,16 +160,16 @@ export function WorkItemDrawer({
 
                     return (
                         <div className="min-w-auto h-full bg-white">
-                            <TaskEdit
-                                task={taskData}
-                                phase={phase}
-                                phases={projectMetadata.phases}
-                                users={projectMetadata.users}
-                                inDrawer={true}
-                                onClose={onClose}
-                                onTaskUpdated={onTaskUpdate}
-                                projectTreeData={Array.isArray(projectTreeData) ? projectTreeData : []}
-                            />
+                            {renderTaskEdit({
+                                task: taskData,
+                                phase,
+                                phases: projectMetadata.phases,
+                                users: projectMetadata.users,
+                                inDrawer: true,
+                                onClose,
+                                onTaskUpdated: onTaskUpdate,
+                                projectTreeData: Array.isArray(projectTreeData) ? projectTreeData : [],
+                            })}
                         </div>
                     );
                 }
@@ -264,7 +241,11 @@ export function WorkItemDrawer({
             console.error('Error loading content:', error);
             return <ErrorState />;
         }
-    }, [workItem, onClose, onTaskUpdate, onScheduleUpdate]);
+    }, [
+        workItem, onClose, onTaskUpdate, onScheduleUpdate,
+        getConsolidatedTicketData, getTaskById, getProjectPhase,
+        getProjectMetadata, getProjectTreeData, renderTicketDetails, renderTaskEdit
+    ]);
 
     React.useEffect(() => {
         let isMounted = true;

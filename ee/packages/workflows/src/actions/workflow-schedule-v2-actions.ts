@@ -2,25 +2,24 @@
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import type { WorkflowDefinition } from '@shared/workflow/runtime/types';
-import { getSchemaRegistry } from '@shared/workflow/runtime/registries/schemaRegistry';
-import { emailWorkflowPayloadSchema } from '@shared/workflow/runtime/schemas/emailWorkflowSchemas';
+import type { WorkflowDefinition } from '@alga-psa/workflows/runtime';
+import { getSchemaRegistry, emailWorkflowPayloadSchema } from '@alga-psa/workflows/runtime';
 import {
   emptyWorkflowPayloadSchema,
   EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF
-} from '@shared/workflow/runtime/schemas/emptyWorkflowPayloadSchema';
+} from '@alga-psa/workflows/runtime';
 import {
   workflowClockTriggerPayloadSchema,
   WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF
-} from '@shared/workflow/runtime/schemas/workflowClockTriggerSchema';
-import { workflowEventPayloadSchemas } from '@shared/workflow/runtime/schemas/workflowEventPayloadSchemas';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2, {
-  type WorkflowDefinitionVersionRecord
-} from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import WorkflowScheduleStateModel, {
+} from '@alga-psa/workflows/runtime';
+import { workflowEventPayloadSchemas } from '@alga-psa/workflows/runtime';
+import {
+  WorkflowDefinitionModelV2,
+  WorkflowDefinitionVersionModelV2,
+  WorkflowScheduleStateModel,
+  type WorkflowDefinitionVersionRecord,
   type WorkflowScheduleStateRecord
-} from '@shared/workflow/persistence/workflowScheduleStateModel';
+} from '@alga-psa/workflows/persistence';
 import {
   createExternalWorkflowScheduleState,
   deleteWorkflowScheduleStateById,
@@ -89,7 +88,6 @@ const throwHttpError = (status: number, message: string): never => {
 
 const validateTimeTriggerTimezone = (timezone: string): boolean => {
   try {
-    // eslint-disable-next-line no-new
     new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(new Date());
     return true;
   } catch {

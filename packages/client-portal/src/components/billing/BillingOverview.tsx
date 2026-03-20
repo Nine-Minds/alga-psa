@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing screens intentionally compose billing feature components for customer-facing account pages. */
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CustomTabs, TabContent } from '@alga-psa/ui/components/CustomTabs';

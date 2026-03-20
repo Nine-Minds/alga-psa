@@ -78,7 +78,7 @@ export async function getTenantSettingsByTenantId(tenantId: string): Promise<Ten
   return getTenantSettingsForTenant(tenantId);
 }
 
-const getExperimentalFeaturesForTenant = async (
+export const getExperimentalFeaturesForTenant = async (
   tenant: string,
   user?: Pick<IUserWithRoles, 'user_id' | 'user_type'>
 ): Promise<ExperimentalFeatures> => {

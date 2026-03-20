@@ -13,7 +13,7 @@ import {
   Zap, Database, Link, Workflow, Mail, Send, Inbox, MailOpen,
   FileText, Layers, Box, Cog, Terminal, Globe, Search, GripVertical,
   // Business operations icons
-  MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building, Users,
+  MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building, Users, Bot,
   Bell, Calendar, SquareCheck, StickyNote, ClipboardList
 } from 'lucide-react';
 import {
@@ -47,7 +47,7 @@ import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/EventsCatalogV2';
-import Schedules from '@alga-psa/workflows/components/automation-hub/Schedules';
+import WorkflowSchedules from './WorkflowSchedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
@@ -71,13 +71,15 @@ import {
 import {
   buildWorkflowDesignerActionCatalog,
   type WorkflowDesignerCatalogRecord
-} from '@shared/workflow/runtime/designer/actionCatalog';
+} from '@alga-psa/workflows/authoring';
 import {
   buildPaletteSearchIndex,
   groupPaletteItemsByCategory,
   matchesPaletteSearchQuery,
 } from './paletteSearch';
 import { ActionSchemaReference } from './ActionSchemaReference';
+import { WorkflowAiSchemaSection } from './WorkflowAiSchemaSection';
+import { WorkflowComposeTextSection } from './WorkflowComposeTextSection';
 import { buildDataContext } from './workflowDataContext';
 import {
   applyGroupedActionSelectionToStep,
@@ -93,6 +95,14 @@ import { WorkflowStepNameField } from './WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
 import { buildWorkflowReferenceFieldOptions } from './workflowReferenceOptions';
+import { shouldRenderWorkflowAiSchemaSection } from './workflowAiStepUtils';
+import { applyWorkflowActionPresentationHintsToList } from './workflowActionPresentation';
+import {
+  buildWorkflowTriggerEventCategoryOptions,
+  buildWorkflowTriggerEventOptions,
+  getWorkflowTriggerEventCategoryKey,
+  WORKFLOW_TRIGGER_EVENT_CATEGORY_KEY_UNKNOWN,
+} from './workflowTriggerEventOptions';
 import {
   DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH,
   getWorkflowDesignerSidebarWidthFromDrag,
@@ -111,9 +121,16 @@ import type {
   Expr,
   PublishError,
   InputMapping
-} from '@shared/workflow/runtime/client';
-import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@shared/workflow/runtime/client';
-import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
+} from '@alga-psa/workflows/runtime/client';
+import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@alga-psa/workflows/authoring';
+import { EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from '@alga-psa/shared/workflow/runtime/schemas/emptyWorkflowPayloadSchema';
+import {
+  isWorkflowAiInferAction,
+  isWorkflowComposeTextAction,
+  resolveComposeTextOutputSchemaFromConfig,
+  resolveWorkflowAiSchemaFromConfig,
+} from '@alga-psa/workflows/authoring';
+import { validateExpressionSource } from '@alga-psa/workflows/authoring';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -242,6 +259,13 @@ const stableSerialize = (value: unknown): string =>
 
 const areStructurallyEqual = (left: unknown, right: unknown): boolean => stableSerialize(left) === stableSerialize(right);
 
+const DESIGNER_FLOAT_EDGE_GUTTER = 8;
+const DESIGNER_FLOAT_PANEL_OFFSET = 16;
+const DESIGNER_FLOAT_MIN_HEIGHT = 160;
+const DESIGNER_PALETTE_WIDTH = 224;
+const DESIGNER_CENTER_LEFT_EXTRA_PADDING = 48;
+const DESIGNER_CENTER_RIGHT_EXTRA_PADDING = 24;
+
 type PipeSegment = {
   index: number;
   branch: 'then' | 'else' | 'try' | 'catch' | 'body';
@@ -264,8 +288,6 @@ const LEGACY_WORKFLOW_NODE_IDS = new Set<string>([
   'email.parseBody',
   'email.renderCommentBlocks'
 ]);
-
-const DEFAULT_PAYLOAD_SCHEMA = 'payload.EmailWorkflowPayload.v1';
 
 const isTimeTrigger = (trigger?: WorkflowTrigger | null): boolean =>
   trigger?.type === 'schedule' || trigger?.type === 'recurring';
@@ -307,7 +329,7 @@ const createDefaultDefinition = (): WorkflowDefinition => ({
   version: 1,
   name: 'New Workflow',
   description: '',
-  payloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA,
+  payloadSchemaRef: EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
   steps: []
 });
 
@@ -1177,6 +1199,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const [payloadSchemaModeDraft, setPayloadSchemaModeDraft] = useState<'inferred' | 'pinned'>('pinned');
   const [pinnedPayloadSchemaRefDraft, setPinnedPayloadSchemaRefDraft] = useState<string>('');
   const [triggerTypeSelection, setTriggerTypeSelection] = useState<TriggerTypeSelection>('manual');
+  const [selectedTriggerEventCategory, setSelectedTriggerEventCategory] = useState<string>('');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
   const [designerSidebarWidth, setDesignerSidebarWidth] = useState(DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH);
@@ -1261,15 +1284,87 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       });
     };
 
+    const el = designerFloatAnchorRef.current;
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined' && el
+        ? new ResizeObserver(() => {
+            update();
+          })
+        : null;
+
+    if (resizeObserver && el) {
+      resizeObserver.observe(el);
+    }
+
     update();
     window.addEventListener('resize', update);
     window.addEventListener('scroll', update, true);
+    document.addEventListener('transitionend', update, true);
+    document.addEventListener('animationend', update, true);
     return () => {
       if (rafId != null) window.cancelAnimationFrame(rafId);
+      resizeObserver?.disconnect();
       window.removeEventListener('resize', update);
       window.removeEventListener('scroll', update, true);
+      document.removeEventListener('transitionend', update, true);
+      document.removeEventListener('animationend', update, true);
     };
   }, [activeTab]);
+
+  const designerFloatingLayout = useMemo(() => {
+    if (!designerFloatAnchorRect || typeof window === 'undefined') {
+      return null;
+    }
+
+    const top = Math.min(
+      Math.max(DESIGNER_FLOAT_EDGE_GUTTER, designerFloatAnchorRect.top + DESIGNER_FLOAT_PANEL_OFFSET),
+      window.innerHeight - DESIGNER_FLOAT_MIN_HEIGHT
+    );
+    const paletteLeft = Math.min(
+      Math.max(DESIGNER_FLOAT_EDGE_GUTTER, designerFloatAnchorRect.left + DESIGNER_FLOAT_PANEL_OFFSET),
+      window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - DESIGNER_PALETTE_WIDTH
+    );
+    const paletteRight = paletteLeft + DESIGNER_PALETTE_WIDTH;
+    const sidebarLeft = Math.min(
+      Math.max(
+        DESIGNER_FLOAT_EDGE_GUTTER,
+        designerFloatAnchorRect.right - DESIGNER_FLOAT_PANEL_OFFSET - designerSidebarWidth
+      ),
+      Math.max(DESIGNER_FLOAT_EDGE_GUTTER, window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - designerSidebarWidth)
+    );
+    const maxHeight = Math.max(
+      DESIGNER_FLOAT_MIN_HEIGHT,
+      designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + DESIGNER_FLOAT_PANEL_OFFSET) - DESIGNER_FLOAT_PANEL_OFFSET
+    );
+    const centerPaddingLeft = Math.max(
+      0,
+      paletteRight - designerFloatAnchorRect.left + DESIGNER_CENTER_LEFT_EXTRA_PADDING
+    );
+    const centerPaddingRight = Math.max(
+      0,
+      designerFloatAnchorRect.right - sidebarLeft + DESIGNER_CENTER_RIGHT_EXTRA_PADDING
+    );
+
+    return {
+      paletteStyle: {
+        position: 'fixed',
+        top,
+        left: paletteLeft,
+        maxHeight,
+      } as React.CSSProperties,
+      sidebarStyle: {
+        position: 'fixed',
+        top,
+        left: sidebarLeft,
+        width: designerSidebarWidth,
+        maxHeight,
+      } as React.CSSProperties,
+      centerScrollStyle: {
+        paddingLeft: `${centerPaddingLeft}px`,
+        paddingRight: `${centerPaddingRight}px`,
+      } as React.CSSProperties,
+    };
+  }, [designerFloatAnchorRect, designerSidebarWidth]);
 
   const stepPathMap = useMemo(() => {
     return activeDefinition ? buildStepPathMap(activeDefinition.steps as Step[]) : {};
@@ -1429,14 +1524,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       version: 1,
       name: 'New Workflow',
       description: '',
-      payloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA,
+      payloadSchemaRef: EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
       steps: []
     };
 
     return (
       !areStructurallyEqual(activeDefinition, pristineUnsavedDraft) ||
-      payloadSchemaModeDraft !== 'inferred' ||
-      pinnedPayloadSchemaRefDraft !== DEFAULT_PAYLOAD_SCHEMA
+      payloadSchemaModeDraft !== 'pinned' ||
+      pinnedPayloadSchemaRefDraft !== EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF
     );
   }, [
     activeDefinition,
@@ -1773,7 +1868,20 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setTriggerTypeSelection(nextType);
 
     if (nextType === 'manual') {
-      setActiveDefinition((current) => (current ? { ...current, trigger: undefined } : current));
+      setSelectedTriggerEventCategory('');
+      setPayloadSchemaModeDraft('pinned');
+      setSchemaInferenceEnabled(false);
+      setPinnedPayloadSchemaRefDraft(EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF);
+      setSchemaRefAdvanced(false);
+      setActiveDefinition((current) => (
+        current
+          ? {
+              ...current,
+              trigger: undefined,
+              payloadSchemaRef: EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
+            }
+          : current
+      ));
       return;
     }
 
@@ -1913,7 +2021,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         throw new Error('Failed to load workflow registries');
       }
       if (overrides?.registryNodes || overrides?.registryActions) {
-        const overrideActions = (overrides.registryActions ?? []) as ActionRegistryItem[];
+        const overrideActions = applyWorkflowActionPresentationHintsToList(
+          (overrides.registryActions ?? []) as ActionRegistryItem[]
+        );
         setNodeRegistry((overrides.registryNodes ?? []) as NodeRegistryItem[]);
         setActionRegistry(overrideActions);
         setDesignerActionCatalog(buildWorkflowDesignerActionCatalog(overrideActions));
@@ -1940,8 +2050,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         listWorkflowRegistryActionsAction(),
         listWorkflowDesignerActionCatalogAction()
       ]);
+      const normalizedActions = applyWorkflowActionPresentationHintsToList(
+        (actions ?? []) as unknown as ActionRegistryItem[]
+      );
       setNodeRegistry((nodes ?? []) as unknown as NodeRegistryItem[]);
-      setActionRegistry((actions ?? []) as unknown as ActionRegistryItem[]);
+      setActionRegistry(normalizedActions);
       setDesignerActionCatalog((catalog ?? []) as WorkflowDesignerCatalogRecord[]);
       try {
         const schemaList = await listWorkflowSchemaRefsAction();
@@ -2240,6 +2353,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setActiveDefinition(normalizedDefinition);
     setActiveWorkflowId(record.workflow_id);
     setTriggerTypeSelection(normalizedDefinition.trigger?.type === 'event' ? 'event' : 'manual');
+    setSelectedTriggerEventCategory('');
     
     // Always reset these when selecting a workflow
     setPublishErrors([]);
@@ -2283,9 +2397,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const draft = createDefaultDefinition();
     setActiveDefinition(draft);
     setActiveWorkflowId(null);
-    setPayloadSchemaModeDraft('inferred');
+    setPayloadSchemaModeDraft('pinned');
     setTriggerTypeSelection('manual');
-    setSchemaInferenceEnabled(true);
+    setSelectedTriggerEventCategory('');
+    setSchemaInferenceEnabled(false);
     setContractSettingsExpanded(false);
     setSchemaRefAdvanced(false);
     setPinnedPayloadSchemaRefDraft(draft.payloadSchemaRef ?? '');
@@ -2294,6 +2409,25 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setPublishErrors([]);
     setPublishWarnings([]);
   }, []);
+
+  useEffect(() => {
+    if (currentTriggerSelection !== 'event') {
+      setSelectedTriggerEventCategory('');
+      return;
+    }
+
+    const selectedEventName = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : '';
+    if (!selectedEventName) {
+      return;
+    }
+
+    const selectedOption = eventCatalogOptions.find((entry) => entry.event_type === selectedEventName) ?? null;
+    setSelectedTriggerEventCategory(
+      selectedOption
+        ? getWorkflowTriggerEventCategoryKey(selectedOption.category)
+        : WORKFLOW_TRIGGER_EVENT_CATEGORY_KEY_UNKNOWN
+    );
+  }, [activeDefinition?.trigger, currentTriggerSelection, eventCatalogOptions]);
 
   useEffect(() => {
     if (mode !== 'editor-designer') {
@@ -2545,7 +2679,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     actionVersion?: number;
     groupKey?: string;
     groupLabel?: string;
-    tileKind?: 'core-object' | 'transform' | 'app';
+    tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
   } | null>(null);
 
   const handleDragStart = (start: { draggableId: string; source: { droppableId: string } }) => {
@@ -2772,6 +2906,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             ? 'Core'
             : record.tileKind === 'transform'
               ? 'Transform'
+              : record.tileKind === 'ai'
+                ? 'AI'
               : 'Apps',
           type: 'action.call' as Step['type'],
           groupKey: record.groupKey,
@@ -2878,6 +3014,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         case 'time': return <Clock className={iconClass} />;
         case 'crm': return <StickyNote className={iconClass} />;
         case 'transform': return <Settings className={iconClass} />;
+        case 'ai': return <Bot className={iconClass} />;
         case 'app': return <Box className={iconClass} />;
         default: return <Box className={iconClass} />;
       }
@@ -2961,12 +3098,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             {(provided) => (
               <WorkflowDesignerPalette
                 visible={Boolean(designerFloatAnchorRect)}
-                style={designerFloatAnchorRect ? {
-                  position: 'fixed',
-                  top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
-                  left: Math.min(Math.max(8, designerFloatAnchorRect.left + 16), window.innerWidth - 8 - 224),
-                  maxHeight: Math.max(160, designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + 16) - 16)
-                } : undefined}
+                style={designerFloatingLayout?.paletteStyle}
                 search={search}
                 onSearchChange={setSearch}
                 registryError={registryError}
@@ -2988,7 +3120,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         actionVersion?: number;
                         groupKey?: string;
                         groupLabel?: string;
-                        tileKind?: 'core-object' | 'transform' | 'app';
+                        tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
                       };
                       return (
                         <PaletteItemWithTooltip
@@ -3026,16 +3158,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           <aside
             id="workflow-designer-sidebar-scroll"
             className={`pointer-events-auto relative max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
-            style={designerFloatAnchorRect ? {
-              position: 'fixed',
-              top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
-              left: Math.min(
-                Math.max(8, designerFloatAnchorRect.right - 16 - designerSidebarWidth),
-                Math.max(8, window.innerWidth - 8 - designerSidebarWidth)
-              ),
-              width: designerSidebarWidth,
-              maxHeight: Math.max(160, designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + 16) - 16)
-            } : undefined}
+            style={designerFloatingLayout?.sidebarStyle}
           >
             <div
               id="workflow-designer-sidebar-resize-handle"
@@ -3217,7 +3340,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           </aside>
         </div>
 
-	        <div id="workflow-designer-center-scroll" className="flex-1 min-h-0 overflow-y-auto p-6 pl-72 pr-[460px]">
+	        <div
+            id="workflow-designer-center-scroll"
+            className="flex-1 min-h-0 overflow-y-auto p-6 pl-72 pr-[460px]"
+            style={designerFloatingLayout?.centerScrollStyle}
+          >
           <div className="max-w-4xl mx-auto space-y-6">
                 {showInitialDesignerSkeleton ? (
                   <>
@@ -3300,35 +3427,26 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     const selectedOption = selectedEventName
                       ? eventCatalogOptions.find((e) => e.event_type === selectedEventName) ?? null
                       : null;
-                    const schemaBadgeClass = (status: WorkflowEventCatalogOptionV2['payload_schema_ref_status']) => {
-                      if (status === 'missing') return 'bg-gray-500/15 text-gray-600 border-gray-500/30';
-                      if (status === 'unknown') return 'bg-destructive/15 text-destructive border-destructive/30';
-                      return 'bg-sky-500/15 text-sky-600 border-sky-500/30';
-                    };
-                    const schemaBadgeLabel = (status: WorkflowEventCatalogOptionV2['payload_schema_ref_status']) => {
-                      if (status === 'missing') return 'No schema';
-                      if (status === 'unknown') return 'Unknown schema';
-                      return 'Schema';
-                    };
                     const showTriggerSchemaDetails = contractSettingsExpanded;
                     const triggerTypeOptions: Array<{ value: TriggerTypeSelection; label: string }> = [
                       { value: 'manual', label: 'No trigger' },
                       { value: 'event', label: 'Event' }
                     ];
-                    const eventOptions: Array<{ value: string; label: string }> = eventCatalogOptions.map((e) => ({
-                      value: e.event_type,
-                      label: e.category ? `${e.name} · ${e.category} (${e.event_type})` : `${e.name} (${e.event_type})`
-                    }));
-
-                    if (selectedEventName && !selectedOption) {
-                      eventOptions.unshift({ value: selectedEventName, label: `Unknown event (${selectedEventName})` });
-                    }
-
                     const showEventConfiguration = currentTriggerSelection === 'event';
+                    const eventCategoryOptions = buildWorkflowTriggerEventCategoryOptions(eventCatalogOptions, selectedEventName);
+                    const eventOptions = buildWorkflowTriggerEventOptions(
+                      eventCatalogOptions,
+                      selectedTriggerEventCategory,
+                      selectedEventName
+                    );
+                    const eventPickerDisabled =
+                      !canManage ||
+                      eventCatalogStatus === 'loading' ||
+                      (!selectedTriggerEventCategory && !(selectedEventName && !selectedOption));
 
                     return (
                       <div className="space-y-3">
-                        <div className="grid gap-4 lg:grid-cols-[220px,1fr]">
+                        <div className="space-y-4">
                           <div>
                             <label htmlFor="workflow-designer-trigger-type" className="block text-sm font-medium text-gray-700 mb-1">
                               Trigger type
@@ -3356,41 +3474,82 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                             {showEventConfiguration && (
                               <div className="space-y-2">
-                                <label htmlFor="workflow-designer-trigger-event" className="block text-sm font-medium text-gray-700 mb-1">
-                                  Event trigger
-                                </label>
-                                {eventCatalogStatus === 'loading' ? (
-                                  <Skeleton className="h-10 w-full" />
-                                ) : (
-                                  <SearchableSelect
-                                    id="workflow-designer-trigger-event"
-                                    value={selectedEventName}
-                                    onChange={(value) => {
-                                      const next = value.trim();
-                                      if (!next) {
-                                        setTriggerTypeSelection('manual');
+                                <div>
+                                  <label htmlFor="workflow-designer-trigger-event-category" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Event category
+                                  </label>
+                                  {eventCatalogStatus === 'loading' ? (
+                                    <Skeleton className="h-10 w-full" />
+                                  ) : (
+                                    <CustomSelect
+                                      id="workflow-designer-trigger-event-category"
+                                      value={selectedTriggerEventCategory}
+                                      onValueChange={(value) => {
+                                        const nextCategory = value.trim();
+                                        setSelectedTriggerEventCategory(nextCategory);
+
+                                        if (!selectedEventName) {
+                                          return;
+                                        }
+
+                                        const currentCategory = selectedOption
+                                          ? getWorkflowTriggerEventCategoryKey(selectedOption.category)
+                                          : WORKFLOW_TRIGGER_EVENT_CATEGORY_KEY_UNKNOWN;
+
+                                        if (nextCategory && currentCategory === nextCategory) {
+                                          return;
+                                        }
+
                                         handleDefinitionChange({ trigger: undefined });
-                                        return;
-                                      }
-                                      const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
-                                      if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
-                                        toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
-                                        return;
-                                      }
-                                      setTriggerTypeSelection('event');
-                                      const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
-                                      handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
-                                    }}
-                                    placeholder="Select trigger event"
-                                    dropdownMode="overlay"
-                                    options={eventOptions}
-                                    disabled={!canManage}
-                                  />
-                                )}
+                                      }}
+                                      options={eventCategoryOptions}
+                                      placeholder="Select event category"
+                                      disabled={!canManage}
+                                    />
+                                  )}
+                                </div>
+
+                                <div>
+                                  <label htmlFor="workflow-designer-trigger-event" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Event
+                                  </label>
+                                  {eventCatalogStatus === 'loading' ? (
+                                    <Skeleton className="h-10 w-full" />
+                                  ) : (
+                                    <SearchableSelect
+                                      id="workflow-designer-trigger-event"
+                                      value={selectedEventName}
+                                      onChange={(value) => {
+                                        const next = value.trim();
+                                        if (!next) {
+                                          handleDefinitionChange({ trigger: undefined });
+                                          return;
+                                        }
+                                        const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
+                                        if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
+                                          toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
+                                          return;
+                                        }
+                                        setTriggerTypeSelection('event');
+                                        if (chosen) {
+                                          setSelectedTriggerEventCategory(getWorkflowTriggerEventCategoryKey(chosen.category));
+                                        }
+                                        const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
+                                        handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
+                                      }}
+                                      placeholder={selectedTriggerEventCategory ? 'Select event' : 'Select category first'}
+                                      dropdownMode="overlay"
+                                      options={eventOptions}
+                                      disabled={eventPickerDisabled}
+                                    />
+                                  )}
+                                </div>
 
                                 {!selectedEventName && eventCatalogStatus !== 'loading' && (
                                   <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                                    Select an event to finish configuring this trigger.
+                                    {selectedTriggerEventCategory
+                                      ? 'Select an event to finish configuring this trigger.'
+                                      : 'Select a category, then choose an event to finish configuring this trigger.'}
                                   </div>
                                 )}
 
@@ -3407,29 +3566,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                                 {selectedOption && (
                                   <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <Badge className={selectedOption.source === 'system' ? 'bg-purple-500/15 text-purple-600 border-purple-500/30' : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'}>
-                                        {selectedOption.source === 'system' ? 'System' : 'Tenant'}
-                                      </Badge>
-                                      <Badge className={
-                                        selectedOption.status === 'active' ? 'bg-success/15 text-success border-success/30'
-                                          : selectedOption.status === 'beta' ? 'bg-warning/15 text-warning-foreground border-warning/30'
-                                            : selectedOption.status === 'draft' ? 'bg-muted text-muted-foreground border-border'
-                                              : 'bg-destructive/15 text-destructive border-destructive/30'
-                                      }>
-                                        {selectedOption.status.charAt(0).toUpperCase() + selectedOption.status.slice(1)}
-                                      </Badge>
-                                      {(showTriggerSchemaDetails || selectedOption.payload_schema_ref_status !== 'known') && (
-                                        <Badge className={schemaBadgeClass(selectedOption.payload_schema_ref_status)}>
-                                          {schemaBadgeLabel(selectedOption.payload_schema_ref_status)}
-                                        </Badge>
-                                      )}
-                                      {selectedOption.category && (
-                                        <Badge className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[rgb(var(--color-border-200))]">
-                                          {selectedOption.category}
-                                        </Badge>
-                                      )}
-                                    </div>
                                     {selectedOption.description && (
                                       <div className="text-xs text-gray-600">{selectedOption.description}</div>
                                     )}
@@ -3694,7 +3830,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                             </>
                           ) : (
                             <>
-                              Choose a trigger to define available data. Manual workflows need a locked schema before publishing or running.
+                              No trigger uses <span className="font-mono">{EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF}</span> by default. Change it in Advanced schema settings if this workflow needs a different manual contract.
                             </>
                           )}
                         </div>
@@ -4371,7 +4507,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   );
   const schedulesContent = (
     <div className="h-full min-h-0 overflow-y-auto px-6 py-4">
-      <Schedules />
+      <WorkflowSchedules />
     </div>
   );
   const isControlPanelMode = mode === 'control-panel';
@@ -5011,10 +5147,30 @@ const StepConfigPanel: React.FC<{
     [step, actionRegistry]
   );
   const selectedAction = actionInputEditorState.selectedAction;
+  const actionCallConfig = step.type === 'action.call'
+    ? ((step as NodeStep).config as Record<string, unknown> | undefined)
+    : undefined;
   const groupedActionRecord = useMemo(
     () => getGroupedActionCatalogRecordForStep(step, designerActionCatalog),
     [step, designerActionCatalog]
   );
+  const isAiInferStep = shouldRenderWorkflowAiSchemaSection(step.type, selectedAction?.id);
+  const isComposeTextStep = step.type === 'action.call' && isWorkflowComposeTextAction(selectedAction?.id);
+  const resolvedActionOutputSchema = useMemo(() => {
+    if (!actionCallConfig) {
+      return null;
+    }
+
+    if (isAiInferStep) {
+      return resolveWorkflowAiSchemaFromConfig(actionCallConfig).schema as JsonSchema | null;
+    }
+
+    if (isComposeTextStep) {
+      return resolveComposeTextOutputSchemaFromConfig(actionCallConfig) as JsonSchema | null;
+    }
+
+    return null;
+  }, [actionCallConfig, isAiInferStep, isComposeTextStep]);
 
   const saveAs = step.type === 'action.call'
     ? ((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs
@@ -5036,6 +5192,35 @@ const StepConfigPanel: React.FC<{
       config: {
         ...existingConfig,
         inputMapping: Object.keys(mapping).length > 0 ? mapping : undefined
+      }
+    });
+  }, [step, onChange]);
+  const handleAiSchemaChange = useCallback((patch: {
+    aiOutputSchemaMode: 'simple' | 'advanced';
+    aiOutputSchema?: Record<string, unknown>;
+    aiOutputSchemaText?: string;
+  }) => {
+    const nodeStep = step as NodeStep;
+    const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
+    onChange({
+      ...nodeStep,
+      config: {
+        ...existingConfig,
+        ...patch,
+      }
+    });
+  }, [step, onChange]);
+  const handleComposeTextChange = useCallback((patch: {
+    version: number;
+    outputs: unknown[];
+  }) => {
+    const nodeStep = step as NodeStep;
+    const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
+    onChange({
+      ...nodeStep,
+      config: {
+        ...existingConfig,
+        ...patch,
       }
     });
   }, [step, onChange]);
@@ -5365,6 +5550,10 @@ const StepConfigPanel: React.FC<{
                 'designerGroupKey',
                 'designerTileKind',
                 'designerAppKey',
+                'outputs',
+                'aiOutputSchemaMode',
+                'aiOutputSchema',
+                'aiOutputSchemaText',
               ]
             : []}
           sectionTitle={step.type === 'action.call' ? 'Step settings' : undefined}
@@ -5388,12 +5577,33 @@ const StepConfigPanel: React.FC<{
         />
       )}
 
+      {step.type === 'action.call' && isAiInferStep && (
+        <WorkflowAiSchemaSection
+          stepId={step.id}
+          config={actionCallConfig}
+          disabled={!editable}
+          onChange={handleAiSchemaChange}
+        />
+      )}
+
+      {step.type === 'action.call' && isComposeTextStep && (
+        <WorkflowComposeTextSection
+          stepId={step.id}
+          saveAs={saveAs}
+          config={actionCallConfig}
+          dataContext={dataContext}
+          disabled={!editable}
+          onChange={handleComposeTextChange}
+        />
+      )}
+
       {/* §16.1 - Action Schema Reference for action.call steps */}
       {step.type === 'action.call' && (
         <div className="mt-4 pt-4 border-t border-gray-200">
           <ActionSchemaReference
             action={selectedAction}
             saveAs={saveAs}
+            outputSchemaOverride={resolvedActionOutputSchema}
             onCopyPath={handleCopyPath}
           />
         </div>

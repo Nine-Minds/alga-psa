@@ -68,7 +68,7 @@ import {
     buildAssetUpdatedPayload,
     buildAssetWarrantyExpiringPayload,
     computeAssetWarrantyExpiring,
-} from '@shared/workflow/streams/domainEventBuilders/assetEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
 

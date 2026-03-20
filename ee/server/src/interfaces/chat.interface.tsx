@@ -5,4 +5,6 @@ export interface IChat extends TenantEntity {
   user_id: string;
   title_text: string | null;
   title_is_locked: boolean | null;
+  created_at?: string | Date | null;
+  updated_at?: string | Date | null;
 }

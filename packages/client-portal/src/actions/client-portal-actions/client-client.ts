@@ -1,5 +1,7 @@
 "use server";
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal account actions intentionally compose client feature models for self-service account views. */
+
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';

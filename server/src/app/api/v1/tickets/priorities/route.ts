@@ -42,7 +42,7 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
 
       const knex = await getConnection(tenantId);
       const priorities = await knex('priorities')
-        .where({ tenant: tenantId })
+        .where({ tenant: tenantId, item_type: 'ticket' })
         .select('priority_id', 'priority_name')
         .orderBy('priority_name', 'asc');
 

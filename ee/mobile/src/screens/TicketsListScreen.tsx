@@ -1,7 +1,7 @@
 import { useFocusEffect, type CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import type { RootStackParamList, TabsParamList, TicketsStackParamList } from "../navigation/types";
@@ -19,9 +19,11 @@ import { logger } from "../logging/logger";
 import { Badge } from "../ui/components/Badge";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { getCachedTicketDetail, getCachedTicketsList, setCachedTicketDetail, setCachedTicketsList } from "../cache/ticketsCache";
+import { getCachedTicketStatuses, setCachedTicketStatuses, getCachedTicketPriorities, setCachedTicketPriorities } from "../cache/referenceDataCache";
 import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
+import { DatePickerField } from "../ui/components/DatePickerField";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -522,6 +524,7 @@ export function TicketsListScreen({ navigation }: Props) {
           visible={filtersOpen}
           client={client}
           apiKey={session.accessToken}
+          tenantId={session.tenantId ?? null}
           filters={filters}
           setFilters={setFilters}
           canFilterMe={Boolean(session?.user?.id)}
@@ -644,6 +647,7 @@ export function TicketsListScreen({ navigation }: Props) {
         visible={filtersOpen}
         client={client}
         apiKey={session.accessToken}
+        tenantId={session.tenantId ?? null}
         filters={filters}
         setFilters={setFilters}
         canFilterMe={Boolean(session?.user?.id)}
@@ -701,13 +705,10 @@ function QuickFilters({
 }) {
   const { t } = useTranslation("tickets");
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: theme.spacing.sm, gap: theme.spacing.sm }}>
       <QuickChip theme={theme} label={t("quickFilters.myTickets")} onPress={() => onSelect("mine")} />
-      <View style={{ width: theme.spacing.sm }} />
       <QuickChip theme={theme} label={t("quickFilters.unassigned")} onPress={() => onSelect("unassigned")} />
-      <View style={{ width: theme.spacing.sm }} />
       <QuickChip theme={theme} label={t("quickFilters.highPriority")} onPress={() => onSelect("highPriority")} />
-      <View style={{ width: theme.spacing.sm }} />
       <QuickChip theme={theme} label={t("quickFilters.recentlyUpdated")} onPress={() => onSelect("recent")} />
     </View>
   );
@@ -739,6 +740,7 @@ function FiltersModal({
   visible,
   client,
   apiKey,
+  tenantId,
   filters,
   setFilters,
   canFilterMe,
@@ -748,6 +750,7 @@ function FiltersModal({
   visible: boolean;
   client: ApiClient | null;
   apiKey: string | null;
+  tenantId: string | null;
   filters: {
     status: "any" | "open" | "closed";
     statusIds: string[];
@@ -787,21 +790,32 @@ function FiltersModal({
       if (!visible) return;
       if (!client || !apiKey) return;
       if (statusOptions.length > 0) return;
-      setStatusOptionsLoading(true);
-      setStatusOptionsError(null);
-      const res = await getTicketStatuses(client, { apiKey });
-      if (canceled) return;
-      if (!res.ok) {
-        setStatusOptionsError(t("filters.unableToLoadStatuses"));
+      const cacheKey = tenantId ?? "unknownTenant";
+      const cached = getCachedTicketStatuses(cacheKey);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setStatusOptions(cached as TicketStatus[]);
         return;
       }
-      setStatusOptions(res.data.data);
+      setStatusOptionsLoading(true);
+      setStatusOptionsError(null);
+      try {
+        const res = await getTicketStatuses(client, { apiKey });
+        if (canceled) return;
+        if (!res.ok) {
+          setStatusOptionsError(t("filters.unableToLoadStatuses"));
+          return;
+        }
+        setStatusOptions(res.data.data);
+        setCachedTicketStatuses(cacheKey, res.data.data);
+      } finally {
+        if (!canceled) setStatusOptionsLoading(false);
+      }
     };
     void run();
     return () => {
       canceled = true;
     };
-  }, [apiKey, client, statusOptions.length, visible]);
+  }, [apiKey, client, statusOptions.length, tenantId, visible]);
 
   useEffect(() => {
     let canceled = false;
@@ -809,25 +823,36 @@ function FiltersModal({
       if (!visible) return;
       if (!client || !apiKey) return;
       if (priorityOptions.length > 0) return;
-      setPriorityOptionsLoading(true);
-      setPriorityOptionsError(null);
-      const res = await getTicketPriorities(client, { apiKey });
-      if (canceled) return;
-      if (!res.ok) {
-        setPriorityOptionsError(t("filters.unableToLoadPriorities"));
+      const cacheKey = tenantId ?? "unknownTenant";
+      const cached = getCachedTicketPriorities(cacheKey);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setPriorityOptions(cached as TicketPriority[]);
         return;
       }
-      setPriorityOptions(res.data.data);
+      setPriorityOptionsLoading(true);
+      setPriorityOptionsError(null);
+      try {
+        const res = await getTicketPriorities(client, { apiKey });
+        if (canceled) return;
+        if (!res.ok) {
+          setPriorityOptionsError(t("filters.unableToLoadPriorities"));
+          return;
+        }
+        setPriorityOptions(res.data.data);
+        setCachedTicketPriorities(cacheKey, res.data.data);
+      } finally {
+        if (!canceled) setPriorityOptionsLoading(false);
+      }
     };
     void run();
     return () => {
       canceled = true;
     };
-  }, [apiKey, client, priorityOptions.length, visible]);
+  }, [apiKey, client, priorityOptions.length, tenantId, visible]);
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background }}>
+      <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: theme.spacing.xl }}>
         <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{t("filters.title")}</Text>
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.status")}</Text>
@@ -952,23 +977,6 @@ function FiltersModal({
             })}
           </View>
         ) : null}
-        <TextInput
-          value={filters.priorityName}
-          onChangeText={(priorityName) => setFilters({ ...filters, priorityName })}
-          placeholder={t("filters.priorityPlaceholder")}
-          placeholderTextColor={theme.colors.placeholder}
-          accessibilityLabel={t("filters.priorityAccessibility")}
-          style={{
-            paddingVertical: theme.spacing.sm,
-            paddingHorizontal: theme.spacing.md,
-            borderRadius: theme.borderRadius.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            marginTop: theme.spacing.sm,
-          }}
-        />
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.updatedSince")}</Text>
         <OptionRow
@@ -982,25 +990,24 @@ function FiltersModal({
           value={filters.updatedSinceDays}
           onChange={(updatedSinceDays) => setFilters({ ...filters, updatedSinceDays, updatedSinceDate: "" })}
         />
-        <TextInput
-          value={filters.updatedSinceDate}
-          onChangeText={(updatedSinceDate) => setFilters({ ...filters, updatedSinceDays: null, updatedSinceDate })}
-          placeholder={t("filters.updatedSinceDatePlaceholder")}
-          placeholderTextColor={theme.colors.placeholder}
-          autoCapitalize="none"
-          autoCorrect={false}
-          accessibilityLabel={t("filters.updatedSinceDateAccessibility")}
-          style={{
-            paddingVertical: theme.spacing.sm,
-            paddingHorizontal: theme.spacing.md,
-            borderRadius: theme.borderRadius.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            marginTop: theme.spacing.sm,
-          }}
-        />
+        <View style={{ marginTop: theme.spacing.sm }}>
+          <DatePickerField
+            value={filters.updatedSinceDate ? (() => { const d = new Date(`${filters.updatedSinceDate}T00:00:00`); return Number.isNaN(d.getTime()) ? undefined : d; })() : undefined}
+            onChange={(d) => {
+              if (d) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, "0");
+                const dd = String(d.getDate()).padStart(2, "0");
+                setFilters({ ...filters, updatedSinceDays: null, updatedSinceDate: `${yyyy}-${mm}-${dd}` });
+              } else {
+                setFilters({ ...filters, updatedSinceDate: "" });
+              }
+            }}
+            placeholder={t("filters.updatedSinceDatePlaceholder")}
+            clearable
+            label={t("filters.updatedSinceDateAccessibility")}
+          />
+        </View>
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
           {t("filters.updatedSinceDateHint")}
         </Text>
@@ -1030,9 +1037,7 @@ function FiltersModal({
           onChange={(sortOrder) => setFilters({ ...filters, sortOrder })}
         />
 
-        <View style={{ flex: 1 }} />
-
-        <View style={{ flexDirection: "row" }}>
+        <View style={{ flexDirection: "row", marginTop: theme.spacing.xl }}>
           <PrimaryButton
             onPress={() =>
               setFilters({ ...DEFAULT_FILTERS })
@@ -1043,7 +1048,7 @@ function FiltersModal({
           <View style={{ width: theme.spacing.sm }} />
           <PrimaryButton onPress={onClose}>{t("common:done")}</PrimaryButton>
         </View>
-      </View>
+      </ScrollView>
     </Modal>
   );
 }

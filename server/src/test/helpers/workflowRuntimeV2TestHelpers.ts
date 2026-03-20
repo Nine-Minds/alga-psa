@@ -7,7 +7,7 @@ import {
   type RetryPolicy,
   type Step,
   type WorkflowDefinition
-} from '@shared/workflow/runtime';
+} from '@alga-psa/workflows/runtime';
 
 export const TEST_SCHEMA_REF = 'payload.TestPayload.v1';
 export const TEST_SOURCE_SCHEMA_REF = 'payload.TestSourcePayload.v1';

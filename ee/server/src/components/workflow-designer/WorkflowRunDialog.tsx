@@ -1042,6 +1042,12 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     () => SAMPLE_TEMPLATES.filter((template) => !eventTemplateIds.includes(template.id)),
     [eventTemplateIds]
   );
+  const segmentedButtonClass = (active: boolean) =>
+    active
+      ? 'border-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]'
+      : 'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background-100))]';
+  const utilityButtonClass =
+    'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background-100))]';
 
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title="Run Workflow" className="max-w-4xl">
@@ -1058,9 +1064,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
         <div className="space-y-4">
           {!publishedVersion && (
-            <div className="rounded border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground space-y-2">
-              <div className="font-medium">No published version</div>
-              <div className="text-xs opacity-90">
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 shadow-sm space-y-2">
+              <div className="font-semibold">No published version</div>
+              <div className="text-xs text-amber-900">
                 You can preview the payload builder, but you must publish the workflow before starting a run.
               </div>
               {canPublish && onPublishDraft && (
@@ -1068,6 +1074,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                   <Button
                     id="run-dialog-publish-draft"
                     size="sm"
+                    className="border-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]"
                     onClick={() => void onPublishDraft()}
                     disabled={isPaused}
                   >
@@ -1189,7 +1196,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             )}
 
             {schemaWarning && (
-              <div className="rounded border border-warning/30 bg-warning/10 p-2 text-xs text-warning-foreground space-y-2">
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 shadow-sm space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span>{schemaWarning}</span>
                   {eventSchema && schemaSource !== 'event' && (
@@ -1197,6 +1204,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                       id="run-dialog-use-event-schema"
                       variant="outline"
                       size="sm"
+                      className={utilityButtonClass}
                       onClick={() => {
                         setSchemaSource('event');
                         if (eventSchema) {
@@ -1261,10 +1269,15 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           </div>
 
           {draftVersion && publishedVersion && draftVersion !== publishedVersion && (
-            <div className="rounded border border-warning/30 bg-warning/10 p-2 text-xs text-warning-foreground flex items-center justify-between">
-              <span>Draft version differs from published (v{publishedVersion}).</span>
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 shadow-sm flex items-center justify-between gap-3">
+              <span className="font-medium">Draft version differs from published (v{publishedVersion}).</span>
               {canPublish && onPublishDraft && (
-                <Button id="run-dialog-publish-latest" size="sm" onClick={() => onPublishDraft()}>
+                <Button
+                  id="run-dialog-publish-latest"
+                  size="sm"
+                  className="border-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]"
+                  onClick={() => onPublishDraft()}
+                >
                   Publish latest
                 </Button>
               )}
@@ -1288,19 +1301,49 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           )}
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button id="run-dialog-mode-json" variant={mode === 'json' ? 'default' : 'outline'} size="sm" onClick={() => setMode('json')}>
+            <Button
+              id="run-dialog-mode-json"
+              variant={mode === 'json' ? 'default' : 'outline'}
+              size="sm"
+              className={segmentedButtonClass(mode === 'json')}
+              onClick={() => setMode('json')}
+            >
               JSON Editor
             </Button>
-            <Button id="run-dialog-mode-form" variant={mode === 'form' ? 'default' : 'outline'} size="sm" onClick={() => setMode('form')}>
+            <Button
+              id="run-dialog-mode-form"
+              variant={mode === 'form' ? 'default' : 'outline'}
+              size="sm"
+              className={segmentedButtonClass(mode === 'form')}
+              onClick={() => setMode('form')}
+            >
               Form Builder
             </Button>
-            <Button id="run-dialog-reset-defaults" variant="outline" size="sm" onClick={handleResetDefaults}>
+            <Button
+              id="run-dialog-reset-defaults"
+              variant="outline"
+              size="sm"
+              className={utilityButtonClass}
+              onClick={handleResetDefaults}
+            >
               Reset to defaults
             </Button>
-            <Button id="run-dialog-copy-payload" variant="outline" size="sm" onClick={copyPayload}>
+            <Button
+              id="run-dialog-copy-payload"
+              variant="outline"
+              size="sm"
+              className={utilityButtonClass}
+              onClick={copyPayload}
+            >
               Copy payload
             </Button>
-            <Button id="run-dialog-clone-latest" variant="outline" size="sm" onClick={handleCloneLatest}>
+            <Button
+              id="run-dialog-clone-latest"
+              variant="outline"
+              size="sm"
+              className={utilityButtonClass}
+              onClick={handleCloneLatest}
+            >
               Clone latest run
             </Button>
           </div>

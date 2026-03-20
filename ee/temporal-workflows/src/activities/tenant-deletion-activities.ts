@@ -22,6 +22,7 @@ import type {
   RecordPendingDeletionInput,
   UpdateDeletionStatusInput,
   DeleteTenantDataResult,
+  SendCancellationEmailResult,
 } from '../types/tenant-deletion-types.js';
 
 /**
@@ -96,6 +97,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Logs and notifications
   'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
+  'platform_notification_recipients',
 
   // Extension logs and execution
   'extension_execution_log', 'extension_execution_log_old',
@@ -1308,9 +1310,10 @@ export async function cancelTenantStripeSubscription(
   try {
     const adminKnex = await getAdminConnection();
 
-    // Find active subscription for this tenant
+    // Find any billable subscription for this tenant (active, trialing, past_due, or unpaid)
     const activeSubscription = await adminKnex('stripe_subscriptions')
-      .where({ tenant: tenantId, status: 'active' })
+      .where({ tenant: tenantId })
+      .whereIn('status', ['active', 'trialing', 'past_due', 'unpaid'])
       .first();
 
     if (!activeSubscription) {
@@ -1371,5 +1374,259 @@ export async function cancelTenantStripeSubscription(
     });
     // Don't throw - subscription cancellation failure shouldn't block deletion workflow
     return { canceled: false, error: errorMsg };
+  }
+}
+
+// Email template color scheme (matches brand from welcome email)
+const EMAIL_COLORS = {
+  primary: '#8a4dea',
+  primaryLight: '#a366f0',
+  textPrimary: '#0f172a',
+  textSecondary: '#334155',
+  textMuted: '#64748b',
+  textLight: '#94a3b8',
+  textOnDark: '#cbd5e1',
+  bgSecondary: '#f8fafc',
+  bgDark: '#1e293b',
+  borderLight: '#e2e8f0',
+};
+
+function createDeactivationEmailContent(tenantName: string, userName: string): {
+  subject: string;
+  htmlBody: string;
+  textBody: string;
+} {
+  const currentYear = new Date().getFullYear();
+  const supportEmail = 'info@nineminds.com';
+
+  const subject = `Your Alga PSA account has been deactivated`;
+
+  const htmlBody = `
+  <!DOCTYPE html>
+  <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Deactivation Notice</title>
+    <style type="text/css">
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap');
+      table {border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt;}
+      a {text-decoration: none; color: ${EMAIL_COLORS.primary};}
+      h1, h2, h3, p {margin: 0; padding: 0;}
+      .ExternalClass {width: 100%;}
+      .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td {line-height: 100%;}
+    </style>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: ${EMAIL_COLORS.bgSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
+      <tr>
+        <td>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="border-collapse: collapse;" bgcolor="${EMAIL_COLORS.bgSecondary}">
+        <tr>
+          <td align="center" style="padding: 40px 20px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; border-collapse: separate; border-spacing: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);" bgcolor="#ffffff">
+              <tr>
+                <td>
+                  <!-- Header -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
+                    <tr>
+                      <td align="center" bgcolor="${EMAIL_COLORS.primary}" style="background: linear-gradient(135deg, ${EMAIL_COLORS.primary} 0%, ${EMAIL_COLORS.primaryLight} 100%); background-color: ${EMAIL_COLORS.primary}; padding: 40px 24px; text-align: center; border-radius: 12px 12px 0 0;">
+                        <h1 style="font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 28px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2;">Account Deactivated</h1>
+                        <p style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; color: #ffffff; margin: 0; opacity: 0.95;">Your account has been deactivated</p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Main Content -->
+                  <tr>
+                    <td bgcolor="#ffffff" style="background-color: #ffffff; padding: 40px 32px;">
+                      <h2 style="color: ${EMAIL_COLORS.textPrimary}; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 22px; font-weight: 600; margin-bottom: 16px;">Hello ${userName},</h2>
+
+                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 16px; margin-bottom: 24px;">Your <b style="color: ${EMAIL_COLORS.textPrimary};">${tenantName}</b> account on Alga PSA has been deactivated. We're sorry to see you go.</p>
+
+                      <!-- What happens next -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
+                        <tr>
+                          <td style="padding: 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 8px; overflow: hidden;">
+                              <tr>
+                                <td bgcolor="#faf8ff" style="background-color: #faf8ff; border-left: 4px solid ${EMAIL_COLORS.primary}; padding: 24px; border-radius: 8px;">
+                                  <h3 style="color: ${EMAIL_COLORS.textPrimary}; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">What happens next:</h3>
+                                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
+                                    <tr>
+                                      <td style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 10px; line-height: 1.6; font-size: 15px;">
+                                        <b style="color: ${EMAIL_COLORS.primary};">1.</b> Your account has been deactivated and <b>you will no longer be charged</b>.
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 10px; line-height: 1.6; font-size: 15px;">
+                                        <b style="color: ${EMAIL_COLORS.primary};">2.</b> All user accounts have been deactivated.
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 10px; line-height: 1.6; font-size: 15px;">
+                                        <b style="color: ${EMAIL_COLORS.primary};">3.</b> Your data will be retained for a grace period before permanent deletion, in case you change your mind.
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px;">
+                                        <b style="color: ${EMAIL_COLORS.primary};">4.</b> A copy of your data has been exported and is available upon request.
+                                      </td>
+                                    </tr>
+                                  </table>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!-- Changed your mind -->
+                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 16px; margin-bottom: 16px;">If you've changed your mind or this was a mistake, please contact our support team at <a href="mailto:${supportEmail}" style="color: ${EMAIL_COLORS.primary}; font-weight: 600;">${supportEmail}</a> as soon as possible and we can restore your account during the grace period.</p>
+
+                      <!-- Divider -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
+                        <tr>
+                          <td style="padding: 24px 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
+                              <tr>
+                                <td style="height: 1px; background-color: ${EMAIL_COLORS.borderLight}; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 15px; margin-bottom: 8px;">Thank you for being an Alga PSA customer. We truly appreciate your business and hope to work with you again in the future.</p>
+
+                      <p style="color: ${EMAIL_COLORS.textSecondary}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; font-size: 15px; margin-top: 20px;">Best regards,<br><b style="color: ${EMAIL_COLORS.textPrimary};">The Alga PSA Team</b></p>
+                    </td>
+                  </tr>
+
+                  <!-- Footer -->
+                  <tr>
+                    <td align="center" bgcolor="${EMAIL_COLORS.bgDark}" style="background-color: ${EMAIL_COLORS.bgDark}; color: ${EMAIL_COLORS.textOnDark}; padding: 32px 24px; text-align: center; font-size: 14px; line-height: 1.6; border-radius: 0 0 12px 12px;">
+                      <p style="color: ${EMAIL_COLORS.textOnDark}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 8px 0;">This email was sent as part of your account deactivation process.</p>
+                      <p style="color: ${EMAIL_COLORS.textOnDark}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">If you did not request this, please contact support immediately.</p>
+                      <p style="color: ${EMAIL_COLORS.textLight}; font-size: 13px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0;">&copy; ${currentYear} Nine Minds. All rights reserved.</p>
+                    </td>
+                  </tr>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>`;
+
+  const textBody = `
+Account Deactivated
+
+Hello ${userName},
+
+Your "${tenantName}" account on Alga PSA has been deactivated. We're sorry to see you go.
+
+WHAT HAPPENS NEXT:
+
+1. Your account has been deactivated and you will no longer be charged.
+2. All user accounts have been deactivated.
+3. Your data will be retained for a grace period before permanent deletion, in case you change your mind.
+4. A copy of your data has been exported and is available upon request.
+
+If you've changed your mind or this was a mistake, please contact our support team at ${supportEmail} as soon as possible and we can restore your account during the grace period.
+
+Thank you for being an Alga PSA customer. We truly appreciate your business and hope to work with you again in the future.
+
+Best regards,
+The Alga PSA Team
+
+---
+This email was sent as part of your account deactivation process.
+If you did not request this, please contact support immediately.
+
+(c) ${currentYear} Nine Minds. All rights reserved.
+  `.trim();
+
+  return { subject, htmlBody, textBody };
+}
+
+/**
+ * Send account deactivation email to the tenant's registered email address.
+ * Called during the tenant deletion workflow after users have been deactivated.
+ *
+ * Note: The "cancellation request received" email (for user-initiated cancellations)
+ * is sent separately by cancelSubscriptionAction when the user clicks Cancel.
+ * This activity always sends the "account deactivated" email.
+ */
+export async function sendCancellationConfirmationEmail(
+  tenantId: string,
+  tenantName: string,
+): Promise<SendCancellationEmailResult> {
+  const log = logger();
+  log.info('Sending account deactivation email to tenant', { tenantId, tenantName });
+
+  const result: SendCancellationEmailResult = {
+    emailsSent: 0,
+    emailsFailed: 0,
+    errors: [],
+  };
+
+  try {
+    const adminKnex = await getAdminConnection();
+
+    // Get the tenant's registered email address
+    const tenant = await adminKnex('tenants')
+      .select('email', 'client_name')
+      .where({ tenant: tenantId })
+      .first();
+
+    if (!tenant?.email) {
+      log.info('No email address found for tenant', { tenantId });
+      return result;
+    }
+
+    log.info('Sending cancellation email to tenant email', { tenantId, email: tenant.email });
+
+    const { emailService: emailServicePromise } = await import('../services/email-service.js');
+    const emailServiceInstance = await emailServicePromise;
+
+    const recipientName = tenant.client_name || tenantName;
+    const { subject, htmlBody, textBody } = createDeactivationEmailContent(tenantName, recipientName);
+
+    try {
+      await emailServiceInstance.sendEmail({
+        to: tenant.email,
+        from: 'info@nineminds.com',
+        subject,
+        html: htmlBody,
+        text: textBody,
+        metadata: {
+          tenantId,
+          emailType: 'account_deactivated',
+          workflowType: 'tenant_deletion',
+        },
+      });
+
+      result.emailsSent++;
+      log.info('Deactivation email sent', { email: tenant.email });
+    } catch (emailError) {
+      result.emailsFailed++;
+      const errorMsg = emailError instanceof Error ? emailError.message : 'Unknown error';
+      result.errors!.push(`${tenant.email}: ${errorMsg}`);
+      log.warn('Failed to send cancellation email', { email: tenant.email, error: errorMsg });
+    }
+
+    return result;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    log.error('Failed to send cancellation confirmation email', { error: errorMsg, tenantId });
+    // Don't throw - email failure shouldn't block deletion workflow
+    result.errors!.push(errorMsg);
+    return result;
   }
 }

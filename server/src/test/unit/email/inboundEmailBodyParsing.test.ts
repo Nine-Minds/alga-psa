@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseEmailReplyBody } from '@alga-psa/shared/workflow/actions/emailWorkflowActions';
+import { parseEmailReplyBody } from '@alga-psa/workflows/actions/emailWorkflowActions';
 
 describe('Inbound email body parsing', () => {
   it('Body parsing: sanitizer returns non-empty text for plain-text emails', async () => {
