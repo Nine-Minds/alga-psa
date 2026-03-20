@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const withTransaction = vi.fn();
 const repositoryAddContractLine = vi.fn();
+const cloneTemplateContractLine = vi.fn();
 
 class MockBaseService<T> {
   constructor(_config: unknown) {}
@@ -11,6 +12,10 @@ class MockBaseService<T> {
   }
 
   addUpdateAuditFields(data: Record<string, unknown>) {
+    return { ...data };
+  }
+
+  addCreateAuditFields(data: Record<string, unknown>) {
     return { ...data };
   }
 }
@@ -37,7 +42,7 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
 }));
 
 vi.mock('@alga-psa/billing/lib/billing/utils/templateClone', () => ({
-  cloneTemplateContractLine: vi.fn(),
+  cloneTemplateContractLine: (...args: any[]) => cloneTemplateContractLine(...args),
 }));
 
 vi.mock('server/src/lib/repositories/contractLineRepository', () => ({
@@ -164,8 +169,9 @@ describe('ContractLineService client-owned mutation paths', () => {
     expect(observedTables).not.toContain('client_contract_lines');
   });
 
-  it('rejects overlapping assignment checks from the target client-owned contract instead of client_contract_lines', async () => {
+  it('rejects only duplicate cloned template assignments inside the target client-owned contract', async () => {
     const observedTables: string[] = [];
+    const observedWhereClauses: Array<[string, unknown]> = [];
     const trx = ((table: string) => {
       observedTables.push(table);
 
@@ -174,7 +180,8 @@ describe('ContractLineService client-owned mutation paths', () => {
       }
 
       const builder = {
-        where() {
+        where(column: string, value: unknown) {
+          observedWhereClauses.push([column, value]);
           return builder;
         },
         async first() {
@@ -198,16 +205,119 @@ describe('ContractLineService client-owned mutation paths', () => {
         },
         {
           contract_line_name: 'Managed Support',
+          description: 'Primary recurring support',
           billing_frequency: 'monthly',
           contract_line_type: 'Fixed',
           service_category: 'managed-services',
+          billing_timing: 'arrears',
+          cadence_owner: 'client',
+          custom_rate: 175,
         },
         'client-contract-1',
         { tenant: 'tenant-1', userId: 'user-1' },
         trx,
       ),
-    ).rejects.toThrow('Client already has an active assignment for this plan in the specified period');
+    ).rejects.toThrow('Client contract already has an active cloned line matching this template assignment');
 
     expect(observedTables).toEqual(['contract_lines']);
+    expect(observedWhereClauses).toContainEqual(['contract_id', 'client-contract-1']);
+    expect(observedWhereClauses).toContainEqual(['contract_line_name', 'Managed Support']);
+    expect(observedWhereClauses).toContainEqual(['description', 'Primary recurring support']);
+    expect(observedWhereClauses).toContainEqual(['billing_timing', 'arrears']);
+    expect(observedWhereClauses).toContainEqual(['cadence_owner', 'client']);
+    expect(observedWhereClauses).toContainEqual(['custom_rate', 175]);
+  });
+
+  it('T113: assignPlanToClient does not backfill template_contract_id on client_contracts when provenance is missing', async () => {
+    const knex = { scope: 'root-knex' };
+    const observedTables: string[] = [];
+    const clientContractsUpdate = vi.fn();
+
+    const trx = ((table: string) => {
+      observedTables.push(table);
+
+      if (table === 'client_contracts') {
+        const builder = {
+          where() {
+            return builder;
+          },
+          async first() {
+            return {
+              template_contract_id: null,
+              contract_id: 'live-contract-1',
+            };
+          },
+          update: clientContractsUpdate,
+        };
+        return builder;
+      }
+
+      if (table === 'contract_lines') {
+        const builder = {
+          insert() {
+            return builder;
+          },
+          async returning() {
+            return [{ contract_line_id: 'new-line-1', contract_id: 'live-contract-1' }];
+          },
+        };
+        return builder;
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    }) as any;
+
+    withTransaction.mockImplementation(async (receivedKnex, callback) => {
+      expect(receivedKnex).toBe(knex);
+      return callback(trx);
+    });
+
+    const { ContractLineService } = await import('server/src/lib/api/services/ContractLineService');
+    const service = new ContractLineService();
+    const context = { tenant: 'tenant-1', userId: 'user-1' } as any;
+
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
+    vi.spyOn(service as any, 'getExistingPlan').mockResolvedValue({
+      contract_line_id: 'template-line-1',
+      contract_line_name: 'Template Line',
+      description: 'Template description',
+      billing_frequency: 'monthly',
+      contract_line_type: 'Fixed',
+      service_category: 'managed-services',
+      billing_timing: 'arrears',
+      cadence_owner: 'client',
+      custom_rate: 175,
+      display_order: 0,
+      enable_proration: false,
+      enable_overtime: false,
+      overtime_rate: null,
+      overtime_threshold: null,
+      enable_after_hours_rate: false,
+      after_hours_multiplier: null,
+    });
+    vi.spyOn(service as any, 'validateClientExists').mockResolvedValue(undefined);
+    vi.spyOn(service as any, 'validateNoOverlappingAssignments').mockResolvedValue(undefined);
+    vi.spyOn(service as any, 'generateClientPlanLinks').mockReturnValue([]);
+
+    await service.assignPlanToClient(
+      {
+        client_contract_id: 'client-contract-1',
+        client_id: 'client-1',
+        contract_line_id: 'template-line-1',
+        start_date: '2026-03-20',
+        end_date: null,
+        custom_rate: null,
+      } as any,
+      context,
+    );
+
+    expect(observedTables).toContain('client_contracts');
+    expect(clientContractsUpdate).not.toHaveBeenCalled();
+    expect(cloneTemplateContractLine).toHaveBeenCalledWith(
+      trx,
+      expect.objectContaining({
+        templateContractId: 'live-contract-1',
+      }),
+    );
   });
 });

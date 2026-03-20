@@ -83,7 +83,7 @@
   { "id": "F082", "description": "Migrate client-portal billing/account/services reads from `client_contract_lines` to the post-drop contract structure.", "implemented": true },
   { "id": "F083", "description": "Remove template-contract fallback joins from live billing computations so instantiated contract lookups depend on canonical `client_contracts.contract_id` only.", "implemented": true },
   { "id": "F084", "description": "Split contract detail and template detail assignment loading so template IDs are not accepted in instantiated contract-assignment queries.", "implemented": true },
-  { "id": "F085", "description": "Stop `ContractLineService` from mutating `client_contracts.template_contract_id` as a runtime fallback side effect.", "implemented": false },
+  { "id": "F085", "description": "Stop `ContractLineService` from mutating `client_contracts.template_contract_id` as a runtime fallback side effect.", "implemented": true },
   { "id": "F086", "description": "Extend client-contract-line post-drop static hygiene guards to include `packages/client-portal` and `packages/clients` test coverage.", "implemented": false },
   { "id": "F087", "description": "Centralize paginated recurring due-work response types in `@alga-psa/types` and consume the shared contracts across billing actions and UI.", "implemented": false },
   { "id": "F088", "description": "Decide and implement final `billingCycleId` semantics on recurring due-work rows (remove from canonical contract or mark as explicit legacy display-only metadata).", "implemented": false }

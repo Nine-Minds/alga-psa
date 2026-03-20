@@ -245,6 +245,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - Contract assignment reads in `contractActions.ts` still accepted template IDs on instantiated query paths (`getContractAssignments(...)` and assignment counting in `getContractSummary(...)`) via `orWhere template_contract_id`, which blurred template-detail and instantiated-detail responsibilities post-drop.
 - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_NAME=server DB_NAME_SERVER=server DB_USER_SERVER=app_user DB_USER_ADMIN=postgres DB_PASSWORD_SERVER=postpass123 DB_PASSWORD_ADMIN=postpass123 pnpm exec vitest run --coverage.enabled=false src/test/integration/contractAssignmentLookup.postDrop.integration.test.ts` (from `server/`; passed)
 - Completed `F084` and `T112` by splitting instantiated assignment loading from template detail loading: assignment readers now resolve only by `client_contracts.contract_id`, while template detail remains available through the template-aware summary path (`contract_templates` + `contract_template_lines`) without leaking template IDs into instantiated assignment queries.
+- `ContractLineService.assignPlanToClient(...)` still executed a runtime side-effect write that backfilled `client_contracts.template_contract_id` whenever the field was null, even though template provenance is now optional metadata and not a live assignment requirement.
+- `pnpm exec vitest run --coverage.enabled=false src/test/unit/api/contractLineService.clientOwnedMutation.test.ts` (from `server/`; passed)
+- Completed `F085` and `T113` by removing `template_contract_id` backfill writes from `ContractLineService` assignment flow and adding focused unit coverage that assignment cloning still works while proving no `client_contracts` mutation occurs when template provenance is absent.
 
 ## Open Questions
 

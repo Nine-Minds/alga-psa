@@ -919,17 +919,6 @@ export class ContractLineService extends BaseService<IContractLine> {
         if (clientContract) {
           targetContractId = clientContract.contract_id;
           templateContractId = clientContract.template_contract_id ?? clientContract.contract_id ?? null;
-
-          if (!clientContract.template_contract_id && clientContract.contract_id) {
-            await trx('client_contracts')
-              .where('tenant', context.tenant)
-              .where('client_contract_id', data.client_contract_id)
-              .update({
-                template_contract_id: clientContract.contract_id,
-                updated_at: trx.fn.now(),
-                updated_by: context.userId
-              });
-          }
         }
       }
 
@@ -937,9 +926,9 @@ export class ContractLineService extends BaseService<IContractLine> {
         throw new Error('Client contract not found or missing contract_id');
       }
 
-      // Per-line lifecycle now lives on the cloned contract_line inside the
-      // client-owned contract, so overlap validation is scoped to the target
-      // client contract rather than the removed client_contract_lines table.
+      // The client contract owns the live cloned line. Reject only true duplicate
+      // clones inside that target contract rather than colliding on the removed
+      // client_contract_lines assignment rows.
       await this.validateNoOverlappingAssignments(
         data,
         templateLine,
@@ -1850,18 +1839,27 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
+    const templateRecurringStorage = normalizeTemplateRecurringStorage({
+      billing_timing: templateLine.billing_timing,
+      cadence_owner: templateLine.cadence_owner,
+    });
+    const clonedCustomRate = data.custom_rate ?? templateLine.custom_rate ?? null;
     const overlapping = await trx('contract_lines')
       .where('contract_id', targetContractId)
       .where('tenant', context.tenant)
       .where('is_active', true)
       .where('contract_line_name', templateLine.contract_line_name)
+      .where('description', templateLine.description ?? null)
       .where('billing_frequency', templateLine.billing_frequency)
       .where('contract_line_type', templateLine.contract_line_type)
       .where('service_category', templateLine.service_category ?? data.service_category ?? null)
+      .where('billing_timing', templateRecurringStorage.billing_timing)
+      .where('cadence_owner', templateRecurringStorage.cadence_owner)
+      .where('custom_rate', clonedCustomRate)
       .first();
     
     if (overlapping) {
-      throw new Error('Client already has an active assignment for this plan in the specified period');
+      throw new Error('Client contract already has an active cloned line matching this template assignment');
     }
   }
 
