@@ -31,6 +31,7 @@ import {
   updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
 } from '../repositories/contractLineRepository';
+import { materializeContractCadenceServicePeriodsForContractLine } from './contractCadenceServicePeriodMaterialization';
 
 
 
@@ -190,7 +191,14 @@ export const addContractLine = withAuth(async (
   }
 
   return knex.transaction((trx: Knex.Transaction) =>
-    repoAddContractLine(trx, tenant, contractId, contractLineId, customRate)
+    repoAddContractLine(trx, tenant, contractId, contractLineId, customRate).then(async (mapping) => {
+      await materializeContractCadenceServicePeriodsForContractLine(trx, {
+        tenant,
+        contractLineId: mapping.contract_line_id,
+        sourceRunPrefix: 'contract_add_line',
+      });
+      return mapping;
+    })
   );
 });
 
@@ -219,7 +227,15 @@ export const updateContractLineAssociation = withAuth(async (
     return permissionError('Permission denied: Cannot modify contract lines');
   }
 
-  return repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
+  const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
+  await knex.transaction(async (trx) => {
+    await materializeContractCadenceServicePeriodsForContractLine(trx, {
+      tenant,
+      contractLineId,
+      sourceRunPrefix: 'contract_line_association_update',
+    });
+  });
+  return updated;
 });
 
 export const updateContractLineRate = withAuth(async (
@@ -239,6 +255,11 @@ export const updateContractLineRate = withAuth(async (
 
   await knex.transaction(async (trx) => {
     await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming);
+    await materializeContractCadenceServicePeriodsForContractLine(trx, {
+      tenant,
+      contractLineId,
+      sourceRunPrefix: 'contract_line_rate_update',
+    });
   });
 });
 
@@ -477,9 +498,7 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
     }
 
     const assignmentsRaw = await knex('client_contracts')
-      .where(function whereContractOrTemplate(this: any) {
-        this.where({ contract_id: contractId }).orWhere({ template_contract_id: contractId });
-      })
+      .where({ contract_id: contractId })
       .andWhere({ tenant })
       .select(assignmentColumns);
 
@@ -599,10 +618,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       .leftJoin('default_billing_settings as dbs', function joinDefaults() {
         this.on('cc.tenant', '=', 'dbs.tenant');
       })
-      .where(function whereContractOrTemplate(this: any) {
-        this.where({ 'cc.contract_id': contractId })
-          .orWhere({ 'cc.template_contract_id': contractId });
-      })
+      .where({ 'cc.contract_id': contractId })
       .andWhere({ 'cc.tenant': tenant })
       .select(selection)
       .orderBy('cc.start_date', 'asc');

@@ -242,6 +242,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_NAME=server DB_NAME_SERVER=server DB_USER_SERVER=app_user DB_USER_ADMIN=postgres DB_PASSWORD_SERVER=postpass123 DB_PASSWORD_ADMIN=postpass123 pnpm exec vitest run --coverage.enabled=false src/test/integration/bucketUsageIntegration.test.ts` (from `server/`; skipped by suite guards in this environment)
 - `pnpm exec vitest run --coverage.enabled=false src/test/unit/bucketUsageService.test.ts` (from `server/`; skipped by suite guards in this environment)
 - Completed `F083` and `T111` by removing template fallback joins from live billing computation paths (`billingEngine.ts` and `bucketUsageService.ts`) and adding DB-backed integration proof that billing-engine SQL uses canonical `cc.contract_id = c.contract_id` joins without template fallback expressions.
+- Contract assignment reads in `contractActions.ts` still accepted template IDs on instantiated query paths (`getContractAssignments(...)` and assignment counting in `getContractSummary(...)`) via `orWhere template_contract_id`, which blurred template-detail and instantiated-detail responsibilities post-drop.
+- `DB_HOST=127.0.0.1 DB_PORT=57433 DB_NAME=server DB_NAME_SERVER=server DB_USER_SERVER=app_user DB_USER_ADMIN=postgres DB_PASSWORD_SERVER=postpass123 DB_PASSWORD_ADMIN=postpass123 pnpm exec vitest run --coverage.enabled=false src/test/integration/contractAssignmentLookup.postDrop.integration.test.ts` (from `server/`; passed)
+- Completed `F084` and `T112` by splitting instantiated assignment loading from template detail loading: assignment readers now resolve only by `client_contracts.contract_id`, while template detail remains available through the template-aware summary path (`contract_templates` + `contract_template_lines`) without leaking template IDs into instantiated assignment queries.
 
 ## Open Questions
 
