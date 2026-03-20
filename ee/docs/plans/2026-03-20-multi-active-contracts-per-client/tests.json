@@ -250,7 +250,7 @@
   {
     "id": "T030",
     "description": "Assignment detail dialogs, line counts, and line names derive from the selected `client_contract_id` only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]

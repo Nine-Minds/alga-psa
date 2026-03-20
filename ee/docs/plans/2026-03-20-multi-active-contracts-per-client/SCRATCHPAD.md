@@ -102,6 +102,8 @@
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
 - 2026-03-20: Client contract-line mutation-scope wiring test run
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/multiActiveContracts.clientContractLineMutationScope.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
+- 2026-03-20: Assignment detail scope wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.assignmentDetails.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/multiActiveContracts.clientContractLineMutationScope.wiring.test.ts`
 
 ## Implementation Log
 
@@ -124,6 +126,10 @@
 - 2026-03-20: Made contract-line mutation scope explicit by requiring assignment-scoped synthetic line identity and failing with an explicit ambiguity error when multiple active assignments share the same contract header.
 - 2026-03-20: Added explicit assignment selection context to the clients Contract Lines UI and plumbed selected `client_contract_id` into add-line payloads.
 - 2026-03-20: Wired `ClientContractAssignment` mutation callbacks into `BillingConfiguration` (`onAssignmentsChanged`) so assignment create/edit/deactivate refreshes line/overlap data immediately instead of leaving stale assignment-scoped views.
+- 2026-03-20: Scoped client assignment detail metadata to the selected assignment in `ClientContract.getDetailedClientContract(...)`:
+  - contract line names/count now come from active `client_contract_lines` rows filtered by `client_contract_id`
+  - removed contract-header-wide `contract_lines` lookup that collapsed sibling active assignments sharing a `contract_id`
+- 2026-03-20: Added `T030` static wiring coverage (`multiActiveContracts.assignmentDetails.wiring.test.ts`) asserting assignment-detail data is sourced by `client_contract_id` and edit dialog consumes selected-assignment line names.
 
 ## Links / References
 

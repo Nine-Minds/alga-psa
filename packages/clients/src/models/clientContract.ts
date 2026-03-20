@@ -483,12 +483,20 @@ const ClientContract = {
 
       const normalized = normalizeClientContract(clientContract) as any;
 
-      const contractLines = await db('contract_lines')
-        .where({ contract_id: normalized.contract_id, tenant })
-        .select('contract_line_name');
+      const assignmentContractLines = await db('client_contract_lines as ccl')
+        .join('contract_lines as cl', function joinContractLines() {
+          this.on('ccl.contract_line_id', '=', 'cl.contract_line_id').andOn('ccl.tenant', '=', 'cl.tenant');
+        })
+        .where({
+          'ccl.client_contract_id': clientContractId,
+          'ccl.tenant': tenant,
+          'ccl.is_active': true,
+        })
+        .distinct('cl.contract_line_id', 'cl.contract_line_name')
+        .select('cl.contract_line_name');
 
-      normalized.contract_line_names = contractLines.map((line) => line.contract_line_name);
-      normalized.contract_line_count = contractLines.length;
+      normalized.contract_line_names = assignmentContractLines.map((line) => line.contract_line_name);
+      normalized.contract_line_count = assignmentContractLines.length;
 
       return normalized;
     } catch (error) {

@@ -147,7 +147,7 @@
   {
     "id": "F030",
     "description": "Fix client-assignment detail dialogs, line counts, and line names so they derive from the selected `client_contract_id` rather than collapsing all rows with the same `contract_id`.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F031",
