@@ -258,7 +258,7 @@
   {
     "id": "T031",
     "description": "Disambiguation help/copy no longer promises a hidden most-recent-assignment fallback.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "T032",
     "description": "Audit coverage or focused tests prove no remaining targeted `packages/clients` UI flow relies on `contract_id` as the unique active assignment identity.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]

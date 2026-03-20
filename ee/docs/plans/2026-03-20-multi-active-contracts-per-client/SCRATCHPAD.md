@@ -104,6 +104,10 @@
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/multiActiveContracts.clientContractLineMutationScope.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
 - 2026-03-20: Assignment detail scope wiring test run
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.assignmentDetails.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/multiActiveContracts.clientContractLineMutationScope.wiring.test.ts`
+- 2026-03-20: Disambiguation-copy fallback removal wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.disambiguationCopy.wiring.test.ts tests/multiActiveContracts.assignmentDetails.wiring.test.ts`
+- 2026-03-20: Clients UI identity audit wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.clientsUiIdentityAudit.wiring.test.ts tests/multiActiveContracts.disambiguationCopy.wiring.test.ts tests/multiActiveContracts.assignmentDetails.wiring.test.ts`
 
 ## Implementation Log
 
@@ -130,6 +134,10 @@
   - contract line names/count now come from active `client_contract_lines` rows filtered by `client_contract_id`
   - removed contract-header-wide `contract_lines` lookup that collapsed sibling active assignments sharing a `contract_id`
 - 2026-03-20: Added `T030` static wiring coverage (`multiActiveContracts.assignmentDetails.wiring.test.ts`) asserting assignment-detail data is sourced by `client_contract_id` and edit dialog consumes selected-assignment line names.
+- 2026-03-20: Removed disambiguation guide wording that implied hidden fallback selection (for example “most recently created contract line” and implicit system default picks) and replaced with explicit ambiguity-error/user-choice guidance.
+- 2026-03-20: Added `T031` static wiring coverage (`multiActiveContracts.disambiguationCopy.wiring.test.ts`) to prevent fallback copy regressions.
+- 2026-03-20: Audited targeted `packages/clients` UI identity surfaces and removed remaining ambiguous assignment picker labeling in `ContractLines` by including explicit assignment identity (`client_contract_id` prefix) in option labels.
+- 2026-03-20: Added `T032` focused wiring coverage (`multiActiveContracts.clientsUiIdentityAudit.wiring.test.ts`) asserting assignment picker/state/overlap matrix flows remain keyed to assignment-scoped identities instead of `contract_id` uniqueness assumptions.
 
 ## Links / References
 

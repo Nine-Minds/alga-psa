@@ -152,12 +152,12 @@
   {
     "id": "F031",
     "description": "Remove disambiguation copy and most-recent-assignment fallback behavior that implies the system may silently choose one active contract on the user's behalf.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F032",
     "description": "Audit remaining `packages/clients` UI flows for `contract_id`-keyed assumptions and convert them to `client_contract_id` semantics or explicit ambiguity failures.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F033",

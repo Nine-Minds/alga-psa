@@ -140,7 +140,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                             onValueChange={(value) => onSelectedClientContractChange(value || null)}
                             options={assignments.map((assignment) => ({
                                 value: assignment.client_contract_id!,
-                                label: `${assignment.contract_id} (${assignment.start_date} → ${assignment.end_date ?? 'ongoing'})`,
+                                label: `Assignment ${assignment.client_contract_id?.slice(0, 8)} • Contract ${assignment.contract_id} (${assignment.start_date} → ${assignment.end_date ?? 'ongoing'})`,
                             }))}
                             placeholder="Select assignment..."
                         />
