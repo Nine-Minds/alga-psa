@@ -92,7 +92,7 @@ describe('client billing bucket period actions', () => {
         if (table === 'contacts') {
           return contactQuery;
         }
-        if (table === 'client_contract_lines as ccl') {
+        if (table === 'client_contracts as cc') {
           return detailedBucketQuery;
         }
         throw new Error(`Unexpected table: ${table}`);
