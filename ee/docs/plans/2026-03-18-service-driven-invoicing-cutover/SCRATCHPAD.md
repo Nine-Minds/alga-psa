@@ -9,6 +9,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Decisions
 
+- (2026-03-20) Keep `selectClientCadenceRecurringRunTargets(...)` pagination metadata candidate-driven (`total`, `totalPages`) from the due-work reader response, even when client-cadence filtering reduces the returned run target count.
 - (2026-03-20) Cadence-source badge formatting in `AutomaticInvoices` must be exhaustive and render explicit unknown-state copy for unexpected values rather than coercing unknowns to `Client schedule`.
 - (2026-03-20) Derive `AutomaticInvoices` contract context exclusively from candidate members and treat candidate-level contract fields as non-authoritative display metadata.
 - (2026-03-20) For grouped recurring invoice candidates (`memberCount > 1`), disable `AutomaticInvoices` preview entirely and require generation from the grouped candidate path so the UI never silently previews only the first member.
@@ -24,6 +25,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Discoveries / Constraints
 
+- (2026-03-20) Recurring run target mapping was already candidate-shaped, but `selectClientCadenceRecurringRunTargets(...)` still leaked target-count pagination side effects by recomputing totals from filtered targets.
 - (2026-03-20) Ready and history cadence badges were still using a binary `contract_anniversary`/`client_schedule` branch that mislabeled unknown values as `Client schedule`; this required an explicit unknown fallback formatter.
 - (2026-03-20) Candidate-level `contractName` can hide partial member metadata loss; aggregating names from members and warning on incomplete member identity avoids collapsing mixed-validity candidates into `No contract context`.
 - (2026-03-20) `AutomaticInvoices` preview eligibility was keyed only to "one selected candidate", which still allowed grouped candidates and silently previewed `members[0]`; gating preview by single-member candidates closes that mismatch and keeps grouped candidates candidate-first.
@@ -92,6 +94,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-20) `pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false` (from `server/`; passed after adding grouped-preview gating coverage for `T097`/`T098`)
 - (2026-03-20) `pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false` (from `server/`; passed after member-derived contract metadata warnings coverage for `T099`/`T100`)
 - (2026-03-20) `pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false` (from `server/`; passed after exhaustive cadence-source fallback coverage for `T101`)
+- (2026-03-20) `pnpm exec vitest run src/test/unit/billing/recurringBillingRunActions.test.ts --coverage.enabled=false` (from `server/`; passed after locking candidate-first target cardinality and candidate-page total semantics for `T102`/`T103`)
 - (2026-03-18) `rg -n "billing_cycle_id" packages/billing/src/actions packages/billing/src/components server/src/lib/api packages/client-portal/src/actions -g '!**/*.test.*'`
 - (2026-03-18) `rg -n "recurring_service_periods" packages/billing/src/actions packages/client-portal/src/actions server/src/lib/api -g '!**/*.test.*'`
 - (2026-03-18) `sed -n '1,260p' packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`
@@ -175,6 +178,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Completed Checkpoints
 
+- (2026-03-20) Completed `F076` and `T102`/`T103` by preserving one-target-per-candidate mapping for client cadence candidates and switching `selectClientCadenceRecurringRunTargets(...)` to return paging totals from the due-work candidate response instead of recomputing totals from filtered target count.
 - (2026-03-20) Completed `F075` and `T101` by introducing exhaustive cadence-source badge formatting for `AutomaticInvoices` ready/history rows and rendering explicit unknown-state copy (`Unknown cadence source (...)`) instead of defaulting unexpected cadence-source values to `Client schedule`.
 - (2026-03-20) Completed `F074` and `T099`/`T100` by deriving contract and contract-line display from candidate members, preserving visible member-derived contract context even when metadata is partially missing, and surfacing explicit `Contract metadata missing` warning copy keyed to the affected candidate.
 - (2026-03-20) Completed `F073` and `T097`/`T098` by restricting `AutomaticInvoices` preview to single-member candidates, rendering explicit grouped-preview-unavailable copy when a grouped candidate is selected, and adding UI tests that lock both the disabled grouped behavior and the preserved single-member preview selector-input path.

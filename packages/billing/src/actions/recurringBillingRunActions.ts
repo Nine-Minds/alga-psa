@@ -16,7 +16,7 @@ import {
   type FetchRecurringDueWorkOptions,
 } from './billingAndTax';
 import {
-  mapClientCadenceDueWorkRowsToRecurringRunTargets,
+  mapClientCadenceInvoiceCandidatesToRecurringRunTargets,
   type ClientCadenceRecurringRunTarget,
   type RecurringBillingRunInvoiceFailure,
   type RecurringBillingRunResult,
@@ -64,14 +64,16 @@ export async function selectClientCadenceRecurringRunTargets(
   totalPages: number;
 }> {
   const recurringDueWork = await getAvailableRecurringDueWork(options);
-  const targets = mapClientCadenceDueWorkRowsToRecurringRunTargets(recurringDueWork.rows);
+  const targets = mapClientCadenceInvoiceCandidatesToRecurringRunTargets(
+    recurringDueWork.invoiceCandidates,
+  );
 
   return {
     targets,
-    total: targets.length,
+    total: recurringDueWork.total,
     page: recurringDueWork.page,
     pageSize: recurringDueWork.pageSize,
-    totalPages: targets.length === 0 ? 0 : Math.ceil(targets.length / recurringDueWork.pageSize),
+    totalPages: recurringDueWork.totalPages,
   };
 }
 

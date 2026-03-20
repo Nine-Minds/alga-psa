@@ -4,6 +4,7 @@ import {
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import { buildRecurringDueWorkRow } from '@alga-psa/shared/billingClients/recurringDueWork';
+import { mapClientCadenceInvoiceCandidatesToRecurringRunTargets } from '../../../../../packages/billing/src/actions/recurringBillingRunActions.shared';
 
 const mocks = vi.hoisted(() => ({
   getCurrentUserAsync: vi.fn(),
@@ -97,7 +98,7 @@ describe('recurring billing run actions', () => {
     mocks.generateInvoiceForSelectionInput.mockResolvedValue({ invoice_id: 'invoice-1' });
     mocks.publishWorkflowEvent.mockResolvedValue(undefined);
     mocks.getAvailableRecurringDueWork.mockResolvedValue({
-      rows: [],
+      invoiceCandidates: [],
       materializationGaps: [],
       total: 0,
       page: 1,
@@ -291,7 +292,77 @@ describe('recurring billing run actions', () => {
     });
 
     mocks.getAvailableRecurringDueWork.mockResolvedValue({
-      rows: [firstRow, secondRow, skippedRow],
+      invoiceCandidates: [
+        {
+          candidateKey: 'candidate-1',
+          clientId: 'client-1',
+          clientName: 'Acme',
+          executionWindow: firstRow.executionWindow,
+          selectorInput: firstRow.selectorInput,
+          windowStart: '2025-02-10',
+          windowEnd: '2025-03-10',
+          windowLabel: '2025-02-10 to 2025-03-10',
+          servicePeriodStart: '2025-02-10',
+          servicePeriodEnd: '2025-03-10',
+          servicePeriodLabel: '2025-02-10 to 2025-03-10',
+          isEarly: false,
+          cadenceOwners: ['client'],
+          cadenceSources: ['client_schedule'],
+          contractId: null,
+          contractName: null,
+          splitReasons: [],
+          memberCount: 1,
+          canGenerate: true,
+          blockedReason: null,
+          members: [firstRow],
+        },
+        {
+          candidateKey: 'candidate-2',
+          clientId: 'client-1',
+          clientName: 'Acme',
+          executionWindow: secondRow.executionWindow,
+          selectorInput: secondRow.selectorInput,
+          windowStart: '2025-01-10',
+          windowEnd: '2025-02-10',
+          windowLabel: '2025-01-10 to 2025-02-10',
+          servicePeriodStart: '2025-01-10',
+          servicePeriodEnd: '2025-02-10',
+          servicePeriodLabel: '2025-01-10 to 2025-02-10',
+          isEarly: false,
+          cadenceOwners: ['client'],
+          cadenceSources: ['client_schedule'],
+          contractId: null,
+          contractName: null,
+          splitReasons: [],
+          memberCount: 1,
+          canGenerate: true,
+          blockedReason: null,
+          members: [secondRow],
+        },
+        {
+          candidateKey: 'candidate-3',
+          clientId: 'client-1',
+          clientName: 'Acme',
+          executionWindow: skippedRow.executionWindow,
+          selectorInput: skippedRow.selectorInput,
+          windowStart: '2025-03-10',
+          windowEnd: '2025-04-10',
+          windowLabel: '2025-03-10 to 2025-04-10',
+          servicePeriodStart: '2025-03-10',
+          servicePeriodEnd: '2025-04-10',
+          servicePeriodLabel: '2025-03-10 to 2025-04-10',
+          isEarly: true,
+          cadenceOwners: ['client'],
+          cadenceSources: ['client_schedule'],
+          contractId: null,
+          contractName: null,
+          splitReasons: [],
+          memberCount: 1,
+          canGenerate: false,
+          blockedReason: 'Blocked',
+          members: [skippedRow],
+        },
+      ],
       materializationGaps: [],
       total: 2,
       page: 1,
@@ -334,5 +405,181 @@ describe('recurring billing run actions', () => {
     expect(result.targets[1]?.selectorInput.executionWindow.identityKey).toBe(
       'client_cadence_window:client:client-1:schedule-2:period-2:2025-02-10:2025-03-10',
     );
+  });
+
+  it('T102: recurring run target mapper yields exactly one target per client-cadence candidate', () => {
+    const firstMember = buildRecurringDueWorkRow({
+      selectorInput: buildClientCadenceDueSelectionInput({
+        clientId: 'client-1',
+        scheduleKey: 'schedule-grouped',
+        periodKey: 'period-grouped-a',
+        windowStart: '2025-02-01',
+        windowEnd: '2025-03-01',
+      }),
+      cadenceSource: 'client_schedule',
+      servicePeriodStart: '2025-02-01',
+      servicePeriodEnd: '2025-03-01',
+      clientName: 'Acme',
+      canGenerate: true,
+      asOf: '2025-03-10',
+      scheduleKey: 'schedule-grouped',
+      periodKey: 'period-grouped-a',
+    });
+    const groupedSelectorInput = buildClientCadenceDueSelectionInput({
+      clientId: 'client-1',
+      scheduleKey: 'schedule-grouped',
+      periodKey: 'period-grouped',
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+    });
+
+    const targets = mapClientCadenceInvoiceCandidatesToRecurringRunTargets([
+      {
+        candidateKey: 'candidate-grouped-client',
+        clientId: 'client-1',
+        clientName: 'Acme',
+        executionWindow: groupedSelectorInput.executionWindow,
+        selectorInput: groupedSelectorInput,
+        windowStart: '2025-02-01',
+        windowEnd: '2025-03-01',
+        windowLabel: '2025-02-01 to 2025-03-01',
+        servicePeriodStart: '2025-02-01',
+        servicePeriodEnd: '2025-03-01',
+        servicePeriodLabel: '2025-02-01 to 2025-03-01',
+        isEarly: false,
+        cadenceOwners: ['client'],
+        cadenceSources: ['client_schedule'],
+        contractId: null,
+        contractName: null,
+        splitReasons: [],
+        memberCount: 2,
+        canGenerate: true,
+        blockedReason: null,
+        members: [
+          firstMember,
+          {
+            ...firstMember,
+            executionIdentityKey: `${firstMember.executionIdentityKey}:member-2`,
+          },
+        ],
+      },
+    ]);
+
+    expect(targets).toHaveLength(1);
+    expect(targets[0]).toMatchObject({
+      clientId: 'client-1',
+      clientName: 'Acme',
+      selectorInput: groupedSelectorInput,
+      executionWindow: groupedSelectorInput.executionWindow,
+    });
+  });
+
+  it('T103: selectClientCadenceRecurringRunTargets keeps candidate pagination totals independent from filtered target count', async () => {
+    const clientRow = buildRecurringDueWorkRow({
+      selectorInput: buildClientCadenceDueSelectionInput({
+        clientId: 'client-1',
+        scheduleKey: 'schedule-eligible',
+        periodKey: 'period-eligible',
+        windowStart: '2025-04-01',
+        windowEnd: '2025-05-01',
+      }),
+      cadenceSource: 'client_schedule',
+      servicePeriodStart: '2025-04-01',
+      servicePeriodEnd: '2025-05-01',
+      clientName: 'Acme',
+      canGenerate: true,
+      asOf: '2025-05-02',
+      scheduleKey: 'schedule-eligible',
+      periodKey: 'period-eligible',
+    });
+    const contractRow = buildRecurringDueWorkRow({
+      selectorInput: buildContractCadenceDueSelectionInput({
+        clientId: 'client-1',
+        contractId: 'contract-1',
+        contractLineId: 'line-1',
+        windowStart: '2025-04-08',
+        windowEnd: '2025-05-08',
+      }),
+      cadenceSource: 'contract_anniversary',
+      servicePeriodStart: '2025-03-08',
+      servicePeriodEnd: '2025-04-08',
+      clientName: 'Acme',
+      canGenerate: true,
+      asOf: '2025-05-02',
+      scheduleKey: 'schedule-contract',
+      periodKey: 'period-contract',
+      contractId: 'contract-1',
+      contractName: 'Annual Support',
+      contractLineId: 'line-1',
+      contractLineName: 'Managed Services',
+    });
+
+    mocks.getAvailableRecurringDueWork.mockResolvedValue({
+      invoiceCandidates: [
+        {
+          candidateKey: 'candidate-client-eligible',
+          clientId: 'client-1',
+          clientName: 'Acme',
+          executionWindow: clientRow.executionWindow,
+          selectorInput: clientRow.selectorInput,
+          windowStart: '2025-04-01',
+          windowEnd: '2025-05-01',
+          windowLabel: '2025-04-01 to 2025-05-01',
+          servicePeriodStart: '2025-04-01',
+          servicePeriodEnd: '2025-05-01',
+          servicePeriodLabel: '2025-04-01 to 2025-05-01',
+          isEarly: false,
+          cadenceOwners: ['client'],
+          cadenceSources: ['client_schedule'],
+          contractId: null,
+          contractName: null,
+          splitReasons: [],
+          memberCount: 1,
+          canGenerate: true,
+          blockedReason: null,
+          members: [clientRow],
+        },
+        {
+          candidateKey: 'candidate-contract-nonclient',
+          clientId: 'client-1',
+          clientName: 'Acme',
+          executionWindow: contractRow.executionWindow,
+          selectorInput: contractRow.selectorInput,
+          windowStart: '2025-04-08',
+          windowEnd: '2025-05-08',
+          windowLabel: '2025-04-08 to 2025-05-08',
+          servicePeriodStart: '2025-03-08',
+          servicePeriodEnd: '2025-04-08',
+          servicePeriodLabel: '2025-03-08 to 2025-04-08',
+          isEarly: false,
+          cadenceOwners: ['contract'],
+          cadenceSources: ['contract_anniversary'],
+          contractId: 'contract-1',
+          contractName: 'Annual Support',
+          splitReasons: [],
+          memberCount: 1,
+          canGenerate: true,
+          blockedReason: null,
+          members: [contractRow],
+        },
+      ],
+      materializationGaps: [],
+      total: 7,
+      page: 2,
+      pageSize: 2,
+      totalPages: 4,
+    });
+
+    const result = await selectClientCadenceRecurringRunTargets({
+      page: 2,
+      pageSize: 2,
+      searchTerm: 'Acme',
+    });
+
+    expect(result.targets).toHaveLength(1);
+    expect(result.total).toBe(7);
+    expect(result.page).toBe(2);
+    expect(result.pageSize).toBe(2);
+    expect(result.totalPages).toBe(4);
   });
 });
