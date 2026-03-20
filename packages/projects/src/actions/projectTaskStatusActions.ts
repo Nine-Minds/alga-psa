@@ -163,18 +163,21 @@ export const copyProjectStatusesToPhase = withAuth(async (
       .returning('*');
 
     // Reassign existing tasks from project-default mappings to the new phase-specific ones
-    const defaultToPhaseMapping = new Map<string, string>();
+    // Group by new phase mapping so we can batch with whereIn, matching removePhaseStatuses style
+    const updatesByReplacement = new Map<string, string[]>();
     for (const defaultMapping of defaultMappings) {
       const phaseMapping = newMappings.find((m) => m.status_id === defaultMapping.status_id);
       if (phaseMapping) {
-        defaultToPhaseMapping.set(defaultMapping.project_status_mapping_id, phaseMapping.project_status_mapping_id);
+        const existing = updatesByReplacement.get(phaseMapping.project_status_mapping_id) || [];
+        existing.push(defaultMapping.project_status_mapping_id);
+        updatesByReplacement.set(phaseMapping.project_status_mapping_id, existing);
       }
     }
 
-    for (const [oldId, newId] of defaultToPhaseMapping) {
+    for (const [newId, oldIds] of updatesByReplacement) {
       await trx('project_tasks')
         .where({ tenant, phase_id: phaseId })
-        .andWhere('project_status_mapping_id', oldId)
+        .whereIn('project_status_mapping_id', oldIds)
         .update({ project_status_mapping_id: newId });
     }
 
