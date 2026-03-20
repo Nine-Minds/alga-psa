@@ -2519,6 +2519,83 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
   expect(normalizeDateValue(historyRow?.invoiceWindowEnd)).toBe(nextPeriodStart);
 }, HOOK_TIMEOUT);
 
+it('T108: recurring due-work assertions validate candidate-level contracts directly without flattening invoiceCandidates members', async () => {
+  setupCommonMocks({ tenantId, userId: 'candidate-contract-assertions-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Candidate Contract Assertions Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Candidate Contract Assertions Service',
+    planName: 'Candidate Contract Assertions Plan',
+    baseRateCents: 20300,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+
+  const materializationPlan = materializeClientCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-20T14:00:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: fixedLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-candidate-contract-assertions',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(materializationPlan.records[0]);
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 10,
+    searchTerm: 'Candidate Contract Assertions Client',
+  });
+
+  const candidate = dueWork.invoiceCandidates.find((invoiceCandidate) =>
+    (invoiceCandidate.clientName ?? '').includes('Candidate Contract Assertions Client')
+    && invoiceCandidate.members.some((member) => (
+      (member.clientName ?? '').includes('Candidate Contract Assertions Client')
+      && normalizeDateValue(member.invoiceWindowStart) === currentPeriodStart
+      && normalizeDateValue(member.invoiceWindowEnd) === nextPeriodStart
+    )),
+  );
+
+  expect(candidate).toBeTruthy();
+  expect(candidate).toMatchObject({
+    memberCount: 1,
+    cadenceOwners: ['client'],
+    cadenceSources: ['client_schedule'],
+    windowStart: currentPeriodStart,
+    windowEnd: nextPeriodStart,
+  });
+  expect(typeof candidate?.canGenerate).toBe('boolean');
+  expect(candidate?.members).toHaveLength(1);
+  expect(candidate?.members[0]).toMatchObject({
+    clientName: 'Candidate Contract Assertions Client',
+    executionWindowKind: 'client_cadence_window',
+    invoiceWindowStart: currentPeriodStart,
+    invoiceWindowEnd: nextPeriodStart,
+  });
+}, HOOK_TIMEOUT);
+
 it('T080: mixed batch generation from AutomaticInvoices discovers and generates both cadence owners from canonical selector input without requiring billing_cycle_id', async () => {
   setupCommonMocks({ tenantId, userId: 'mixed-batch-happy-user', permissionCheck: () => true });
 

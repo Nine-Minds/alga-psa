@@ -225,6 +225,12 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-18) Completed `T086` through `T090` with DB-backed recurring happy-path coverage in `billingInvoiceTiming.integration.test.ts`. The integration suite now proves end-to-end due-work selection, preview, generate, history, mixed-batch generation, contract delete reappearance, and bridged client reverse reappearance, while `billingAndTax.ts` now degrades gracefully when optional client-contract-line tables are absent and normalizes persisted due-work identity keys from live Postgres date values before building selector inputs.
 - (2026-03-18) Completed `T091` through `T096` with the last regression checkpoint. Compatibility client-cadence rows still preview and batch-generate through `AutomaticInvoices`, legacy PO-overage behavior still routes through selector-input identity without changing the operator flow, compatibility preview errors keep their historical invalid/unauthorized shape, `InvoiceService.buildBaseQuery(...)` still selects recurring summary fields for list/detail readers, rerunning service-period backfill stays idempotent once the future horizon exists, and non-recurring manual prepayment invoice creation remains isolated from recurring service-period plumbing.
 
+## Latest Updates (2026-03-20)
+
+- `T108` candidate-level due-work assertions were initially flaky when relying on implicit compatibility rows; making the test materialize one deterministic client-cadence recurring service-period record and asserting candidate/member contracts directly removed row-flatten dependence while staying stable under partial-materialization guards.
+- `DB_HOST=127.0.0.1 DB_PORT=57433 DB_NAME=server DB_NAME_SERVER=server DB_USER_SERVER=app_user DB_USER_ADMIN=postgres DB_PASSWORD_SERVER=postpass123 DB_PASSWORD_ADMIN=postpass123 pnpm exec vitest run --coverage.enabled=false src/test/integration/billingInvoiceTiming.integration.test.ts -t "T108"` (from `server/`; passed after making candidate discovery deterministic and avoiding over-strict `canGenerate` expectations)
+- Completed `F080` and `T108` by refactoring recurring due-work integration assertions to validate candidate-level contracts directly in `billingInvoiceTiming.integration.test.ts` without relying on `invoiceCandidates.flatMap(...)` row helpers for the new coverage path.
+
 ## Open Questions
 
 - Should the first cut of the UI show client-cadence and contract-cadence due rows in one unified table or grouped sections?
