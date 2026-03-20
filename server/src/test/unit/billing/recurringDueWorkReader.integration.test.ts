@@ -138,13 +138,20 @@ function createQueryBuilder(rows: Row[]) {
 
 const mocks = vi.hoisted(() => {
   const rowsByTable: Record<string, Row[]> = {};
+  const missingTables = new Set<string>();
 
-  const trx = vi.fn((tableName: string) =>
-    createQueryBuilder(rowsByTable[normalizeTableName(tableName)] ?? []),
-  ) as any;
+  const trx = vi.fn((tableName: string) => {
+    const normalizedTableName = normalizeTableName(tableName);
+    if (missingTables.has(normalizedTableName)) {
+      throw new Error(`relation "${normalizedTableName}" does not exist`);
+    }
+
+    return createQueryBuilder(rowsByTable[normalizedTableName] ?? []);
+  }) as any;
   trx.raw = vi.fn((sql: string) => sql);
 
   return {
+    missingTables,
     rowsByTable,
     trx,
     createTenantKnex: vi.fn(async () => ({ knex: trx })),
@@ -179,6 +186,7 @@ const { getAvailableRecurringDueWork } = await import(
 describe('recurring due-work reader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.missingTables.clear();
 
     mocks.rowsByTable.client_billing_cycles = [
       {
@@ -205,28 +213,28 @@ describe('recurring due-work reader', () => {
       },
     ];
 
-    mocks.rowsByTable.client_contract_lines = [
+    mocks.rowsByTable.client_contracts = [
       {
         tenant: 'tenant-1',
         client_id: 'client-1',
         client_contract_line_id: 'assignment-1',
-        contract_line_id: 'assignment-1',
         cadence_owner: 'client',
         billing_frequency: 'monthly',
         billing_timing: 'advance',
         start_date: '2025-01-01',
         end_date: null,
+        is_active: true,
       },
       {
         tenant: 'tenant-1',
         client_id: 'client-2',
         client_contract_line_id: 'assignment-2',
-        contract_line_id: 'assignment-2',
         cadence_owner: 'client',
         billing_frequency: 'monthly',
         billing_timing: 'advance',
         start_date: '2025-01-01',
         end_date: null,
+        is_active: true,
       },
     ];
 
@@ -297,7 +305,9 @@ describe('recurring due-work reader', () => {
     ];
   });
 
-  it('T001/T002/T003: due-work reader returns only persisted recurring service-period rows for client-cadence and contract-cadence work in deterministic order', async () => {
+  it('T001/T002: due-work reader loads persisted client-cadence and contract-cadence rows when `client_contract_lines` is absent', async () => {
+    mocks.missingTables.add('client_contract_lines');
+
     const result = await getAvailableRecurringDueWork({
       page: 1,
       pageSize: 10,
@@ -381,7 +391,9 @@ describe('recurring due-work reader', () => {
     });
   });
 
-  it('T004: due-work reader reports a missing-materialization repair state instead of synthesizing a compatibility due row', async () => {
+  it('T003: due-work reader resolves client-cadence materialization gaps from surviving tables when `client_contract_lines` is absent', async () => {
+    mocks.missingTables.add('client_contract_lines');
+
     const result = await getAvailableRecurringDueWork({
       page: 1,
       pageSize: 10,

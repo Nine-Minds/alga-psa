@@ -311,28 +311,22 @@ async function fetchPersistedRecurringDueWorkDbRows(
     });
 
     const clientContractLineRowsQuery = trx('recurring_service_periods as rsp')
-        .join('client_contract_lines as ccl', function () {
-            this.on('ccl.client_contract_line_id', '=', 'rsp.obligation_id')
-                .andOn('ccl.tenant', '=', 'rsp.tenant');
+        .join('contract_lines as cl', function () {
+            // Post-drop compatibility: client-cadence recurring rows still use
+            // obligation_type=client_contract_line, but obligation_id resolves to contract_line_id.
+            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
+                .andOn('cl.tenant', '=', 'rsp.tenant');
+        })
+        .join('contracts as ct', function () {
+            this.on('ct.contract_id', '=', 'cl.contract_id')
+                .andOn('ct.tenant', '=', 'cl.tenant');
         })
         .join('clients as c', function () {
-            this.on('c.client_id', '=', 'ccl.client_id')
-                .andOn('c.tenant', '=', 'ccl.tenant');
-        })
-        .leftJoin('client_contracts as cc', function () {
-            this.on('cc.client_contract_id', '=', 'ccl.client_contract_id')
-                .andOn('cc.tenant', '=', 'ccl.tenant');
-        })
-        .leftJoin('contract_lines as cl', function () {
-            this.on('cl.contract_line_id', '=', 'ccl.contract_line_id')
-                .andOn('cl.tenant', '=', 'ccl.tenant');
-        })
-        .leftJoin('contracts as ct', function () {
-            this.on('ct.contract_id', '=', trx.raw('coalesce(ccl.contract_id, cc.contract_id)'))
-                .andOn('ct.tenant', '=', 'rsp.tenant');
+            this.on('c.client_id', '=', 'ct.owner_client_id')
+                .andOn('c.tenant', '=', 'ct.tenant');
         })
         .leftJoin('client_billing_cycles as cbc', function () {
-            this.on('cbc.client_id', '=', 'ccl.client_id')
+            this.on('cbc.client_id', '=', 'c.client_id')
                 .andOn('cbc.tenant', '=', 'rsp.tenant')
                 .andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
                 .andOn('cbc.period_end_date', '=', 'rsp.invoice_window_end');
@@ -356,8 +350,8 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'cbc.billing_cycle_id',
             'ct.contract_id',
             'ct.contract_name',
-            trx.raw('coalesce(cl.contract_line_id, ccl.contract_line_id) as contract_line_id'),
-            trx.raw('coalesce(cl.contract_line_name, ccl.contract_line_name) as contract_line_name'),
+            'cl.contract_line_id',
+            'cl.contract_line_name',
         );
 
     applyBillingPeriodSearchAndDateFilters(clientContractLineRowsQuery, options, {
@@ -385,21 +379,26 @@ async function fetchClientCadenceMaterializationGaps(
         return [];
     }
 
-    const activeRecurringRows = await trx('client_contract_lines as ccl')
-        .join('contract_lines as cl', function () {
-            this.on('cl.contract_line_id', '=', 'ccl.contract_line_id')
-                .andOn('cl.tenant', '=', 'ccl.tenant');
+    const activeRecurringRows = await trx('client_contracts as cc')
+        .join('contracts as ct', function () {
+            this.on('ct.contract_id', '=', trx.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
+                .andOn('ct.tenant', '=', 'cc.tenant');
         })
-        .where('ccl.tenant', tenant)
-        .whereIn('ccl.client_id', clientIds)
+        .join('contract_lines as cl', function () {
+            this.on('cl.contract_id', '=', 'ct.contract_id')
+                .andOn('cl.tenant', '=', 'ct.tenant');
+        })
+        .where('cc.tenant', tenant)
+        .whereIn('cc.client_id', clientIds)
+        .where('cc.is_active', true)
         .where('cl.cadence_owner', 'client')
         .whereNotNull('cl.billing_frequency')
         .whereNotNull('cl.billing_timing')
         .select(
-            'ccl.client_id',
-            'ccl.client_contract_line_id',
-            'ccl.start_date',
-            'ccl.end_date',
+            'cc.client_id',
+            'cl.contract_line_id as client_contract_line_id',
+            'cc.start_date',
+            'cc.end_date',
             'cl.cadence_owner',
             'cl.billing_frequency',
             'cl.billing_timing',
