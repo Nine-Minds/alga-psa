@@ -9,6 +9,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Decisions
 
+- (2026-03-20) Derive `AutomaticInvoices` contract context exclusively from candidate members and treat candidate-level contract fields as non-authoritative display metadata.
 - (2026-03-20) For grouped recurring invoice candidates (`memberCount > 1`), disable `AutomaticInvoices` preview entirely and require generation from the grouped candidate path so the UI never silently previews only the first member.
 - (2026-03-20) Keep this as the single active ALGA plan for service-driven invoicing cleanup; do not split remaining schema/caller/test cleanup into a separate plan folder.
 - (2026-03-20) Treat post-drop `client_contract_lines` removal in `packages/clients` and `packages/client-portal` as in-scope cutover completion work, not optional follow-up.
@@ -22,6 +23,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Discoveries / Constraints
 
+- (2026-03-20) Candidate-level `contractName` can hide partial member metadata loss; aggregating names from members and warning on incomplete member identity avoids collapsing mixed-validity candidates into `No contract context`.
 - (2026-03-20) `AutomaticInvoices` preview eligibility was keyed only to "one selected candidate", which still allowed grouped candidates and silently previewed `members[0]`; gating preview by single-member candidates closes that mismatch and keeps grouped candidates candidate-first.
 - (2026-03-20) Multi-agent audit identified remaining fallback risk in `AutomaticInvoices`: grouped candidates can preview only the first member, and contract metadata rendering still trusts first-member-derived candidate fields. These are now explicitly tracked as `F073`/`F074`/`F075`.
 - (2026-03-20) Recurring run target mapping had a row-flatten legacy seam; mapper was partially tightened to candidate-first, but candidate-based paging/total semantics and coverage still need follow-through (`F076`, `T102`, `T103`).
@@ -86,6 +88,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 ## Commands / Runbooks
 
 - (2026-03-20) `pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false` (from `server/`; passed after adding grouped-preview gating coverage for `T097`/`T098`)
+- (2026-03-20) `pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false` (from `server/`; passed after member-derived contract metadata warnings coverage for `T099`/`T100`)
 - (2026-03-18) `rg -n "billing_cycle_id" packages/billing/src/actions packages/billing/src/components server/src/lib/api packages/client-portal/src/actions -g '!**/*.test.*'`
 - (2026-03-18) `rg -n "recurring_service_periods" packages/billing/src/actions packages/client-portal/src/actions server/src/lib/api -g '!**/*.test.*'`
 - (2026-03-18) `sed -n '1,260p' packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`
@@ -169,6 +172,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Completed Checkpoints
 
+- (2026-03-20) Completed `F074` and `T099`/`T100` by deriving contract and contract-line display from candidate members, preserving visible member-derived contract context even when metadata is partially missing, and surfacing explicit `Contract metadata missing` warning copy keyed to the affected candidate.
 - (2026-03-20) Completed `F073` and `T097`/`T098` by restricting `AutomaticInvoices` preview to single-member candidates, rendering explicit grouped-preview-unavailable copy when a grouped candidate is selected, and adding UI tests that lock both the disabled grouped behavior and the preserved single-member preview selector-input path.
 - (2026-03-18) Completed `F001`, `F002`, `F005`, `F006`, and `F007` by adding `IRecurringDueWorkRow` plus `buildClientScheduleDueWorkRow(...)` / `buildServicePeriodRecurringDueWorkRow(...)`. The builders now normalize row identity, cadence-source metadata, service-period labels, invoice-window labels, and contract context on top of the existing recurring execution-window identity helpers.
 - (2026-03-18) Completed `T001` through `T005` with focused server-side unit coverage proving stable client/contract execution identities and the new display/context fields on due-work rows.

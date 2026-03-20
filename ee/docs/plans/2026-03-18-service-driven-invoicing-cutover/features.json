@@ -72,7 +72,7 @@
   { "id": "F071", "description": "Document the cutover sequence from billing-cycle-driven recurring invoicing to service-driven invoicing for operators and implementers.", "implemented": true },
   { "id": "F072", "description": "Add migration/runbook steps for backfilling, replenishing, validating, and repairing recurring service periods before enabling the full UI cutover.", "implemented": true },
   { "id": "F073", "description": "Restrict AutomaticInvoices preview to single-member invoice candidates so grouped candidates cannot silently preview only the first member.", "implemented": true },
-  { "id": "F074", "description": "Render AutomaticInvoices contract context from candidate members and show explicit metadata warnings when contract identity is partially missing.", "implemented": false },
+  { "id": "F074", "description": "Render AutomaticInvoices contract context from candidate members and show explicit metadata warnings when contract identity is partially missing.", "implemented": true },
   { "id": "F075", "description": "Use exhaustive cadence-source formatting in AutomaticInvoices (including unknown-source fallback copy) instead of defaulting unknown values to client schedule.", "implemented": false },
   { "id": "F076", "description": "Make recurring run target selection candidate-first end to end, including one-target-per-candidate semantics and pagination totals derived from candidate pages.", "implemented": false },
   { "id": "F077", "description": "Block invoicing of partially materialized recurring windows by validating missing eligible persisted selections before generation.", "implemented": false },

@@ -957,25 +957,71 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 title: 'Contract',
                 dataIndex: 'contractName',
                 render: (_: unknown, record: ReadyPeriod) => {
-                  if (!record.contractName) {
-                    return <span className="text-muted-foreground">No contract context</span>;
-                  }
+                  const contractNames = Array.from(
+                    new Set(
+                      record.members
+                        .map((member) => member.contractName?.trim())
+                        .filter((name): name is string => Boolean(name)),
+                    ),
+                  );
                   const contractLineNames = Array.from(
                     new Set(
                       record.members
-                        .map((member) => member.contractLineName)
-                        .filter((name): name is string => Boolean(name?.trim())),
+                        .map((member) => member.contractLineName?.trim())
+                        .filter((name): name is string => Boolean(name)),
                     ),
                   );
+                  const contractMetadataMissingCount = record.members.filter((member) => {
+                    const hasContractSignal = Boolean(
+                      member.cadenceOwner === 'contract'
+                      || member.contractId
+                      || member.contractLineId
+                      || member.contractName?.trim()
+                      || member.contractLineName?.trim(),
+                    );
+                    if (!hasContractSignal) {
+                      return false;
+                    }
+
+                    const missingContractIdentity =
+                      !member.contractId
+                      && !member.contractName?.trim();
+                    const missingContractLineIdentity =
+                      !member.contractLineId
+                      && !member.contractLineName?.trim();
+                    const missingContractName = Boolean(member.contractId && !member.contractName?.trim());
+                    const missingContractLineName = Boolean(member.contractLineId && !member.contractLineName?.trim());
+
+                    return (
+                      missingContractIdentity
+                      || missingContractLineIdentity
+                      || missingContractName
+                      || missingContractLineName
+                    );
+                  }).length;
+
+                  if (contractNames.length === 0 && contractLineNames.length === 0 && contractMetadataMissingCount === 0) {
+                    return <span className="text-muted-foreground">No contract context</span>;
+                  }
 
                   return (
                     <div className="space-y-1">
-                      <div>{record.contractName}</div>
+                      {contractNames.map((name) => (
+                        <div key={`${record.candidateKey}:contract:${name}`}>{name}</div>
+                      ))}
                       {contractLineNames.map((lineName) => (
                         <div key={`${record.candidateKey}:${lineName}`} className="text-xs text-muted-foreground">
                           {lineName}
                         </div>
                       ))}
+                      {contractMetadataMissingCount > 0 ? (
+                        <div
+                          className="text-xs text-warning"
+                          data-testid={`contract-metadata-warning-${record.candidateKey}`}
+                        >
+                          Contract metadata missing ({contractMetadataMissingCount} obligation{contractMetadataMissingCount === 1 ? '' : 's'})
+                        </div>
+                      ) : null}
                     </div>
                   );
                 },

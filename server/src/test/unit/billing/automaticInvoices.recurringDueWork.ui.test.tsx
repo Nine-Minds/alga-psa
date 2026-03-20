@@ -936,6 +936,102 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     });
   });
 
+  it('T099: AutomaticInvoices contract column derives names from candidate members and does not collapse partial metadata to no-context copy', async () => {
+    const fullMember = createContractRow();
+    const partialMember = {
+      ...createContractRow(),
+      contractName: null,
+      contractLineName: null,
+      executionIdentityKey: `${fullMember.executionIdentityKey}:partial-contract-metadata`,
+      selectorInput: {
+        ...fullMember.selectorInput,
+        executionWindow: {
+          ...fullMember.selectorInput.executionWindow,
+          periodKey: 'period:2025-05-08:2025-06-08',
+          invoiceWindow: {
+            ...fullMember.selectorInput.executionWindow.invoiceWindow,
+            start: '2025-06-08',
+            end: '2025-07-08',
+          },
+          servicePeriod: {
+            ...fullMember.selectorInput.executionWindow.servicePeriod,
+            start: '2025-05-08',
+            end: '2025-06-08',
+          },
+        },
+      },
+    };
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [
+        buildInvoiceCandidate([fullMember, partialMember], { candidateKey: 'candidate-contract-metadata-t099' }),
+      ],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Zenith Annual Support')).toBeInTheDocument();
+    expect(screen.getByText('Managed Services')).toBeInTheDocument();
+    expect(screen.queryByText('No contract context')).toBeNull();
+  });
+
+  it('T100: AutomaticInvoices surfaces contract metadata missing warning copy for partially identified member metadata', async () => {
+    const fullMember = createContractRow();
+    const partialMember = {
+      ...createContractRow(),
+      contractName: null,
+      contractLineName: null,
+      executionIdentityKey: `${fullMember.executionIdentityKey}:partial-contract-metadata-warning`,
+      selectorInput: {
+        ...fullMember.selectorInput,
+        executionWindow: {
+          ...fullMember.selectorInput.executionWindow,
+          periodKey: 'period:2025-06-08:2025-07-08',
+          invoiceWindow: {
+            ...fullMember.selectorInput.executionWindow.invoiceWindow,
+            start: '2025-07-08',
+            end: '2025-08-08',
+          },
+          servicePeriod: {
+            ...fullMember.selectorInput.executionWindow.servicePeriod,
+            start: '2025-06-08',
+            end: '2025-07-08',
+          },
+        },
+      },
+    };
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [
+        buildInvoiceCandidate([fullMember, partialMember], { candidateKey: 'candidate-contract-metadata-t100' }),
+      ],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByTestId('contract-metadata-warning-candidate-contract-metadata-t100'),
+    ).toHaveTextContent('Contract metadata missing (1 obligation)');
+  });
+
   it('T032: AutomaticInvoices preview opens for a client-cadence row through the selector-input preview path', async () => {
     const clientRow = createClientRow();
     getAvailableRecurringDueWorkMock.mockResolvedValue({
