@@ -9,6 +9,10 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Decisions
 
+- (2026-03-20) For grouped recurring invoice candidates (`memberCount > 1`), disable `AutomaticInvoices` preview entirely and require generation from the grouped candidate path so the UI never silently previews only the first member.
+- (2026-03-20) Keep this as the single active ALGA plan for service-driven invoicing cleanup; do not split remaining schema/caller/test cleanup into a separate plan folder.
+- (2026-03-20) Treat post-drop `client_contract_lines` removal in `packages/clients` and `packages/client-portal` as in-scope cutover completion work, not optional follow-up.
+- (2026-03-20) Prioritize strict candidate-first contracts over compatibility fallbacks in UI/action layers; missing or malformed due-work payloads should be treated as contract violations, not silently coerced.
 - (2026-03-18) Treat this as a finishing-cutover plan layered on top of the broader `service-period-first-billing-and-cadence-ownership` plan, not a replacement for the whole architecture plan.
 - (2026-03-18) Scope includes all remaining app-level work necessary to make service-period-driven invoicing operationally true, including broader unfinished items that directly affect invoicing behavior.
 - (2026-03-18) Hourly and usage are in scope for service-driven invoicing windows. They do not precompute charges, but they must bill available content inside the selected service period.
@@ -18,6 +22,12 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Discoveries / Constraints
 
+- (2026-03-20) `AutomaticInvoices` preview eligibility was keyed only to "one selected candidate", which still allowed grouped candidates and silently previewed `members[0]`; gating preview by single-member candidates closes that mismatch and keeps grouped candidates candidate-first.
+- (2026-03-20) Multi-agent audit identified remaining fallback risk in `AutomaticInvoices`: grouped candidates can preview only the first member, and contract metadata rendering still trusts first-member-derived candidate fields. These are now explicitly tracked as `F073`/`F074`/`F075`.
+- (2026-03-20) Recurring run target mapping had a row-flatten legacy seam; mapper was partially tightened to candidate-first, but candidate-based paging/total semantics and coverage still need follow-through (`F076`, `T102`, `T103`).
+- (2026-03-20) Full post-drop cleanup is incomplete outside billing package core: `packages/clients` and `packages/client-portal` still contain runtime/table references to `client_contract_lines` and need migration to `client_contracts -> contracts -> contract_lines` (`F081`, `F082`).
+- (2026-03-20) Additional live fallback seams remain around `template_contract_id` usage in instantiated billing lookups and assignment queries (`F083`-`F085`), plus static guard coverage that currently misses non-server package tests (`F086`).
+- (2026-03-20) Plan artifacts now track remaining contract cleanup work: centralizing paginated due-work types in `@alga-psa/types` and finalizing `billingCycleId` semantics on due-work rows (`F087`, `F088`).
 - (2026-03-18) `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx` still sources ready rows from `getAvailableBillingPeriods(...)`, stores selection as `Set<billing_cycle_id>`, previews only by `billing_cycle_id`, and maps PO-overage, generate, reverse, and delete flows through billing-cycle IDs.
 - (2026-03-18) `packages/billing/src/actions/billingAndTax.ts:getAvailableBillingPeriods(...)` still joins `client_billing_cycles` and `invoices` directly and has no service-period reader contract.
 - (2026-03-18) `packages/billing/src/actions/billingCycleActions.ts` still owns invoiced-history, reverse, and delete behavior, all through `client_billing_cycles` plus `invoices.billing_cycle_id`.
@@ -75,6 +85,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Commands / Runbooks
 
+- (2026-03-20) `pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false` (from `server/`; passed after adding grouped-preview gating coverage for `T097`/`T098`)
 - (2026-03-18) `rg -n "billing_cycle_id" packages/billing/src/actions packages/billing/src/components server/src/lib/api packages/client-portal/src/actions -g '!**/*.test.*'`
 - (2026-03-18) `rg -n "recurring_service_periods" packages/billing/src/actions packages/client-portal/src/actions server/src/lib/api -g '!**/*.test.*'`
 - (2026-03-18) `sed -n '1,260p' packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`
@@ -158,6 +169,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Completed Checkpoints
 
+- (2026-03-20) Completed `F073` and `T097`/`T098` by restricting `AutomaticInvoices` preview to single-member candidates, rendering explicit grouped-preview-unavailable copy when a grouped candidate is selected, and adding UI tests that lock both the disabled grouped behavior and the preserved single-member preview selector-input path.
 - (2026-03-18) Completed `F001`, `F002`, `F005`, `F006`, and `F007` by adding `IRecurringDueWorkRow` plus `buildClientScheduleDueWorkRow(...)` / `buildServicePeriodRecurringDueWorkRow(...)`. The builders now normalize row identity, cadence-source metadata, service-period labels, invoice-window labels, and contract context on top of the existing recurring execution-window identity helpers.
 - (2026-03-18) Completed `T001` through `T005` with focused server-side unit coverage proving stable client/contract execution identities and the new display/context fields on due-work rows.
 - (2026-03-18) Completed `F003`, `F004`, `F008`, `F009`, `F010`, `F011`, `F012`, and `F013` by adding `getAvailableRecurringDueWork(...)` in `billingAndTax.ts`. The reader now pulls ready persisted rows from `recurring_service_periods`, carries schedule/period keys and due-state metadata into due-work rows, allows unbridged contract-cadence windows, and merges compatibility billing-cycle rows underneath canonical rows by execution identity.

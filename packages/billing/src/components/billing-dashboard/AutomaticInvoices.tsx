@@ -7,11 +7,10 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Search, Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
-import type { IRecurringDueSelectionInput, IRecurringDueWorkRow } from '@alga-psa/types';
+import { Search, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
+import type { IRecurringDueSelectionInput, IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
 import {
   getPurchaseOrderOverageForSelectionInput,
   previewInvoiceForSelectionInput,
@@ -49,7 +48,7 @@ interface AutomaticInvoicesProps {
   refreshTrigger?: number;
 }
 
-type ReadyPeriod = IRecurringDueWorkRow;
+type ReadyPeriod = IRecurringDueWorkInvoiceCandidate;
 
 type InvoicedPeriod = RecurringInvoiceHistoryRow;
 
@@ -73,11 +72,13 @@ const buildDateRangeFilter = (range: DateRange): BillingPeriodDateRange | undefi
   return { from, to };
 };
 
+const getTodayDate = (): Date => {
+  const today = new Date();
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+};
+
 const buildServicePeriodRepairHref = (scheduleKey: string) =>
   `/msp/billing?tab=service-periods&scheduleKey=${encodeURIComponent(scheduleKey)}`;
-
-const hasRecurringBillingCycleBridge = (record: { billingCycleId?: string | null }) =>
-  Boolean(record.billingCycleId);
 
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
   // Drawer removed: client details quick view no longer used here
@@ -91,11 +92,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // Date range filter state (pending = user selection, applied = active filter)
   const [pendingDateRange, setPendingDateRange] = useState<DateRange>(() => ({
     from: undefined,
-    to: undefined,
+    to: getTodayDate(),
   }));
   const [appliedDateRange, setAppliedDateRange] = useState<DateRange>(() => ({
     from: undefined,
-    to: undefined,
+    to: getTodayDate(),
   }));
   const [invoicedPeriods, setInvoicedPeriods] = useState<InvoicedPeriod[]>([]);
   const [invoicedCurrentPage, setInvoicedCurrentPage] = useState(1);
@@ -219,8 +220,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         if (!isMounted) return;
 
-        setPeriods(result.rows as ReadyPeriod[]);
-        setMaterializationGaps(result.materializationGaps ?? []);
+        setPeriods(result.invoiceCandidates as ReadyPeriod[]);
+        setMaterializationGaps(result.materializationGaps);
         setTotalPeriods(result.total);
         initialLoadDone.current = true;
 
@@ -250,10 +251,20 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // For server-side pagination, filteredPeriods is just periods
   const filteredPeriods = periods;
+  const readyRows = filteredPeriods.flatMap((period) => period.members);
   const selectedReadyPeriods = filteredPeriods.filter((period) =>
-    selectedPeriods.has(period.executionIdentityKey),
+    selectedPeriods.has(period.candidateKey),
   );
-  const selectedPreviewPeriod = selectedReadyPeriods.length === 1 ? selectedReadyPeriods[0] : null;
+  const selectedPreviewCandidate = selectedReadyPeriods.length === 1 ? selectedReadyPeriods[0] ?? null : null;
+  const selectedPreviewPeriod =
+    selectedPreviewCandidate
+    && selectedPreviewCandidate.memberCount === 1
+    && selectedPreviewCandidate.members.length === 1
+      ? selectedPreviewCandidate.members[0] ?? null
+      : null;
+  const groupedPreviewSelection =
+    selectedPreviewCandidate
+    && (selectedPreviewCandidate.memberCount > 1 || selectedPreviewCandidate.members.length > 1);
 
   // Debounce invoiced search term
   useEffect(() => {
@@ -326,26 +337,26 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     if (event.target.checked) {
       const validIds = filteredPeriods
         .filter((period) => period.canGenerate)
-        .map((period) => period.executionIdentityKey);
+        .map((period) => period.candidateKey);
       setSelectedPeriods(new Set(validIds));
     } else {
       setSelectedPeriods(new Set());
     }
   };
 
-  const handleSelectPeriod = (executionIdentityKey: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!executionIdentityKey) return;
+  const handleSelectPeriod = (candidateKey: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!candidateKey) return;
 
     const newSelected = new Set(selectedPeriods);
     if (event.target.checked) {
-      newSelected.add(executionIdentityKey);
+      newSelected.add(candidateKey);
     } else {
-      newSelected.delete(executionIdentityKey);
+      newSelected.delete(candidateKey);
     }
     setSelectedPeriods(newSelected);
   };
 
-  const buildRecurringRunTarget = (period: ReadyPeriod) => {
+  const buildRecurringRunTarget = (period: { selectorInput: IRecurringDueSelectionInput; executionWindow: IRecurringDueSelectionInput['executionWindow'] }) => {
     return {
       selectorInput: period.selectorInput,
       executionWindow: period.executionWindow,
@@ -365,7 +376,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     billingCycleId?: string | null;
     executionIdentityKey?: string;
   }) =>
-    periods.find((period) =>
+    readyRows.find((period) =>
       (failure.executionIdentityKey && period.executionIdentityKey === failure.executionIdentityKey)
       || (failure.billingCycleId && period.billingCycleId === failure.billingCycleId),
     );
@@ -379,7 +390,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     return clientName || failure.billingCycleId || failure.executionIdentityKey || 'Recurring invoice window';
   };
 
-  const handlePreviewInvoice = async (period: ReadyPeriod) => {
+  const handlePreviewInvoice = async (period: {
+    selectorInput: IRecurringDueSelectionInput;
+    billingCycleId?: string | null;
+    executionIdentityKey: string;
+  }) => {
     setIsPreviewLoading(true);
     setErrors({}); // Clear previous errors
     const response = await previewInvoiceForSelectionInput(period.selectorInput);
@@ -409,12 +424,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const handleGenerateInvoices = async () => {
-    const selectedExecutionPeriods = periods.filter((period) =>
-      selectedPeriods.has(period.executionIdentityKey),
+    const selectedCandidates = periods.filter((period) =>
+      selectedPeriods.has(period.candidateKey),
     );
-    if (selectedExecutionPeriods.length === 0) {
+    if (selectedCandidates.length === 0) {
       return;
     }
+    const selectedExecutionPeriods = selectedCandidates.flatMap((candidate) => candidate.members);
 
     setIsGenerating(true);
     setErrors({});
@@ -491,7 +507,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     try {
       const newErrors: { [key: string]: string } = {};
       const overageIds = new Set(Object.keys(overageByExecutionIdentityKey));
-      const selectedExecutionPeriods = periods.filter((period) =>
+      const selectedExecutionPeriods = readyRows.filter((period) =>
         executionIdentityKeys.includes(period.executionIdentityKey),
       );
       const toGenerate =
@@ -715,7 +731,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             <div>
               <h2 className="text-lg font-semibold">Ready to Invoice</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Each row is an invoice window. Generated recurring invoices group the due service periods that land in that window.
+                Each row is an invoice candidate that groups all due obligations that should be generated together.
               </p>
             </div>
             <div className="flex gap-2 items-end">
@@ -729,12 +745,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 }}
                 disabled={
                   selectedPeriods.size !== 1
+                  || !selectedPreviewPeriod
                   || isPreviewLoading
                 }
               >
                 <Eye className="h-4 w-4 mr-2" />
                 {isPreviewLoading ? 'Loading...' : 'Preview Selected'}
               </Button>
+              {groupedPreviewSelection ? (
+                <span className="text-xs text-muted-foreground" data-testid="grouped-preview-unavailable-copy">
+                  Preview is only available for single-obligation candidates.
+                </span>
+              ) : null}
               <Button
                 id='generate-invoices-button'
                 onClick={handleGenerateInvoices}
@@ -750,7 +772,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <div className="flex items-end gap-4 mb-4">
             <DateRangePicker
               id="billing-period-date-range"
-              label="Invoice window end date range"
+              label="Service period start date range"
               value={pendingDateRange}
               onChange={(range) => setPendingDateRange(range)}
             />
@@ -871,82 +893,89 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     disabled={!filteredPeriods.some((period) => period.canGenerate)}
                   />
                 ),
-                dataIndex: 'executionIdentityKey',
-                render: (_: unknown, record: ReadyPeriod) => record.canGenerate ? (
+                dataIndex: 'candidateKey',
+                render: (_: unknown, record: ReadyPeriod) => (
                   <Checkbox
-                    id={`select-${record.executionIdentityKey}`}
-                    checked={selectedPeriods.has(record.executionIdentityKey)}
+                    id={`select-${record.candidateKey}`}
+                    checked={selectedPeriods.has(record.candidateKey)}
+                    disabled={!record.canGenerate}
                     // Stop propagation to prevent row click when clicking checkbox
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                       event.stopPropagation();
-                      handleSelectPeriod(record.executionIdentityKey, event);
+                      handleSelectPeriod(record.candidateKey, event);
                     }}
                     onClick={(e) => e.stopPropagation()} // Also stop propagation on click
                   />
-                ) : null
+                )
               },
               {
                 title: 'Client',
                 dataIndex: 'clientName',
-                render: (_: unknown, record: ReadyPeriod) => record.clientName ?? 'Unknown client',
+                render: (_: unknown, record: ReadyPeriod) => (
+                  <div className="space-y-1">
+                    <div>{record.clientName ?? 'Unknown client'}</div>
+                    {!record.canGenerate && record.blockedReason ? (
+                      <div className="text-xs text-muted-foreground">{record.blockedReason}</div>
+                    ) : null}
+                  </div>
+                ),
               },
               {
                 title: 'Cadence Source',
-                dataIndex: 'cadenceSource',
+                dataIndex: 'cadenceSources',
                 render: (_: unknown, record: ReadyPeriod) => (
                   <div className="space-y-1">
-                    <Badge variant="outline">
-                      {record.cadenceSource === 'contract_anniversary' ? 'Contract anniversary' : 'Client schedule'}
-                    </Badge>
-                    {!hasRecurringBillingCycleBridge(record) ? (
+                    {record.cadenceSources.map((source) => (
+                      <Badge key={`${record.candidateKey}:${source}`} variant="outline">
+                        {source === 'contract_anniversary' ? 'Contract anniversary' : 'Client schedule'}
+                      </Badge>
+                    ))}
+                    {record.members.some((member) => !member.billingCycleId) ? (
                       <Badge variant="secondary">Service-period-backed</Badge>
                     ) : null}
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <span>{record.dueState === 'early' ? 'Early' : 'Due'}</span>
-                      {record.isEarly ? (
-                        <Tooltip
-                          content={
-                            <p>
-                              Warning: Current invoice window hasn&apos;t ended yet (ends{' '}
-                              {toPlainDate(record.invoiceWindowEnd).toLocaleString()})
-                            </p>
-                          }
-                          side="top"
-                          className="max-w-xs"
-                        >
-                          <span className="inline-flex items-center cursor-help">
-                            <Info className="h-4 w-4 text-yellow-500" />
-                          </span>
-                        </Tooltip>
-                      ) : null}
-                    </div>
                   </div>
                 ),
               },
               {
                 title: 'Service Period',
                 dataIndex: 'servicePeriodLabel',
-                render: (_: unknown, record: ReadyPeriod) => record.servicePeriodLabel,
+                render: (_: unknown, record: ReadyPeriod) => (
+                  <div className="space-y-1">
+                    <div>{record.servicePeriodLabel}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {record.memberCount} obligation{record.memberCount === 1 ? '' : 's'}
+                    </div>
+                  </div>
+                ),
               },
               {
                 title: 'Invoice Window',
-                dataIndex: 'invoiceWindowLabel',
-                render: (_: unknown, record: ReadyPeriod) => record.invoiceWindowLabel,
+                dataIndex: 'windowLabel',
+                render: (_: unknown, record: ReadyPeriod) => record.windowLabel,
               },
               {
-                title: 'Contract Context',
+                title: 'Contract',
                 dataIndex: 'contractName',
                 render: (_: unknown, record: ReadyPeriod) => {
-                  if (!record.contractName && !record.contractLineName) {
+                  if (!record.contractName) {
                     return <span className="text-muted-foreground">No contract context</span>;
                   }
+                  const contractLineNames = Array.from(
+                    new Set(
+                      record.members
+                        .map((member) => member.contractLineName)
+                        .filter((name): name is string => Boolean(name?.trim())),
+                    ),
+                  );
 
                   return (
                     <div className="space-y-1">
-                      {record.contractName ? <div>{record.contractName}</div> : null}
-                      {record.contractLineName ? (
-                        <div className="text-xs text-muted-foreground">{record.contractLineName}</div>
-                      ) : null}
+                      <div>{record.contractName}</div>
+                      {contractLineNames.map((lineName) => (
+                        <div key={`${record.candidateKey}:${lineName}`} className="text-xs text-muted-foreground">
+                          {lineName}
+                        </div>
+                      ))}
                     </div>
                   );
                 },
