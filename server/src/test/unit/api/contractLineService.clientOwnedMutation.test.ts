@@ -9,6 +9,10 @@ class MockBaseService<T> {
   async getKnex(): Promise<{ knex: unknown }> {
     throw new Error('getKnex mock not provided');
   }
+
+  addUpdateAuditFields(data: Record<string, unknown>) {
+    return { ...data };
+  }
 }
 
 vi.mock('@alga-psa/db', () => ({
@@ -94,5 +98,116 @@ describe('ContractLineService client-owned mutation paths', () => {
       149.5
     );
     expect(result).toEqual(mapping);
+  });
+
+  it('deactivates a client-owned cloned line without touching client_contract_lines', async () => {
+    const observedTables: string[] = [];
+    let updatePayload: Record<string, unknown> | undefined;
+    const knex = { scope: 'root-knex' };
+    const trx = ((table: string) => {
+      observedTables.push(table);
+
+      if (table === 'contract_lines as cl') {
+        const builder = {
+          join() {
+            return builder;
+          },
+          where() {
+            return builder;
+          },
+          select() {
+            return builder;
+          },
+          async first() {
+            return { client_id: 'client-1' };
+          },
+        };
+
+        return builder;
+      }
+
+      if (table === 'contract_lines') {
+        const builder = {
+          where() {
+            return builder;
+          },
+          async update(payload: Record<string, unknown>) {
+            updatePayload = payload;
+            return 1;
+          },
+        };
+
+        return builder;
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    }) as any;
+
+    withTransaction.mockImplementation(async (receivedKnex, callback) => {
+      expect(receivedKnex).toBe(knex);
+      return callback(trx);
+    });
+
+    const { ContractLineService } = await import('server/src/lib/api/services/ContractLineService');
+    const service = new ContractLineService();
+    const context = { tenant: 'tenant-1', userId: 'user-1' } as any;
+
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
+    const validateSafeUnassignment = vi
+      .spyOn(service as any, 'validateSafeUnassignment')
+      .mockResolvedValue(undefined);
+
+    await service.unassignPlanFromClient('live-line-1', context);
+
+    expect(validateSafeUnassignment).toHaveBeenCalledWith('live-line-1', 'client-1', context, trx);
+    expect(updatePayload).toMatchObject({ is_active: false });
+    expect(observedTables).not.toContain('client_contract_lines');
+  });
+
+  it('rejects overlapping assignment checks from the target client-owned contract instead of client_contract_lines', async () => {
+    const observedTables: string[] = [];
+    const trx = ((table: string) => {
+      observedTables.push(table);
+
+      if (table !== 'contract_lines') {
+        throw new Error(`Unexpected table ${table}`);
+      }
+
+      const builder = {
+        where() {
+          return builder;
+        },
+        async first() {
+          return { contract_line_id: 'existing-line-1' };
+        },
+      };
+
+      return builder;
+    }) as any;
+
+    const { ContractLineService } = await import('server/src/lib/api/services/ContractLineService');
+    const service = new ContractLineService();
+
+    await expect(
+      (service as any).validateNoOverlappingAssignments(
+        {
+          client_id: 'client-1',
+          contract_line_id: 'template-line-1',
+          start_date: '2026-03-19T00:00:00.000Z',
+          service_category: 'managed-services',
+        },
+        {
+          contract_line_name: 'Managed Support',
+          billing_frequency: 'monthly',
+          contract_line_type: 'Fixed',
+          service_category: 'managed-services',
+        },
+        'client-contract-1',
+        { tenant: 'tenant-1', userId: 'user-1' },
+        trx,
+      ),
+    ).rejects.toThrow('Client already has an active assignment for this plan in the specified period');
+
+    expect(observedTables).toEqual(['contract_lines']);
   });
 });

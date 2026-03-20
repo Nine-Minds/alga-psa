@@ -10,6 +10,7 @@ import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import type { ISO8601String } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { buildPostDropRecurringObligationCandidates } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
@@ -124,19 +125,13 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     return 0;
   }
 
-  const obligationCandidates: Array<{
-    obligation_type: 'contract_line' | 'client_contract_line';
-    obligation_id: string;
-  }> = [
-    {
-      obligation_type: 'contract_line',
-      obligation_id: configRow.contract_line_id,
-    },
-    {
-      obligation_type: 'client_contract_line',
-      obligation_id: configRow.contract_line_id,
-    },
-  ];
+  const obligationCandidates = buildPostDropRecurringObligationCandidates({
+    contractLineId: configRow.contract_line_id,
+    chargeFamily: chargeFamily,
+  }).map((candidate) => ({
+    obligation_type: candidate.obligationType,
+    obligation_id: candidate.obligationId,
+  }));
 
   return tx('recurring_service_periods')
     .where({ tenant, charge_family: chargeFamily, due_position: billingTiming })

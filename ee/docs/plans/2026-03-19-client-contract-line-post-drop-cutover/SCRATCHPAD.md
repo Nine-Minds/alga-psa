@@ -17,6 +17,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19) The likely post-drop recurring identity target is `contract_line_id` for the line plus `client_contract_id` / `client_contracts` for assignment windowing. If `client_contract_line` survives at all, it should survive only as compatibility metadata, not as a live storage dependency.
 - (2026-03-19 23:10 EDT) For `getAvailableRecurringDueWork()`, client-cadence persisted rows can resolve directly through `recurring_service_periods -> contract_lines -> contracts.owner_client_id` because the invoice/service-period window is already materialized. Materialization-gap detection still needs `client_contracts` for active assignment windows, but maps `contract_line_id` back into the compatibility field `client_contract_line_id`.
 - (2026-03-19 23:26 EDT) Client-cadence schedule regeneration can use the same surviving structure as due-work gap detection: load active obligations from `client_contracts -> contracts -> contract_lines`, alias `contract_line_id` to `client_contract_line_id`, and defer the actual obligation identity migration to the later F014/F015 work.
+- (2026-03-19 23:49 EDT) `ContractLineService.validateNoOverlappingAssignments()` should validate duplicates against active cloned lines already present on the target client-owned contract, not against a removed per-client line table. After the drop, per-line assignment windows no longer exist independently from the client-owned contract lifecycle.
+- (2026-03-19 23:56 EDT) The resolved post-drop identity rule is: client cadence keeps `obligation_type = 'client_contract_line'` only as passive compatibility metadata, while the canonical surviving obligation id is always the live `contract_line_id`. Shared helper functions should build that identity instead of re-encoding it inline.
 
 ## Discoveries / Constraints
 
@@ -39,6 +41,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:35 EDT) Contract wizard create flow was already using surviving `contract_lines` and `client_contracts`, but `contractWizardActions.ts` still carried an unused helper that wrote `client_contract_lines`, `client_contract_services`, and related dropped tables. The integration test still asserted those dropped tables as expected output.
 - (2026-03-19 23:39 EDT) `applyCreditToInvoice()` still contained a pure guard read against `client_contract_lines` before updating invoice/client balances. That read was not used for business logic and would hard-fail in migrated schemas.
 - (2026-03-19 23:39 EDT) The billing overview report definition still counted active billing clients by joining `client_contract_lines`, even though the active client-owned model is `client_contracts -> contracts -> contract_lines`.
+- (2026-03-19 23:49 EDT) `server/src/lib/api/services/ContractLineService.ts` no longer has live `client_contract_lines` reads/writes. Unassign, activation, usage metrics, analytics, in-use checks, and overlap validation now all resolve through `contract_lines`, `contracts`, and `client_contracts`.
+- (2026-03-19 23:56 EDT) Client-cadence recurring identity had drifted into several inline string/tuple shims across due-work, regeneration, linkage, bucket resolution, selector normalization, service-period repair, and billing-engine materialization. A shared helper in `shared/billingClients/postDropRecurringObligationIdentity.ts` was enough to unify those paths without changing persisted compatibility types.
 
 ## Commands / Runbooks
 
@@ -90,6 +94,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `pnpm exec vitest run src/test/integration/contractWizard.integration.test.ts` failed locally with `ECONNREFUSED` to `127.0.0.1:5438` / `::1:5438` because the DB-backed test Postgres was not available.
 - (2026-03-19 23:39 EDT) Verification for F012/F013:
   - `pnpm exec vitest run src/test/unit/billing/creditActions.applyCredit.postDrop.test.ts src/test/unit/billing/billingOverviewReport.postDrop.static.test.ts` (run from `server/`)
+- (2026-03-19 23:49 EDT) Verification for F011/F019:
+  - `pnpm exec vitest run src/test/unit/api/contractLineService.clientOwnedMutation.test.ts src/test/unit/api/contractLineService.postDrop.static.test.ts` (run from `server/`)
+- (2026-03-19 23:56 EDT) Verification for F014/F015:
+  - `pnpm exec vitest run src/test/unit/billing/postDropRecurringObligationIdentity.test.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts src/test/unit/billing/updateClientBillingSchedule.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts src/test/unit/billing/bucketUsageService.periods.test.ts src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts src/test/unit/billing/recurringServicePeriodActions.test.ts src/test/unit/api/contractLineService.clientOwnedMutation.test.ts src/test/unit/api/contractLineService.postDrop.static.test.ts` (run from `server/`)
 
 ## Completed Items
 
@@ -109,6 +117,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:35 EDT) Completed `F010`: removed the dead per-client line replication helper from `contractWizardActions.ts` and rewrote contract wizard coverage to validate the surviving `client_contracts`, `contract_lines`, and `contract_line_service_*` structures instead of the dropped `client_contract_lines` / `client_contract_services` tables.
 - (2026-03-19 23:39 EDT) Completed `F012`: credit application no longer queries `client_contract_lines` before applying client credit to an invoice. The live path now updates credit balances directly from invoice/client/credit-tracking state, which already contains the required domain information.
 - (2026-03-19 23:39 EDT) Completed `F013`: the billing overview report definition now derives active billing clients from `client_contracts -> contracts -> contract_lines` instead of treating `client_contract_lines` as a live fact source.
+- (2026-03-19 23:49 EDT) Completed `F011`: `ContractLineService` live mutation/runtime paths no longer require `client_contract_lines`. Client-owned unassign/deactivate behavior now updates canonical `contract_lines`, and duplicate assignment checks are scoped to the surviving client-owned contract structure.
+- (2026-03-19 23:49 EDT) Completed `F019`: server-side contract-line service behaviors for unassign/deactivate, usage analytics, overview counts, in-use checks, and overlap validation no longer query `client_contract_lines`; they now join surviving `contract_lines -> contracts -> client_contracts` instead.
+- (2026-03-19 23:56 EDT) Completed `F014`: defined a shared post-drop recurring obligation helper (`shared/billingClients/postDropRecurringObligationIdentity.ts`) and rewired due-work, regeneration, selector normalization, linkage, bucket resolution, service-period inspection, and billing-engine settlement code to use that canonical identity rule instead of inline string shims.
+- (2026-03-19 23:56 EDT) Completed `F015`: the retained `client_contract_line` identity is now explicitly compatibility-only. Shared helpers document that it always points at the surviving `contract_line_id`, and live runtime paths consume that helper instead of implying a backing `client_contract_lines` table.
 
 ## Links / References
 

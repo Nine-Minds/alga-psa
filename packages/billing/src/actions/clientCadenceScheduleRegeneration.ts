@@ -12,6 +12,10 @@ import {
 } from '../lib/billing/billingCycleAnchors';
 import { materializeClientCadenceServicePeriods } from '@shared/billingClients/materializeClientCadenceServicePeriods';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
+import {
+  buildPersistedClientCadencePostDropObligationRef,
+  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
+} from '@shared/billingClients/postDropRecurringObligationIdentity';
 
 type ClientCadenceRecurringObligationRow = {
   client_contract_line_id: string;
@@ -284,7 +288,7 @@ async function loadExistingRecurringServicePeriodRecords(
     .where({
       tenant: params.tenant,
       obligation_id: params.obligationId,
-      obligation_type: 'client_contract_line',
+      obligation_type: CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
       cadence_owner: 'client',
     })
     .orderBy('service_period_start', 'asc')
@@ -389,12 +393,11 @@ export async function regenerateClientCadenceServicePeriodsForScheduleChange(
       asOf: regenerationStart,
       materializedAt,
       billingCycle: params.billingCycle,
-      sourceObligation: {
+      sourceObligation: buildPersistedClientCadencePostDropObligationRef({
         tenant: params.tenant,
-        obligationId: obligation.client_contract_line_id,
-        obligationType: 'client_contract_line',
+        contractLineId: obligation.client_contract_line_id,
         chargeFamily: resolveRecurringChargeFamily(obligation.contract_line_type),
-      },
+      }),
       duePosition,
       sourceRuleVersion,
       sourceRunKey,

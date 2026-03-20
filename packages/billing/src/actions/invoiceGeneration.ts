@@ -54,6 +54,7 @@ import {
   buildClientCadenceDueSelectionInput,
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
+import { CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
@@ -373,7 +374,7 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
         .where({
           'rsp.tenant': params.tenant,
           'rsp.cadence_owner': 'client',
-          'rsp.obligation_type': 'client_contract_line',
+          'rsp.obligation_type': CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
           'c.client_id': params.clientId,
           'rsp.invoice_window_start': normalizedWindowStart,
           'rsp.invoice_window_end': normalizedWindowEnd,
@@ -431,7 +432,7 @@ async function normalizeRecurringSelectorInput(params: {
           .where({
             'rsp.tenant': params.tenant,
             'rsp.cadence_owner': 'client',
-            'rsp.obligation_type': 'client_contract_line',
+            'rsp.obligation_type': CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
             'rsp.schedule_key': params.selectorInput.executionWindow.scheduleKey,
             'rsp.period_key': params.selectorInput.executionWindow.periodKey,
             'rsp.invoice_window_start': normalizedWindowStart,

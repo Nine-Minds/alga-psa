@@ -32,6 +32,10 @@ import {
     buildRecurringServicePeriodPeriodKey,
     buildRecurringServicePeriodScheduleKey,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
+import {
+    buildClientCadencePostDropObligationRef,
+    CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
+} from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 
 // Types for paginated billing periods
 export interface BillingPeriodWithMeta extends IClientContractLineCycle {
@@ -332,7 +336,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
                 .andOn('cbc.period_end_date', '=', 'rsp.invoice_window_end');
         })
         .where('rsp.tenant', tenant)
-        .where('rsp.obligation_type', 'client_contract_line')
+        .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
         .whereIn('rsp.lifecycle_state', dueStates)
         .whereNull('rsp.invoice_charge_detail_id')
         .select(
@@ -430,10 +434,15 @@ async function fetchClientCadenceMaterializationGaps(
             }
 
             const duePosition = row.billing_timing === 'arrears' ? 'arrears' : 'advance';
+            const sourceObligation = buildClientCadencePostDropObligationRef({
+                tenant,
+                contractLineId: row.client_contract_line_id,
+                chargeFamily: 'fixed',
+            });
             const scheduleKey = buildRecurringServicePeriodScheduleKey({
                 tenant,
-                obligationType: 'client_contract_line',
-                obligationId: row.client_contract_line_id,
+                obligationType: sourceObligation.obligationType,
+                obligationId: sourceObligation.obligationId,
                 cadenceOwner: 'client',
                 duePosition: duePosition as DuePosition,
             });

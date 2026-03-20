@@ -906,9 +906,6 @@ export class ContractLineService extends BaseService<IContractLine> {
       // Validate client exists
       await this.validateClientExists(data.client_id, context, trx);
 
-      // Check for overlapping assignments
-      await this.validateNoOverlappingAssignments(data, context, trx);
-
       // Get the client's contract to assign this line to
       let targetContractId: string | null = null;
       let templateContractId: string | null = null;
@@ -939,6 +936,17 @@ export class ContractLineService extends BaseService<IContractLine> {
       if (!targetContractId) {
         throw new Error('Client contract not found or missing contract_id');
       }
+
+      // Per-line lifecycle now lives on the cloned contract_line inside the
+      // client-owned contract, so overlap validation is scoped to the target
+      // client contract rather than the removed client_contract_lines table.
+      await this.validateNoOverlappingAssignments(
+        data,
+        templateLine,
+        targetContractId,
+        context,
+        trx,
+      );
 
       // Renewed or replacement assignments must create a fresh line identity so
       // historical recurring detail periods stay attached to the superseded line.
@@ -1003,8 +1011,8 @@ export class ContractLineService extends BaseService<IContractLine> {
 
   /**
    * Unassign contract line from client
-   * @deprecated This function operates on the legacy client_contract_lines table which is being phased out.
-   * Contracts are now client-specific via client_contracts, so individual line assignment is redundant.
+   * Client-owned lines are canonical after the post-drop cutover, so
+   * unassignment deactivates the cloned contract_line directly.
    */
   async unassignPlanFromClient(
     clientContractLineId: string,
@@ -1013,11 +1021,14 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      // First get the client_id from the assignment record
-      const assignment = await trx('client_contract_lines')
-        .where('client_contract_line_id', clientContractLineId)
-        .where('tenant', context.tenant)
-        .select('client_id')
+      const assignment = await trx('contract_lines as cl')
+        .join('contracts as c', function joinContracts() {
+          this.on('cl.contract_id', '=', 'c.contract_id')
+            .andOn('cl.tenant', '=', 'c.tenant');
+        })
+        .where('cl.contract_line_id', clientContractLineId)
+        .where('cl.tenant', context.tenant)
+        .select('c.owner_client_id as client_id')
         .first();
 
       if (!assignment) {
@@ -1027,14 +1038,12 @@ export class ContractLineService extends BaseService<IContractLine> {
       // Check if there are pending invoices or active usage
       await this.validateSafeUnassignment(clientContractLineId, assignment.client_id, context, trx);
 
-      // Soft delete by setting end_date and is_active = false
       const updateData = this.addUpdateAuditFields({
-        end_date: new Date().toISOString(),
         is_active: false
       }, context);
 
-      await trx('client_contract_lines')
-        .where('client_contract_line_id', clientContractLineId)
+      await trx('contract_lines')
+        .where('contract_line_id', clientContractLineId)
         .where('tenant', context.tenant)
         .update(updateData);
     });
@@ -1076,20 +1085,6 @@ export class ContractLineService extends BaseService<IContractLine> {
         .where('tenant', context.tenant)
         .update(updateData)
         .returning('*');
-      
-      // If deactivating, also deactivate client assignments if requested
-      if (!data.is_active && data.effective_date) {
-        await trx('client_contract_lines')
-          .where('contract_line_id', planId)
-          .where('tenant', context.tenant)
-          .where('is_active', true)
-          .update({
-            is_active: false,
-            end_date: data.effective_date,
-            updated_at: new Date(),
-            updated_by: context.userId
-          });
-      }
       
       return addHateoasLinks(
         normalizeContractLineCompatibility(updatedPlan),
@@ -1277,12 +1272,26 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     // Get time entries for billable usage
     const timeEntries = await knex('time_entries as te')
-      .join('client_contract_lines as ccl', function() {
-        this.on('te.client_id', '=', 'ccl.client_id')
-            .andOn('te.tenant', '=', 'ccl.tenant');
+      .join('contract_lines as cl', function joinLines() {
+        this.on('cl.contract_line_id', '=', knex.raw('?', [planId]))
+          .andOn('cl.tenant', '=', 'te.tenant');
       })
-      .where('ccl.contract_line_id', planId)
+      .join('contracts as c', function joinContracts() {
+        this.on('cl.contract_id', '=', 'c.contract_id')
+          .andOn('cl.tenant', '=', 'c.tenant');
+      })
+      .join('client_contracts as cc', function joinAssignments() {
+        this.on('c.contract_id', '=', 'cc.contract_id')
+          .andOn('c.tenant', '=', 'cc.tenant')
+          .andOn('cc.client_id', '=', 'te.client_id');
+      })
       .where('te.tenant', context.tenant)
+      .where('cl.contract_line_id', planId)
+      .where('cc.is_active', true)
+      .andWhere(function limitToClientOwnedContracts() {
+        this.whereNull('c.is_template').orWhere('c.is_template', false);
+      })
+      .whereRaw('c.owner_client_id = cc.client_id')
       .whereBetween('te.start_time', [periodStart, periodEnd])
       .where('te.is_billable', true)
       .sum('te.duration as billable_minutes')
@@ -1409,13 +1418,25 @@ export class ContractLineService extends BaseService<IContractLine> {
     const plan = await this.getExistingPlan(planId, context);
     
     // Get client assignments
-    const clientStats = await knex('client_contract_lines')
-      .where('contract_line_id', planId)
-      .where('tenant', context.tenant)
+    const clientStats = await knex('contract_lines as cl')
+      .join('contracts as c', function joinContracts() {
+        this.on('cl.contract_id', '=', 'c.contract_id')
+          .andOn('cl.tenant', '=', 'c.tenant');
+      })
+      .leftJoin('client_contracts as cc', function joinAssignments() {
+        this.on('c.contract_id', '=', 'cc.contract_id')
+          .andOn('c.tenant', '=', 'cc.tenant');
+      })
+      .where('cl.contract_line_id', planId)
+      .where('cl.tenant', context.tenant)
       .select(
-        knex.raw('COUNT(*) as total_clients'),
-        knex.raw('COUNT(CASE WHEN is_active = true THEN 1 END) as active_clients')
+        knex.raw('COUNT(DISTINCT cc.client_id) as total_clients'),
+        knex.raw('COUNT(DISTINCT CASE WHEN cc.is_active = true THEN cc.client_id END) as active_clients')
       )
+      .whereRaw('c.owner_client_id = cc.client_id')
+      .andWhere(function limitToClientOwnedContracts() {
+        this.whereNull('c.is_template').orWhere('c.is_template', false);
+      })
       .first();
     
     // Get revenue data (simplified)
@@ -1468,7 +1489,24 @@ export class ContractLineService extends BaseService<IContractLine> {
     const [planCount, contractCount, assignmentCount] = await Promise.all([
       knex('contract_lines').where('tenant', context.tenant).count('* as count').first(),
       knex('contracts').where('tenant', context.tenant).count('* as count').first(),
-      knex('client_contract_lines').where('tenant', context.tenant).where('is_active', true).count('* as count').first()
+      knex('contract_lines as cl')
+        .join('contracts as c', function joinContracts() {
+          this.on('cl.contract_id', '=', 'c.contract_id')
+            .andOn('cl.tenant', '=', 'c.tenant');
+        })
+        .join('client_contracts as cc', function joinAssignments() {
+          this.on('c.contract_id', '=', 'cc.contract_id')
+            .andOn('c.tenant', '=', 'cc.tenant');
+        })
+        .where('cl.tenant', context.tenant)
+        .where('cl.is_active', true)
+        .where('cc.is_active', true)
+        .whereRaw('c.owner_client_id = cc.client_id')
+        .andWhere(function limitToClientOwnedContracts() {
+          this.whereNull('c.is_template').orWhere('c.is_template', false);
+        })
+        .countDistinct('cl.contract_line_id as count')
+        .first()
     ]);
     
     // Get plans by type
@@ -1664,22 +1702,6 @@ export class ContractLineService extends BaseService<IContractLine> {
     trx?: Knex.Transaction
   ): Promise<{ inUse: boolean; reason?: string }> {
     const { knex } = trx ? { knex: trx } : await this.getKnex();
-    
-    // Check client assignments
-    const clientAssignments = await knex('client_contract_lines')
-      .where('contract_line_id', planId)
-      .where('tenant', context.tenant)
-      .where('is_active', true)
-      .count('* as count')
-      .first();
-    
-    const clientCount = parseInt(String(clientAssignments?.count || '0'));
-    if (clientCount > 0) {
-      return {
-        inUse: true,
-        reason: `Plan is currently assigned to ${clientCount} ${clientCount === 1 ? 'client' : 'clients'}`
-      };
-    }
 
     // Check if plan is associated with any contracts and fetch associated clients
     // After migration 20251028090000, data is stored directly in contract_lines
@@ -1690,6 +1712,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       })
       .leftJoin('client_contracts as cc', function() {
         this.on('c.contract_id', '=', 'cc.contract_id')
+          .andOn('c.tenant', '=', 'cc.tenant')
           .andOn('cc.is_active', '=', knex.raw('?', [true]));
       })
       .leftJoin('clients as cl', function() {
@@ -1699,6 +1722,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       .where('clx.contract_line_id', planId)
       .where('clx.tenant', context.tenant)
       .whereNotNull('clx.contract_id')
+      .whereRaw('c.owner_client_id = cc.client_id')
+      .andWhere(function limitToClientOwnedContracts() {
+        this.whereNull('c.is_template').orWhere('c.is_template', false);
+      })
       .select('c.contract_name', 'cl.client_name', 'c.contract_id')
       .orderBy(['c.contract_name', 'cl.client_name']);
 
@@ -1818,18 +1845,19 @@ export class ContractLineService extends BaseService<IContractLine> {
 
   private async validateNoOverlappingAssignments(
     data: CreateClientContractLineData,
+    templateLine: IContractLine,
+    targetContractId: string,
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const overlapping = await trx('client_contract_lines')
-      .where('client_id', data.client_id)
-      .where('contract_line_id', data.contract_line_id)
+    const overlapping = await trx('contract_lines')
+      .where('contract_id', targetContractId)
       .where('tenant', context.tenant)
       .where('is_active', true)
-      .where(function() {
-        this.whereNull('end_date')
-            .orWhere('end_date', '>', data.start_date);
-      })
+      .where('contract_line_name', templateLine.contract_line_name)
+      .where('billing_frequency', templateLine.billing_frequency)
+      .where('contract_line_type', templateLine.contract_line_type)
+      .where('service_category', templateLine.service_category ?? data.service_category ?? null)
       .first();
     
     if (overlapping) {

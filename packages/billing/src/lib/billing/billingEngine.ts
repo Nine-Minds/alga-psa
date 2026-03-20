@@ -52,6 +52,11 @@ import {
   resolveContractCadenceAnchorDate,
   resolveContractCadenceInvoiceWindowForServicePeriod,
 } from "@alga-psa/shared/billingClients/contractCadenceServicePeriods";
+import {
+  buildClientCadencePostDropObligationRef,
+  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
+  POST_DROP_RECURRING_OBLIGATION_TYPES,
+} from "@alga-psa/shared/billingClients/postDropRecurringObligationIdentity";
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService
 import {
@@ -396,7 +401,7 @@ export class BillingEngine {
     const dueRows = await this.knex("recurring_service_periods")
       .where({ tenant: this.tenant })
       .whereIn("obligation_id", eligibleLineIds)
-      .whereIn("obligation_type", ["contract_line", "client_contract_line"])
+      .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
       .whereIn(
         "lifecycle_state",
         [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES],
@@ -423,7 +428,7 @@ export class BillingEngine {
       const existingMaterializedRow = await this.knex("recurring_service_periods")
         .where({ tenant: this.tenant })
         .whereIn("obligation_id", eligibleLineIds)
-        .whereIn("obligation_type", ["contract_line", "client_contract_line"])
+        .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
         .whereNotIn("lifecycle_state", ["archived", "superseded"])
         .first("record_id");
 
@@ -2158,12 +2163,11 @@ export class BillingEngine {
     const currentStart = toISODate(toPlainDate(billingPeriod.startDate));
     const currentEndExclusive = toISODate(toPlainDate(billingPeriod.endDate));
     const cadenceOwner = resolveCadenceOwner(clientContractLine.cadence_owner);
-    const sourceObligation = {
-      obligationId: clientContractLine.client_contract_line_id,
-      obligationType: "client_contract_line" as const,
-      chargeFamily: "fixed" as const,
+    const sourceObligation = buildClientCadencePostDropObligationRef({
+      contractLineId: clientContractLine.client_contract_line_id,
+      chargeFamily: "fixed",
       tenant: this.tenant ?? undefined,
-    };
+    });
     const activityWindow = {
       start: clientContractLine.start_date
         ? toISODate(toPlainDate(clientContractLine.start_date))
@@ -2292,7 +2296,7 @@ export class BillingEngine {
     duePosition: "arrears" | "advance";
     sourceObligation: {
       obligationId: string;
-      obligationType: "client_contract_line";
+      obligationType: typeof CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE;
       chargeFamily: "fixed";
       tenant?: string;
     };

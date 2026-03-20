@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Contract line mutation/runtime service paths stop requiring the dropped `client_contract_lines` structure for live behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements"]
   },
   {
@@ -80,13 +80,13 @@
   {
     "id": "F014",
     "description": "One canonical post-drop recurring obligation identity is defined and used consistently for client cadence.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Open Questions"]
   },
   {
     "id": "F015",
     "description": "Legacy `client_contract_line` identity, if retained at all, is limited to documented passive compatibility metadata rather than live table joins.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
   },
   {
@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Server-side contract-line service paths stop using `client_contract_lines` for live behaviors such as unassign/deactivate, usage analytics, in-use checks, overlap validation, and overview counts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Reports / read models / API"]
   },
   {

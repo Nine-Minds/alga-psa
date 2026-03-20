@@ -23,6 +23,7 @@ import {
   type IRecurringServicePeriodRegenerationPlan,
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
+import { isClientCadencePostDropObligationType } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 
 const RECURRING_SERVICE_PERIOD_PERMISSION_RESOURCE = 'billing.recurring_service_periods';
 
@@ -301,7 +302,7 @@ async function loadObligationContext(input: {
     };
   }
 
-  if (obligationType === 'client_contract_line') {
+  if (isClientCadencePostDropObligationType(obligationType)) {
     const row = await trx('contract_lines as cl')
       .join('contracts as ct', function joinContracts(this: any) {
         this.on('ct.contract_id', '=', 'cl.contract_id')

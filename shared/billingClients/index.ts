@@ -19,3 +19,4 @@ export * from './clientContractStatus';
 export * from './recurringTiming';
 export * from './recurringRunExecutionIdentity';
 export * from './clientCadenceServicePeriods';
+export * from './postDropRecurringObligationIdentity';

@@ -3,6 +3,9 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClientContractLine } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db'; // Assuming needed if trx doesn't carry tenant context reliably
 import { toPlainDate, toISODate } from '@alga-psa/core';
+import {
+    buildClientCadencePostDropObligationRef,
+} from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 // Import necessary interfaces - adjust paths if needed
 
 // Define IBucketUsage locally for now, aligning with Phase 1 needs.
@@ -131,18 +134,21 @@ async function calculatePeriod(
 
     console.debug(`[calculatePeriod] Found clientPlan: contract_line_id=${clientPlan.contract_line_id}, start_date=${clientPlan.start_date}, billing_frequency=${clientPlan.billing_frequency}`);
 
-    const recurringObligationType =
-        clientPlan.cadence_owner === 'contract' ? 'contract_line' : 'client_contract_line';
-    const recurringObligationId =
-        recurringObligationType === 'contract_line'
-            ? clientPlan.contract_line_id
-            : clientPlan.client_contract_line_id;
+    const recurringObligation = clientPlan.cadence_owner === 'contract'
+        ? {
+            obligationType: 'contract_line' as const,
+            obligationId: clientPlan.contract_line_id,
+        }
+        : buildClientCadencePostDropObligationRef({
+            contractLineId: clientPlan.client_contract_line_id,
+            chargeFamily: 'bucket',
+        });
 
     const matchingRecurringServicePeriod = await trx('recurring_service_periods')
         .where({
             tenant,
-            obligation_type: recurringObligationType,
-            obligation_id: recurringObligationId,
+            obligation_type: recurringObligation.obligationType,
+            obligation_id: recurringObligation.obligationId,
         })
         .whereNotNull('service_period_start')
         .whereNotNull('service_period_end')
