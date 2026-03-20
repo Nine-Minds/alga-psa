@@ -348,7 +348,7 @@
   {
     "id": "T042",
     "description": "Invoice query and contract-detail surfaces continue to show a generated invoice under the correct contract assignment for a client with multiple active contracts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]

@@ -425,8 +425,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   };
 
   const loadContractInvoices = useCallback(async () => {
-    const detailContractId = contract?.contract_id ?? contractId;
-    if (!detailContractId) {
+    const invoiceScopeClientContractId = clientContractId ?? assignments[0]?.client_contract_id ?? null;
+    if (!invoiceScopeClientContractId) {
       setContractInvoices([]);
       setInvoiceTemplates([]);
       setInvoiceError(null);
@@ -438,7 +438,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
     try {
       const [invoices, templates] = await Promise.all([
-        fetchInvoicesByContract(detailContractId),
+        fetchInvoicesByContract(invoiceScopeClientContractId),
         getInvoiceTemplates()
       ]);
 
@@ -446,11 +446,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setInvoiceTemplates(templates);
     } catch (err) {
       console.error('Error loading contract invoices:', err);
-      setInvoiceError('Failed to load invoices for this contract.');
+      setInvoiceError('Failed to load invoices for this contract assignment.');
     } finally {
       setIsLoadingInvoices(false);
     }
-  }, [contract?.contract_id, contractId]);
+  }, [assignments, clientContractId]);
 
   useEffect(() => {
     if (activeTab === 'invoices') {

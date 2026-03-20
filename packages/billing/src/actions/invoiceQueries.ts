@@ -461,7 +461,7 @@ export const fetchInvoicesByClient = withAuth(async (
 
 /**
  * Fetch invoices for a specific contract assignment (client_contract_id)
- * @param contractId The contract ID (client_contract_id) to fetch invoices for
+ * @param contractId The contract assignment ID (client_contract_id) to fetch invoices for
  * @returns Array of invoice view models
  */
 export const fetchInvoicesByContract = withAuth(async (
@@ -483,7 +483,7 @@ export const fetchInvoicesByContract = withAuth(async (
             .andOn('invoices.tenant', '=', 'clients.tenant');
         })
         .where({
-          'client_contracts.contract_id': contractId,
+          'invoices.client_contract_id': contractId,
           'invoices.tenant': tenant
         })
         .select(

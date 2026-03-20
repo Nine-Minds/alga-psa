@@ -197,7 +197,7 @@
   {
     "id": "F040",
     "description": "Ensure invoice query, contract detail, and invoice view-model surfaces remain correct for concurrent active contracts because invoices are still single-assignment scoped.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F041",
