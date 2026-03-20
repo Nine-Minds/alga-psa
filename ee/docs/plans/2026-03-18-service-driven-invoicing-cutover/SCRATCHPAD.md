@@ -248,6 +248,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - `ContractLineService.assignPlanToClient(...)` still executed a runtime side-effect write that backfilled `client_contracts.template_contract_id` whenever the field was null, even though template provenance is now optional metadata and not a live assignment requirement.
 - `pnpm exec vitest run --coverage.enabled=false src/test/unit/api/contractLineService.clientOwnedMutation.test.ts` (from `server/`; passed)
 - Completed `F085` and `T113` by removing `template_contract_id` backfill writes from `ContractLineService` assignment flow and adding focused unit coverage that assignment cloning still works while proving no `client_contracts` mutation occurs when template provenance is absent.
+- `pnpm exec vitest run --coverage.enabled=false src/test/unit/billing/clientContractLineRuntimeSourceGuards.static.test.ts` (from `server/`; passed)
+- Completed `F086` and `T114` by extending the post-drop static runtime hygiene guard to scan `packages/client-portal/src/actions` and `packages/clients` runtime sources (actions + models) for forbidden `client_contract_lines`/`client_contract_services` table usage.
 
 ## Open Questions
 

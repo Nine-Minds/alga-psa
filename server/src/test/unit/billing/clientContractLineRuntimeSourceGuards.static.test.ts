@@ -44,6 +44,21 @@ function findDroppedTableRuntimeUsages(relativePaths: string[]): string[] {
   return findings;
 }
 
+function findTemplateProvenanceLiveJoinUsages(relativePaths: string[]): string[] {
+  const findings: string[] = [];
+  const pattern = /coalesce\s*\(\s*cc\.template_contract_id\s*,\s*cc\.contract_id\s*\)/g;
+
+  for (const relativePath of relativePaths) {
+    const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+    pattern.lastIndex = 0;
+    if (pattern.test(source)) {
+      findings.push(`${relativePath}: ${pattern}`);
+    }
+  }
+
+  return findings;
+}
+
 describe('client-contract-line runtime source guards', () => {
   it('T019: no live recurring or invoicing action queries dropped client-contract line tables', () => {
     const findings = findDroppedTableRuntimeUsages(
@@ -57,6 +72,33 @@ describe('client-contract-line runtime source guards', () => {
     const findings = findDroppedTableRuntimeUsages(
       getTrackedSourceFiles('packages/billing/src/services'),
     );
+
+    expect(findings).toEqual([]);
+  });
+
+  it('live recurring loaders do not follow template provenance instead of the client-owned contract', () => {
+    const findings = findTemplateProvenanceLiveJoinUsages([
+      'packages/billing/src/actions/billingAndTax.ts',
+      'packages/billing/src/actions/clientCadenceScheduleRegeneration.ts',
+      'packages/billing/src/lib/billing/billingEngine.ts',
+    ]);
+
+    expect(findings).toEqual([]);
+  });
+
+  it('T114: client portal runtime sources do not query dropped client-contract line tables', () => {
+    const findings = findDroppedTableRuntimeUsages(
+      getTrackedSourceFiles('packages/client-portal/src/actions'),
+    );
+
+    expect(findings).toEqual([]);
+  });
+
+  it('T114: clients runtime sources do not query dropped client-contract line tables', () => {
+    const findings = findDroppedTableRuntimeUsages([
+      ...getTrackedSourceFiles('packages/clients/src/actions'),
+      ...getTrackedSourceFiles('packages/clients/src/models'),
+    ]);
 
     expect(findings).toEqual([]);
   });
