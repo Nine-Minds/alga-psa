@@ -93,6 +93,7 @@ export type TicketRichTextEditorProps = {
   onError?: (payload: { code: string; message: string; requestId?: string }) => void;
   onLinkPress?: (url: string) => void;
   qaAutoPressFirstLink?: boolean;
+  imageAuth?: { baseUrl: string; apiKey: string };
 };
 
 export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRichTextEditorProps>(
@@ -115,6 +116,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onError,
       onLinkPress,
       qaAutoPressFirstLink = false,
+      imageAuth,
     },
     ref,
   ) {
@@ -142,6 +144,8 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onError,
       onLinkPress,
     };
+    const imageAuthRef = useRef(imageAuth);
+    imageAuthRef.current = imageAuth;
 
     const [ready, setReady] = useState(false);
     const [state, setState] = useState<TicketMobileEditorStatePayload>({
@@ -192,6 +196,29 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
           callbacksRef.current.onContentHeight?.(payload);
         },
         onError: reportError,
+        onImageRequest(payload) {
+          const auth = imageAuthRef.current;
+          if (!auth) return;
+          const fetchUrl = `${auth.baseUrl}${payload.src}`;
+          fetch(fetchUrl, {
+            headers: { "x-api-key": auth.apiKey },
+          })
+            .then(async (resp) => {
+              if (!resp.ok) throw new Error(`Image fetch failed: ${resp.status}`);
+              const contentType = resp.headers.get("content-type") ?? "image/png";
+              const buf = await resp.arrayBuffer();
+              const bytes = new Uint8Array(buf);
+              let binary = "";
+              for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+              }
+              const base64 = btoa(binary);
+              bridgeRef.current?.sendImageData(payload.src, `data:${contentType};base64,${base64}`);
+            })
+            .catch(() => {
+              // Leave the broken image
+            });
+        },
       });
     }
 
@@ -309,6 +336,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
         autofocus,
         placeholder,
         debounceMs,
+        imageAuth,
       });
     };
 

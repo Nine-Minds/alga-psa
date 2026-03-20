@@ -166,6 +166,14 @@ vi.mock("../ui/components/Badge", () => ({
   Badge: (props: Record<string, unknown>) => React.createElement("MockBadge", props),
 }));
 
+vi.mock("../ui/components/DatePickerField", () => ({
+  DatePickerField: (props: Record<string, unknown>) => React.createElement("MockDatePickerField", props),
+}));
+
+vi.mock("../ui/components/TimePickerField", () => ({
+  TimePickerField: (props: Record<string, unknown>) => React.createElement("MockTimePickerField", props),
+}));
+
 vi.mock("../ui/components/PrimaryButton", () => ({
   PrimaryButton: (props: Record<string, unknown>) =>
     React.createElement("MockPrimaryButton", props, props.children as React.ReactNode),

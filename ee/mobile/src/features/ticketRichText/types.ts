@@ -36,6 +36,7 @@ export type TicketMobileEditorInitPayload = {
   autofocus?: boolean;
   placeholder?: string;
   debounceMs?: number;
+  imageAuth?: { baseUrl: string; apiKey: string };
 };
 
 export type TicketMobileEditorNativeToWebMessage =
@@ -55,6 +56,13 @@ export type TicketMobileEditorNativeToWebMessage =
       payload: {
         requestId: string;
         request: TicketMobileEditorRequest;
+      };
+    }
+  | {
+      type: "image-data";
+      payload: {
+        src: string;
+        dataUri: string;
       };
     };
 
@@ -97,5 +105,11 @@ export type TicketMobileEditorWebToNativeMessage =
         code: string;
         message: string;
         requestId?: string;
+      };
+    }
+  | {
+      type: "image-request";
+      payload: {
+        src: string;
       };
     };

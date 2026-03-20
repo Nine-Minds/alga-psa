@@ -23,6 +23,7 @@ import { getCachedTicketStatuses, setCachedTicketStatuses, getCachedTicketPriori
 import { formatDateShort, formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
+import { DatePickerField } from "../ui/components/DatePickerField";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -989,25 +990,24 @@ function FiltersModal({
           value={filters.updatedSinceDays}
           onChange={(updatedSinceDays) => setFilters({ ...filters, updatedSinceDays, updatedSinceDate: "" })}
         />
-        <TextInput
-          value={filters.updatedSinceDate}
-          onChangeText={(updatedSinceDate) => setFilters({ ...filters, updatedSinceDays: null, updatedSinceDate })}
-          placeholder={t("filters.updatedSinceDatePlaceholder")}
-          placeholderTextColor={theme.colors.placeholder}
-          autoCapitalize="none"
-          autoCorrect={false}
-          accessibilityLabel={t("filters.updatedSinceDateAccessibility")}
-          style={{
-            paddingVertical: theme.spacing.sm,
-            paddingHorizontal: theme.spacing.md,
-            borderRadius: theme.borderRadius.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            marginTop: theme.spacing.sm,
-          }}
-        />
+        <View style={{ marginTop: theme.spacing.sm }}>
+          <DatePickerField
+            value={filters.updatedSinceDate ? (() => { const d = new Date(`${filters.updatedSinceDate}T00:00:00`); return Number.isNaN(d.getTime()) ? undefined : d; })() : undefined}
+            onChange={(d) => {
+              if (d) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, "0");
+                const dd = String(d.getDate()).padStart(2, "0");
+                setFilters({ ...filters, updatedSinceDays: null, updatedSinceDate: `${yyyy}-${mm}-${dd}` });
+              } else {
+                setFilters({ ...filters, updatedSinceDate: "" });
+              }
+            }}
+            placeholder={t("filters.updatedSinceDatePlaceholder")}
+            clearable
+            label={t("filters.updatedSinceDateAccessibility")}
+          />
+        </View>
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
           {t("filters.updatedSinceDateHint")}
         </Text>
