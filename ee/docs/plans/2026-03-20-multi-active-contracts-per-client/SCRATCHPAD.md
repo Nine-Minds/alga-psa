@@ -138,6 +138,8 @@
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.reportingExportAudit.wiring.test.ts`
 - 2026-03-20: Billing test helper concurrent-assignment fixture wiring test run
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts`
+- 2026-03-20: Direct concurrent-assignment seeding helper wiring test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts`
 
 ## Implementation Log
 
@@ -210,6 +212,11 @@
   - assignment-line active toggle (`clientContractLineIsActive`)
 - 2026-03-20: Added `createConcurrentFixedPlanAssignments(...)` helper to seed two or more intentionally concurrent assignment fixtures via one call.
 - 2026-03-20: Added `T049` wiring coverage in `server/src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts` asserting lifecycle knobs and concurrent-assignment helper are present and wired.
+- 2026-03-20: Added `seedConcurrentClientContractAssignmentsDirect(...)` helper for explicit direct DB fixture seeding through `TestContext.createEntity(...)`:
+  - requires `contracts` + `client_contracts` tables
+  - supports per-assignment header/assignment lifecycle overrides
+  - intentionally bypasses production write paths for tests that need concurrent states directly
+- 2026-03-20: Added `T050` wiring coverage in `server/src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts` asserting direct concurrent seeding uses `createEntity(...)` on `contracts` and `client_contracts`.
 
 ## Links / References
 

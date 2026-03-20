@@ -227,7 +227,7 @@
   {
     "id": "F046",
     "description": "Add dedicated concurrent-assignment fixture helpers and direct DB seeding paths for tests that must bypass production guard code to model the new allowed states.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F047",

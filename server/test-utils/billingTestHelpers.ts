@@ -318,6 +318,19 @@ interface CreateBucketUsageOptions {
   rolledOverMinutes?: number;
 }
 
+interface DirectConcurrentAssignmentSeedOptions {
+  contractId?: string;
+  clientContractId?: string;
+  clientId?: string;
+  contractName?: string;
+  contractHeaderIsActive?: boolean;
+  contractHeaderStatus?: string;
+  assignmentIsActive?: boolean;
+  assignmentStatus?: string;
+  startDate?: string;
+  endDate?: string | null;
+}
+
 async function ensureServiceType(
   context: TestContext,
   billingMethod: 'fixed' | 'hourly' | 'usage' = 'fixed'
@@ -924,6 +937,70 @@ export async function createConcurrentFixedPlanAssignments(
   }
 
   return seededAssignments;
+}
+
+export async function seedConcurrentClientContractAssignmentsDirect(
+  context: TestContext,
+  assignments: DirectConcurrentAssignmentSeedOptions[]
+): Promise<Array<{ contractId: string; clientContractId: string }>> {
+  if (assignments.length < 2) {
+    throw new Error('seedConcurrentClientContractAssignmentsDirect requires at least two assignments');
+  }
+
+  const hasContractsTable = await context.db.schema.hasTable('contracts');
+  const hasClientContractsTable = await context.db.schema.hasTable('client_contracts');
+  if (!hasContractsTable || !hasClientContractsTable) {
+    throw new Error('contracts and client_contracts tables are required for direct concurrent assignment seeding');
+  }
+
+  const seeded: Array<{ contractId: string; clientContractId: string }> = [];
+
+  for (const assignment of assignments) {
+    const contractId = assignment.contractId ?? uuidv4();
+    const clientContractId = assignment.clientContractId ?? uuidv4();
+    const targetClientId = assignment.clientId ?? context.clientId;
+    const contractName = assignment.contractName ?? `Direct Assignment ${seeded.length + 1}`;
+    const contractHeaderIsActive = assignment.contractHeaderIsActive ?? true;
+    const contractHeaderStatus = assignment.contractHeaderStatus ?? 'Active';
+    const assignmentIsActive = assignment.assignmentIsActive ?? true;
+    const assignmentStatus = assignment.assignmentStatus ?? 'active';
+    const startDate = assignment.startDate ?? '2025-02-01';
+    const endDate = assignment.endDate ?? null;
+
+    await context.createEntity('contracts', {
+      contract_id: contractId,
+      contract_name: contractName,
+      contract_description: `${contractName} direct-seeded fixture`,
+      billing_frequency: 'monthly',
+      is_active: contractHeaderIsActive,
+      status: contractHeaderStatus,
+      is_template: false,
+      currency_code: 'USD',
+      owner_client_id: targetClientId,
+      created_at: context.db.fn.now(),
+      updated_at: context.db.fn.now(),
+    }, 'contract_id');
+
+    await context.createEntity('client_contracts', {
+      client_contract_id: clientContractId,
+      client_id: targetClientId,
+      contract_id: contractId,
+      start_date: startDate,
+      end_date: endDate,
+      is_active: assignmentIsActive,
+      status: assignmentStatus,
+      po_required: false,
+      po_number: null,
+      po_amount: null,
+      template_contract_id: null,
+      created_at: context.db.fn.now(),
+      updated_at: context.db.fn.now(),
+    }, 'client_contract_id');
+
+    seeded.push({ contractId, clientContractId });
+  }
+
+  return seeded;
 }
 
 export async function ensureClientPlanBundlesTable(context: TestContext): Promise<void> {

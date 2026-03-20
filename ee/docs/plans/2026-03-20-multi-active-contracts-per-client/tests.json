@@ -416,7 +416,7 @@
   {
     "id": "T050",
     "description": "A dedicated test helper can create two or more concurrent assignments for one client via direct DB inserts or `TestContext.createEntity(...)` without guarded production APIs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
