@@ -18,6 +18,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
   getClientContractLine,
+  getClientContracts,
   updateClientContractLine,
   addClientContractLine,
   removeClientContractLine,
@@ -83,6 +84,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const [serviceCategories, setServiceCategories] = useState<IServiceCategory[]>([]);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [clientContractLines, setClientContractLines] = useState<ClientContractLineWithStringDates[]>([]);
+    const [clientContracts, setClientContracts] = useState<IClientContract[]>([]);
+    const [selectedClientContractId, setSelectedClientContractId] = useState<string | null>(null);
     const [editingContractLine, setEditingContractLine] = useState<ClientContractLineWithStringDates | null>(null);
     const [contractLineToDelete, setContractLineToDelete] = useState<string | null>(null);
     const [services, setServices] = useState<IService[]>([]);
@@ -138,13 +141,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
     useEffect(() => {
         const fetchData = async () => {
-            const contractLines = await getClientContractLine(client.client_id);
-            const contractLinesWithStringDates: ClientContractLineWithStringDates[] = contractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
-                ...plan,
-                start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
-            }));
-            setClientContractLines(contractLinesWithStringDates);
+            await hydrateAssignmentScopedViews();
 
             const plans = await getContractLinesAsync();
             setContractLines(plans);
@@ -572,12 +569,18 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
                 <TabsContent value="plans" className="space-y-6"> {/* Added space-y for layout */}
                     {/* Added ClientContractAssignment component */}
-                    <ClientContractAssignment clientId={client.client_id} />
+                    <ClientContractAssignment
+                        clientId={client.client_id}
+                        onAssignmentsChanged={hydrateAssignmentScopedViews}
+                    />
 
                     {/* Existing ContractLines component */}
                     <ContractLines
                         clientContractLines={clientContractLines}
                         contractLines={contractLines}
+                        assignments={clientContracts}
+                        selectedClientContractId={selectedClientContractId}
+                        onSelectedClientContractChange={setSelectedClientContractId}
                         serviceCategories={serviceCategories}
                         clientId={client.client_id}
                         onEdit={handleEditContractLine}
@@ -659,3 +662,22 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 };
 
 export default BillingConfiguration;
+    const hydrateAssignmentScopedViews = async () => {
+        const contractLines = await getClientContractLine(client.client_id);
+        const contractLinesWithStringDates: ClientContractLineWithStringDates[] = contractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
+            ...plan,
+            start_date: formatStartDate(plan.start_date),
+            end_date: plan.end_date ? formatStartDate(plan.end_date) : null
+        }));
+        setClientContractLines(contractLinesWithStringDates);
+
+        const assignments = await getClientContracts(client.client_id);
+        const activeAssignments = assignments.filter((assignment) => assignment.is_active);
+        setClientContracts(activeAssignments);
+        setSelectedClientContractId((prevSelected) => {
+            if (prevSelected && activeAssignments.some((assignment) => assignment.client_contract_id === prevSelected)) {
+                return prevSelected;
+            }
+            return activeAssignments[0]?.client_contract_id ?? null;
+        });
+    };

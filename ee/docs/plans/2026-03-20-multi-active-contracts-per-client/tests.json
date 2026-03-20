@@ -215,7 +215,7 @@
   {
     "id": "T026",
     "description": "Contract-line add flow carries explicit `client_contract_id` context from UI to action layer.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028"
@@ -224,7 +224,7 @@
   {
     "id": "T027",
     "description": "Contract-line edit flow is explicit about assignment scope versus shared line scope and no longer presents assignment-scoped editing on top of line-scoped mutation implicitly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028"
@@ -233,7 +233,7 @@
   {
     "id": "T028",
     "description": "Contract-line remove flow targets the intended active assignment and cannot silently act on a sibling active assignment.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028"
@@ -242,7 +242,7 @@
   {
     "id": "T029",
     "description": "BillingConfiguration and related clients screens refresh lines and overlap data immediately after assignment create/edit/deactivate actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]

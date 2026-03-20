@@ -100,6 +100,8 @@
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
 - 2026-03-20: Client contract-line assignment read wiring test run
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
+- 2026-03-20: Client contract-line mutation-scope wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/multiActiveContracts.clientContractLineMutationScope.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
 
 ## Implementation Log
 
@@ -119,6 +121,9 @@
   - removed contract-header de-dup filtering that blocked creating a second active assignment for the same `contract_id`
 - 2026-03-20: Refactored clients contract-line reads to emit assignment-scoped synthetic identity (`contract-<client_contract_id>-<contract_line_id>`) instead of aliasing raw `contract_line_id` as `client_contract_line_id`.
 - 2026-03-20: Added synthetic identity parsing in clients contract-line action/model paths so historical invoice guards and mutations can resolve back to underlying contract-line IDs without reintroducing contract-header-only read identity.
+- 2026-03-20: Made contract-line mutation scope explicit by requiring assignment-scoped synthetic line identity and failing with an explicit ambiguity error when multiple active assignments share the same contract header.
+- 2026-03-20: Added explicit assignment selection context to the clients Contract Lines UI and plumbed selected `client_contract_id` into add-line payloads.
+- 2026-03-20: Wired `ClientContractAssignment` mutation callbacks into `BillingConfiguration` (`onAssignmentsChanged`) so assignment create/edit/deactivate refreshes line/overlap data immediately instead of leaving stale assignment-scoped views.
 
 ## Links / References
 

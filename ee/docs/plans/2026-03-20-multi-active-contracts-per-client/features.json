@@ -132,17 +132,17 @@
   {
     "id": "F027",
     "description": "Refactor client contract-line mutation flows so the payload and persistence model are explicit about assignment scope versus shared header/line scope.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F028",
     "description": "Add explicit assignment context to client contract-line add/edit/remove UI so the user and the server both know which active assignment is being modified.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F029",
     "description": "Fix `BillingConfiguration` and related clients screens so assignment mutations immediately refresh contract lines and overlap data instead of leaving stale state on screen.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F030",

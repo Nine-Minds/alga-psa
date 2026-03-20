@@ -31,6 +31,7 @@ import { ClientContractDialog, ClientContractDialogSubmission } from './ClientCo
 
 interface ClientContractAssignmentProps {
   clientId: string;
+  onAssignmentsChanged?: () => Promise<void> | void;
 }
 
 interface DetailedClientContract extends IClientContract {
@@ -40,7 +41,7 @@ interface DetailedClientContract extends IClientContract {
   contract_line_names?: string[];
 }
 
-const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ clientId }) => {
+const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ clientId, onAssignmentsChanged }) => {
   const [clientContracts, setClientContracts] = useState<DetailedClientContract[]>([]);
   const [availableContracts, setAvailableContracts] = useState<IContract[]>([]);
   const [selectedContractToAdd, setSelectedContractToAdd] = useState<string | null>(null);
@@ -138,7 +139,8 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
         await applyContractToClient(createdAssignment.client_contract_id);
       }
       
-      fetchData(); // Refresh data
+      await fetchData(); // Refresh data
+      await onAssignmentsChanged?.();
     } catch (error: any) {
       console.error('Error adding contract to client:', error);
       // Try to extract backend error message
@@ -161,7 +163,8 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
   const handleDeactivateContract = async (clientContractId: string) => {
     try {
       await deactivateClientContract(clientContractId);
-      fetchData(); // Refresh data
+      await fetchData(); // Refresh data
+      await onAssignmentsChanged?.();
     } catch (error: any) {
       console.error('Error deactivating client contract:', error);
       let errorMsg = 'Failed to deactivate contract';
@@ -196,8 +199,9 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
         notice_period_days: payload.endDate ? payload.notice_period_days : undefined,
         renewal_term_months: payload.endDate ? payload.renewal_term_months : undefined,
       });
-      fetchData(); // Refresh data
+      await fetchData(); // Refresh data
       setEditingContract(null);
+      await onAssignmentsChanged?.();
     } catch (error: any) {
       console.error('Error updating client contract:', error);
       let errorMsg = 'Failed to update contract';
