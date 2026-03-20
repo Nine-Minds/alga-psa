@@ -26,7 +26,6 @@ function ScrollColumn({
   formatItem,
   colors,
   typography,
-  spacing,
 }: {
   data: number[];
   selected: number;
@@ -34,7 +33,6 @@ function ScrollColumn({
   formatItem: (val: number) => string;
   colors: ReturnType<typeof useTheme>["colors"];
   typography: ReturnType<typeof useTheme>["typography"];
-  spacing: ReturnType<typeof useTheme>["spacing"];
 }) {
   const listRef = useRef<FlatList<number>>(null);
   const didInitialScroll = useRef(false);
@@ -220,7 +218,6 @@ export function TimePickerField({
                   formatItem={pad2}
                   colors={colors}
                   typography={typography}
-                  spacing={spacing}
                 />
               </View>
 
@@ -237,7 +234,6 @@ export function TimePickerField({
                   formatItem={pad2}
                   colors={colors}
                   typography={typography}
-                  spacing={spacing}
                 />
               </View>
             </View>
