@@ -596,4 +596,35 @@ describe('selector-input recurring generation', () => {
       invoiceId: 'invoice-existing',
     });
   });
+
+  it('T040: selector-input generation fails explicitly when billing charges span multiple client_contract_id values', async () => {
+    mocks.calculateBillingForExecutionWindow.mockResolvedValueOnce({
+      ...mocks.contractBillingResult,
+      charges: [
+        {
+          ...mocks.contractBillingResult.charges[0],
+          client_contract_id: 'assignment-1',
+        },
+        {
+          ...mocks.contractBillingResult.charges[0],
+          serviceId: 'service-2',
+          client_contract_id: 'assignment-2',
+        },
+      ],
+    });
+
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
+      message:
+        'Invoice spans multiple client contracts (assignment-1, assignment-2). Only one client contract per invoice is supported.',
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    });
+  });
 });

@@ -187,7 +187,7 @@
   {
     "id": "F038",
     "description": "Preserve the single-invoice single-`client_contract_id` invariant in invoice generation and make any resulting mixed-contract preview/generate failure explicit and intentional.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F039",

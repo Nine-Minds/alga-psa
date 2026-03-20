@@ -1402,7 +1402,17 @@ export const generateInvoiceForSelectionInput = withAuth(async (
     );
   }
 
-  const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
+  let clientContractId: string | null = null;
+  try {
+    clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
+  } catch (error) {
+    throw withRecurringWindowErrorContext(
+      error instanceof Error
+        ? error
+        : new Error('Recurring invoice generation failed because invoice scope could not be resolved.'),
+      normalizedSelectorInput,
+    );
+  }
   if (clientContractId) {
     const poContext = await getClientContractPurchaseOrderContext({
       knex,

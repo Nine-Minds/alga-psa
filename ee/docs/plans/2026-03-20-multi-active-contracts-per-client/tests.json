@@ -332,7 +332,7 @@
   {
     "id": "T040",
     "description": "If mixed-assignment charges accidentally reach invoice generation, the preserved single-assignment invariant fails explicitly with a user-readable error rather than silent misattribution.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]

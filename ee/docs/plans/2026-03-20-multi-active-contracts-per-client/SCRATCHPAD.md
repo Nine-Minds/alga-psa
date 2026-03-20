@@ -118,6 +118,8 @@
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
 - 2026-03-20: Client-cadence assignment-scoped materialization-gap regression test run
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts`
+- 2026-03-20: Mixed-assignment single-invoice invariant regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts`
 
 ## Implementation Log
 
@@ -162,6 +164,8 @@
 - 2026-03-20: Added `T038` regression in `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` proving sibling assignments sharing one base contract line persist as separate parent invoice charges with distinct `client_contract_id` attribution.
 - 2026-03-20: Refined client-cadence materialization-gap candidate blocking to match assignment-scoped recurring identities instead of broad `client + invoice window` keys.
 - 2026-03-20: Added `T039` regression in `server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts` proving a materialization gap on one assignment does not block sibling assignment candidates in the same client invoice window.
+- 2026-03-20: Preserved explicit single-assignment invoice failure behavior by attaching recurring execution-window context when selector-input generation encounters mixed `client_contract_id` charge sets.
+- 2026-03-20: Added `T040` regression in `server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts` proving selector-input generation fails explicitly (with user-readable single-assignment invariant message) when billing charges span multiple assignments.
 
 ## Links / References
 
