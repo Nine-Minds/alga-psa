@@ -1,6 +1,6 @@
 [
   {"id": "F001", "description": "Create en/msp/dispatch.json with ~120 keys following naming convention", "implemented": true, "prdRefs": ["D-FR1 to D-FR8"]},
-  {"id": "F002", "description": "WorkItemListPanel.tsx: wire useTranslation('msp/dispatch'), translate heading, search/filter placeholders, status labels, pagination", "implemented": false, "prdRefs": ["D-FR1"]},
+  {"id": "F002", "description": "WorkItemListPanel.tsx: wire useTranslation('msp/dispatch'), translate heading, search/filter placeholders, status labels, pagination", "implemented": true, "prdRefs": ["D-FR1"]},
   {"id": "F003", "description": "ScheduleViewPanel.tsx: translate page title, view toggle buttons (Day/Week), navigation buttons, Show Inactive label", "implemented": false, "prdRefs": ["D-FR2"]},
   {"id": "F004", "description": "WorkItemDetailsDrawer.tsx: translate all field labels, section headings, error toasts, fallback text", "implemented": false, "prdRefs": ["D-FR3"]},
   {"id": "F005", "description": "TechnicianDispatchDashboard.tsx: translate error/success toasts, permission messages, filter options, private event title", "implemented": false, "prdRefs": ["D-FR4"]},

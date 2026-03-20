@@ -114,6 +114,7 @@ SCRIPT
 ## Progress Log
 
 - (2026-03-20) `F001` completed: created `server/public/locales/en/msp/dispatch.json` with shared sections for `page`, `workItems`, `schedule`, `details`, `dashboard`, `events`, `badges`, and `time`. Included extra shared keys for tooltips, delete-validation fallback text, and dashboard toasts so the later component wiring step stays additive and consistent.
+- (2026-03-20) `F002` completed: wired `packages/scheduling/src/components/technician-dispatch/WorkItemListPanel.tsx` to `useTranslation('msp/dispatch')` for the panel heading, search/filter placeholders, unscheduled/scheduled toggle label, pagination buttons, page summary, and item-count summary. Kept interpolation in the namespace for page and count strings.
 
 ### Key file paths — Dispatch
 | File | Strings |
