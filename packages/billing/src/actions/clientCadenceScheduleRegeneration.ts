@@ -253,19 +253,24 @@ async function loadClientCadenceRecurringObligations(
   trx: Knex.Transaction,
   params: { tenant: string; clientId: string },
 ): Promise<ClientCadenceRecurringObligationRow[]> {
-  return trx('client_contract_lines as ccl')
-    .join('contract_lines as cl', function () {
-      this.on('cl.contract_line_id', '=', 'ccl.contract_line_id')
-        .andOn('cl.tenant', '=', 'ccl.tenant');
+  return trx('client_contracts as cc')
+    .join('contracts as ct', function () {
+      this.on('ct.contract_id', '=', trx.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
+        .andOn('ct.tenant', '=', 'cc.tenant');
     })
-    .where('ccl.tenant', params.tenant)
-    .andWhere('ccl.client_id', params.clientId)
+    .join('contract_lines as cl', function () {
+      this.on('cl.contract_id', '=', 'ct.contract_id')
+        .andOn('cl.tenant', '=', 'ct.tenant');
+    })
+    .where('cc.tenant', params.tenant)
+    .andWhere('cc.client_id', params.clientId)
+    .where('cc.is_active', true)
     .where('cl.cadence_owner', 'client')
     .whereNotNull('cl.billing_timing')
     .select(
-      'ccl.client_contract_line_id',
-      'ccl.start_date',
-      'ccl.end_date',
+      'cl.contract_line_id as client_contract_line_id',
+      'cc.start_date',
+      'cc.end_date',
       'cl.contract_line_type',
       'cl.billing_timing',
     );

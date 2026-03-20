@@ -16,6 +16,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19) The plan assumes the intended live structure is: `contracts` as client-owned header, `contract_lines` as canonical line obligation, `client_contracts` as assignment/lifecycle layer.
 - (2026-03-19) The likely post-drop recurring identity target is `contract_line_id` for the line plus `client_contract_id` / `client_contracts` for assignment windowing. If `client_contract_line` survives at all, it should survive only as compatibility metadata, not as a live storage dependency.
 - (2026-03-19 23:10 EDT) For `getAvailableRecurringDueWork()`, client-cadence persisted rows can resolve directly through `recurring_service_periods -> contract_lines -> contracts.owner_client_id` because the invoice/service-period window is already materialized. Materialization-gap detection still needs `client_contracts` for active assignment windows, but maps `contract_line_id` back into the compatibility field `client_contract_line_id`.
+- (2026-03-19 23:26 EDT) Client-cadence schedule regeneration can use the same surviving structure as due-work gap detection: load active obligations from `client_contracts -> contracts -> contract_lines`, alias `contract_line_id` to `client_contract_line_id`, and defer the actual obligation identity migration to the later F014/F015 work.
 
 ## Discoveries / Constraints
 
@@ -32,6 +33,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:16 EDT) `AutomaticInvoices` can be validated meaningfully without a database fixture by letting the component call the real `getAvailableRecurringDueWork()` action against mocked migrated-schema rows. That catches regressions in the UI load path instead of only checking a prebuilt mock payload.
 - (2026-03-19 23:19 EDT) Preview/generate selector normalization for client cadence can follow the same post-drop lookup as due-work loading: `recurring_service_periods -> contract_lines -> contracts.owner_client_id`. The selector-input path only needs to prove the persisted service-period window belongs to the client; it does not need a dropped assignment row.
 - (2026-03-19 23:21 EDT) Service-period inspection uses the same obligation-context rule: persisted client-cadence rows can resolve display metadata directly from `contract_lines -> contracts.owner_client_id`. No live inspection path needs a dropped client assignment row once the recurring service period already exists.
+- (2026-03-19 23:26 EDT) `packages/billing/src/actions/clientCadenceScheduleRegeneration.ts` was the next stale runtime caller. Its query still started from `client_contract_lines`, and `server/src/test/unit/billing/updateClientBillingSchedule.test.ts` encoded that exact base table in its fake transaction responses.
 
 ## Commands / Runbooks
 
@@ -72,6 +74,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `pnpm exec vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts` (run from `server/`)
 - (2026-03-19 23:21 EDT) Verification for F006/T008:
   - `pnpm exec vitest run src/test/unit/billing/recurringServicePeriodActions.test.ts` (run from `server/`)
+- (2026-03-19 23:26 EDT) Verification for F007/T009:
+  - `pnpm exec vitest run src/test/unit/billing/updateClientBillingSchedule.test.ts` (run from `server/`)
 
 ## Completed Items
 
@@ -84,6 +88,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:19 EDT) Completed `T005`/`T006`/`T007`: preview and generation coverage now explicitly fails on any `client_contract_lines` access while verifying client-cadence selector-input preview, client-cadence selector-input generation, and contract-cadence regression behavior.
 - (2026-03-19 23:21 EDT) Completed `F006`: recurring service-period management view resolves client-cadence obligation metadata from surviving contract-owned structures instead of `client_contract_lines`.
 - (2026-03-19 23:21 EDT) Completed `T008`: service-period management view coverage now simulates a migrated schema by failing on any `client_contract_lines` access while still returning client/contract/line context for a client-cadence schedule.
+- (2026-03-19 23:26 EDT) Completed `F007`: client-cadence schedule regeneration now loads active recurring obligations from `client_contracts -> contracts -> contract_lines` and aliases the surviving `contract_line_id` back to `client_contract_line_id` for compatibility, removing the dropped-table dependency from billing-schedule changes.
+- (2026-03-19 23:26 EDT) Completed `T009`: billing-schedule regeneration coverage now seeds `client_contracts as cc`, treats `client_contract_lines` as missing, and still verifies regenerated recurring service periods are materialized and superseded correctly.
 
 ## Links / References
 

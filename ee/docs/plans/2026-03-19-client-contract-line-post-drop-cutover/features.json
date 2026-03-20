@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Client-cadence recurring regeneration loads obligations from the surviving structure instead of `client_contract_lines`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Rollout / Migration"]
   },
   {

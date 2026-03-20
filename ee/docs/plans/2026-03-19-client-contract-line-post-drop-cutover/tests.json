@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "Integration: client-cadence regeneration after billing schedule change loads obligations from surviving tables only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F014", "F018"]
   },
   {

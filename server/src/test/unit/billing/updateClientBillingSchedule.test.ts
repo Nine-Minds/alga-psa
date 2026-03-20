@@ -9,14 +9,16 @@ class FakeQuery {
   private readonly calls: Call[];
   private readonly table: string;
   private readonly responses: Record<string, any>;
+  private readonly missingTables: Set<string>;
   private whereClauses: unknown[] = [];
   private andWhereClauses: unknown[] = [];
   private isFirst = false;
 
-  constructor(table: string, calls: Call[], responses: Record<string, any>) {
+  constructor(table: string, calls: Call[], responses: Record<string, any>, missingTables?: Iterable<string>) {
     this.table = table;
     this.calls = calls;
     this.responses = responses;
+    this.missingTables = new Set(missingTables ?? []);
   }
 
   where(...args: unknown[]): this {
@@ -61,6 +63,10 @@ class FakeQuery {
 
   select(...args: unknown[]): any {
     this.calls.push({ table: this.table, method: 'select', args, where: this.whereClauses, andWhere: this.andWhereClauses });
+    const baseTable = this.table.split(/\s+as\s+/i)[0] ?? this.table;
+    if (this.missingTables.has(baseTable)) {
+      return Promise.reject(new Error(`relation "${baseTable}" does not exist`));
+    }
     const key = `${this.table}:select:${this.isFirst ? 'first' : 'many'}`;
     return Promise.resolve(this.responses[key]);
   }
@@ -87,10 +93,14 @@ class FakeQuery {
   }
 }
 
-function makeFakeTransaction(responses: Record<string, any>): { trx: any; calls: Call[] } {
+function makeFakeTransaction(
+  responses: Record<string, any>,
+  options?: { missingTables?: string[] },
+): { trx: any; calls: Call[] } {
   const calls: Call[] = [];
-  const trx: any = (table: string) => new FakeQuery(table, calls, responses);
+  const trx: any = (table: string) => new FakeQuery(table, calls, responses, options?.missingTables);
   trx.fn = { now: () => 'NOW' };
+  trx.raw = (value: string) => value;
   return { trx, calls };
 }
 
@@ -139,7 +149,7 @@ describe('updateClientBillingSchedule', () => {
     const responses = {
       'clients:select:first': { client_id: 'client-1', billing_cycle: 'monthly' },
       'client_billing_cycles as cbc:select:first': { period_end_date: '2026-01-10T00:00:00Z' },
-      'client_contract_lines as ccl:select:many': [
+      'client_contracts as cc:select:many': [
         {
           client_contract_line_id: 'line-1',
           start_date: '2025-01-10T00:00:00Z',
@@ -182,7 +192,9 @@ describe('updateClientBillingSchedule', () => {
         },
       ],
     };
-    const { trx, calls } = makeFakeTransaction(responses);
+    const { trx, calls } = makeFakeTransaction(responses, {
+      missingTables: ['client_contract_lines'],
+    });
     currentTrx = trx;
     const { updateClientBillingSchedule: updateWithMock } = await import('../../../../../packages/billing/src/actions/billingScheduleActions');
 
@@ -253,7 +265,7 @@ describe('updateClientBillingSchedule', () => {
     const responses = {
       'clients:select:first': { client_id: 'client-1', billing_cycle: 'monthly' },
       'client_billing_cycles as cbc:select:first': null,
-      'client_contract_lines as ccl:select:many': [
+      'client_contracts as cc:select:many': [
         {
           client_contract_line_id: 'line-1',
           start_date: '2025-01-01T00:00:00Z',
@@ -264,7 +276,9 @@ describe('updateClientBillingSchedule', () => {
       ],
       'recurring_service_periods:select:many': [],
     };
-    const { trx, calls } = makeFakeTransaction(responses);
+    const { trx, calls } = makeFakeTransaction(responses, {
+      missingTables: ['client_contract_lines'],
+    });
     currentTrx = trx;
     const { updateClientBillingSchedule: updateWithMock } = await import('../../../../../packages/billing/src/actions/billingScheduleActions');
 
