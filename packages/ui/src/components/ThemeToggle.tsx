@@ -8,15 +8,28 @@ import { useAppTheme } from '../hooks/useAppTheme';
 
 type ThemeOption = 'light' | 'dark' | 'system';
 
-const themeOptions: Array<{ value: ThemeOption; label: string; icon: typeof Sun }> = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
-];
+interface ThemeToggleLabels {
+  ariaLabel?: string;
+  light?: string;
+  dark?: string;
+  system?: string;
+  selected?: string;
+}
 
-export function ThemeToggle() {
+interface ThemeToggleProps {
+  labels?: ThemeToggleLabels;
+}
+
+export function ThemeToggle({ labels }: ThemeToggleProps) {
   const { theme, resolvedTheme, setTheme } = useAppTheme();
   const [mounted, setMounted] = useState(false);
+  const themeOptions: Array<{ value: ThemeOption; label: string; icon: typeof Sun }> = [
+    { value: 'light', label: labels?.light ?? 'Light', icon: Sun },
+    { value: 'dark', label: labels?.dark ?? 'Dark', icon: Moon },
+    { value: 'system', label: labels?.system ?? 'System', icon: Monitor },
+  ];
+  const ariaLabel = labels?.ariaLabel ?? 'Theme toggle';
+  const selectedLabel = labels?.selected ?? 'Selected';
 
   useEffect(() => {
     setMounted(true);
@@ -44,7 +57,7 @@ export function ThemeToggle() {
           data-automation-id="theme-toggle"
           variant="ghost"
           size="icon"
-          aria-label="Theme toggle"
+          aria-label={ariaLabel}
           className="h-10 w-10"
         >
           <ActiveIcon className="h-5 w-5" />
@@ -60,7 +73,7 @@ export function ThemeToggle() {
             <Icon className="h-4 w-4" />
             <span className="text-sm">{label}</span>
             {theme === value && (
-              <span className="ml-auto text-xs text-gray-500">Selected</span>
+              <span className="ml-auto text-xs text-gray-500">{selectedLabel}</span>
             )}
           </DropdownMenuItem>
         ))}

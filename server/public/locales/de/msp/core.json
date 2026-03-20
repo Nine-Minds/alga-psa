@@ -151,6 +151,13 @@
     },
     "tenantBadge": {
       "ariaLabel": "Aktiver Mandant {{tenant}}"
+    },
+    "themeToggle": {
+      "ariaLabel": "Theme umschalten",
+      "light": "Hell",
+      "dark": "Dunkel",
+      "system": "System",
+      "selected": "Ausgewahlt"
     }
   },
   "dialogs": {

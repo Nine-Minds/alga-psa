@@ -59,7 +59,24 @@
     },
     "substeps": {
       "dataImport": "55555",
-      "createContacts": "55555"
+      "identity": {
+        "addProvider": "55555",
+        "linkTeamMember": "55555"
+      },
+      "portal": {
+        "customDomain": "55555",
+        "branding": "55555",
+        "inviteFirstContact": "55555"
+      },
+      "createContacts": "55555",
+      "calendar": {
+        "addProvider": "55555",
+        "connectAuthorize": "55555"
+      },
+      "email": {
+        "configureInbound": "55555",
+        "configureOutboundDomain": "55555"
+      }
     },
     "cta": {
       "completed": "55555",
@@ -105,6 +122,31 @@
         "title": "55555",
         "description": "55555",
         "cta": "55555"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "55555",
+        "noLinkedUsers": "55555",
+        "addProviderCredentials": "55555",
+        "configurationUnavailable": "55555",
+        "loadFailed": "55555"
+      },
+      "portal": {
+        "loadFailed": "55555"
+      },
+      "import": {
+        "loadFailed": "55555"
+      },
+      "calendar": {
+        "providerAttention": "55555 {{provider}} 55555",
+        "loadFailed": "55555"
+      },
+      "email": {
+        "enterpriseOnly": "55555",
+        "tenantRequired": "55555",
+        "loadFailed": "55555",
+        "verificationFailed": "55555 {{domain}} 55555"
       }
     },
     "errors": {

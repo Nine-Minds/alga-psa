@@ -59,7 +59,24 @@
     },
     "substeps": {
       "dataImport": "Ukończ pierwszy import LUB utwórz 5 kontaktów",
-      "createContacts": "Utwórz pierwsze 5 kontaktów"
+      "identity": {
+        "addProvider": "Dodaj dostawcę SSO",
+        "linkTeamMember": "Połącz pierwszego członka zespołu"
+      },
+      "portal": {
+        "customDomain": "Niestandardowa domena portalu",
+        "branding": "Dostosowanie kolorów i logo portalu",
+        "inviteFirstContact": "Zaproś pierwszy kontakt do portalu"
+      },
+      "createContacts": "Utwórz pierwsze 5 kontaktów",
+      "calendar": {
+        "addProvider": "Dodaj dostawcę kalendarza",
+        "connectAuthorize": "Połącz i autoryzuj dostawcę"
+      },
+      "email": {
+        "configureInbound": "Skonfiguruj pocztę przychodzącą",
+        "configureOutboundDomain": "Skonfiguruj niestandardową domenę poczty wychodzącej"
+      }
     },
     "cta": {
       "completed": "Ukończono",
@@ -105,6 +122,31 @@
         "title": "Skonfiguruj e-mail",
         "description": "Skonfiguruj przychodzącą pocztę zgłoszeń i zweryfikuj domenę wysyłkową dla niezawodnego dostarczania.",
         "cta": "Skonfiguruj e-mail"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "Nie można teraz zweryfikować połączonych członków zespołu.",
+        "noLinkedUsers": "Żaden użytkownik nie jest jeszcze połączony z dostawcą tożsamości. Poproś administratora MSP o podłączenie Google lub Microsoft.",
+        "addProviderCredentials": "Dodaj poświadczenia Google Workspace lub Microsoft 365, aby włączyć SSO dla swojego zespołu.",
+        "configurationUnavailable": "Konfiguracja dostawcy SSO jest niedostępna w tym środowisku.",
+        "loadFailed": "Nie udało się załadować stanu konfiguracji SSO."
+      },
+      "portal": {
+        "loadFailed": "Nie udało się załadować stanu domeny portalu klienta."
+      },
+      "import": {
+        "loadFailed": "Nie udało się załadować historii importu."
+      },
+      "calendar": {
+        "providerAttention": "{{provider}} wymaga uwagi, zanim synchronizacja będzie mogła zostać wznowiona.",
+        "loadFailed": "Nie udało się załadować integracji kalendarza."
+      },
+      "email": {
+        "enterpriseOnly": "Zarządzane domeny e-mail są dostępne tylko w edycji Enterprise.",
+        "tenantRequired": "Kontekst tenant jest wymagany do załadowania statusu onboardingu e-maila.",
+        "loadFailed": "Nie udało się załadować zarządzanych domen e-mail.",
+        "verificationFailed": "Weryfikacja domeny {{domain}} nie powiodła się."
       }
     },
     "errors": {

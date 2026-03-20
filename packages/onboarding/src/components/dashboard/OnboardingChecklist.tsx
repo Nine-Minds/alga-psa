@@ -243,5 +243,17 @@ function translateStep(step: OnboardingStep, t: (key: string, options?: Record<s
     title: t(step.titleKey, { defaultValue: step.title }),
     description: t(step.descriptionKey, { defaultValue: step.description }),
     ctaLabel: t(step.ctaLabelKey, { defaultValue: step.ctaLabel }),
+    blocker: step.blockerKey
+      ? t(step.blockerKey, { defaultValue: step.blocker ?? step.blockerKey, ...step.blockerValues })
+      : step.blocker,
+    substeps: step.substeps?.map((substep) => ({
+      ...substep,
+      title: substep.titleKey
+        ? t(substep.titleKey, { defaultValue: substep.title })
+        : substep.title,
+      blocker: substep.blockerKey
+        ? t(substep.blockerKey, { defaultValue: substep.blocker ?? substep.blockerKey, ...substep.blockerValues })
+        : substep.blocker,
+    })) ?? [],
   };
 }

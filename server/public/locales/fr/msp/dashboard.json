@@ -59,7 +59,24 @@
     },
     "substeps": {
       "dataImport": "Terminez votre premier import OU créez 5 contacts",
-      "createContacts": "Créez vos 5 premiers contacts"
+      "identity": {
+        "addProvider": "Ajouter un fournisseur SSO",
+        "linkTeamMember": "Lier le premier membre de l'équipe"
+      },
+      "portal": {
+        "customDomain": "Domaine personnalisé du portail",
+        "branding": "Personnalisation des couleurs et du logo du portail",
+        "inviteFirstContact": "Invitez votre premier contact sur le portail"
+      },
+      "createContacts": "Créez vos 5 premiers contacts",
+      "calendar": {
+        "addProvider": "Ajouter un fournisseur de calendrier",
+        "connectAuthorize": "Connecter et autoriser le fournisseur"
+      },
+      "email": {
+        "configureInbound": "Configurer l'e-mail entrant",
+        "configureOutboundDomain": "Configurer le domaine d'e-mail sortant personnalisé"
+      }
     },
     "cta": {
       "completed": "Terminé",
@@ -105,6 +122,31 @@
         "title": "Configurer l'e-mail",
         "description": "Configurez l'e-mail entrant des tickets et vérifiez un domaine d'envoi sortant pour une distribution fiable.",
         "cta": "Configurer l'e-mail"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "Impossible de vérifier les membres d'équipe liés pour le moment.",
+        "noLinkedUsers": "Aucun utilisateur n'est encore lié à un fournisseur d'identité. Demandez à un administrateur MSP de connecter Google ou Microsoft.",
+        "addProviderCredentials": "Ajoutez les identifiants Google Workspace ou Microsoft 365 pour activer le SSO pour votre équipe.",
+        "configurationUnavailable": "La configuration du fournisseur SSO n'est pas disponible dans cet environnement.",
+        "loadFailed": "Impossible de charger l'état de la configuration SSO."
+      },
+      "portal": {
+        "loadFailed": "Impossible de charger l'état du domaine du portail client."
+      },
+      "import": {
+        "loadFailed": "Impossible de charger l'historique d'import."
+      },
+      "calendar": {
+        "providerAttention": "{{provider}} nécessite une intervention avant que la synchronisation puisse reprendre.",
+        "loadFailed": "Impossible de charger les intégrations de calendrier."
+      },
+      "email": {
+        "enterpriseOnly": "Les domaines d'e-mail gérés ne sont disponibles qu'en édition Enterprise.",
+        "tenantRequired": "Le contexte du tenant est requis pour charger l'état d'onboarding de l'e-mail.",
+        "loadFailed": "Impossible de charger les domaines d'e-mail gérés.",
+        "verificationFailed": "La vérification de {{domain}} a échoué."
       }
     },
     "errors": {

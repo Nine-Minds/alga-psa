@@ -2,9 +2,9 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Sidebar from '../../../components/layout/Sidebar';
 
@@ -111,6 +111,10 @@ describe('Sidebar i18n wiring', () => {
     };
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it('T010: main navigation items display translated text when translations are available', () => {
     render(
       <Sidebar
@@ -119,8 +123,8 @@ describe('Sidebar i18n wiring', () => {
       />
     );
 
-    expect(screen.getByText('Accueil')).toBeInTheDocument();
-    expect(screen.getByText('Tickets FR')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Accueil' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Tickets FR' })).toBeInTheDocument();
   });
 
   it('T011: English fallback labels remain when translated values are unavailable', () => {
@@ -133,8 +137,8 @@ describe('Sidebar i18n wiring', () => {
       />
     );
 
-    expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Tickets')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Tickets' })).toBeInTheDocument();
   });
 
   it('T012/T013/T014/T015: collapsed sidebar tooltips and chrome labels use translations', () => {
@@ -161,7 +165,7 @@ describe('Sidebar i18n wiring', () => {
     );
 
     expect(screen.getByText('Organisation et acces')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Retour principal' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Retour principal/ })).toBeInTheDocument();
   });
 
   it('T017/T018: billing mode section title and collapsed Back to Main tooltip are translated', () => {
@@ -189,7 +193,7 @@ describe('Sidebar i18n wiring', () => {
       />
     );
 
-    expect(screen.getByText('General')).toBeInTheDocument();
-    expect(screen.queryByText('Language')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'General' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Language' })).not.toBeInTheDocument();
   });
 });

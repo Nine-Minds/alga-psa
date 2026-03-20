@@ -151,6 +151,13 @@
     },
     "tenantBadge": {
       "ariaLabel": "55555 {{tenant}} 55555"
+    },
+    "themeToggle": {
+      "ariaLabel": "55555",
+      "light": "55555",
+      "dark": "55555",
+      "system": "55555",
+      "selected": "55555"
     }
   },
   "dialogs": {

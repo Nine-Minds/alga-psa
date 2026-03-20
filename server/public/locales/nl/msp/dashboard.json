@@ -59,7 +59,24 @@
     },
     "substeps": {
       "dataImport": "Voltooi je eerste import OF maak 5 contacten aan",
-      "createContacts": "Maak je eerste 5 contacten aan"
+      "identity": {
+        "addProvider": "SSO-provider toevoegen",
+        "linkTeamMember": "Het eerste teamlid koppelen"
+      },
+      "portal": {
+        "customDomain": "Aangepast portaaldomein",
+        "branding": "Kleuren- en logo-aanpassingen voor het portaal",
+        "inviteFirstContact": "Nodig je eerste contact uit voor het portaal"
+      },
+      "createContacts": "Maak je eerste 5 contacten aan",
+      "calendar": {
+        "addProvider": "Een kalenderprovider toevoegen",
+        "connectAuthorize": "De provider verbinden en autoriseren"
+      },
+      "email": {
+        "configureInbound": "Inkomende e-mail configureren",
+        "configureOutboundDomain": "Aangepast uitgaand e-maildomein configureren"
+      }
     },
     "cta": {
       "completed": "Voltooid",
@@ -105,6 +122,31 @@
         "title": "E-mail configureren",
         "description": "Stel inkomende ticketmail in en verifieer een uitgaand verzenddomein voor betrouwbare aflevering.",
         "cta": "E-mail configureren"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "Gekoppelde teamleden kunnen op dit moment niet worden gecontroleerd.",
+        "noLinkedUsers": "Er zijn nog geen gebruikers gekoppeld aan een identiteitsprovider. Vraag een MSP-beheerder om Google of Microsoft te koppelen.",
+        "addProviderCredentials": "Voeg Google Workspace- of Microsoft 365-gegevens toe om SSO voor je team in te schakelen.",
+        "configurationUnavailable": "De configuratie van de SSO-provider is niet beschikbaar in deze omgeving.",
+        "loadFailed": "De status van de SSO-configuratie kon niet worden geladen."
+      },
+      "portal": {
+        "loadFailed": "De status van het klantportaaldomein kon niet worden geladen."
+      },
+      "import": {
+        "loadFailed": "De importgeschiedenis kon niet worden geladen."
+      },
+      "calendar": {
+        "providerAttention": "{{provider}} vereist aandacht voordat synchronisatie kan worden hervat.",
+        "loadFailed": "De kalenderintegraties konden niet worden geladen."
+      },
+      "email": {
+        "enterpriseOnly": "Beheerde e-maildomeinen zijn alleen beschikbaar in de Enterprise-editie.",
+        "tenantRequired": "Tenantcontext is vereist om de onboardingstatus van e-mail te laden.",
+        "loadFailed": "De beheerde e-maildomeinen konden niet worden geladen.",
+        "verificationFailed": "Verificatie voor {{domain}} is mislukt."
       }
     },
     "errors": {

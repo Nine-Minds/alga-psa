@@ -28,6 +28,9 @@ const translations: Record<string, string> = {
   'onboarding.progress.messageInProgress': 'Continue FR',
   'onboarding.stepLabel': 'ETAPE {{index}} FR',
   'onboarding.substeps.dataImport': 'Sous-etape import FR',
+  'onboarding.substeps.identity.addProvider': 'Ajouter un fournisseur SSO FR',
+  'onboarding.substeps.identity.linkTeamMember': 'Lier le premier membre FR',
+  'onboarding.blockers.identity.noLinkedUsers': 'Aucun utilisateur lie FR',
   'onboarding.cta.completed': 'Termine CTA FR',
   'onboarding.cta.hiding': 'Masquage FR',
   'onboarding.cta.hide': 'Masquer FR',
@@ -184,5 +187,45 @@ describe('DashboardOnboardingSection i18n wiring', () => {
     expect(screen.getByText('Description complete FR')).toBeInTheDocument();
     expect(screen.getByText('Fini FR')).toBeInTheDocument();
     expect(screen.getByText('Complete FR')).toBeInTheDocument();
+  });
+
+  it('translates keyed substep titles and blocker text', () => {
+    render(
+      <DashboardOnboardingSection
+        steps={[
+          {
+            id: 'identity_sso',
+            status: 'in_progress',
+            lastUpdated: null,
+            progressValue: 50,
+            blocker: 'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.',
+            blockerKey: 'onboarding.blockers.identity.noLinkedUsers',
+            blockerValues: {},
+            meta: {},
+            substeps: [
+              {
+                id: 'identity_provider_configured',
+                title: 'Add an SSO provider',
+                titleKey: 'onboarding.substeps.identity.addProvider',
+                status: 'complete',
+                lastUpdated: null,
+              },
+              {
+                id: 'identity_user_linked',
+                title: 'Link the first team member',
+                titleKey: 'onboarding.substeps.identity.linkTeamMember',
+                status: 'in_progress',
+                lastUpdated: null,
+              },
+            ],
+            dismissed: false,
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Ajouter un fournisseur SSO FR')).toBeInTheDocument();
+    expect(screen.getByText('Lier le premier membre FR')).toBeInTheDocument();
+    expect(screen.getByText('Aucun utilisateur lie FR')).toBeInTheDocument();
   });
 });

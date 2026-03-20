@@ -59,7 +59,24 @@
     },
     "substeps": {
       "dataImport": "Completa la prima importazione OPPURE crea 5 contatti",
-      "createContacts": "Crea i primi 5 contatti"
+      "identity": {
+        "addProvider": "Aggiungi un provider SSO",
+        "linkTeamMember": "Collega il primo membro del team"
+      },
+      "portal": {
+        "customDomain": "Dominio personalizzato del portale",
+        "branding": "Personalizzazioni di colori e logo del portale",
+        "inviteFirstContact": "Invita il tuo primo contatto al portale"
+      },
+      "createContacts": "Crea i primi 5 contatti",
+      "calendar": {
+        "addProvider": "Aggiungi un provider di calendario",
+        "connectAuthorize": "Collega e autorizza il provider"
+      },
+      "email": {
+        "configureInbound": "Configura l'email in entrata",
+        "configureOutboundDomain": "Configura il dominio email personalizzato in uscita"
+      }
     },
     "cta": {
       "completed": "Completato",
@@ -105,6 +122,31 @@
         "title": "Configura email",
         "description": "Configura l'email ticket in ingresso e verifica un dominio di invio in uscita per una consegna affidabile.",
         "cta": "Configura email"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "Impossibile verificare i membri del team collegati in questo momento.",
+        "noLinkedUsers": "Nessun utente è ancora collegato a un provider di identità. Chiedi a un amministratore MSP di collegare Google o Microsoft.",
+        "addProviderCredentials": "Aggiungi le credenziali di Google Workspace o Microsoft 365 per abilitare il SSO per il tuo team.",
+        "configurationUnavailable": "La configurazione del provider SSO non è disponibile in questo ambiente.",
+        "loadFailed": "Impossibile caricare lo stato della configurazione SSO."
+      },
+      "portal": {
+        "loadFailed": "Impossibile caricare lo stato del dominio del portale clienti."
+      },
+      "import": {
+        "loadFailed": "Impossibile caricare la cronologia delle importazioni."
+      },
+      "calendar": {
+        "providerAttention": "{{provider}} richiede attenzione prima che la sincronizzazione possa riprendere.",
+        "loadFailed": "Impossibile caricare le integrazioni del calendario."
+      },
+      "email": {
+        "enterpriseOnly": "I domini email gestiti sono disponibili solo nell'edizione Enterprise.",
+        "tenantRequired": "Il contesto tenant è richiesto per caricare lo stato di onboarding dell'email.",
+        "loadFailed": "Impossibile caricare i domini email gestiti.",
+        "verificationFailed": "La verifica di {{domain}} non è riuscita."
       }
     },
     "errors": {

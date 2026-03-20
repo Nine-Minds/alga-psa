@@ -59,7 +59,24 @@
     },
     "substeps": {
       "dataImport": "Schließen Sie Ihren ersten Import ab ODER erstellen Sie 5 Kontakte",
-      "createContacts": "Erstellen Sie Ihre ersten 5 Kontakte"
+      "identity": {
+        "addProvider": "Einen SSO-Anbieter hinzufügen",
+        "linkTeamMember": "Das erste Teammitglied verknüpfen"
+      },
+      "portal": {
+        "customDomain": "Benutzerdefinierte Portal-Domain",
+        "branding": "Portal-Farb- und Logoanpassungen",
+        "inviteFirstContact": "Laden Sie Ihren ersten Kontakt ins Portal ein"
+      },
+      "createContacts": "Erstellen Sie Ihre ersten 5 Kontakte",
+      "calendar": {
+        "addProvider": "Einen Kalenderanbieter hinzufügen",
+        "connectAuthorize": "Anbieter verbinden und autorisieren"
+      },
+      "email": {
+        "configureInbound": "Eingehende E-Mail konfigurieren",
+        "configureOutboundDomain": "Benutzerdefinierte ausgehende E-Mail-Domain konfigurieren"
+      }
     },
     "cta": {
       "completed": "Abgeschlossen",
@@ -105,6 +122,31 @@
         "title": "E-Mail konfigurieren",
         "description": "Richten Sie eingehende Ticket-E-Mails ein und verifizieren Sie eine ausgehende Versanddomain für zuverlässige Zustellung.",
         "cta": "E-Mail konfigurieren"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "Verknüpfte Teammitglieder können derzeit nicht überprüft werden.",
+        "noLinkedUsers": "Es sind noch keine Benutzer mit einem Identitätsanbieter verknüpft. Bitten Sie einen MSP-Administrator, Google oder Microsoft zu verbinden.",
+        "addProviderCredentials": "Fügen Sie Google-Workspace- oder Microsoft-365-Zugangsdaten hinzu, um SSO für Ihr Team zu aktivieren.",
+        "configurationUnavailable": "Die SSO-Anbieterkonfiguration ist in dieser Umgebung nicht verfügbar.",
+        "loadFailed": "Der Status der SSO-Konfiguration konnte nicht geladen werden."
+      },
+      "portal": {
+        "loadFailed": "Der Status der Kundenportal-Domain konnte nicht geladen werden."
+      },
+      "import": {
+        "loadFailed": "Die Importhistorie konnte nicht geladen werden."
+      },
+      "calendar": {
+        "providerAttention": "{{provider}} erfordert Aufmerksamkeit, bevor die Synchronisierung fortgesetzt werden kann.",
+        "loadFailed": "Die Kalenderintegrationen konnten nicht geladen werden."
+      },
+      "email": {
+        "enterpriseOnly": "Verwaltete E-Mail-Domains sind nur in der Enterprise-Edition verfügbar.",
+        "tenantRequired": "Ein Tenant-Kontext ist erforderlich, um den E-Mail-Onboarding-Status zu laden.",
+        "loadFailed": "Die verwalteten E-Mail-Domains konnten nicht geladen werden.",
+        "verificationFailed": "Die Verifizierung für {{domain}} ist fehlgeschlagen."
       }
     },
     "errors": {

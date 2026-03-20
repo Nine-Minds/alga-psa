@@ -10,6 +10,7 @@ import Header from '../../../components/layout/Header';
 
 const routerPush = vi.fn();
 const signOut = vi.fn();
+const themeToggleSpy = vi.fn();
 let pathname = '/msp/tickets';
 let translations: Record<string, string> = {};
 
@@ -71,7 +72,28 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/ThemeToggle', () => ({
-  ThemeToggle: () => <div>Theme toggle</div>,
+  ThemeToggle: ({
+    labels,
+  }: {
+    labels?: {
+      ariaLabel?: string;
+      light?: string;
+      dark?: string;
+      system?: string;
+      selected?: string;
+    };
+  }) => {
+    themeToggleSpy(labels);
+    return (
+      <div>
+        <span>{labels?.ariaLabel}</span>
+        <span>{labels?.light}</span>
+        <span>{labels?.dark}</span>
+        <span>{labels?.system}</span>
+        <span>{labels?.selected}</span>
+      </div>
+    );
+  },
 }));
 
 vi.mock('@alga-psa/ui/components/UserAvatar', () => ({
@@ -136,6 +158,7 @@ describe('Header i18n wiring', () => {
     pathname = '/msp/tickets';
     routerPush.mockReset();
     signOut.mockReset();
+    themeToggleSpy.mockReset();
     translations = {
       'header.quickCreate.ariaLabel': 'Ouvrir creation rapide',
       'header.quickCreate.title': 'Creation rapide',
@@ -165,6 +188,11 @@ describe('Header i18n wiring', () => {
       'header.breadcrumb.dashboard': 'Tableau de bord FR',
       'nav.tickets': 'Tickets traduits',
       'header.tenantBadge.ariaLabel': 'Locataire actif {{tenant}}',
+      'header.themeToggle.ariaLabel': 'Basculer le theme',
+      'header.themeToggle.light': 'Clair',
+      'header.themeToggle.dark': 'Sombre',
+      'header.themeToggle.system': 'Systeme',
+      'header.themeToggle.selected': 'Selectionne',
       'header.userFallback': 'Utilisateur',
       'header.quickAccess': 'Acces rapide au profil et au compte.',
       'header.profile': 'Profil FR',
@@ -240,6 +268,30 @@ describe('Header i18n wiring', () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText('Locataire actif Acme MSP')).toBeInTheDocument();
+    });
+  });
+
+  it('T030: theme toggle labels are translated before being passed to the shared toggle', () => {
+    render(
+      <Header
+        sidebarOpen={true}
+        setSidebarOpen={vi.fn()}
+        rightSidebarOpen={false}
+        setRightSidebarOpen={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Basculer le theme')).toBeInTheDocument();
+    expect(screen.getByText('Clair')).toBeInTheDocument();
+    expect(screen.getByText('Sombre')).toBeInTheDocument();
+    expect(screen.getByText('Systeme')).toBeInTheDocument();
+    expect(screen.getByText('Selectionne')).toBeInTheDocument();
+    expect(themeToggleSpy).toHaveBeenCalledWith({
+      ariaLabel: 'Basculer le theme',
+      light: 'Clair',
+      dark: 'Sombre',
+      system: 'Systeme',
+      selected: 'Selectionne',
     });
   });
 });

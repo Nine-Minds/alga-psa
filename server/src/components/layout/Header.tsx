@@ -460,7 +460,15 @@ export default function Header({
         <TrialBanner />
         <TenantBadge tenant={userData?.tenant} ariaLabel={tenantBadgeAriaLabel} />
         <QuickCreateMenu t={t} />
-        <ThemeToggle />
+        <ThemeToggle
+          labels={{
+            ariaLabel: t('header.themeToggle.ariaLabel', { defaultValue: 'Theme toggle' }),
+            light: t('header.themeToggle.light', { defaultValue: 'Light' }),
+            dark: t('header.themeToggle.dark', { defaultValue: 'Dark' }),
+            system: t('header.themeToggle.system', { defaultValue: 'System' }),
+            selected: t('header.themeToggle.selected', { defaultValue: 'Selected' }),
+          }}
+        />
         <NotificationBell />
         <JobActivityIndicator t={t} />
         <DropdownMenu>

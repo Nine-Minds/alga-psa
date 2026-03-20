@@ -59,7 +59,24 @@
     },
     "substeps": {
       "dataImport": "Complete your first import OR create 5 contacts",
-      "createContacts": "Create your first 5 contacts"
+      "identity": {
+        "addProvider": "Add an SSO provider",
+        "linkTeamMember": "Link the first team member"
+      },
+      "portal": {
+        "customDomain": "Portal custom domain",
+        "branding": "Portal color and logo customizations",
+        "inviteFirstContact": "Invite your first contact to the portal"
+      },
+      "createContacts": "Create your first 5 contacts",
+      "calendar": {
+        "addProvider": "Add a calendar provider",
+        "connectAuthorize": "Connect and authorize the provider"
+      },
+      "email": {
+        "configureInbound": "Configure inbound email",
+        "configureOutboundDomain": "Configure outbound custom email domain"
+      }
     },
     "cta": {
       "completed": "Completed",
@@ -105,6 +122,31 @@
         "title": "Configure Email",
         "description": "Set up inbound ticket email and verify an outbound sending domain for reliable delivery.",
         "cta": "Configure Email"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "Unable to verify linked team members right now.",
+        "noLinkedUsers": "No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.",
+        "addProviderCredentials": "Add Google Workspace or Microsoft 365 credentials to enable SSO for your team.",
+        "configurationUnavailable": "SSO provider configuration is unavailable in this environment.",
+        "loadFailed": "Unable to load SSO configuration status."
+      },
+      "portal": {
+        "loadFailed": "Unable to load client portal domain status."
+      },
+      "import": {
+        "loadFailed": "Unable to load import history."
+      },
+      "calendar": {
+        "providerAttention": "{{provider}} requires attention before syncing can resume.",
+        "loadFailed": "Unable to load calendar integrations."
+      },
+      "email": {
+        "enterpriseOnly": "Managed email domains are only available in the Enterprise edition.",
+        "tenantRequired": "Tenant context is required to load email onboarding status.",
+        "loadFailed": "Unable to load managed email domains.",
+        "verificationFailed": "Verification for {{domain}} failed."
       }
     },
     "errors": {
