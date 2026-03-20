@@ -1,0 +1,162 @@
+[
+  {
+    "id": "T001",
+    "description": "validate-translations.cjs passes with 0 errors after dispatch batch (msp/dispatch keys consistent across all 9 locales)",
+    "implemented": false,
+    "featureIds": ["F001", "F012", "F013"]
+  },
+  {
+    "id": "T002",
+    "description": "Dispatch: all 13 component files compile with useTranslation('msp/dispatch') — no TypeScript errors",
+    "implemented": false,
+    "featureIds": ["F002", "F003", "F004", "F005", "F006", "F007", "F008", "F009", "F010"]
+  },
+  {
+    "id": "T003",
+    "description": "Dispatch: ROUTE_NAMESPACES maps /msp/technician-dispatch to include msp/dispatch",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T004",
+    "description": "Dispatch: Italian accent audit passes for it/msp/dispatch.json",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T005",
+    "description": "Dispatch: Visual QA (xx locale) — /msp/technician-dispatch shows '11111' for schedule panel, work items, tooltips",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+
+  {
+    "id": "T010",
+    "description": "validate-translations.cjs passes with 0 errors after reports batch (msp/reports keys consistent across all 9 locales)",
+    "implemented": false,
+    "featureIds": ["F020", "F026", "F027"]
+  },
+  {
+    "id": "T011",
+    "description": "Reports: all 4 component files compile with useTranslation('msp/reports') — no TypeScript errors",
+    "implemented": false,
+    "featureIds": ["F021", "F022", "F023", "F024"]
+  },
+  {
+    "id": "T012",
+    "description": "Reports: ROUTE_NAMESPACES maps /msp/billing to include msp/reports",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T013",
+    "description": "Reports: Italian accent audit passes for it/msp/reports.json",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T014",
+    "description": "Reports: Visual QA (xx locale) — billing reports tab shows '11111' for tabs, columns, metrics, empty states",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+
+  {
+    "id": "T020",
+    "description": "validate-translations.cjs passes with 0 errors after admin batch (msp/admin keys consistent across all 9 locales)",
+    "implemented": false,
+    "featureIds": ["F030", "F036", "F037"]
+  },
+  {
+    "id": "T021",
+    "description": "Admin: all 4 component files compile with useTranslation('msp/admin') — no TypeScript errors",
+    "implemented": false,
+    "featureIds": ["F031", "F032", "F033", "F034"]
+  },
+  {
+    "id": "T022",
+    "description": "Admin: ROUTE_NAMESPACES maps /msp/settings to include msp/admin",
+    "implemented": false,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T023",
+    "description": "Admin: Italian accent audit passes for it/msp/admin.json",
+    "implemented": false,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T024",
+    "description": "Admin: Visual QA (xx locale) — /msp/settings telemetry and email tabs show '11111'",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+
+  {
+    "id": "T030",
+    "description": "validate-translations.cjs passes with 0 errors after time-entry batch (msp/time-entry keys consistent across all 9 locales)",
+    "implemented": false,
+    "featureIds": ["F050", "F061", "F062"]
+  },
+  {
+    "id": "T031",
+    "description": "Time entry: all 33 component files compile with useTranslation('msp/time-entry') — no TypeScript errors",
+    "implemented": false,
+    "featureIds": ["F051", "F052", "F053", "F054", "F055", "F056", "F057", "F058", "F059"]
+  },
+  {
+    "id": "T032",
+    "description": "Time entry: ROUTE_NAMESPACES maps /msp/time-entry, /msp/time-sheet-approvals, /msp/time-management to include msp/time-entry",
+    "implemented": false,
+    "featureIds": ["F060"]
+  },
+  {
+    "id": "T033",
+    "description": "Time entry: Italian accent audit passes for it/msp/time-entry.json",
+    "implemented": false,
+    "featureIds": ["F063"]
+  },
+  {
+    "id": "T034",
+    "description": "Time entry: Visual QA (xx locale) — /msp/time-entry timesheet, work items, edit form show '11111'",
+    "implemented": false,
+    "featureIds": ["F062"]
+  },
+  {
+    "id": "T035",
+    "description": "Time entry: Visual QA (xx locale) — /msp/time-sheet-approvals approval dashboard shows '11111'",
+    "implemented": false,
+    "featureIds": ["F062"]
+  },
+
+  {
+    "id": "T040",
+    "description": "Cross-batch: validate-translations.cjs passes for ALL locales after all 4 batches complete (0 errors, 0 warnings)",
+    "implemented": false,
+    "featureIds": ["F091"]
+  },
+  {
+    "id": "T041",
+    "description": "Cross-batch: pseudo-locales regenerated — xx and yy files for all 4 namespaces match en key structure",
+    "implemented": false,
+    "featureIds": ["F013", "F027", "F037", "F062"]
+  },
+  {
+    "id": "T042",
+    "description": "Cross-batch: npm run build succeeds with no TypeScript errors",
+    "implemented": false,
+    "featureIds": ["F092"]
+  },
+  {
+    "id": "T043",
+    "description": "Cross-batch: msp-i18n-enabled OFF — dispatch, reports, admin, time-entry pages all show English text, no regressions",
+    "implemented": false,
+    "featureIds": ["F092"]
+  },
+  {
+    "id": "T044",
+    "description": "Cross-batch: German (de) locale — no visible text overflow in dispatch filters, report columns, admin forms, timesheet headers",
+    "implemented": false,
+    "featureIds": ["F012", "F026", "F036", "F061"]
+  }
+]
