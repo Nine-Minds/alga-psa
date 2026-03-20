@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Recurring service-period inspection resolves client-cadence obligation metadata from the surviving client-owned structure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements"]
   },
   {

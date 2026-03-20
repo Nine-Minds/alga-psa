@@ -31,6 +31,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:10 EDT) The existing due-work reader test harness was flexible enough to simulate a migrated schema by throwing on any attempted `client_contract_lines` access. That let the first checkpoint verify behavior rather than only string-match source code.
 - (2026-03-19 23:16 EDT) `AutomaticInvoices` can be validated meaningfully without a database fixture by letting the component call the real `getAvailableRecurringDueWork()` action against mocked migrated-schema rows. That catches regressions in the UI load path instead of only checking a prebuilt mock payload.
 - (2026-03-19 23:19 EDT) Preview/generate selector normalization for client cadence can follow the same post-drop lookup as due-work loading: `recurring_service_periods -> contract_lines -> contracts.owner_client_id`. The selector-input path only needs to prove the persisted service-period window belongs to the client; it does not need a dropped assignment row.
+- (2026-03-19 23:21 EDT) Service-period inspection uses the same obligation-context rule: persisted client-cadence rows can resolve display metadata directly from `contract_lines -> contracts.owner_client_id`. No live inspection path needs a dropped client assignment row once the recurring service period already exists.
 
 ## Commands / Runbooks
 
@@ -69,6 +70,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `pnpm exec vitest run src/test/unit/billing/recurringDueWorkReader.integration.test.ts src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx` (run from `server/`)
 - (2026-03-19 23:19 EDT) Verification for F004/F005/T005/T006/T007:
   - `pnpm exec vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts` (run from `server/`)
+- (2026-03-19 23:21 EDT) Verification for F006/T008:
+  - `pnpm exec vitest run src/test/unit/billing/recurringServicePeriodActions.test.ts` (run from `server/`)
 
 ## Completed Items
 
@@ -79,6 +82,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:16 EDT) Completed `T004`: the UI test now renders `AutomaticInvoices` while the real due-work action runs against mocked migrated-schema data and a hard failure on any `client_contract_lines` access.
 - (2026-03-19 23:19 EDT) Completed `F004`/`F005`: selector-input preview/generate normalization for client-cadence windows no longer joins `client_contract_lines`; it resolves persisted windows through surviving `contract_lines` plus `contracts.owner_client_id`.
 - (2026-03-19 23:19 EDT) Completed `T005`/`T006`/`T007`: preview and generation coverage now explicitly fails on any `client_contract_lines` access while verifying client-cadence selector-input preview, client-cadence selector-input generation, and contract-cadence regression behavior.
+- (2026-03-19 23:21 EDT) Completed `F006`: recurring service-period management view resolves client-cadence obligation metadata from surviving contract-owned structures instead of `client_contract_lines`.
+- (2026-03-19 23:21 EDT) Completed `T008`: service-period management view coverage now simulates a migrated schema by failing on any `client_contract_lines` access while still returning client/contract/line context for a client-cadence schedule.
 
 ## Links / References
 

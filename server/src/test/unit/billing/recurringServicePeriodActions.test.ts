@@ -2,11 +2,72 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildRecurringServicePeriodRecord } from '../../test-utils/recurringTimingFixtures';
 
-const mocks = vi.hoisted(() => ({
-  hasPermission: vi.fn(),
-  createTenantKnex: vi.fn(async () => ({ knex: vi.fn() })),
-  withTransaction: vi.fn(),
-}));
+type Row = Record<string, any>;
+
+function normalizeTableName(tableName: string): string {
+  return tableName.split(/\s+as\s+/i)[0].trim();
+}
+
+function normalizeColumn(column: string): string {
+  return column.replace(/^.*\./, '').replace(/\s+as\s+.*$/i, '').trim();
+}
+
+function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
+  let resultRows = [...rows];
+
+  const builder: any = {
+    where: vi.fn((columnOrCriteria: string | Record<string, any>, operatorOrValue?: any) => {
+      if (typeof columnOrCriteria === 'object') {
+        resultRows = resultRows.filter((row) =>
+          Object.entries(columnOrCriteria).every(([column, expected]) =>
+            row[normalizeColumn(column)] === expected,
+          ),
+        );
+        return builder;
+      }
+
+      resultRows = resultRows.filter(
+        (row) => row[normalizeColumn(columnOrCriteria)] === operatorOrValue,
+      );
+      return builder;
+    }),
+    select: vi.fn(() => builder),
+    orderBy: vi.fn(() => builder),
+    first: vi.fn(async () => resultRows[0]),
+    join: vi.fn(() => builder),
+    leftJoin: vi.fn(() => builder),
+    raw,
+    then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
+      Promise.resolve(resultRows).then(resolve, reject),
+  };
+
+  return builder;
+}
+
+const mocks = vi.hoisted(() => {
+  const rowsByTable: Record<string, Row[]> = {};
+  const missingTables = new Set<string>();
+  const raw = vi.fn((sql: string) => sql);
+  const knex = vi.fn((tableName: string) => {
+    const normalizedTableName = normalizeTableName(tableName);
+    if (missingTables.has(normalizedTableName)) {
+      throw new Error(`relation "${normalizedTableName}" does not exist`);
+    }
+
+    return createQueryBuilder(rowsByTable[normalizedTableName] ?? [], raw);
+  }) as any;
+  knex.raw = raw;
+
+  return {
+    hasPermission: vi.fn(),
+    rowsByTable,
+    missingTables,
+    createTenantKnex: vi.fn(async () => ({ knex })),
+    withTransaction: vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) =>
+      callback(knex),
+    ),
+  };
+});
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: (...args: any[]) => Promise<unknown>) =>
@@ -40,6 +101,51 @@ describe('recurring service period actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.hasPermission.mockResolvedValue(true);
+    mocks.missingTables.clear();
+    mocks.rowsByTable.recurring_service_periods = [
+      {
+        record_id: 'rsp-client-1',
+        tenant: 'tenant-1',
+        schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+        period_key: 'period:2025-01-01:2025-02-01',
+        revision: 1,
+        obligation_id: 'line-1',
+        obligation_type: 'client_contract_line',
+        charge_family: 'fixed',
+        cadence_owner: 'client',
+        due_position: 'arrears',
+        lifecycle_state: 'generated',
+        service_period_start: '2025-01-01',
+        service_period_end: '2025-02-01',
+        invoice_window_start: '2025-02-01',
+        invoice_window_end: '2025-03-01',
+        activity_window_start: null,
+        activity_window_end: null,
+        timing_metadata: null,
+        provenance_kind: 'system_generated',
+        source_rule_version: 'line-1:v1',
+        reason_code: 'materialization',
+        source_run_key: 'materialize-1',
+        supersedes_record_id: null,
+        invoice_id: null,
+        invoice_charge_id: null,
+        invoice_charge_detail_id: null,
+        invoice_linked_at: null,
+        created_at: '2025-01-01T00:00:00.000Z',
+        updated_at: '2025-01-01T00:00:00.000Z',
+      },
+    ];
+    mocks.rowsByTable.contract_lines = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_name: 'Acme Corp',
+        contract_id: 'contract-1',
+        contract_name: 'Acme Managed Services',
+        contract_line_id: 'line-1',
+        contract_line_name: 'Managed Router',
+      },
+    ];
   });
 
   it('T076: service-period view actions require billing.recurring_service_periods.view', async () => {
@@ -187,6 +293,30 @@ describe('recurring service period actions', () => {
           recordId: 'rsp_billed',
         },
       ],
+    });
+  });
+
+  it('T008: management view resolves client-cadence obligation context without `client_contract_lines`', async () => {
+    mocks.missingTables.add('client_contract_lines');
+
+    const result = await getRecurringServicePeriodManagementView(
+      'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+    );
+
+    expect(result).toMatchObject({
+      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      obligationId: 'line-1',
+      obligationType: 'client_contract_line',
+      clientId: 'client-1',
+      clientName: 'Acme Corp',
+      contractId: 'contract-1',
+      contractName: 'Acme Managed Services',
+      contractLineId: 'line-1',
+      contractLineName: 'Managed Router',
+      summary: {
+        totalRows: 1,
+        generatedRows: 1,
+      },
     });
   });
 });

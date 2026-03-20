@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "Integration: service-period inspection resolves client-cadence obligation context without `client_contract_lines`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F018"]
   },
   {

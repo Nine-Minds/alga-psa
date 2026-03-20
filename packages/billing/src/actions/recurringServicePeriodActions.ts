@@ -302,32 +302,24 @@ async function loadObligationContext(input: {
   }
 
   if (obligationType === 'client_contract_line') {
-    const row = await trx('client_contract_lines as ccl')
+    const row = await trx('contract_lines as cl')
+      .join('contracts as ct', function joinContracts(this: any) {
+        this.on('ct.contract_id', '=', 'cl.contract_id')
+          .andOn('ct.tenant', '=', 'cl.tenant');
+      })
       .join('clients as c', function joinClients(this: any) {
-        this.on('c.client_id', '=', 'ccl.client_id')
-          .andOn('c.tenant', '=', 'ccl.tenant');
+        this.on('c.client_id', '=', 'ct.owner_client_id')
+          .andOn('c.tenant', '=', 'ct.tenant');
       })
-      .leftJoin('client_contracts as cc', function joinClientContracts(this: any) {
-        this.on('cc.client_contract_id', '=', 'ccl.client_contract_id')
-          .andOn('cc.tenant', '=', 'ccl.tenant');
-      })
-      .leftJoin('contract_lines as cl', function joinContractLines(this: any) {
-        this.on('cl.contract_line_id', '=', 'ccl.contract_line_id')
-          .andOn('cl.tenant', '=', 'ccl.tenant');
-      })
-      .leftJoin('contracts as ct', function joinContracts(this: any) {
-        this.on('ct.contract_id', '=', trx.raw('coalesce(ccl.contract_id, cc.contract_id)'))
-          .andOn('ct.tenant', '=', 'ccl.tenant');
-      })
-      .where('ccl.tenant', tenant)
-      .where('ccl.client_contract_line_id', obligationId)
+      .where('cl.tenant', tenant)
+      .where('cl.contract_line_id', obligationId)
       .first(
         'c.client_id',
         'c.client_name',
         'ct.contract_id',
         'ct.contract_name',
-        trx.raw('coalesce(cl.contract_line_id, ccl.contract_line_id) as contract_line_id'),
-        trx.raw('coalesce(cl.contract_line_name, ccl.contract_line_name) as contract_line_name'),
+        'cl.contract_line_id',
+        'cl.contract_line_name',
       );
 
     return {
