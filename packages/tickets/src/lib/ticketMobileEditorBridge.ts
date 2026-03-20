@@ -31,6 +31,7 @@ const ticketMobileEditorInitPayloadSchema = z.object({
   autofocus: z.boolean().optional(),
   placeholder: z.string().optional(),
   debounceMs: z.number().int().positive().optional(),
+  imageAuth: z.object({ baseUrl: z.string(), apiKey: z.string() }).optional(),
 });
 
 const ticketMobileEditorToolbarStateSchema = z.object({
@@ -67,6 +68,13 @@ const nativeToWebMessageSchema = z.discriminatedUnion('type', [
     payload: z.object({
       requestId: z.string().min(1),
       request: ticketMobileEditorRequestSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal('image-data'),
+    payload: z.object({
+      src: z.string().min(1),
+      dataUri: z.string().min(1),
     }),
   }),
 ]);
@@ -110,6 +118,12 @@ const webToNativeMessageSchema = z.discriminatedUnion('type', [
       code: z.string().min(1),
       message: z.string().min(1),
       requestId: z.string().min(1).optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('image-request'),
+    payload: z.object({
+      src: z.string().min(1),
     }),
   }),
 ]);
