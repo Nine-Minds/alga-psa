@@ -365,7 +365,7 @@
   {
     "id": "T044",
     "description": "Recurring due-work grouping continues to use `purchaseOrderScopeKey = client_contract_id` so contract-scoped invoices remain separable for multi-active clients.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F003",
