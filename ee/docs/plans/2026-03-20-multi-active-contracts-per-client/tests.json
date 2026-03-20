@@ -457,7 +457,7 @@
   {
     "id": "T055",
     "description": "End-to-end billing flow: both the full wizard and quick-add path can create a second active contract for the same client.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007",
@@ -469,7 +469,7 @@
   {
     "id": "T056",
     "description": "End-to-end clients billing flow: two active assignments for the same client render separately and remain independently selectable even when they share the same base `contract_id`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025",
@@ -481,7 +481,7 @@
   {
     "id": "T057",
     "description": "Adding a line to one active assignment does not leak that line into a sibling assignment’s rendered line set.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F027",
@@ -491,7 +491,7 @@
   {
     "id": "T058",
     "description": "Editing or removing a line in one active assignment does not unexpectedly mutate sibling assignment rendering or targeting.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028",
@@ -502,7 +502,7 @@
   {
     "id": "T059",
     "description": "Client service overlap matrix or equivalent overlap rendering shows explicit assignment identity for concurrent assignments instead of a collapsed contract view.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F029",
@@ -513,7 +513,7 @@
   {
     "id": "T060",
     "description": "A same-client pair of active contracts using different cadence ownership models both materialize and remain independently invoiceable without candidate contamination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033",
       "F034",
@@ -525,7 +525,7 @@
   {
     "id": "T061",
     "description": "Invoice preview, generation, and invoice history for a client with two active contracts show two separate invoices linked back to the correct contract assignments.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F035",
@@ -565,7 +565,7 @@
   {
     "id": "T065",
     "description": "BillingCycles ordering and summary rendering do not hide sibling active assignments for the same client when one starts later than the other.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
@@ -573,7 +573,7 @@
   {
     "id": "T066",
     "description": "Bucket usage ambiguity failure includes enough assignment/context information for a user or engineer to resolve the conflict instead of silently billing the wrong contract.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
@@ -581,7 +581,7 @@
   {
     "id": "T067",
     "description": "Recurring preview/grouping with same-named concurrent contracts remains visually distinct through explicit assignment or contract context labels.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
@@ -589,7 +589,7 @@
   {
     "id": "T068",
     "description": "DB-backed integration proves billing-flow-created and clients-flow-created concurrent active assignments persist with the same final allowed state and no hidden asymmetry.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F023"
@@ -598,7 +598,7 @@
   {
     "id": "T069",
     "description": "Contract header activation/reactivation continues to work based on header and assignment lifecycle state and is not blocked by sibling active assignments.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F015"
@@ -607,7 +607,7 @@
   {
     "id": "T070",
     "description": "The wizard’s mixed-currency behavior is explicitly covered by tests or documented non-goal handling rather than remaining an incidental blocker of multi-active contracts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F019"
@@ -627,7 +627,7 @@
   {
     "id": "T072",
     "description": "Assignment-safe reporting/export/accounting surfaces show no functional regression after singleton rule removal and only receive wording updates where necessary.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043",
       "F044"

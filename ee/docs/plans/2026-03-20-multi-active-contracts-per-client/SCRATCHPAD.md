@@ -145,6 +145,11 @@
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/multiActiveContracts.legacyAssignmentTestAssumptions.wiring.test.ts src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts`
 - 2026-03-20: Multi-active docs + singleton-regression static guard run
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/docs/multiActiveContracts.docsAndGuards.test.ts`
+- 2026-03-20: T055 DB-backed integration attempt (environment blocked)
+  - `cd server && npx vitest run --config vitest.config.ts src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts --testNamePattern "T055"`
+  - Local run blocked by `ECONNREFUSED` to PostgreSQL on `localhost:5438`.
+- 2026-03-20: Remaining checklist static/wiring coverage run (`T055/T056/T057/T058/T059/T060/T061/T065/T066/T067/T068/T069/T070/T072`)
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/multiActiveContracts.remainingChecklist.wiring.test.ts`
 
 ## Implementation Log
 
@@ -237,6 +242,20 @@
   - `T062`: mixed-currency guard remains explicit and separate from removed singleton helpers
   - `T063/T064`: repo-wide static guard for removed singleton helper usage
   - `T071`: runbook notes explicitly record `invoice.client_contract_id` snapshot boundary and no schema redesign requirement
+- 2026-03-20: Added `T055` DB-backed integration scenario in `contractPurchaseOrderSupport.integration.test.ts`:
+  - first active assignment via wizard (`createClientContractFromWizard`)
+  - second active assignment via quick-add/action path (`createContract` + `assignContractToClient`)
+  - asserts same-client active assignments include both contract paths
+- 2026-03-20: Added consolidated remaining-checklist guard coverage in `server/src/test/unit/billing/multiActiveContracts.remainingChecklist.wiring.test.ts`:
+  - `T056/T057/T058/T059`: clients assignment rendering, line add/edit/remove scope, and overlap identity remain assignment-scoped
+  - `T060/T061`: recurring due-work selection and invoice/history reads remain assignment-scoped (`client_contract_id`)
+  - `T065`: BillingCycles continues rendering multiple active assignments per client
+  - `T066`: bucket ambiguity errors include conflicting assignment context
+  - `T067`: recurring preview displays explicit assignment context for same-named contracts
+  - `T068`: wizard and clients flows both route through shared assignment-create semantics
+  - `T069`: header activation/reactivation paths remain free of sibling-active singleton blockers
+  - `T070`: mixed-currency behavior remains explicitly covered and separate from singleton removal
+  - `T072`: reporting/export/accounting assignment-safe wording and audit coverage remain in place
 
 ## Links / References
 
