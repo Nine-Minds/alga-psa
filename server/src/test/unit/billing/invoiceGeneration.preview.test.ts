@@ -14,6 +14,23 @@ function normalizeColumn(column: string): string {
   return column.replace(/^.*\./, '').replace(/\s+as\s+.*$/i, '').trim();
 }
 
+function applyOperator(rowValue: any, operator: string, expected: any): boolean {
+  switch (operator) {
+    case '=':
+      return rowValue === expected;
+    case '>=':
+      return String(rowValue) >= String(expected);
+    case '<=':
+      return String(rowValue) <= String(expected);
+    case '>':
+      return String(rowValue) > String(expected);
+    case '<':
+      return String(rowValue) < String(expected);
+    default:
+      return rowValue === expected;
+  }
+}
+
 function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
   return {
     record_id: 'rsp-client-1',
@@ -60,10 +77,33 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
   let resultRows = [...rows];
 
   const builder: any = {
-    where: vi.fn((criteria: Record<string, any>) => {
+    where: vi.fn((columnOrCriteria: string | Record<string, any> | ((this: any) => void), operatorOrValue?: any, maybeValue?: any) => {
+      if (typeof columnOrCriteria === 'function') {
+        const scopedWhere: any = {
+          where: vi.fn(() => scopedWhere),
+          orWhereNull: vi.fn(() => scopedWhere),
+        };
+        columnOrCriteria.call(scopedWhere);
+        return builder;
+      }
+
+      if (typeof columnOrCriteria === 'string') {
+        const column = normalizeColumn(columnOrCriteria);
+        const operator = maybeValue === undefined ? '=' : operatorOrValue;
+        const expected = maybeValue === undefined ? operatorOrValue : maybeValue;
+        resultRows = resultRows.filter((row) => applyOperator(row[column], operator, expected));
+        return builder;
+      }
+
+      const criteria = columnOrCriteria;
       resultRows = resultRows.filter((row) =>
         Object.entries(criteria).every(([key, expected]) => row[normalizeColumn(key)] === expected),
       );
+      return builder;
+    }),
+    whereIn: vi.fn((column: string, values: any[]) => {
+      const normalized = normalizeColumn(column);
+      resultRows = resultRows.filter((row) => values.includes(row[normalized]));
       return builder;
     }),
     whereNotNull: vi.fn((column: string) => {
@@ -605,6 +645,59 @@ describe('invoice preview recurring timing', () => {
         ]),
       }),
     });
+  });
+
+  it('T034/T036: selector-input preview scopes recurring timing selections to the selected client-cadence assignment', async () => {
+    mocks.selectDueRecurringServicePeriodsForBillingWindow.mockResolvedValueOnce({
+      'line-1': {
+        duePosition: 'arrears',
+        servicePeriodStart: '2025-01-01',
+        servicePeriodEnd: '2025-02-01',
+        servicePeriodStartExclusive: '2025-01-01',
+        servicePeriodEndExclusive: '2025-02-01',
+        coverageRatio: 1,
+      },
+      'line-2': {
+        duePosition: 'arrears',
+        servicePeriodStart: '2025-01-01',
+        servicePeriodEnd: '2025-02-01',
+        servicePeriodStartExclusive: '2025-01-01',
+        servicePeriodEndExclusive: '2025-02-01',
+        coverageRatio: 1,
+      },
+    });
+
+    const selectorInput = buildClientCadenceDueSelectionInput({
+      clientId: 'client-1',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      periodKey: 'period:2025-01-01:2025-02-01',
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+    });
+
+    const result = await previewInvoiceForSelectionInput(selectorInput);
+
+    expect(result).toMatchObject({ success: true });
+    expect(mocks.calculateBillingForExecutionWindow).toHaveBeenCalledWith(
+      'client-1',
+      '2025-02-01',
+      '2025-03-01',
+      expect.objectContaining({
+        recurringTimingSelections: {
+          'line-1': expect.any(Object),
+        },
+      }),
+    );
+    expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalledWith(
+      'client-1',
+      '2025-02-01',
+      '2025-03-01',
+      expect.objectContaining({
+        recurringTimingSelections: expect.objectContaining({
+          'line-2': expect.any(Object),
+        }),
+      }),
+    );
   });
 
   it('T007: selector-input preview action still returns correct contract-cadence details after client-line table removal cleanup', async () => {

@@ -283,6 +283,27 @@ describe('recurring due-work reader', () => {
       },
       {
         tenant: 'tenant-1',
+        record_id: 'rsp-client-arrears-1',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-3:client:arrears',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-04-01',
+        invoice_window_end: '2025-05-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-3',
+        client_name: 'Wonder Co',
+        billing_cycle_id: null,
+        contract_id: 'contract-3',
+        contract_name: 'Wonder Retainer',
+        contract_line_id: 'assignment-3',
+        contract_line_name: 'Wonder Fixed Fee',
+      },
+      {
+        tenant: 'tenant-1',
         record_id: 'rsp-archived',
         schedule_key: 'schedule:tenant-1:contract_line:line-archived:contract:arrears',
         period_key: 'period:2025-01-01:2025-02-01',
@@ -313,7 +334,7 @@ describe('recurring due-work reader', () => {
       pageSize: 10,
     });
 
-    expect(result.total).toBe(2);
+    expect(result.total).toBe(3);
     expect(result.invoiceCandidates.map((candidate) => ({
       clientName: candidate.clientName,
       cadenceSource: candidate.cadenceSources[0],
@@ -326,6 +347,13 @@ describe('recurring due-work reader', () => {
         invoiceWindowEnd: '2025-05-08',
         executionIdentityKey:
           'contract_cadence_window:contract:client-9:contract-1:line-1:2025-04-08:2025-05-08',
+      },
+      {
+        clientName: 'Wonder Co',
+        cadenceSource: 'client_schedule',
+        invoiceWindowEnd: '2025-05-01',
+        executionIdentityKey:
+          'client_cadence_window:client:client-3:schedule:tenant-1:client_contract_line:assignment-3:client:arrears:period:2025-03-01:2025-04-01:2025-04-01:2025-05-01',
       },
       {
         clientName: 'Acme Co',
@@ -347,12 +375,19 @@ describe('recurring due-work reader', () => {
       pageSize: 1,
     });
 
-    expect(firstPage.total).toBe(2);
-    expect(firstPage.totalPages).toBe(2);
+    expect(firstPage.total).toBe(3);
+    expect(firstPage.totalPages).toBe(3);
     expect(firstPage.invoiceCandidates.map((candidate) => candidate.members[0]?.executionIdentityKey)).toEqual([
       'contract_cadence_window:contract:client-9:contract-1:line-1:2025-04-08:2025-05-08',
     ]);
     expect(secondPage.invoiceCandidates.map((candidate) => candidate.members[0]?.executionIdentityKey)).toEqual([
+      'client_cadence_window:client:client-3:schedule:tenant-1:client_contract_line:assignment-3:client:arrears:period:2025-03-01:2025-04-01:2025-04-01:2025-05-01',
+    ]);
+    const thirdPage = await getAvailableRecurringDueWork({
+      page: 3,
+      pageSize: 1,
+    });
+    expect(thirdPage.invoiceCandidates.map((candidate) => candidate.members[0]?.executionIdentityKey)).toEqual([
       'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
     ]);
   });
@@ -383,6 +418,107 @@ describe('recurring due-work reader', () => {
 
     expect(result.total).toBe(0);
     expect(result.invoiceCandidates).toEqual([]);
+  });
+
+  it('T117: client-arrears rows stay visible by service-period filter but remain blocked until the selected to-date reaches the invoice window start', async () => {
+    const beforeWindowStarts = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      dateRange: {
+        to: '2025-03-20',
+      },
+    });
+
+    const blockedCandidate = beforeWindowStarts.invoiceCandidates.find(
+      (candidate) => candidate.clientId === 'client-3',
+    );
+
+    expect(blockedCandidate).toMatchObject({
+      servicePeriodStart: '2025-03-01',
+      windowStart: '2025-04-01',
+      canGenerate: false,
+      blockedReason: 'One or more included obligations are not eligible for generation.',
+    });
+
+    const afterWindowStarts = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      dateRange: {
+        to: '2025-04-05',
+      },
+    });
+
+    const readyCandidate = afterWindowStarts.invoiceCandidates.find(
+      (candidate) => candidate.clientId === 'client-3',
+    );
+
+    expect(readyCandidate).toMatchObject({
+      servicePeriodStart: '2025-03-01',
+      windowStart: '2025-04-01',
+      canGenerate: true,
+      blockedReason: null,
+    });
+  });
+
+  it('T118: client-arrears materialization gaps align to the following invoice window instead of inventing a same-period repair gap', async () => {
+    mocks.rowsByTable.client_billing_cycles = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-3',
+        client_name: 'Wonder Co',
+        billing_cycle_id: 'cycle-2025-03',
+        billing_cycle: 'monthly',
+        period_start_date: '2025-03-01',
+        period_end_date: '2025-04-01',
+        effective_date: '2025-03-01',
+        invoice_id: null,
+      },
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-3',
+        client_name: 'Wonder Co',
+        billing_cycle_id: 'cycle-2025-04',
+        billing_cycle: 'monthly',
+        period_start_date: '2025-04-01',
+        period_end_date: '2025-05-01',
+        effective_date: '2025-04-01',
+        invoice_id: null,
+      },
+    ];
+
+    mocks.rowsByTable.client_contracts = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-3',
+        client_contract_line_id: 'assignment-3',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'arrears',
+        start_date: '2025-03-01',
+        end_date: null,
+        is_active: true,
+      },
+    ];
+
+    mocks.rowsByTable.recurring_service_periods = [];
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(result.invoiceCandidates).toEqual([]);
+    expect(result.materializationGaps).toEqual([
+      expect.objectContaining({
+        clientId: 'client-3',
+        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-3:client:arrears',
+        periodKey: 'period:2025-03-01:2025-04-01',
+        servicePeriodStart: '2025-03-01',
+        servicePeriodEnd: '2025-04-01',
+        invoiceWindowStart: '2025-04-01',
+        invoiceWindowEnd: '2025-05-01',
+      }),
+    ]);
   });
 
   it('T003: due-work reader resolves client-cadence materialization gaps from surviving tables when `client_contract_lines` is absent', async () => {
@@ -478,5 +614,84 @@ describe('recurring due-work reader', () => {
 
     expect(result.invoiceCandidates).toHaveLength(2);
     expect(result.invoiceCandidates.every((candidate) => candidate.splitReasons.includes('financial_constraint'))).toBe(true);
+  });
+
+  it('T033: due-work candidate grouping stays split by client_contract_id for same-client same-window recurring rows', async () => {
+    mocks.rowsByTable.recurring_service_periods = [
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-contract-scope-1',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-03-01',
+        invoice_window_end: '2025-04-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: null,
+        contract_id: 'contract-2',
+        contract_name: 'Acme Monthly Support',
+        contract_line_id: 'assignment-1',
+        contract_line_name: 'Acme Retainer',
+        client_contract_id: 'cc-1',
+        currency_code: 'USD',
+        tax_source: 'internal',
+        export_shape_key: 'default-export',
+      },
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-contract-scope-2',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-2:client:advance',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-03-01',
+        invoice_window_end: '2025-04-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: null,
+        contract_id: 'contract-2',
+        contract_name: 'Acme Monthly Support',
+        contract_line_id: 'assignment-2',
+        contract_line_name: 'Acme Backup',
+        client_contract_id: 'cc-2',
+        currency_code: 'USD',
+        tax_source: 'internal',
+        export_shape_key: 'default-export',
+      },
+    ];
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      searchTerm: 'Acme',
+    });
+
+    expect(result.invoiceCandidates).toHaveLength(2);
+    expect(
+      result.invoiceCandidates
+        .map((candidate) => candidate.candidateKey)
+        .sort(),
+    ).toEqual([
+      expect.stringContaining(':cc-1:'),
+      expect.stringContaining(':cc-2:'),
+    ]);
+    expect(
+      result.invoiceCandidates
+        .map((candidate) => candidate.members[0]?.recordId)
+        .sort(),
+    ).toEqual(['rsp-contract-scope-1', 'rsp-contract-scope-2']);
+    expect(result.invoiceCandidates.every((candidate) => candidate.memberCount === 1)).toBe(true);
+    expect(result.invoiceCandidates.every((candidate) => candidate.splitReasons.includes('single_contract'))).toBe(true);
+    expect(result.invoiceCandidates.every((candidate) => candidate.splitReasons.includes('purchase_order_scope'))).toBe(true);
   });
 });

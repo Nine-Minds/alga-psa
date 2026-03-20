@@ -627,16 +627,94 @@ export async function calculateBillingForSelectionInput(input: {
       input.selectorInput.windowStart,
       input.selectorInput.windowEnd,
     );
+  const scopedRecurringTimingSelections = scopeRecurringTimingSelectionsForSelectorInput(
+    recurringTimingSelections,
+    input.selectorInput,
+  );
 
   return input.billingEngine.calculateBillingForExecutionWindow(
     input.selectorInput.clientId,
     input.selectorInput.windowStart,
     input.selectorInput.windowEnd,
     {
-      recurringTimingSelections,
+      recurringTimingSelections: scopedRecurringTimingSelections,
       recurringTimingSelectionSource: 'persisted',
     },
   );
+}
+
+function parseClientContractLineIdFromScheduleKey(scheduleKey: string | null | undefined): string | null {
+  if (!scheduleKey) {
+    return null;
+  }
+
+  const match = scheduleKey.match(/:client_contract_line:([^:]+):/);
+  return match?.[1] ?? null;
+}
+
+function scopeRecurringTimingSelectionsForSelectorInput(
+  recurringTimingSelections: Record<string, unknown>,
+  selectorInput: IRecurringDueSelectionInput,
+): Record<string, unknown> {
+  const matchesObligationId = (obligationId: string, selectedId: string): boolean => {
+    return (
+      obligationId === selectedId
+      || obligationId.endsWith(`:${selectedId}`)
+      || obligationId.endsWith(`-${selectedId}`)
+    );
+  };
+
+  const executionWindow = selectorInput.executionWindow;
+  const selectionEntries = Object.entries(recurringTimingSelections ?? {});
+  if (selectionEntries.length === 0) {
+    return recurringTimingSelections ?? {};
+  }
+
+  if (executionWindow.kind === 'client_cadence_window') {
+    const selectedClientContractLineId = parseClientContractLineIdFromScheduleKey(
+      executionWindow.scheduleKey,
+    );
+    if (!selectedClientContractLineId) {
+      throw new Error(
+        'Recurring selector input is missing client-cadence assignment identity (schedule key).',
+      );
+    }
+
+    const scoped = Object.fromEntries(
+      selectionEntries.filter(([obligationId]) =>
+        matchesObligationId(obligationId, selectedClientContractLineId),
+      ),
+    );
+    if (Object.keys(scoped).length === 0) {
+      throw new Error(
+        'Recurring service periods were not materialized for this recurring execution window.',
+      );
+    }
+    return scoped;
+  }
+
+  if (executionWindow.kind === 'contract_cadence_window') {
+    const selectedContractLineId = executionWindow.contractLineId;
+    if (!selectedContractLineId) {
+      throw new Error(
+        'Recurring selector input is missing contract-cadence assignment identity (contract line).',
+      );
+    }
+
+    const scoped = Object.fromEntries(
+      selectionEntries.filter(([obligationId]) =>
+        matchesObligationId(obligationId, selectedContractLineId),
+      ),
+    );
+    if (Object.keys(scoped).length === 0) {
+      throw new Error(
+        'Recurring service periods were not materialized for this recurring execution window.',
+      );
+    }
+    return scoped;
+  }
+
+  return recurringTimingSelections;
 }
 
 export type PurchaseOrderOverageDecision = 'allow' | 'skip';

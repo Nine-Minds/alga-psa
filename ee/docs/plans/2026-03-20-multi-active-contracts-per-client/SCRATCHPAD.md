@@ -22,6 +22,8 @@
 - 2026-03-20: Fixed recurring charge attribution can still collapse sibling concurrent assignments if they share the same base line/template identity.
 - 2026-03-20: Bucket usage currently picks the latest active matching assignment. That behavior becomes actively wrong when concurrent active contracts are allowed.
 - 2026-03-20: BillingCycles still collapses multiple active assignments for a client to the first active row returned, ordered by latest start date.
+- 2026-03-20: `calculateBillingForSelectionInput(...)` previously fetched persisted recurring timing selections at `client + invoice window` scope and passed them through unchanged, which could re-expand selected-candidate preview/generation into sibling assignment work.
+- 2026-03-20: Client-cadence selector `scheduleKey` encodes assignment line identity (`client_contract_line:<id>`), which can be used to enforce assignment-scoped recurring selection filtering before billing calculation.
 - 2026-03-20: Singleton active-contract UI/action blockers were still live in `ContractBasicsStep`, `ContractDialog`, `ClientContractsTab`, `Contracts.tsx`, `contractActions`, and shared/model helper layers.
 - 2026-03-20: Wizard assignment writes inserted directly into `client_contracts`, so shared assignment validation was bypassed and mixed-currency policy could diverge from clients flows.
 
@@ -108,6 +110,10 @@
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.disambiguationCopy.wiring.test.ts tests/multiActiveContracts.assignmentDetails.wiring.test.ts`
 - 2026-03-20: Clients UI identity audit wiring test run
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.clientsUiIdentityAudit.wiring.test.ts tests/multiActiveContracts.disambiguationCopy.wiring.test.ts tests/multiActiveContracts.assignmentDetails.wiring.test.ts`
+- 2026-03-20: Recurring due-work assignment-split integration test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts`
+- 2026-03-20: Recurring selector-scope preview/generation regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts`
 
 ## Implementation Log
 
@@ -138,6 +144,15 @@
 - 2026-03-20: Added `T031` static wiring coverage (`multiActiveContracts.disambiguationCopy.wiring.test.ts`) to prevent fallback copy regressions.
 - 2026-03-20: Audited targeted `packages/clients` UI identity surfaces and removed remaining ambiguous assignment picker labeling in `ContractLines` by including explicit assignment identity (`client_contract_id` prefix) in option labels.
 - 2026-03-20: Added `T032` focused wiring coverage (`multiActiveContracts.clientsUiIdentityAudit.wiring.test.ts`) asserting assignment picker/state/overlap matrix flows remain keyed to assignment-scoped identities instead of `contract_id` uniqueness assumptions.
+- 2026-03-20: Added `T033` regression coverage in `server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts` proving same-client/same-window recurring rows with different `client_contract_id` values remain split into separate invoice candidates (with split reasons reflecting single-contract and PO-scope boundaries).
+- 2026-03-20: Scoped recurring preview/generation billing selection execution to the selected selector identity in `calculateBillingForSelectionInput(...)`:
+  - client-cadence selection now filters persisted recurring timing selections to the selected `client_contract_line` parsed from selector `scheduleKey`
+  - contract-cadence selection now filters persisted recurring timing selections to the selected `contractLineId`
+  - both paths now fail explicitly when selector-scoped rows are missing instead of silently re-expanding to sibling due work
+- 2026-03-20: Added selector-scope regression coverage:
+  - `T034/T036` in `server/src/test/unit/billing/invoiceGeneration.preview.test.ts`
+  - `T035/T037` in `server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts`
+  - Expanded both test harness query builders to support `whereIn` and overloaded `where(...)` signatures used by selector normalization paths.
 
 ## Links / References
 

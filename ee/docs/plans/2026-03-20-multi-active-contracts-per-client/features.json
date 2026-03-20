@@ -162,17 +162,17 @@
   {
     "id": "F033",
     "description": "Preserve recurring due-work grouping by `client_contract_id` / contract assignment so multi-active clients continue to produce separate invoice candidates instead of mixed-contract candidates.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F034",
     "description": "Refactor recurring preview to execute against the selected candidate's assignment scope rather than broad `client + invoice window` scope.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F035",
     "description": "Refactor recurring generation to execute against the selected candidate's assignment scope rather than broad `client + invoice window` scope.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F036",

@@ -274,7 +274,7 @@
   {
     "id": "T033",
     "description": "Recurring due-work returns separate invoice candidates for two active assignments on the same client and invoice window.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "T034",
     "description": "Previewing one selected client-cadence recurring candidate includes only charges for its `client_contract_id`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F038"
@@ -291,7 +291,7 @@
   {
     "id": "T035",
     "description": "Generating one selected client-cadence recurring candidate creates an invoice only for its `client_contract_id`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F038"
@@ -300,7 +300,7 @@
   {
     "id": "T036",
     "description": "Regression coverage proves recurring preview no longer re-expands a selected candidate into all due work for the same client and invoice window.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -308,7 +308,7 @@
   {
     "id": "T037",
     "description": "Regression coverage proves recurring generation no longer re-expands a selected candidate into all due work for the same client and invoice window.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
