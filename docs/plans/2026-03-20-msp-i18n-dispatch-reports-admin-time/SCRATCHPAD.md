@@ -123,6 +123,7 @@ SCRIPT
 - (2026-03-20) `F008` completed: wired `packages/scheduling/src/components/technician-dispatch/WorkItemCard.tsx` to `useTranslation('msp/dispatch')` for the Needs Dispatch badge and its interpolated tooltip text, reusing the shared unknown-agent fallback key when the assigned user list is empty.
 - (2026-03-20) `F009` completed: wired `packages/scheduling/src/components/technician-dispatch/TimeHeader.tsx` to `useTranslation('msp/dispatch')` so the 12-hour `AM` / `PM` suffixes come from the namespace instead of being hardcoded.
 - (2026-03-20) `F010` completed: wired the technician column action in `packages/scheduling/src/components/technician-dispatch/DailyTechnicianScheduleGrid.tsx` to `useTranslation('msp/dispatch')` for the View Week tooltip and both normal/inactive aria-label variants.
+- (2026-03-20) `F011` completed: added `'/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch']` to `packages/core/src/lib/i18n/config.ts` so the dispatch namespace is route-loaded with the rest of the MSP shell.
 
 ### Key file paths — Dispatch
 | File | Strings |

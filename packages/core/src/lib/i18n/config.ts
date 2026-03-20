@@ -134,6 +134,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/knowledge-base': ['common', 'msp/core', 'features/documents'],
   '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
   '/msp/projects': ['common', 'msp/core', 'features/projects'],
+  '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch'],
   '/msp/settings': ['common', 'msp/core', 'msp/settings', 'features/projects'],
   '/msp/profile': ['common', 'msp/core', 'msp/settings'],
   '/msp/security-settings': ['common', 'msp/core', 'msp/settings'],
