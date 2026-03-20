@@ -95,6 +95,9 @@
       "security": "Sicurezza"
     }
   },
+  "dashboard": {
+    "onboardingWizard": "Configurazione guidata"
+  },
   "header": {
     "userFallback": "Utente",
     "quickAccess": "Accesso rapido al profilo e all'account.",

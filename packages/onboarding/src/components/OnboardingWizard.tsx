@@ -84,6 +84,7 @@ export function OnboardingWizard({
     serviceDescription: '',
     servicePrice: '',
     contractLineName: 'hourly',
+    currencyCode: 'USD',
 
     // Ticketing
     boardName: '',
@@ -207,7 +208,8 @@ export function OnboardingWizard({
                 serviceDescription: wizardData.serviceDescription,
                 servicePrice: wizardData.servicePrice,
                 contractLineName: wizardData.contractLineName,
-                serviceTypeId: wizardData.serviceTypeId
+                serviceTypeId: wizardData.serviceTypeId,
+                currencyCode: wizardData.currencyCode,
               });
               if (!billingResult.success) {
                 setErrors(prev => ({ ...prev, [stepIndex]: billingResult.error || 'Failed to setup billing' }));

@@ -54,6 +54,7 @@ export interface BillingData {
   servicePrice: string;
   contractLineName: string;
   serviceTypeId?: string;
+  currencyCode?: string;
 }
 
 export interface TicketingData {
@@ -655,6 +656,8 @@ export const setupBilling = withAuth(async (
       }
 
       // Create service catalog entry
+      const currencyCode = data.currencyCode || 'USD';
+      const rateInCents = Math.round((parseFloat(data.servicePrice) || 0) * 100);
       serviceId = require('crypto').randomUUID();
       await trx('service_catalog').insert({
         service_id: serviceId,
@@ -663,9 +666,25 @@ export const setupBilling = withAuth(async (
         description: data.serviceDescription,
         billing_method: serviceType.billing_method || 'usage',
         custom_service_type_id: serviceType.id,
-        default_rate: parseFloat(data.servicePrice) || 0,
-        unit_of_measure: 'hour'
+        default_rate: rateInCents,
+        unit_of_measure: 'hour',
+        cost_currency: currencyCode,
       });
+
+      // Create service_prices entry so the catalog UI shows the correct currency & rate
+      await trx('service_prices').insert({
+        price_id: require('crypto').randomUUID(),
+        tenant,
+        service_id: serviceId,
+        currency_code: currencyCode,
+        rate: rateInCents,
+      });
+
+      // Set default currency on all tenant clients created during onboarding
+      await trx('clients')
+        .where({ tenant })
+        .whereNull('default_currency_code')
+        .update({ default_currency_code: currencyCode });
 
       // Save progress
       await saveTenantOnboardingProgress({
