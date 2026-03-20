@@ -316,7 +316,7 @@
   {
     "id": "T038",
     "description": "Fixed recurring charges from concurrent assignments that share the same base contract/template line stay separated by `client_contract_id` and do not collapse onto the first assignment.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]

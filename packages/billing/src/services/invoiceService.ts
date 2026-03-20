@@ -548,7 +548,11 @@ async function persistFixedInvoiceCharges(
 ): Promise<number> {
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
-  const fixedPlanDetailsMap = new Map<string, { consolidatedItem: any; details: IFixedPriceCharge[] }>();
+  const fixedPlanDetailsMap = new Map<string, {
+    sourceClientContractLineId: string;
+    consolidatedItem: any;
+    details: IFixedPriceCharge[];
+  }>();
 
   for (const charge of fixedCharges) {
     // --- Handle Detailed Fixed Price Charges (V1 Scope) ---
@@ -558,24 +562,29 @@ async function persistFixedInvoiceCharges(
     // --- END DEBUG LOGGING ---
     // Rely on config_id being present and truthy, as 'in' check might be unreliable depending on object creation
     if (charge.config_id) {
-      // Use client_contract_line_id from the base IBillingCharge interface if needed for grouping
+      // Use assignment + line identity so sibling assignments that share a base line id
+      // cannot collapse into one consolidated fixed recurring parent charge.
       const clientContractLineId = charge.client_contract_line_id;
+      const clientContractId = charge.client_contract_id ?? null;
       if (!clientContractLineId) {
         // This shouldn't happen if billingEngine adds it correctly, but good to check.
         console.error("Detailed fixed price charge is missing client_contract_line_id:", charge);
         throw new Error("Internal error: Detailed fixed price charge must have a client_contract_line_id.");
       }
+      const fixedPlanGroupKey = `${clientContractId ?? '__no_assignment__'}:${clientContractLineId}`;
 
-      // Group by clientContractLineId instead of planId
-      if (!fixedPlanDetailsMap.has(clientContractLineId)) {
+      if (!fixedPlanDetailsMap.has(fixedPlanGroupKey)) {
           if (charge.base_rate === undefined || charge.base_rate === null) {
               console.error("Detailed fixed price charge is missing base_rate:", charge);
               throw new Error("Internal error: Detailed fixed price charge must have a base_rate.");
           }
 
           // --- Determine Consolidated Item Tax Region & Taxability (Derived from Charges) ---
-          // Get all charges associated with this clientContractLineId to determine consolidated properties
-          const chargesForThisPlan = fixedCharges.filter(c => c.client_contract_line_id === clientContractLineId);
+          // Keep grouping scoped to one assignment + one line identity.
+          const chargesForThisPlan = fixedCharges.filter((c) =>
+            c.client_contract_line_id === clientContractLineId
+            && (c.client_contract_id ?? null) === clientContractId,
+          );
 
           // Determine if *any* charge in this group is taxable
           const isAnyChargeTaxable = chargesForThisPlan.some(c => c.is_taxable);
@@ -597,11 +606,11 @@ async function persistFixedInvoiceCharges(
           }
           // --- End Determine Consolidated Item Tax Region & Taxability ---
 
-          console.log(`[INVOICE DEBUG] Setting fixedPlanDetailsMap for ${clientContractLineId}, charge.base_rate: ${charge.base_rate}`);
-          const planClientContractId =
-            chargesForThisPlan.find((c) => c.client_contract_id)?.client_contract_id ?? null;
+          console.log(`[INVOICE DEBUG] Setting fixedPlanDetailsMap for ${fixedPlanGroupKey}, charge.base_rate: ${charge.base_rate}`);
+          const planClientContractId = clientContractId;
 
-          fixedPlanDetailsMap.set(clientContractLineId, {
+          fixedPlanDetailsMap.set(fixedPlanGroupKey, {
+              sourceClientContractLineId: clientContractLineId,
               consolidatedItem: {
                   invoice_id: invoiceId,
                   service_id: null,
@@ -630,7 +639,7 @@ async function persistFixedInvoiceCharges(
           });
       }
 
-      const planEntry = fixedPlanDetailsMap.get(clientContractLineId)!;
+      const planEntry = fixedPlanDetailsMap.get(fixedPlanGroupKey)!;
       planEntry.details.push(charge);
 
     } else {
@@ -671,7 +680,13 @@ async function persistFixedInvoiceCharges(
   // --- Process Consolidated Fixed Plan Items and Details ---
 
   // Fetch plan details (name and fixed config base rate) for all consolidated items first
-  const clientPlanIds = Array.from(fixedPlanDetailsMap.keys());
+  const clientPlanIds = Array.from(
+    new Set(
+      Array.from(fixedPlanDetailsMap.values()).map(
+        (planEntry) => planEntry.sourceClientContractLineId,
+      ),
+    ),
+  );
   // Map: clientContractLineId -> { contract_line_name: string, contract_line_base_rate: number | null }
   const planInfoMap = new Map<string, { contract_line_name: string; contract_line_base_rate: number | null }>();
 
@@ -711,10 +726,10 @@ async function persistFixedInvoiceCharges(
 
 
   // Iterate using clientContractLineId as the key
-  for (const [clientContractLineId, planEntry] of fixedPlanDetailsMap.entries()) {
-    const planInfo = planInfoMap.get(clientContractLineId);
+  for (const [fixedPlanGroupKey, planEntry] of fixedPlanDetailsMap.entries()) {
+    const planInfo = planInfoMap.get(planEntry.sourceClientContractLineId);
     if (!planInfo) {
-        console.error(`Could not find plan info for clientContractLineId: ${clientContractLineId}`);
+        console.error(`Could not find plan info for clientContractLineId: ${planEntry.sourceClientContractLineId}`);
         // Decide how to handle missing plan info (skip? throw error?)
         continue;
     }
@@ -728,7 +743,7 @@ async function persistFixedInvoiceCharges(
     planEntry.consolidatedItem.unit_price = planInfo.contract_line_base_rate !== null
         ? Math.round(planInfo.contract_line_base_rate)
         : planEntry.consolidatedItem.unit_price; // Fallback to initially set price (from first service)
-    console.log(`[INVOICE DEBUG] Updated unit_price for ${clientContractLineId}: contract_line_base_rate=${planInfo.contract_line_base_rate}, oldUnitPrice=${oldUnitPrice}, newUnitPrice=${planEntry.consolidatedItem.unit_price}`);
+    console.log(`[INVOICE DEBUG] Updated unit_price for ${fixedPlanGroupKey}: contract_line_base_rate=${planInfo.contract_line_base_rate}, oldUnitPrice=${oldUnitPrice}, newUnitPrice=${planEntry.consolidatedItem.unit_price}`);
 
     let planNetTotal = 0;
     let planTaxTotal = 0;

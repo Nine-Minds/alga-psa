@@ -613,4 +613,101 @@ describe("invoiceService fixed recurring persistence", () => {
       tables.recurring_service_periods[0].updated_at,
     );
   });
+
+  it("T038: fixed recurring consolidation keeps sibling assignment charges separated when they share a base contract line", async () => {
+    const { tx, inserts } = createMockTx({
+      contract_line_service_configuration: [
+        {
+          tenant: "tenant-1",
+          config_id: "config-a",
+          contract_line_id: "contract-line-shared",
+        },
+        {
+          tenant: "tenant-1",
+          config_id: "config-b",
+          contract_line_id: "contract-line-shared",
+        },
+      ],
+    });
+
+    await persistInvoiceCharges(
+      tx,
+      "invoice-1",
+      [
+        {
+          type: "fixed",
+          serviceId: "service-1",
+          serviceName: "Managed Support",
+          quantity: 1,
+          rate: 6000,
+          total: 6000,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: "US-NY",
+          is_taxable: false,
+          client_contract_line_id: "contract-line-shared",
+          client_contract_id: "assignment-1",
+          contract_name: "Acme Corp",
+          config_id: "config-a",
+          base_rate: 6000,
+          enable_proration: false,
+          fmv: 6000,
+          proportion: 1,
+          allocated_amount: 6000,
+          servicePeriodStart: "2025-03-01",
+          servicePeriodEnd: "2025-03-31",
+          billingTiming: "advance",
+          tenant: "tenant-1",
+        },
+        {
+          type: "fixed",
+          serviceId: "service-2",
+          serviceName: "Managed Support",
+          quantity: 1,
+          rate: 4000,
+          total: 4000,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: "US-NY",
+          is_taxable: false,
+          client_contract_line_id: "contract-line-shared",
+          client_contract_id: "assignment-2",
+          contract_name: "Acme Corp",
+          config_id: "config-b",
+          base_rate: 4000,
+          enable_proration: false,
+          fmv: 4000,
+          proportion: 1,
+          allocated_amount: 4000,
+          servicePeriodStart: "2025-03-01",
+          servicePeriodEnd: "2025-03-31",
+          billingTiming: "advance",
+          tenant: "tenant-1",
+        },
+      ],
+      {
+        client_id: "client-1",
+        tax_region: "US-NY",
+      },
+      {
+        user: {
+          id: "user-1",
+        },
+      } as any,
+      "tenant-1",
+    );
+
+    expect(inserts.invoice_charges).toHaveLength(2);
+    expect(
+      inserts.invoice_charges
+        .map((charge) => charge.client_contract_id)
+        .sort(),
+    ).toEqual(["assignment-1", "assignment-2"]);
+    expect(
+      inserts.invoice_charges
+        .map((charge) => charge.net_amount)
+        .sort((left, right) => left - right),
+    ).toEqual([4000, 6000]);
+    expect(inserts.invoice_charge_fixed_details).toHaveLength(2);
+  });
 });

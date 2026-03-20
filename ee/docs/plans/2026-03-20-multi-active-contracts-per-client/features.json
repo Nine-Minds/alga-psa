@@ -177,7 +177,7 @@
   {
     "id": "F036",
     "description": "Fix fixed recurring charge attribution and grouping so concurrent assignments that share the same base contract/template line do not collapse onto the first `client_contract_id`.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F037",

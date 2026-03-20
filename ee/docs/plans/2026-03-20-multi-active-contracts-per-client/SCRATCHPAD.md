@@ -114,6 +114,8 @@
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts`
 - 2026-03-20: Recurring selector-scope preview/generation regression test run
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts`
+- 2026-03-20: Fixed recurring persistence assignment-separation regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
 
 ## Implementation Log
 
@@ -153,6 +155,9 @@
   - `T034/T036` in `server/src/test/unit/billing/invoiceGeneration.preview.test.ts`
   - `T035/T037` in `server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts`
   - Expanded both test harness query builders to support `whereIn` and overloaded `where(...)` signatures used by selector normalization paths.
+- 2026-03-20: Fixed fixed-recurring consolidated parent grouping in `persistFixedInvoiceCharges(...)` so grouping identity is `client_contract_id + client_contract_line_id` (assignment-scoped), not line-id-only.
+- 2026-03-20: Updated consolidated-plan metadata lookup to query by source line identity while retaining assignment-scoped grouping keys.
+- 2026-03-20: Added `T038` regression in `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` proving sibling assignments sharing one base contract line persist as separate parent invoice charges with distinct `client_contract_id` attribution.
 
 ## Links / References
 
