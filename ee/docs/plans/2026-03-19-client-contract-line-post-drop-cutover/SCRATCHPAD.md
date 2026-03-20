@@ -30,6 +30,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19) Low-priority hygiene cleanup remains worthwhile because tracked backup files and teardown-only fixtures still keep the dropped table visible in active engineering flows.
 - (2026-03-19 23:10 EDT) The existing due-work reader test harness was flexible enough to simulate a migrated schema by throwing on any attempted `client_contract_lines` access. That let the first checkpoint verify behavior rather than only string-match source code.
 - (2026-03-19 23:16 EDT) `AutomaticInvoices` can be validated meaningfully without a database fixture by letting the component call the real `getAvailableRecurringDueWork()` action against mocked migrated-schema rows. That catches regressions in the UI load path instead of only checking a prebuilt mock payload.
+- (2026-03-19 23:19 EDT) Preview/generate selector normalization for client cadence can follow the same post-drop lookup as due-work loading: `recurring_service_periods -> contract_lines -> contracts.owner_client_id`. The selector-input path only needs to prove the persisted service-period window belongs to the client; it does not need a dropped assignment row.
 
 ## Commands / Runbooks
 
@@ -66,6 +67,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `pnpm exec vitest run src/test/unit/billing/recurringDueWorkReader.integration.test.ts` (run from `server/`)
 - (2026-03-19 23:16 EDT) Verification for F003/T004:
   - `pnpm exec vitest run src/test/unit/billing/recurringDueWorkReader.integration.test.ts src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx` (run from `server/`)
+- (2026-03-19 23:19 EDT) Verification for F004/F005/T005/T006/T007:
+  - `pnpm exec vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts` (run from `server/`)
 
 ## Completed Items
 
@@ -74,6 +77,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:10 EDT) Completed `T001`/`T002`/`T003`: due-work reader coverage now simulates a fully migrated schema by failing on any `client_contract_lines` access while still verifying persisted client cadence, persisted contract cadence, and client-cadence materialization gaps.
 - (2026-03-19 23:16 EDT) Completed `F003`: `AutomaticInvoices` can load recurring due work in a simulated migrated schema with no `client_contract_lines` table because its server action path no longer depends on that table for due-work loading.
 - (2026-03-19 23:16 EDT) Completed `T004`: the UI test now renders `AutomaticInvoices` while the real due-work action runs against mocked migrated-schema data and a hard failure on any `client_contract_lines` access.
+- (2026-03-19 23:19 EDT) Completed `F004`/`F005`: selector-input preview/generate normalization for client-cadence windows no longer joins `client_contract_lines`; it resolves persisted windows through surviving `contract_lines` plus `contracts.owner_client_id`.
+- (2026-03-19 23:19 EDT) Completed `T005`/`T006`/`T007`: preview and generation coverage now explicitly fails on any `client_contract_lines` access while verifying client-cadence selector-input preview, client-cadence selector-input generation, and contract-cadence regression behavior.
 
 ## Links / References
 

@@ -26,19 +26,19 @@
   {
     "id": "T005",
     "description": "Integration: recurring preview for a client-cadence selector-input window succeeds without joining `client_contract_lines`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F018"]
   },
   {
     "id": "T006",
     "description": "Integration: recurring generate for a client-cadence selector-input window succeeds without joining `client_contract_lines`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F018"]
   },
   {
     "id": "T007",
     "description": "Integration: recurring preview/generate for contract cadence continues to work after client-line table removal cleanup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F005"]
   },
   {

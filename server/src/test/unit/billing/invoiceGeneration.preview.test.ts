@@ -88,6 +88,7 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
 }
 
 const mocks = vi.hoisted(() => {
+  const missingTables = new Set<string>();
   const rowsByTable: Record<string, Row[]> = {
     client_billing_cycles: [
       {
@@ -121,9 +122,14 @@ const mocks = vi.hoisted(() => {
   };
 
   const raw = vi.fn((sql: string) => sql);
-  const knex = vi.fn((tableName: string) =>
-    createQueryBuilder(rowsByTable[normalizeTableName(tableName)] ?? [], raw),
-  ) as any;
+  const knex = vi.fn((tableName: string) => {
+    const normalizedTableName = normalizeTableName(tableName);
+    if (missingTables.has(normalizedTableName)) {
+      throw new Error(`relation "${normalizedTableName}" does not exist`);
+    }
+
+    return createQueryBuilder(rowsByTable[normalizedTableName] ?? [], raw);
+  }) as any;
   knex.raw = raw;
 
   const createTenantKnex = vi.fn(async () => ({ knex }));
@@ -197,6 +203,7 @@ const mocks = vi.hoisted(() => {
   }));
 
   return {
+    missingTables,
     rowsByTable,
     createTenantKnex,
     withTransaction,
@@ -293,6 +300,7 @@ const {
 describe('invoice preview recurring timing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.missingTables.clear();
     mocks.hasPermission.mockReturnValue(true);
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
     mocks.getClientDetails.mockResolvedValue({
@@ -566,7 +574,9 @@ describe('invoice preview recurring timing', () => {
     expect(invalidResult).not.toHaveProperty('billingCycleId');
   });
 
-  it('T042: selector-input preview action returns the same recurring service-period details as billing-cycle preview for an equivalent client-cadence row', async () => {
+  it('T005: selector-input preview action resolves a client-cadence execution window without `client_contract_lines`', async () => {
+    mocks.missingTables.add('client_contract_lines');
+
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
       scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
@@ -597,7 +607,9 @@ describe('invoice preview recurring timing', () => {
     });
   });
 
-  it('T043: selector-input preview action returns correct recurring service-period details for a contract-cadence row with no billing-cycle bridge', async () => {
+  it('T007: selector-input preview action still returns correct contract-cadence details after client-line table removal cleanup', async () => {
+    mocks.missingTables.add('client_contract_lines');
+
     const selectorInput = buildContractCadenceDueSelectionInput({
       clientId: 'client-1',
       contractId: 'contract-1',

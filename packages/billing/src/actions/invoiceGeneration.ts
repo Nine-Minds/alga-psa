@@ -358,15 +358,23 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
     params.knex,
     async (trx: Knex.Transaction) =>
       trx('recurring_service_periods as rsp')
-        .join('client_contract_lines as ccl', function () {
-          this.on('ccl.client_contract_line_id', '=', 'rsp.obligation_id')
-            .andOn('ccl.tenant', '=', 'rsp.tenant');
+        .join('contract_lines as cl', function () {
+          this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
+            .andOn('cl.tenant', '=', 'rsp.tenant');
+        })
+        .join('contracts as ct', function () {
+          this.on('ct.contract_id', '=', 'cl.contract_id')
+            .andOn('ct.tenant', '=', 'cl.tenant');
+        })
+        .join('clients as c', function () {
+          this.on('c.client_id', '=', 'ct.owner_client_id')
+            .andOn('c.tenant', '=', 'ct.tenant');
         })
         .where({
           'rsp.tenant': params.tenant,
           'rsp.cadence_owner': 'client',
           'rsp.obligation_type': 'client_contract_line',
-          'ccl.client_id': params.clientId,
+          'c.client_id': params.clientId,
           'rsp.invoice_window_start': normalizedWindowStart,
           'rsp.invoice_window_end': normalizedWindowEnd,
         })
@@ -408,9 +416,17 @@ async function normalizeRecurringSelectorInput(params: {
       params.knex,
       async (trx: Knex.Transaction) =>
         trx('recurring_service_periods as rsp')
-          .join('client_contract_lines as ccl', function () {
-            this.on('ccl.client_contract_line_id', '=', 'rsp.obligation_id')
-              .andOn('ccl.tenant', '=', 'rsp.tenant');
+          .join('contract_lines as cl', function () {
+            this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
+              .andOn('cl.tenant', '=', 'rsp.tenant');
+          })
+          .join('contracts as ct', function () {
+            this.on('ct.contract_id', '=', 'cl.contract_id')
+              .andOn('ct.tenant', '=', 'cl.tenant');
+          })
+          .join('clients as c', function () {
+            this.on('c.client_id', '=', 'ct.owner_client_id')
+              .andOn('c.tenant', '=', 'ct.tenant');
           })
           .where({
             'rsp.tenant': params.tenant,
@@ -420,7 +436,7 @@ async function normalizeRecurringSelectorInput(params: {
             'rsp.period_key': params.selectorInput.executionWindow.periodKey,
             'rsp.invoice_window_start': normalizedWindowStart,
             'rsp.invoice_window_end': normalizedWindowEnd,
-            'ccl.client_id': params.selectorInput.clientId,
+            'c.client_id': params.selectorInput.clientId,
           })
           .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
           .orderBy('rsp.service_period_start', 'asc')

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  buildClientCadenceDueSelectionInput,
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
@@ -103,6 +104,7 @@ function createQueryBuilder(rows: Row[], tableName: string) {
 }
 
 const mocks = vi.hoisted(() => {
+  const missingTables = new Set<string>();
   const rowsByTable: Record<string, Row[]> = {
     client_billing_cycles: [
       {
@@ -134,9 +136,14 @@ const mocks = vi.hoisted(() => {
     project_materials: [],
   };
 
-  const knex = vi.fn((tableName: string) =>
-    createQueryBuilder(rowsByTable[normalizeTableName(tableName)] ?? [], normalizeTableName(tableName)),
-  ) as any;
+  const knex = vi.fn((tableName: string) => {
+    const normalizedTableName = normalizeTableName(tableName);
+    if (missingTables.has(normalizedTableName)) {
+      throw new Error(`relation "${normalizedTableName}" does not exist`);
+    }
+
+    return createQueryBuilder(rowsByTable[normalizedTableName] ?? [], normalizedTableName);
+  }) as any;
   knex.raw = vi.fn((sql: string) => sql);
 
   const getFullInvoiceById = vi.fn(async (_knex: unknown, _tenant: string, invoiceId: string) => {
@@ -193,6 +200,7 @@ const mocks = vi.hoisted(() => {
   };
 
   return {
+    missingTables,
     rowsByTable,
     clientBillingResult,
     contractBillingResult,
@@ -360,6 +368,7 @@ const {
 describe('selector-input recurring generation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.missingTables.clear();
     mocks.rowsByTable.invoices.length = 0;
     mocks.rowsByTable.recurring_service_periods.splice(
       0,
@@ -372,7 +381,34 @@ describe('selector-input recurring generation', () => {
     mocks.calculateBillingForExecutionWindow.mockResolvedValue(mocks.contractBillingResult);
   });
 
-  it('T046: recurring generation API accepts a selector-input execution window and creates an invoice with no billing_cycle_id bridge', async () => {
+  it('T006: recurring generation API accepts a client-cadence selector-input window with no `client_contract_lines` table', async () => {
+    mocks.missingTables.add('client_contract_lines');
+
+    const selectorInput = buildClientCadenceDueSelectionInput({
+      clientId: 'client-1',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      periodKey: 'period:2025-01-01:2025-02-01',
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+    });
+
+    const result = await generateInvoiceForSelectionInput(selectorInput);
+
+    expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).toHaveBeenCalledWith(
+      'client-1',
+      '2025-02-01',
+      '2025-03-01',
+    );
+    expect(mocks.calculateBillingForExecutionWindow).toHaveBeenCalled();
+    expect(mocks.rowsByTable.invoices[0]?.billing_cycle_id ?? null).toBeNull();
+    expect(result).toMatchObject({
+      billing_cycle_id: null,
+    });
+  });
+
+  it('T007: recurring generation API still accepts a contract-cadence selector-input execution window after client-line table removal cleanup', async () => {
+    mocks.missingTables.add('client_contract_lines');
+
     const selectorInput = buildContractCadenceDueSelectionInput({
       clientId: 'client-1',
       contractId: 'contract-1',

@@ -20,13 +20,13 @@
   {
     "id": "F004",
     "description": "Recurring preview selector normalization resolves client-cadence service periods without joining `client_contract_lines`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F005",
     "description": "Recurring generate selector normalization resolves client-cadence service periods without joining `client_contract_lines`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
   },
   {
