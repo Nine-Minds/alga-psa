@@ -121,6 +121,7 @@ SCRIPT
 - (2026-03-20) `F006` completed: wired `packages/scheduling/src/components/technician-dispatch/ScheduleEvent.tsx` and `WeeklyScheduleEvent.tsx` to `useTranslation('msp/dispatch')` for action labels, delete-validation fallback text, delete-dialog fallback entity name, private-event "Busy", and the unknown/unassigned/untitled event fallbacks. Weekly event tooltip date/time strings now use `useFormatters()` so the tooltip content tracks the active locale too.
 - (2026-03-20) `F007` completed: wired the sidebar controls in `packages/scheduling/src/components/technician-dispatch/WeeklyTechnicianScheduleGrid.tsx` to `useTranslation('msp/dispatch')` for Compare All, Clear All, Compare/Stop Comparing, and the View Week tooltip/aria-label variants, including inactive-user aria text.
 - (2026-03-20) `F008` completed: wired `packages/scheduling/src/components/technician-dispatch/WorkItemCard.tsx` to `useTranslation('msp/dispatch')` for the Needs Dispatch badge and its interpolated tooltip text, reusing the shared unknown-agent fallback key when the assigned user list is empty.
+- (2026-03-20) `F009` completed: wired `packages/scheduling/src/components/technician-dispatch/TimeHeader.tsx` to `useTranslation('msp/dispatch')` so the 12-hour `AM` / `PM` suffixes come from the namespace instead of being hardcoded.
 
 ### Key file paths — Dispatch
 | File | Strings |
