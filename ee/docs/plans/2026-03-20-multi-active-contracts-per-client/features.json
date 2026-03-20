@@ -202,7 +202,7 @@
   {
     "id": "F041",
     "description": "Update the Billing Cycles summary surface so it can represent multiple active assignments for a client instead of displaying only the first active contract row returned.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F042",

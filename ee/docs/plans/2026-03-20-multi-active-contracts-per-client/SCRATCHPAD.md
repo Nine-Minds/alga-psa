@@ -126,6 +126,8 @@
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.invoiceAssignmentScoping.wiring.test.ts tests/ContractDetail.clientOwnedSemantics.wiring.test.ts tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts`
 - 2026-03-20: Invoice PO assignment-scope unit regression test run
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceQueries.purchaseOrderSummary.test.ts`
+- 2026-03-20: BillingCycles multi-assignment summary wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.billingCyclesSummary.wiring.test.ts`
 
 ## Implementation Log
 
@@ -178,6 +180,8 @@
 - 2026-03-20: Updated `ContractDetail` invoice-tab loading to scope invoice reads by selected `clientContractId` (fallback first assignment) and clarified assignment-scoped error copy.
 - 2026-03-20: Added `T042` wiring coverage in `packages/billing/tests/multiActiveContracts.invoiceAssignmentScoping.wiring.test.ts` asserting invoice query and contract-detail invoice tab use assignment (`client_contract_id`) identity.
 - 2026-03-20: Added `T043` unit coverage in `server/src/test/unit/billing/invoiceQueries.purchaseOrderSummary.test.ts` proving PO context/consumption lookups are keyed by `invoice.client_contract_id` and do not drift to sibling active assignments.
+- 2026-03-20: Updated `BillingCycles` assignment summary mapping to retain and render all active `client_contract_id` rows per client (with assignment identity labels) instead of collapsing to the first contract row.
+- 2026-03-20: Added `T045` wiring coverage in `packages/billing/tests/multiActiveContracts.billingCyclesSummary.wiring.test.ts` asserting multi-assignment summary rendering path remains active.
 
 ## Links / References
 

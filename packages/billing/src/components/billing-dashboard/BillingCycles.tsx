@@ -88,7 +88,9 @@ const BillingCycles: React.FC = () => {
     from: getDefaultStartDate(),
     to: undefined,
   }));
-  const [clientContracts, setClientContracts] = useState<{ [clientId: string]: string }>({});
+  const [clientContracts, setClientContracts] = useState<{
+    [clientId: string]: Array<{ clientContractId: string; contractId: string }>;
+  }>({});
   const [contracts, setContracts] = useState<{ [contractId: string]: IContract }>({});
 
   // Debounce search term
@@ -164,16 +166,25 @@ const BillingCycles: React.FC = () => {
         getClientBillingScheduleSummaries(clientIds)
       ]);
 
-      // Build active contract map per client (first by latest start date).
-      const clientContractsMap: { [clientId: string]: string } = {};
+      // Build active assignment map per client.
+      const clientContractsMap: {
+        [clientId: string]: Array<{ clientContractId: string; contractId: string }>;
+      } = {};
       clientAssignedContracts.forEach(contract => {
-        if (!contract.client_id || !contract.contract_id) {
+        if (!contract.client_id || !contract.contract_id || !contract.client_contract_id) {
           return;
         }
 
-        if (!clientContractsMap[contract.client_id]) {
-          clientContractsMap[contract.client_id] = contract.contract_id;
+        const existingAssignments = clientContractsMap[contract.client_id] ?? [];
+        if (existingAssignments.some((assignment) => assignment.clientContractId === contract.client_contract_id)) {
+          return;
         }
+
+        existingAssignments.push({
+          clientContractId: contract.client_contract_id,
+          contractId: contract.contract_id,
+        });
+        clientContractsMap[contract.client_id] = existingAssignments;
       });
 
       setClientContracts(clientContractsMap);
@@ -234,10 +245,26 @@ const BillingCycles: React.FC = () => {
       title: 'Contract',
       dataIndex: 'client_id',
       render: (value: string) => {
-        const contractId = clientContracts[value];
-        if (!contractId) return <span className="text-muted-foreground">No active contract</span>;
-        const contract = contracts[contractId];
-        return contract?.contract_name || <span className="text-muted-foreground">Unknown</span>;
+        const assignments = clientContracts[value] ?? [];
+        if (assignments.length === 0) {
+          return <span className="text-muted-foreground">No active assignments</span>;
+        }
+
+        return (
+          <div className="space-y-1">
+            {assignments.map((assignment) => {
+              const contractName = contracts[assignment.contractId]?.contract_name ?? 'Unknown';
+              return (
+                <div key={assignment.clientContractId} className="space-y-0.5">
+                  <div>{contractName}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Assignment {assignment.clientContractId.slice(0, 8)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
       },
     },
     {

@@ -375,7 +375,7 @@
   {
     "id": "T045",
     "description": "BillingCycles summary shows multiple active assignments or an explicit multi-assignment representation instead of collapsing to the first active contract row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
