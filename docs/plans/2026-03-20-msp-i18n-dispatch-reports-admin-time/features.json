@@ -6,7 +6,7 @@
   {"id": "F005", "description": "TechnicianDispatchDashboard.tsx: translate error/success toasts, permission messages, filter options, private event title", "implemented": true, "prdRefs": ["D-FR4"]},
   {"id": "F006", "description": "ScheduleEvent.tsx + WeeklyScheduleEvent.tsx: translate View Details, Delete, Busy, Unknown/Unassigned/Untitled fallbacks", "implemented": true, "prdRefs": ["D-FR5"]},
   {"id": "F007", "description": "WeeklyTechnicianScheduleGrid.tsx: translate Compare/Clear All, View Week tooltips and aria-labels", "implemented": true, "prdRefs": ["D-FR6"]},
-  {"id": "F008", "description": "WorkItemCard.tsx: translate Needs Dispatch badge and tooltip", "implemented": false, "prdRefs": ["D-FR7"]},
+  {"id": "F008", "description": "WorkItemCard.tsx: translate Needs Dispatch badge and tooltip", "implemented": true, "prdRefs": ["D-FR7"]},
   {"id": "F009", "description": "TimeHeader.tsx: translate AM/PM time suffixes", "implemented": false, "prdRefs": ["D-FR8"]},
   {"id": "F010", "description": "DailyTechnicianScheduleGrid.tsx: translate View Week tooltip and aria-labels", "implemented": false, "prdRefs": ["D-FR5"]},
   {"id": "F011", "description": "Update ROUTE_NAMESPACES for /msp/technician-dispatch to load msp/dispatch", "implemented": false, "prdRefs": ["D-FR9"]},
