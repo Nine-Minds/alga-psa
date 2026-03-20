@@ -276,13 +276,9 @@ export default function TaskDocumentsSimple({
       await fetchDocuments();
     }
 
-    if (isPendingMode) {
-      // Skip folder selection in pending mode - default to root
-      handleFolderSelected(null);
-    } else {
-      // Show folder selector first
-      setShowFolderModal(true);
-    }
+    // Match the shared ticket documents flow by always selecting a destination
+    // folder before creating a new document.
+    setShowFolderModal(true);
   };
 
   const handleFolderSelected = async (folderPath: string | null) => {
@@ -590,7 +586,9 @@ export default function TaskDocumentsSimple({
               userId: currentUser.user_id,
               entityId: isPendingMode ? undefined : taskId,
               entityType: isPendingMode ? undefined : "project_task",
-              folderPath: isPendingMode ? null : undefined,
+              // Leave folderPath undefined so the shared uploader prompts for a
+              // destination folder, matching the ticket documents flow.
+              folderPath: undefined,
               onUploadComplete: async (result: any) => {
                 setShowUpload(false);
                 if (result?.success && result.document) {
