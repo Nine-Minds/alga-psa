@@ -122,6 +122,7 @@ SCRIPT
 - (2026-03-20) `F007` completed: wired the sidebar controls in `packages/scheduling/src/components/technician-dispatch/WeeklyTechnicianScheduleGrid.tsx` to `useTranslation('msp/dispatch')` for Compare All, Clear All, Compare/Stop Comparing, and the View Week tooltip/aria-label variants, including inactive-user aria text.
 - (2026-03-20) `F008` completed: wired `packages/scheduling/src/components/technician-dispatch/WorkItemCard.tsx` to `useTranslation('msp/dispatch')` for the Needs Dispatch badge and its interpolated tooltip text, reusing the shared unknown-agent fallback key when the assigned user list is empty.
 - (2026-03-20) `F009` completed: wired `packages/scheduling/src/components/technician-dispatch/TimeHeader.tsx` to `useTranslation('msp/dispatch')` so the 12-hour `AM` / `PM` suffixes come from the namespace instead of being hardcoded.
+- (2026-03-20) `F010` completed: wired the technician column action in `packages/scheduling/src/components/technician-dispatch/DailyTechnicianScheduleGrid.tsx` to `useTranslation('msp/dispatch')` for the View Week tooltip and both normal/inactive aria-label variants.
 
 ### Key file paths — Dispatch
 | File | Strings |
