@@ -212,7 +212,7 @@
   {
     "id": "F043",
     "description": "Clarify report and dashboard labels whose wording still implies one active contract or conflates assignment counts with contract/client counts when behavior is already assignment-based.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F044",

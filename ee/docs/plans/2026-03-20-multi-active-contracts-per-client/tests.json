@@ -391,7 +391,7 @@
   {
     "id": "T047",
     "description": "Contract report/dashboard wording is updated where assignment counts were previously mislabeled as billable clients or singular contracts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]

@@ -132,6 +132,8 @@
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.recurringPurchaseOrderScope.wiring.test.ts`
 - 2026-03-20: Bucket usage ambiguity regression test run
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/bucketUsageService.periods.test.ts`
+- 2026-03-20: Contract reports wording wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/ContractReports.summaryCopy.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/contractReportActions.expiration.wiring.test.ts`
 
 ## Implementation Log
 
@@ -189,6 +191,8 @@
 - 2026-03-20: Added `T044` wiring coverage in `packages/billing/tests/multiActiveContracts.recurringPurchaseOrderScope.wiring.test.ts` asserting recurring candidate grouping retains `purchaseOrderScopeKey = client_contract_id`.
 - 2026-03-20: Replaced implicit bucket assignment fallback in `calculatePeriod(...)` by detecting conflicting active assignment matches and throwing an explicit ambiguity error instead of silently choosing one.
 - 2026-03-20: Added `T046` regression in `server/src/test/unit/billing/bucketUsageService.periods.test.ts` proving overlapping eligible assignments fail explicitly with actionable assignment context.
+- 2026-03-20: Updated Contract Reports summary wording so assignment-based counts are labeled as `Active assignments` instead of `Billable clients`.
+- 2026-03-20: Added `T047` wiring coverage in `packages/billing/tests/ContractReports.summaryCopy.wiring.test.ts` to prevent report-label regressions that conflate assignment counts with client counts.
 
 ## Links / References
 

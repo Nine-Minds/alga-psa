@@ -372,7 +372,7 @@ const ContractReports: React.FC = () => {
             <h3 className="font-semibold">Active Contracts</h3>
           </div>
           <p className="text-2xl font-bold text-purple-600">{summary?.activeContractCount ?? 0}</p>
-          <p className="text-xs text-muted-foreground mt-1">Billable clients</p>
+          <p className="text-xs text-muted-foreground mt-1">Active assignments</p>
         </Card>
 
         <Card className="p-4">

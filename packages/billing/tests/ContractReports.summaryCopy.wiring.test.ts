@@ -12,4 +12,10 @@ describe('ContractReports summary copy wiring', () => {
     expect(source).toContain('summary?.atRiskDecisionCount ?? 0');
     expect(source).toContain('Decision due dates in the next 90 days');
   });
+
+  it('labels assignment-based counts explicitly instead of client-count language', () => {
+    expect(source).toContain('Active Contracts');
+    expect(source).toContain('Active assignments');
+    expect(source).not.toContain('Billable clients');
+  });
 });
