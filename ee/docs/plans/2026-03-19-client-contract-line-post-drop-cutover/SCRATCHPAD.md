@@ -36,6 +36,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:26 EDT) `packages/billing/src/actions/clientCadenceScheduleRegeneration.ts` was the next stale runtime caller. Its query still started from `client_contract_lines`, and `server/src/test/unit/billing/updateClientBillingSchedule.test.ts` encoded that exact base table in its fake transaction responses.
 - (2026-03-19 23:29 EDT) Invoice-detail linkage was still widening client-cadence obligation candidates through `client_contract_lines`. In the post-drop model that lookup is redundant because live client-cadence recurring service periods already use `obligation_type = 'client_contract_line'` with the surviving `contract_line_id` as `obligation_id`.
 - (2026-03-19 23:30 EDT) Bucket period resolution had the same stale assumption: it only needed an active client assignment window plus the canonical contract line and bucket config, but it still started that lookup from `client_contract_lines`.
+- (2026-03-19 23:35 EDT) Contract wizard create flow was already using surviving `contract_lines` and `client_contracts`, but `contractWizardActions.ts` still carried an unused helper that wrote `client_contract_lines`, `client_contract_services`, and related dropped tables. The integration test still asserted those dropped tables as expected output.
+- (2026-03-19 23:39 EDT) `applyCreditToInvoice()` still contained a pure guard read against `client_contract_lines` before updating invoice/client balances. That read was not used for business logic and would hard-fail in migrated schemas.
+- (2026-03-19 23:39 EDT) The billing overview report definition still counted active billing clients by joining `client_contract_lines`, even though the active client-owned model is `client_contracts -> contracts -> contract_lines`.
 
 ## Commands / Runbooks
 
@@ -82,6 +85,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `pnpm exec vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts src/test/unit/billing/recurringInvoiceLinkage.static.test.ts` (run from `server/`)
 - (2026-03-19 23:30 EDT) Verification for F009 bucket period resolution:
   - `pnpm exec vitest run src/test/unit/billing/bucketUsageService.periods.test.ts` (run from `server/`)
+- (2026-03-19 23:35 EDT) Verification for F010 contract wizard cleanup:
+  - `pnpm exec vitest run src/test/unit/billing/contractWizard.postDrop.static.test.ts` (run from `server/`)
+  - `pnpm exec vitest run src/test/integration/contractWizard.integration.test.ts` failed locally with `ECONNREFUSED` to `127.0.0.1:5438` / `::1:5438` because the DB-backed test Postgres was not available.
+- (2026-03-19 23:39 EDT) Verification for F012/F013:
+  - `pnpm exec vitest run src/test/unit/billing/creditActions.applyCredit.postDrop.test.ts src/test/unit/billing/billingOverviewReport.postDrop.static.test.ts` (run from `server/`)
 
 ## Completed Items
 
@@ -98,6 +106,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:26 EDT) Completed `T009`: billing-schedule regeneration coverage now seeds `client_contracts as cc`, treats `client_contract_lines` as missing, and still verifies regenerated recurring service periods are materialized and superseded correctly.
 - (2026-03-19 23:29 EDT) Completed `F008`: invoice-detail linkage no longer queries `client_contract_lines` to derive client-cadence recurring obligation candidates. The live path now matches recurring service periods against the surviving `contract_line_id` for both `contract_line` and compatibility `client_contract_line` obligation types.
 - (2026-03-19 23:30 EDT) Completed `F009`: bucket recurring period resolution now finds active client-cadence obligations through `client_contracts -> contracts -> contract_lines`, preserving compatibility-only `client_contract_line` obligation typing while using the surviving `contract_line_id` as the recurring obligation id.
+- (2026-03-19 23:35 EDT) Completed `F010`: removed the dead per-client line replication helper from `contractWizardActions.ts` and rewrote contract wizard coverage to validate the surviving `client_contracts`, `contract_lines`, and `contract_line_service_*` structures instead of the dropped `client_contract_lines` / `client_contract_services` tables.
+- (2026-03-19 23:39 EDT) Completed `F012`: credit application no longer queries `client_contract_lines` before applying client credit to an invoice. The live path now updates credit balances directly from invoice/client/credit-tracking state, which already contains the required domain information.
+- (2026-03-19 23:39 EDT) Completed `F013`: the billing overview report definition now derives active billing clients from `client_contracts -> contracts -> contract_lines` instead of treating `client_contract_lines` as a live fact source.
 
 ## Links / References
 

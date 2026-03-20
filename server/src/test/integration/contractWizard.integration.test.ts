@@ -15,11 +15,8 @@ type CreatedIds = {
   contractId?: string;
   contractLineId?: string;
   clientContractId?: string;
-  clientContractLineId?: string;
-  clientServiceIds: string[];
-  clientConfigIds: string[];
 };
-let createdIds: CreatedIds = { clientServiceIds: [], clientConfigIds: [] };
+let createdIds: CreatedIds = {};
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -62,11 +59,11 @@ describe('createClientContractFromWizard', () => {
     if (db && tenantId) {
       await cleanupCreatedRecords(db, tenantId, createdIds);
     }
-    createdIds = { clientServiceIds: [], clientConfigIds: [] };
+    createdIds = {};
   });
 
   it('creates downstream client records for fixed-fee contracts', async () => {
-    createdIds = { clientServiceIds: [], clientConfigIds: [] };
+    createdIds = {};
     const serviceTypeId = uuidv4();
     const serviceTypeName = `Managed Services ${serviceTypeId.slice(0, 8)}`;
     await db('service_types').insert({
@@ -139,37 +136,32 @@ describe('createClientContractFromWizard', () => {
     expect(clientContract).toBeTruthy();
     createdIds.clientContractId = clientContract?.client_contract_id;
 
-    const clientContractLine = await db('client_contract_lines')
+    expect(await db.schema.hasTable('client_contract_lines')).toBe(false);
+    expect(await db.schema.hasTable('client_contract_services')).toBe(false);
+
+    const contractLine = await db('contract_lines')
       .where({ tenant: tenantId, contract_line_id: result.contract_line_id })
       .first();
-    expect(clientContractLine).toBeTruthy();
-    expect(clientContractLine?.client_contract_id).toBe(clientContract?.client_contract_id);
-    createdIds.clientContractLineId = clientContractLine?.client_contract_line_id;
+    expect(contractLine).toBeTruthy();
+    expect(contractLine?.contract_id).toBe(result.contract_id);
+    expect(contractLine?.enable_proration).toBe(true);
 
-    const clientService = await db('client_contract_services')
-      .where({ tenant: tenantId, client_contract_line_id: clientContractLine?.client_contract_line_id })
+    const contractLineService = await db('contract_line_services')
+      .where({ tenant: tenantId, contract_line_id: result.contract_line_id, service_id: serviceId })
       .first();
-    expect(clientService).toBeTruthy();
-    expect(clientService?.service_id).toBe(serviceId);
-    if (clientService?.client_contract_service_id) {
-      createdIds.clientServiceIds.push(clientService.client_contract_service_id);
-    }
+    expect(contractLineService).toBeTruthy();
 
-    const clientConfig = await db('client_contract_service_configuration')
-      .where({ tenant: tenantId, client_contract_service_id: clientService?.client_contract_service_id })
+    const contractLineConfig = await db('contract_line_service_configuration')
+      .where({ tenant: tenantId, contract_line_id: result.contract_line_id, service_id: serviceId })
       .first();
-    expect(clientConfig).toBeTruthy();
-    expect(clientConfig?.configuration_type).toBe('Fixed');
-    if (clientConfig?.config_id) {
-      createdIds.clientConfigIds.push(clientConfig.config_id);
-    }
+    expect(contractLineConfig).toBeTruthy();
+    expect(contractLineConfig?.configuration_type).toBe('Fixed');
 
-    const fixedConfig = await db('client_contract_service_fixed_config')
-      .where({ tenant: tenantId, config_id: clientConfig?.config_id })
+    const fixedConfig = await db('contract_line_service_fixed_config')
+      .where({ tenant: tenantId, config_id: contractLineConfig?.config_id })
       .first();
     expect(fixedConfig).toBeTruthy();
-    expect(Number(fixedConfig?.base_rate ?? 0)).toBeCloseTo(100);
-    expect(fixedConfig?.enable_proration).toBe(true);
+    expect(Number(fixedConfig?.base_rate ?? 0)).toBe(10000);
 
   });
 });
@@ -214,22 +206,6 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
       // ignore cleanup issues
     }
   };
-
-  await safeDeleteIn('client_contract_service_bucket_config', 'config_id', ids.clientConfigIds);
-  await safeDeleteIn('client_contract_service_usage_config', 'config_id', ids.clientConfigIds);
-  await safeDeleteIn('client_contract_service_rate_tiers', 'config_id', ids.clientConfigIds);
-  await safeDeleteIn('client_contract_service_hourly_configs', 'config_id', ids.clientConfigIds);
-  await safeDeleteIn('client_contract_service_hourly_config', 'config_id', ids.clientConfigIds);
-  await safeDeleteIn('client_contract_service_fixed_config', 'config_id', ids.clientConfigIds);
-  await safeDeleteIn('client_contract_service_configuration', 'config_id', ids.clientConfigIds);
-  await safeDeleteIn('client_contract_services', 'client_contract_service_id', ids.clientServiceIds);
-
-  if (ids.clientContractLineId) {
-    await safeDelete('client_contract_lines', {
-      tenant: tenantId,
-      client_contract_line_id: ids.clientContractLineId
-    });
-  }
 
   if (ids.clientContractId) {
     await safeDelete('client_contracts', {
