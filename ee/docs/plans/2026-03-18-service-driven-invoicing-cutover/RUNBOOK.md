@@ -13,6 +13,20 @@ It is the operator/developer entrypoint for:
 
 Until a dedicated billing-maintenance UI exists, the supported maintenance entrypoint is the shared helper layer under `shared/billingClients/*.ts`, invoked through `pnpm exec tsx`.
 
+## Cutover Sequence
+
+Use this sequence when moving a tenant from billing-cycle-driven recurring operations to service-driven recurring invoicing.
+
+1. Confirm cadence-owner authoring and selector-input recurring generation are already deployed in the target environment.
+2. Validate that the tenant has the new `billing.recurring_service_periods` permissions granted to the operator roles that will inspect or repair service periods.
+3. Run the coverage assessment for active recurring schedules to identify any obligation whose persisted future rows do not reach the target horizon.
+4. Backfill active obligations that have no persisted future rows yet.
+5. Regenerate untouched future rows for obligations whose cadence-owner, billing timing, or activity-window rules changed during rollout.
+6. Re-run the due-work reader and confirm canonical persisted rows now appear for the expected invoice windows instead of compatibility billing-cycle fallbacks.
+7. Exercise one contract-cadence invoice end-to-end through preview, generate, and invoiced history.
+8. Exercise one post-drop client-cadence invoice end-to-end to confirm the compatibility obligation label still resolves through the surviving client-owned contract structure during cutover.
+9. Only after both paths validate should billing ops rely on the `AutomaticInvoices` due-work table as the primary recurring surface for that tenant.
+
 ## Quick Diagnosis
 
 ### 1. Confirm the gap is materialization-related
@@ -58,24 +72,40 @@ order by invoice_window_end desc, service_period_start desc;
 
 ```sql
 select
-  ccl.client_id,
-  ccl.contract_line_id,
+  cc.client_id,
+  cl.contract_line_id,
   cl.cadence_owner,
   cl.billing_frequency,
   cl.billing_timing,
-  cl.start_date,
-  cl.end_date
-from client_contract_lines ccl
+  cc.start_date,
+  cc.end_date
+from client_contracts cc
+join contracts ct
+  on ct.contract_id = coalesce(cc.template_contract_id, cc.contract_id)
+ and ct.tenant = cc.tenant
 join contract_lines cl
-  on cl.contract_line_id = ccl.contract_line_id
- and cl.tenant = ccl.tenant
-where ccl.tenant = :tenant
-  and ccl.client_id = :client_id
+  on cl.contract_id = ct.contract_id
+ and cl.tenant = ct.tenant
+where cc.tenant = :tenant
+  and cc.client_id = :client_id
+  and cc.is_active = true
   and cl.is_recurring = true
-order by ccl.contract_line_id;
+order by cl.contract_line_id;
 ```
 
 If the recurring obligation exists but the matching `recurring_service_periods` row does not, continue with coverage assessment and backfill/regeneration planning.
+
+## Migration Checklist
+
+Run this checklist before declaring the tenant ready for service-driven recurring invoicing:
+
+- backfill active recurring obligations that still have zero future persisted rows
+- replenish schedules whose generated horizon no longer reaches the target billing-ops window
+- regenerate untouched future rows after cadence-owner, timing, or activity-window changes
+- validate due-work selection for both contract-cadence and post-drop client-cadence windows
+- validate preview/generate behavior for one unbridged contract-cadence window
+- validate reverse/delete repair for one billed recurring invoice so reopened service periods reappear correctly
+- keep compatibility billing-cycle monitoring in place until the due-work reader no longer reports missing-materialization fallbacks for the tenant
 
 ## Coverage Assessment Entry Point
 
@@ -238,6 +268,15 @@ If a recurring invoice was deleted during cutover testing and the due row did no
 2. confirm `invoice_id`, `invoice_charge_id`, and `invoice_charge_detail_id` were cleared
 3. confirm `lifecycle_state = 'locked'`
 4. rerun due-work validation
+
+For reverse/delete validation during tenant rollout:
+
+1. capture the recurring row's `schedule_key`, `period_key`, `invoice_id`, and `executionIdentityKey`
+2. perform the reverse or hard-delete action from the billing UI
+3. confirm invoiced history reflects the new invoice state
+4. confirm the linked `recurring_service_periods` rows either reopen to `locked` or remain correctly linked for post-drop client-cadence behavior
+5. rerun the due-work reader to confirm the same execution window is visible again when it should be invoiceable
+6. if the row does not reappear, use the linkage and coverage checks above before retrying generation
 
 `locked` is the expected restored state after delete-repair because the system cannot safely infer whether the prior mutable state was exactly `generated` or `edited`.
 

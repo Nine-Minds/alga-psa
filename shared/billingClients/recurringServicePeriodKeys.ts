@@ -6,7 +6,11 @@ import type {
   RecurringObligationType,
 } from '@alga-psa/types';
 
-function toDateOnly(value: ISO8601String): ISO8601String {
+function toDateOnly(value: ISO8601String | Date): ISO8601String {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10) as ISO8601String;
+  }
+
   return `${value.slice(0, 10)}` as ISO8601String;
 }
 

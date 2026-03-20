@@ -92,19 +92,19 @@
   {
     "id": "F016",
     "description": "Static tests and integration tests are updated so they no longer assert `client_contract_lines` as expected live runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements"]
   },
   {
     "id": "F017",
     "description": "Stale plan/runbook/docs references to `client_contract_lines` as a live runtime dependency are corrected or marked historical.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements"]
   },
   {
     "id": "F018",
     "description": "No live runtime path crashes with `relation \\\"client_contract_lines\\\" does not exist` in a fully migrated environment.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Cleanup-only test fixtures, teardowns, tracked backup artifacts, and stale operational runbooks stop pointing active development flows at dropped client-contract line tables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Tests and docs cleanup"]
   }
 ]

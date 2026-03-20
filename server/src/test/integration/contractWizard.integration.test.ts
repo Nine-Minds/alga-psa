@@ -28,9 +28,40 @@ vi.mock('server/src/lib/db', async () => {
   };
 });
 
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+    withTransaction: vi.fn(async (knexOrTrx: Knex, callback: (trx: Knex.Transaction) => Promise<unknown>) =>
+      callback(knexOrTrx as unknown as Knex.Transaction),
+    ),
+    requireTenantId: vi.fn(async () => tenantId),
+    runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn()),
+  };
+});
+
 vi.mock('server/src/lib/tenant', () => ({
   getTenantForCurrentRequest: vi.fn(async () => tenantId ?? null),
   getTenantFromHeaders: vi.fn(() => tenantId ?? null)
+}));
+
+vi.mock('@alga-psa/auth/withAuth', () => ({
+  withAuth: (action: (...args: any[]) => Promise<unknown>) =>
+    (...args: any[]) =>
+      action(
+        {
+          user_id: 'contract-wizard-test-user',
+          tenant: tenantId,
+          roles: [{ role_name: 'Admin' }],
+        } as any,
+        { tenant: tenantId },
+        ...args,
+      ),
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
 }));
 
 describe('createClientContractFromWizard', () => {
@@ -108,7 +139,7 @@ describe('createClientContractFromWizard', () => {
     const result = await createClientContractFromWizard({
       contract_name: 'Emerald City Fixed Fee',
       description: 'Managed services',
-      company_id: clientId,
+      client_id: clientId,
       start_date: '2025-10-01',
       end_date: null,
       billing_frequency: 'monthly',

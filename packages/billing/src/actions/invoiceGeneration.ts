@@ -54,7 +54,10 @@ import {
   buildClientCadenceDueSelectionInput,
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
-import { CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import {
+  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
+  POST_DROP_RECURRING_OBLIGATION_TYPES,
+} from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
@@ -374,11 +377,11 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
         .where({
           'rsp.tenant': params.tenant,
           'rsp.cadence_owner': 'client',
-          'rsp.obligation_type': CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
           'c.client_id': params.clientId,
           'rsp.invoice_window_start': normalizedWindowStart,
           'rsp.invoice_window_end': normalizedWindowEnd,
         })
+        .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
         .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
         .orderBy('rsp.service_period_start', 'asc')
         .orderBy('rsp.revision', 'asc')
@@ -432,13 +435,13 @@ async function normalizeRecurringSelectorInput(params: {
           .where({
             'rsp.tenant': params.tenant,
             'rsp.cadence_owner': 'client',
-            'rsp.obligation_type': CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
             'rsp.schedule_key': params.selectorInput.executionWindow.scheduleKey,
             'rsp.period_key': params.selectorInput.executionWindow.periodKey,
             'rsp.invoice_window_start': normalizedWindowStart,
             'rsp.invoice_window_end': normalizedWindowEnd,
             'c.client_id': params.selectorInput.clientId,
           })
+          .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
           .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
           .orderBy('rsp.service_period_start', 'asc')
           .orderBy('rsp.revision', 'asc')

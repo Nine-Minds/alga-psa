@@ -1309,14 +1309,14 @@ export const createClientContractFromWizard = withAuth(async (
         submission.renewal_mode === 'manual' ||
         submission.renewal_mode === 'auto'
           ? submission.renewal_mode
-          : null;
+          : 'manual';
     }
 
     if (hasNoticePeriodColumn) {
       clientContractInsertData.notice_period_days =
         Number.isInteger(submission.notice_period_days) && (submission.notice_period_days as number) >= 0
           ? submission.notice_period_days
-          : null;
+          : 30;
     }
 
     if (hasRenewalTermColumn) {

@@ -13,8 +13,8 @@ describe('recurring invoice linkage source guards', () => {
     expect(invoiceServiceSource).toContain("first(['billing_period_start', 'billing_period_end'])");
     expect(invoiceServiceSource).not.toContain('billing_cycle_id');
     expect(invoiceServiceSource).not.toContain('obligationTypeFilter');
-    expect(invoiceServiceSource).toContain("obligation_type: 'contract_line'");
-    expect(invoiceServiceSource).toContain("obligation_type: 'client_contract_line'");
+    expect(invoiceServiceSource).toContain('buildPostDropRecurringObligationCandidates({');
+    expect(invoiceServiceSource).toContain('contractLineId: configRow.contract_line_id');
     expect(invoiceServiceSource).toContain('where(function recurringObligationMatch()');
   });
 
@@ -23,6 +23,7 @@ describe('recurring invoice linkage source guards', () => {
     expect(invoiceServiceSource).not.toContain('relation .* does not exist');
     expect(invoiceServiceSource).not.toContain("code === '42P01'");
     expect(invoiceServiceSource).not.toContain("await tx('client_contract_lines')");
-    expect(invoiceServiceSource).toContain("obligation_id: configRow.contract_line_id");
+    expect(invoiceServiceSource).toContain('obligation_type: candidate.obligationType');
+    expect(invoiceServiceSource).toContain('obligation_id: candidate.obligationId');
   });
 });
