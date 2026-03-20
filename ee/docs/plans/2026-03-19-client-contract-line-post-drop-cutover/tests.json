@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "UI: `AutomaticInvoices` render path loads successfully in a fully migrated environment with no dropped-table errors.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F018"]
   },
   {

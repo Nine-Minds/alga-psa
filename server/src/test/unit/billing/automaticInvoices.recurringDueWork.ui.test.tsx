@@ -13,7 +13,186 @@ import * as billingCycleActions from '@alga-psa/billing/actions/billingCycleActi
 import * as invoiceGenerationActions from '@alga-psa/billing/actions/invoiceGeneration';
 import * as recurringBillingRunActions from '@alga-psa/billing/actions/recurringBillingRunActions';
 
+type Row = Record<string, any>;
+
+function normalizeTableName(tableName: string): string {
+  return tableName.split(/\s+as\s+/i)[0].trim();
+}
+
+function normalizeColumn(column: string): string {
+  return column
+    .replace(/^LOWER\(/i, '')
+    .replace(/^DATE\(/i, '')
+    .replace(/\)$/g, '')
+    .replace(/^.*\./, '')
+    .replace(/\s+as\s+.*$/i, '')
+    .trim();
+}
+
+function compareValues(left: any, right: any) {
+  if (left == null && right == null) {
+    return 0;
+  }
+  if (left == null) {
+    return -1;
+  }
+  if (right == null) {
+    return 1;
+  }
+  return String(left).localeCompare(String(right));
+}
+
+function applyOperator(rowValue: any, operator: string, expected: any) {
+  switch (operator) {
+    case '=':
+      return rowValue === expected;
+    case '>=':
+      return String(rowValue) >= String(expected);
+    case '<=':
+      return String(rowValue) <= String(expected);
+    case '>':
+      return String(rowValue) > String(expected);
+    case '<':
+      return String(rowValue) < String(expected);
+    default:
+      throw new Error(`Unsupported operator ${operator}`);
+  }
+}
+
+function createQueryBuilder(rows: Row[]) {
+  let resultRows = [...rows];
+
+  const builder: any = {
+    join: vi.fn(() => builder),
+    leftJoin: vi.fn(() => builder),
+    select: vi.fn(() => builder),
+    where: vi.fn((columnOrCriteria: string | Record<string, any>, operatorOrValue?: any, maybeValue?: any) => {
+      if (typeof columnOrCriteria === 'object') {
+        resultRows = resultRows.filter((row) =>
+          Object.entries(columnOrCriteria).every(([column, expected]) =>
+            row[normalizeColumn(column)] === expected,
+          ),
+        );
+        return builder;
+      }
+
+      const column = normalizeColumn(columnOrCriteria);
+      const operator = maybeValue === undefined ? '=' : operatorOrValue;
+      const expected = maybeValue === undefined ? operatorOrValue : maybeValue;
+      resultRows = resultRows.filter((row) => applyOperator(row[column], operator, expected));
+      return builder;
+    }),
+    whereIn: vi.fn((column: string, values: any[]) => {
+      const normalized = normalizeColumn(column);
+      resultRows = resultRows.filter((row) => values.includes(row[normalized]));
+      return builder;
+    }),
+    whereNull: vi.fn((column: string) => {
+      const normalized = normalizeColumn(column);
+      resultRows = resultRows.filter((row) => row[normalized] == null);
+      return builder;
+    }),
+    whereNotNull: vi.fn((column: string) => {
+      const normalized = normalizeColumn(column);
+      resultRows = resultRows.filter((row) => row[normalized] != null);
+      return builder;
+    }),
+    whereRaw: vi.fn((sql: string, args: any[] = []) => {
+      const loweredLikeMatch = sql.match(/LOWER\((.+)\)\s+LIKE\s+\?/i);
+      if (loweredLikeMatch) {
+        const column = normalizeColumn(loweredLikeMatch[1] ?? '');
+        const needle = String(args[0] ?? '').toLowerCase().replaceAll('%', '');
+        resultRows = resultRows.filter((row) =>
+          String(row[column] ?? '').toLowerCase().includes(needle),
+        );
+        return builder;
+      }
+
+      const dateCompareMatch = sql.match(/DATE\((.+)\)\s*(>=|<=)\s+\?/i);
+      if (dateCompareMatch) {
+        const column = normalizeColumn(dateCompareMatch[1] ?? '');
+        const operator = dateCompareMatch[2] ?? '=';
+        const expected = String(args[0] ?? '');
+        resultRows = resultRows.filter((row) =>
+          applyOperator(String(row[column] ?? '').slice(0, 10), operator, expected),
+        );
+        return builder;
+      }
+
+      throw new Error(`Unsupported whereRaw expression: ${sql}`);
+    }),
+    orderBy: vi.fn((column: string, direction: 'asc' | 'desc' = 'asc') => {
+      const normalized = normalizeColumn(column);
+      resultRows = [...resultRows].sort((left, right) => {
+        const comparison = compareValues(left[normalized], right[normalized]);
+        return direction === 'desc' ? -comparison : comparison;
+      });
+      return builder;
+    }),
+    limit: vi.fn((count: number) => {
+      resultRows = resultRows.slice(0, count);
+      return builder;
+    }),
+    offset: vi.fn((count: number) => {
+      resultRows = resultRows.slice(count);
+      return builder;
+    }),
+    count: vi.fn(() => {
+      resultRows = [{ count: resultRows.length }];
+      return builder;
+    }),
+    first: vi.fn(async () => resultRows[0]),
+    then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
+      Promise.resolve(resultRows).then(resolve, reject),
+  };
+
+  return builder;
+}
+
+const dbMocks = vi.hoisted(() => {
+  const rowsByTable: Record<string, Row[]> = {};
+  const missingTables = new Set<string>();
+
+  const trx = vi.fn((tableName: string) => {
+    const normalizedTableName = normalizeTableName(tableName);
+    if (missingTables.has(normalizedTableName)) {
+      throw new Error(`relation "${normalizedTableName}" does not exist`);
+    }
+
+    return createQueryBuilder(rowsByTable[normalizedTableName] ?? []);
+  }) as any;
+  trx.raw = vi.fn((sql: string) => sql);
+
+  return {
+    missingTables,
+    rowsByTable,
+    trx,
+    createTenantKnex: vi.fn(async () => ({ knex: trx })),
+    withTransaction: vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) =>
+      callback(trx),
+    ),
+  };
+});
+
 (globalThis as unknown as { React?: typeof React }).React = React;
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: (...args: any[]) => Promise<unknown>) =>
+    (...args: any[]) =>
+      action(
+        {
+          user_id: 'user-1',
+          tenant: 'tenant-1',
+        },
+        { tenant: 'tenant-1' },
+        ...args,
+      ),
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: dbMocks.createTenantKnex,
+  withTransaction: dbMocks.withTransaction,
+}));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ data, columns, id, currentPage, onPageChange }: any) => {
@@ -196,6 +375,7 @@ function createInvoicedContractRow() {
 }
 
 describe('AutomaticInvoices recurring due-work UI', () => {
+  const originalGetAvailableRecurringDueWork = billingAndTaxActions.getAvailableRecurringDueWork;
   const getAvailableRecurringDueWorkMock = vi.spyOn(billingAndTaxActions, 'getAvailableRecurringDueWork');
   const getAvailableBillingPeriodsMock = vi.spyOn(billingAndTaxActions, 'getAvailableBillingPeriods');
   const getRecurringInvoiceHistoryPaginatedMock = vi.spyOn(billingCycleActions, 'getRecurringInvoiceHistoryPaginated');
@@ -223,6 +403,80 @@ describe('AutomaticInvoices recurring due-work UI', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
+    dbMocks.missingTables.clear();
+
+    dbMocks.rowsByTable.client_billing_cycles = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-2',
+        client_name: 'Bravo Co',
+        billing_cycle_id: 'cycle-2025-02',
+        billing_cycle: 'monthly',
+        period_start_date: '2025-02-01',
+        period_end_date: '2025-03-01',
+        effective_date: '2025-02-01',
+        invoice_id: null,
+      },
+    ];
+
+    dbMocks.rowsByTable.client_contracts = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-2',
+        client_contract_line_id: 'line-2',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        start_date: '2025-01-01',
+        end_date: null,
+        is_active: true,
+      },
+    ];
+
+    dbMocks.rowsByTable.recurring_service_periods = [
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-contract-1',
+        schedule_key: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+        period_key: 'period:2025-03-08:2025-04-08',
+        lifecycle_state: 'generated',
+        cadence_owner: 'contract',
+        obligation_type: 'contract_line',
+        service_period_start: '2025-03-08',
+        service_period_end: '2025-04-08',
+        invoice_window_start: '2025-04-08',
+        invoice_window_end: '2025-05-08',
+        invoice_charge_detail_id: null,
+        client_id: 'client-9',
+        client_name: 'Zenith Health',
+        billing_cycle_id: null,
+        contract_id: 'contract-1',
+        contract_name: 'Zenith Annual Support',
+        contract_line_id: 'line-1',
+        contract_line_name: 'Managed Services',
+      },
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-client-1',
+        schedule_key: 'schedule:tenant-1:client_contract_line:line-2:client:advance',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-03-01',
+        invoice_window_end: '2025-04-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-2',
+        client_name: 'Bravo Co',
+        billing_cycle_id: null,
+        contract_id: 'contract-2',
+        contract_name: 'Bravo Monthly Support',
+        contract_line_id: 'line-2',
+        contract_line_name: 'Bravo Retainer',
+      },
+    ];
 
     getAvailableBillingPeriodsMock.mockResolvedValue({
       periods: [],
@@ -288,6 +542,27 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     expect(getAvailableBillingPeriodsMock).not.toHaveBeenCalled();
     expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+  });
+
+  it('T004: AutomaticInvoices loads through the real due-work action in a migrated schema with no `client_contract_lines` table', async () => {
+    dbMocks.missingTables.add('client_contract_lines');
+    getAvailableRecurringDueWorkMock.mockImplementation(originalGetAvailableRecurringDueWork);
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith({
+        page: 1,
+        pageSize: 10,
+        searchTerm: '',
+        dateRange: undefined,
+      });
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+      expect(screen.getAllByText('Bravo Co').length).toBeGreaterThan(0);
+    });
+
+    expect(screen.queryByText('Failed to load billing periods. Please try again.')).toBeNull();
+    expect(getAvailableBillingPeriodsMock).not.toHaveBeenCalled();
   });
 
   it('T011/T026/T029/T030/T039: AutomaticInvoices renders contract-cadence rows with cadence, service-period, invoice-window, contract context, and a service-period-backed badge', async () => {

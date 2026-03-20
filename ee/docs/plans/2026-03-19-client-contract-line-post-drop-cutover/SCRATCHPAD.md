@@ -29,6 +29,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19) Stale operational guidance also exists in `ee/docs/plans/2026-03-18-service-driven-invoicing-cutover/RUNBOOK.md`, which still starts repair SQL from `client_contract_lines`.
 - (2026-03-19) Low-priority hygiene cleanup remains worthwhile because tracked backup files and teardown-only fixtures still keep the dropped table visible in active engineering flows.
 - (2026-03-19 23:10 EDT) The existing due-work reader test harness was flexible enough to simulate a migrated schema by throwing on any attempted `client_contract_lines` access. That let the first checkpoint verify behavior rather than only string-match source code.
+- (2026-03-19 23:16 EDT) `AutomaticInvoices` can be validated meaningfully without a database fixture by letting the component call the real `getAvailableRecurringDueWork()` action against mocked migrated-schema rows. That catches regressions in the UI load path instead of only checking a prebuilt mock payload.
 
 ## Commands / Runbooks
 
@@ -63,12 +64,16 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
     - tracked backups `server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts.bak*`
 - (2026-03-19 23:10 EDT) Verification for F001/F002/T001/T002/T003:
   - `pnpm exec vitest run src/test/unit/billing/recurringDueWorkReader.integration.test.ts` (run from `server/`)
+- (2026-03-19 23:16 EDT) Verification for F003/T004:
+  - `pnpm exec vitest run src/test/unit/billing/recurringDueWorkReader.integration.test.ts src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx` (run from `server/`)
 
 ## Completed Items
 
 - (2026-03-19 23:10 EDT) Completed `F001`: persisted client-cadence due-work loading no longer joins `client_contract_lines`; the reader resolves contract/client metadata via surviving `contract_lines` and `contracts.owner_client_id`.
 - (2026-03-19 23:10 EDT) Completed `F002`: client-cadence materialization-gap detection now loads active recurring obligations from `client_contracts -> contracts -> contract_lines`, preserving the legacy `client_contract_line` logical identity only as compatibility metadata.
 - (2026-03-19 23:10 EDT) Completed `T001`/`T002`/`T003`: due-work reader coverage now simulates a fully migrated schema by failing on any `client_contract_lines` access while still verifying persisted client cadence, persisted contract cadence, and client-cadence materialization gaps.
+- (2026-03-19 23:16 EDT) Completed `F003`: `AutomaticInvoices` can load recurring due work in a simulated migrated schema with no `client_contract_lines` table because its server action path no longer depends on that table for due-work loading.
+- (2026-03-19 23:16 EDT) Completed `T004`: the UI test now renders `AutomaticInvoices` while the real due-work action runs against mocked migrated-schema data and a hard failure on any `client_contract_lines` access.
 
 ## Links / References
 

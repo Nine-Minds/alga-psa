@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "`AutomaticInvoices` loads successfully in fully migrated environments where `client_contract_lines` does not exist.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
   },
   {
