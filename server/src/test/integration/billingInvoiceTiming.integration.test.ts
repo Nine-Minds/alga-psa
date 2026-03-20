@@ -1646,8 +1646,9 @@ it('T082: DB-backed recurring invoice code treats materialized service periods a
     pageSize: 10,
     searchTerm: 'Required Schema Client',
   });
+  const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
 
-  expect(dueWork.rows.find((row) => row.clientName === 'Required Schema Client')).toBeUndefined();
+  expect(dueRows.find((row) => row.clientName === 'Required Schema Client')).toBeUndefined();
   expect(dueWork.materializationGaps).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -1677,6 +1678,211 @@ it('T082: DB-backed recurring invoice code treats materialized service periods a
     success: false,
     error: 'Recurring service periods were not materialized for this recurring execution window.',
   });
+}, HOOK_TIMEOUT);
+
+it('T105: due-work candidates are non-generateable when a client-cadence window is only partially materialized', async () => {
+  setupCommonMocks({ tenantId, userId: 'partial-materialization-duework-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Partial Materialization Due Work Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const firstLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Partial Materialization Service A',
+    planName: 'Partial Materialization Plan A',
+    baseRateCents: 15600,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+  const secondLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Partial Materialization Service B',
+    planName: 'Partial Materialization Plan B',
+    baseRateCents: 16400,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+
+  const firstPlan = materializeClientCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-20T14:00:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: firstLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${firstLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-partial-duework-a',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  const secondPlan = materializeClientCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-20T14:05:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: secondLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${secondLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-partial-duework-b',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+
+  const firstTarget = firstPlan.records.find((record) =>
+    normalizeDateValue(record.invoiceWindow.start) === currentPeriodStart
+    && normalizeDateValue(record.invoiceWindow.end) === nextPeriodStart,
+  );
+  const secondTarget = secondPlan.records.find((record) =>
+    normalizeDateValue(record.invoiceWindow.start) === currentPeriodStart
+    && normalizeDateValue(record.invoiceWindow.end) === nextPeriodStart,
+  );
+  expect(firstTarget).toBeTruthy();
+  expect(secondTarget).toBeTruthy();
+  await upsertRecurringServicePeriodRecord(firstTarget!);
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Partial Materialization Due Work Client',
+  });
+  const blockedCandidate = dueWork.invoiceCandidates.find((candidate) =>
+    candidate.clientName === 'Partial Materialization Due Work Client'
+    && normalizeDateValue(candidate.windowStart) === currentPeriodStart
+    && normalizeDateValue(candidate.windowEnd) === nextPeriodStart,
+  );
+
+  expect(blockedCandidate).toBeTruthy();
+  expect(blockedCandidate?.canGenerate).toBe(false);
+  expect(blockedCandidate?.blockedReason).toContain('partially materialized');
+  expect(dueWork.materializationGaps.length).toBeGreaterThan(0);
+  expect(
+    dueWork.materializationGaps.every((gap) => gap.reason === 'missing_service_period_materialization'),
+  ).toBe(true);
+  expect(
+    dueWork.materializationGaps.some((gap) => gap.clientName === 'Partial Materialization Due Work Client'),
+  ).toBe(true);
+}, HOOK_TIMEOUT);
+
+it('T104: generation blocks partially materialized client-cadence windows when eligible recurring selections are missing', async () => {
+  setupCommonMocks({ tenantId, userId: 'partial-materialization-generate-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Partial Materialization Generate Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const firstLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Partial Generate Service A',
+    planName: 'Partial Generate Plan A',
+    baseRateCents: 17600,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+  const secondLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Partial Generate Service B',
+    planName: 'Partial Generate Plan B',
+    baseRateCents: 18600,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'client',
+  });
+
+  const firstPlan = materializeClientCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-20T14:10:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: firstLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${firstLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-partial-generate-a',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  const secondPlan = materializeClientCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-20T14:15:00.000Z',
+    billingCycle: 'monthly',
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: secondLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${secondLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-partial-generate-b',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+
+  const firstTarget = firstPlan.records.find((record) =>
+    normalizeDateValue(record.invoiceWindow.start) === currentPeriodStart
+    && normalizeDateValue(record.invoiceWindow.end) === nextPeriodStart,
+  );
+  const secondTarget = secondPlan.records.find((record) =>
+    normalizeDateValue(record.invoiceWindow.start) === currentPeriodStart
+    && normalizeDateValue(record.invoiceWindow.end) === nextPeriodStart,
+  );
+  expect(firstTarget).toBeTruthy();
+  expect(secondTarget).toBeTruthy();
+  await upsertRecurringServicePeriodRecord(firstTarget!);
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Partial Materialization Generate Client',
+  });
+  const blockedMember = dueWork.invoiceCandidates
+    .flatMap((candidate) => candidate.members)
+    .find((row) =>
+      row.clientName === 'Partial Materialization Generate Client'
+      && normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart
+      && normalizeDateValue(row.invoiceWindowEnd) === nextPeriodStart,
+    );
+
+  expect(blockedMember).toBeTruthy();
+
+  await expect(
+    generateInvoiceForSelectionInput(blockedMember!.selectorInput),
+  ).rejects.toThrow('Recurring service periods were not materialized for this recurring execution window.');
 }, HOOK_TIMEOUT);
 
 it('T033/T078: reversing a client-cadence recurring invoice repairs service-period linkage without mutating a billing-cycle primary object', async () => {
@@ -2003,7 +2209,8 @@ it('T017/T019/T050/T077/T080/T084: recurring contract-cadence preview, generatio
     pageSize: 10,
     searchTerm: 'Contract Happy Path Client',
   });
-  const dueRow = dueWork.rows.find((row) =>
+  const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
+  const dueRow = dueRows.find((row) =>
     row.clientName === 'Contract Happy Path Client'
     && row.cadenceSource === 'contract_anniversary'
     && normalizeDateValue(row.invoiceWindowStart) === contractPeriodStart
@@ -2058,6 +2265,166 @@ it('T017/T019/T050/T077/T080/T084: recurring contract-cadence preview, generatio
   expect(normalizeDateValue(historyRow?.invoiceWindowEnd)).toBe(contractNextPeriodStart);
 }, HOOK_TIMEOUT);
 
+it('T345: invoicing a second contract-cadence contract in the same window does not rebill the first contract or block the second', async () => {
+  setupCommonMocks({ tenantId, userId: 'contract-sequential-same-window-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Sequential Same Window Contract Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+
+  const firstLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Sequential Window Contract Service A',
+    planName: 'Sequential Window Contract Plan A',
+    baseRateCents: 12100,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+
+  const firstMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T20:30:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: `${currentPeriodStart}T00:00:00Z`,
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: firstLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${firstLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-sequential-contract-a',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  const firstTargetRecord = firstMaterializationPlan.records.find((record) =>
+    normalizeDateValue(record.invoiceWindow.start) === currentPeriodStart
+    && normalizeDateValue(record.invoiceWindow.end) === nextPeriodStart,
+  );
+  expect(firstTargetRecord).toBeTruthy();
+  await upsertRecurringServicePeriodRecord(firstTargetRecord!);
+
+  const firstDueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Sequential Same Window Contract Client',
+  });
+  const firstDueRows = firstDueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
+  const firstDueRow = firstDueRows.find((row) =>
+    row.clientName === 'Sequential Same Window Contract Client'
+    && row.cadenceSource === 'contract_anniversary'
+    && row.contractLineId === firstLine.contractLineId
+    && normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart
+    && normalizeDateValue(row.invoiceWindowEnd) === nextPeriodStart,
+  );
+  expect(firstDueRow).toBeTruthy();
+
+  const firstInvoice = await generateInvoiceForSelectionInput(firstDueRow!.selectorInput);
+  expect(firstInvoice).toBeTruthy();
+
+  const secondLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Sequential Window Contract Service B',
+    planName: 'Sequential Window Contract Plan B',
+    baseRateCents: 17700,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+
+  const secondMaterializationPlan = materializeContractCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T20:35:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: `${currentPeriodStart}T00:00:00Z`,
+    sourceObligation: {
+      tenant: tenantId,
+      obligationId: secondLine.contractLineId,
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    },
+    duePosition: 'advance',
+    sourceRuleVersion: `${secondLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-sequential-contract-b',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  const secondTargetRecord = secondMaterializationPlan.records.find((record) =>
+    normalizeDateValue(record.invoiceWindow.start) === currentPeriodStart
+    && normalizeDateValue(record.invoiceWindow.end) === nextPeriodStart,
+  );
+  expect(secondTargetRecord).toBeTruthy();
+  await upsertRecurringServicePeriodRecord(secondTargetRecord!);
+
+  const secondDueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Sequential Same Window Contract Client',
+  });
+  const secondDueRows = secondDueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
+  const secondDueRow = secondDueRows.find((row) =>
+    row.clientName === 'Sequential Same Window Contract Client'
+    && row.cadenceSource === 'contract_anniversary'
+    && row.contractLineId === secondLine.contractLineId
+    && normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart
+    && normalizeDateValue(row.invoiceWindowEnd) === nextPeriodStart,
+  );
+  expect(secondDueRow).toBeTruthy();
+  expect(
+    secondDueRows.some((row) =>
+      row.contractLineId === firstLine.contractLineId
+      && normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart
+      && normalizeDateValue(row.invoiceWindowEnd) === nextPeriodStart,
+    ),
+  ).toBe(false);
+
+  const secondInvoice = await generateInvoiceForSelectionInput(secondDueRow!.selectorInput);
+  expect(secondInvoice).toBeTruthy();
+  expect(secondInvoice!.invoice_id).not.toBe(firstInvoice!.invoice_id);
+
+  const firstInvoiceCharges = await db('invoice_charges')
+    .where({ tenant: tenantId, invoice_id: firstInvoice!.invoice_id })
+    .select(['description']);
+  const secondInvoiceCharges = await db('invoice_charges')
+    .where({ tenant: tenantId, invoice_id: secondInvoice!.invoice_id })
+    .select(['description']);
+
+  expect(firstInvoiceCharges.map((row) => row.description)).toContain('Sequential Window Contract Service A');
+  expect(firstInvoiceCharges.map((row) => row.description)).not.toContain('Sequential Window Contract Service B');
+  expect(secondInvoiceCharges.map((row) => row.description)).toContain('Sequential Window Contract Service B');
+  expect(secondInvoiceCharges.map((row) => row.description)).not.toContain('Sequential Window Contract Service A');
+
+  const billedFirstRecord = await db('recurring_service_periods')
+    .where({ tenant: tenantId, record_id: firstTargetRecord!.recordId })
+    .first(['lifecycle_state', 'invoice_id', 'invoice_charge_detail_id']);
+  expect(billedFirstRecord).toMatchObject({
+    lifecycle_state: 'billed',
+    invoice_id: firstInvoice!.invoice_id,
+  });
+  expect(billedFirstRecord?.invoice_charge_detail_id ?? null).not.toBeNull();
+
+  const billedSecondRecord = await db('recurring_service_periods')
+    .where({ tenant: tenantId, record_id: secondTargetRecord!.recordId })
+    .first(['lifecycle_state', 'invoice_id', 'invoice_charge_detail_id']);
+  expect(billedSecondRecord).toMatchObject({
+    lifecycle_state: 'billed',
+    invoice_id: secondInvoice!.invoice_id,
+  });
+  expect(billedSecondRecord?.invoice_charge_detail_id ?? null).not.toBeNull();
+}, HOOK_TIMEOUT);
+
 it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation, and history remain functional through service periods with null billing_cycle_id', async () => {
   setupCommonMocks({ tenantId, userId: 'client-happy-path-user', permissionCheck: () => true });
 
@@ -2089,7 +2456,8 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
     pageSize: 10,
     searchTerm: 'Client Happy Path Reader',
   });
-  const dueRow = dueWork.rows.find((row) =>
+  const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
+  const dueRow = dueRows.find((row) =>
     row.clientName === 'Client Happy Path Reader'
     && row.executionWindowKind === 'client_cadence_window'
     && normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart
@@ -2242,8 +2610,9 @@ it('T080: mixed batch generation from AutomaticInvoices discovers and generates 
     pageSize: 20,
     searchTerm: 'Mixed Batch',
   });
-  const clientRow = dueWork.rows.find((row) => row.clientName === 'Mixed Batch Client Reader');
-  const contractRow = dueWork.rows.find((row) =>
+  const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
+  const clientRow = dueRows.find((row) => row.clientName === 'Mixed Batch Client Reader');
+  const contractRow = dueRows.find((row) =>
     row.clientName === 'Mixed Batch Contract Client'
     && row.cadenceSource === 'contract_anniversary'
     && normalizeDateValue(row.invoiceWindowStart) === contractPeriodStart
@@ -2351,7 +2720,8 @@ it('T079: deleting a contract-cadence recurring invoice makes the same execution
     pageSize: 10,
     searchTerm: 'Contract Delete Reappear Client',
   });
-  const reopenedRow = dueWork.rows.find((row) =>
+  const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
+  const reopenedRow = dueRows.find((row) =>
     row.clientName === 'Contract Delete Reappear Client'
     && row.cadenceSource === 'contract_anniversary'
     && normalizeDateValue(row.invoiceWindowStart) === contractPeriodStart
@@ -2428,7 +2798,8 @@ it('T078: reversing a client-cadence recurring invoice restores due selection by
     pageSize: 10,
     searchTerm: 'Client Reverse Reappear Reader',
   });
-  const reopenedRow = dueWork.rows.find((row) =>
+  const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
+  const reopenedRow = dueRows.find((row) =>
     row.clientName === 'Client Reverse Reappear Reader'
     && row.executionWindowKind === 'client_cadence_window'
     && normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart

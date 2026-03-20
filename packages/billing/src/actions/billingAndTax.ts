@@ -16,7 +16,9 @@ import {
     BillingCycleType,
     DuePosition,
     IClientContractLineCycle,
+    IRecurringDueWorkInvoiceCandidate,
     IRecurringDueWorkRow,
+    RECURRING_RANGE_SEMANTICS,
 } from '@alga-psa/types';
 import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
@@ -24,6 +26,7 @@ import { ITaxCalculationResult } from '@alga-psa/types';
 import {
     buildRecurringDueWorkRow,
 } from '@alga-psa/shared/billingClients/recurringDueWork';
+import { groupDueServicePeriodsForInvoiceCandidates } from '@alga-psa/shared/billingClients/recurringTiming';
 import {
     buildClientCadenceDueSelectionInput,
     buildContractCadenceDueSelectionInput,
@@ -69,7 +72,7 @@ export interface PaginatedBillingPeriodsResult {
 export interface FetchRecurringDueWorkOptions extends FetchBillingPeriodsOptions {}
 
 export interface PaginatedRecurringDueWorkResult {
-    rows: IRecurringDueWorkRow[];
+    invoiceCandidates: IRecurringDueWorkInvoiceCandidate[];
     materializationGaps: RecurringDueWorkMaterializationGap[];
     total: number;
     page: number;
@@ -311,7 +314,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
 
     applyBillingPeriodSearchAndDateFilters(contractLineRowsQuery, options, {
         clientNameColumn: 'c.client_name',
-        dateColumn: 'rsp.invoice_window_end',
+        dateColumn: 'rsp.service_period_start',
     });
 
     const clientContractLineRowsQuery = trx('recurring_service_periods as rsp')
@@ -360,7 +363,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
 
     applyBillingPeriodSearchAndDateFilters(clientContractLineRowsQuery, options, {
         clientNameColumn: 'c.client_name',
-        dateColumn: 'rsp.invoice_window_end',
+        dateColumn: 'rsp.service_period_start',
     });
 
     const contractLineRows = await contractLineRowsQuery;
@@ -385,7 +388,9 @@ async function fetchClientCadenceMaterializationGaps(
 
     const activeRecurringRows = await trx('client_contracts as cc')
         .join('contracts as ct', function () {
-            this.on('ct.contract_id', '=', trx.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
+            // template_contract_id is provenance only; live recurring rows belong to the
+            // client-owned contract and its cloned contract_lines.
+            this.on('ct.contract_id', '=', 'cc.contract_id')
                 .andOn('ct.tenant', '=', 'cc.tenant');
         })
         .join('contract_lines as cl', function () {
@@ -531,6 +536,134 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
             contractName: row.contract_name ?? null,
             contractLineName: row.contract_line_name ?? null,
         });
+    });
+}
+
+function buildRecurringDueWorkInvoiceCandidates(
+    rows: IRecurringDueWorkRow[],
+): IRecurringDueWorkInvoiceCandidate[] {
+    if (rows.length === 0) {
+        return [];
+    }
+
+    const rowByExecutionIdentityKey = new Map(
+        rows.map((row) => [row.executionIdentityKey, row] as const),
+    );
+
+    const grouped = groupDueServicePeriodsForInvoiceCandidates(
+        rows.map((row) => ({
+            servicePeriod: {
+                kind: 'service_period',
+                cadenceOwner: row.cadenceOwner,
+                duePosition: row.executionWindow.duePosition,
+                sourceObligation: {
+                    obligationId: row.executionIdentityKey,
+                    obligationType: row.contractLineId ? 'contract_line' : 'client_contract_line',
+                    chargeFamily: 'fixed',
+                },
+                start: row.servicePeriodStart,
+                end: row.servicePeriodEnd,
+                semantics: RECURRING_RANGE_SEMANTICS,
+            },
+            invoiceWindow: {
+                kind: 'invoice_window',
+                cadenceOwner: row.cadenceOwner,
+                duePosition: row.executionWindow.duePosition,
+                start: row.invoiceWindowStart,
+                end: row.invoiceWindowEnd,
+                semantics: RECURRING_RANGE_SEMANTICS,
+            },
+            clientContractId: row.contractId ?? null,
+        })),
+    );
+
+    return grouped
+        .map((candidate) => {
+            const members = candidate.dueSelections
+                .map((selection) => rowByExecutionIdentityKey.get(selection.servicePeriod.sourceObligation.obligationId))
+                .filter((row): row is IRecurringDueWorkRow => Boolean(row));
+
+            if (members.length === 0) {
+                return null;
+            }
+
+            const firstMember = members[0];
+            const servicePeriodStart = members
+                .map((member) => member.servicePeriodStart)
+                .sort()[0] as ISO8601String;
+            const servicePeriodEnd = members
+                .map((member) => member.servicePeriodEnd)
+                .sort()
+                .slice(-1)[0] as ISO8601String;
+            const cadenceSources = Array.from(new Set(members.map((member) => member.cadenceSource))).sort();
+            const canGenerate = members.every((member) => member.canGenerate);
+
+            return {
+                candidateKey: `invoice-candidate:${candidate.groupKey}`,
+                clientId: firstMember.clientId,
+                clientName: firstMember.clientName ?? null,
+                windowStart: candidate.windowStart,
+                windowEnd: candidate.windowEnd,
+                windowLabel: `${candidate.windowStart} to ${candidate.windowEnd}`,
+                servicePeriodStart,
+                servicePeriodEnd,
+                servicePeriodLabel: `${servicePeriodStart} to ${servicePeriodEnd}`,
+                cadenceOwners: [...candidate.cadenceOwners],
+                cadenceSources,
+                contractId: firstMember.contractId ?? null,
+                contractName: firstMember.contractName ?? null,
+                splitReasons: [...candidate.splitReasons],
+                memberCount: members.length,
+                canGenerate,
+                blockedReason: canGenerate ? null : 'One or more included obligations are not eligible for generation.',
+                members,
+            } satisfies IRecurringDueWorkInvoiceCandidate;
+        })
+        .filter((candidate): candidate is IRecurringDueWorkInvoiceCandidate => Boolean(candidate))
+        .sort((left, right) => {
+            if (left.windowEnd !== right.windowEnd) {
+                return right.windowEnd.localeCompare(left.windowEnd);
+            }
+            if (left.windowStart !== right.windowStart) {
+                return right.windowStart.localeCompare(left.windowStart);
+            }
+            if ((left.clientName ?? '') !== (right.clientName ?? '')) {
+                return (left.clientName ?? '').localeCompare(right.clientName ?? '');
+            }
+
+            return left.candidateKey.localeCompare(right.candidateKey);
+        });
+}
+
+function applyClientCadenceMaterializationGapBlocks(
+    invoiceCandidates: IRecurringDueWorkInvoiceCandidate[],
+    materializationGaps: RecurringDueWorkMaterializationGap[],
+): IRecurringDueWorkInvoiceCandidate[] {
+    if (invoiceCandidates.length === 0 || materializationGaps.length === 0) {
+        return invoiceCandidates;
+    }
+
+    const blockedWindowKeys = new Set(
+        materializationGaps.map((gap) => `${gap.clientId}:${gap.invoiceWindowStart}:${gap.invoiceWindowEnd}`),
+    );
+
+    return invoiceCandidates.map((candidate) => {
+        const isClientCadenceCandidate = candidate.cadenceOwners.includes('client');
+        if (!isClientCadenceCandidate) {
+            return candidate;
+        }
+
+        const windowKey = `${candidate.clientId}:${candidate.windowStart}:${candidate.windowEnd}`;
+        if (!blockedWindowKeys.has(windowKey)) {
+            return candidate;
+        }
+
+        return {
+            ...candidate,
+            canGenerate: false,
+            blockedReason:
+                'Recurring service periods are partially materialized for this window. Repair service periods before generation.',
+        };
     });
 }
 
@@ -767,18 +900,23 @@ export const getAvailableRecurringDueWork = withAuth(async (
             options,
         );
         const persistedRows = mapPersistedRecurringDueWorkDbRowsToRows(persistedDbRows, asOf);
+        const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(persistedRows);
         const persistedIdentityKeys = new Set(
             persistedRows.map((row) => row.executionIdentityKey),
         );
         const materializationGaps = rawMaterializationGaps.filter(
             (gap) => !persistedIdentityKeys.has(gap.executionIdentityKey),
         );
-        const total = persistedRows.length;
+        const blockedInvoiceCandidates = applyClientCadenceMaterializationGapBlocks(
+            invoiceCandidates,
+            materializationGaps,
+        );
+        const total = blockedInvoiceCandidates.length;
         const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
         const offset = (page - 1) * pageSize;
 
         return {
-            rows: persistedRows.slice(offset, offset + pageSize),
+            invoiceCandidates: blockedInvoiceCandidates.slice(offset, offset + pageSize),
             materializationGaps,
             total,
             page,

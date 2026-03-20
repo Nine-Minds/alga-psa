@@ -403,6 +403,84 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
   });
 }
 
+async function assertClientCadenceWindowFullyMaterialized(params: {
+  knex: Knex;
+  tenant: string;
+  clientId: string;
+  windowStart: ISO8601String;
+  windowEnd: ISO8601String;
+}): Promise<void> {
+  const activeRecurringLineRows = await withTransaction(
+    params.knex,
+    async (trx: Knex.Transaction) =>
+      trx('client_contracts as cc')
+        .join('contracts as ct', function () {
+          this.on('ct.contract_id', '=', 'cc.contract_id')
+            .andOn('ct.tenant', '=', 'cc.tenant');
+        })
+        .join('contract_lines as cl', function () {
+          this.on('cl.contract_id', '=', 'ct.contract_id')
+            .andOn('cl.tenant', '=', 'ct.tenant');
+        })
+        .where({
+          'cc.tenant': params.tenant,
+          'cc.client_id': params.clientId,
+          'cc.is_active': true,
+          'cl.cadence_owner': 'client',
+        })
+        .whereNotNull('cl.billing_frequency')
+        .whereNotNull('cl.billing_timing')
+        .where('cc.start_date', '<', params.windowEnd)
+        .where(function () {
+          this.where('cc.end_date', '>=', params.windowStart)
+            .orWhereNull('cc.end_date');
+        })
+        .select('cl.contract_line_id'),
+  );
+
+  const activeRecurringLineIds = Array.from(
+    new Set(
+      activeRecurringLineRows
+        .map((row) => row.contract_line_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  if (activeRecurringLineIds.length === 0) {
+    return;
+  }
+
+  const materializedRows = await withTransaction(
+    params.knex,
+    async (trx: Knex.Transaction) =>
+      trx('recurring_service_periods')
+        .where({
+          tenant: params.tenant,
+          cadence_owner: 'client',
+          invoice_window_start: params.windowStart,
+          invoice_window_end: params.windowEnd,
+        })
+        .whereIn('obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
+        .whereIn('obligation_id', activeRecurringLineIds)
+        .whereNotIn('lifecycle_state', ['archived', 'superseded'])
+        .select('obligation_id'),
+  );
+
+  const materializedLineIds = new Set(
+    materializedRows
+      .map((row) => row.obligation_id)
+      .filter((value): value is string => Boolean(value)),
+  );
+  const missingLineIds = activeRecurringLineIds.filter(
+    (lineId) => !materializedLineIds.has(lineId),
+  );
+
+  if (missingLineIds.length > 0) {
+    throw new Error(
+      'Recurring service periods were not materialized for this recurring execution window.',
+    );
+  }
+}
+
 async function normalizeRecurringSelectorInput(params: {
   knex: Knex;
   tenant: string;
@@ -453,6 +531,14 @@ async function normalizeRecurringSelectorInput(params: {
         'Recurring service periods were not materialized for this recurring execution window.',
       );
     }
+
+    await assertClientCadenceWindowFullyMaterialized({
+      knex: params.knex,
+      tenant: params.tenant,
+      clientId: params.selectorInput.clientId,
+      windowStart: normalizedWindowStart,
+      windowEnd: normalizedWindowEnd,
+    });
 
     return buildClientCadenceDueSelectionInput({
       clientId: params.selectorInput.clientId,
