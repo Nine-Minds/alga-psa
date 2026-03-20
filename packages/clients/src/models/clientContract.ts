@@ -1,8 +1,11 @@
 import type { IClientContract } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { v4 as uuidv4 } from 'uuid';
-import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import {
+  createClientContractAssignment,
+  deriveClientContractStatus,
+  updateClientContractAssignment,
+} from '@alga-psa/shared/billingClients';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 
 type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
@@ -529,70 +532,33 @@ const ClientContract = {
         clientId,
       });
 
-      if (startDate) {
-        const overlapping = await db('client_contracts')
-          .where({ client_id: clientId, tenant, is_active: true })
-          .where(function overlap() {
-            this.where(function overlapsExistingEnd() {
-              this.where('end_date', '>', startDate).orWhereNull('end_date');
-            }).where(function overlapsExistingStart() {
-              if (endDate) {
-                this.where('start_date', '<', endDate);
-              } else {
-                this.whereRaw('1 = 1');
-              }
-            });
-          })
-          .first();
-
-        if (overlapping) {
-          throw new Error(`Client ${clientId} already has an active contract overlapping the specified range`);
-        }
-      }
-
-      const timestamp = new Date().toISOString();
-      const insertPayload: IClientContract = {
-        client_contract_id: uuidv4(),
+      return await createClientContractAssignment(db, tenant, {
         client_id: clientId,
         contract_id: contractId,
         template_contract_id: null,
         start_date: startDate,
         end_date: endDate,
         is_active: true,
-        tenant,
-        created_at: timestamp,
-        updated_at: timestamp,
-      };
-
-      if (endDate) {
-        if (renewalSettings?.use_tenant_renewal_defaults !== undefined) {
-          insertPayload.use_tenant_renewal_defaults = renewalSettings.use_tenant_renewal_defaults;
-        }
-        if (
+        use_tenant_renewal_defaults: renewalSettings?.use_tenant_renewal_defaults,
+        renewal_mode:
           renewalSettings?.renewal_mode === 'none' ||
           renewalSettings?.renewal_mode === 'manual' ||
           renewalSettings?.renewal_mode === 'auto'
-        ) {
-          insertPayload.renewal_mode = renewalSettings.renewal_mode;
-        }
-        if (
+            ? renewalSettings.renewal_mode
+            : undefined,
+        notice_period_days:
           typeof renewalSettings?.notice_period_days === 'number' &&
           Number.isFinite(renewalSettings.notice_period_days) &&
           renewalSettings.notice_period_days >= 0
-        ) {
-          insertPayload.notice_period_days = Math.floor(renewalSettings.notice_period_days);
-        }
-        if (
+            ? Math.floor(renewalSettings.notice_period_days)
+            : undefined,
+        renewal_term_months:
           typeof renewalSettings?.renewal_term_months === 'number' &&
           Number.isFinite(renewalSettings.renewal_term_months) &&
           renewalSettings.renewal_term_months > 0
-        ) {
-          insertPayload.renewal_term_months = Math.floor(renewalSettings.renewal_term_months);
-        }
-      }
-
-      const [created] = await db<IClientContract>('client_contracts').insert(insertPayload).returning('*');
-      return normalizeClientContract(created);
+            ? Math.floor(renewalSettings.renewal_term_months)
+            : undefined,
+      });
     } catch (error) {
       console.error(`Error assigning contract ${contractId} to client ${clientId}:`, error);
       throw error;
@@ -650,41 +616,7 @@ const ClientContract = {
         }
       }
 
-      const effectiveStart = updateData.start_date ?? existing.start_date;
-      const effectiveEnd = updateData.end_date !== undefined ? updateData.end_date : existing.end_date;
-
-      if (effectiveStart) {
-        const overlapping = await db('client_contracts')
-          .where({ client_id: existing.client_id, tenant, is_active: true })
-          .whereNot({ client_contract_id: clientContractId })
-          .where(function overlap() {
-            this.where(function overlapsExistingEnd() {
-              this.where('end_date', '>', effectiveStart).orWhereNull('end_date');
-            }).where(function overlapsExistingStart() {
-              if (effectiveEnd) {
-                this.where('start_date', '<', effectiveEnd);
-              } else {
-                this.whereRaw('1 = 1');
-              }
-            });
-          })
-          .first();
-
-        if (overlapping) {
-          throw new Error(`Client ${existing.client_id} already has an active contract overlapping the specified range`);
-        }
-      }
-
-      const [updated] = await db<IClientContract>('client_contracts')
-        .where({ tenant, client_contract_id: clientContractId })
-        .update(sanitized)
-        .returning('*');
-
-      if (!updated) {
-        throw new Error(`Client contract ${clientContractId} not found`);
-      }
-
-      return normalizeClientContract(updated);
+      return await updateClientContractAssignment(db, tenant, clientContractId, sanitized);
     } catch (error) {
       console.error(`Error updating client contract ${clientContractId}:`, error);
       throw error;

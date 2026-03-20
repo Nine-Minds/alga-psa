@@ -20,6 +20,7 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
+import { createClientContractAssignment } from '@alga-psa/shared/billingClients';
 
 
 import ContractLine from '../models/contractLine';
@@ -42,6 +43,7 @@ import {
   BucketOverlayInput,
   upsertBucketOverlayInTransaction
 } from './bucketOverlayActions';
+import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
 
 // ---------------------- Template wizard types ----------------------
 
@@ -736,30 +738,6 @@ export const createClientContractFromWizard = withAuth(async (
     }
     const endDate = normalizeDateOnly(submission.end_date) ?? null;
 
-    // Check for existing active contracts in different currencies
-    const newCurrency = submission.currency_code || 'USD';
-    const existingContracts = await trx('contracts as c')
-      .join('client_contracts as cc', function() {
-        this.on('cc.contract_id', '=', 'c.contract_id')
-          .andOn('cc.tenant', '=', 'c.tenant');
-      })
-      .where({
-        'cc.client_id': submission.client_id,
-        'cc.tenant': tenant,
-        'cc.is_active': true,
-        'c.is_active': true
-      })
-      .whereNot('c.currency_code', newCurrency)
-      .select('c.contract_id', 'c.contract_name', 'c.currency_code')
-      .first();
-
-    if (existingContracts) {
-      throw new Error(
-        `Client already has an active contract in ${existingContracts.currency_code} ("${existingContracts.contract_name}"). ` +
-        `Cannot create a contract in ${newCurrency}. Mixed-currency contracts for the same client are not supported.`
-      );
-    }
-
     const now = new Date();
     const nowIso = now.toISOString();
 
@@ -1271,69 +1249,42 @@ export const createClientContractFromWizard = withAuth(async (
       nextDisplayOrder += 1;
     }
 
-    const clientContractId = uuidv4();
-
-    const [
-      hasRenewalModeColumn,
-      hasNoticePeriodColumn,
-      hasRenewalTermColumn,
-      hasUseTenantDefaultsColumn,
-    ] = await Promise.all([
-      trx.schema.hasColumn('client_contracts', 'renewal_mode'),
-      trx.schema.hasColumn('client_contracts', 'notice_period_days'),
-      trx.schema.hasColumn('client_contracts', 'renewal_term_months'),
-      trx.schema.hasColumn('client_contracts', 'use_tenant_renewal_defaults'),
-    ]);
-
-    const clientContractInsertData: Record<string, unknown> = {
-      tenant,
-      client_contract_id: clientContractId,
+    await createClientContractAssignment(trx, tenant, {
       client_id: submission.client_id,
       contract_id: contractId,
       start_date: startDate,
       end_date: endDate,
       is_active: !isDraft,
-      po_required: submission.po_required ?? false,
-      po_number: submission.po_number ?? null,
-      po_amount: submission.po_amount ?? null,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
-      // Keep template provenance for draft/review flows, but live recurring timing
-      // semantics are copied onto contract_lines and stay independent after clone.
-      template_contract_id: submission.template_id ?? null,
-    };
-
-    if (hasRenewalModeColumn) {
-      clientContractInsertData.renewal_mode =
+      renewal_mode:
         submission.renewal_mode === 'none' ||
         submission.renewal_mode === 'manual' ||
         submission.renewal_mode === 'auto'
           ? submission.renewal_mode
-          : 'manual';
-    }
-
-    if (hasNoticePeriodColumn) {
-      clientContractInsertData.notice_period_days =
+          : 'manual',
+      notice_period_days:
         Number.isInteger(submission.notice_period_days) && (submission.notice_period_days as number) >= 0
-          ? submission.notice_period_days
-          : 30;
-    }
-
-    if (hasRenewalTermColumn) {
-      clientContractInsertData.renewal_term_months =
+          ? Number(submission.notice_period_days)
+          : 30,
+      renewal_term_months:
         Number.isInteger(submission.renewal_term_months) && (submission.renewal_term_months as number) > 0
-          ? submission.renewal_term_months
-          : null;
-    }
-
-    if (hasUseTenantDefaultsColumn) {
-      clientContractInsertData.use_tenant_renewal_defaults =
+          ? Number(submission.renewal_term_months)
+          : undefined,
+      use_tenant_renewal_defaults:
         typeof submission.use_tenant_renewal_defaults === 'boolean'
           ? submission.use_tenant_renewal_defaults
-          : true;
-    }
+          : true,
+      po_required: submission.po_required ?? false,
+      po_number: submission.po_number ?? null,
+      po_amount: submission.po_amount ?? null,
+    });
 
-    await trx('client_contracts').insert(clientContractInsertData);
+    if (!isDraft) {
+      await syncRecurringServicePeriodsForContract(trx, {
+        tenant,
+        contractId,
+        sourceRunPrefix: 'contract_wizard_save',
+      });
+    }
 
     createdForWorkflow = {
       contractId,

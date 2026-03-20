@@ -23,7 +23,6 @@ import { IContract, IContractWithClient } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
-  checkClientHasActiveContract,
   deleteContract,
   getDraftContracts,
   getContractTemplates,
@@ -142,7 +141,7 @@ const Contracts: React.FC = () => {
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
@@ -158,7 +157,7 @@ const Contracts: React.FC = () => {
       setShowClientWizard(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to resume draft';
-      alert(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -192,47 +191,33 @@ const Contracts: React.FC = () => {
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to terminate contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
-  const handleRestoreContract = async (clientContractId?: string, clientId?: string, contractId?: string) => {
+  const handleRestoreContract = async (clientContractId?: string) => {
     try {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
-      }
-      if (clientId) {
-        const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
-        if (hasActiveContract) {
-          alert('Cannot restore this contract to active status because the client already has an active contract. Please terminate their current active contract first, or restore this contract as a draft.');
-          return;
-        }
       }
       await updateClientContractForBilling(clientContractId, { is_active: true });
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to restore contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
-  const handleSetToActive = async (clientContractId?: string, clientId?: string, contractId?: string) => {
+  const handleSetToActive = async (clientContractId?: string) => {
     try {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
-      }
-      if (clientId) {
-        const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
-        if (hasActiveContract) {
-          alert('Cannot set this contract to active because the client already has an active contract. Please terminate their current active contract first.');
-          return;
-        }
       }
       await updateClientContractForBilling(clientContractId, { is_active: true });
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to activate contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
@@ -431,7 +416,7 @@ const renderStatusBadge = (status: string) => {
                 className="text-green-600 focus:text-green-600"
                 onClick={(event) => {
                   event.stopPropagation();
-                  void handleRestoreContract(record.client_contract_id, record.client_id, record.contract_id);
+                  void handleRestoreContract(record.client_contract_id);
                 }}
               >
                 Restore
@@ -443,7 +428,7 @@ const renderStatusBadge = (status: string) => {
                 className="text-green-600 focus:text-green-600"
                 onClick={(event) => {
                   event.stopPropagation();
-                  void handleSetToActive(record.client_contract_id, record.client_id, record.contract_id);
+                  void handleSetToActive(record.client_contract_id);
                 }}
               >
                 Set to Active

@@ -19,7 +19,8 @@ describe('ClientContractsTab assignment lifecycle wiring', () => {
     expect(source).toContain("await updateClientContractForBilling(clientContractId, { is_active: false });");
     expect(source).toContain("await updateClientContractForBilling(clientContractId, { is_active: true });");
     expect(source).toContain("void handleTerminateContract(record.client_contract_id);");
-    expect(source).toContain("void handleRestoreContract(record.client_contract_id, record.client_id, record.contract_id);");
-    expect(source).toContain("void handleSetToActive(record.client_contract_id, record.client_id, record.contract_id);");
+    expect(source).toContain("void handleRestoreContract(record.client_contract_id);");
+    expect(source).toContain("void handleSetToActive(record.client_contract_id);");
+    expect(source).not.toContain('checkClientHasActiveContract');
   });
 });

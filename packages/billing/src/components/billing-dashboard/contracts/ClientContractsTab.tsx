@@ -21,7 +21,6 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContractWithClient } from '@alga-psa/types';
 import {
-  checkClientHasActiveContract,
   deleteContract,
   getContractsWithClients,
 } from '@alga-psa/billing/actions/contractActions';
@@ -40,6 +39,7 @@ import { updateClientContractForBilling } from '@alga-psa/billing/actions/billin
 import { ContractWizard } from './ContractWizard';
 import { ContractDialog } from './ContractDialog';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { toast } from 'react-hot-toast';
 
 interface ClientContractsTabProps {
   onRefreshNeeded?: () => void;
@@ -127,7 +127,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       onRefreshNeeded?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
@@ -141,49 +141,35 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       onRefreshNeeded?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to terminate contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
-  const handleRestoreContract = async (clientContractId?: string, clientId?: string, contractId?: string) => {
+  const handleRestoreContract = async (clientContractId?: string) => {
     try {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
-      }
-      if (clientId) {
-        const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
-        if (hasActiveContract) {
-          alert('Cannot restore this contract to active status because the client already has an active contract. Please terminate their current active contract first, or restore this contract as a draft.');
-          return;
-        }
       }
       await updateClientContractForBilling(clientContractId, { is_active: true });
       await fetchClientContracts();
       onRefreshNeeded?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to restore contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
-  const handleSetToActive = async (clientContractId?: string, clientId?: string, contractId?: string) => {
+  const handleSetToActive = async (clientContractId?: string) => {
     try {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
-      }
-      if (clientId) {
-        const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
-        if (hasActiveContract) {
-          alert('Cannot set this contract to active because the client already has an active contract. Please terminate their current active contract first.');
-          return;
-        }
       }
       await updateClientContractForBilling(clientContractId, { is_active: true });
       await fetchClientContracts();
       onRefreshNeeded?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to activate contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
@@ -199,7 +185,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       setShowClientWizard(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to resume draft';
-      alert(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -341,7 +327,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                 className="text-green-600 focus:text-green-600"
                 onClick={(event) => {
                   event.stopPropagation();
-                  void handleRestoreContract(record.client_contract_id, record.client_id, record.contract_id);
+                  void handleRestoreContract(record.client_contract_id);
                 }}
               >
                 Restore
@@ -353,7 +339,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                 className="text-green-600 focus:text-green-600"
                 onClick={(event) => {
                   event.stopPropagation();
-                  void handleSetToActive(record.client_contract_id, record.client_id, record.contract_id);
+                  void handleSetToActive(record.client_contract_id);
                 }}
               >
                 Set to Active
@@ -417,7 +403,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       onRefreshNeeded?.();
     } catch (mutationError) {
       const message = mutationError instanceof Error ? mutationError.message : 'Failed to mark renewal as renewing';
-      alert(message);
+      toast.error(message);
       await refreshRenewalRows();
     } finally {
       setPendingUpcomingRenewalActions((current) => ({ ...current, [rowId]: undefined }));
@@ -445,7 +431,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       onRefreshNeeded?.();
     } catch (mutationError) {
       const message = mutationError instanceof Error ? mutationError.message : 'Failed to mark renewal as non-renewing';
-      alert(message);
+      toast.error(message);
       await refreshRenewalRows();
     } finally {
       setPendingUpcomingRenewalActions((current) => ({ ...current, [rowId]: undefined }));

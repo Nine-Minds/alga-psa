@@ -31,7 +31,7 @@ import {
   updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
 } from '../repositories/contractLineRepository';
-import { materializeContractCadenceServicePeriodsForContractLine } from './contractCadenceServicePeriodMaterialization';
+import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
 
 
@@ -192,7 +192,7 @@ export const addContractLine = withAuth(async (
 
   return knex.transaction((trx: Knex.Transaction) =>
     repoAddContractLine(trx, tenant, contractId, contractLineId, customRate).then(async (mapping) => {
-      await materializeContractCadenceServicePeriodsForContractLine(trx, {
+      await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
         contractLineId: mapping.contract_line_id,
         sourceRunPrefix: 'contract_add_line',
@@ -229,7 +229,7 @@ export const updateContractLineAssociation = withAuth(async (
 
   const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
   await knex.transaction(async (trx) => {
-    await materializeContractCadenceServicePeriodsForContractLine(trx, {
+    await syncRecurringServicePeriodsForContractLine(trx, {
       tenant,
       contractLineId,
       sourceRunPrefix: 'contract_line_association_update',
@@ -255,7 +255,7 @@ export const updateContractLineRate = withAuth(async (
 
   await knex.transaction(async (trx) => {
     await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming);
-    await materializeContractCadenceServicePeriodsForContractLine(trx, {
+    await syncRecurringServicePeriodsForContractLine(trx, {
       tenant,
       contractLineId,
       sourceRunPrefix: 'contract_line_rate_update',
@@ -358,21 +358,6 @@ export const updateContract = withAuth(async (
       const hasInvoices = await Contract.hasInvoices(knex, tenant, contractId);
       if (hasInvoices) {
         throw new Error('Cannot set contract to draft because it has associated invoices. Contracts with invoices cannot be set to draft.');
-      }
-    }
-
-    // If trying to set contract to active, check if client already has an active contract
-    if (updateData.status === 'active') {
-      // Get all clients assigned to this contract
-      const clientContracts = await knex('client_contracts')
-        .where({ contract_id: contractId, tenant })
-        .select('client_id');
-
-      for (const cc of clientContracts) {
-        const hasActiveContract = await Contract.hasActiveContractForClient(knex, tenant, cc.client_id, contractId);
-        if (hasActiveContract) {
-          throw new Error('Client already has an active contract. To create a new active contract, terminate their current contract or save this contract as a draft.');
-        }
       }
     }
 
@@ -551,28 +536,6 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
       throw error;
     }
     throw new Error(`Failed to compute contract summary: ${error}`);
-  }
-});
-
-export const checkClientHasActiveContract = withAuth(async (user, { tenant }, clientId: string, excludeContractId?: string): Promise<boolean> => {
-  const { knex } = await createTenantKnex();
-
-  try {
-    return await Contract.hasActiveContractForClient(knex, tenant, clientId, excludeContractId);
-  } catch (error) {
-    console.error(`Error checking active contract for client ${clientId}:`, error);
-    throw error;
-  }
-});
-
-export const fetchClientIdsWithActiveContracts = withAuth(async (user, { tenant }, excludeContractId?: string): Promise<string[]> => {
-  const { knex } = await createTenantKnex();
-
-  try {
-    return await Contract.getClientIdsWithActiveContracts(knex, tenant, excludeContractId);
-  } catch (error) {
-    console.error('Error fetching client IDs with active contracts:', error);
-    throw error;
   }
 });
 

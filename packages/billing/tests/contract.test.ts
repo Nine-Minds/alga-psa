@@ -9,8 +9,6 @@ import { describe, it, expect, vi } from 'vitest';
 import Contract from '../src/models/contract';
 
 vi.mock('@alga-psa/shared/billingClients', () => ({
-  hasActiveContractForClient: vi.fn(),
-  getClientIdsWithActiveContracts: vi.fn(),
   checkAndReactivateExpiredContract: vi.fn(),
 }));
 
@@ -90,16 +88,6 @@ describe('Contract Model', () => {
 
       await expect(Contract.hasInvoices(knex, '', 'contract-123')).rejects.toThrow(
         'Tenant context is required for checking contract invoices'
-      );
-    });
-  });
-
-  describe('hasActiveContractForClient', () => {
-    it('should throw error when tenant is not provided', async () => {
-      const { knex } = createMockKnex();
-
-      await expect(Contract.hasActiveContractForClient(knex, '', 'client-123')).rejects.toThrow(
-        'Tenant context is required for checking client active contracts'
       );
     });
   });

@@ -101,13 +101,9 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
       setClientContracts(detailedContracts);
       setAvailableContracts(contracts.filter(c => c.is_active));
 
-      // Set default selected contract if available
-      const filteredContracts = contracts.filter(
-        c => c.is_active && !detailedContracts.some(dc => dc.contract_id === c.contract_id)
-      );
-
-      if (filteredContracts.length > 0) {
-        setSelectedContractToAdd(filteredContracts[0].contract_id || null);
+      const activeContracts = contracts.filter((c) => c.is_active);
+      if (activeContracts.length > 0) {
+        setSelectedContractToAdd(activeContracts[0].contract_id || null);
       } else {
         setSelectedContractToAdd(null);
       }
@@ -123,7 +119,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     if (!clientId || !selectedContractToAdd) return;
     
     try {
-      await assignContractToClient(
+      const createdAssignment = await assignContractToClient(
         clientId,
         selectedContractToAdd,
         payload.startDate,
@@ -138,12 +134,8 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
           : undefined
       );
       
-      // Apply the contract to create client contract lines
-      const newContracts = await getClientContracts(clientId);
-      const newContract = newContracts.find(c => c.contract_id === selectedContractToAdd);
-
-      if (newContract && newContract.client_contract_id) {
-        await applyContractToClient(newContract.client_contract_id);
+      if (createdAssignment.client_contract_id) {
+        await applyContractToClient(createdAssignment.client_contract_id);
       }
       
       fetchData(); // Refresh data
@@ -335,10 +327,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     },
   ];
 
-  // Filter available contracts to only show those not already assigned to the client
-  const filteredAvailableContracts = availableContracts.filter(
-    contract => !clientContracts.some(cc => cc.contract_id === contract.contract_id && cc.is_active)
-  );
+  const selectableContracts = availableContracts;
 
   return (
     <Card size="2">
@@ -379,7 +368,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
             
             <div className="flex space-x-2 mt-4">
               <CustomSelect
-                options={filteredAvailableContracts.map(c => ({
+                options={selectableContracts.map(c => ({
                   value: c.contract_id!,
                   label: c.contract_name
                 }))}
@@ -393,7 +382,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
                 triggerButton={
                   <Button
                     id="assign-contract-button"
-                    disabled={!selectedContractToAdd || filteredAvailableContracts.length === 0}
+                    disabled={!selectedContractToAdd || selectableContracts.length === 0}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Assign Contract

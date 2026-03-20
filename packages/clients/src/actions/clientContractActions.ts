@@ -11,8 +11,10 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate } from '@alga-psa/core';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
-import { v4 as uuidv4 } from 'uuid';
-import { checkAndReactivateExpiredContract } from '@alga-psa/shared/billingClients';
+import {
+  checkAndReactivateExpiredContract,
+  createClientContractAssignment,
+} from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -283,52 +285,19 @@ export const createClientContract = withAuth(async (
 
     assertContractOwnedByClient(contractExists, input.client_id, input.contract_id);
 
-    if (input.is_active) {
-      const overlapping = await trx('client_contracts')
-        .where({ client_id: input.client_id, tenant, is_active: true })
-        .where(function overlap() {
-          this.where(function overlapsExistingEnd() {
-            this.where('end_date', '>', input.start_date).orWhereNull('end_date');
-          }).where(function overlapsExistingStart() {
-            if (input.end_date) {
-              this.where('start_date', '<', input.end_date);
-            } else {
-              this.whereRaw('1 = 1');
-            }
-          });
-        })
-        .first();
-
-      if (overlapping) {
-        throw new Error(`Client ${input.client_id} already has an active contract overlapping the specified range`);
-      }
-    }
-
-    const timestamp = new Date().toISOString();
-    const insertPayload: Record<string, unknown> = {
-      client_contract_id: uuidv4(),
+    const createdAssignment = await createClientContractAssignment(trx, tenant, {
       client_id: input.client_id,
       contract_id: input.contract_id,
       template_contract_id: null,
       start_date: input.start_date,
       end_date: input.end_date,
       is_active: input.is_active,
-      tenant,
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-
-    const hasPoRequired = await trx.schema.hasColumn('client_contracts', 'po_required');
-    const hasPoNumber = await trx.schema.hasColumn('client_contracts', 'po_number');
-    const hasPoAmount = await trx.schema.hasColumn('client_contracts', 'po_amount');
-
-    if (hasPoRequired) insertPayload.po_required = Boolean(input.po_required);
-    if (hasPoNumber) insertPayload.po_number = input.po_number ?? null;
-    if (hasPoAmount) insertPayload.po_amount = input.po_amount ?? null;
-
-    const [created] = await trx<IClientContract>('client_contracts').insert(insertPayload).returning('*');
-    createdForEvent = created;
-    return created;
+      po_required: input.po_required,
+      po_number: input.po_number ?? null,
+      po_amount: input.po_amount ?? null,
+    });
+    createdForEvent = createdAssignment;
+    return createdAssignment;
   });
 
   if (createdForEvent) {

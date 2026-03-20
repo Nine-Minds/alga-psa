@@ -44,6 +44,52 @@ const normalizeDateOnly = (value: unknown): string | undefined => {
   return undefined;
 };
 
+const findMixedCurrencyActiveAssignment = async (
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  params: {
+    clientId: string;
+    targetCurrencyCode?: string | null;
+  }
+): Promise<{ currency_code: string; contract_name: string | null } | null> => {
+  const targetCurrencyCode =
+    typeof params.targetCurrencyCode === 'string' && params.targetCurrencyCode.trim().length > 0
+      ? params.targetCurrencyCode.trim()
+      : null;
+  if (!targetCurrencyCode) return null;
+
+  const rows = await knexOrTrx('client_contracts as cc')
+    .join('contracts as c', function joinContracts() {
+      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+    })
+    .where({
+      'cc.client_id': params.clientId,
+      'cc.tenant': tenant,
+      'cc.is_active': true,
+      'c.is_active': true,
+    })
+    .whereNot('c.currency_code', targetCurrencyCode)
+    .select('cc.start_date', 'cc.end_date', 'c.currency_code', 'c.contract_name');
+
+  const activeRow = rows.find((row: {
+    start_date: string | null;
+    end_date: string | null;
+    currency_code?: string | null;
+  }) => deriveClientContractStatus({
+    isActive: true,
+    startDate: row.start_date,
+    endDate: row.end_date,
+  }) === 'active');
+  if (!activeRow || typeof activeRow.currency_code !== 'string' || activeRow.currency_code.trim().length === 0) {
+    return null;
+  }
+
+  return {
+    currency_code: activeRow.currency_code,
+    contract_name: typeof activeRow.contract_name === 'string' ? activeRow.contract_name : null,
+  };
+};
+
 const subtractDaysFromDateOnly = (dateOnly: string, days: number): string | undefined => {
   if (!Number.isInteger(days) || days < 0) return undefined;
   const parsed = new Date(`${dateOnly}T00:00:00.000Z`);
@@ -455,23 +501,22 @@ export async function createClientContractAssignment(
   }
 
   if (input.is_active) {
-    const overlapping = await knexOrTrx('client_contracts')
-      .where({ client_id: input.client_id, tenant, is_active: true })
-      .where(function overlap() {
-        this.where(function overlapsExistingEnd() {
-          this.where('end_date', '>', input.start_date).orWhereNull('end_date');
-        }).where(function overlapsExistingStart() {
-          if (input.end_date) {
-            this.where('start_date', '<', input.end_date);
-          } else {
-            this.whereRaw('1 = 1');
-          }
-        });
-      })
-      .first();
-
-    if (overlapping) {
-      throw new Error(`Client ${input.client_id} already has an active contract overlapping the specified range`);
+    const targetCurrencyCode =
+      typeof (contractExists as { currency_code?: string | null }).currency_code === 'string'
+        ? (contractExists as { currency_code: string }).currency_code
+        : null;
+    const mixedCurrencyConflict = await findMixedCurrencyActiveAssignment(knexOrTrx, tenant, {
+      clientId: input.client_id,
+      targetCurrencyCode,
+    });
+    if (mixedCurrencyConflict) {
+      const contractLabel = mixedCurrencyConflict.contract_name
+        ? ` ("${mixedCurrencyConflict.contract_name}")`
+        : '';
+      throw new Error(
+        `Client already has an active contract in ${mixedCurrencyConflict.currency_code}${contractLabel}. ` +
+        `Cannot create a contract in ${targetCurrencyCode}. Mixed-currency contracts for the same client are not supported.`
+      );
     }
   }
 
@@ -542,31 +587,6 @@ export async function updateClientContractAssignment(
 
     if (contract && contract.is_active) {
       throw new Error('Start date cannot be changed for active contracts. Set the contract to draft first.');
-    }
-  }
-
-  const effectiveStart = updateData.start_date ?? existing.start_date;
-  const effectiveEnd = updateData.end_date !== undefined ? updateData.end_date : existing.end_date;
-
-  if (effectiveStart) {
-    const overlapping = await knexOrTrx('client_contracts')
-      .where({ client_id: existing.client_id, tenant, is_active: true })
-      .whereNot({ client_contract_id: clientContractId })
-      .where(function overlap() {
-        this.where(function overlapsExistingEnd() {
-          this.where('end_date', '>', effectiveStart).orWhereNull('end_date');
-        }).where(function overlapsExistingStart() {
-          if (effectiveEnd) {
-            this.where('start_date', '<', effectiveEnd);
-          } else {
-            this.whereRaw('1 = 1');
-          }
-        });
-      })
-      .first();
-
-    if (overlapping) {
-      throw new Error(`Client ${existing.client_id} already has an active contract overlapping the specified range`);
     }
   }
 

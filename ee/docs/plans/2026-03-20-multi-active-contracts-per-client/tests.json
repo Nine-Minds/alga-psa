@@ -1,0 +1,636 @@
+[
+  {
+    "id": "T001",
+    "description": "The PRD and scratchpad explicitly state that multiple concurrent active `client_contracts` assignments for one client are allowed.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F048"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "The PRD and scratchpad explicitly state that invoices remain scoped to exactly one `client_contract_id` even when a client has multiple active contracts.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F048"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Plan/runbook notes explicitly record that historical schema/migrations never enforced a single-active-contract uniqueness rule at the database layer.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F048"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "The mixed-currency rule has an explicit documented disposition in the plan instead of remaining an accidental side effect of the singleton rule.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F048"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Wizard basics allows selecting a client that already has another active contract.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Quick-add/edit contract dialog allows selecting a client that already has another active contract.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Wizard UI no longer shows the warning instructing users to terminate the current contract or save as draft before creating another active contract.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Quick-add/edit dialog no longer disables submit because another active contract exists for the selected client.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "ClientContractsTab restore flow succeeds even when the client already has another active contract.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "ClientContractsTab set-to-active flow succeeds even when the client already has another active contract.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Alternate `Contracts.tsx` restore/set-active actions no longer reject solely because another active contract exists.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Static/wiring coverage proves no live billing UI flow still passes active-contract-derived `disabledClientIds` or singleton checks to block client selection.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F013",
+      "F048"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "`updateContract(... status: 'active')` no longer rejects because another active contract exists for one of the assigned clients.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Expired contract reactivation no longer rejects because a different active contract exists for the same client.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Static or unit coverage proves `hasActiveContractForClient(...)` is removed or no longer used by activation/write flows as a business invariant.",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F023",
+      "F048"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Static or unit coverage proves `getClientIdsWithActiveContracts(...)` is removed or no longer used to block product flows.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F013",
+      "F048"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Billing contract model wrappers around singleton helper functions are removed or reduced to non-blocking diagnostics-only behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Billing wizard create path and clients assignment path both allow the same concurrent active assignment state instead of diverging by entry point.",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F023"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Shared assignment create flow allows overlapping active assignments for the same client when all other invariants are satisfied.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Shared assignment update flow allows overlapping active assignments for the same client when all other invariants are satisfied.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Existing invoiced-period guard still blocks moving assignment dates across already invoiced service periods after singleton rule removal.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Packages/clients create/update code delegates to the shared assignment validation path instead of maintaining duplicate overlap/singleton enforcement.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "`packages/clients` assignment selection state supports two active rows with the same `contract_id` because identity is keyed by `client_contract_id`.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Assignment create/apply flow uses the returned `client_contract_id` instead of re-finding the first assignment by `contract_id`.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "DB-backed integration proves client contract-line reads are assignment-scoped and do not duplicate or cross-associate rows when two active assignments share the same `contract_id`.",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Contract-line add flow carries explicit `client_contract_id` context from UI to action layer.",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Contract-line edit flow is explicit about assignment scope versus shared line scope and no longer presents assignment-scoped editing on top of line-scoped mutation implicitly.",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Contract-line remove flow targets the intended active assignment and cannot silently act on a sibling active assignment.",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "BillingConfiguration and related clients screens refresh lines and overlap data immediately after assignment create/edit/deactivate actions.",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Assignment detail dialogs, line counts, and line names derive from the selected `client_contract_id` only.",
+    "implemented": false,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Disambiguation help/copy no longer promises a hidden most-recent-assignment fallback.",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Audit coverage or focused tests prove no remaining targeted `packages/clients` UI flow relies on `contract_id` as the unique active assignment identity.",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Recurring due-work returns separate invoice candidates for two active assignments on the same client and invoice window.",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Previewing one selected client-cadence recurring candidate includes only charges for its `client_contract_id`.",
+    "implemented": false,
+    "featureIds": [
+      "F034",
+      "F038"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Generating one selected client-cadence recurring candidate creates an invoice only for its `client_contract_id`.",
+    "implemented": false,
+    "featureIds": [
+      "F035",
+      "F038"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Regression coverage proves recurring preview no longer re-expands a selected candidate into all due work for the same client and invoice window.",
+    "implemented": false,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Regression coverage proves recurring generation no longer re-expands a selected candidate into all due work for the same client and invoice window.",
+    "implemented": false,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Fixed recurring charges from concurrent assignments that share the same base contract/template line stay separated by `client_contract_id` and do not collapse onto the first assignment.",
+    "implemented": false,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "A client-cadence materialization gap on one assignment blocks only that assignment’s candidate and not unrelated candidates for the same client window.",
+    "implemented": false,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "If mixed-assignment charges accidentally reach invoice generation, the preserved single-assignment invariant fails explicitly with a user-readable error rather than silent misattribution.",
+    "implemented": false,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Recurring preview rendering distinguishes concurrent contracts that share the same display name.",
+    "implemented": false,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Invoice query and contract-detail surfaces continue to show a generated invoice under the correct contract assignment for a client with multiple active contracts.",
+    "implemented": false,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "PO overage and consumption remain tied to `invoice.client_contract_id` and are unaffected by sibling active assignments for the same client.",
+    "implemented": false,
+    "featureIds": [
+      "F003",
+      "F040"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Recurring due-work grouping continues to use `purchaseOrderScopeKey = client_contract_id` so contract-scoped invoices remain separable for multi-active clients.",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F033"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "BillingCycles summary shows multiple active assignments or an explicit multi-assignment representation instead of collapsing to the first active contract row.",
+    "implemented": false,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Bucket usage with multiple overlapping eligible assignments fails explicitly or requires disambiguation instead of silently choosing the latest-start assignment.",
+    "implemented": false,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Contract report/dashboard wording is updated where assignment counts were previously mislabeled as billable clients or singular contracts.",
+    "implemented": false,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Audit notes and focused tests record which reporting/export/accounting surfaces are already assignment-safe and confirm no hidden active-contract selector remains in the targeted files.",
+    "implemented": false,
+    "featureIds": [
+      "F044",
+      "F048"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "`createFixedPlanAssignment` or equivalent billing fixture helper can explicitly seed concurrent assignments with header and assignment lifecycle knobs.",
+    "implemented": false,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "A dedicated test helper can create two or more concurrent assignments for one client via direct DB inserts or `TestContext.createEntity(...)` without guarded production APIs.",
+    "implemented": false,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Legacy tests that query `where({ client_id }).first()` or depend on latest-assignment semantics are updated to assert explicit assignment IDs instead.",
+    "implemented": false,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Static guard coverage fails if new billing or clients code reintroduces singleton UI/action patterns such as active-contract client disabling or 'already has an active contract' write blockers.",
+    "implemented": false,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "`docs/billing/billing.md` no longer states that assigning a contract to a client must ensure no overlap with other active contracts.",
+    "implemented": false,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "The contract purchase order plan/runbook language is updated to reflect preserved single-assignment invoice scope without treating 'single active contract per client' as a prerequisite.",
+    "implemented": false,
+    "featureIds": [
+      "F003",
+      "F048"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "End-to-end billing flow: both the full wizard and quick-add path can create a second active contract for the same client.",
+    "implemented": false,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F019"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "End-to-end clients billing flow: two active assignments for the same client render separately and remain independently selectable even when they share the same base `contract_id`.",
+    "implemented": false,
+    "featureIds": [
+      "F024",
+      "F025",
+      "F026",
+      "F030",
+      "F032"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Adding a line to one active assignment does not leak that line into a sibling assignment’s rendered line set.",
+    "implemented": false,
+    "featureIds": [
+      "F026",
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "Editing or removing a line in one active assignment does not unexpectedly mutate sibling assignment rendering or targeting.",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F028",
+      "F029",
+      "F030"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Client service overlap matrix or equivalent overlap rendering shows explicit assignment identity for concurrent assignments instead of a collapsed contract view.",
+    "implemented": false,
+    "featureIds": [
+      "F026",
+      "F029",
+      "F030",
+      "F032"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "A same-client pair of active contracts using different cadence ownership models both materialize and remain independently invoiceable without candidate contamination.",
+    "implemented": false,
+    "featureIds": [
+      "F033",
+      "F034",
+      "F035",
+      "F037",
+      "F040"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "Invoice preview, generation, and invoice history for a client with two active contracts show two separate invoices linked back to the correct contract assignments.",
+    "implemented": false,
+    "featureIds": [
+      "F034",
+      "F035",
+      "F040"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "The mixed-currency rule behavior matches the plan’s documented decision and no longer piggybacks implicitly on the removed single-active-contract guard.",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F019",
+      "F048"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "Repo-wide static or search-based coverage proves no live write/activation path still uses `hasActiveContractForClient(...)` to block concurrent active assignments.",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F023",
+      "F048"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "Repo-wide static or search-based coverage proves no live product flow still uses `getClientIdsWithActiveContracts(...)` to disable selection or submission.",
+    "implemented": false,
+    "featureIds": [
+      "F017",
+      "F013",
+      "F048"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "BillingCycles ordering and summary rendering do not hide sibling active assignments for the same client when one starts later than the other.",
+    "implemented": false,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Bucket usage ambiguity failure includes enough assignment/context information for a user or engineer to resolve the conflict instead of silently billing the wrong contract.",
+    "implemented": false,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Recurring preview/grouping with same-named concurrent contracts remains visually distinct through explicit assignment or contract context labels.",
+    "implemented": false,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "DB-backed integration proves billing-flow-created and clients-flow-created concurrent active assignments persist with the same final allowed state and no hidden asymmetry.",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F023"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Contract header activation/reactivation continues to work based on header and assignment lifecycle state and is not blocked by sibling active assignments.",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F015"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "The wizard’s mixed-currency behavior is explicitly covered by tests or documented non-goal handling rather than remaining an incidental blocker of multi-active contracts.",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F019"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Runbook/migration notes explicitly record that invoice tables already snapshot `client_contract_id`, so removing the singleton rule does not require a schema redesign to preserve single-assignment invoices.",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004",
+      "F048"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Assignment-safe reporting/export/accounting surfaces show no functional regression after singleton rule removal and only receive wording updates where necessary.",
+    "implemented": false,
+    "featureIds": [
+      "F043",
+      "F044"
+    ]
+  }
+]
