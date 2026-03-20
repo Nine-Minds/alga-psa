@@ -95,6 +95,9 @@
       "security": "11111"
     }
   },
+  "dashboard": {
+    "onboardingWizard": "11111"
+  },
   "header": {
     "userFallback": "11111",
     "quickAccess": "11111",

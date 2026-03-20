@@ -95,6 +95,9 @@
       "security": "Beveiliging"
     }
   },
+  "dashboard": {
+    "onboardingWizard": "Installatiewizard"
+  },
   "header": {
     "userFallback": "Gebruiker",
     "quickAccess": "Snelle toegang tot profiel en account.",
