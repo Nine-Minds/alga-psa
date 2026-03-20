@@ -3,15 +3,20 @@ export type OnboardingProgressStatus = 'not_started' | 'in_progress' | 'blocked'
 export interface OnboardingProgressSubstep {
   id: string;
   title: string;
+  titleKey?: string;
   status: OnboardingProgressStatus;
   lastUpdated: string | null;
   blocker?: string | null;
+  blockerKey?: string | null;
+  blockerValues?: Record<string, unknown>;
   meta?: Record<string, unknown>;
 }
 
 export interface DerivedParentProgress {
   status: OnboardingProgressStatus;
   blocker: string | null;
+  blockerKey?: string | null;
+  blockerValues?: Record<string, unknown>;
   lastUpdated: string | null;
   progressValue: number;
 }
@@ -46,6 +51,7 @@ export function deriveParentStepFromSubsteps(
     return {
       status: 'not_started',
       blocker: null,
+      blockerKey: null,
       lastUpdated: fallbackLastUpdated,
       progressValue: 0,
     };
@@ -53,10 +59,12 @@ export function deriveParentStepFromSubsteps(
 
   const hasBlocked = substeps.some((substep) => substep.status === 'blocked');
   if (hasBlocked) {
-    const blocker = substeps.find((substep) => substep.status === 'blocked')?.blocker ?? null;
+    const firstBlocked = substeps.find((substep) => substep.status === 'blocked');
     return {
       status: 'blocked',
-      blocker,
+      blocker: firstBlocked?.blocker ?? null,
+      blockerKey: firstBlocked?.blockerKey ?? null,
+      blockerValues: firstBlocked?.blockerValues,
       lastUpdated: maxIso([fallbackLastUpdated, ...substeps.map((substep) => substep.lastUpdated)]),
       progressValue: Math.round(
         (substeps.filter((substep) => substep.status === 'complete').length / substeps.length) * 100,
@@ -69,6 +77,7 @@ export function deriveParentStepFromSubsteps(
     return {
       status: 'complete',
       blocker: null,
+      blockerKey: null,
       lastUpdated: maxIso([fallbackLastUpdated, ...substeps.map((substep) => substep.lastUpdated)]),
       progressValue: 100,
     };
@@ -78,8 +87,8 @@ export function deriveParentStepFromSubsteps(
   return {
     status: started ? 'in_progress' : 'not_started',
     blocker: null,
+    blockerKey: null,
     lastUpdated: maxIso([fallbackLastUpdated, ...substeps.map((substep) => substep.lastUpdated)]),
     progressValue: Math.round((completed / substeps.length) * 100),
   };
 }
-

@@ -27,6 +27,8 @@ export interface OnboardingStepServerState {
   status: OnboardingStepStatus;
   lastUpdated: string | null;
   blocker?: string | null;
+  blockerKey?: string | null;
+  blockerValues?: Record<string, unknown>;
   progressValue?: number | null;
   meta?: Record<string, unknown>;
   substeps?: OnboardingSubstepServerState[];
@@ -75,6 +77,8 @@ const isModuleNotFoundError = (error: unknown): boolean => {
 const buildErrorStep = (
   id: OnboardingStepId,
   message: string,
+  blockerKey?: string,
+  blockerValues?: Record<string, unknown>,
   error?: unknown
 ): OnboardingStepServerState => {
   if (error) {
@@ -87,6 +91,8 @@ const buildErrorStep = (
     id,
     status: 'blocked',
     blocker: message,
+    blockerKey: blockerKey ?? null,
+    blockerValues,
     lastUpdated: null,
   };
 };
@@ -117,7 +123,7 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
 
     let linkedCount = 0;
     let lastUpdated: string | null = null;
-    let linkedAccountsUnavailableReason: string | null = null;
+    let linkedAccountsUnavailable = false;
 
     try {
       const adminDb = await getAdminConnection();
@@ -131,7 +137,7 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
       linkedCount = aggregate?.total ? Number(aggregate.total) : 0;
       lastUpdated = dateToIso(aggregate?.latest_updated ?? null);
     } catch (error) {
-      linkedAccountsUnavailableReason = 'Unable to verify linked team members right now.';
+      linkedAccountsUnavailable = true;
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.warn('[onboarding-progress] Unable to load linked identity accounts; defaulting to zero linked users', {
         tenantId,
@@ -146,17 +152,28 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
       {
         id: 'identity_provider_configured',
         title: 'Add an SSO provider',
+        titleKey: 'onboarding.substeps.identity.addProvider',
         status: hasProvider ? 'complete' : 'not_started',
         lastUpdated,
       },
       {
         id: 'identity_user_linked',
         title: 'Link the first team member',
+        titleKey: 'onboarding.substeps.identity.linkTeamMember',
         status: hasLinkedAccount ? 'complete' : hasProvider ? 'in_progress' : 'not_started',
         lastUpdated,
       },
     ];
     const derived = deriveParentStepFromSubsteps(substeps as OnboardingProgressSubstep[], lastUpdated);
+    const linkedAccountsBlocker = linkedAccountsUnavailable
+      ? {
+          blocker: 'Unable to verify linked team members right now.',
+          blockerKey: 'onboarding.blockers.identity.linkedAccountsUnavailable',
+        }
+      : {
+          blocker: 'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.',
+          blockerKey: 'onboarding.blockers.identity.noLinkedUsers',
+        };
 
     return {
       id: 'identity_sso',
@@ -167,14 +184,18 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
       meta: {
         configuredProviders: configuredProviders.map((option) => option.id),
         linkedAccounts: linkedCount,
-        linkedAccountsLoaded: linkedAccountsUnavailableReason === null,
+        linkedAccountsLoaded: !linkedAccountsUnavailable,
       },
       blocker: hasProvider
         ? hasLinkedAccount
           ? null
-          : linkedAccountsUnavailableReason ??
-            'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.'
+          : linkedAccountsBlocker.blocker
         : 'Add Google Workspace or Microsoft 365 credentials to enable SSO for your team.',
+      blockerKey: hasProvider
+        ? hasLinkedAccount
+          ? null
+          : linkedAccountsBlocker.blockerKey
+        : 'onboarding.blockers.identity.addProviderCredentials',
     };
   } catch (error) {
     if (isModuleNotFoundError(error)) {
@@ -182,10 +203,17 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
         id: 'identity_sso',
         status: 'blocked',
         blocker: 'SSO provider configuration is unavailable in this environment.',
+        blockerKey: 'onboarding.blockers.identity.configurationUnavailable',
         lastUpdated: null,
       };
     }
-    return buildErrorStep('identity_sso', 'Unable to load SSO configuration status.', error);
+    return buildErrorStep(
+      'identity_sso',
+      'Unable to load SSO configuration status.',
+      'onboarding.blockers.identity.loadFailed',
+      undefined,
+      error
+    );
   }
 }
 
@@ -204,6 +232,8 @@ async function resolveCustomerPortalStep(tenantId: string): Promise<OnboardingSt
       id: 'client_portal_domain',
       status: derived.status as OnboardingStepStatus,
       blocker: derived.blocker,
+      blockerKey: derived.blockerKey,
+      blockerValues: derived.blockerValues,
       lastUpdated: derived.lastUpdated,
       progressValue: derived.progressValue,
       substeps,
@@ -213,7 +243,13 @@ async function resolveCustomerPortalStep(tenantId: string): Promise<OnboardingSt
       },
     };
   } catch (error) {
-    return buildErrorStep('client_portal_domain', 'Unable to load client portal domain status.', error);
+    return buildErrorStep(
+      'client_portal_domain',
+      'Unable to load client portal domain status.',
+      'onboarding.blockers.portal.loadFailed',
+      undefined,
+      error
+    );
   }
 }
 
@@ -225,6 +261,7 @@ async function resolvePortalCustomDomainSubstep(tenantId: string): Promise<Onboa
     return {
       id: 'portal_custom_domain',
       title: 'Portal custom domain',
+      titleKey: 'onboarding.substeps.portal.customDomain',
       status: 'not_started',
       lastUpdated,
       meta: {
@@ -237,6 +274,7 @@ async function resolvePortalCustomDomainSubstep(tenantId: string): Promise<Onboa
     return {
       id: 'portal_custom_domain',
       title: 'Portal custom domain',
+      titleKey: 'onboarding.substeps.portal.customDomain',
       status: 'complete',
       lastUpdated,
       meta: {
@@ -253,6 +291,7 @@ async function resolvePortalCustomDomainSubstep(tenantId: string): Promise<Onboa
   return {
     id: 'portal_custom_domain',
     title: 'Portal custom domain',
+    titleKey: 'onboarding.substeps.portal.customDomain',
     status: isFailed ? 'blocked' : 'in_progress',
     lastUpdated,
     blocker: isFailed ? status.statusMessage : null,
@@ -279,6 +318,7 @@ async function resolvePortalBrandingSubstep(tenantId: string): Promise<Onboardin
   return {
     id: 'portal_branding',
     title: 'Portal color and logo customizations',
+    titleKey: 'onboarding.substeps.portal.branding',
     status: hasPortalConfig ? 'complete' : 'not_started',
     lastUpdated,
   };
@@ -300,6 +340,7 @@ async function resolvePortalInviteSubstep(tenantId: string): Promise<OnboardingS
   return {
     id: 'portal_invite_first_contact',
     title: 'Invite your first contact to the portal',
+    titleKey: 'onboarding.substeps.portal.inviteFirstContact',
     status: total > 0 ? 'complete' : 'not_started',
     lastUpdated,
     meta: {
@@ -328,6 +369,7 @@ async function resolveImportStep(tenantId: string): Promise<OnboardingStepServer
       {
         id: 'contacts_created',
         title: 'Create your first 5 contacts',
+        titleKey: 'onboarding.substeps.createContacts',
         status: contactStatus,
         lastUpdated: contactLastUpdated,
         meta: {
@@ -350,7 +392,13 @@ async function resolveImportStep(tenantId: string): Promise<OnboardingStepServer
       },
     };
   } catch (error) {
-    return buildErrorStep('data_import', 'Unable to load import history.', error);
+    return buildErrorStep(
+      'data_import',
+      'Unable to load import history.',
+      'onboarding.blockers.import.loadFailed',
+      undefined,
+      error
+    );
   }
 }
 async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServerState> {
@@ -371,17 +419,26 @@ async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServ
     );
 
     const hasProvider = providers.length > 0;
+    const calendarConnectionFallback = errored
+      ? {
+          blocker: `${errored.name} requires attention before syncing can resume.`,
+          blockerKey: 'onboarding.blockers.calendar.providerAttention',
+          blockerValues: { provider: errored.name },
+        }
+      : null;
 
     const substeps: OnboardingSubstepServerState[] = [
       {
         id: 'calendar_provider_added',
         title: 'Add a calendar provider',
+        titleKey: 'onboarding.substeps.calendar.addProvider',
         status: hasProvider ? 'complete' : 'not_started',
         lastUpdated,
       },
       {
         id: 'calendar_provider_connected',
         title: 'Connect and authorize the provider',
+        titleKey: 'onboarding.substeps.calendar.connectAuthorize',
         status: connected.length > 0
           ? 'complete'
           : errored
@@ -390,7 +447,9 @@ async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServ
               ? 'in_progress'
               : 'not_started',
         lastUpdated,
-        blocker: errored?.error_message || (errored ? `${errored.name} requires attention before syncing can resume.` : null),
+        blocker: errored?.error_message || calendarConnectionFallback?.blocker || null,
+        blockerKey: errored?.error_message ? null : (calendarConnectionFallback?.blockerKey ?? null),
+        blockerValues: errored?.error_message ? undefined : calendarConnectionFallback?.blockerValues,
       },
     ];
 
@@ -401,6 +460,8 @@ async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServ
       status: derived.status as OnboardingStepStatus,
       lastUpdated: derived.lastUpdated,
       blocker: derived.blocker,
+      blockerKey: derived.blockerKey,
+      blockerValues: derived.blockerValues,
       progressValue: derived.progressValue,
       substeps,
       meta: {
@@ -408,14 +469,24 @@ async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServ
       },
     };
   } catch (error) {
-    return buildErrorStep('calendar_sync', 'Unable to load calendar integrations.', error);
+    return buildErrorStep(
+      'calendar_sync',
+      'Unable to load calendar integrations.',
+      'onboarding.blockers.calendar.loadFailed',
+      undefined,
+      error
+    );
   }
 }
 
 async function resolveManagedEmailStep(tenant: string): Promise<OnboardingStepServerState> {
   const { tenant: tenantId } = await createTenantKnex(tenant);
   if (!tenantId) {
-    return buildErrorStep('managed_email', 'Tenant context is required to load email onboarding status.');
+    return buildErrorStep(
+      'managed_email',
+      'Tenant context is required to load email onboarding status.',
+      'onboarding.blockers.email.tenantRequired'
+    );
   }
   return resolveEmailStep(tenantId);
 }
@@ -449,10 +520,17 @@ async function resolveEmailStep(tenantId: string): Promise<OnboardingStepServerS
         status: 'blocked',
         lastUpdated: null,
         blocker: 'Managed email domains are only available in the Enterprise edition.',
+        blockerKey: 'onboarding.blockers.email.enterpriseOnly',
       };
     }
 
-    return buildErrorStep('managed_email', 'Unable to load managed email domains.', error);
+    return buildErrorStep(
+      'managed_email',
+      'Unable to load managed email domains.',
+      'onboarding.blockers.email.loadFailed',
+      undefined,
+      error
+    );
   }
 }
 
@@ -472,6 +550,7 @@ async function resolveInboundEmailProviderSubstep(tenantId: string): Promise<Onb
   return {
     id: 'email_inbound_provider',
     title: 'Configure inbound email',
+    titleKey: 'onboarding.substeps.email.configureInbound',
     status: total > 0 ? 'complete' : 'not_started',
     lastUpdated,
     meta: {
@@ -490,6 +569,7 @@ async function resolveOutboundCustomEmailDomainSubstep(): Promise<OnboardingSubs
     return {
       id: 'email_outbound_custom_domain',
       title: 'Configure outbound custom email domain',
+      titleKey: 'onboarding.substeps.email.configureOutboundDomain',
       status: 'not_started',
       lastUpdated: null,
     };
@@ -507,6 +587,7 @@ async function resolveOutboundCustomEmailDomainSubstep(): Promise<OnboardingSubs
     return {
       id: 'email_outbound_custom_domain',
       title: 'Configure outbound custom email domain',
+      titleKey: 'onboarding.substeps.email.configureOutboundDomain',
       status: 'complete',
       lastUpdated,
       meta: {
@@ -519,9 +600,12 @@ async function resolveOutboundCustomEmailDomainSubstep(): Promise<OnboardingSubs
     return {
       id: 'email_outbound_custom_domain',
       title: 'Configure outbound custom email domain',
+      titleKey: 'onboarding.substeps.email.configureOutboundDomain',
       status: 'blocked',
       lastUpdated,
       blocker: failed.failureReason || `Verification for ${failed.domain} failed.`,
+      blockerKey: failed.failureReason ? null : 'onboarding.blockers.email.verificationFailed',
+      blockerValues: failed.failureReason ? undefined : { domain: failed.domain },
       meta: {
         domains: domains.map((domain) => ({ domain: domain.domain, status: domain.status })),
       },
@@ -531,6 +615,7 @@ async function resolveOutboundCustomEmailDomainSubstep(): Promise<OnboardingSubs
   return {
     id: 'email_outbound_custom_domain',
     title: 'Configure outbound custom email domain',
+    titleKey: 'onboarding.substeps.email.configureOutboundDomain',
     status: 'in_progress',
     lastUpdated,
     meta: {

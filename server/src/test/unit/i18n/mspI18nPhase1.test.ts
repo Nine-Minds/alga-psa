@@ -267,7 +267,7 @@ describe('MSP i18n Phase 1', () => {
     expect(nav.contacts).toBe('Contacts');
     expect(nav.documents).toBe('Documents');
     expect(nav.assets).toBe('Assets');
-    expect(nav.billing).toBe('Billing');
+    expect(nav.billing.label).toBe('Billing');
     expect(nav.extensions).toBe('Extensions');
 
     const settingsItems = settingsNavigationSections.flatMap((section) => section.items);
@@ -312,7 +312,7 @@ describe('MSP i18n Phase 1', () => {
     expect(settingsPage).toContain("useFeatureFlag('msp-i18n-enabled'");
 
     const sidebar = readRepoFile('server/src/components/layout/Sidebar.tsx');
-    expect(sidebar).toContain('item.name !== \'Language\'');
+    expect(sidebar).toContain("item.translationKey !== 'settings.tabs.language'");
   });
 
   it('T048-T049: MSP locale tenant actions read and write mspPortal settings', () => {
