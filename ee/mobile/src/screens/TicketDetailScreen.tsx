@@ -1610,11 +1610,20 @@ function TimeFields({
     ? endMin - startMin
     : null;
   const durationStr = durationMin !== null ? String(durationMin) : "";
+  const [durationInput, setDurationInput] = useState(durationStr);
+  const [durationFocused, setDurationFocused] = useState(false);
 
-  const handleDurationChange = (text: string) => {
+  useEffect(() => {
+    if (!durationFocused) {
+      setDurationInput(durationStr);
+    }
+  }, [durationStr, durationFocused]);
+
+  const applyDuration = (text: string) => {
     const dur = Number(text);
-    if (!Number.isFinite(dur) || dur <= 0 || startMin === null) return;
-    onChangeEndTime(minutesToHHMM(startMin + dur));
+    if (Number.isFinite(dur) && dur > 0 && startMin !== null) {
+      onChangeEndTime(minutesToHHMM(startMin + dur));
+    }
   };
 
   const inputStyle = {
@@ -1664,8 +1673,13 @@ function TimeFields({
             {t("timeEntry.durationLabel")}
           </Text>
           <TextInput
-            value={durationStr}
-            onChangeText={handleDurationChange}
+            value={durationFocused ? durationInput : durationStr}
+            onChangeText={setDurationInput}
+            onFocus={() => setDurationFocused(true)}
+            onBlur={() => {
+              setDurationFocused(false);
+              applyDuration(durationInput);
+            }}
             placeholder={t("timeEntry.durationPlaceholder")}
             placeholderTextColor={colors.placeholder}
             keyboardType="number-pad"

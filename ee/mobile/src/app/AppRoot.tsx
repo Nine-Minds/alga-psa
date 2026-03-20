@@ -15,7 +15,7 @@ import { createApiClient } from "../api";
 import { refreshSession as refreshSessionApi, revokeSession } from "../api/mobileAuth";
 import { logger } from "../logging/logger";
 import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
-import { getBiometricGateEnabled } from "../auth/biometricGate";
+import { getBiometricGateEnabled, BIOMETRIC_GRACE_MS } from "../auth/biometricGate";
 import { BiometricLockView } from "./BiometricLockView";
 import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
@@ -42,6 +42,7 @@ export function AppRoot() {
   const startupStartedAt = useRef(Date.now());
   const startupReported = useRef(false);
   const lastRevocationCheckAtMs = useRef(0);
+  const lastBiometricUnlockAtMs = useRef(0);
 
   const baseUrl = config.ok ? config.baseUrl : null;
 
@@ -233,7 +234,10 @@ export function AppRoot() {
     if (!session) return;
     void (async () => {
       const biometricEnabled = await getBiometricGateEnabled();
-      if (biometricEnabled) setIsBiometricLocked(true);
+      if (!biometricEnabled) return;
+      const elapsed = Date.now() - lastBiometricUnlockAtMs.current;
+      if (lastBiometricUnlockAtMs.current > 0 && elapsed < BIOMETRIC_GRACE_MS) return;
+      setIsBiometricLocked(true);
     })();
   });
 
@@ -283,7 +287,10 @@ export function AppRoot() {
         }}
       >
         {session && isBiometricLocked ? (
-          <BiometricLockView onUnlocked={() => setIsBiometricLocked(false)} />
+          <BiometricLockView onUnlocked={() => {
+            lastBiometricUnlockAtMs.current = Date.now();
+            setIsBiometricLocked(false);
+          }} />
         ) : (
           <View style={{ flex: 1 }}>
             {isOfflineStatus(network) ? <OfflineBanner onRetry={() => {}} /> : null}
