@@ -127,7 +127,7 @@
   {
     "id": "F026",
     "description": "Refactor client contract-line reads so they are assignment-scoped and do not join `contract_lines` to `client_contracts` by `contract_id` alone.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F027",

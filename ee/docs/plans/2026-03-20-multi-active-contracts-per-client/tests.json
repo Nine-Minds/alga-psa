@@ -207,7 +207,7 @@
   {
     "id": "T025",
     "description": "DB-backed integration proves client contract-line reads are assignment-scoped and do not duplicate or cross-associate rows when two active assignments share the same `contract_id`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]

@@ -4,6 +4,17 @@ import type { IClientContractLine, ITransaction } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
 class ClientContractLine {
+  private static parseClientContractLineIdentity(value: string): { clientContractId?: string; contractLineId: string } {
+    const match = value.match(/^contract-([0-9a-fA-F-]{36})-([0-9a-fA-F-]{36})$/);
+    if (!match) {
+      return { contractLineId: value };
+    }
+    return {
+      clientContractId: match[1],
+      contractLineId: match[2],
+    };
+  }
+
   private static buildClientContractLineBaseQuery(
     db: Knex,
     tenant: string,
@@ -27,7 +38,7 @@ class ClientContractLine {
     // template_contract_id is exposed only as provenance metadata for callers.
     // Runtime reads and writes remain anchored on cc.contract_id / cl.contract_line_id.
     return [
-      'cl.contract_line_id as client_contract_line_id',
+      db.raw("concat('contract-', cc.client_contract_id, '-', cl.contract_line_id) as client_contract_line_id"),
       'cc.client_id',
       'cl.contract_line_id',
       'cl.service_category',
@@ -84,7 +95,8 @@ class ClientContractLine {
     }
 
     if (excludeContractLineId) {
-      query.whereNot('cl.contract_line_id', excludeContractLineId);
+      const identity = this.parseClientContractLineIdentity(excludeContractLineId);
+      query.whereNot('cl.contract_line_id', identity.contractLineId);
     }
 
     if (excludeContractId) {
@@ -235,12 +247,16 @@ class ClientContractLine {
       throw new Error('Tenant context is required for fetching contract line');
     }
 
-    const line = await this.buildClientContractLineBaseQuery(db, tenant)
+    const identity = this.parseClientContractLineIdentity(contractLineId);
+    const query = this.buildClientContractLineBaseQuery(db, tenant)
       .where({
-        'cl.contract_line_id': contractLineId,
+        'cl.contract_line_id': identity.contractLineId,
       })
-      .select(this.contractLineSelectColumns(db))
-      .first();
+      .select(this.contractLineSelectColumns(db));
+    if (identity.clientContractId) {
+      query.andWhere('cc.client_contract_id', identity.clientContractId);
+    }
+    const line = await query.first();
 
     return line as IClientContractLine | undefined;
   }

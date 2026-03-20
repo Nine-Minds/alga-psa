@@ -11,18 +11,90 @@ import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTi
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { withAuth } from '@alga-psa/auth';
 
+const parseClientContractLineIdentity = (value: string): { clientContractId?: string; contractLineId: string } => {
+  const match = value.match(/^contract-([0-9a-fA-F-]{36})-([0-9a-fA-F-]{36})$/);
+  if (!match) {
+    return { contractLineId: value };
+  }
+  return {
+    clientContractId: match[1],
+    contractLineId: match[2],
+  };
+};
+
+const ensureAssignmentScopedIdentity = (
+  identity: { clientContractId?: string; contractLineId: string },
+): { clientContractId: string; contractLineId: string } => {
+  if (!identity.clientContractId) {
+    throw new Error('Assignment-scoped client contract line identity is required for this mutation.');
+  }
+  return {
+    clientContractId: identity.clientContractId,
+    contractLineId: identity.contractLineId,
+  };
+};
+
+const assertSharedHeaderMutationIsExplicit = async (
+  trx: Knex.Transaction,
+  tenant: string,
+  identity: { clientContractId: string; contractLineId: string },
+): Promise<void> => {
+  const selectedAssignment = await trx('client_contracts')
+    .where({ tenant, client_contract_id: identity.clientContractId })
+    .first('client_id', 'contract_id');
+  if (!selectedAssignment) {
+    throw new Error(`Client contract ${identity.clientContractId} not found.`);
+  }
+
+  const assignmentCountRow = await trx('client_contracts')
+    .where({
+      tenant,
+      client_id: selectedAssignment.client_id,
+      contract_id: selectedAssignment.contract_id,
+      is_active: true,
+    })
+    .count<{ count: string }[]>('* as count')
+    .first();
+  const assignmentCount = Number(assignmentCountRow?.count ?? 0);
+  if (assignmentCount > 1) {
+    throw new Error(
+      `Contract line mutation is ambiguous for assignment ${identity.clientContractId}. ` +
+      'This mutation path updates shared contract-header lines. Resolve by editing a contract assignment with unique line scope.'
+    );
+  }
+
+  const lineExists = await trx('contract_lines as cl')
+    .where({
+      'cl.tenant': tenant,
+      'cl.contract_line_id': identity.contractLineId,
+      'cl.contract_id': selectedAssignment.contract_id,
+    })
+    .first('cl.contract_line_id');
+  if (!lineExists) {
+    throw new Error(
+      `Contract line ${identity.contractLineId} is not associated with client contract ${identity.clientContractId}.`
+    );
+  }
+};
+
 // Historical flat invoices can still lack canonical recurring detail rows during rollout.
 // Mutation guards therefore prefer recurring detail periods and fall back only for old flat invoices.
 async function getLatestHistoricalInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {
+  const identity = parseClientContractLineIdentity(clientContractLineId);
+
   // First, get the client_contract_id associated with the clientContractLineId
-  const planInfo = await db('contract_lines as cl')
+  const planInfoQuery = db('contract_lines as cl')
     .join('client_contracts as cc', function(this: Knex.JoinClause) {
       this.on('cl.contract_id', '=', 'cc.contract_id')
           .andOn('cl.tenant', '=', 'cc.tenant');
     })
     .select('cc.client_id', 'cl.contract_line_id', 'cc.client_contract_id')
-    .where({ 'cl.contract_line_id': clientContractLineId, 'cl.tenant': tenant })
-    .first();
+    .where({ 'cl.contract_line_id': identity.contractLineId, 'cl.tenant': tenant });
+
+  if (identity.clientContractId) {
+    planInfoQuery.andWhere('cc.client_contract_id', identity.clientContractId);
+  }
+  const planInfo = await planInfoQuery.first();
 
   if (!planInfo) {
     console.warn(`Contract line ${clientContractLineId} not found for tenant ${tenant}`);
@@ -178,7 +250,7 @@ export const getClientContractLine = withAuth(async (
         })
         .select([
           'cl.*',
-          'cl.contract_line_id as client_contract_line_id', // Map to expected interface field
+          trx.raw("concat('contract-', cc.client_contract_id, '-', cl.contract_line_id) as client_contract_line_id"),
           'cc.client_id',
           'cc.client_contract_id',
           'cc.start_date',
@@ -216,10 +288,12 @@ export const updateClientContractLine = withAuth(async (
 ): Promise<void> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
     const latestInvoicedPeriodEnd = await getLatestAuthoritativeRecurringPeriodEndDate(db, tenant, clientContractLineId);
-    assertContractLineMutationAllowed(latestInvoicedPeriodEnd, clientContractLineId, updates);
+    assertContractLineMutationAllowed(latestInvoicedPeriodEnd, identity.contractLineId, updates);
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const cadenceOwner = updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, clientContractLineId);
+      await assertSharedHeaderMutationIsExplicit(trx, tenant, identity);
+      const cadenceOwner = updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, identity.contractLineId);
 
       // Filter updates to include only columns that exist on contract_lines
       const {
@@ -238,7 +312,7 @@ export const updateClientContractLine = withAuth(async (
 
       return await trx('contract_lines')
         .where({
-          contract_line_id: clientContractLineId,
+          contract_line_id: identity.contractLineId,
           tenant
         })
         .update(validUpdates);
@@ -368,6 +442,7 @@ export const removeClientContractLine = withAuth(async (
 ): Promise<void> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
 
     // --- Validation Start ---
     const latestInvoicedPeriodEnd = await getLatestAuthoritativeRecurringPeriodEndDate(db, tenant, clientContractLineId);
@@ -377,9 +452,10 @@ export const removeClientContractLine = withAuth(async (
     // --- Validation End ---
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertSharedHeaderMutationIsExplicit(trx, tenant, identity);
       return await trx('contract_lines')
         .where({
-          contract_line_id: clientContractLineId,
+          contract_line_id: identity.contractLineId,
           tenant
         })
         .update({ is_active: false }); // end_date removed as it's not on contract_lines
@@ -403,6 +479,7 @@ export const editClientContractLine = withAuth(async (
 ): Promise<void> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const identity = ensureAssignmentScopedIdentity(parseClientContractLineIdentity(clientContractLineId));
 
     // Convert dates to proper format
     // Use 'any' type here to allow assigning Date objects, knex will handle them.
@@ -425,12 +502,13 @@ export const editClientContractLine = withAuth(async (
 
     // --- Validation Start ---
     const latestInvoicedPeriodEnd = await getLatestAuthoritativeRecurringPeriodEndDate(db, tenant, clientContractLineId);
-    assertContractLineMutationAllowed(latestInvoicedPeriodEnd, clientContractLineId, updates);
+    assertContractLineMutationAllowed(latestInvoicedPeriodEnd, identity.contractLineId, updates);
     // --- Validation End ---
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertSharedHeaderMutationIsExplicit(trx, tenant, identity);
       updateData.cadence_owner =
-        updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, clientContractLineId);
+        updates.cadence_owner ?? await getExistingCadenceOwner(trx, tenant, identity.contractLineId);
 
       // Filter updates to include only columns that exist on contract_lines
       const {
@@ -447,7 +525,7 @@ export const editClientContractLine = withAuth(async (
 
       return await trx('contract_lines')
         .where({
-          contract_line_id: clientContractLineId,
+          contract_line_id: identity.contractLineId,
           tenant
         })
         .update(validUpdates);

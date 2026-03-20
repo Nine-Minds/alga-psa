@@ -98,6 +98,8 @@
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/contract.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts`
 - 2026-03-20: Clients identity wiring test run
   - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
+- 2026-03-20: Client contract-line assignment read wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
 
 ## Implementation Log
 
@@ -115,6 +117,8 @@
 - 2026-03-20: Updated `ClientContractAssignment` to keep assignment flows keyed by `client_contract_id`:
   - add/apply now uses the returned assignment id from `assignContractToClient(...)`
   - removed contract-header de-dup filtering that blocked creating a second active assignment for the same `contract_id`
+- 2026-03-20: Refactored clients contract-line reads to emit assignment-scoped synthetic identity (`contract-<client_contract_id>-<contract_line_id>`) instead of aliasing raw `contract_line_id` as `client_contract_line_id`.
+- 2026-03-20: Added synthetic identity parsing in clients contract-line action/model paths so historical invoice guards and mutations can resolve back to underlying contract-line IDs without reintroducing contract-header-only read identity.
 
 ## Links / References
 
