@@ -79,12 +79,16 @@ async function calculatePeriod(
 
     console.debug(`[calculatePeriod] Inputs: tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
 
-    // Find the active client contract line that covers the target date AND
+    // Find the active client-owned contract line that covers the target date AND
     // is associated with a bucket configuration for the given serviceCatalogId.
-    const clientPlan = await trx('client_contract_lines as ccl')
+    const clientPlan = await trx('client_contracts as cc')
+        .join('contracts as ct', function() {
+            this.on('ct.contract_id', '=', trx.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
+                .andOn('ct.tenant', '=', 'cc.tenant');
+        })
         .join('contract_lines as cl', function() {
-            this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
-                .andOn('ccl.tenant', '=', 'cl.tenant');
+            this.on('cl.contract_id', '=', 'ct.contract_id')
+                .andOn('cl.tenant', '=', 'ct.tenant');
         })
         .join('contract_line_service_configuration as psc', function() {
             this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
@@ -95,23 +99,23 @@ async function calculatePeriod(
             this.on('psc.config_id', '=', 'psbc.config_id')
                 .andOn('psc.tenant', '=', 'psbc.tenant');
         })
-        .where('ccl.client_id', clientId)
-        .andWhere('ccl.tenant', tenant)
-        .andWhere('ccl.is_active', true)
-        .andWhere('ccl.start_date', '<=', targetDateISO) // Plan must start on or before the target date
+        .where('cc.client_id', clientId)
+        .andWhere('cc.tenant', tenant)
+        .andWhere('cc.is_active', true)
+        .andWhere('cc.start_date', '<=', targetDateISO) // Plan must start on or before the target date
         .andWhere(function() {
             // Plan must end on or after the target date, or have no end date
-            this.where('ccl.end_date', '>=', targetDateISO)
-                .orWhereNull('ccl.end_date');
+            this.where('cc.end_date', '>=', targetDateISO)
+                .orWhereNull('cc.end_date');
         })
         .select(
-            'ccl.client_contract_line_id',
-            'ccl.contract_line_id',
-            'ccl.start_date', // Use the client-specific plan start date as the anchor
+            'cl.contract_line_id as client_contract_line_id',
+            'cl.contract_line_id',
+            'cc.start_date', // Use the client-specific assignment start date as the anchor
             'cl.billing_frequency',
             'cl.cadence_owner',
          )
-        .orderBy('ccl.start_date', 'desc') // Prefer the most recently started plan if overlaps occur
+        .orderBy('cc.start_date', 'desc') // Prefer the most recently started plan if overlaps occur
         .first<{
             client_contract_line_id: string;
             contract_line_id: string;

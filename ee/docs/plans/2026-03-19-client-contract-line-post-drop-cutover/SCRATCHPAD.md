@@ -34,6 +34,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:19 EDT) Preview/generate selector normalization for client cadence can follow the same post-drop lookup as due-work loading: `recurring_service_periods -> contract_lines -> contracts.owner_client_id`. The selector-input path only needs to prove the persisted service-period window belongs to the client; it does not need a dropped assignment row.
 - (2026-03-19 23:21 EDT) Service-period inspection uses the same obligation-context rule: persisted client-cadence rows can resolve display metadata directly from `contract_lines -> contracts.owner_client_id`. No live inspection path needs a dropped client assignment row once the recurring service period already exists.
 - (2026-03-19 23:26 EDT) `packages/billing/src/actions/clientCadenceScheduleRegeneration.ts` was the next stale runtime caller. Its query still started from `client_contract_lines`, and `server/src/test/unit/billing/updateClientBillingSchedule.test.ts` encoded that exact base table in its fake transaction responses.
+- (2026-03-19 23:29 EDT) Invoice-detail linkage was still widening client-cadence obligation candidates through `client_contract_lines`. In the post-drop model that lookup is redundant because live client-cadence recurring service periods already use `obligation_type = 'client_contract_line'` with the surviving `contract_line_id` as `obligation_id`.
+- (2026-03-19 23:30 EDT) Bucket period resolution had the same stale assumption: it only needed an active client assignment window plus the canonical contract line and bucket config, but it still started that lookup from `client_contract_lines`.
 
 ## Commands / Runbooks
 
@@ -76,6 +78,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `pnpm exec vitest run src/test/unit/billing/recurringServicePeriodActions.test.ts` (run from `server/`)
 - (2026-03-19 23:26 EDT) Verification for F007/T009:
   - `pnpm exec vitest run src/test/unit/billing/updateClientBillingSchedule.test.ts` (run from `server/`)
+- (2026-03-19 23:29 EDT) Verification for F008 linkage cleanup:
+  - `pnpm exec vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts src/test/unit/billing/recurringInvoiceLinkage.static.test.ts` (run from `server/`)
+- (2026-03-19 23:30 EDT) Verification for F009 bucket period resolution:
+  - `pnpm exec vitest run src/test/unit/billing/bucketUsageService.periods.test.ts` (run from `server/`)
 
 ## Completed Items
 
@@ -90,6 +96,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-19 23:21 EDT) Completed `T008`: service-period management view coverage now simulates a migrated schema by failing on any `client_contract_lines` access while still returning client/contract/line context for a client-cadence schedule.
 - (2026-03-19 23:26 EDT) Completed `F007`: client-cadence schedule regeneration now loads active recurring obligations from `client_contracts -> contracts -> contract_lines` and aliases the surviving `contract_line_id` back to `client_contract_line_id` for compatibility, removing the dropped-table dependency from billing-schedule changes.
 - (2026-03-19 23:26 EDT) Completed `T009`: billing-schedule regeneration coverage now seeds `client_contracts as cc`, treats `client_contract_lines` as missing, and still verifies regenerated recurring service periods are materialized and superseded correctly.
+- (2026-03-19 23:29 EDT) Completed `F008`: invoice-detail linkage no longer queries `client_contract_lines` to derive client-cadence recurring obligation candidates. The live path now matches recurring service periods against the surviving `contract_line_id` for both `contract_line` and compatibility `client_contract_line` obligation types.
+- (2026-03-19 23:30 EDT) Completed `F009`: bucket recurring period resolution now finds active client-cadence obligations through `client_contracts -> contracts -> contract_lines`, preserving compatibility-only `client_contract_line` obligation typing while using the surviving `contract_line_id` as the recurring obligation id.
 
 ## Links / References
 

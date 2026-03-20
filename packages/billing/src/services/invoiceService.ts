@@ -132,24 +132,11 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
       obligation_type: 'contract_line',
       obligation_id: configRow.contract_line_id,
     },
+    {
+      obligation_type: 'client_contract_line',
+      obligation_id: configRow.contract_line_id,
+    },
   ];
-
-  const clientContractLineRows = await tx('client_contract_lines')
-    .where({
-      tenant,
-      client_id: clientId,
-      contract_line_id: configRow.contract_line_id,
-    })
-    .select<{ client_contract_line_id: string }[]>('client_contract_line_id');
-
-  for (const row of clientContractLineRows) {
-    if (row.client_contract_line_id) {
-      obligationCandidates.push({
-        obligation_type: 'client_contract_line',
-        obligation_id: row.client_contract_line_id,
-      });
-    }
-  }
 
   return tx('recurring_service_periods')
     .where({ tenant, charge_family: chargeFamily, due_position: billingTiming })

@@ -36,6 +36,11 @@ function buildBucketUsageTransaction(config: {
   };
 
   const trx: any = ((tableName: string) => {
+    const baseTableName = tableName.split(/\s+as\s+/i)[0];
+    if (baseTableName === "client_contract_lines") {
+      throw new Error('relation "client_contract_lines" does not exist');
+    }
+
     state.tablesCalled.push(tableName);
     const builder: any = {};
     const recurringCallIndex =
@@ -65,7 +70,7 @@ function buildBucketUsageTransaction(config: {
     builder.select = vi.fn().mockImplementation(() => builder);
 
     builder.first = vi.fn().mockImplementation(async () => {
-      if (tableName === "client_contract_lines as ccl") {
+      if (tableName === "client_contracts as cc") {
         return {
           client_contract_line_id: config.clientContractLineId,
           contract_line_id: config.contractLineId,
@@ -126,6 +131,7 @@ function buildBucketUsageTransaction(config: {
     return builder;
   }) as any;
 
+  trx.raw = (value: string) => value;
   trx.client = {
     config: {
       tenant: "test-tenant",
@@ -139,7 +145,7 @@ describe("bucketUsageService period selection", () => {
   it("T054: bucket recurring period resolution follows canonical recurring service periods for client cadence", async () => {
     const { trx, state } = buildBucketUsageTransaction({
       cadenceOwner: "client",
-      clientContractLineId: "assignment-1",
+      clientContractLineId: "plan-1",
       contractLineId: "plan-1",
       currentRecurringPeriod: {
         schedule_key: "schedule-client",
@@ -190,7 +196,7 @@ describe("bucketUsageService period selection", () => {
     expect(state.tablesCalled).not.toContain("client_billing_cycles");
     expect(state.recurringWhereCalls[0]).toEqual(
       expect.arrayContaining([
-        [{ tenant: "test-tenant", obligation_type: "client_contract_line", obligation_id: "assignment-1" }],
+        [{ tenant: "test-tenant", obligation_type: "client_contract_line", obligation_id: "plan-1" }],
       ]),
     );
   });

@@ -58,6 +58,7 @@ class MockQueryBuilder {
     private readonly tables: Record<string, Row[]>,
     private readonly inserts: Record<string, Row[]>,
     private readonly tableName: string,
+    private readonly missingTables: Set<string>,
   ) {}
 
   private get rows() {
@@ -104,10 +105,16 @@ class MockQueryBuilder {
   }
 
   async first(columns?: string[] | string) {
+    if (this.missingTables.has(this.tableName)) {
+      throw new Error(`relation "${this.tableName}" does not exist`);
+    }
     return projectRow(this.filteredRows()[0], columns);
   }
 
   async select(...columns: string[]) {
+    if (this.missingTables.has(this.tableName)) {
+      throw new Error(`relation "${this.tableName}" does not exist`);
+    }
     if (columns.length === 0) {
       return this.filteredRows();
     }
@@ -131,13 +138,17 @@ class MockQueryBuilder {
   }
 }
 
-function createMockTx(initialTables: Record<string, Row[]> = {}) {
+function createMockTx(
+  initialTables: Record<string, Row[]> = {},
+  options?: { missingTables?: string[] },
+) {
   const tables = Object.fromEntries(
     Object.entries(initialTables).map(([tableName, rows]) => [
       normalizeTableName(tableName),
       rows.map((row) => ({ ...row })),
     ]),
   ) as Record<string, Row[]>;
+  const missingTables = new Set(options?.missingTables ?? []);
   const inserts: Record<string, Row[]> = {
     invoice_charges: [],
     invoice_charge_details: [],
@@ -145,7 +156,12 @@ function createMockTx(initialTables: Record<string, Row[]> = {}) {
   };
 
   const tx: any = (tableName: string) =>
-    new MockQueryBuilder(tables, inserts, normalizeTableName(tableName));
+    new MockQueryBuilder(
+      tables,
+      inserts,
+      normalizeTableName(tableName),
+      missingTables,
+    );
 
   return { tx, inserts, tables };
 }
@@ -440,14 +456,6 @@ describe("invoiceService fixed recurring persistence", () => {
           contract_line_id: "contract-line-1",
         },
       ],
-      client_contract_lines: [
-        {
-          tenant: "tenant-1",
-          client_id: "client-1",
-          contract_line_id: "contract-line-1",
-          client_contract_line_id: "assignment-1",
-        },
-      ],
       recurring_service_periods: [
         {
           record_id: "rsp-client-1",
@@ -455,7 +463,7 @@ describe("invoiceService fixed recurring persistence", () => {
           charge_family: "product",
           due_position: "arrears",
           obligation_type: "client_contract_line",
-          obligation_id: "assignment-1",
+          obligation_id: "contract-line-1",
           lifecycle_state: "generated",
           invoice_charge_detail_id: null,
           service_period_start: "2025-01-01",
@@ -464,6 +472,8 @@ describe("invoiceService fixed recurring persistence", () => {
           invoice_window_end: "2025-03-01",
         },
       ],
+    }, {
+      missingTables: ["client_contract_lines"],
     });
 
     await persistInvoiceCharges(
@@ -530,14 +540,6 @@ describe("invoiceService fixed recurring persistence", () => {
           contract_line_id: "contract-line-2",
         },
       ],
-      client_contract_lines: [
-        {
-          tenant: "tenant-1",
-          client_id: "client-1",
-          contract_line_id: "contract-line-2",
-          client_contract_line_id: "assignment-2",
-        },
-      ],
       recurring_service_periods: [
         {
           record_id: "rsp-contract-1",
@@ -554,6 +556,8 @@ describe("invoiceService fixed recurring persistence", () => {
           invoice_window_end: "2025-04-01",
         },
       ],
+    }, {
+      missingTables: ["client_contract_lines"],
     });
 
     await persistInvoiceCharges(

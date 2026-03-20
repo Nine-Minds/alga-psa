@@ -22,6 +22,7 @@ describe('recurring invoice linkage source guards', () => {
     expect(invoiceServiceSource).not.toContain('isMissingRecurringLinkageRelationError');
     expect(invoiceServiceSource).not.toContain('relation .* does not exist');
     expect(invoiceServiceSource).not.toContain("code === '42P01'");
-    expect(invoiceServiceSource).toContain("await tx('client_contract_lines')");
+    expect(invoiceServiceSource).not.toContain("await tx('client_contract_lines')");
+    expect(invoiceServiceSource).toContain("obligation_id: configRow.contract_line_id");
   });
 });
