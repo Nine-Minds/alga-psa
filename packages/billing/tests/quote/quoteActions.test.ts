@@ -24,7 +24,10 @@ const hasPermissionMock = vi.fn();
 const sendEmailMock = vi.fn();
 const getTenantEmailServiceInstance = vi.fn(() => ({ sendEmail: (...args: any[]) => sendEmailMock(...args) }));
 const generatePDFMock = vi.fn();
+const generateAndStoreMock = vi.fn();
 const approvalSettingsMock = vi.fn();
+const documentInsertMock = vi.fn();
+const documentAssociationCreateMock = vi.fn();
 
 const makeQuery = (result: any) => {
   const chain: any = {};
@@ -70,6 +73,18 @@ vi.mock('../../src/services', () => ({
   convertQuoteToDraftInvoice: vi.fn(),
   createQuotePDFGenerationService: vi.fn(() => ({
     generatePDF: (...args: any[]) => generatePDFMock(...args),
+    generateAndStore: (...args: any[]) => generateAndStoreMock(...args),
+  })),
+}));
+
+vi.mock('../../src/lib/documentsHelpers', () => ({
+  getStorageProviderFactoryAsync: vi.fn(),
+  getFileStoreModelAsync: vi.fn(),
+  getDocumentModelAsync: vi.fn(async () => ({
+    insert: (...args: any[]) => documentInsertMock(...args),
+  })),
+  getDocumentAssociationModelAsync: vi.fn(async () => ({
+    create: (...args: any[]) => documentAssociationCreateMock(...args),
   })),
 }));
 
@@ -160,6 +175,9 @@ describe('quoteActions', () => {
     createTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: TENANT_ID });
     hasPermissionMock.mockResolvedValue(true);
     generatePDFMock.mockResolvedValue(Buffer.from('pdf-content'));
+    generateAndStoreMock.mockResolvedValue({ file_id: 'stored-file-1', storage_path: 'tenant/pdfs/Q-0001.pdf', file_size: 1024 });
+    documentInsertMock.mockResolvedValue({ document_id: 'doc-1' });
+    documentAssociationCreateMock.mockResolvedValue({ association_id: 'assoc-1' });
     sendEmailMock.mockResolvedValue({ success: true, messageId: 'message-1' });
     approvalSettingsMock.mockResolvedValue({ approvalRequired: false });
     vi.spyOn(Quote, 'create').mockResolvedValue({ quote_id: QUOTE_ID } as any);
@@ -929,5 +947,178 @@ describe('quoteActions', () => {
       entityType: 'quote',
       entityId: QUOTE_ID,
     }));
+  });
+
+  it('T129: sendQuote stores a PDF document and creates a quote association', async () => {
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(generateAndStoreMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quoteId: QUOTE_ID,
+        quoteNumber: 'Q-0001',
+        userId: USER_ID,
+      })
+    );
+    expect(documentInsertMock).toHaveBeenCalledWith(
+      mockKnex,
+      expect.objectContaining({
+        document_name: 'Quote_Q-0001.pdf',
+        mime_type: 'application/pdf',
+        file_id: 'stored-file-1',
+        folder_path: '/Quotes/Generated',
+        is_client_visible: true,
+        tenant: TENANT_ID,
+      })
+    );
+    expect(documentAssociationCreateMock).toHaveBeenCalledWith(
+      mockKnex,
+      expect.objectContaining({
+        entity_id: QUOTE_ID,
+        entity_type: 'quote',
+        tenant: TENANT_ID,
+      })
+    );
+  });
+
+  it('T130: sendQuote succeeds even if PDF storage fails', async () => {
+    generateAndStoreMock.mockRejectedValueOnce(new Error('Storage unavailable'));
+
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    const result = await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    // Email was sent successfully
+    expect(sendEmailMock).toHaveBeenCalled();
+    // Status was updated to sent despite storage failure
+    expect(Quote.update).toHaveBeenCalledWith(
+      mockKnex,
+      TENANT_ID,
+      QUOTE_ID,
+      expect.objectContaining({ status: 'sent' })
+    );
+    expect(result).toMatchObject({ status: 'sent' });
+  });
+
+  it('T131: getQuotePdfFileId returns the stored file_id for a quote with a PDF', async () => {
+    const docQuery = makeQuery({ file_id: 'stored-file-42' });
+    docQuery.join = vi.fn(() => docQuery);
+    docQuery.whereNotNull = vi.fn(() => docQuery);
+    docQuery.orderBy = vi.fn(() => docQuery);
+    mockKnex.mockImplementation((table: string) => {
+      if (table === 'document_associations as da') {
+        return docQuery;
+      }
+      if (table === 'tenants') {
+        return makeQuery({ client_name: 'Acme MSP' });
+      }
+      throw new Error(`Unexpected mockKnex table access: ${table}`);
+    });
+
+    const { getQuotePdfFileId } = await import('../../src/actions/quoteActions');
+    const result = await getQuotePdfFileId(QUOTE_ID);
+
+    expect(result).toBe('stored-file-42');
+    expect(docQuery.where).toHaveBeenCalledWith(
+      expect.objectContaining({
+        'da.entity_id': QUOTE_ID,
+        'da.entity_type': 'quote',
+        'da.tenant': TENANT_ID,
+      })
+    );
+  });
+
+  it('T132: getQuotePdfFileId returns null when no PDF is stored', async () => {
+    const docQuery = makeQuery(undefined);
+    docQuery.join = vi.fn(() => docQuery);
+    docQuery.whereNotNull = vi.fn(() => docQuery);
+    docQuery.orderBy = vi.fn(() => docQuery);
+    mockKnex.mockImplementation((table: string) => {
+      if (table === 'document_associations as da') {
+        return docQuery;
+      }
+      if (table === 'tenants') {
+        return makeQuery({ client_name: 'Acme MSP' });
+      }
+      throw new Error(`Unexpected mockKnex table access: ${table}`);
+    });
+
+    const { getQuotePdfFileId } = await import('../../src/actions/quoteActions');
+    const result = await getQuotePdfFileId(QUOTE_ID);
+
+    expect(result).toBeNull();
+  });
+
+  it('T133: regenerateQuotePdf generates a new PDF and stores it as a document', async () => {
+    vi.spyOn(Quote, 'getById').mockResolvedValueOnce({
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      created_by: USER_ID,
+    } as any);
+
+    const { regenerateQuotePdf } = await import('../../src/actions/quoteActions');
+    const result = await regenerateQuotePdf(QUOTE_ID);
+
+    expect(generateAndStoreMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quoteId: QUOTE_ID,
+        quoteNumber: 'Q-0001',
+        userId: USER_ID,
+      })
+    );
+    expect(documentInsertMock).toHaveBeenCalled();
+    expect(documentAssociationCreateMock).toHaveBeenCalled();
+    expect(result).toBe('stored-file-1');
+  });
+
+  it('T134: regenerateQuotePdf throws when quote does not exist', async () => {
+    vi.spyOn(Quote, 'getById').mockResolvedValueOnce(null);
+
+    const { regenerateQuotePdf } = await import('../../src/actions/quoteActions');
+
+    await expect(regenerateQuotePdf(QUOTE_ID)).rejects.toThrow('Quote 33333333-3333-4333-8333-333333333333 not found');
+  });
+
+  it('T135: regenerateQuotePdf requires billing:update permission', async () => {
+    hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => (
+      !(resource === 'billing' && action === 'update')
+    ));
+
+    const { regenerateQuotePdf } = await import('../../src/actions/quoteActions');
+    const result = await regenerateQuotePdf(QUOTE_ID);
+
+    expect(result).toEqual({ permissionError: 'Permission denied: Cannot update quotes' });
+    expect(generateAndStoreMock).not.toHaveBeenCalled();
   });
 });

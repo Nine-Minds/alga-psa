@@ -816,3 +816,56 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
     throw new Error('Failed to fetch current usage');
   }
 });
+
+/**
+ * Download quote PDF - looks up the stored PDF file_id for the quote.
+ * If no PDF exists yet (quote was created before PDF storage was added),
+ * generates and stores one on the fly.
+ */
+export const downloadClientQuotePdf = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string
+): Promise<DownloadPdfResult> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    const quote = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return getAuthorizedClientQuote(trx, user, tenant, quoteId);
+    });
+
+    // Look for an existing stored PDF document
+    const doc = await knex('document_associations as da')
+      .join('documents as d', function () {
+        this.on('da.document_id', 'd.document_id')
+          .andOn('da.tenant', 'd.tenant');
+      })
+      .where({
+        'da.entity_id': quoteId,
+        'da.entity_type': 'quote',
+        'da.tenant': tenant,
+      })
+      .whereNotNull('d.file_id')
+      .orderBy('da.created_at', 'desc')
+      .select('d.file_id')
+      .first<{ file_id: string } | undefined>();
+
+    if (doc?.file_id) {
+      return { success: true, fileId: doc.file_id };
+    }
+
+    // No stored PDF yet — generate one on the fly
+    const { createQuotePDFGenerationService } = await import('@alga-psa/billing/services');
+    const pdfService = createQuotePDFGenerationService(tenant);
+    const fileRecord = await pdfService.generateAndStore({
+      quoteId: quote.quote_id,
+      quoteNumber: quote.quote_number ?? undefined,
+      userId: user.user_id,
+    });
+
+    return { success: true, fileId: fileRecord.file_id };
+  } catch (error) {
+    console.error('Error downloading quote PDF:', error);
+    return { success: false, error: 'Failed to download quote PDF' };
+  }
+});

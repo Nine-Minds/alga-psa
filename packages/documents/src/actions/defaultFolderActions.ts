@@ -211,6 +211,14 @@ const SUGGESTED_DEFAULTS: ISuggestedDefault[] = [
       { folderPath: '/Assets/Licenses', sortOrder: 3, isClientVisible: false },
     ],
   },
+  {
+    entityType: 'quote',
+    items: [
+      { folderPath: '/Quotes', sortOrder: 0, isClientVisible: true },
+      { folderPath: '/Quotes/Generated', sortOrder: 1, isClientVisible: true },
+      { folderPath: '/Quotes/Attachments', sortOrder: 2, isClientVisible: true },
+    ],
+  },
 ];
 
 /**

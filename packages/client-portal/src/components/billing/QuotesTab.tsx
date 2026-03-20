@@ -9,9 +9,9 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import type { ColumnDefinition, IQuote, IQuoteItem, IQuoteWithClient, QuoteStatus } from '@alga-psa/types';
 import { QUOTE_STATUS_METADATA } from '@alga-psa/types';
-import { acceptClientQuote, getClientQuoteById, getClientQuotes, rejectClientQuote, updateClientQuoteSelections } from '@alga-psa/client-portal/actions';
+import { acceptClientQuote, downloadClientQuotePdf, getClientQuoteById, getClientQuotes, rejectClientQuote, updateClientQuoteSelections } from '@alga-psa/client-portal/actions';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 
 interface QuotesTabProps {
   formatCurrency: (amount: number, currencyCode?: string) => string;
@@ -150,6 +150,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const selectedQuoteId = searchParams?.get('quoteId');
 
@@ -326,6 +327,33 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!selectedQuote) {
+      return;
+    }
+
+    setIsDownloadingPdf(true);
+    try {
+      const result = await downloadClientQuotePdf(selectedQuote.quote_id);
+      if (result.success && result.fileId) {
+        const downloadUrl = `/api/documents/download/${result.fileId}`;
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        setDecisionError(result.error || 'Failed to download PDF.');
+      }
+    } catch (err) {
+      console.error('Error downloading quote PDF:', err);
+      setDecisionError('Failed to download PDF. Please try again.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   const quoteColumns: ColumnDefinition<IQuoteWithClient>[] = useMemo(() => [
     {
       title: 'Quote #',
@@ -400,9 +428,21 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
               </h3>
               <p className="text-sm text-gray-500">{selectedQuote.title}</p>
             </div>
-            <Button id="close-quote-details" variant="ghost" size="sm" onClick={() => updateUrlParams({ quoteId: null })}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                id="download-quote-pdf"
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+              >
+                <Download className="mr-1 h-4 w-4" />
+                {isDownloadingPdf ? 'Downloading…' : 'Download PDF'}
+              </Button>
+              <Button id="close-quote-details" variant="ghost" size="sm" onClick={() => updateUrlParams({ quoteId: null })}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-6 p-4">

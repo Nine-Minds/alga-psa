@@ -570,6 +570,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
             .first();
           return record?.converted_contract_id || record?.converted_invoice_id ? 1 : 0;
         }
+      },
+      {
+        type: 'document',
+        table: 'document_associations',
+        label: 'document',
+        countQuery: countDocumentAssociations('quote')
       }
     ]
   }

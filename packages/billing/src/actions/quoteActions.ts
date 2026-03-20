@@ -1,5 +1,6 @@
 'use server';
 
+import { randomUUID } from 'crypto';
 import { createTenantKnex } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
@@ -15,6 +16,7 @@ import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate } from '..
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, createQuotePDFGenerationService } from '../services';
+import { getDocumentModelAsync, getDocumentAssociationModelAsync } from '../lib/documentsHelpers';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -166,6 +168,51 @@ const getQuoteRecipients = async (
         .filter((email) => email.length > 0)
     )
   );
+};
+
+const storeQuotePdf = async (
+  knex: Knex,
+  tenant: string,
+  quote: IQuote,
+  userId: string
+): Promise<string> => {
+  const pdfService = createQuotePDFGenerationService(tenant);
+  const fileRecord = await pdfService.generateAndStore({
+    quoteId: quote.quote_id,
+    quoteNumber: quote.quote_number ?? undefined,
+    userId,
+  });
+
+  const documentId = randomUUID();
+  const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
+
+  const DocumentModel = await getDocumentModelAsync();
+  const DocumentAssociation = await getDocumentAssociationModelAsync();
+
+  await DocumentModel.insert(knex, {
+    document_id: documentId,
+    document_name: `Quote_${resolvedQuoteNumber}.pdf`,
+    type_id: null,
+    user_id: userId,
+    created_by: userId,
+    order_number: 0,
+    tenant,
+    file_id: fileRecord.file_id,
+    storage_path: fileRecord.storage_path,
+    mime_type: 'application/pdf',
+    file_size: fileRecord.file_size,
+    folder_path: '/Quotes/Generated',
+    is_client_visible: true,
+  });
+
+  await DocumentAssociation.create(knex, {
+    document_id: documentId,
+    entity_id: quote.quote_id,
+    entity_type: 'quote',
+    tenant,
+  });
+
+  return fileRecord.file_id;
 };
 
 const sendQuoteEmailWithAttachment = async ({
@@ -848,17 +895,25 @@ export const sendQuote = withAuth(async (
     throw new Error(emailResult.error || 'Failed to send quote email');
   }
 
+  // Store the generated PDF as a document associated with the quote
+  const actorUserId = getActorUserId(user);
+  try {
+    await storeQuotePdf(knex, tenant, quote, actorUserId ?? quote.created_by ?? 'system');
+  } catch (pdfStoreError) {
+    console.error('Failed to store quote PDF (email was sent successfully):', pdfStoreError);
+  }
+
   await Quote.update(knex, tenant, quoteId, {
     status: 'sent',
     sent_at: new Date().toISOString(),
-    updated_by: getActorUserId(user),
+    updated_by: actorUserId,
   });
 
   await QuoteActivity.create(knex, tenant, {
     quote_id: quoteId,
     activity_type: 'sent',
     description: `Quote sent to ${recipients.join(', ')}`,
-    performed_by: getActorUserId(user),
+    performed_by: actorUserId,
     metadata: {
       recipients,
       message_id: emailResult.messageId ?? null,
@@ -1133,4 +1188,63 @@ export const getQuoteByConvertedInvoiceId = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return Quote.getByConvertedInvoiceId(knex, tenant, invoiceId);
+});
+
+/**
+ * Get the most recent stored PDF file_id for a quote.
+ * Returns null if no PDF has been stored yet.
+ */
+export const getQuotePdfFileId = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+): Promise<string | null | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+
+  const doc = await knex('document_associations as da')
+    .join('documents as d', function () {
+      this.on('da.document_id', 'd.document_id')
+        .andOn('da.tenant', 'd.tenant');
+    })
+    .where({
+      'da.entity_id': quoteId,
+      'da.entity_type': 'quote',
+      'da.tenant': tenant,
+    })
+    .whereNotNull('d.file_id')
+    .orderBy('da.created_at', 'desc')
+    .select('d.file_id')
+    .first<{ file_id: string } | undefined>();
+
+  return doc?.file_id ?? null;
+});
+
+/**
+ * Generate a fresh PDF for a quote and store it, replacing any existing stored PDF.
+ */
+export const regenerateQuotePdf = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+): Promise<string | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const quote = await Quote.getById(knex, tenant, quoteId);
+
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found`);
+  }
+
+  const actorUserId = getActorUserId(user) ?? quote.created_by ?? 'system';
+  const fileId = await storeQuotePdf(knex, tenant, quote, actorUserId);
+  return fileId;
 });

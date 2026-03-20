@@ -40,3 +40,16 @@ export async function getDocumentsByContractIdAsync(contractId: string) {
   const module = await import(/* webpackIgnore: true */ getDocumentsActionsModule());
   return module.getDocumentsByContractId(contractId);
 }
+
+const getDocumentsModelModule = () => '@alga-psa/' + 'documents/models/document';
+const getDocumentsAssociationModelModule = () => '@alga-psa/' + 'documents/models/documentAssociation';
+
+export async function getDocumentModelAsync() {
+  const module = await import(/* webpackIgnore: true */ getDocumentsModelModule());
+  return module.default;
+}
+
+export async function getDocumentAssociationModelAsync() {
+  const module = await import(/* webpackIgnore: true */ getDocumentsAssociationModelModule());
+  return module.default;
+}

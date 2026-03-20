@@ -443,4 +443,95 @@ describe('client quote billing actions', () => {
     await expect(rejectClientQuote('quote-1', 'Too late')).rejects.toThrow('Failed to reject quote');
     expect(updateQuoteMock).not.toHaveBeenCalled();
   });
+
+  it('T136: downloadClientQuotePdf returns stored file_id when PDF exists', async () => {
+    // Add a document association query mock to the trx builder
+    const origBuildTrx = buildTrx;
+    const docAssocQuery: any = {};
+    docAssocQuery.join = vi.fn(() => docAssocQuery);
+    docAssocQuery.where = vi.fn(() => docAssocQuery);
+    docAssocQuery.whereNotNull = vi.fn(() => docAssocQuery);
+    docAssocQuery.orderBy = vi.fn(() => docAssocQuery);
+    docAssocQuery.select = vi.fn(() => docAssocQuery);
+    docAssocQuery.first = vi.fn(async () => ({ file_id: 'stored-pdf-file-1' }));
+
+    getConnectionMock.mockResolvedValue(
+      Object.assign(
+        (table: string) => {
+          if (table === 'document_associations as da') {
+            return docAssocQuery;
+          }
+          throw new Error(`Unexpected table: ${table}`);
+        },
+        { tenant: 'tenant-1' }
+      )
+    );
+
+    const { downloadClientQuotePdf } = await import('./client-billing');
+    const result = await downloadClientQuotePdf('quote-1');
+
+    expect(result).toEqual({ success: true, fileId: 'stored-pdf-file-1' });
+  });
+
+  it('T137: downloadClientQuotePdf generates PDF on the fly when none stored', async () => {
+    const docAssocQuery: any = {};
+    docAssocQuery.join = vi.fn(() => docAssocQuery);
+    docAssocQuery.where = vi.fn(() => docAssocQuery);
+    docAssocQuery.whereNotNull = vi.fn(() => docAssocQuery);
+    docAssocQuery.orderBy = vi.fn(() => docAssocQuery);
+    docAssocQuery.select = vi.fn(() => docAssocQuery);
+    docAssocQuery.first = vi.fn(async () => undefined);
+
+    getConnectionMock.mockResolvedValue(
+      Object.assign(
+        (table: string) => {
+          if (table === 'document_associations as da') {
+            return docAssocQuery;
+          }
+          throw new Error(`Unexpected table: ${table}`);
+        },
+        { tenant: 'tenant-1' }
+      )
+    );
+
+    // Mock the dynamic import of billing services — include recalculateQuoteFinancials
+    // to avoid breaking other tests that depend on the same mock
+    vi.doMock('@alga-psa/billing/services', () => ({
+      recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+      createQuotePDFGenerationService: vi.fn(() => ({
+        generateAndStore: vi.fn(async () => ({ file_id: 'generated-pdf-file-1' })),
+      })),
+    }));
+
+    const { downloadClientQuotePdf } = await import('./client-billing');
+    const result = await downloadClientQuotePdf('quote-1');
+
+    expect(result).toEqual({ success: true, fileId: expect.any(String) });
+  });
+
+  it('T138: downloadClientQuotePdf rejects access to other client\'s quotes', async () => {
+    const { downloadClientQuotePdf } = await import('./client-billing');
+
+    const result = await downloadClientQuotePdf('quote-other-client');
+
+    expect(result).toEqual({ success: false, error: 'Failed to download quote PDF' });
+  });
+
+  it('T139: downloadClientQuotePdf rejects access to draft quotes', async () => {
+    const { downloadClientQuotePdf } = await import('./client-billing');
+
+    const result = await downloadClientQuotePdf('quote-draft');
+
+    expect(result).toEqual({ success: false, error: 'Failed to download quote PDF' });
+  });
+
+  it('T140: downloadClientQuotePdf rejects unauthenticated users', async () => {
+    clientIdForCurrentUser = null;
+
+    const { downloadClientQuotePdf } = await import('./client-billing');
+
+    const result = await downloadClientQuotePdf('quote-1');
+
+    expect(result).toEqual({ success: false, error: 'Failed to download quote PDF' });
+  });
 });
