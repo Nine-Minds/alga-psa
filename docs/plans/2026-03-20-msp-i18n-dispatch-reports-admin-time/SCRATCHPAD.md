@@ -21,6 +21,8 @@
 - (2026-03-20) `TimeSlot.tsx`, `TechnicianRow.tsx`, `utils.ts` have zero user-visible strings — no translation needed.
 - (2026-03-20) Private calendar events show "Busy" as title — this needs translation in both ScheduleEvent and WeeklyScheduleEvent.
 - (2026-03-20) Drag-and-drop error messages are console-only — skip.
+- (2026-03-20) `ScheduleEvent.tsx` and `WeeklyScheduleEvent.tsx` also have user-visible tooltip/title strings for deletion validation, event detail tooltips, and fallback entity names that were not called out explicitly in the PRD; these were added to `en/msp/dispatch.json` so later component wiring can reuse shared keys instead of adding one-offs.
+- (2026-03-20) `ScheduleViewPanel.tsx` still formats the center date with `toLocaleDateString('en-US')`. This is a locale bug outside the literal-string extraction list; handle it during component wiring with `useFormatters()` rather than a translation key.
 
 ### Reports (2b-7)
 - (2026-03-20) Only 4 files, ~99 strings total. `ContractReports.tsx` has the most (~54) with 4 report tabs each having their own column definitions.
@@ -107,6 +109,11 @@ SCRIPT
 - Translation plan: `.ai/translation/MSP_i18n_plan.md`
 - Translation guide: `.ai/translation/translation-guide.md`
 - Previous batch plan (reference): `docs/plans/2026-03-19-msp-i18n-batch-2b1-core/`
+- Dispatch namespace file: `server/public/locales/en/msp/dispatch.json`
+
+## Progress Log
+
+- (2026-03-20) `F001` completed: created `server/public/locales/en/msp/dispatch.json` with shared sections for `page`, `workItems`, `schedule`, `details`, `dashboard`, `events`, `badges`, and `time`. Included extra shared keys for tooltips, delete-validation fallback text, and dashboard toasts so the later component wiring step stays additive and consistent.
 
 ### Key file paths — Dispatch
 | File | Strings |
