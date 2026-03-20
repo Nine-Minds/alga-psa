@@ -229,26 +229,6 @@ function resolveRecurringInvoiceBridgeId(bridgeMetadata?: RecurringBridgeMetadat
   return bridgeMetadata?.billingCycleId ?? null;
 }
 
-function buildLegacyBillingWindowSelectionInput(input: {
-  clientId: string;
-  windowStart: ISO8601String;
-  windowEnd: ISO8601String;
-}): IRecurringDueSelectionInput {
-  return {
-    clientId: input.clientId,
-    windowStart: input.windowStart,
-    windowEnd: input.windowEnd,
-    executionWindow: {
-      kind: 'client_cadence_window',
-      cadenceOwner: 'client',
-      clientId: input.clientId,
-      windowStart: input.windowStart,
-      windowEnd: input.windowEnd,
-      identityKey: `legacy_client_cadence_window:client:${input.clientId}:${input.windowStart}:${input.windowEnd}`,
-    },
-  };
-}
-
 function normalizeRecurringWindowDate(value: ISO8601String): ISO8601String {
   return toISODate(toPlainDate(value));
 }
@@ -635,23 +615,6 @@ async function calculatePreviewTax(
   console.log(`[calculatePreviewTax] Summed pre-calculated tax: ${totalTax}`);
 
   return totalTax;
-}
-
-export async function calculateBillingForInvoiceWindow(input: {
-  billingEngine: BillingEngine;
-  clientId: string;
-  cycleStart: ISO8601String;
-  cycleEnd: ISO8601String;
-  billingCycleId: string;
-}) {
-  return calculateBillingForSelectionInput({
-    billingEngine: input.billingEngine,
-    selectorInput: buildLegacyBillingWindowSelectionInput({
-      clientId: input.clientId,
-      windowStart: input.cycleStart,
-      windowEnd: input.cycleEnd,
-    }),
-  });
 }
 
 export async function calculateBillingForSelectionInput(input: {

@@ -77,7 +77,7 @@
   { "id": "F076", "description": "Make recurring run target selection candidate-first end to end, including one-target-per-candidate semantics and pagination totals derived from candidate pages.", "implemented": true },
   { "id": "F077", "description": "Block invoicing of partially materialized recurring windows by validating missing eligible persisted selections before generation.", "implemented": true },
   { "id": "F078", "description": "Enrich due-work candidate grouping inputs with real scope/currency/tax/export split keys so grouping reflects actual invoice-splitting constraints.", "implemented": true },
-  { "id": "F079", "description": "Remove legacy billing-window recurring generation fallbacks and migrate remaining callers/tests to canonical selector-input execution contracts.", "implemented": false },
+  { "id": "F079", "description": "Remove legacy billing-window recurring generation fallbacks and migrate remaining callers/tests to canonical selector-input execution contracts.", "implemented": true },
   { "id": "F080", "description": "Refactor billingInvoiceTiming integration assertions to validate candidate-level behavior directly rather than flattening members into row-style checks.", "implemented": false },
   { "id": "F081", "description": "Migrate admin client billing configuration reads/writes from `client_contract_lines` to the post-drop `client_contracts -> contracts -> contract_lines` structure.", "implemented": false },
   { "id": "F082", "description": "Migrate client-portal billing/account/services reads from `client_contract_lines` to the post-drop contract structure.", "implemented": false },

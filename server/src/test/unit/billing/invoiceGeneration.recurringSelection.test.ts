@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  calculateBillingForInvoiceWindow,
   calculateBillingForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import {
@@ -36,13 +35,17 @@ describe('invoice generation recurring selection', () => {
       calculateBilling: vi.fn().mockResolvedValue(billingResult),
       calculateBillingForExecutionWindow: vi.fn().mockResolvedValue(billingResult),
     } as any;
-
-    const result = await calculateBillingForInvoiceWindow({
-      billingEngine,
+    const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      cycleStart: '2025-02-01',
-      cycleEnd: '2025-03-01',
-      billingCycleId: 'cycle-1',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:contract-line-1:client:arrears',
+      periodKey: 'period:2025-02-01:2025-03-01',
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+    });
+
+    const result = await calculateBillingForSelectionInput({
+      billingEngine,
+      selectorInput,
     });
 
     expect(
@@ -181,13 +184,17 @@ describe('invoice generation recurring selection', () => {
       calculateBilling: vi.fn().mockResolvedValue(billingResult),
       calculateBillingForExecutionWindow: vi.fn().mockResolvedValue(billingResult),
     } as any;
-
-    const result = await calculateBillingForInvoiceWindow({
-      billingEngine,
+    const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      cycleStart: '2025-02-01',
-      cycleEnd: '2025-03-01',
-      billingCycleId: 'cycle-1',
+      scheduleKey: 'schedule:tenant-1:client_contract_line:contract-line-1:client:arrears',
+      periodKey: 'period:2025-02-01:2025-03-01',
+      windowStart: '2025-02-01',
+      windowEnd: '2025-03-01',
+    });
+
+    const result = await calculateBillingForSelectionInput({
+      billingEngine,
+      selectorInput,
     });
 
     expect(
