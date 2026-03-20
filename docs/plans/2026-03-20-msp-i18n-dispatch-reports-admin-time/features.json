@@ -4,7 +4,7 @@
   {"id": "F003", "description": "ScheduleViewPanel.tsx: translate page title, view toggle buttons (Day/Week), navigation buttons, Show Inactive label", "implemented": true, "prdRefs": ["D-FR2"]},
   {"id": "F004", "description": "WorkItemDetailsDrawer.tsx: translate all field labels, section headings, error toasts, fallback text", "implemented": true, "prdRefs": ["D-FR3"]},
   {"id": "F005", "description": "TechnicianDispatchDashboard.tsx: translate error/success toasts, permission messages, filter options, private event title", "implemented": true, "prdRefs": ["D-FR4"]},
-  {"id": "F006", "description": "ScheduleEvent.tsx + WeeklyScheduleEvent.tsx: translate View Details, Delete, Busy, Unknown/Unassigned/Untitled fallbacks", "implemented": false, "prdRefs": ["D-FR5"]},
+  {"id": "F006", "description": "ScheduleEvent.tsx + WeeklyScheduleEvent.tsx: translate View Details, Delete, Busy, Unknown/Unassigned/Untitled fallbacks", "implemented": true, "prdRefs": ["D-FR5"]},
   {"id": "F007", "description": "WeeklyTechnicianScheduleGrid.tsx: translate Compare/Clear All, View Week tooltips and aria-labels", "implemented": false, "prdRefs": ["D-FR6"]},
   {"id": "F008", "description": "WorkItemCard.tsx: translate Needs Dispatch badge and tooltip", "implemented": false, "prdRefs": ["D-FR7"]},
   {"id": "F009", "description": "TimeHeader.tsx: translate AM/PM time suffixes", "implemented": false, "prdRefs": ["D-FR8"]},
