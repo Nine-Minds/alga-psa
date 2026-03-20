@@ -10,7 +10,7 @@
   {"id": "F009", "description": "TimeHeader.tsx: translate AM/PM time suffixes", "implemented": true, "prdRefs": ["D-FR8"]},
   {"id": "F010", "description": "DailyTechnicianScheduleGrid.tsx: translate View Week tooltip and aria-labels", "implemented": true, "prdRefs": ["D-FR5"]},
   {"id": "F011", "description": "Update ROUTE_NAMESPACES for /msp/technician-dispatch to load msp/dispatch", "implemented": true, "prdRefs": ["D-FR9"]},
-  {"id": "F012", "description": "Generate dispatch translations for all 6 non-English locales (fr, es, de, nl, it, pl)", "implemented": false},
+  {"id": "F012", "description": "Generate dispatch translations for all 6 non-English locales (fr, es, de, nl, it, pl)", "implemented": true},
   {"id": "F013", "description": "Create dispatch pseudo-locale files (xx, yy)", "implemented": false},
   {"id": "F014", "description": "Italian accent audit on it/msp/dispatch.json", "implemented": false},
 
