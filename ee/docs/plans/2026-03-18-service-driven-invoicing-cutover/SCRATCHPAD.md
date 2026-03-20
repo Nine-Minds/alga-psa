@@ -9,6 +9,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Decisions
 
+- (2026-03-20) Feed invoice-candidate grouping with persisted scope metadata (`client_contract_id`, PO scope, contract currency, client tax-source override) so split reasons and candidate partitioning align with real invoice constraints instead of row-only defaults.
 - (2026-03-20) Treat client-cadence windows as non-generateable when materialization gaps overlap the same client + invoice window, and enforce the same check during selector-input generation to block partial invoices.
 - (2026-03-20) Keep `selectClientCadenceRecurringRunTargets(...)` pagination metadata candidate-driven (`total`, `totalPages`) from the due-work reader response, even when client-cadence filtering reduces the returned run target count.
 - (2026-03-20) Cadence-source badge formatting in `AutomaticInvoices` must be exhaustive and render explicit unknown-state copy for unexpected values rather than coercing unknowns to `Client schedule`.
@@ -26,6 +27,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Discoveries / Constraints
 
+- (2026-03-20) The shared candidate grouper already supported PO/currency/tax/export keys, but due-work readers were not populating those inputs from persisted DB rows, so financial-scope splits could collapse incorrectly.
 - (2026-03-20) Partial materialization can surface persisted due rows for one recurring line while sibling eligible lines are missing; without explicit guards this still looked generateable and produced incomplete invoices.
 - (2026-03-20) Recurring run target mapping was already candidate-shaped, but `selectClientCadenceRecurringRunTargets(...)` still leaked target-count pagination side effects by recomputing totals from filtered targets.
 - (2026-03-20) Ready and history cadence badges were still using a binary `contract_anniversary`/`client_schedule` branch that mislabeled unknown values as `Client schedule`; this required an explicit unknown fallback formatter.
@@ -98,6 +100,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-20) `pnpm exec vitest run src/test/unit/billing/automaticInvoices.recurringDueWork.ui.test.tsx --coverage.enabled=false` (from `server/`; passed after exhaustive cadence-source fallback coverage for `T101`)
 - (2026-03-20) `pnpm exec vitest run src/test/unit/billing/recurringBillingRunActions.test.ts --coverage.enabled=false` (from `server/`; passed after locking candidate-first target cardinality and candidate-page total semantics for `T102`/`T103`)
 - (2026-03-20) `DB_HOST=127.0.0.1 DB_PORT=57433 DB_NAME=server DB_NAME_SERVER=server DB_USER_SERVER=app_user DB_USER_ADMIN=postgres DB_PASSWORD_SERVER=postpass123 DB_PASSWORD_ADMIN=postpass123 pnpm exec vitest run --coverage.enabled=false src/test/integration/billingInvoiceTiming.integration.test.ts -t "T104|T105"` (from `server/`; passed)
+- (2026-03-20) `pnpm exec vitest run src/test/unit/billing/recurringDueWorkReader.integration.test.ts --coverage.enabled=false` (from `server/`; passed after split-key grouping coverage for `T106`)
 - (2026-03-18) `rg -n "billing_cycle_id" packages/billing/src/actions packages/billing/src/components server/src/lib/api packages/client-portal/src/actions -g '!**/*.test.*'`
 - (2026-03-18) `rg -n "recurring_service_periods" packages/billing/src/actions packages/client-portal/src/actions server/src/lib/api -g '!**/*.test.*'`
 - (2026-03-18) `sed -n '1,260p' packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`
@@ -181,6 +184,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Completed Checkpoints
 
+- (2026-03-20) Completed `F078` and `T106` by wiring persisted grouping metadata into recurring due-work candidate partitioning (`clientContractId`, `purchaseOrderScopeKey`, `currencyCode`, `taxSource`) so same-window due selections split according to real financial/PO constraints and surface deterministic split reasons.
 - (2026-03-20) Completed `F077` and `T104`/`T105` by blocking generation for partially materialized client-cadence windows at both due-work and invoice-generation layers: due-work candidates now flip `canGenerate=false` with an explicit repair reason when overlapping materialization gaps exist, and selector-input generation now asserts all active client-cadence recurring lines in the window have non-archived persisted service-period rows before invoicing.
 - (2026-03-20) Completed `F076` and `T102`/`T103` by preserving one-target-per-candidate mapping for client cadence candidates and switching `selectClientCadenceRecurringRunTargets(...)` to return paging totals from the due-work candidate response instead of recomputing totals from filtered target count.
 - (2026-03-20) Completed `F075` and `T101` by introducing exhaustive cadence-source badge formatting for `AutomaticInvoices` ready/history rows and rendering explicit unknown-state copy (`Unknown cadence source (...)`) instead of defaulting unexpected cadence-source values to `Client schedule`.

@@ -113,6 +113,18 @@ interface PersistedRecurringDueWorkDbRow {
     contract_name?: string | null;
     contract_line_id?: string | null;
     contract_line_name?: string | null;
+    client_contract_id?: string | null;
+    currency_code?: string | null;
+    tax_source?: string | null;
+    export_shape_key?: string | null;
+}
+
+interface RecurringDueWorkGroupingMetadata {
+    clientContractId?: string | null;
+    purchaseOrderScopeKey?: string | null;
+    currencyCode?: string | null;
+    taxSource?: string | null;
+    exportShapeKey?: string | null;
 }
 
 interface ClientCadenceRecurringLineActivityRow {
@@ -283,6 +295,16 @@ async function fetchPersistedRecurringDueWorkDbRows(
             this.on('c.client_id', '=', 'ct.owner_client_id')
                 .andOn('c.tenant', '=', 'ct.tenant');
         })
+        .leftJoin('client_contracts as cc', function () {
+            this.on('cc.contract_id', '=', 'ct.contract_id')
+                .andOn('cc.client_id', '=', 'c.client_id')
+                .andOn('cc.tenant', '=', 'rsp.tenant')
+                .andOn('cc.is_active', '=', trx.raw('?', [true]));
+        })
+        .leftJoin('client_tax_settings as cts', function () {
+            this.on('cts.client_id', '=', 'c.client_id')
+                .andOn('cts.tenant', '=', 'rsp.tenant');
+        })
         .leftJoin('client_billing_cycles as cbc', function () {
             this.on('cbc.client_id', '=', 'c.client_id')
                 .andOn('cbc.tenant', '=', 'rsp.tenant')
@@ -310,6 +332,9 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'ct.contract_name',
             'cl.contract_line_id',
             'cl.contract_line_name',
+            'cc.client_contract_id',
+            'ct.currency_code',
+            'cts.tax_source_override as tax_source',
         );
 
     applyBillingPeriodSearchAndDateFilters(contractLineRowsQuery, options, {
@@ -331,6 +356,16 @@ async function fetchPersistedRecurringDueWorkDbRows(
         .join('clients as c', function () {
             this.on('c.client_id', '=', 'ct.owner_client_id')
                 .andOn('c.tenant', '=', 'ct.tenant');
+        })
+        .leftJoin('client_contracts as cc', function () {
+            this.on('cc.contract_id', '=', 'ct.contract_id')
+                .andOn('cc.client_id', '=', 'c.client_id')
+                .andOn('cc.tenant', '=', 'rsp.tenant')
+                .andOn('cc.is_active', '=', trx.raw('?', [true]));
+        })
+        .leftJoin('client_tax_settings as cts', function () {
+            this.on('cts.client_id', '=', 'c.client_id')
+                .andOn('cts.tenant', '=', 'rsp.tenant');
         })
         .leftJoin('client_billing_cycles as cbc', function () {
             this.on('cbc.client_id', '=', 'c.client_id')
@@ -359,6 +394,9 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'ct.contract_name',
             'cl.contract_line_id',
             'cl.contract_line_name',
+            'cc.client_contract_id',
+            'ct.currency_code',
+            'cts.tax_source_override as tax_source',
         );
 
     applyBillingPeriodSearchAndDateFilters(clientContractLineRowsQuery, options, {
@@ -541,6 +579,7 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
 
 function buildRecurringDueWorkInvoiceCandidates(
     rows: IRecurringDueWorkRow[],
+    metadataByRecordId: Map<string, RecurringDueWorkGroupingMetadata> = new Map(),
 ): IRecurringDueWorkInvoiceCandidate[] {
     if (rows.length === 0) {
         return [];
@@ -552,6 +591,7 @@ function buildRecurringDueWorkInvoiceCandidates(
 
     const grouped = groupDueServicePeriodsForInvoiceCandidates(
         rows.map((row) => ({
+            ...(row.recordId ? metadataByRecordId.get(row.recordId) : undefined),
             servicePeriod: {
                 kind: 'service_period',
                 cadenceOwner: row.cadenceOwner,
@@ -573,7 +613,10 @@ function buildRecurringDueWorkInvoiceCandidates(
                 end: row.invoiceWindowEnd,
                 semantics: RECURRING_RANGE_SEMANTICS,
             },
-            clientContractId: row.contractId ?? null,
+            clientContractId:
+                (row.recordId ? metadataByRecordId.get(row.recordId)?.clientContractId : null)
+                ?? row.contractId
+                ?? null,
         })),
     );
 
@@ -900,7 +943,22 @@ export const getAvailableRecurringDueWork = withAuth(async (
             options,
         );
         const persistedRows = mapPersistedRecurringDueWorkDbRowsToRows(persistedDbRows, asOf);
-        const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(persistedRows);
+        const groupingMetadataByRecordId = new Map<string, RecurringDueWorkGroupingMetadata>(
+            persistedDbRows.map((row) => [
+                row.record_id,
+                {
+                    clientContractId: row.client_contract_id ?? row.contract_id ?? null,
+                    purchaseOrderScopeKey: row.client_contract_id ?? null,
+                    currencyCode: row.currency_code ?? null,
+                    taxSource: row.tax_source ?? null,
+                    exportShapeKey: row.export_shape_key ?? null,
+                },
+            ] as const),
+        );
+        const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
+            persistedRows,
+            groupingMetadataByRecordId,
+        );
         const persistedIdentityKeys = new Set(
             persistedRows.map((row) => row.executionIdentityKey),
         );

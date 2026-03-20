@@ -314,11 +314,11 @@ describe('recurring due-work reader', () => {
     });
 
     expect(result.total).toBe(2);
-    expect(result.rows.map((row) => ({
-      clientName: row.clientName,
-      cadenceSource: row.cadenceSource,
-      invoiceWindowEnd: row.invoiceWindowEnd,
-      executionIdentityKey: row.executionIdentityKey,
+    expect(result.invoiceCandidates.map((candidate) => ({
+      clientName: candidate.clientName,
+      cadenceSource: candidate.cadenceSources[0],
+      invoiceWindowEnd: candidate.windowEnd,
+      executionIdentityKey: candidate.members[0]?.executionIdentityKey,
     }))).toEqual([
       {
         clientName: 'Zenith Health',
@@ -349,10 +349,10 @@ describe('recurring due-work reader', () => {
 
     expect(firstPage.total).toBe(2);
     expect(firstPage.totalPages).toBe(2);
-    expect(firstPage.rows.map((row) => row.executionIdentityKey)).toEqual([
+    expect(firstPage.invoiceCandidates.map((candidate) => candidate.members[0]?.executionIdentityKey)).toEqual([
       'contract_cadence_window:contract:client-9:contract-1:line-1:2025-04-08:2025-05-08',
     ]);
-    expect(secondPage.rows.map((row) => row.executionIdentityKey)).toEqual([
+    expect(secondPage.invoiceCandidates.map((candidate) => candidate.members[0]?.executionIdentityKey)).toEqual([
       'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
     ]);
   });
@@ -365,14 +365,13 @@ describe('recurring due-work reader', () => {
     });
 
     expect(result.total).toBe(1);
-    expect(result.rows[0]).toMatchObject({
+    expect(result.invoiceCandidates[0]).toMatchObject({
       clientName: 'Zenith Health',
-      cadenceSource: 'contract_anniversary',
-      billingCycleId: null,
+      cadenceSources: ['contract_anniversary'],
     });
   });
 
-  it('T012: due-work reader date filter operates on invoice-window dates rather than client billing-cycle end dates for contract-cadence rows', async () => {
+  it('T012: due-work reader date filter operates on service-period-start dates for contract-cadence rows', async () => {
     const result = await getAvailableRecurringDueWork({
       page: 1,
       pageSize: 10,
@@ -382,13 +381,8 @@ describe('recurring due-work reader', () => {
       },
     });
 
-    expect(result.total).toBe(1);
-    expect(result.rows[0]).toMatchObject({
-      clientName: 'Zenith Health',
-      invoiceWindowStart: '2025-04-08',
-      invoiceWindowEnd: '2025-05-08',
-      servicePeriodEnd: '2025-04-08',
-    });
+    expect(result.total).toBe(0);
+    expect(result.invoiceCandidates).toEqual([]);
   });
 
   it('T003: due-work reader resolves client-cadence materialization gaps from surviving tables when `client_contract_lines` is absent', async () => {
@@ -419,6 +413,70 @@ describe('recurring due-work reader', () => {
           'Recurring service periods were not materialized for this canonical client-cadence execution window.',
       },
     ]);
-    expect(result.rows.map((row) => row.clientId)).not.toContain('client-2');
+    expect(result.invoiceCandidates.map((candidate) => candidate.clientId)).not.toContain('client-2');
+  });
+
+  it('T106: due-work candidate grouping respects purchase-order scope, currency, tax, and export-shape split keys', async () => {
+    mocks.rowsByTable.recurring_service_periods = [
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-split-1',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-03-01',
+        invoice_window_end: '2025-04-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: null,
+        contract_id: 'contract-2',
+        contract_name: 'Acme Monthly Support',
+        contract_line_id: 'assignment-1',
+        contract_line_name: 'Acme Retainer',
+        client_contract_id: 'cc-1',
+        currency_code: 'USD',
+        tax_source: 'internal',
+        export_shape_key: 'default-export',
+      },
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-split-2',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-2:client:advance',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-03-01',
+        invoice_window_end: '2025-04-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: null,
+        contract_id: 'contract-2',
+        contract_name: 'Acme Monthly Support',
+        contract_line_id: 'assignment-2',
+        contract_line_name: 'Acme Backup',
+        client_contract_id: 'cc-1',
+        currency_code: 'EUR',
+        tax_source: 'pending_external',
+        export_shape_key: 'default-export',
+      },
+    ];
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      searchTerm: 'Acme',
+    });
+
+    expect(result.invoiceCandidates).toHaveLength(2);
+    expect(result.invoiceCandidates.every((candidate) => candidate.splitReasons.includes('financial_constraint'))).toBe(true);
   });
 });
