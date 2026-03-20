@@ -432,7 +432,7 @@
   {
     "id": "T052",
     "description": "Static guard coverage fails if new billing or clients code reintroduces singleton UI/action patterns such as active-contract client disabling or 'already has an active contract' write blockers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -440,7 +440,7 @@
   {
     "id": "T053",
     "description": "`docs/billing/billing.md` no longer states that assigning a contract to a client must ensure no overlap with other active contracts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -448,7 +448,7 @@
   {
     "id": "T054",
     "description": "The contract purchase order plan/runbook language is updated to reflect preserved single-assignment invoice scope without treating 'single active contract per client' as a prerequisite.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F048"
@@ -535,7 +535,7 @@
   {
     "id": "T062",
     "description": "The mixed-currency rule behavior matches the plan’s documented decision and no longer piggybacks implicitly on the removed single-active-contract guard.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F019",
@@ -545,7 +545,7 @@
   {
     "id": "T063",
     "description": "Repo-wide static or search-based coverage proves no live write/activation path still uses `hasActiveContractForClient(...)` to block concurrent active assignments.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F023",
@@ -555,7 +555,7 @@
   {
     "id": "T064",
     "description": "Repo-wide static or search-based coverage proves no live product flow still uses `getClientIdsWithActiveContracts(...)` to disable selection or submission.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F013",
@@ -616,7 +616,7 @@
   {
     "id": "T071",
     "description": "Runbook/migration notes explicitly record that invoice tables already snapshot `client_contract_id`, so removing the singleton rule does not require a schema redesign to preserve single-assignment invoices.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F003",

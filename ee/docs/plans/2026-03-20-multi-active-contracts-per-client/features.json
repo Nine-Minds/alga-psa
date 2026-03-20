@@ -237,6 +237,6 @@
   {
     "id": "F048",
     "description": "Add static, documentation, and runbook coverage that explicitly records the removed singleton active-contract rule and the preserved single-assignment invoice boundary so future work cannot reintroduce either assumption accidentally.",
-    "implemented": false
+    "implemented": true
   }
 ]

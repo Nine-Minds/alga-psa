@@ -11,6 +11,7 @@
 - 2026-03-20: `client_contract_id`, not `contract_id`, is the canonical identity for assignment-scoped UI and execution.
 - 2026-03-20: Ambiguous legacy surfaces must stop guessing. Prefer explicit assignment identity or an explicit ambiguity failure.
 - 2026-03-20: Mixed-currency behavior is explicitly preserved as a separate policy; multi-active assignment support does not imply mixed-currency active assignments for the same client.
+- 2026-03-20: Invoice tables already snapshot `client_contract_id`, so removing singleton active-contract assumptions does not require invoice schema redesign to preserve single-assignment invoices.
 
 ## Discoveries / Constraints
 
@@ -142,6 +143,8 @@
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts`
 - 2026-03-20: Legacy test assignment-identity regression wiring test run
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/multiActiveContracts.legacyAssignmentTestAssumptions.wiring.test.ts src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts`
+- 2026-03-20: Multi-active docs + singleton-regression static guard run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/docs/multiActiveContracts.docsAndGuards.test.ts`
 
 ## Implementation Log
 
@@ -223,6 +226,17 @@
   - `contractWizard.integration.test.ts` now reads client assignment using explicit `contract_id: result.contract_id`
   - `contractPurchaseOrderSupport.integration.test.ts` now captures wizard result and reads assignment by explicit `contract_id: wizardResult.contract_id` (removed `orderBy(created_at desc)` fallback)
 - 2026-03-20: Added `T051` wiring coverage in `server/src/test/unit/billing/multiActiveContracts.legacyAssignmentTestAssumptions.wiring.test.ts` to prevent reintroduction of latest-assignment test assumptions in targeted integration suites.
+- 2026-03-20: Updated product docs/runbooks to remove singleton-active assumptions and preserve explicit invoice boundary:
+  - `docs/billing/billing.md` assignment lifecycle section now states concurrent active assignments are allowed (with mixed-currency still blocked as a separate rule)
+  - `ee/docs/plans/2026-01-05-contract-purchase-order-support/PRD.md` now describes `invoices.client_contract_id` as single-assignment invoice scope (not single-active prerequisite)
+  - `ee/docs/plans/2026-01-05-contract-purchase-order-support/SCRATCHPAD.md` now states one PO per invoice without assuming one active contract per client
+- 2026-03-20: Added consolidated static/docs guard coverage in `server/src/test/unit/docs/multiActiveContracts.docsAndGuards.test.ts`:
+  - `T052`: singleton UI/action guard patterns stay removed
+  - `T053`: billing docs no longer claim active-assignment overlap blocking
+  - `T054`: contract PO plan docs no longer depend on single-active-client prerequisite
+  - `T062`: mixed-currency guard remains explicit and separate from removed singleton helpers
+  - `T063/T064`: repo-wide static guard for removed singleton helper usage
+  - `T071`: runbook notes explicitly record `invoice.client_contract_id` snapshot boundary and no schema redesign requirement
 
 ## Links / References
 

@@ -2,7 +2,7 @@
 
 ## Context / Decisions (2026-01-05)
 
-- One PO per invoice (assume single active contract per client).
+- One PO per invoice (single-assignment invoice scope; does not require a single active contract per client).
 - Invoice stores PO number as a snapshot at creation time.
 - PO number appears in:
   - invoice metadata in-app
