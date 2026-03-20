@@ -808,6 +808,68 @@ it('T166: DB-backed recurring outputs stay stable across billing_cycle_alignment
   }
 }, HOOK_TIMEOUT);
 
+it('T111: billing engine contract resolution joins only on instantiated client_contracts.contract_id (no template fallback join)', async () => {
+  setupCommonMocks({ tenantId, userId: 'template-fallback-join-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    cycleId,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Template Join Removal Client',
+    previousPeriodStart: '2025-02-01',
+    currentPeriodStart: '2025-03-01',
+    nextPeriodStart: '2025-04-01',
+  });
+
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'Template Join Removal Service',
+    planName: 'Template Join Removal Plan',
+    baseRateCents: 25000,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+  });
+
+  await db('client_contracts')
+    .where({
+      tenant: tenantId,
+      client_contract_id: fixedLine.clientContractId,
+    })
+    .update({
+      template_contract_id: fixedLine.contractId,
+      updated_at: db.fn.now(),
+    });
+
+  const observedSql: string[] = [];
+  const onQuery = (queryData: { sql?: string }) => {
+    if (typeof queryData.sql === 'string') {
+      observedSql.push(queryData.sql);
+    }
+  };
+
+  db.on('query', onQuery);
+  const engine = new BillingEngine();
+  const billingResult = await engine.calculateBilling(
+    contextLike.clientId,
+    currentPeriodStart,
+    nextPeriodStart,
+    cycleId,
+  );
+  db.removeListener('query', onQuery);
+
+  expect(billingResult.charges.length).toBeGreaterThan(0);
+
+  const coalesceFallbackPattern = /coalesce\s*\(\s*cc\.template_contract_id\s*,\s*cc\.contract_id\s*\)/i;
+  const templateJoinFallbackPattern = /cc\"\s*\.\s*\"template_contract_id\"\s*=\s*\"c\"\s*\.\s*\"contract_id\"/i;
+  const canonicalJoinPattern = /cc\"\s*\.\s*\"contract_id\"\s*=\s*\"c\"\s*\.\s*\"contract_id\"/i;
+
+  expect(observedSql.some((sql) => coalesceFallbackPattern.test(sql))).toBe(false);
+  expect(observedSql.some((sql) => templateJoinFallbackPattern.test(sql))).toBe(false);
+  expect(observedSql.some((sql) => canonicalJoinPattern.test(sql))).toBe(true);
+}, HOOK_TIMEOUT);
+
 it('T167: DB-backed recurring outputs still persist canonical partial service periods on live arrears paths after resolveServicePeriod cleanup', async () => {
   setupCommonMocks({ tenantId, userId: 'resolve-cleanup-user', permissionCheck: () => true });
 

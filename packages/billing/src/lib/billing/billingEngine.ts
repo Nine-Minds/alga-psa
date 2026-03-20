@@ -922,15 +922,16 @@ export class BillingEngine {
       `[BillingEngine] Loading contract lines for client ${clientId}, period: ${billingPeriod.startDate} to ${billingPeriod.endDate}`,
     );
 
-    // Query contract lines via client_contracts -> contracts -> contract_lines
-    // This replaces the old client_contract_lines-based query
+    // Query contract lines via client-owned client_contracts -> contracts -> contract_lines.
+    // template_contract_id is provenance for draft/review flows only; live billing must
+    // read the cloned lines from cc.contract_id.
     const clientContractLines = await knex("client_contracts as cc")
       .join("contracts as c", function () {
-        this.on(
-          "c.contract_id",
+        this.on("c.contract_id", "=", "cc.contract_id").andOn(
+          "c.tenant",
           "=",
-          knex.raw("coalesce(cc.template_contract_id, cc.contract_id)"),
-        ).andOn("c.tenant", "=", "cc.tenant");
+          "cc.tenant",
+        );
       })
       .join("contract_lines as cl", function () {
         this.on("cl.contract_id", "=", "c.contract_id").andOn(
@@ -3870,13 +3871,11 @@ export class BillingEngine {
         );
       })
       .join("client_contracts as cc", function () {
-        this.on("cc.tenant", "=", "c.tenant").andOn(function () {
-          this.on("cc.template_contract_id", "=", "c.contract_id").orOn(
-            "cc.contract_id",
-            "=",
-            "c.contract_id",
-          );
-        });
+        this.on("cc.contract_id", "=", "c.contract_id").andOn(
+          "cc.tenant",
+          "=",
+          "c.tenant",
+        );
       })
       .where({
         "cc.client_id": clientId,

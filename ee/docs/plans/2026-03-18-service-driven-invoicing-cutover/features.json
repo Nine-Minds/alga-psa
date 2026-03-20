@@ -81,7 +81,7 @@
   { "id": "F080", "description": "Refactor billingInvoiceTiming integration assertions to validate candidate-level behavior directly rather than flattening members into row-style checks.", "implemented": true },
   { "id": "F081", "description": "Migrate admin client billing configuration reads/writes from `client_contract_lines` to the post-drop `client_contracts -> contracts -> contract_lines` structure.", "implemented": true },
   { "id": "F082", "description": "Migrate client-portal billing/account/services reads from `client_contract_lines` to the post-drop contract structure.", "implemented": true },
-  { "id": "F083", "description": "Remove template-contract fallback joins from live billing computations so instantiated contract lookups depend on canonical `client_contracts.contract_id` only.", "implemented": false },
+  { "id": "F083", "description": "Remove template-contract fallback joins from live billing computations so instantiated contract lookups depend on canonical `client_contracts.contract_id` only.", "implemented": true },
   { "id": "F084", "description": "Split contract detail and template detail assignment loading so template IDs are not accepted in instantiated contract-assignment queries.", "implemented": false },
   { "id": "F085", "description": "Stop `ContractLineService` from mutating `client_contracts.template_contract_id` as a runtime fallback side effect.", "implemented": false },
   { "id": "F086", "description": "Extend client-contract-line post-drop static hygiene guards to include `packages/client-portal` and `packages/clients` test coverage.", "implemented": false },

@@ -86,7 +86,7 @@ async function calculatePeriod(
     // is associated with a bucket configuration for the given serviceCatalogId.
     const clientPlan = await trx('client_contracts as cc')
         .join('contracts as ct', function() {
-            this.on('ct.contract_id', '=', trx.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
+            this.on('ct.contract_id', '=', 'cc.contract_id')
                 .andOn('ct.tenant', '=', 'cc.tenant');
         })
         .join('contract_lines as cl', function() {
