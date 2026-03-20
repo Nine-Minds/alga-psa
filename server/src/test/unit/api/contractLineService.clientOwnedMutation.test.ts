@@ -228,7 +228,7 @@ describe('ContractLineService client-owned mutation paths', () => {
     expect(observedWhereClauses).toContainEqual(['custom_rate', 175]);
   });
 
-  it('T113: assignPlanToClient does not backfill template_contract_id on client_contracts when provenance is missing', async () => {
+  it('T113: assignPlanToClient fails closed when template provenance is missing instead of falling back to contract_id', async () => {
     const knex = { scope: 'root-knex' };
     const observedTables: string[] = [];
     const clientContractsUpdate = vi.fn();
@@ -299,7 +299,94 @@ describe('ContractLineService client-owned mutation paths', () => {
     vi.spyOn(service as any, 'validateNoOverlappingAssignments').mockResolvedValue(undefined);
     vi.spyOn(service as any, 'generateClientPlanLinks').mockReturnValue([]);
 
-    await service.assignPlanToClient(
+    await expect(
+      service.assignPlanToClient(
+        {
+          client_contract_id: 'client-contract-1',
+          client_id: 'client-1',
+          contract_line_id: 'template-line-1',
+          start_date: '2026-03-20',
+          end_date: null,
+          custom_rate: null,
+        } as any,
+        context,
+      ),
+    ).rejects.toThrow(
+      'Client contract client-contract-1 is missing template provenance (template_contract_id) required for template clone operations',
+    );
+
+    expect(observedTables).toContain('client_contracts');
+    expect(clientContractsUpdate).not.toHaveBeenCalled();
+    expect(cloneTemplateContractLine).not.toHaveBeenCalled();
+  });
+
+  it('T011: assignPlanToClient clones successfully when explicit template provenance exists', async () => {
+    const knex = { scope: 'root-knex' };
+
+    const trx = ((table: string) => {
+      if (table === 'client_contracts') {
+        const builder = {
+          where() {
+            return builder;
+          },
+          async first() {
+            return {
+              template_contract_id: 'template-contract-1',
+              contract_id: 'live-contract-1',
+            };
+          },
+        };
+        return builder;
+      }
+
+      if (table === 'contract_lines') {
+        const builder = {
+          insert() {
+            return builder;
+          },
+          async returning() {
+            return [{ contract_line_id: 'new-line-1', contract_id: 'live-contract-1' }];
+          },
+        };
+        return builder;
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    }) as any;
+
+    withTransaction.mockImplementation(async (receivedKnex, callback) => {
+      expect(receivedKnex).toBe(knex);
+      return callback(trx);
+    });
+
+    const { ContractLineService } = await import('server/src/lib/api/services/ContractLineService');
+    const service = new ContractLineService();
+    const context = { tenant: 'tenant-1', userId: 'user-1' } as any;
+
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
+    vi.spyOn(service as any, 'getExistingPlan').mockResolvedValue({
+      contract_line_id: 'template-line-1',
+      contract_line_name: 'Template Line',
+      description: 'Template description',
+      billing_frequency: 'monthly',
+      contract_line_type: 'Fixed',
+      service_category: 'managed-services',
+      billing_timing: 'arrears',
+      cadence_owner: 'client',
+      custom_rate: 175,
+      display_order: 0,
+      enable_proration: false,
+      enable_overtime: false,
+      overtime_rate: null,
+      overtime_threshold: null,
+      enable_after_hours_rate: false,
+      after_hours_multiplier: null,
+    });
+    vi.spyOn(service as any, 'validateClientExists').mockResolvedValue(undefined);
+    vi.spyOn(service as any, 'validateNoOverlappingAssignments').mockResolvedValue(undefined);
+    vi.spyOn(service as any, 'generateClientPlanLinks').mockReturnValue([]);
+
+    const response = await service.assignPlanToClient(
       {
         client_contract_id: 'client-contract-1',
         client_id: 'client-1',
@@ -311,12 +398,13 @@ describe('ContractLineService client-owned mutation paths', () => {
       context,
     );
 
-    expect(observedTables).toContain('client_contracts');
-    expect(clientContractsUpdate).not.toHaveBeenCalled();
+    expect(response.client_contract_line_id).toBe('new-line-1');
     expect(cloneTemplateContractLine).toHaveBeenCalledWith(
       trx,
       expect.objectContaining({
-        templateContractId: 'live-contract-1',
+        templateContractId: 'template-contract-1',
+        templateContractLineId: 'template-line-1',
+        contractLineId: expect.any(String),
       }),
     );
   });

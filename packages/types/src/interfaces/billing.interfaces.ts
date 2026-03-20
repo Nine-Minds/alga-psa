@@ -114,7 +114,11 @@ export interface IClientContractLine extends TenantEntity {
   enable_proration?: boolean;
   billing_cycle_alignment?: 'start' | 'end' | 'prorated';
   client_contract_id?: string; // Reference to the client contract assignment
-  template_contract_id?: string;
+  /**
+   * Provenance-only metadata from the source template assignment.
+   * Never use this as a live runtime contract lookup key.
+   */
+  template_contract_id?: string | null;
   contract_id?: string; // Reference to the contract (for pricing schedule lookups)
   // Added fields from join with contract_lines
   contract_line_name?: string;

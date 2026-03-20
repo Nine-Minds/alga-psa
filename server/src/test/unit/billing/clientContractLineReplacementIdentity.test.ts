@@ -22,7 +22,7 @@ vi.mock('../../../../../packages/clients/src/lib/billingHelpers.ts', () => ({
   cloneTemplateContractLineAsync: (...args: any[]) => cloneTemplateContractLineAsync(...args),
 }));
 
-function createAddClientContractLineTrx() {
+function createAddClientContractLineTrx(options?: { templateContractId?: string | null }) {
   const createdLine = { contract_line_id: 'generated-line-id' };
   const templateLine = {
     contract_line_name: 'Managed Service',
@@ -58,7 +58,8 @@ function createAddClientContractLineTrx() {
     where: vi.fn(() => clientContractsBuilder),
     first: vi.fn(async () => ({
       contract_id: 'client-contract-template-target',
-      template_contract_id: 'template-contract-1',
+      template_contract_id:
+        options && 'templateContractId' in options ? options.templateContractId : 'template-contract-1',
     })),
   };
 
@@ -126,6 +127,31 @@ describe('client contract line replacement identity', () => {
         templateContractId: 'template-contract-1',
       })
     );
+  });
+
+  it('T008: addClientContractLine fails closed when template provenance is missing instead of falling back to contract_id', async () => {
+    const { trx, contractLinesBuilder } = createAddClientContractLineTrx({ templateContractId: null });
+
+    createTenantKnex.mockResolvedValue({ knex: {} });
+    withTransaction.mockImplementation(async (_knex: unknown, callback: any) => callback(trx));
+
+    const { addClientContractLine } = await import('../../../../../packages/clients/src/actions/clientContractLineActions.ts');
+
+    await expect(
+      addClientContractLine({
+        client_id: 'client-1',
+        client_contract_id: 'client-contract-1',
+        contract_line_id: 'template-line-1',
+        start_date: '2026-04-01',
+        end_date: null,
+        is_active: true,
+      } as any),
+    ).rejects.toThrow(
+      'Client contract client-contract-1 is missing template provenance (template_contract_id) required to clone template contract lines',
+    );
+
+    expect(contractLinesBuilder.insert).not.toHaveBeenCalled();
+    expect(cloneTemplateContractLineAsync).not.toHaveBeenCalled();
   });
 
   it('T203: server assignPlanToClient keeps renewed/replacement assignments on fresh line ids instead of mutating the superseded line source', () => {

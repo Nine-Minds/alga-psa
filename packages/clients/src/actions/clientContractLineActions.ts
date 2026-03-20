@@ -194,6 +194,8 @@ export const getClientContractLine = withAuth(async (
       const recurringStorage = normalizeLiveRecurringStorage(billing);
       return {
         ...recurringStorage,
+        // Provenance-only metadata: never used as live runtime lookup identity.
+        template_contract_id: billing.template_contract_id ?? null,
         // Convert dates to ISO8601String as expected by the interface
         // Convert dates to ISO8601String: DB -> PlainDate -> ISOString
         start_date: toISODate(toPlainDate(billing.start_date)),
@@ -273,7 +275,12 @@ export const addClientContractLine = withAuth(async (
         throw new Error('Client contract not found or missing contract_id');
       }
 
-      const templateContractId = clientContract.template_contract_id ?? clientContract.contract_id;
+      const templateContractId = clientContract.template_contract_id ?? null;
+      if (!templateContractId) {
+        throw new Error(
+          `Client contract ${newBilling.client_contract_id} is missing template provenance (template_contract_id) required to clone template contract lines`
+        );
+      }
 
       // Get the template line to copy
       const templateLine = await trx('contract_lines')

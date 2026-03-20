@@ -59,6 +59,27 @@ function findTemplateProvenanceLiveJoinUsages(relativePaths: string[]): string[]
   return findings;
 }
 
+function findMixedTemplateRuntimeFallbackUsages(relativePaths: string[]): string[] {
+  const findings: string[] = [];
+  const patterns = [
+    /template_contract_id\s*\?\?\s*[^;\n]*contract_id/g,
+    /coalesce\s*\(\s*[^)]*template_contract_id[^,]*,\s*[^)]*contract_id[^)]*\)/gi,
+    /cc"\s*\.\s*"template_contract_id"\s*=\s*"c"\s*\.\s*"contract_id"/gi,
+  ];
+
+  for (const relativePath of relativePaths) {
+    const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+    for (const pattern of patterns) {
+      pattern.lastIndex = 0;
+      if (pattern.test(source)) {
+        findings.push(`${relativePath}: ${pattern}`);
+      }
+    }
+  }
+
+  return findings;
+}
+
 describe('client-contract-line runtime source guards', () => {
   it('T019: no live recurring or invoicing action queries dropped client-contract line tables', () => {
     const findings = findDroppedTableRuntimeUsages(
@@ -98,6 +119,18 @@ describe('client-contract-line runtime source guards', () => {
     const findings = findDroppedTableRuntimeUsages([
       ...getTrackedSourceFiles('packages/clients/src/actions'),
       ...getTrackedSourceFiles('packages/clients/src/models'),
+    ]);
+
+    expect(findings).toEqual([]);
+  });
+
+  it('T017: targeted runtime packages and scripts reject mixed template/runtime fallback patterns', () => {
+    const findings = findMixedTemplateRuntimeFallbackUsages([
+      'packages/clients/src/actions/clientContractActions.ts',
+      'packages/clients/src/actions/clientContractLineActions.ts',
+      'server/src/lib/api/services/ContractLineService.ts',
+      'server/scripts/contract-template-decoupling.ts',
+      'packages/billing/src/models/contract.ts',
     ]);
 
     expect(findings).toEqual([]);

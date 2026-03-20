@@ -24,6 +24,8 @@ class ClientContractLine {
   }
 
   private static contractLineSelectColumns(db: Knex): Array<string | Knex.Raw> {
+    // template_contract_id is exposed only as provenance metadata for callers.
+    // Runtime reads and writes remain anchored on cc.contract_id / cl.contract_line_id.
     return [
       'cl.contract_line_id as client_contract_line_id',
       'cc.client_id',

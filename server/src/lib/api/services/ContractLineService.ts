@@ -918,12 +918,17 @@ export class ContractLineService extends BaseService<IContractLine> {
 
         if (clientContract) {
           targetContractId = clientContract.contract_id;
-          templateContractId = clientContract.template_contract_id ?? clientContract.contract_id ?? null;
+          templateContractId = clientContract.template_contract_id ?? null;
         }
       }
 
       if (!targetContractId) {
         throw new Error('Client contract not found or missing contract_id');
+      }
+      if (!templateContractId) {
+        throw new Error(
+          `Client contract ${data.client_contract_id} is missing template provenance (template_contract_id) required for template clone operations`
+        );
       }
 
       // The client contract owns the live cloned line. Reject only true duplicate

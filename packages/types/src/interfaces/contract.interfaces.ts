@@ -40,6 +40,7 @@ export interface IContractWithClient extends IContract {
   contract_header_status?: ContractStatus;
   start_date?: ISO8601String;
   end_date?: ISO8601String | null;
+  /** Provenance-only metadata for template origin; not a runtime identity key. */
   template_contract_id?: string | null;
   template_contract_name?: string | null;
 }
@@ -68,6 +69,7 @@ export interface IClientContract extends TenantEntity {
   contract_id: string;
   assignment_status?: ContractStatus;
   contract_status?: ContractStatus;
+  /** Provenance-only metadata for template origin; not a runtime identity key. */
   template_contract_id?: string | null;
   billing_frequency?: string;
   start_date: ISO8601String;

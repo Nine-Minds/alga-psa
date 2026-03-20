@@ -702,7 +702,12 @@ export const applyContractToClient = withAuth(async (
 
     // Start a transaction to populate services/configuration for each line
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const templateContractId = clientContract.template_contract_id ?? clientContract.contract_id ?? null;
+      const templateContractId = clientContract.template_contract_id ?? null;
+      if (!templateContractId) {
+        throw new Error(
+          `Client contract ${clientContractId} is missing template provenance (template_contract_id) required for template clone operations`
+        );
+      }
 
       for (const line of contractLines) {
         // Clone services and configuration from template to this contract line

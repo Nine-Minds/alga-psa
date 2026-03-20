@@ -168,6 +168,7 @@ describe('clientContractLineActions recurring compatibility', () => {
       cadence_owner: 'client',
       start_date: '2026-01-08',
       end_date: null,
+      template_contract_id: null,
     });
 
     await addClientContractLine({
