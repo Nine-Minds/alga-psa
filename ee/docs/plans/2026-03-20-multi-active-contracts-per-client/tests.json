@@ -356,7 +356,7 @@
   {
     "id": "T043",
     "description": "PO overage and consumption remain tied to `invoice.client_contract_id` and are unaffected by sibling active assignments for the same client.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F040"
