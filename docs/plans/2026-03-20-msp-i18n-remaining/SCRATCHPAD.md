@@ -34,6 +34,7 @@
 - (2026-03-20) Smallest batch — 7 files, ~29 strings total
 - (2026-03-20) All in `packages/jobs/src/components/monitoring/`
 - (2026-03-20) `JobStepHistory.tsx` has zero visible strings — skip
+- (2026-03-21) `JobStepHistory.tsx` does have visible copy (`Job Steps`, `Processed`, `Retries`) in addition to status labels. The batch is still small, but the PRD count underestimates it slightly.
 
 ### Email Providers (2b-18)
 - (2026-03-20) 10 files with strings in `packages/integrations/src/components/email/`
@@ -143,6 +144,8 @@ done
 - (2026-03-21) Completed `F023`: added KB namespace files for `de`, `es`, `fr`, `it`, `nl`, and `pl`, then generated targeted `xx` and `yy` pseudo-locales from the English source. The KB namespace now exists in all 9 required locales under `server/public/locales/*/msp/knowledge-base.json`.
 - (2026-03-21) Validation for `F023`: counted 163 leaf strings in each generated real locale, confirmed the pseudo-locale outputs were generated from the KB English source without touching unrelated namespaces, and re-ran `node scripts/validate-translations.cjs` with `Errors: 0` and `Warnings: 0`.
 - (2026-03-21) Completed `F024`: ran the Italian accent audit against [server/public/locales/it/msp/knowledge-base.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/knowledge-base.json). The broad grep only surfaced legitimate conjunctions such as `creare e gestire`; a tighter search for common accentless spellings (`puo`, `gia`, `verra`, `funzionalita`, `perche`, weekday names without accents) returned no matches, so no Italian copy changes were required.
+- (2026-03-21) Completed `F030`: added [server/public/locales/en/msp/jobs.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/jobs.json) as the English jobs namespace. The file is grouped by monitoring surface (`recentTable`, `metrics`, `historyTable`, `progress`, `drawer`, `stepHistory`, `shared`) so the next jobs rewrite can cover table columns, status/runner labels, relative-time copy, drawer headings, and step-history labels from one namespace.
+- (2026-03-21) Validation for `F030`: parsed the new JSON successfully and counted 47 leaf strings, reflecting the extra step-history and time-format copy that the original jobs estimate undercounted.
 
 ## Open Questions
 
