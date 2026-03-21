@@ -1,0 +1,289 @@
+{
+  "page": {
+    "title": "Knowledge Base",
+    "subtitle": "Create and manage knowledge base articles",
+    "actions": {
+      "import": "Import",
+      "newArticle": "New Article"
+    },
+    "tabs": {
+      "articles": "Articles",
+      "reviewDashboard": "Review Dashboard"
+    },
+    "feedback": {
+      "loadError": "Failed to load articles",
+      "createError": "Failed to create article",
+      "userLoadError": "Failed to load user. Article editing is unavailable."
+    },
+    "newArticleTitle": "New Article"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Draft",
+      "review": "In Review",
+      "published": "Published",
+      "archived": "Archived"
+    },
+    "audienceLabels": {
+      "internal": "Internal",
+      "client": "Client",
+      "public": "Public"
+    },
+    "typeLabels": {
+      "how_to": "How-To",
+      "faq": "FAQ",
+      "troubleshooting": "Troubleshooting",
+      "reference": "Reference"
+    },
+    "reviewCycleOptions": {
+      "none": "No review cycle",
+      "30": "30 days",
+      "60": "60 days",
+      "90": "90 days",
+      "180": "180 days",
+      "365": "1 year"
+    },
+    "fallbacks": {
+      "emptyDate": "-"
+    }
+  },
+  "list": {
+    "title": "Knowledge Base Articles",
+    "countSummary": "{{count}} article(s)",
+    "itemLabel": "articles",
+    "empty": "No articles found",
+    "createFirst": "Create Your First Article",
+    "table": {
+      "title": "Title",
+      "type": "Type",
+      "audience": "Audience",
+      "status": "Status",
+      "tags": "Tags",
+      "stats": "Stats",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "stats": {
+      "views": "Views",
+      "helpful": "Helpful",
+      "notHelpful": "Not helpful"
+    },
+    "actions": {
+      "edit": "Edit",
+      "submitForReview": "Submit for Review",
+      "publish": "Publish",
+      "archive": "Archive"
+    },
+    "pagination": {
+      "itemsPerPage": {
+        "10": "10 items/page",
+        "20": "20 items/page",
+        "50": "50 items/page"
+      }
+    },
+    "stale": {
+      "reviewOverdue": "Review overdue"
+    },
+    "dialogs": {
+      "archive": {
+        "title": "Archive Article",
+        "message": "Are you sure you want to archive \"{{title}}\"? This will remove it from client visibility."
+      }
+    },
+    "feedback": {
+      "archiveError": "Failed to archive article",
+      "archiveSuccess": "Article archived"
+    }
+  },
+  "editor": {
+    "header": {
+      "untitled": "Untitled Article",
+      "back": "Back"
+    },
+    "actions": {
+      "submitForReview": "Submit for Review",
+      "publish": "Publish",
+      "archive": "Archive",
+      "saveMetadata": "Save Metadata",
+      "saving": "Saving..."
+    },
+    "feedback": {
+      "permissionDenied": "Permission denied",
+      "notFound": "Article not found",
+      "loadError": "Failed to load article",
+      "noChanges": "No changes to save",
+      "saveError": "Failed to save article",
+      "saveSuccess": "Article metadata saved",
+      "publishError": "Failed to publish article",
+      "publishSuccess": "Article published",
+      "statusChangeError": "Failed to change article status",
+      "submitForReviewSuccess": "Article submitted for review",
+      "archiveSuccess": "Article archived"
+    },
+    "badges": {
+      "reviewOverdue": "Review Overdue"
+    },
+    "stats": {
+      "title": "Statistics",
+      "views": "Views",
+      "helpful": "Helpful",
+      "notHelpful": "Not helpful",
+      "published": "Published"
+    },
+    "metadata": {
+      "title": "Metadata",
+      "fields": {
+        "title": "Title",
+        "slug": "URL Slug",
+        "articleType": "Article Type",
+        "audience": "Audience",
+        "category": "Category",
+        "reviewCycle": "Review Cycle",
+        "nextReview": "Next review",
+        "noCategory": "No category"
+      }
+    },
+    "tags": {
+      "title": "Tags"
+    }
+  },
+  "filters": {
+    "title": "Filters",
+    "actions": {
+      "clear": "Clear"
+    },
+    "labels": {
+      "search": "Search",
+      "status": "Status",
+      "audience": "Audience",
+      "articleType": "Article Type",
+      "category": "Category",
+      "tags": "Tags"
+    },
+    "placeholders": {
+      "search": "Search articles...",
+      "status": "Select status...",
+      "audience": "Select audience...",
+      "articleType": "Select type...",
+      "category": "Select category...",
+      "tags": "Filter by tags..."
+    },
+    "options": {
+      "status": {
+        "all": "All Statuses"
+      },
+      "audience": {
+        "all": "All Audiences"
+      },
+      "articleType": {
+        "all": "All Types"
+      },
+      "category": {
+        "all": "All Categories"
+      }
+    }
+  },
+  "categoryTree": {
+    "allCategories": "All Categories",
+    "empty": "No categories defined"
+  },
+  "publishing": {
+    "title": "Publishing",
+    "currentStatus": "Current Status",
+    "actions": {
+      "submitForReview": "Submit for Review",
+      "publish": "Publish",
+      "approveAndPublish": "Approve & Publish",
+      "archive": "Archive",
+      "republish": "Republish"
+    },
+    "flow": {
+      "draft": "Draft",
+      "review": "Review",
+      "published": "Published"
+    },
+    "warnings": {
+      "audience": "Publishing will make this article visible to {{audience}} users."
+    },
+    "dialogs": {
+      "publish": {
+        "title": "Publish Article",
+        "message": "Are you sure you want to publish this article?",
+        "messageWithAudience": "This will publish the article and make it visible to {{audience}} users. Are you sure?"
+      },
+      "archive": {
+        "title": "Archive Article",
+        "message": "This will archive the article and remove it from client visibility. Are you sure?"
+      }
+    },
+    "feedback": {
+      "publishError": "Failed to publish article",
+      "publishSuccess": "Article published successfully",
+      "archiveError": "Failed to archive article",
+      "archiveSuccess": "Article archived"
+    }
+  },
+  "reviewDashboard": {
+    "summary": {
+      "awaitingReview": "Awaiting Review",
+      "overdueReviews": "Overdue Reviews"
+    },
+    "empty": "All caught up! No articles need review.",
+    "sections": {
+      "awaitingReview": "Articles Awaiting Review",
+      "overdue": "Overdue for Review"
+    },
+    "labels": {
+      "submitted": "Submitted",
+      "due": "Due",
+      "lastReviewed": "Last reviewed",
+      "never": "Never"
+    },
+    "actions": {
+      "view": "View",
+      "review": "Review",
+      "reviewNow": "Review Now"
+    },
+    "feedback": {
+      "loadError": "Failed to load review data"
+    }
+  },
+  "importDialog": {
+    "title": "Import Articles",
+    "dropzone": {
+      "title": "Drop files here or click to browse",
+      "formats": "Supports .md and .html files"
+    },
+    "fields": {
+      "audience": "Audience",
+      "articleType": "Article Type"
+    },
+    "actions": {
+      "import": "Import {{count}} file(s)",
+      "importing": "Importing..."
+    },
+    "feedback": {
+      "unsupportedFileType": "{{fileName}}: unsupported file type. Use .md or .html",
+      "permissionDenied": "Permission denied",
+      "importSuccess": "Imported {{imported}} of {{total}} article(s)",
+      "allFailed": "All imports failed",
+      "importError": "Import failed"
+    },
+    "results": {
+      "summary": "{{imported}} of {{total}} article(s) imported",
+      "failedCount": "{{count}} failed:"
+    }
+  },
+  "staleness": {
+    "badges": {
+      "reviewOverdue": "Review Overdue",
+      "reviewDueSoon": "Review Due Soon",
+      "overdueBy": "Overdue by {{count}} days",
+      "dueIn": "Due in {{count}} days"
+    },
+    "tooltips": {
+      "reviewOverdue": "Review was due {{date}}",
+      "reviewDue": "Review due {{date}}"
+    }
+  }
+}
