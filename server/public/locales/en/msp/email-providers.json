@@ -119,6 +119,9 @@
       "folders": "Folders: {{filters}}",
       "labels": "Labels: {{filters}}"
     },
+    "warnings": {
+      "inboundDefaults": "Inbound ticket defaults are required and emails won't process until one is selected."
+    },
     "defaults": {
       "placeholder": "Select defaults...",
       "empty": "No defaults available"
