@@ -4,6 +4,7 @@
       "view": "View",
       "back": "Back",
       "save": "Save Entry",
+      "saveGeneric": "Save",
       "saving": "Saving...",
       "cancel": "Cancel",
       "reset": "Reset",
@@ -97,6 +98,11 @@
       "notes": "Notes",
       "deleteTimeEntry": "Delete Time Entry",
       "unsavedChanges": "Unsaved changes"
+    },
+    "placeholders": {
+      "selectService": "Select a service",
+      "selectDate": "Select date",
+      "addNotes": "Add notes"
     },
     "validation": {
       "startBeforeEnd": "Start time must be earlier than end time",
