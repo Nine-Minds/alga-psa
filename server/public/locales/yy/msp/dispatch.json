@@ -1,0 +1,152 @@
+{
+  "page": {
+    "title": "55555",
+    "filteredWorkItems": "55555"
+  },
+  "workItems": {
+    "title": "55555",
+    "searchPlaceholder": "55555",
+    "filterPlaceholder": "55555",
+    "status": {
+      "unscheduled": "55555",
+      "scheduled": "55555"
+    },
+    "pagination": {
+      "previous": "55555",
+      "next": "55555",
+      "pageInfo": "55555",
+      "showing": "55555"
+    }
+  },
+  "schedule": {
+    "showInactive": "55555",
+    "prev": "55555",
+    "next": "55555",
+    "today": "55555",
+    "viewDay": "55555",
+    "viewWeek": "55555",
+    "prevAria": "55555",
+    "nextAria": "55555",
+    "viewWeekTooltip": "55555",
+    "viewWeekAria": "55555",
+    "viewWeekAriaInactive": "55555",
+    "compareAll": "55555",
+    "clearAll": "55555",
+    "compare": "55555",
+    "stopComparing": "55555",
+    "compareAria": "55555",
+    "compareAriaInactive": "55555"
+  },
+  "details": {
+    "appointmentRequest": {
+      "title": "55555"
+    },
+    "sections": {
+      "approvalInformation": "55555"
+    },
+    "fields": {
+      "service": "55555",
+      "status": "55555",
+      "client": "55555",
+      "contact": "55555",
+      "company": "55555",
+      "requester": "55555",
+      "email": "55555",
+      "phone": "55555",
+      "requestedDate": "55555",
+      "requestedTime": "55555",
+      "duration": "55555",
+      "preferredTechnician": "55555",
+      "description": "55555",
+      "declineReason": "55555",
+      "approvedBy": "55555",
+      "approvedAt": "55555"
+    },
+    "messages": {
+      "notAvailable": "55555",
+      "unsupportedWorkItemType": "55555"
+    },
+    "toasts": {
+      "noUsersAvailable": "55555",
+      "noUserSession": "55555",
+      "failedToLoadTicketData": "55555",
+      "failedToLoadProjectTaskData": "55555",
+      "failedToLoadAdHocEntryData": "55555",
+      "failedToLoadInteractionData": "55555",
+      "failedToLoadAppointmentRequestData": "55555"
+    },
+    "errors": {
+      "loadUsers": "55555",
+      "loadingContent": "55555",
+      "tryAgain": "55555"
+    },
+    "units": {
+      "minutes": "55555"
+    }
+  },
+  "dashboard": {
+    "filters": {
+      "allOpen": "55555",
+      "allClosed": "55555"
+    },
+    "messages": {
+      "accessDenied": "55555",
+      "unknownError": "55555",
+      "permissionDeniedSchedule": "55555",
+      "couldNotLoadWorkItemDetails": "55555"
+    },
+    "errors": {
+      "searchWorkItems": "55555",
+      "loadStatusFilterOptions": "55555",
+      "refreshScheduleEntries": "55555",
+      "refreshData": "55555",
+      "loadPermissions": "55555",
+      "fetchScheduleEntries": "55555",
+      "fetchData": "55555",
+      "updateSchedule": "55555",
+      "createScheduleEntry": "55555",
+      "deleteScheduleEntry": "55555",
+      "updateTask": "55555",
+      "updateScheduleEntry": "55555",
+      "saveScheduleEntry": "55555",
+      "openWorkItemDetails": "55555"
+    },
+    "success": {
+      "taskUpdated": "55555",
+      "scheduleEntryUpdated": "55555",
+      "scheduleEntryCreated": "55555"
+    }
+  },
+  "events": {
+    "actions": {
+      "viewDetails": "55555",
+      "delete": "55555",
+      "deleteScheduleEntry": "55555"
+    },
+    "fallbacks": {
+      "busy": "55555",
+      "unknown": "55555",
+      "unassigned": "55555",
+      "unknownAgent": "55555",
+      "untitled": "55555",
+      "thisScheduleEntry": "55555"
+    },
+    "tooltip": {
+      "privateEvent": "55555",
+      "eventDetails": "55555"
+    },
+    "errors": {
+      "validateDeletion": "55555"
+    }
+  },
+  "badges": {
+    "needsDispatch": "55555",
+    "needsDispatchFor": "55555"
+  },
+  "time": {
+    "suffixes": {
+      "am": "55555",
+      "pm": "55555"
+    }
+  }
+}

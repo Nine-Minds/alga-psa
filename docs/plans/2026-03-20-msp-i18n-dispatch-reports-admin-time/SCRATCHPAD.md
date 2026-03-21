@@ -126,6 +126,7 @@ SCRIPT
 - (2026-03-20) `F011` completed: added `'/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch']` to `packages/core/src/lib/i18n/config.ts` so the dispatch namespace is route-loaded with the rest of the MSP shell.
 - (2026-03-20) Partial dispatch locale batch: added `server/public/locales/fr/msp/dispatch.json`, `server/public/locales/es/msp/dispatch.json`, and `server/public/locales/it/msp/dispatch.json`. Structural parity against `server/public/locales/en/msp/dispatch.json` passed for all three files. The remaining `de`, `nl`, and `pl` locale files are still pending for the full `F012` batch.
 - (2026-03-20) `F012` completed: added the remaining real-locale files `server/public/locales/de/msp/dispatch.json`, `server/public/locales/nl/msp/dispatch.json`, and `server/public/locales/pl/msp/dispatch.json`. Checked all six real locales (`fr`, `es`, `de`, `nl`, `it`, `pl`) against `server/public/locales/en/msp/dispatch.json`; key structure matched in every file and interpolation placeholders were preserved.
+- (2026-03-20) `F013` completed: generated `server/public/locales/xx/msp/dispatch.json` and `server/public/locales/yy/msp/dispatch.json` with all leaf values collapsed to `11111` / `55555`. Kept the exact key structure from English while intentionally not preserving interpolation tokens so pseudo-locale QA highlights extraction coverage rather than variable formatting.
 
 ### Key file paths — Dispatch
 | File | Strings |
