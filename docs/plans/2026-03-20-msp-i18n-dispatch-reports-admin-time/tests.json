@@ -132,7 +132,7 @@
   {
     "id": "T040",
     "description": "Cross-batch: validate-translations.cjs passes for ALL locales after all 4 batches complete (0 errors, 0 warnings)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F091"]
   },
   {

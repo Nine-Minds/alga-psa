@@ -185,6 +185,7 @@ SCRIPT
 - (2026-03-20) `T033` passed: the batch i18n test codifies the Italian accent-audit pattern for `server/public/locales/it/msp/time-entry.json`, so the one false-positive line fixed during `F063` stays protected from regression.
 - (2026-03-20) `T034` passed: expanded `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` to assert `xx` values for representative time-entry page surfaces, including `timeEntryForm.labels.service`, `workItemList.pagination.previous`, and `timeSheetHeader.title`; rerunning the targeted vitest file confirmed those timesheet/edit-form/work-item labels resolve to `11111`.
 - (2026-03-20) `T035` passed: the same targeted i18n test now asserts `approval.sections.summary`, `managerDashboard.title`, and `managerDashboard.access.title` resolve to `11111` in `server/public/locales/xx/msp/time-entry.json`, giving automated pseudo-locale coverage for the approval dashboard route.
+- (2026-03-20) `T040` passed: the completed `node scripts/validate-translations.cjs` run serves as the cross-batch locale integrity check after all four namespaces landed. It finished with `Errors: 0` and `Warnings: 0` across `de`, `es`, `fr`, `it`, `nl`, `pl`, `xx`, and `yy`.
 
 ### Key file paths — Dispatch
 | File | Strings |
