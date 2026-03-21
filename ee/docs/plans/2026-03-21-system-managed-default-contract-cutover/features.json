@@ -1,0 +1,581 @@
+[
+  {
+    "id": "F001",
+    "description": "Define system-managed default contract domain model and invariants in PRD-aligned engineering notes.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add persistent marker/identity strategy for default contracts (schema-level or deterministic identity rule).",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 1",
+      "Data / API / Integrations 2"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Enforce uniqueness for default contract identity per tenant+client (constraint/index/upsert semantics).",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 3",
+      "Data / API / Integrations 3"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Implement idempotent `ensureDefaultContractForClient` primitive in shared billing-domain layer.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 2",
+      "Execution Order 2"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Ensure primitive creates minimal valid rows (`contracts` + `client_contracts`) without requiring immediate service lines.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations 1"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Set required contract defaults on ensure-created contract (status, currency, owner client, lifecycle-safe defaults).",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 1",
+      "Data / API / Integrations 1"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Hook default-contract ensure into shared billing settings ensure/insert path.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 2",
+      "Execution Order 3"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Hook default-contract ensure into shared billing schedule ensure/update path.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 2",
+      "Execution Order 3"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Hook default-contract ensure into billing package cycle-anchor ensure path.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 2",
+      "Execution Order 3"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Hook default-contract ensure into billing package settings action insert/update path.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 2",
+      "Execution Order 3"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Hook default-contract ensure into billing credit-expiration settings insert/update path where billing settings are created.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 2",
+      "Execution Order 3"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Centralize duplicated billing-settings ensure logic so all callers share one default-contract ensure behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 13",
+      "Execution Order 3"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Guard ensure hooks so null-setting override deletes do not unintentionally recreate default contracts unless policy requires.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 14"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Add optional fallback reconciliation hook for client-created events that bypass billing settings flows.",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations 5"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Audit and patch API generic client-delete path to invoke domain cleanup equivalent to package-level delete action.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 13",
+      "Execution Order 8"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Implement explicit cleanup for default-contract assignments on client deletion.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 11"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Define orphan default-contract cleanup policy for contract headers when assignments are removed.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 11"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Preserve non-destructive lifecycle for invoiced default contracts (soft lifecycle, no invalid hard-delete behavior).",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 12"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Update scheduling resolver signature to accept `effectiveDate` for default contract-line determination.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 5",
+      "Execution Order 4"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Update billing resolver signature to accept `effectiveDate` for default contract-line determination.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 5",
+      "Execution Order 4"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Update resolver eligibility filters to use `start_date <= effectiveDate` and `end_date >= effectiveDate or null`.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 5"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Pass time-entry work date/start timestamp-derived date into scheduling save-path resolver.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 5"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Pass usage effective date into usage save/update resolver.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 5"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Align UI eligible-contract-lines endpoint/helper to use same effective-date-aware resolver logic.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 6"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Update time-entry UI caller to provide effective date to eligible-lines query.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 6"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Update usage UI caller to provide effective date to eligible-lines query.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 6"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Remove display-only default-selection behavior that differs from persisted assignment behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 6"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Implement billing-engine reconciliation write-back for unresolved time rows with deterministic single eligible line.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 7",
+      "Execution Order 5"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Implement billing-engine reconciliation write-back for unresolved usage rows with deterministic single eligible line.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 7",
+      "Execution Order 5"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Guard reconciliation updates with null-check predicates to avoid overriding explicit assignments.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 7"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Ensure reconciliation logic is idempotent under repeated due-work runs.",
+    "implemented": false,
+    "prdRefs": [
+      "Non-functional Requirements 4"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Update unresolved due-work query semantics to exclude reconciled deterministic records.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 8"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Keep ambiguous/no-match records unresolved and visible for explicit handling.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 8"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Refactor automatic invoicing candidate builder to consume default-contract-aware unresolved model.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 8",
+      "Execution Order 6"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Refactor invoice generation selection-key parsing away from legacy non-contract key semantics in primary paths.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 9",
+      "Execution Order 6"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Maintain backward-safe parsing for historical keys only where migration compatibility is required.",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration 5"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Update recurring invoice run actions to use default-contract-aware selection data structures.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 9"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Add clear attribution metadata for grouped rows indicating explicit contract vs system-managed default contract source.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 4"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Add hard generation block when grouped row attribution metadata is missing and generation would be unsafe.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 5"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Update contract list row badges to show `System-managed default` label.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 1"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Add helper copy in contract list/detail: `Created automatically for uncontracted work`.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 1"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Restrict destructive/manual lifecycle actions for system-managed default contract rows in list/detail UI.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 2"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Ensure ownership-changing fields/actions are read-only/hidden for system-managed default contracts.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 2",
+      "Security / Permissions 2"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Update contract detail explanatory copy for system-managed ownership and assignment behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 2"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Update time-entry contract banner copy from `default rates/non-contract` to `system-managed default contract` terminology.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 3"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Update usage UI messaging to mirror time-entry default-contract terminology.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 3"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Replace technical assignment labels in automatic invoicing rows with business-safe labels.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 4"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Ensure grouped-row combinability logic remains correct when rows include default-contract and explicit-contract work.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 16"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Add route-safe permission checks so only authorized users can view/edit default-contract lifecycle controls.",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions 1"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Prevent unauthorized API mutations of system-managed markers/identity fields.",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions 2"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Add structured log events for default contract ensure outcomes (created/reused).",
+    "implemented": false,
+    "prdRefs": [
+      "Observability 1"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Add structured log events for resolver routing decisions (explicit/default/ambiguous).",
+    "implemented": false,
+    "prdRefs": [
+      "Observability 1"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Add structured log events for reconciliation write-back updates and skips.",
+    "implemented": false,
+    "prdRefs": [
+      "Observability 1"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Add operational counters/trace markers for default contract created/reused and unresolved ambiguous counts.",
+    "implemented": false,
+    "prdRefs": [
+      "Observability 2"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Create schema migration(s) for any new default-contract marker/pointer fields and uniqueness constraints.",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration 2"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Keep migration idempotent and schema-guarded with explicit existence checks.",
+    "implemented": false,
+    "prdRefs": [
+      "Non-functional Requirements 3"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Implement lazy backfill strategy: no forced full historical materialization; create/link on first qualifying interaction.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 10",
+      "Rollout / Migration 3"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Implement targeted reconciliation routine for existing null contract_line_id records with deterministic single match.",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration 4"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Document and enforce execution sequencing to avoid partial-cutover invalid states.",
+    "implemented": false,
+    "prdRefs": [
+      "Execution Order"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Remove dead/obsolete fallback branches after cutover verification to reduce complexity debt.",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration 6"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Update developer docs/runbooks describing default contract lifecycle and routing semantics.",
+    "implemented": false,
+    "prdRefs": [
+      "Execution Order 9"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Update API schema contracts if default-contract metadata is exposed in billing settings/contract endpoints.",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations 2"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Add server-side validation to prevent multiple conflicting default-contract assignments per client.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 3"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Maintain multi-active-contract support while preserving deterministic resolver precedence for default contract only as fallback.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 16"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Ensure invoice history and recurring history attribution fields display stable default-contract context.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes 4"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Audit integration-created clients and ensure first billing-config touchpoint still triggers default-contract creation.",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations 5"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Ensure cross-package shared helpers and package action layers do not diverge in default-contract behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 13"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Add cleanup guardrails so deleting billing configuration/client cannot leave dangling references to default contract pointers.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 11"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Define and enforce canonical naming convention for system-created default contracts.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 1"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Validate no regression in contract cadence and service-period invoicing flows when default-contract routing is enabled.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements 16"
+    ]
+  }
+]

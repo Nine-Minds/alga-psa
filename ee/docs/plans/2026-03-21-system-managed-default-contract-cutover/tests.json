@@ -1,0 +1,208 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: first billing-settings ensure for a client creates exactly one system-managed default contract + one assignment (idempotent on repeated call).",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F012"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Concurrency integration: parallel ensure calls for same tenant+client produce no duplicate default contracts.",
+    "implemented": false,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F055",
+      "F056",
+      "F063"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit+integration: time-entry save resolves default line by effective work date (covers backdated, current, future dates).",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F021",
+      "F022",
+      "F024",
+      "F025",
+      "F064"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit+integration: usage create/update resolves default line by effective usage date and remains consistent with UI eligibility endpoint.",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F021",
+      "F023",
+      "F024",
+      "F026",
+      "F064"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Billing-engine integration: unresolved time row with exactly one eligible line is persisted with contract_line_id and removed from unresolved output.",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F030",
+      "F031",
+      "F032"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Billing-engine integration: unresolved usage row with exactly one eligible line is persisted with contract_line_id and removed from unresolved output.",
+    "implemented": false,
+    "featureIds": [
+      "F029",
+      "F030",
+      "F031",
+      "F032"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Due-work integration: ambiguous or no-match records remain unresolved and visible; deterministic records do not surface as non-contract candidates.",
+    "implemented": false,
+    "featureIds": [
+      "F033",
+      "F034",
+      "F058",
+      "F070"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Invoice-generation integration: selected recurring rows generate correctly with default-contract-aware keys and no primary-path dependence on legacy non-contract IDs.",
+    "implemented": false,
+    "featureIds": [
+      "F035",
+      "F036",
+      "F037",
+      "F070"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "UI test: automatic invoicing grouped rows show business labels for default-contract and unmatched records; metadata-missing rows are hard-blocked.",
+    "implemented": false,
+    "featureIds": [
+      "F038",
+      "F039",
+      "F047",
+      "F065"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "UI test: contract list/detail show system-managed default badge/helper copy and hide/disable disallowed destructive/ownership actions.",
+    "implemented": false,
+    "featureIds": [
+      "F040",
+      "F041",
+      "F042",
+      "F043",
+      "F044",
+      "F049",
+      "F050"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "UI test: time-entry and usage banners/messages use default-contract terminology and do not imply a persisted default when assignment is unresolved.",
+    "implemented": false,
+    "featureIds": [
+      "F045",
+      "F046",
+      "F027"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Lifecycle integration: client delete through package action removes billing settings/cycles and default-contract assignment artifacts without dangling references.",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F018",
+      "F068"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Lifecycle integration: client delete through API/controller path executes equivalent cleanup behavior (no orphaned default-contract links).",
+    "implemented": false,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F068"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: null-setting override/deletion paths do not recreate default contract unexpectedly, while valid active billing-configuration paths still ensure it.",
+    "implemented": false,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F013",
+      "F057",
+      "F067"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Migration test: schema migration for markers/pointers/uniqueness is idempotent and safe on already-migrated databases.",
+    "implemented": false,
+    "featureIds": [
+      "F055",
+      "F056",
+      "F062"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Regression integration: service-period and contract-cadence recurring invoicing scenarios remain correct after default-contract cutover.",
+    "implemented": false,
+    "featureIds": [
+      "F048",
+      "F060",
+      "F064",
+      "F070"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Observability test: ensure/reconcile/route paths emit expected structured logs/markers with no PII leakage.",
+    "implemented": false,
+    "featureIds": [
+      "F051",
+      "F052",
+      "F053",
+      "F054"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Integration-import regression: clients created via integration pathways still receive default contract on first qualifying billing-configuration interaction.",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F057",
+      "F066"
+    ]
+  }
+]

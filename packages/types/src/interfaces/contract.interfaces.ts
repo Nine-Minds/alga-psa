@@ -23,6 +23,7 @@ export interface IContract extends TenantEntity {
   is_active: boolean;
   status: ContractStatus;
   is_template?: boolean;
+  is_system_managed_default?: boolean;
   template_metadata?: Record<string, unknown> | null;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;

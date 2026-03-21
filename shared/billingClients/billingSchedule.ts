@@ -15,6 +15,7 @@ import {
   CLIENT_CADENCE_SCHEDULE_CONTEXT,
   type ClientCadenceScheduleContext,
 } from './clientCadenceScheduleContext';
+import { ensureClientBillingSettingsRow } from './billingSettings';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -71,40 +72,6 @@ export async function getClientBillingCycleAnchor(
     anchor: normalized,
     cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT,
   };
-}
-
-async function ensureClientBillingSettingsRow(
-  trx: Knex.Transaction,
-  params: { tenant: string; clientId: string }
-): Promise<void> {
-  const existing = await trx('client_billing_settings')
-    .where({ tenant: params.tenant, client_id: params.clientId })
-    .first()
-    .select('client_id');
-  if (existing) return;
-
-  const defaults = await trx('default_billing_settings')
-    .where({ tenant: params.tenant })
-    .first()
-    .select(
-      'zero_dollar_invoice_handling',
-      'suppress_zero_dollar_invoices',
-      'credit_expiration_days',
-      'credit_expiration_notification_days',
-      'enable_credit_expiration'
-    );
-
-  await trx('client_billing_settings').insert({
-    tenant: params.tenant,
-    client_id: params.clientId,
-    zero_dollar_invoice_handling: defaults?.zero_dollar_invoice_handling ?? 'normal',
-    suppress_zero_dollar_invoices: defaults?.suppress_zero_dollar_invoices ?? false,
-    credit_expiration_days: defaults?.credit_expiration_days ?? 365,
-    credit_expiration_notification_days: defaults?.credit_expiration_notification_days ?? [30, 7, 1],
-    enable_credit_expiration: defaults?.enable_credit_expiration ?? true,
-    created_at: trx.fn.now(),
-    updated_at: trx.fn.now()
-  });
 }
 
 export type UpdateClientBillingScheduleInput = {

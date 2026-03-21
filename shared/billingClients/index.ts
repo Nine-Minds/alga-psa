@@ -6,6 +6,7 @@ export * from './contracts';
 export * from './billingCycleAnchors';
 export * from './createBillingCycles';
 export * from './billingSettings';
+export * from './defaultContract';
 export * from './contractLines';
 export * from './contractsAdmin';
 export * from './services';
