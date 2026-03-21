@@ -172,8 +172,10 @@
       "oauthWarning": "Revoking this session will not revoke {{provider}} OAuth access. Revoke access from your {{provider}} account settings.",
       "confirmLogout": "Are you sure you want to logout from this device?",
       "messages": {
+        "loadFailed": "Failed to load sessions",
         "loggingOut": "Logging out...",
-        "revoked": "Session revoked successfully"
+        "revoked": "Session revoked successfully",
+        "revokeFailed": "Failed to revoke session"
       },
       "emptyState": {
         "loading": "Loading sessions...",
