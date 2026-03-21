@@ -1603,11 +1603,44 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
   let cadenceOwner: CadenceOwner = 'client';
   let billingTiming: 'arrears' | 'advance' = 'arrears';
   let fixedBaseRateCents: number | undefined;
+  const servicesByLineId = new Map<
+    string,
+    Awaited<ReturnType<typeof getTemplateLineServicesWithConfigurations>>
+  >();
+  const hourlyServiceIds: string[] = [];
+  const usageServiceIds: string[] = [];
+
+  for (const line of detailedLines) {
+    const servicesWithConfig = await getTemplateLineServicesWithConfigurations(line.contract_line_id);
+    servicesByLineId.set(line.contract_line_id, servicesWithConfig);
+
+    if (line.contract_line_type === 'Hourly') {
+      hourlyServiceIds.push(...servicesWithConfig.map(({ service }) => service.service_id));
+    } else if (line.contract_line_type === 'Usage') {
+      usageServiceIds.push(...servicesWithConfig.map(({ service }) => service.service_id));
+    }
+  }
+
+  const templateCurrencyCode = 'USD';
+  const hourlyModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
+    knex,
+    tenant,
+    hourlyServiceIds,
+    'Hourly',
+    templateCurrencyCode
+  );
+  const usageModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
+    knex,
+    tenant,
+    usageServiceIds,
+    'Usage',
+    templateCurrencyCode
+  );
 
   for (const line of detailedLines) {
     cadenceOwner = line.cadence_owner ?? cadenceOwner;
     billingTiming = line.billing_timing ?? billingTiming;
-    const servicesWithConfig = await getTemplateLineServicesWithConfigurations(line.contract_line_id);
+    const servicesWithConfig = servicesByLineId.get(line.contract_line_id) ?? [];
 
     if (line.contract_line_type === 'Fixed') {
       servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
@@ -1657,6 +1690,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
         const hourlyRateCents = firstPositiveRateInCents(
           hourlyConfig?.hourly_rate,
           configuration?.custom_rate,
+          hourlyModeDefaultsByServiceId.get(service.service_id),
           service.default_rate
         );
 
@@ -1693,6 +1727,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
         const unitRateCents = firstPositiveRateInCents(
           usageConfig?.base_rate,
           configuration?.custom_rate,
+          usageModeDefaultsByServiceId.get(service.service_id),
           service.default_rate
         );
 
@@ -1844,11 +1879,44 @@ export const getDraftContractForResume = withAuth(async (
   let usageBillingFrequency: string | undefined;
   let cadenceOwner: CadenceOwner = 'client';
   let billingTiming: 'arrears' | 'advance' = 'arrears';
+  const servicesByLineId = new Map<
+    string,
+    Awaited<ReturnType<typeof getContractLineServicesWithConfigurations>>
+  >();
+  const hourlyServiceIds: string[] = [];
+  const usageServiceIds: string[] = [];
+
+  for (const line of detailedLines) {
+    const servicesWithConfig = await getContractLineServicesWithConfigurations(line.contract_line_id);
+    servicesByLineId.set(line.contract_line_id, servicesWithConfig);
+
+    if (line.contract_line_type === 'Hourly') {
+      hourlyServiceIds.push(...servicesWithConfig.map(({ service }) => service.service_id));
+    } else if (line.contract_line_type === 'Usage') {
+      usageServiceIds.push(...servicesWithConfig.map(({ service }) => service.service_id));
+    }
+  }
+
+  const contractCurrencyCode = contract.currency_code || 'USD';
+  const hourlyModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
+    knex,
+    tenant,
+    hourlyServiceIds,
+    'Hourly',
+    contractCurrencyCode
+  );
+  const usageModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
+    knex,
+    tenant,
+    usageServiceIds,
+    'Usage',
+    contractCurrencyCode
+  );
 
   for (const line of detailedLines) {
     cadenceOwner = line.cadence_owner ?? cadenceOwner;
     billingTiming = line.billing_timing ?? billingTiming;
-    const servicesWithConfig = await getContractLineServicesWithConfigurations(line.contract_line_id);
+    const servicesWithConfig = servicesByLineId.get(line.contract_line_id) ?? [];
 
     if (line.contract_line_type === 'Fixed') {
       servicesWithConfig.forEach(({ service, configuration, bucketConfig }) => {
@@ -1900,6 +1968,7 @@ export const getDraftContractForResume = withAuth(async (
         const hourlyRateCents = firstPositiveRateInCents(
           hourlyConfig?.hourly_rate,
           configuration?.custom_rate,
+          hourlyModeDefaultsByServiceId.get(service.service_id),
           service.default_rate
         );
 
@@ -1937,6 +2006,7 @@ export const getDraftContractForResume = withAuth(async (
         const unitRateCents = firstPositiveRateInCents(
           usageConfig?.base_rate,
           configuration?.custom_rate,
+          usageModeDefaultsByServiceId.get(service.service_id),
           service.default_rate
         );
 

@@ -58,10 +58,22 @@ vi.mock('../src/actions/bucketOverlayActions', () => ({
 
 type KnexRow = Record<string, unknown> | null;
 
-const makeKnex = (rows: { contracts?: KnexRow; client_contracts?: KnexRow; contract_templates?: KnexRow }) => {
+const makeKnex = (rows: {
+  contracts?: KnexRow;
+  client_contracts?: KnexRow;
+  contract_templates?: KnexRow;
+  service_catalog_mode_defaults?: Array<{ service_id: string; rate: number }>;
+}) => {
   const builderFor = (table: string) => {
     const builder: any = {};
+    let modeDefaultFilter: { serviceIds?: string[]; billingMode?: string; currencyCode?: string } = {};
     builder.where = vi.fn(() => builder);
+    builder.whereIn = vi.fn((column: string, values: string[]) => {
+      if (table === 'service_catalog_mode_defaults' && column === 'service_id') {
+        modeDefaultFilter = { ...modeDefaultFilter, serviceIds: values };
+      }
+      return builder;
+    });
     builder.andWhere = vi.fn((...args: any[]) => {
       if (typeof args[0] === 'function') {
         const whereBuilder = {
@@ -72,11 +84,34 @@ const makeKnex = (rows: { contracts?: KnexRow; client_contracts?: KnexRow; contr
       }
       return builder;
     });
+    builder.select = vi.fn(async () => {
+      if (table !== 'service_catalog_mode_defaults') {
+        return [];
+      }
+      const rowsForModeDefaults = rows.service_catalog_mode_defaults ?? [];
+      return rowsForModeDefaults.filter((row) => {
+        if (modeDefaultFilter.serviceIds && !modeDefaultFilter.serviceIds.includes(row.service_id)) {
+          return false;
+        }
+        return true;
+      });
+    });
     builder.first = vi.fn(async () => {
       if (table === 'contracts') return rows.contracts ?? null;
       if (table === 'client_contracts') return rows.client_contracts ?? null;
       if (table === 'contract_templates') return rows.contract_templates ?? null;
       return null;
+    });
+    builder.where = vi.fn((conditions?: Record<string, unknown>) => {
+      if (table === 'service_catalog_mode_defaults' && conditions) {
+        modeDefaultFilter = {
+          ...modeDefaultFilter,
+          billingMode: typeof conditions.billing_mode === 'string' ? conditions.billing_mode : modeDefaultFilter.billingMode,
+          currencyCode:
+            typeof conditions.currency_code === 'string' ? conditions.currency_code : modeDefaultFilter.currencyCode,
+        };
+      }
+      return builder;
     });
     return builder;
   };
@@ -448,7 +483,7 @@ describe('getDraftContractForResume action', () => {
     });
   });
 
-  it('falls back to catalog default rates when draft hourly/usage rates are 0 (T029b)', async () => {
+  it('T026: resume preserves decoupled selections and mode-default prefills when stored rates are empty', async () => {
     const knex = makeKnex({
       contracts: {
         contract_id: 'contract-1',
@@ -468,6 +503,10 @@ describe('getDraftContractForResume action', () => {
         po_amount: null,
         template_contract_id: null,
       },
+      service_catalog_mode_defaults: [
+        { service_id: 'svc-hourly', rate: 10100 },
+        { service_id: 'svc-usage', rate: 575 },
+      ],
     });
     createTenantKnex.mockResolvedValue({ knex });
     fetchDetailedContractLines.mockResolvedValue([
@@ -532,15 +571,15 @@ describe('getDraftContractForResume action', () => {
 
     expect(result.hourly_services[0]).toMatchObject({
       service_id: 'svc-hourly',
-      hourly_rate: 9200,
+      hourly_rate: 10100,
     });
     expect(result.usage_services[0]).toMatchObject({
       service_id: 'svc-usage',
-      unit_rate: 375,
+      unit_rate: 575,
     });
   });
 
-  it('falls back to catalog default rates in template snapshot when stored rates are 0', async () => {
+  it('T027: template snapshot preserves decoupled selections and mode-default prefills when stored rates are empty', async () => {
     const knex = makeKnex({
       contract_templates: {
         template_id: 'template-1',
@@ -548,6 +587,10 @@ describe('getDraftContractForResume action', () => {
         template_description: 'Test',
         default_billing_frequency: 'monthly',
       },
+      service_catalog_mode_defaults: [
+        { service_id: 'svc-hourly', rate: 14400 },
+        { service_id: 'svc-usage', rate: 880 },
+      ],
     });
     createTenantKnex.mockResolvedValue({ knex });
     fetchDetailedContractLines.mockResolvedValue([
@@ -610,11 +653,11 @@ describe('getDraftContractForResume action', () => {
 
     expect(snapshot.hourly_services?.[0]).toMatchObject({
       service_id: 'svc-hourly',
-      hourly_rate: 11300,
+      hourly_rate: 14400,
     });
     expect(snapshot.usage_services?.[0]).toMatchObject({
       service_id: 'svc-usage',
-      unit_rate: 640,
+      unit_rate: 880,
     });
   });
 
