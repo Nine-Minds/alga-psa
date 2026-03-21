@@ -61,10 +61,11 @@
       "current": "Current Password",
       "new": "New Password",
       "confirm": "Confirm New Password",
+      "validationFailed": "Password does not meet all requirements",
       "requirements": "Password must be at least 8 characters",
-      "submit": "Update Password",
-      "success": "Password updated successfully",
-      "error": "Failed to update password",
+      "submit": "Change Password",
+      "success": "Password changed successfully",
+      "error": "Failed to change password",
       "passwordMismatch": "New passwords do not match",
       "unknownError": "An error occurred while changing password"
     },
@@ -123,6 +124,7 @@
         "roles": "Roles",
         "actions": "Actions"
       },
+      "unnamedUser": "Unnamed User",
       "noRolesAssigned": "No roles assigned",
       "removeRole": "Remove {{role}}",
       "emptyState": {
@@ -162,7 +164,7 @@
       "session": {
         "yourSession": "Your Session",
         "unknownDevice": "Unknown Device",
-        "lastActive": "Last active {{time}} ago",
+        "lastActive": "Last active {{time}}",
         "logout": "Logout",
         "revoke": "Revoke",
         "revoking": "Revoking..."

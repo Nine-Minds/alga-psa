@@ -12,7 +12,6 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { formatDistanceToNow } from 'date-fns';
 import {
   getAllSessionsAction,
   revokeSessionAction,
@@ -35,10 +34,11 @@ import {
   Filter,
   XCircle,
 } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function AdminSessionManagement() {
-  const { t } = useTranslation('msp/settings');
+  const { t } = useTranslation('msp/profile');
+  const { formatRelativeTime } = useFormatters();
   const [sessions, setSessions] = useState<SessionWithUser[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<SessionWithUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +64,9 @@ export default function AdminSessionManagement() {
       setFilteredSessions(sessionsData.sessions);
       setUsers(usersData);
     } catch (error) {
-      handleError(error, 'Failed to load sessions');
+      handleError(error, t('security.sessions.messages.loadFailed', {
+        defaultValue: 'Failed to load sessions',
+      }));
     } finally {
       setLoading(false);
     }
@@ -162,7 +164,9 @@ export default function AdminSessionManagement() {
         await fetchSessions();
       }
     } catch (error) {
-      handleError(error, 'Failed to revoke session');
+      handleError(error, t('security.sessions.messages.revokeFailed', {
+        defaultValue: 'Failed to revoke session',
+      }));
     } finally {
       setRevoking(null);
     }
@@ -429,7 +433,7 @@ export default function AdminSessionManagement() {
                           <Clock className="h-3.5 w-3.5" />
                           <span>
                             {t('security.sessions.session.lastActive', {
-                              time: formatDistanceToNow(new Date(session.last_activity_at)),
+                              time: formatRelativeTime(session.last_activity_at),
                             })}
                           </span>
                         </div>
