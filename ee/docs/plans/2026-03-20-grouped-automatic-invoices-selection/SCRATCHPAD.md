@@ -68,6 +68,10 @@ Working notes for the grouped automatic-invoices selection redesign. This plan i
 - (2026-03-20) Validation run:
   - `cd packages/billing && npx vitest run tests/automaticInvoices.groupedParentRows.test.tsx`
   - `npm -w packages/billing run typecheck` (fails due existing unrelated package-level TS errors; see `billingCycleActions.ts`, `recurringBillingRunActions.shared.ts`, `billingEngine.ts`, `invoiceService.ts`, plus recurring due-window typing drift around `duePosition`).
+- (2026-03-20) Completed `F009` by introducing dual parent/child selection targets, child-level checkbox selection in expanded groups, and parent tri-state behavior when child selections are partial.
+- (2026-03-20) Completed `F010` by implementing smart `Select All`: combinable groups select parent targets, non-combinable groups select child targets.
+- (2026-03-20) Completed `F011` by keeping blocked child rows visible while preventing blocked child selection in both direct child selection and `Select All`.
+- (2026-03-20) Completed `T009`-`T014` with UI behavior tests covering parent selection semantics, child selection availability, parent tri-state, smart `Select All`, and blocked child visibility/selection guardrails.
 
 ## Open Questions
 

@@ -50,37 +50,37 @@
   {
     "id": "T009",
     "description": "When a parent is combinable, selecting the parent selects the whole group as one invoice target.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F009"]
   },
   {
     "id": "T010",
     "description": "When a parent is non-combinable, the parent checkbox is disabled while child rows remain individually selectable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F009", "F012"]
   },
   {
     "id": "T011",
     "description": "Partial child selection drives a tri-state parent indicator without silently changing execution semantics.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
     "id": "T012",
     "description": "`Select All` selects combinable groups by parent row instead of selecting each child individually.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
     "id": "T013",
     "description": "`Select All` selects child rows individually for non-combinable groups instead of attempting invalid parent selection.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F012"]
   },
   {
     "id": "T014",
     "description": "Blocked child rows remain visible inside a group and do not become selectable through either child selection or parent `Select All`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {

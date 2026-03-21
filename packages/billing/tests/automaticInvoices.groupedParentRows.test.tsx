@@ -45,6 +45,11 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
     columns?: Array<{ dataIndex?: string; render?: (value: unknown, row: any, index: number) => React.ReactNode }>;
   }) => (
     <div data-testid={id}>
+      <div data-testid={`${id}-header`}>
+        {columns.map((column, columnIndex) => (
+          <div key={`header-${columnIndex}`}>{(column as any).title ?? null}</div>
+        ))}
+      </div>
       <div data-testid={`${id}-row-count`}>{data.length}</div>
       {data.map((row, index) => (
         <div
@@ -75,7 +80,13 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ containerClassName: _containerClassName, ...props }: any) => <input {...props} />,
 }));
 vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  Checkbox: (props: any) => <input type="checkbox" {...props} />,
+  Checkbox: ({ indeterminate: _indeterminate, ...props }: any) => (
+    <input
+      type="checkbox"
+      data-indeterminate={_indeterminate ? 'true' : 'false'}
+      {...props}
+    />
+  ),
 }));
 vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
   DateRangePicker: () => <div data-testid="date-range-picker" />,
@@ -129,6 +140,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
           members: [
             {
               executionIdentityKey: 'exec-1',
+              canGenerate: true,
               billingCycleId: 'bc-1',
               clientId: 'client-1',
               purchaseOrderScopeKey: 'po-1',
@@ -143,6 +155,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
             },
             {
               executionIdentityKey: 'exec-2',
+              canGenerate: true,
               billingCycleId: 'bc-2',
               clientId: 'client-1',
               purchaseOrderScopeKey: 'po-1',
@@ -302,5 +315,127 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(
       screen.getByTestId('combinability-reasons-parent-group:client-1:2026-03-01:2026-04-01'),
     ).toHaveTextContent('Export shape differs');
+  });
+
+  it('selecting a combinable parent selects the full group target (T009)', async () => {
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const parentCheckbox = await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      return checkbox as HTMLInputElement;
+    });
+    fireEvent.click(parentCheckbox);
+
+    expect(parentCheckbox.checked).toBe(true);
+    expect(screen.getByText('Generate Invoices for Selected Periods (2)')).toBeInTheDocument();
+  });
+
+  it('non-combinable parent stays disabled while child rows remain selectable (T010)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const expandButton = await screen.findByRole('button', { name: 'Expand' });
+    fireEvent.click(expandButton);
+
+    const parentCheckbox = document.getElementById(
+      'select-parent-group:client-1:2026-03-01:2026-04-01',
+    ) as HTMLInputElement;
+    const childCheckbox = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
+    ) as HTMLInputElement;
+
+    expect(parentCheckbox.disabled).toBe(true);
+    expect(childCheckbox.disabled).toBe(false);
+  });
+
+  it('partial child selection drives parent indeterminate state (T011)', async () => {
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const expandButton = await screen.findByRole('button', { name: 'Expand' });
+    fireEvent.click(expandButton);
+
+    const childCheckbox = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
+    ) as HTMLInputElement;
+    fireEvent.click(childCheckbox);
+
+    const parentCheckbox = document.getElementById(
+      'select-parent-group:client-1:2026-03-01:2026-04-01',
+    ) as HTMLInputElement;
+    expect(parentCheckbox.checked).toBe(false);
+    expect(parentCheckbox.dataset.indeterminate).toBe('true');
+  });
+
+  it('select all selects combinable groups by parent row (T012)', async () => {
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const [selectAll] = await screen.findAllByRole('checkbox');
+    fireEvent.click(selectAll);
+
+    const parentCheckbox = document.getElementById(
+      'select-parent-group:client-1:2026-03-01:2026-04-01',
+    ) as HTMLInputElement;
+    expect(parentCheckbox.checked).toBe(true);
+  });
+
+  it('select all selects child rows for non-combinable groups (T013)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members[1].taxSource = 'inclusive';
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const [selectAll] = await screen.findAllByRole('checkbox');
+    fireEvent.click(selectAll);
+
+    const expandButton = await screen.findByRole('button', { name: 'Expand' });
+    fireEvent.click(expandButton);
+
+    const parentCheckbox = document.getElementById(
+      'select-parent-group:client-1:2026-03-01:2026-04-01',
+    ) as HTMLInputElement;
+    const childOne = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
+    ) as HTMLInputElement;
+    const childTwo = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-2',
+    ) as HTMLInputElement;
+
+    expect(parentCheckbox.checked).toBe(false);
+    expect(childOne.checked).toBe(true);
+    expect(childTwo.checked).toBe(true);
+  });
+
+  it('keeps blocked children visible but unselectable via child selection and select all (T014)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].canGenerate = false;
+    mockDueWorkResponse.invoiceCandidates[0].members[1].canGenerate = false;
+    mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const [selectAll] = await screen.findAllByRole('checkbox');
+    fireEvent.click(selectAll);
+
+    const expandButton = await screen.findByRole('button', { name: 'Expand' });
+    fireEvent.click(expandButton);
+
+    const blockedChild = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-2',
+    ) as HTMLInputElement;
+    const readyChild = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
+    ) as HTMLInputElement;
+
+    expect(
+      screen.getByTestId('child-row-parent-group:client-1:2026-03-01:2026-04-01-exec-2'),
+    ).toBeInTheDocument();
+    expect(blockedChild.disabled).toBe(true);
+    expect(blockedChild.checked).toBe(false);
+    expect(readyChild.checked).toBe(true);
   });
 });

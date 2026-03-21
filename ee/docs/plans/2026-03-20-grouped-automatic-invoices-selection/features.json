@@ -50,19 +50,19 @@
   {
     "id": "F009",
     "description": "Support child-level selection regardless of parent combinability, including tri-state parent behavior for partial selection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product Decisions", "Requirements"]
   },
   {
     "id": "F010",
     "description": "Implement smart `Select All` semantics that select parents for combinable groups and child rows individually for non-combinable groups.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product Decisions", "Requirements"]
   },
   {
     "id": "F011",
     "description": "Keep blocked child candidates visible inside groups while preventing their selection and reflecting their status in the parent summary.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements"]
   },
   {

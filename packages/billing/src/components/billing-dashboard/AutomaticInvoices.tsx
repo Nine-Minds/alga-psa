@@ -219,7 +219,7 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
   const router = useRouter();
   // Drawer removed: client details quick view no longer used here
-  const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
+  const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
   const [expandedParentGroups, setExpandedParentGroups] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
@@ -314,7 +314,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       setDebouncedClientFilter(clientFilter);
       if (initialLoadDone.current) {
         setCurrentReadyPage(1);
-        setSelectedPeriods(new Set()); // Clear selection when filter changes
+        setSelectedTargets(new Set()); // Clear selection when filter changes
         setExpandedParentGroups(new Set());
       }
     }, 300);
@@ -325,14 +325,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentReadyPage(1);
-    setSelectedPeriods(new Set());
+    setSelectedTargets(new Set());
     setExpandedParentGroups(new Set());
   };
 
   // Handle page change - clear selection (server-side pagination means selected items may not be visible)
   const handleReadyPageChange = (newPage: number) => {
     setCurrentReadyPage(newPage);
-    setSelectedPeriods(new Set());
+    setSelectedTargets(new Set());
     setExpandedParentGroups(new Set());
   };
 
@@ -340,7 +340,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const handleDateRangeSearch = () => {
     setAppliedDateRange(pendingDateRange);
     setCurrentReadyPage(1);
-    setSelectedPeriods(new Set());
+    setSelectedTargets(new Set());
     setExpandedParentGroups(new Set());
   };
 
@@ -371,7 +371,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         const maxPage = Math.max(1, Math.ceil(result.total / pageSize));
         if (currentReadyPage > maxPage && currentReadyPage !== maxPage) {
           setCurrentReadyPage(maxPage);
-          setSelectedPeriods(new Set()); // Clear selection since visible rows changed
+          setSelectedTargets(new Set()); // Clear selection since visible rows changed
         }
       } catch (error) {
         console.error('Error loading billing periods:', error);
@@ -395,21 +395,40 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const filteredPeriods = periods;
   const parentGroups = buildRecurringInvoiceParentGroups(filteredPeriods);
   const readyRows = parentGroups.flatMap((group) => group.childExecutionRows);
+  const childSelectionKeyForMember = (member: RecurringInvoiceParentGroup['childExecutionRows'][number]) =>
+    `child-selection:${member.executionIdentityKey}`;
   const selectedParentGroups = parentGroups.filter((group) =>
-    selectedPeriods.has(group.parentSummary.parentSelectionKey),
+    selectedTargets.has(group.parentSummary.parentSelectionKey),
   );
-  const selectedPreviewCandidate = selectedParentGroups.length === 1
-    ? selectedParentGroups[0]?.candidate ?? null
-    : null;
-  const selectedPreviewPeriod =
-    selectedPreviewCandidate
-    && selectedPreviewCandidate.memberCount === 1
-    && selectedPreviewCandidate.members.length === 1
-      ? selectedPreviewCandidate.members[0] ?? null
-      : null;
-  const groupedPreviewSelection =
-    selectedPreviewCandidate
-    && (selectedPreviewCandidate.memberCount > 1 || selectedPreviewCandidate.members.length > 1);
+  const selectedChildRows = readyRows.filter((member) => selectedTargets.has(childSelectionKeyForMember(member)));
+  const selectedExecutionRows = [
+    ...selectedParentGroups.flatMap((group) => group.childExecutionRows),
+    ...selectedChildRows,
+  ].filter((member, index, allMembers) =>
+    allMembers.findIndex((item) => item.executionIdentityKey === member.executionIdentityKey) === index,
+  );
+  const selectedPreviewPeriod = selectedExecutionRows.length === 1 ? selectedExecutionRows[0] ?? null : null;
+  const groupedPreviewSelection = selectedExecutionRows.length > 1;
+  const isGroupFullySelected = (group: RecurringInvoiceParentGroup): boolean => {
+    if (selectedTargets.has(group.parentSummary.parentSelectionKey)) {
+      return true;
+    }
+
+    const selectableChildren = group.childExecutionRows.filter((member) => member.canGenerate);
+    if (selectableChildren.length === 0) {
+      return false;
+    }
+
+    return selectableChildren.every((member) => selectedTargets.has(childSelectionKeyForMember(member)));
+  };
+  const allGroupsFullySelected = parentGroups.length > 0 && parentGroups.every((group) => isGroupFullySelected(group));
+  const hasAnyGroupSelection = parentGroups.some((group) => {
+    if (selectedTargets.has(group.parentSummary.parentSelectionKey)) {
+      return true;
+    }
+
+    return group.childExecutionRows.some((member) => selectedTargets.has(childSelectionKeyForMember(member)));
+  });
 
   // Debounce invoiced search term
   useEffect(() => {
@@ -480,25 +499,64 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const validIds = parentGroups
-        .filter((group) => group.parentSummary.canGenerate && group.parentSummary.isCombinable)
-        .map((group) => group.parentSummary.parentSelectionKey);
-      setSelectedPeriods(new Set(validIds));
+      const nextSelections = new Set<string>();
+      for (const group of parentGroups) {
+        const selectableChildren = group.childExecutionRows.filter((member) => member.canGenerate);
+        if (selectableChildren.length === 0) {
+          continue;
+        }
+
+        if (group.parentSummary.canGenerate && group.parentSummary.isCombinable) {
+          nextSelections.add(group.parentSummary.parentSelectionKey);
+          continue;
+        }
+
+        for (const child of selectableChildren) {
+          nextSelections.add(childSelectionKeyForMember(child));
+        }
+      }
+      setSelectedTargets(nextSelections);
     } else {
-      setSelectedPeriods(new Set());
+      setSelectedTargets(new Set());
     }
   };
 
-  const handleSelectPeriod = (parentSelectionKey: string, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectParentGroup = (
+    group: RecurringInvoiceParentGroup,
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const parentSelectionKey = group.parentSummary.parentSelectionKey;
     if (!parentSelectionKey) return;
 
-    const newSelected = new Set(selectedPeriods);
+    const newSelected = new Set(selectedTargets);
+    for (const child of group.childExecutionRows) {
+      newSelected.delete(childSelectionKeyForMember(child));
+    }
+
     if (event.target.checked) {
       newSelected.add(parentSelectionKey);
     } else {
       newSelected.delete(parentSelectionKey);
     }
-    setSelectedPeriods(newSelected);
+    setSelectedTargets(newSelected);
+  };
+
+  const handleSelectChild = (
+    group: RecurringInvoiceParentGroup,
+    child: RecurringInvoiceParentGroup['childExecutionRows'][number],
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const childSelectionKey = childSelectionKeyForMember(child);
+    const nextSelected = new Set(selectedTargets);
+    nextSelected.delete(group.parentSummary.parentSelectionKey);
+
+    if (event.target.checked) {
+      nextSelected.add(childSelectionKey);
+    } else {
+      nextSelected.delete(childSelectionKey);
+    }
+
+    setSelectedTargets(nextSelected);
   };
 
   const toggleParentGroupExpansion = (parentGroupKey: string) => {
@@ -581,13 +639,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const handleGenerateInvoices = async () => {
-    const selectedCandidates = parentGroups
-      .filter((group) => selectedPeriods.has(group.parentSummary.parentSelectionKey))
-      .map((group) => group.candidate);
-    if (selectedCandidates.length === 0) {
+    const selectedExecutionPeriods = selectedExecutionRows.filter((period) => period.canGenerate);
+    if (selectedExecutionPeriods.length === 0) {
       return;
     }
-    const selectedExecutionPeriods = selectedCandidates.flatMap((candidate) => candidate.members);
 
     setIsGenerating(true);
     setErrors({});
@@ -645,7 +700,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
-      setSelectedPeriods(new Set());
+      setSelectedTargets(new Set());
       // Let onGenerateSuccess trigger refresh via refreshTrigger - no need to manually reload
       onGenerateSuccess();
     } finally {
@@ -694,7 +749,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
-      setSelectedPeriods(new Set());
+      setSelectedTargets(new Set());
       // Let onGenerateSuccess trigger refresh via refreshTrigger - no need to manually reload
       onGenerateSuccess();
     } finally {
@@ -910,7 +965,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   }
                 }}
                 disabled={
-                  selectedPeriods.size !== 1
+                  selectedExecutionRows.length !== 1
                   || !selectedPreviewPeriod
                   || isPreviewLoading
                 }
@@ -926,10 +981,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               <Button
                 id='generate-invoices-button'
                 onClick={handleGenerateInvoices}
-                disabled={selectedPeriods.size === 0 || isGenerating}
-                className={selectedPeriods.size === 0 ? 'opacity-50' : ''}
+                disabled={selectedExecutionRows.length === 0 || isGenerating}
+                className={selectedExecutionRows.length === 0 ? 'opacity-50' : ''}
               >
-                {isGenerating ? 'Generating...' : `Generate Invoices for Selected Periods (${selectedPeriods.size})`}
+                {isGenerating ? 'Generating...' : `Generate Invoices for Selected Periods (${selectedExecutionRows.length})`}
               </Button>
             </div>
           </div>
@@ -1054,25 +1109,34 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 title: (
                     <Checkbox
                     id="select-all"
-                    checked={parentGroups.length > 0 && selectedPeriods.size === parentGroups.filter((group) => group.parentSummary.canGenerate && group.parentSummary.isCombinable).length}
+                    checked={allGroupsFullySelected}
+                    indeterminate={!allGroupsFullySelected && hasAnyGroupSelection}
                     onChange={handleSelectAll}
-                    disabled={!parentGroups.some((group) => group.parentSummary.canGenerate && group.parentSummary.isCombinable)}
+                    disabled={parentGroups.length === 0}
                   />
                 ),
                 dataIndex: 'candidateKey',
-                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
-                  <Checkbox
-                    id={`select-${record.parentSummary.parentGroupKey}`}
-                    checked={selectedPeriods.has(record.parentSummary.parentSelectionKey)}
-                    disabled={!record.parentSummary.canGenerate || !record.parentSummary.isCombinable}
-                    // Stop propagation to prevent row click when clicking checkbox
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                      event.stopPropagation();
-                      handleSelectPeriod(record.parentSummary.parentSelectionKey, event);
-                    }}
-                    onClick={(e) => e.stopPropagation()} // Also stop propagation on click
-                  />
-                )
+                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
+                  const isParentSelected = selectedTargets.has(record.parentSummary.parentSelectionKey);
+                  const selectedChildrenCount = record.childExecutionRows.filter((member) =>
+                    selectedTargets.has(childSelectionKeyForMember(member)),
+                  ).length;
+                  const isPartiallySelected = !isParentSelected && selectedChildrenCount > 0;
+                  return (
+                    <Checkbox
+                      id={`select-${record.parentSummary.parentGroupKey}`}
+                      checked={isParentSelected}
+                      indeterminate={isPartiallySelected}
+                      disabled={!record.parentSummary.canGenerate || !record.parentSummary.isCombinable}
+                      // Stop propagation to prevent row click when clicking checkbox
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        event.stopPropagation();
+                        handleSelectParentGroup(record, event);
+                      }}
+                      onClick={(e) => e.stopPropagation()} // Also stop propagation on click
+                    />
+                  );
+                }
               },
               {
                 title: 'Group',
@@ -1183,6 +1247,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         const duePosition = (member.selectorInput.executionWindow as { duePosition?: string }).duePosition;
                         const billingTiming = duePosition === 'advance' ? 'Advance' : 'Arrears';
                         const amountCents = (member as { amountCents?: number | null }).amountCents;
+                        const isChildSelected = selectedTargets.has(childSelectionKeyForMember(member));
 
                         return (
                           <div
@@ -1190,6 +1255,17 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                             className="rounded border border-border/60 p-2"
                             data-testid={`child-row-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
                           >
+                            <div className="mb-1">
+                              <Checkbox
+                                id={`select-child-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
+                                checked={isChildSelected}
+                                disabled={!member.canGenerate}
+                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                                  event.stopPropagation();
+                                  handleSelectChild(record, member, event);
+                                }}
+                              />
+                            </div>
                             <div className="text-sm font-medium">
                               {assignmentContext ?? member.contractLineName ?? member.executionIdentityKey}
                             </div>
