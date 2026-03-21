@@ -9,7 +9,7 @@
   { "id": "F008", "description": "Replace fixed-service server submit billing-method rejection with contract-context validation rules only.", "implemented": true, "prdRefs": ["Requirements > L1.B"] },
   { "id": "F009", "description": "Replace hourly-service server submit billing-method rejection with contract-context validation rules only.", "implemented": true, "prdRefs": ["Requirements > L1.B"] },
   { "id": "F010", "description": "Replace usage-service server submit billing-method rejection with contract-context validation rules only.", "implemented": true, "prdRefs": ["Requirements > L1.B"] },
-  { "id": "F011", "description": "Update contract line service attach actions to validate by target line mode/context instead of catalog billing method.", "implemented": false, "prdRefs": ["Requirements > L1.B"] },
+  { "id": "F011", "description": "Update contract line service attach actions to validate by target line mode/context instead of catalog billing method.", "implemented": true, "prdRefs": ["Requirements > L1.B"] },
   { "id": "F012", "description": "Implement fixed-line rate default prefill from mode-specific catalog defaults with clear override semantics.", "implemented": false, "prdRefs": ["Requirements > L1.C"] },
   { "id": "F013", "description": "Implement hourly-line rate default prefill from mode-specific catalog defaults with clear override semantics.", "implemented": false, "prdRefs": ["Requirements > L1.C"] },
   { "id": "F014", "description": "Implement usage-line rate default prefill from mode-specific catalog defaults with clear override semantics.", "implemented": false, "prdRefs": ["Requirements > L1.C"] },

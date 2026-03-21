@@ -247,24 +247,16 @@ export const addServiceToContractLine = withAuth(async (
       return addServiceToTemplateLine(trx, tenant, templateLine, serviceId, quantity, customRate);
     }
 
-  // Get service details and join with service_types to get the type's billing_method
-  const serviceWithType = await trx('service_catalog as sc')
-    .leftJoin('service_types as st', function() {
-      this.on('sc.custom_service_type_id', '=', 'st.id')
-          .andOn('sc.tenant', '=', 'st.tenant');
-    })
+  const service = await trx('service_catalog')
     .where({
-      'sc.service_id': serviceId,
-      'sc.tenant': tenant
+      service_id: serviceId,
+      tenant
     })
-    .select('sc.*', 'st.billing_method as service_type_billing_method') // Select the billing_method from the type table
-    .first() as IService & { service_type_billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' }; // Add type info
+    .first() as IService | undefined;
 
-  if (!serviceWithType) {
+  if (!service) {
     throw new Error(`Service ${serviceId} not found`);
   }
-  // Use serviceWithType which includes service_type_billing_method for logic below
-  const service = serviceWithType; // Keep using 'service' variable name for compatibility with validation block
 
   // Get plan details
   const plan = await trx('contract_lines')
@@ -315,35 +307,31 @@ export const addServiceToContractLine = withAuth(async (
     }
   }
 
-  if (plan.contract_line_type === 'Hourly' && service.billing_method === 'fixed') {
-    throw new Error(`Cannot add a fixed-price service (${service.service_name}) to an hourly contract line.`);
-  } else if (plan.contract_line_type === 'Usage' && service.billing_method === 'fixed') {
-    // Prevent adding fixed-price services to Usage-Based plans
-    throw new Error(`Cannot add a fixed-price service (${service.service_name}) to a usage-based contract line.`);
+  const allowedConfigTypesByPlan: Record<'Fixed' | 'Hourly' | 'Usage', Array<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>> = {
+    Fixed: ['Fixed', 'Bucket'],
+    Hourly: ['Hourly', 'Bucket'],
+    Usage: ['Usage', 'Bucket'],
+  };
+
+  if (configType) {
+    const allowedConfigTypes = allowedConfigTypesByPlan[plan.contract_line_type as 'Fixed' | 'Hourly' | 'Usage'] ?? ['Fixed'];
+    if (!allowedConfigTypes.includes(configType)) {
+      throw new Error(
+        `Configuration type ${configType} is not valid for ${plan.contract_line_type} contract lines. Allowed: ${allowedConfigTypes.join(', ')}.`
+      );
+    }
   }
-  // TODO: Add other validation rules as needed (e.g., prevent hourly services on fixed plans?)
   // --- END SERVER-SIDE VALIDATION ---
 
-  // Determine configuration type based on standard service type's billing method, prioritizing explicit configType
-  let determinedConfigType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket'; // Bucket might need separate logic
-
-  // Determine configuration type: Prioritize explicit param, then plan type, then service type
-  if (configType) {
-    determinedConfigType = configType;
-  } else if (serviceWithType?.service_type_billing_method === 'fixed') {
-    determinedConfigType = 'Fixed';
-  } else if (serviceWithType?.service_type_billing_method === 'hourly') {
-    determinedConfigType = 'Hourly';
-  } else if (serviceWithType?.service_type_billing_method === 'usage') {
-    determinedConfigType = 'Usage';
-  } else if (serviceWithType?.service_type_billing_method === 'per_unit') {
-    // Per-unit items are persisted with Fixed configuration metadata, but billed as product charges.
-    determinedConfigType = 'Fixed';
-  } else {
-    // Fallback for missing/unknown service billing method on non-Bucket plans
-    console.warn(`Could not determine standard billing method for service type of ${serviceId} on a non-Bucket plan. Defaulting configuration type to 'Fixed'.`);
-    determinedConfigType = 'Fixed';
-  }
+  // Determine configuration type from explicit override first, otherwise from target contract-line context.
+  const determinedConfigType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = configType
+    ?? (
+      plan.contract_line_type === 'Hourly'
+        ? 'Hourly'
+        : plan.contract_line_type === 'Usage'
+          ? 'Usage'
+          : 'Fixed'
+    );
 
   const configurationType = determinedConfigType;
   let hourlyConfigPayload: Partial<IContractLineServiceHourlyConfig> | undefined;
