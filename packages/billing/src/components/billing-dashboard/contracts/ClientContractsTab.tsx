@@ -277,8 +277,21 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     {
       title: 'Contract Name',
       dataIndex: 'contract_name',
-      render: (value: string | null) =>
-        typeof value === 'string' && value.trim().length > 0 ? value : '—',
+      render: (value: string | null, record) => {
+        const hasName = typeof value === 'string' && value.trim().length > 0;
+        const isSystemManagedDefault = record.is_system_managed_default === true;
+        return (
+          <div className="space-y-1">
+            <span>{hasName ? value : '—'}</span>
+            {isSystemManagedDefault ? (
+              <>
+                <Badge variant="info">System-managed default</Badge>
+                <p className="text-xs text-muted-foreground">Created automatically for uncontracted work</p>
+              </>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       title: 'Start Date',
@@ -298,89 +311,94 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     {
       title: 'Actions',
       dataIndex: 'contract_id',
-      render: (value, record) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id="contract-actions-menu"
-              variant="ghost"
-              className="h-8 w-8 p-0"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <span className="sr-only">Open menu</span>
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              id={(record.assignment_status ?? record.status) === 'draft' ? 'resume-contract-menu-item' : 'edit-contract-menu-item'}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (!record.contract_id) return;
-                if ((record.assignment_status ?? record.status) === 'draft') {
-                  void handleResumeDraft(record.contract_id);
-                  return;
-                }
-                navigateToContract(record.contract_id, record.client_contract_id);
-              }}
-            >
-              {(record.assignment_status ?? record.status) === 'draft' ? 'Resume' : 'Edit'}
-            </DropdownMenuItem>
-            {(record.assignment_status ?? record.status) === 'active' && (
+      render: (value, record) => {
+        const isSystemManagedDefault = record.is_system_managed_default === true;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id="contract-actions-menu"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <span className="sr-only">Open menu</span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
               <DropdownMenuItem
-                id="terminate-contract-menu-item"
-                className="text-orange-600 focus:text-orange-600"
+                id={(record.assignment_status ?? record.status) === 'draft' ? 'resume-contract-menu-item' : 'edit-contract-menu-item'}
                 onClick={(event) => {
                   event.stopPropagation();
-                  void handleTerminateContract(record.client_contract_id);
+                  if (!record.contract_id) return;
+                  if ((record.assignment_status ?? record.status) === 'draft' && !isSystemManagedDefault) {
+                    void handleResumeDraft(record.contract_id);
+                    return;
+                  }
+                  navigateToContract(record.contract_id, record.client_contract_id);
                 }}
               >
-                Terminate
+                {(record.assignment_status ?? record.status) === 'draft' && !isSystemManagedDefault ? 'Resume' : 'View details'}
               </DropdownMenuItem>
-            )}
-            {(record.assignment_status ?? record.status) === 'terminated' && (
-              <DropdownMenuItem
-                id="restore-contract-menu-item"
-                className="text-green-600 focus:text-green-600"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void handleRestoreContract(record.client_contract_id);
-                }}
-              >
-                Restore
-              </DropdownMenuItem>
-            )}
-            {(record.assignment_status ?? record.status) === 'draft' && (
-              <DropdownMenuItem
-                id="set-to-active-menu-item"
-                className="text-green-600 focus:text-green-600"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void handleSetToActive(record.client_contract_id);
-                }}
-              >
-                Set to Active
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              id="client-contracts-tab-delete-menu-item"
-              className="text-red-600 focus:text-red-600"
-              onClick={(event) => {
-                event.stopPropagation();
-                if (record.contract_id) {
-                  setContractToDelete({
-                    contractId: record.contract_id,
-                    contractName: record.contract_name?.trim() || 'Untitled contract',
-                    clientName: record.client_name?.trim() || undefined,
-                  });
-                }
-              }}
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+              {!isSystemManagedDefault && (record.assignment_status ?? record.status) === 'active' && (
+                <DropdownMenuItem
+                  id="terminate-contract-menu-item"
+                  className="text-orange-600 focus:text-orange-600"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handleTerminateContract(record.client_contract_id);
+                  }}
+                >
+                  Terminate
+                </DropdownMenuItem>
+              )}
+              {!isSystemManagedDefault && (record.assignment_status ?? record.status) === 'terminated' && (
+                <DropdownMenuItem
+                  id="restore-contract-menu-item"
+                  className="text-green-600 focus:text-green-600"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handleRestoreContract(record.client_contract_id);
+                  }}
+                >
+                  Restore
+                </DropdownMenuItem>
+              )}
+              {!isSystemManagedDefault && (record.assignment_status ?? record.status) === 'draft' && (
+                <DropdownMenuItem
+                  id="set-to-active-menu-item"
+                  className="text-green-600 focus:text-green-600"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handleSetToActive(record.client_contract_id);
+                  }}
+                >
+                  Set to Active
+                </DropdownMenuItem>
+              )}
+              {!isSystemManagedDefault ? (
+                <DropdownMenuItem
+                  id="client-contracts-tab-delete-menu-item"
+                  className="text-red-600 focus:text-red-600"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (record.contract_id) {
+                      setContractToDelete({
+                        contractId: record.contract_id,
+                        contractName: record.contract_name?.trim() || 'Untitled contract',
+                        clientName: record.client_name?.trim() || undefined,
+                      });
+                    }
+                  }}
+                >
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 

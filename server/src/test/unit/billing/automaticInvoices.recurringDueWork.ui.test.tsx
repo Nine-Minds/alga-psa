@@ -1029,7 +1029,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     expect(
       screen.getByTestId('contract-metadata-warning-candidate-contract-metadata-t100'),
-    ).toHaveTextContent('Contract metadata missing (1 obligation)');
+    ).toHaveTextContent('Assignment attribution metadata missing (1 obligation)');
   });
 
   it('T101: cadence-source rendering is exhaustive and unknown values render explicit unknown-state copy', async () => {

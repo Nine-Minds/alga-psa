@@ -117,3 +117,43 @@
   - `npm -w shared run typecheck`
   - `npm -w @alga-psa/integrations run typecheck`
   - `npm -w @alga-psa/scheduling run typecheck` (currently fails due pre-existing `packages/clients` type errors unrelated to this plan)
+
+## Progress Update (2026-03-21, F038/F039/T009)
+
+- Added explicit recurring due-work attribution metadata on row/candidate shapes (`source`, business label, completeness, missing fields) to carry grouped-row assignment context through server and UI layers.
+- `billingAndTax` now stamps persisted rows as `explicit_contract` vs `system_managed_default_contract` and unresolved rows as `unresolved`; grouped candidates aggregate attribution summaries.
+- Persisted rows with incomplete contract attribution metadata are now marked non-generatable with a blocking reason before they reach grouped selection.
+- `AutomaticInvoices` now consumes attribution metadata for grouped-row context labels and warning copy (`Assignment attribution metadata missing ...`) instead of relying on heuristic-only contract field checks.
+- Added UI guard coverage for grouped rows: business-safe labels for system-managed default and unresolved work, plus hard-block behavior for metadata-missing rows.
+- Completed features: `F038`, `F039`.
+- Completed test: `T009`.
+
+### Verification commands
+
+- `cd server && npx vitest run src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
+- `cd server && npx vitest run src/test/unit/billing/invoiceGeneration.unresolvedSelectionKeys.test.ts src/test/unit/billing/nonContractDueWork.integration.test.ts`
+- `npm -w shared run typecheck`
+
+### Notes
+
+- `npm -w @alga-psa/billing run typecheck` still reports unrelated pre-existing workspace errors outside this change set; new attribution changes compile within exercised paths.
+- Running `automaticInvoices.recurringDueWork.ui.test.tsx` in the same invocation currently triggers existing router-mount test harness issues (`invariant expected app router to be mounted`) not introduced by this work.
+
+## Progress Update (2026-03-21, F040-F044/T010)
+
+- Updated contract list UI (`ClientContractsTab`) to surface `System-managed default` badge and helper copy (`Created automatically for uncontracted work`) directly in contract-name cells.
+- Added system-managed lifecycle guardrails in list actions: default contracts now only expose view/details access and hide destructive/manual lifecycle operations (`Delete`, `Terminate`, `Restore`, `Set to Active`).
+- Updated contract detail UI (`ContractDetail`) with explicit system-managed banner/copy and read-only behavior for lifecycle/ownership-sensitive controls.
+- Detail view now disables ownership-changing controls (assignment edit, lifecycle selectors, save) and hides destructive delete action for system-managed default contracts.
+- Added static UI contract test coverage for list/detail guardrails and copy semantics.
+- Completed features: `F040`, `F041`, `F042`, `F043`, `F044`.
+- Completed test: `T010`.
+
+### Verification commands
+
+- `cd server && npx vitest run src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx src/test/unit/billing/systemManagedDefaultContracts.ui.static.test.ts`
+- `cd server && npx vitest run src/test/unit/billing/invoiceGeneration.unresolvedSelectionKeys.test.ts src/test/unit/billing/nonContractDueWork.integration.test.ts`
+
+### Notes
+
+- `T010` is currently implemented as a static UI contract test due test-environment import-resolution issues when rendering full `ContractDetail` runtime dependencies in isolation.

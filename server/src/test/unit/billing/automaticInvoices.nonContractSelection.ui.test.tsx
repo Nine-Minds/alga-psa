@@ -82,6 +82,12 @@ function createContractMember() {
     contractLineId: 'line-1',
     contractName: 'Acme Support',
     contractLineName: 'Managed Services',
+    attribution: {
+      source: 'explicit_contract',
+      label: 'Explicit contract',
+      isComplete: true,
+      missingFields: [],
+    },
     record: buildRecurringServicePeriodRecord({
       cadenceOwner: 'contract',
       duePosition: 'arrears',
@@ -125,6 +131,49 @@ function createNonContractMember() {
     contractLineName: 'Unresolved usage record',
     currencyCode: 'USD',
     taxSource: 'internal',
+    attribution: {
+      source: 'unresolved',
+      label: 'Unresolved work',
+      isComplete: true,
+      missingFields: [],
+    },
+  });
+}
+
+function createSystemManagedDefaultMember() {
+  return buildServicePeriodRecurringDueWorkRow({
+    clientId: 'client-1',
+    clientName: 'Acme Co',
+    contractId: 'contract-default',
+    contractLineId: 'line-default',
+    contractName: 'System-managed default contract',
+    contractLineName: 'Default billing line',
+    attribution: {
+      source: 'system_managed_default_contract',
+      label: 'System-managed default contract',
+      isComplete: true,
+      missingFields: [],
+    },
+    record: buildRecurringServicePeriodRecord({
+      cadenceOwner: 'contract',
+      duePosition: 'arrears',
+      sourceObligation: {
+        tenant: 'tenant-1',
+        obligationId: 'line-default',
+        obligationType: 'contract_line',
+        chargeFamily: 'fixed',
+      },
+      invoiceWindow: {
+        start: '2025-03-01',
+        end: '2025-04-01',
+        semantics: 'half_open',
+      },
+      servicePeriod: {
+        start: '2025-02-01',
+        end: '2025-03-01',
+        semantics: 'half_open',
+      },
+    }),
   });
 }
 
@@ -189,6 +238,7 @@ describe('AutomaticInvoices non-contract selection UI', () => {
 
   const contractMember = createContractMember();
   const nonContractMember = createNonContractMember();
+  const defaultContractMember = createSystemManagedDefaultMember();
 
   beforeEach(() => {
     cleanup();
@@ -243,14 +293,88 @@ describe('AutomaticInvoices non-contract selection UI', () => {
   });
 
   it('T043: renders non-contract candidates as first-class child rows', async () => {
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildCandidate([nonContractMember])],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
 
     await screen.findByText('Acme Co');
     fireEvent.click(screen.getByLabelText('Expand'));
 
     await waitFor(() => {
-      expect(screen.getByText('Unresolved usage record')).toBeInTheDocument();
-      expect(screen.getByText('Unresolved work')).toBeInTheDocument();
+      expect(
+        screen.getByTestId(`non-contract-child-${nonContractMember.executionIdentityKey}`),
+      ).toHaveTextContent('Unresolved work');
+    });
+  });
+
+  it('T009: grouped rows expose business-safe attribution labels and block generation when attribution metadata is missing', async () => {
+    const defaultAttributionOnlyMember = cloneMember(defaultContractMember, {
+      executionIdentityKey: 'default-contract-attribution-only',
+      contractName: null,
+      contractLineName: null,
+      attribution: {
+        source: 'system_managed_default_contract',
+        label: 'System-managed default contract',
+        isComplete: true,
+        missingFields: [],
+      },
+    } as any);
+    const metadataGapMember = cloneMember(defaultContractMember, {
+      executionIdentityKey: 'default-contract-metadata-gap',
+      contractName: null,
+      contractLineName: null,
+      canGenerate: false,
+      blockedReason: 'Contract attribution metadata is incomplete for one or more obligations. Review assignment data before generation.',
+      attribution: {
+        source: 'system_managed_default_contract',
+        label: 'System-managed default contract',
+        isComplete: false,
+        missingFields: ['contractLineName'],
+      },
+    } as any);
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [
+        buildCandidate([defaultAttributionOnlyMember, nonContractMember, metadataGapMember]),
+      ],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await screen.findByText('Acme Co');
+    fireEvent.click(screen.getByLabelText('Expand'));
+    expect(screen.getAllByText('System-managed default contract').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Unresolved work').length).toBeGreaterThan(0);
+
+    expect(
+      screen.getByTestId('contract-metadata-warning-candidate-mixed-1'),
+    ).toHaveTextContent('Assignment attribution metadata missing (1 obligation)');
+
+    const generateButton = screen.getByRole('button', { name: /Generate Invoices for Selected Periods/i });
+    fireEvent.click(generateButton);
+
+    await waitFor(() => {
+      expect(generateGroupedInvoicesAsRecurringBillingRunMock).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          groupedTargets: expect.arrayContaining([
+            expect.objectContaining({
+              selectorInputs: expect.arrayContaining([metadataGapMember.selectorInput]),
+            }),
+          ]),
+        }),
+      );
     });
   });
 

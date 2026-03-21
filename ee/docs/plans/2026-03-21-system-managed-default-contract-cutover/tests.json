@@ -98,7 +98,7 @@
   {
     "id": "T009",
     "description": "UI test: automatic invoicing grouped rows show business labels for default-contract and unmatched records; metadata-missing rows are hard-blocked.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F039",
@@ -109,7 +109,7 @@
   {
     "id": "T010",
     "description": "UI test: contract list/detail show system-managed default badge/helper copy and hide/disable disallowed destructive/ownership actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040",
       "F041",

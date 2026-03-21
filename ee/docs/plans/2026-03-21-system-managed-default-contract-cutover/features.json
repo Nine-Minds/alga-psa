@@ -315,7 +315,7 @@
   {
     "id": "F038",
     "description": "Add clear attribution metadata for grouped rows indicating explicit contract vs system-managed default contract source.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 4"
     ]
@@ -323,7 +323,7 @@
   {
     "id": "F039",
     "description": "Add hard generation block when grouped row attribution metadata is missing and generation would be unsafe.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 5"
     ]
@@ -331,7 +331,7 @@
   {
     "id": "F040",
     "description": "Update contract list row badges to show `System-managed default` label.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 1"
     ]
@@ -339,7 +339,7 @@
   {
     "id": "F041",
     "description": "Add helper copy in contract list/detail: `Created automatically for uncontracted work`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 1"
     ]
@@ -347,7 +347,7 @@
   {
     "id": "F042",
     "description": "Restrict destructive/manual lifecycle actions for system-managed default contract rows in list/detail UI.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 2"
     ]
@@ -355,7 +355,7 @@
   {
     "id": "F043",
     "description": "Ensure ownership-changing fields/actions are read-only/hidden for system-managed default contracts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 2",
       "Security / Permissions 2"
@@ -364,7 +364,7 @@
   {
     "id": "F044",
     "description": "Update contract detail explanatory copy for system-managed ownership and assignment behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 2"
     ]

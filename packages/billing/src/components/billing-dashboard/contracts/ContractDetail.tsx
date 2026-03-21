@@ -231,6 +231,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const primaryAssignmentStatus = primaryAssignment?.assignment_status ?? 'draft';
   const isLiveClientContract =
     contract?.is_template === false && primaryAssignment !== null;
+  const isSystemManagedDefault = contract?.is_system_managed_default === true;
   const primaryAssignmentUsesTenantRenewalDefaults =
     primaryAssignment?.use_tenant_renewal_defaults !== false;
   const primaryAssignmentRenewalMode = normalizeRenewalMode(
@@ -1105,6 +1106,18 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
               </Alert>
             )}
 
+            {isSystemManagedDefault ? (
+              <Alert variant="info" data-testid="system-managed-default-contract-alert">
+                <AlertDescription>
+                  <div className="space-y-1">
+                    <div className="font-medium">System-managed default contract</div>
+                    <div>Created automatically for uncontracted work.</div>
+                    <div>Lifecycle and ownership controls are read-only on this contract.</div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
             <form onSubmit={handleEditSubmit} className="space-y-6" noValidate>
               {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive">
@@ -1139,6 +1152,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <Label htmlFor="edit-contract-name">Contract Name *</Label>
+                        {isSystemManagedDefault ? (
+                          <Badge variant="info">System-managed default</Badge>
+                        ) : null}
                         {!isEditingName && (
                           <Button
                             id="edit-contract-name-btn"
@@ -1147,11 +1163,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             variant="ghost"
                             onClick={() => setIsEditingName(true)}
                             className="h-5 w-5 p-0"
+                            disabled={isSystemManagedDefault}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
                         )}
                       </div>
+                      {isSystemManagedDefault ? (
+                        <p className="text-xs text-muted-foreground">Created automatically for uncontracted work</p>
+                      ) : null}
                       {isEditingName ? (
                         <div className="flex items-center gap-2">
                           <Input
@@ -1201,6 +1221,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             variant="ghost"
                             onClick={() => setIsEditingDescription(true)}
                             className="h-5 w-5 p-0"
+                            disabled={isSystemManagedDefault}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
@@ -1295,7 +1316,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 { value: 'terminated', label: 'Terminated' },
                                 ...(contract.status === 'expired' ? [{ value: 'expired', label: 'Expired' }] : [])
                               ]}
-                              disabled={contract.status === 'expired'}
+                              disabled={contract.status === 'expired' || isSystemManagedDefault}
                             />
                             {contract.status === 'expired' && (
                               <p className="text-xs text-muted-foreground">
@@ -1317,6 +1338,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           options={BILLING_FREQUENCY_OPTIONS}
                           placeholder="Select billing frequency"
                           className={hasAttemptedSubmit && !editBillingFrequency ? 'ring-1 ring-red-500' : ''}
+                          disabled={isSystemManagedDefault}
                         />
                       </div>
                     </div>
@@ -1386,6 +1408,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
+                    {isSystemManagedDefault ? (
+                      <p className="text-xs text-muted-foreground">
+                        Ownership is system-managed for this default contract.
+                      </p>
+                    ) : null}
                     {assignments.length === 0 ? (
                       <p className="text-muted-foreground">No client assigned to this contract yet.</p>
                     ) : (
@@ -1530,6 +1557,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 variant="ghost"
                                 onClick={() => handleStartEditAssignment(assignment)}
                                 className="gap-2"
+                                disabled={isSystemManagedDefault}
                               >
                                 <Pencil className="h-4 w-4" />
                                 Edit
@@ -1915,14 +1943,16 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     <FileText className="mr-2 h-4 w-4" />
                     View Invoices
                   </Button>
-                  <Button
-                    id="delete-contract-btn"
-                    variant="destructive"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Contract
-                  </Button>
+                  {!isSystemManagedDefault ? (
+                    <Button
+                      id="delete-contract-btn"
+                      variant="destructive"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Contract
+                    </Button>
+                  ) : null}
                 </CardContent>
               </Card>
 
@@ -1938,7 +1968,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 <Button
                   id="save-edit-contract-btn"
                   type="submit"
-                  disabled={isSaving}
+                  disabled={isSaving || isSystemManagedDefault}
                   className={!editContractName.trim() || !editBillingFrequency ? 'opacity-50' : ''}
                 >
                   <span className={hasUnsavedChanges ? 'font-bold' : ''}>

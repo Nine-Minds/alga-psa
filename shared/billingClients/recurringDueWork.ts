@@ -1,5 +1,6 @@
 import type {
   IRecurringDueSelectionInput,
+  IRecurringDueWorkAttribution,
   IRecurringDueWorkRow,
   IRecurringRunExecutionWindowIdentity,
   IRecurringServicePeriodRecord,
@@ -38,6 +39,7 @@ interface BuildRecurringDueWorkRowInput {
   currencyCode?: string | null;
   taxSource?: string | null;
   exportShapeKey?: string | null;
+  attribution?: IRecurringDueWorkAttribution;
 }
 
 export interface ClientScheduleDueWorkWindowInput {
@@ -63,6 +65,7 @@ export interface ServicePeriodDueWorkRecordInput {
   contractLineId?: string | null;
   contractName?: string | null;
   contractLineName?: string | null;
+  attribution?: IRecurringDueWorkAttribution;
   asOf?: ISO8601String;
   canGenerate?: boolean;
 }
@@ -144,6 +147,7 @@ function buildBaseRecurringDueWorkRow(input: BuildRecurringDueWorkRowInput): IRe
     currencyCode: input.currencyCode ?? null,
     taxSource: input.taxSource ?? null,
     exportShapeKey: input.exportShapeKey ?? null,
+    attribution: input.attribution,
   };
 }
 
@@ -243,6 +247,7 @@ export function buildServicePeriodRecurringDueWorkRow(
     lifecycleState: record.lifecycleState,
     contractName: input.contractName,
     contractLineName: input.contractLineName,
+    attribution: input.attribution,
   });
 }
 

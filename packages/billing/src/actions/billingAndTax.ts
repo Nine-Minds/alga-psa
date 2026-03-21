@@ -93,6 +93,7 @@ interface PersistedRecurringDueWorkDbRow {
     contract_name?: string | null;
     contract_line_id?: string | null;
     contract_line_name?: string | null;
+    is_system_managed_default?: boolean | null;
     client_contract_id?: string | null;
     po_required?: boolean | null;
     currency_code?: string | null;
@@ -106,6 +107,54 @@ interface RecurringDueWorkGroupingMetadata {
     currencyCode?: string | null;
     taxSource?: string | null;
     exportShapeKey?: string | null;
+}
+
+function buildPersistedRowAttribution(row: PersistedRecurringDueWorkDbRow): NonNullable<IRecurringDueWorkRow['attribution']> {
+    const missingFields: string[] = [];
+    const hasContractId = Boolean(row.contract_id?.trim());
+    const hasContractName = Boolean(row.contract_name?.trim());
+    const hasContractLineId = Boolean(row.contract_line_id?.trim());
+    const hasContractLineName = Boolean(row.contract_line_name?.trim());
+    const hasSystemManagedMarker = row.is_system_managed_default === true;
+
+    if (!hasContractId) {
+        missingFields.push('contractId');
+    }
+    if (!hasContractName) {
+        missingFields.push('contractName');
+    }
+    if (!hasContractLineId) {
+        missingFields.push('contractLineId');
+    }
+    if (!hasContractLineName) {
+        missingFields.push('contractLineName');
+    }
+
+    const isComplete = missingFields.length === 0;
+    const source: 'explicit_contract' | 'system_managed_default_contract' | null =
+        hasContractId || hasContractLineId || hasContractName || hasContractLineName
+            ? (hasSystemManagedMarker ? 'system_managed_default_contract' : 'explicit_contract')
+            : null;
+
+    return {
+        source,
+        label: source === 'system_managed_default_contract'
+            ? 'System-managed default contract'
+            : source === 'explicit_contract'
+                ? 'Explicit contract'
+                : null,
+        isComplete,
+        missingFields,
+    };
+}
+
+function buildUnresolvedRowAttribution(): NonNullable<IRecurringDueWorkRow['attribution']> {
+    return {
+        source: 'unresolved',
+        label: 'Unresolved work',
+        isComplete: true,
+        missingFields: [],
+    };
 }
 
 type ClientBillingMetadata = {
@@ -316,6 +365,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'cbc.billing_cycle_id',
             'ct.contract_id',
             'ct.contract_name',
+            'ct.is_system_managed_default',
             'cl.contract_line_id',
             'cl.contract_line_name',
             'cc.client_contract_id',
@@ -379,6 +429,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'cbc.billing_cycle_id',
             'ct.contract_id',
             'ct.contract_name',
+            'ct.is_system_managed_default',
             'cl.contract_line_id',
             'cl.contract_line_name',
             'cc.client_contract_id',
@@ -573,8 +624,13 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
                 windowStart: invoiceWindowStart,
                 windowEnd: invoiceWindowEnd,
             });
+        const attribution = buildPersistedRowAttribution(row);
+        const missingAttribution = !attribution.isComplete;
+        const blockedReason = missingAttribution
+            ? 'Contract attribution metadata is incomplete for one or more obligations. Review assignment data before generation.'
+            : null;
 
-        return buildRecurringDueWorkRow({
+        const dueWorkRow = buildRecurringDueWorkRow({
             selectorInput,
             cadenceSource: row.cadence_owner === 'contract' ? 'contract_anniversary' : 'client_schedule',
             billingCycleId: row.billing_cycle_id ?? null,
@@ -592,7 +648,16 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
             currencyCode: metadata?.currencyCode ?? null,
             taxSource: metadata?.taxSource ?? null,
             exportShapeKey: metadata?.exportShapeKey ?? null,
+            canGenerate: !missingAttribution,
+            attribution,
         });
+
+        return missingAttribution
+            ? {
+                ...dueWorkRow,
+                blockedReason,
+            } as IRecurringDueWorkRow
+            : dueWorkRow;
     });
 }
 
@@ -697,6 +762,7 @@ async function fetchUnresolvedNonContractDueWorkRows(
                 currencyCode: metadata?.currencyCode ?? null,
                 taxSource: metadata?.taxSource ?? null,
                 exportShapeKey: null,
+                attribution: buildUnresolvedRowAttribution(),
             });
 
             rows.push({
@@ -799,6 +865,25 @@ function buildRecurringDueWorkInvoiceCandidates(
                 .slice(-1)[0] as ISO8601String;
             const cadenceSources = Array.from(new Set(members.map((member) => member.cadenceSource))).sort();
             const canGenerate = members.every((member) => member.canGenerate);
+            const explicitContractCount = members.filter(
+                (member) => member.attribution?.source === 'explicit_contract',
+            ).length;
+            const systemManagedDefaultContractCount = members.filter(
+                (member) => member.attribution?.source === 'system_managed_default_contract',
+            ).length;
+            const unresolvedCount = members.filter(
+                (member) => member.attribution?.source === 'unresolved',
+            ).length;
+            const missingAttributionCount = members.filter(
+                (member) => member.attribution?.isComplete === false,
+            ).length;
+            const labels = Array.from(
+                new Set(
+                    members
+                        .map((member) => member.attribution?.label?.trim())
+                        .filter((label): label is string => Boolean(label)),
+                ),
+            ).sort();
 
             return {
                 candidateKey: `invoice-candidate:${candidate.groupKey}`,
@@ -822,6 +907,13 @@ function buildRecurringDueWorkInvoiceCandidates(
                 memberCount: members.length,
                 canGenerate,
                 blockedReason: canGenerate ? null : 'One or more included obligations are not eligible for generation.',
+                attributionSummary: {
+                    explicitContractCount,
+                    systemManagedDefaultContractCount,
+                    unresolvedCount,
+                    missingAttributionCount,
+                    labels,
+                },
                 members,
             } satisfies IRecurringDueWorkInvoiceCandidate;
         })

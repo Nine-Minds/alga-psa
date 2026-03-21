@@ -242,6 +242,10 @@ const parseNonContractSelectionFromScheduleKey = (scheduleKey: string | null | u
 };
 
 const getRecurringAssignmentContext = (member: IRecurringDueWorkInvoiceCandidate['members'][number]): string | null => {
+  if (member.attribution?.label?.trim()) {
+    return member.attribution.label.trim();
+  }
+
   const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
   if (nonContractSelection) {
     return nonContractSelection.chargeType === 'time'
@@ -1290,32 +1294,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       ),
                     );
                     const contractMetadataMissingCount = record.childExecutionRows.filter((member) => {
-                      const hasContractSignal = Boolean(
-                        member.cadenceOwner === 'contract'
-                        || member.contractId
-                        || member.contractLineId
-                        || member.contractName?.trim()
-                        || member.contractLineName?.trim(),
-                      );
-                      if (!hasContractSignal) {
-                        return false;
-                      }
-
-                      const missingContractIdentity =
-                        !member.contractId
-                        && !member.contractName?.trim();
-                      const missingContractLineIdentity =
-                        !member.contractLineId
-                        && !member.contractLineName?.trim();
-                      const missingContractName = Boolean(member.contractId && !member.contractName?.trim());
-                      const missingContractLineName = Boolean(member.contractLineId && !member.contractLineName?.trim());
-
-                      return (
-                        missingContractIdentity
-                        || missingContractLineIdentity
-                        || missingContractName
-                        || missingContractLineName
-                      );
+                      return member.attribution?.isComplete === false;
                     }).length;
                     const assignmentContexts = Array.from(
                       new Set(
@@ -1324,9 +1303,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           .filter((value): value is string => Boolean(value)),
                       ),
                     );
+                    const attributionSummaryLabels = record.candidate.attributionSummary?.labels ?? [];
+                    const assignmentLabels = Array.from(new Set([...attributionSummaryLabels, ...assignmentContexts]));
 	                    const cadenceSummary = summarizeCadenceSources(record.candidate.cadenceSources);
                       const shouldShowAssignmentContexts =
-                        !isExpanded && contractNames.length === 0 && contractLineNames.length === 0;
+                        !isExpanded
+                        && contractNames.length === 0
+                        && contractLineNames.length === 0
+                        && assignmentLabels.length > 0;
 	                  return (
                       <div className="min-w-[16rem] space-y-2">
                         <div className="flex items-start gap-2">
@@ -1385,7 +1369,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                             {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
                               <div className="text-xs text-muted-foreground">{record.parentSummary.blockedReason}</div>
                             ) : null}
-                            {shouldShowAssignmentContexts ? assignmentContexts.map((contextValue) => (
+                            {shouldShowAssignmentContexts ? assignmentLabels.map((contextValue) => (
                               <div
                                 key={`${record.parentSummary.candidateKey}:assignment:${contextValue}`}
                                 className="text-xs text-muted-foreground"
@@ -1399,7 +1383,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                 className="text-xs text-warning"
                                 data-testid={`contract-metadata-warning-${record.parentSummary.candidateKey}`}
                               >
-                                Contract metadata missing ({contractMetadataMissingCount} obligation{contractMetadataMissingCount === 1 ? '' : 's'})
+                                Assignment attribution metadata missing ({contractMetadataMissingCount} obligation{contractMetadataMissingCount === 1 ? '' : 's'})
                               </div>
                             ) : null}
                           </div>
@@ -1496,6 +1480,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                       {nonContractSelection ? (
                                         <div className="text-xs text-muted-foreground" data-testid={`non-contract-child-${member.executionIdentityKey}`}>
                                           Unresolved work
+                                        </div>
+                                      ) : null}
+                                      {member.attribution?.isComplete === false ? (
+                                        <div className="text-xs text-warning" data-testid={`child-attribution-warning-${member.executionIdentityKey}`}>
+                                          Assignment attribution metadata missing
                                         </div>
                                       ) : null}
                                     </div>

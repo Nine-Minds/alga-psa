@@ -370,6 +370,17 @@ export interface IRecurringRunExecutionWindowIdentity {
 export type RecurringDueWorkCadenceSource = 'client_schedule' | 'contract_anniversary';
 
 export type RecurringDueWorkState = 'due' | 'early';
+export type RecurringDueWorkAttributionSource =
+  | 'explicit_contract'
+  | 'system_managed_default_contract'
+  | 'unresolved';
+
+export interface IRecurringDueWorkAttribution {
+  source: RecurringDueWorkAttributionSource | null;
+  label: string | null;
+  isComplete: boolean;
+  missingFields: string[];
+}
 
 export interface IPersistedRecurringObligationRef extends IRecurringObligationRef {
   tenant: string;
@@ -519,6 +530,15 @@ export interface IRecurringDueWorkRow {
   currencyCode?: string | null;
   taxSource?: string | null;
   exportShapeKey?: string | null;
+  attribution?: IRecurringDueWorkAttribution;
+}
+
+export interface IRecurringDueWorkCandidateAttributionSummary {
+  explicitContractCount: number;
+  systemManagedDefaultContractCount: number;
+  unresolvedCount: number;
+  missingAttributionCount: number;
+  labels: string[];
 }
 
 export interface IRecurringDueWorkInvoiceCandidate {
@@ -543,6 +563,7 @@ export interface IRecurringDueWorkInvoiceCandidate {
   memberCount: number;
   canGenerate: boolean;
   blockedReason?: string | null;
+  attributionSummary?: IRecurringDueWorkCandidateAttributionSummary;
   members: IRecurringDueWorkRow[];
 }
 
