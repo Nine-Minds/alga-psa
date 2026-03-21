@@ -185,7 +185,7 @@ export interface IService extends TenantEntity {
   service_id: string;
   service_name: string;
   custom_service_type_id: string;   // FK to service_types (now required)
-  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Billing method specific to this service instance (Now required)
+  billing_method: 'fixed' | 'hourly' | 'usage'; // Billing method specific to this service instance (Now required)
   default_rate: number; // Convenience field: primary rate (typically first/USD price)
   category_id: string | null;
   unit_of_measure: string;
@@ -211,7 +211,7 @@ export interface IService extends TenantEntity {
 export interface IStandardServiceType {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Updated to match service billing methods
+  billing_method: 'fixed' | 'hourly' | 'usage'; // Updated to match service billing methods
   display_order: number;
   created_at: ISO8601String;
   updated_at: ISO8601String;
@@ -221,7 +221,7 @@ export interface IStandardServiceType {
 export interface IServiceType extends TenantEntity {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Updated to match service billing methods
+  billing_method: 'fixed' | 'hourly' | 'usage'; // Updated to match service billing methods
   // standard_service_type_id removed
   is_active: boolean;
   description?: string | null;

@@ -120,6 +120,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Added static guard coverage `T015` in `server/src/test/unit/billing/schedulingAvailabilityDecoupling.static.test.ts` to prevent regression to `billing_method as service_type` proxying in scheduling and client-portal availability reads.
 - (2026-03-21) Completed F037 by canonicalizing product catalog writes in `ProductCatalogService` create/update paths from legacy `per_unit` to `usage` so active product writes no longer emit legacy billing vocabulary.
 - (2026-03-21) Added static write guard `server/src/test/unit/api/productCatalogCanonicalWrites.static.test.ts` to enforce canonical product billing writes and prevent reintroduction of `billing_method: 'per_unit'` in product service APIs.
+- (2026-03-21) Completed F038/F039 by hard-cutting service/product schema contracts to canonical vocabulary: product schema now accepts/defaults `usage` (not `per_unit`), and schema tests explicitly reject legacy values. Key refs: `server/src/lib/api/schemas/productSchemas.ts`, `server/src/test/unit/api/productBillingMethodCutover.schema.test.ts`.
+- (2026-03-21) Completed F040 by removing `per_unit` from server/shared billing interface unions and adding static guards that financial + contract-line schemas remain canonical `fixed|hourly|usage`. Key refs: `server/src/interfaces/billing.interfaces.ts`, `packages/types/src/interfaces/billing.interfaces.ts`, `server/src/test/unit/api/billingInterfacesCutover.static.test.ts`.
+- (2026-03-21) Marked T012/T013 complete based on schema + interface guard suite run (service/product cutover schemas and financial/contract-line canonical enums).
 
 - (2026-03-21) Validation runbooks:
   - `cd server && npx vitest run src/test/unit/billing/nonContractDueWork.integration.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
@@ -130,3 +133,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run src/test/unit/billing/serviceQueryDecoupling.static.test.ts` (pass, T014 guards)
   - `cd server && npx vitest run src/test/unit/billing/schedulingAvailabilityDecoupling.static.test.ts` (pass, T015 guards)
   - `cd server && npx vitest run src/test/unit/api/productCatalogCanonicalWrites.static.test.ts` (pass)
+  - `cd server && npx vitest run src/test/unit/api/serviceBillingMethodCutover.schema.test.ts src/test/unit/api/productBillingMethodCutover.schema.test.ts src/test/unit/api/billingInterfacesCutover.static.test.ts` (pass, T012/T013)
