@@ -146,7 +146,7 @@
       "apiKey": {
         "label": "Resend API Key",
         "placeholder": "re_xxxxxxxxxxxxxxxxxx",
-        "help": "Get your API key from {{url}}"
+        "helpPrefix": "Get your API key from"
       },
       "fromAddress": {
         "label": "From Address",
