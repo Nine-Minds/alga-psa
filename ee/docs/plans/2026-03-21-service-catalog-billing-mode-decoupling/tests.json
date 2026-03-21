@@ -1,6 +1,6 @@
 [
   { "id": "T001", "description": "DB migration sanity: canonicalize `per_unit` to `usage`, build mode-default pricing schema, and backfill successfully on representative tenant data.", "implemented": true, "featureIds": ["F001", "F002", "F003", "F037"] },
-  { "id": "T002", "description": "DB migration guard: migration fails fast with actionable error when required source defaults are missing/corrupt.", "implemented": false, "featureIds": ["F003"] },
+  { "id": "T002", "description": "DB migration guard: migration fails fast with actionable error when required source defaults are missing/corrupt.", "implemented": true, "featureIds": ["F003"] },
   { "id": "T003", "description": "Wizard integration happy path: create contract with same service used across fixed, hourly, and usage sections; all line creations succeed with context-based validation.", "implemented": false, "featureIds": ["F004", "F005", "F006", "F008", "F009", "F010"] },
   { "id": "T004", "description": "Template wizard parity test: template authoring and resume round-trip preserve decoupled selections and prefills across fixed/hourly/usage.", "implemented": false, "featureIds": ["F007", "F016", "F017"] },
   { "id": "T005", "description": "Contract-line service attach integration: add/attach validates against target line mode and rejects only true context violations.", "implemented": false, "featureIds": ["F011"] },
@@ -12,7 +12,7 @@
   { "id": "T011", "description": "Mixed generation compatibility test: compatible mixed selections combine; incompatible mixed selections split by scope (PO/currency/tax/export/window).", "implemented": true, "featureIds": ["F031", "F032"] },
   { "id": "T012", "description": "API contract test suite: service and product APIs enforce canonical vocabulary and reject legacy alias fields/legacy mode inputs.", "implemented": false, "featureIds": ["F001", "F038", "F039"] },
   { "id": "T013", "description": "Shared schema/types compile test: financial + contract-line schemas/interfaces compile and validate with decoupled semantics only.", "implemented": false, "featureIds": ["F040"] },
-  { "id": "T014", "description": "Service query integration bundle: billing service list/search/sort and shared billing-clients service queries behave correctly after decoupling.", "implemented": false, "featureIds": ["F033", "F034"] },
+  { "id": "T014", "description": "Service query integration bundle: billing service list/search/sort and shared billing-clients service queries behave correctly after decoupling.", "implemented": true, "featureIds": ["F033", "F034"] },
   { "id": "T015", "description": "Scheduling + client-portal integration bundle: service lookups and availability payloads stop using billing mode as identity/type proxy.", "implemented": false, "featureIds": ["F035", "F036"] },
   { "id": "T016", "description": "Catalog settings/onboarding integration bundle: service-type changes no longer silently rewrite billing behavior and onboarding creates decoupled-compliant records.", "implemented": false, "featureIds": ["F041", "F042"] },
   { "id": "T017", "description": "Usage tracking UI integration: usage picker behavior is driven by contract/usage context, not catalog billing-method gating.", "implemented": false, "featureIds": ["F043"] },

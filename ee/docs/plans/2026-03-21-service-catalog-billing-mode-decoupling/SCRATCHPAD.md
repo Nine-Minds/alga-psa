@@ -111,6 +111,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Marked F032 complete after verifying grouped preview summary explicitly states one combined invoice vs N separate invoices (`preview-invoice-count-summary`), with test coverage in `automaticInvoices.nonContractSelection.ui.test.tsx`.
 - (2026-03-21) Added/updated `T011` in `server/src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx` to assert compatible mixed selections combine as a parent-group target while incompatible scope selections (currency mismatch) split into child-level targets.
 - (2026-03-21) Marked `T001` complete by validating migration canonicalization + mode-default schema/backfill suites (`billingMethodCanonicalizationMigration`, `serviceCatalogModeDefaultsMigration`, `serviceCatalogModeDefaultsBackfillMigration`).
+- (2026-03-21) Completed F033 by decoupling service-catalog API filter/sort semantics from billing metadata for non-service contexts: `billing_method` filtering and sort precedence now apply only when `item_kind='service'`, with safe service-name fallback elsewhere.
+- (2026-03-21) Completed F034 by mirroring the same service-only billing-metadata filter/sort semantics in shared helper `shared/billingClients/services.ts` to keep caller behavior consistent across API and shared query paths.
+- (2026-03-21) Added static guard coverage `T014` in `server/src/test/unit/billing/serviceQueryDecoupling.static.test.ts` to lock decoupled filter/sort behavior in both `ServiceCatalogService` and shared billing-client helpers.
+- (2026-03-21) Marked `T002` complete via backfill migration guard assertions in `serviceCatalogModeDefaultsBackfillMigration.test.ts` (unmappable mode + missing required default mappings fail fast with actionable messages).
 
 - (2026-03-21) Validation runbooks:
   - `cd server && npx vitest run src/test/unit/billing/nonContractDueWork.integration.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
@@ -118,3 +122,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `npx tsc -p packages/billing/tsconfig.json --noEmit` (fails on pre-existing unrelated package type errors; no new errors from the F026-F030 patch set).
   - `cd server && npx vitest run src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx` (pass, includes T011 and T049 assertions)
   - `cd server && npx vitest run src/test/unit/migrations/billingMethodCanonicalizationMigration.test.ts src/test/unit/migrations/serviceCatalogModeDefaultsMigration.test.ts src/test/unit/migrations/serviceCatalogModeDefaultsBackfillMigration.test.ts` (pass)
+  - `cd server && npx vitest run src/test/unit/billing/serviceQueryDecoupling.static.test.ts` (pass, T014 guards)

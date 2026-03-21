@@ -61,6 +61,7 @@ export async function getServices(
     sort: sortField,
     order: sortOrder
   };
+  const supportsServiceBillingMetadata = sanitizedOptions.item_kind === 'service';
 
   const applyFilters = (query: Knex.QueryBuilder) => {
     if (sanitizedOptions.item_kind && sanitizedOptions.item_kind !== 'any') {
@@ -71,7 +72,7 @@ export async function getServices(
       query.where('sc.is_active', sanitizedOptions.is_active);
     }
 
-    if (sanitizedOptions.billing_method) {
+    if (sanitizedOptions.billing_method && supportsServiceBillingMetadata) {
       query.where('sc.billing_method', sanitizedOptions.billing_method);
     }
 
@@ -102,6 +103,10 @@ export async function getServices(
     billing_method: 'sc.billing_method',
     default_rate: 'sc.default_rate'
   };
+  const effectiveSortField: SortField =
+    sanitizedOptions.sort === 'billing_method' && !supportsServiceBillingMetadata
+      ? 'service_name'
+      : sanitizedOptions.sort;
 
   const baseQuery = knexOrTrx('service_catalog as sc').where({ 'sc.tenant': tenant });
 
@@ -139,9 +144,9 @@ export async function getServices(
         'st.name as service_type_name'
       )
   )
-    .orderBy(sortColumnMap[sanitizedOptions.sort], sanitizedOptions.order)
+    .orderBy(sortColumnMap[effectiveSortField], sanitizedOptions.order)
     .modify((queryBuilder) => {
-      if (sanitizedOptions.sort !== 'service_name') {
+      if (effectiveSortField !== 'service_name') {
         queryBuilder.orderBy('sc.service_name', 'asc');
       }
       queryBuilder.orderBy('sc.service_id', 'asc');
@@ -225,4 +230,3 @@ export async function getServiceTypesForSelection(
     .orderBy('name', 'asc');
   return rows.map((r: any) => ({ ...r, is_standard: false }));
 }
-
