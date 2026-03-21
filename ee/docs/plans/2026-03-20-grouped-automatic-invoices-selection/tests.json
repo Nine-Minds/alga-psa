@@ -20,31 +20,31 @@
   {
     "id": "T004",
     "description": "A parent row is combinable only when all ready children share the same client, currency, PO scope, tax source, and export shape.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F008"]
   },
   {
     "id": "T005",
     "description": "A parent row becomes non-combinable when PO scope differs across children and shows the PO incompatibility reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F008", "F012", "F023"]
   },
   {
     "id": "T006",
     "description": "A parent row becomes non-combinable when currency differs across children and shows the currency incompatibility reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F008", "F012"]
   },
   {
     "id": "T007",
     "description": "A parent row becomes non-combinable when tax source differs across children and shows the tax incompatibility reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F008", "F012"]
   },
   {
     "id": "T008",
     "description": "A parent row becomes non-combinable when export shape differs across children and shows the export incompatibility reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F008", "F012"]
   },
   {

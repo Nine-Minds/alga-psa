@@ -61,6 +61,13 @@ Working notes for the grouped automatic-invoices selection redesign. This plan i
 - (2026-03-20) Completed `F006` by rendering child details in the expanded group view, including assignment/contract context, cadence source, billing timing, service period, and amount.
 - (2026-03-20) Completed `F005` by rendering parent summary combinability state alongside client, window, child-count, and aggregate-amount summaries.
 - (2026-03-20) Completed `T003` by testing parent expansion and verifying child detail rendering in the automatic invoices grouped UI behavior test.
+- (2026-03-20) Added financial-scope fields (`purchaseOrderScopeKey`, `currencyCode`, `taxSource`, `exportShapeKey`) to recurring due-work rows/candidates and wired those fields through due-work shaping so UI combinability logic can evaluate true invoice-scope compatibility.
+- (2026-03-20) Completed `F007` by computing parent combinability from effective child scope values (client, currency, PO scope, tax source, export shape) and completed `F008` by enabling parent selection only when combinable.
+- (2026-03-20) Completed `F012` by surfacing explicit non-combinable reason text on parent rows (`PO scope differs`, `Currency differs`, `Tax treatment differs`, `Export shape differs`).
+- (2026-03-20) Completed `T004`-`T008` with scenario tests that verify combinability gating and each incompatibility reason.
+- (2026-03-20) Validation run:
+  - `cd packages/billing && npx vitest run tests/automaticInvoices.groupedParentRows.test.tsx`
+  - `npm -w packages/billing run typecheck` (fails due existing unrelated package-level TS errors; see `billingCycleActions.ts`, `recurringBillingRunActions.shared.ts`, `billingEngine.ts`, `invoiceService.ts`, plus recurring due-window typing drift around `duePosition`).
 
 ## Open Questions
 

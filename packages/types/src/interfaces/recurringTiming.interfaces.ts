@@ -514,6 +514,10 @@ export interface IRecurringDueWorkRow {
   contractLineId?: string | null;
   contractName?: string | null;
   contractLineName?: string | null;
+  purchaseOrderScopeKey?: string | null;
+  currencyCode?: string | null;
+  taxSource?: string | null;
+  exportShapeKey?: string | null;
 }
 
 export interface IRecurringDueWorkInvoiceCandidate {
@@ -530,6 +534,10 @@ export interface IRecurringDueWorkInvoiceCandidate {
   cadenceSources: RecurringDueWorkCadenceSource[];
   contractId?: string | null;
   contractName?: string | null;
+  purchaseOrderScopeKey?: string | null;
+  currencyCode?: string | null;
+  taxSource?: string | null;
+  exportShapeKey?: string | null;
   splitReasons: RecurringInvoiceSplitReason[];
   memberCount: number;
   canGenerate: boolean;

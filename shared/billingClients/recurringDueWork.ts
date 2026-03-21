@@ -34,6 +34,10 @@ interface BuildRecurringDueWorkRowInput {
   lifecycleState?: IRecurringDueWorkRow['lifecycleState'];
   contractName?: string | null;
   contractLineName?: string | null;
+  purchaseOrderScopeKey?: string | null;
+  currencyCode?: string | null;
+  taxSource?: string | null;
+  exportShapeKey?: string | null;
 }
 
 export interface ClientScheduleDueWorkWindowInput {
@@ -88,12 +92,12 @@ function buildRecurringDueWorkIdentity(
   };
 }
 
-function isEarlyInvoiceWindow(windowEnd: ISO8601String, asOf?: ISO8601String) {
+function isEarlyInvoiceWindow(windowStart: ISO8601String, asOf?: ISO8601String) {
   if (!asOf) {
     return false;
   }
 
-  return String(windowEnd).slice(0, 10) > String(asOf).slice(0, 10);
+  return String(windowStart).slice(0, 10) > String(asOf).slice(0, 10);
 }
 
 function buildBaseRecurringDueWorkRow(input: BuildRecurringDueWorkRowInput): IRecurringDueWorkRow {
@@ -104,9 +108,10 @@ function buildBaseRecurringDueWorkRow(input: BuildRecurringDueWorkRowInput): IRe
   const invoiceWindowEnd = normalizeDueWorkDate(input.selectorInput.windowEnd);
   const contractId = executionWindow.contractId ?? null;
   const contractLineId = executionWindow.contractLineId ?? null;
-  const isEarly = isEarlyInvoiceWindow(invoiceWindowEnd, input.asOf);
+  const isEarly = isEarlyInvoiceWindow(invoiceWindowStart, input.asOf);
   const servicePeriodStart = normalizeDueWorkDate(input.servicePeriodStart);
   const servicePeriodEnd = normalizeDueWorkDate(input.servicePeriodEnd);
+  const canGenerate = (input.canGenerate ?? true) && !isEarly;
 
   return {
     ...identity,
@@ -117,7 +122,7 @@ function buildBaseRecurringDueWorkRow(input: BuildRecurringDueWorkRowInput): IRe
     cadenceSource: input.cadenceSource,
     dueState: isEarly ? 'early' : 'due',
     isEarly,
-    canGenerate: input.canGenerate ?? true,
+    canGenerate,
     clientId: input.selectorInput.clientId,
     clientName: input.clientName ?? null,
     billingCycleId,
@@ -135,6 +140,10 @@ function buildBaseRecurringDueWorkRow(input: BuildRecurringDueWorkRowInput): IRe
     contractLineId,
     contractName: input.contractName ?? null,
     contractLineName: input.contractLineName ?? null,
+    purchaseOrderScopeKey: input.purchaseOrderScopeKey ?? null,
+    currencyCode: input.currencyCode ?? null,
+    taxSource: input.taxSource ?? null,
+    exportShapeKey: input.exportShapeKey ?? null,
   };
 }
 

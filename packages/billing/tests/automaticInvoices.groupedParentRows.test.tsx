@@ -130,6 +130,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
             {
               executionIdentityKey: 'exec-1',
               billingCycleId: 'bc-1',
+              clientId: 'client-1',
+              purchaseOrderScopeKey: 'po-1',
+              currencyCode: 'USD',
+              taxSource: 'exclusive',
+              exportShapeKey: 'shape-a',
               cadenceSource: 'contract_anniversary',
               servicePeriodLabel: '2026-03-01 to 2026-04-01',
               executionWindow: { duePosition: 'advance' },
@@ -139,6 +144,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
             {
               executionIdentityKey: 'exec-2',
               billingCycleId: 'bc-2',
+              clientId: 'client-1',
+              purchaseOrderScopeKey: 'po-1',
+              currencyCode: 'USD',
+              taxSource: 'exclusive',
+              exportShapeKey: 'shape-a',
               cadenceSource: 'contract_anniversary',
               servicePeriodLabel: '2026-03-01 to 2026-04-01',
               executionWindow: { duePosition: 'advance' },
@@ -198,5 +208,99 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(screen.getAllByText('Cadence: Contract anniversary').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Service period: 2026-03-01 to 2026-04-01').length).toBeGreaterThan(0);
     expect(screen.getByText('Amount: $125.00')).toBeInTheDocument();
+  });
+
+  it('is combinable only when all ready children share client/currency/PO/tax/export scope (T004)', async () => {
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      expect(checkbox?.disabled).toBe(false);
+    });
+
+    expect(
+      screen.queryByTestId('combinability-reasons-parent-group:client-1:2026-03-01:2026-04-01'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows PO incompatibility reason when child PO scope differs (T005)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members[1].purchaseOrderScopeKey = 'po-2';
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      expect(checkbox?.disabled).toBe(true);
+    });
+
+    expect(
+      screen.getByTestId('combinability-reasons-parent-group:client-1:2026-03-01:2026-04-01'),
+    ).toHaveTextContent('PO scope differs');
+  });
+
+  it('shows currency incompatibility reason when child currency differs (T006)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      expect(checkbox?.disabled).toBe(true);
+    });
+
+    expect(
+      screen.getByTestId('combinability-reasons-parent-group:client-1:2026-03-01:2026-04-01'),
+    ).toHaveTextContent('Currency differs');
+  });
+
+  it('shows tax incompatibility reason when child tax source differs (T007)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members[1].taxSource = 'inclusive';
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      expect(checkbox?.disabled).toBe(true);
+    });
+
+    expect(
+      screen.getByTestId('combinability-reasons-parent-group:client-1:2026-03-01:2026-04-01'),
+    ).toHaveTextContent('Tax treatment differs');
+  });
+
+  it('shows export-shape incompatibility reason when child export shape differs (T008)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members[1].exportShapeKey = 'shape-b';
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      expect(checkbox?.disabled).toBe(true);
+    });
+
+    expect(
+      screen.getByTestId('combinability-reasons-parent-group:client-1:2026-03-01:2026-04-01'),
+    ).toHaveTextContent('Export shape differs');
   });
 });

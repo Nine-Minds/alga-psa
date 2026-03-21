@@ -541,8 +541,10 @@ async function fetchClientCadenceMaterializationGaps(
 function mapPersistedRecurringDueWorkDbRowsToRows(
     rows: PersistedRecurringDueWorkDbRow[],
     asOf: ISO8601String,
+    metadataByRecordId: Map<string, RecurringDueWorkGroupingMetadata> = new Map(),
 ): IRecurringDueWorkRow[] {
     return rows.map((row) => {
+        const metadata = metadataByRecordId.get(row.record_id);
         const invoiceWindowStart = normalizeDateOnly(row.invoice_window_start) as ISO8601String;
         const invoiceWindowEnd = normalizeDateOnly(row.invoice_window_end) as ISO8601String;
         const servicePeriodStart = normalizeDateOnly(row.service_period_start) as ISO8601String;
@@ -577,6 +579,10 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
             lifecycleState: row.lifecycle_state as IRecurringDueWorkRow['lifecycleState'],
             contractName: row.contract_name ?? null,
             contractLineName: row.contract_line_name ?? null,
+            purchaseOrderScopeKey: metadata?.purchaseOrderScopeKey ?? null,
+            currencyCode: metadata?.currencyCode ?? null,
+            taxSource: metadata?.taxSource ?? null,
+            exportShapeKey: metadata?.exportShapeKey ?? null,
         });
     });
 }
@@ -621,6 +627,22 @@ function buildRecurringDueWorkInvoiceCandidates(
                 (row.recordId ? metadataByRecordId.get(row.recordId)?.clientContractId : null)
                 ?? row.contractId
                 ?? null,
+            purchaseOrderScopeKey:
+                (row.recordId ? metadataByRecordId.get(row.recordId)?.purchaseOrderScopeKey : null)
+                ?? row.purchaseOrderScopeKey
+                ?? null,
+            currencyCode:
+                (row.recordId ? metadataByRecordId.get(row.recordId)?.currencyCode : null)
+                ?? row.currencyCode
+                ?? null,
+            taxSource:
+                (row.recordId ? metadataByRecordId.get(row.recordId)?.taxSource : null)
+                ?? row.taxSource
+                ?? null,
+            exportShapeKey:
+                (row.recordId ? metadataByRecordId.get(row.recordId)?.exportShapeKey : null)
+                ?? row.exportShapeKey
+                ?? null,
         })),
     );
 
@@ -659,6 +681,10 @@ function buildRecurringDueWorkInvoiceCandidates(
                 cadenceSources,
                 contractId: firstMember.contractId ?? null,
                 contractName: firstMember.contractName ?? null,
+                purchaseOrderScopeKey: candidate.purchaseOrderScopeKey ?? null,
+                currencyCode: candidate.currencyCode ?? null,
+                taxSource: candidate.taxSource ?? null,
+                exportShapeKey: candidate.exportShapeKey ?? null,
                 splitReasons: [...candidate.splitReasons],
                 memberCount: members.length,
                 canGenerate,
@@ -968,7 +994,6 @@ export const getAvailableRecurringDueWork = withAuth(async (
             tenant,
             options,
         );
-        const persistedRows = mapPersistedRecurringDueWorkDbRowsToRows(persistedDbRows, asOf);
         const groupingMetadataByRecordId = new Map<string, RecurringDueWorkGroupingMetadata>(
             persistedDbRows.map((row) => [
                 row.record_id,
@@ -980,6 +1005,11 @@ export const getAvailableRecurringDueWork = withAuth(async (
                     exportShapeKey: row.export_shape_key ?? null,
                 },
             ] as const),
+        );
+        const persistedRows = mapPersistedRecurringDueWorkDbRowsToRows(
+            persistedDbRows,
+            asOf,
+            groupingMetadataByRecordId,
         );
         const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
             persistedRows,

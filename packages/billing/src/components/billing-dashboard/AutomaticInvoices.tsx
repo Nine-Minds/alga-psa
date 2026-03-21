@@ -68,6 +68,7 @@ interface RecurringInvoiceParentGroup {
     aggregateAmountCents: number | null;
     isCombinable: boolean;
     combinabilitySummary: string;
+    incompatibilityReasons: string[];
     canGenerate: boolean;
     blockedReason: string | null;
   };
@@ -84,7 +85,8 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
       memberAmounts.length > 0 && memberAmounts.length === candidate.members.length
         ? memberAmounts.reduce((sum, amount) => sum + amount, 0)
         : null;
-    const isCombinable = candidate.splitReasons.length === 0 && candidate.canGenerate;
+    const incompatibilityReasons = resolveIncompatibilityReasons(candidate);
+    const isCombinable = candidate.canGenerate && incompatibilityReasons.length === 0;
 
     return {
       parentSummary: {
@@ -98,6 +100,7 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
       aggregateAmountCents,
       isCombinable,
       combinabilitySummary: isCombinable ? 'Combinable as one invoice' : 'Not combinable as one invoice',
+      incompatibilityReasons,
       canGenerate: candidate.canGenerate,
       blockedReason: candidate.blockedReason ?? null,
     },
@@ -173,6 +176,44 @@ const getRecurringAssignmentContext = (member: IRecurringDueWorkInvoiceCandidate
   return member.executionIdentityKey?.trim()
     ? `Execution ${member.executionIdentityKey.trim()}`
     : null;
+};
+
+const normalizeScopeValue = (value: string | null | undefined): string => {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : '__none__';
+};
+
+const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
+  const eligibleMembers = candidate.members.filter((member) => member.canGenerate);
+  const members = eligibleMembers.length > 0 ? eligibleMembers : candidate.members;
+  if (members.length <= 1) {
+    return [];
+  }
+
+  const reasons: string[] = [];
+  const uniqueClients = new Set(members.map((member) => normalizeScopeValue(member.clientId)));
+  const uniqueCurrencies = new Set(members.map((member) => normalizeScopeValue(member.currencyCode)));
+  const uniquePoScopes = new Set(members.map((member) => normalizeScopeValue(member.purchaseOrderScopeKey)));
+  const uniqueTaxSources = new Set(members.map((member) => normalizeScopeValue(member.taxSource)));
+  const uniqueExportShapes = new Set(members.map((member) => normalizeScopeValue(member.exportShapeKey)));
+
+  if (uniqueClients.size > 1) {
+    reasons.push('Client differs');
+  }
+  if (uniquePoScopes.size > 1) {
+    reasons.push('PO scope differs');
+  }
+  if (uniqueCurrencies.size > 1) {
+    reasons.push('Currency differs');
+  }
+  if (uniqueTaxSources.size > 1) {
+    reasons.push('Tax treatment differs');
+  }
+  if (uniqueExportShapes.size > 1) {
+    reasons.push('Export shape differs');
+  }
+
+  return reasons;
 };
 
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
@@ -440,7 +481,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       const validIds = parentGroups
-        .filter((group) => group.parentSummary.canGenerate)
+        .filter((group) => group.parentSummary.canGenerate && group.parentSummary.isCombinable)
         .map((group) => group.parentSummary.parentSelectionKey);
       setSelectedPeriods(new Set(validIds));
     } else {
@@ -1013,9 +1054,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 title: (
                     <Checkbox
                     id="select-all"
-                    checked={parentGroups.length > 0 && selectedPeriods.size === parentGroups.filter((group) => group.parentSummary.canGenerate).length}
+                    checked={parentGroups.length > 0 && selectedPeriods.size === parentGroups.filter((group) => group.parentSummary.canGenerate && group.parentSummary.isCombinable).length}
                     onChange={handleSelectAll}
-                    disabled={!parentGroups.some((group) => group.parentSummary.canGenerate)}
+                    disabled={!parentGroups.some((group) => group.parentSummary.canGenerate && group.parentSummary.isCombinable)}
                   />
                 ),
                 dataIndex: 'candidateKey',
@@ -1023,7 +1064,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   <Checkbox
                     id={`select-${record.parentSummary.parentGroupKey}`}
                     checked={selectedPeriods.has(record.parentSummary.parentSelectionKey)}
-                    disabled={!record.parentSummary.canGenerate}
+                    disabled={!record.parentSummary.canGenerate || !record.parentSummary.isCombinable}
                     // Stop propagation to prevent row click when clicking checkbox
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                       event.stopPropagation();
@@ -1062,6 +1103,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     <Badge variant={record.parentSummary.isCombinable ? 'outline' : 'secondary'}>
                       {record.parentSummary.combinabilitySummary}
                     </Badge>
+                    {!record.parentSummary.isCombinable && record.parentSummary.incompatibilityReasons.length > 0 ? (
+                      <div
+                        className="text-xs text-muted-foreground"
+                        data-testid={`combinability-reasons-${record.parentSummary.parentGroupKey}`}
+                      >
+                        {record.parentSummary.incompatibilityReasons.join(', ')}
+                      </div>
+                    ) : null}
                     {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
                       <div className="text-xs text-muted-foreground">{record.parentSummary.blockedReason}</div>
                     ) : null}
@@ -1131,7 +1180,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       {record.childExecutionRows.map((member) => {
                         const assignmentContext = getRecurringAssignmentContext(member);
                         const cadenceSource = formatCadenceSourceBadge(member.cadenceSource).label;
-                        const billingTiming = member.executionWindow.duePosition === 'advance' ? 'Advance' : 'Arrears';
+                        const duePosition = (member.selectorInput.executionWindow as { duePosition?: string }).duePosition;
+                        const billingTiming = duePosition === 'advance' ? 'Advance' : 'Arrears';
                         const amountCents = (member as { amountCents?: number | null }).amountCents;
 
                         return (

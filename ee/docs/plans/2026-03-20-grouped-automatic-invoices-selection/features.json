@@ -38,13 +38,13 @@
   {
     "id": "F007",
     "description": "Compute parent combinability from effective invoice-level financial scope: client, currency, PO scope, tax source, and export shape.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product Decisions", "Requirements"]
   },
   {
     "id": "F008",
     "description": "Enable the parent checkbox only when the currently eligible children are combinable as one invoice.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product Decisions", "Requirements"]
   },
   {
@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Expose explicit incompatibility reasons on non-combinable parent rows, including PO, currency, tax, and export-shape differences.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements"]
   },
   {
