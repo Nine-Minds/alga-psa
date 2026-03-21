@@ -19,6 +19,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Mode-specific catalog defaults are stored in a dedicated table (`service_catalog_mode_defaults`) rather than overloading existing `service_prices`. Rationale: keep contract-mode defaults explicit and avoid breaking multi-currency price reads while migration/backfill work lands.
 - (2026-03-21) Backfill semantics for mode-defaults are one-way and service-scoped: seed from `service_prices` first, fallback to `service_catalog.default_rate` only when no per-currency rows exist, and fail on unresolved active-service mappings. Rationale: preserve the richest existing pricing data while preventing silent gaps.
 - (2026-03-21) Wizard and template service pickers now apply only `itemKinds=['service']` gating for fixed/hourly/usage sections; billing-method filter arguments were removed from these step-level picker calls. Rationale: service identity is catalog-level and billing mode is contract-context.
+- (2026-03-21) Contract/template wizard submit validators now enforce only `item_kind='service'` for fixed/hourly/usage service arrays; billing_method matching checks were removed from server-side submission validation.
 
 ## Discoveries / Constraints
 
@@ -33,6 +34,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Added migration `20260321110000_create_service_catalog_mode_defaults.cjs` with tenant+service scoped FK, strict unique key `(tenant, service_id, billing_mode, currency_code)`, billing_mode check (`fixed|hourly|usage`), and non-negative rate check.
 - (2026-03-21) Added migration `20260321113000_backfill_service_catalog_mode_defaults.cjs` that normalizes `per_unit -> usage`, inserts from `service_prices`, falls back to `service_catalog` defaults, and throws when active services with source defaults still have no mode-default rows.
 - (2026-03-21) `ServiceCatalogPicker` still supports optional `billing_methods`, but wizard and template steps no longer pass billing-method filters in fixed/hourly/usage service flows; only products step still uses `itemKinds=['product']` as expected.
+- (2026-03-21) Added integration coverage (`T013-T018`) in `server/src/test/integration/contractWizard.integration.test.ts` for decoupled acceptance (fixed/hourly/usage) and non-service rejections.
 
 ## Commands / Runbooks
 
@@ -54,6 +56,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run src/test/unit/migrations/serviceCatalogModeDefaultsMigration.test.ts src/test/unit/migrations/serviceCatalogModeDefaultsBackfillMigration.test.ts`
 - (2026-03-21) Validate wizard picker decoupling static guards:
   - `cd server && npx vitest run src/test/unit/fixedWizardPickerPolicy.static.test.ts`
+- (2026-03-21) Validate server submit decoupling integration tests:
+  - `cd server && npx vitest run src/test/integration/contractWizard.integration.test.ts`
+  - Note: blocked locally in this run due unavailable DB test harness (`ECONNREFUSED 127.0.0.1:5438`).
 
 ## Links / References
 

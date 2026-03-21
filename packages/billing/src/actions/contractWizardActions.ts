@@ -313,9 +313,9 @@ export const createContractTemplateFromWizard = withAuth(async (
       for (const item of filteredFixedServices) {
         const match = services.find((s) => s.service_id === item.service_id);
         if (!match) continue;
-        if (match.item_kind !== 'service' || match.billing_method !== 'fixed') {
+        if (match.item_kind !== 'service') {
           throw new Error(
-            `Catalog item "${match.service_name}" must be a fixed-billing service to be added to fixed fee template lines.`
+            `Catalog item "${match.service_name}" must be a service to be added to fixed fee template lines.`
           );
         }
       }
@@ -334,9 +334,9 @@ export const createContractTemplateFromWizard = withAuth(async (
       for (const item of filteredHourlyServices) {
         const match = services.find((s) => s.service_id === item.service_id);
         if (!match) continue;
-        if (match.item_kind !== 'service' || match.billing_method !== 'hourly') {
+        if (match.item_kind !== 'service') {
           throw new Error(
-            `Catalog item "${match.service_name}" must be an hourly-billing service to be added to hourly template lines.`
+            `Catalog item "${match.service_name}" must be a service to be added to hourly template lines.`
           );
         }
       }
@@ -344,9 +344,9 @@ export const createContractTemplateFromWizard = withAuth(async (
       for (const item of filteredUsageServices) {
         const match = services.find((s) => s.service_id === item.service_id);
         if (!match) continue;
-        if (match.item_kind !== 'service' || match.billing_method !== 'usage') {
+        if (match.item_kind !== 'service') {
           throw new Error(
-            `Catalog item "${match.service_name}" must be a usage-billing service to be added to usage template lines.`
+            `Catalog item "${match.service_name}" must be a service to be added to usage template lines.`
           );
         }
       }
@@ -957,9 +957,9 @@ export const createClientContractFromWizard = withAuth(async (
       for (const item of filteredFixedServices) {
         const match = serviceCatalogById.get(item.service_id);
         if (!match) continue;
-        if (match.item_kind !== 'service' || match.billing_method !== 'fixed') {
+        if (match.item_kind !== 'service') {
           throw new Error(
-            `Catalog item "${match.service_name}" must be a fixed-billing service to be added to fixed fee contract lines.`
+            `Catalog item "${match.service_name}" must be a service to be added to fixed fee contract lines.`
           );
         }
       }
@@ -978,9 +978,9 @@ export const createClientContractFromWizard = withAuth(async (
       for (const item of filteredHourlyServices) {
         const match = serviceCatalogById.get(item.service_id);
         if (!match) continue;
-        if (match.item_kind !== 'service' || match.billing_method !== 'hourly') {
+        if (match.item_kind !== 'service') {
           throw new Error(
-            `Catalog item "${match.service_name}" must be an hourly-billing service to be added to hourly contract lines.`
+            `Catalog item "${match.service_name}" must be a service to be added to hourly contract lines.`
           );
         }
       }
@@ -988,9 +988,9 @@ export const createClientContractFromWizard = withAuth(async (
       for (const item of filteredUsageServices) {
         const match = serviceCatalogById.get(item.service_id);
         if (!match) continue;
-        if (match.item_kind !== 'service' || match.billing_method !== 'usage') {
+        if (match.item_kind !== 'service') {
           throw new Error(
-            `Catalog item "${match.service_name}" must be a usage-billing service to be added to usage contract lines.`
+            `Catalog item "${match.service_name}" must be a service to be added to usage contract lines.`
           );
         }
       }

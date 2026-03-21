@@ -195,7 +195,286 @@ describe('createClientContractFromWizard', () => {
     expect(Number(fixedConfig?.base_rate ?? 0)).toBe(10000);
 
   });
+
+  it('T013: accepts fixed services even when catalog billing_method is non-fixed', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'hourly');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const serviceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Fixed Line Decoupled Service',
+      billingMethod: 'hourly',
+      itemKind: 'service',
+      defaultRate: 7500,
+      unitOfMeasure: 'month',
+    });
+    createdIds.serviceId = serviceId;
+
+    const clientId = await insertClient(db, tenantId, 'Fixed Acceptance Client');
+    createdIds.clientId = clientId;
+
+    const result = await createClientContractFromWizard({
+      contract_name: 'Fixed Decoupled Contract',
+      description: 'accepts non-fixed catalog method',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: true,
+      fixed_base_rate: 7500,
+      fixed_services: [{ service_id: serviceId, quantity: 1 }],
+      hourly_services: [],
+      usage_services: [],
+      po_required: false,
+    });
+
+    expect(result.contract_id).toBeDefined();
+    createdIds.contractId = result.contract_id;
+    createdIds.contractLineId = result.contract_line_id ?? undefined;
+  });
+
+  it('T014: rejects fixed-service submissions when selected catalog item is not a service', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'fixed');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const productId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Fixed Line Product',
+      billingMethod: 'fixed',
+      itemKind: 'product',
+      defaultRate: 4200,
+      unitOfMeasure: 'each',
+    });
+    createdIds.serviceId = productId;
+
+    const clientId = await insertClient(db, tenantId, 'Fixed Rejection Client');
+    createdIds.clientId = clientId;
+
+    await expect(
+      createClientContractFromWizard({
+        contract_name: 'Fixed Product Rejection Contract',
+        description: 'reject product in fixed services',
+        client_id: clientId,
+        start_date: '2025-10-01',
+        end_date: null,
+        billing_frequency: 'monthly',
+        enable_proration: true,
+        fixed_base_rate: 4200,
+        fixed_services: [{ service_id: productId, quantity: 1 }],
+        hourly_services: [],
+        usage_services: [],
+        po_required: false,
+      })
+    ).rejects.toThrow('must be a service to be added to fixed fee contract lines');
+  });
+
+  it('T015: accepts hourly services even when catalog billing_method is non-hourly', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'usage');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const serviceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Hourly Line Decoupled Service',
+      billingMethod: 'usage',
+      itemKind: 'service',
+      defaultRate: 6300,
+      unitOfMeasure: 'hour',
+    });
+    createdIds.serviceId = serviceId;
+
+    const clientId = await insertClient(db, tenantId, 'Hourly Acceptance Client');
+    createdIds.clientId = clientId;
+
+    const result = await createClientContractFromWizard({
+      contract_name: 'Hourly Decoupled Contract',
+      description: 'accepts non-hourly catalog method',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: false,
+      fixed_services: [],
+      hourly_services: [{ service_id: serviceId, hourly_rate: 6300 }],
+      usage_services: [],
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+      po_required: false,
+    });
+
+    expect(result.contract_id).toBeDefined();
+    createdIds.contractId = result.contract_id;
+    createdIds.contractLineId = result.contract_line_id ?? undefined;
+  });
+
+  it('T016: rejects hourly-service submissions when selected catalog item is not a service', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'hourly');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const productId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Hourly Line Product',
+      billingMethod: 'hourly',
+      itemKind: 'product',
+      defaultRate: 3500,
+      unitOfMeasure: 'each',
+    });
+    createdIds.serviceId = productId;
+
+    const clientId = await insertClient(db, tenantId, 'Hourly Rejection Client');
+    createdIds.clientId = clientId;
+
+    await expect(
+      createClientContractFromWizard({
+        contract_name: 'Hourly Product Rejection Contract',
+        description: 'reject product in hourly services',
+        client_id: clientId,
+        start_date: '2025-10-01',
+        end_date: null,
+        billing_frequency: 'monthly',
+        enable_proration: false,
+        fixed_services: [],
+        hourly_services: [{ service_id: productId, hourly_rate: 3500 }],
+        usage_services: [],
+        minimum_billable_time: 15,
+        round_up_to_nearest: 15,
+        po_required: false,
+      })
+    ).rejects.toThrow('must be a service to be added to hourly contract lines');
+  });
+
+  it('T017: accepts usage services even when catalog billing_method is non-usage', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'fixed');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const serviceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Usage Line Decoupled Service',
+      billingMethod: 'fixed',
+      itemKind: 'service',
+      defaultRate: 2900,
+      unitOfMeasure: 'unit',
+    });
+    createdIds.serviceId = serviceId;
+
+    const clientId = await insertClient(db, tenantId, 'Usage Acceptance Client');
+    createdIds.clientId = clientId;
+
+    const result = await createClientContractFromWizard({
+      contract_name: 'Usage Decoupled Contract',
+      description: 'accepts non-usage catalog method',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: false,
+      fixed_services: [],
+      hourly_services: [],
+      usage_services: [{ service_id: serviceId, unit_rate: 2900, unit_of_measure: 'unit' }],
+      po_required: false,
+    });
+
+    expect(result.contract_id).toBeDefined();
+    createdIds.contractId = result.contract_id;
+    createdIds.contractLineId = result.contract_line_id ?? undefined;
+  });
+
+  it('T018: rejects usage-service submissions when selected catalog item is not a service', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'usage');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const productId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Usage Line Product',
+      billingMethod: 'usage',
+      itemKind: 'product',
+      defaultRate: 1800,
+      unitOfMeasure: 'each',
+    });
+    createdIds.serviceId = productId;
+
+    const clientId = await insertClient(db, tenantId, 'Usage Rejection Client');
+    createdIds.clientId = clientId;
+
+    await expect(
+      createClientContractFromWizard({
+        contract_name: 'Usage Product Rejection Contract',
+        description: 'reject product in usage services',
+        client_id: clientId,
+        start_date: '2025-10-01',
+        end_date: null,
+        billing_frequency: 'monthly',
+        enable_proration: false,
+        fixed_services: [],
+        hourly_services: [],
+        usage_services: [{ service_id: productId, unit_rate: 1800, unit_of_measure: 'unit' }],
+        po_required: false,
+      })
+    ).rejects.toThrow('must be a service to be added to usage contract lines');
+  });
 });
+
+async function insertServiceType(connection: Knex, tenant: string, billingMethod: 'fixed' | 'hourly' | 'usage') {
+  const serviceTypeId = uuidv4();
+  await connection('service_types').insert({
+    id: serviceTypeId,
+    tenant,
+    name: `Service Type ${serviceTypeId.slice(0, 8)}`,
+    billing_method: billingMethod,
+    order_number: Math.floor(Math.random() * 1000000),
+    created_at: connection.fn.now(),
+    updated_at: connection.fn.now(),
+  });
+  return serviceTypeId;
+}
+
+async function insertCatalogItem(
+  connection: Knex,
+  tenant: string,
+  options: {
+    serviceTypeId: string;
+    serviceName: string;
+    billingMethod: 'fixed' | 'hourly' | 'usage';
+    itemKind: 'service' | 'product';
+    defaultRate: number;
+    unitOfMeasure: string;
+  }
+) {
+  const serviceId = uuidv4();
+  await connection('service_catalog').insert({
+    tenant,
+    service_id: serviceId,
+    service_name: options.serviceName,
+    description: 'Contract wizard integration item',
+    default_rate: options.defaultRate,
+    unit_of_measure: options.unitOfMeasure,
+    billing_method: options.billingMethod,
+    custom_service_type_id: options.serviceTypeId,
+    tax_rate_id: null,
+    category_id: null,
+    item_kind: options.itemKind,
+  });
+  return serviceId;
+}
+
+async function insertClient(connection: Knex, tenant: string, clientNamePrefix: string) {
+  const clientId = uuidv4();
+  await connection('clients').insert({
+    tenant,
+    client_id: clientId,
+    client_name: `${clientNamePrefix} ${clientId.slice(0, 8)}`,
+    billing_cycle: 'monthly',
+    is_tax_exempt: false,
+    created_at: connection.fn.now(),
+    updated_at: connection.fn.now(),
+  });
+  return clientId;
+}
 
 async function ensureTenant(connection: Knex): Promise<string> {
   const existing = await connection('tenants').first<{ tenant: string }>('tenant');
