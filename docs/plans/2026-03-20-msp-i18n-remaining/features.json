@@ -34,7 +34,7 @@
   {"id": "F051", "description": "Wire useTranslation('msp/profile') in AdminSessionManagement.tsx (~16), PasswordChangeForm.tsx (~12), UserProfile.tsx (~17)", "implemented": true, "prdRefs": ["2b-19"]},
   {"id": "F052", "description": "Wire useTranslation in UserRoleAssignment.tsx (~9), SecuritySettingsPage.tsx (~4), PlatformUpdateDetail.tsx (~6)", "implemented": true, "prdRefs": ["2b-19"]},
   {"id": "F053", "description": "Generate msp/profile translations for 6 non-English locales + 2 pseudo-locales", "implemented": true, "prdRefs": ["2b-19"]},
-  {"id": "F054", "description": "Italian accent audit on it/msp/profile.json", "implemented": false, "prdRefs": ["2b-19"]},
+  {"id": "F054", "description": "Italian accent audit on it/msp/profile.json", "implemented": true, "prdRefs": ["2b-19"]},
 
   {"id": "F060", "description": "Close batch 2b-20 (extensions + licensing) as 'no translation needed' — 0 user-visible strings found", "implemented": false, "prdRefs": ["2b-20"]},
 

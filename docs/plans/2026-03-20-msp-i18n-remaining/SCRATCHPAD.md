@@ -172,6 +172,7 @@ done
 - (2026-03-21) Validation for `F052`: `git diff --check` passed, `npx tsc -p server/tsconfig.json --noEmit` passed after the remaining profile/security rewrites, and the enriched [server/public/locales/en/msp/profile.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/profile.json) still parsed successfully with Node.
 - (2026-03-21) Completed `F053`: added profile namespace files for `de`, `es`, `fr`, `it`, `nl`, and `pl`, then regenerated targeted `xx` and `yy` pseudo-locales from the English source. Unlike the email-provider batch, most profile/security strings were assembled from already-translated `msp/settings` and `client-portal` locale data, with only the new profile load/save errors, password validation copy, session error messages, unnamed-user fallback, and platform-update detail labels filled in manually.
 - (2026-03-21) Validation for `F053`: `node scripts/validate-translations.cjs` passed with `Errors: 0` and `Warnings: 0`, `git diff --check` stayed clean, and direct leaf counts matched across the English, production, and pseudo profile locale files (117 leaf strings each).
+- (2026-03-21) Completed `F054`: ran the Italian accent audit against [server/public/locales/it/msp/profile.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/profile.json). A whole-word sweep for common missing-accent spellings (`puo`, `gia`, `verra`, `funzionalita`, `perche`) returned zero matches, so the new Italian profile locale did not require accent corrections.
 
 ## Open Questions
 
