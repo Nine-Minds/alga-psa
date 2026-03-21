@@ -11,6 +11,7 @@
 - (2026-03-21) Use hard cutover objective: remove primary-path non-contract fallback complexity once routing is stable.
 - (2026-03-21) Persist explicit default-contract identity on `contracts.is_system_managed_default` and enforce uniqueness via tenant+owner-client partial unique index; deterministic naming is `System-managed default contract`.
 - (2026-03-21) Centralize billing-settings row ensure in `shared/billingClients/billingSettings.ts` and make default-contract ensure part of that shared path, then route schedule/cycle-anchor/package settings/credit-expiration updates through it.
+- (2026-03-21) Null client-billing-settings overrides (`settings === null`) remain delete-only and do not trigger default-contract ensure; ensure is only invoked on non-null ensure/update touchpoints.
 
 ## Discoveries / Constraints
 
@@ -33,6 +34,8 @@
   - `jq empty ee/docs/plans/2026-03-21-system-managed-default-contract-cutover/tests.json`
   - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-21-system-managed-default-contract-cutover`
 - Verify T001 coverage for default contract ensure:
+  - `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
+- Verify T002 concurrency coverage (same suite now includes forced race path):
   - `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
 - (Optional) Package wiring spot-check:
   - `cd packages/billing && npx vitest run tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/billingSettingsActions.renewalDefaultsWiring.test.ts tests/billingSettingsActions.cadenceOwnerDefaultsWiring.test.ts`
@@ -65,6 +68,11 @@
   - `server/migrations/20260321150000_add_system_managed_default_contract_marker.cjs`
   - `shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
   - `ee/docs/plans/2026-03-21-system-managed-default-contract-cutover/ENGINEERING_NOTES.md`
+
+## Completed Checklist Progress
+
+- (2026-03-21) Completed features: `F001-F013`, `F055`, `F056`, `F063`.
+- (2026-03-21) Completed tests: `T001`, `T002`.
 
 ## Open Questions
 

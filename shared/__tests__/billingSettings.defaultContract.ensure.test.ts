@@ -3,17 +3,22 @@ import { ensureClientBillingSettingsRow } from '../billingClients/billingSetting
 
 type Row = Record<string, any>;
 type TableState = Record<string, Row[]>;
+type FakeKnexOptions = {
+  forceEmptyDefaultContractLookups?: number;
+};
 
 class FakeQueryBuilder {
   private readonly state: TableState;
   private readonly tableName: string;
+  private readonly options: FakeKnexOptions;
   private filters: Record<string, any>[] = [];
   private selectedColumns: string[] | null = null;
   private firstOnly = false;
 
-  constructor(state: TableState, tableName: string) {
+  constructor(state: TableState, tableName: string, options: FakeKnexOptions) {
     this.state = state;
     this.tableName = tableName;
+    this.options = options;
   }
 
   where(criteria: Record<string, any>): this {
@@ -36,6 +41,26 @@ class FakeQueryBuilder {
 
   async insert(payload: Row): Promise<{ returning: (columns: string | string[]) => Promise<Row[]> }> {
     const table = this.state[this.tableName] ?? (this.state[this.tableName] = []);
+
+    if (
+      this.tableName === 'contracts' &&
+      payload.is_system_managed_default === true &&
+      payload.owner_client_id
+    ) {
+      const duplicate = table.find(
+        (row) =>
+          row.tenant === payload.tenant &&
+          row.owner_client_id === payload.owner_client_id &&
+          row.is_system_managed_default === true
+      );
+      if (duplicate) {
+        const duplicateError = Object.assign(new Error('duplicate key value violates unique constraint'), {
+          code: '23505',
+        });
+        throw duplicateError;
+      }
+    }
+
     const row = { ...payload };
     table.push(row);
     return {
@@ -75,6 +100,17 @@ class FakeQueryBuilder {
 
   private getRows(): Row[] {
     const table = this.state[this.tableName] ?? [];
+
+    if (
+      this.tableName === 'contracts' &&
+      this.options.forceEmptyDefaultContractLookups &&
+      this.options.forceEmptyDefaultContractLookups > 0 &&
+      this.filters.some((criteria) => criteria.is_system_managed_default === true)
+    ) {
+      this.options.forceEmptyDefaultContractLookups -= 1;
+      return [];
+    }
+
     const rows = this.filterRows(table);
     return rows.map((row) => this.projectRow(row));
   }
@@ -98,12 +134,12 @@ class FakeQueryBuilder {
   }
 }
 
-const createFakeKnex = (initialState: TableState) => {
+const createFakeKnex = (initialState: TableState, options: FakeKnexOptions = {}) => {
   const state: TableState = Object.fromEntries(
     Object.entries(initialState).map(([table, rows]) => [table, rows.map((row) => ({ ...row }))])
   );
 
-  const knex = ((tableName: string) => new FakeQueryBuilder(state, tableName)) as any;
+  const knex = ((tableName: string) => new FakeQueryBuilder(state, tableName, options)) as any;
   knex.fn = {
     now: () => '2026-03-21T00:00:00.000Z',
   };
@@ -173,5 +209,48 @@ describe('default contract ensure on billing settings ensure', () => {
     );
     expect(assignments).toHaveLength(1);
     expect(assignments[0].is_active).toBe(true);
+  });
+
+  it('T002: parallel ensure calls for the same tenant+client do not create duplicate default contracts', async () => {
+    const knex = createFakeKnex(
+      {
+        clients: [
+          {
+            tenant: 'tenant-1',
+            client_id: 'client-1',
+            default_currency_code: 'USD',
+          },
+        ],
+        default_billing_settings: [
+          {
+            tenant: 'tenant-1',
+            zero_dollar_invoice_handling: 'normal',
+            suppress_zero_dollar_invoices: false,
+            credit_expiration_days: 365,
+            credit_expiration_notification_days: [30, 7, 1],
+            enable_credit_expiration: true,
+          },
+        ],
+        client_billing_settings: [],
+        contracts: [],
+        client_contracts: [],
+      },
+      {
+        // Force both parallel calls to miss the initial lookup, so both attempt insert.
+        // The second insert must be rejected/retried via unique-violation path.
+        forceEmptyDefaultContractLookups: 2,
+      }
+    );
+
+    await Promise.all([
+      ensureClientBillingSettingsRow(knex, { tenant: 'tenant-1', clientId: 'client-1' }),
+      ensureClientBillingSettingsRow(knex, { tenant: 'tenant-1', clientId: 'client-1' }),
+    ]);
+
+    const state = knex.__state as TableState;
+    const defaultContracts = state.contracts.filter(
+      (row) => row.tenant === 'tenant-1' && row.owner_client_id === 'client-1' && row.is_system_managed_default === true
+    );
+    expect(defaultContracts).toHaveLength(1);
   });
 });

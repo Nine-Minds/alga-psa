@@ -16,7 +16,7 @@
   {
     "id": "T002",
     "description": "Concurrency integration: parallel ensure calls for same tenant+client produce no duplicate default contracts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F004",

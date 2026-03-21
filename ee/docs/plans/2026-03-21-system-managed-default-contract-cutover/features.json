@@ -108,7 +108,7 @@
   {
     "id": "F013",
     "description": "Guard ensure hooks so null-setting override deletes do not unintentionally recreate default contracts unless policy requires.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 14"
     ]
@@ -452,7 +452,7 @@
   {
     "id": "F055",
     "description": "Create schema migration(s) for any new default-contract marker/pointer fields and uniqueness constraints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration 2"
     ]
@@ -460,7 +460,7 @@
   {
     "id": "F056",
     "description": "Keep migration idempotent and schema-guarded with explicit existence checks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements 3"
     ]
@@ -517,7 +517,7 @@
   {
     "id": "F063",
     "description": "Add server-side validation to prevent multiple conflicting default-contract assignments per client.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 3"
     ]
