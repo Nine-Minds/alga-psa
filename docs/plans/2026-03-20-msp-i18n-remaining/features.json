@@ -44,7 +44,7 @@
   {"id": "F065", "description": "Create en/msp/licensing.json for CE licensing stub copy discovered in batch 2b-20 follow-up", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F066", "description": "Wire useTranslation('msp/licensing') in CE licensing stub components (ReduceLicensesModal, LicensePurchaseForm)", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F067", "description": "Generate msp/licensing translations for 6 non-English locales + 2 pseudo-locales", "implemented": true, "prdRefs": ["2b-20"]},
-  {"id": "F068", "description": "Italian accent audit on it/msp/licensing.json", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F068", "description": "Italian accent audit on it/msp/licensing.json", "implemented": true, "prdRefs": ["2b-20"]},
 
   {"id": "F090", "description": "Update ROUTE_NAMESPACES for /msp/surveys, /msp/schedule, /msp/knowledge-base, /msp/jobs, /msp/settings (email-providers), /msp/profile, /msp/security-settings, /msp/platform-updates", "implemented": false},
   {"id": "F091", "description": "validate-translations.cjs passes for all 6 new namespaces across all 9 locales", "implemented": false},
