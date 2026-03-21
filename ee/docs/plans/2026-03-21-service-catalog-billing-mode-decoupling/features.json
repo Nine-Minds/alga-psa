@@ -1,6 +1,6 @@
 [
   { "id": "F001", "description": "Enforce canonical billing vocabulary `fixed|hourly|usage` and reject/normalize legacy `per_unit` inputs at all write boundaries.", "implemented": true, "prdRefs": ["Requirements > L1.A"] },
-  { "id": "F002", "description": "Introduce mode-specific catalog default pricing storage keyed by service, billing_mode, currency, tenant with strict uniqueness.", "implemented": false, "prdRefs": ["Requirements > L1.A"] },
+  { "id": "F002", "description": "Introduce mode-specific catalog default pricing storage keyed by service, billing_mode, currency, tenant with strict uniqueness.", "implemented": true, "prdRefs": ["Requirements > L1.A"] },
   { "id": "F003", "description": "Run one-way migration/backfill from existing catalog defaults into mode-specific default pricing and fail if required mappings are missing.", "implemented": false, "prdRefs": ["Requirements > L1.G"] },
   { "id": "F004", "description": "Remove fixed-step wizard picker filtering by catalog billing method while preserving `item_kind=service` constraint.", "implemented": false, "prdRefs": ["Requirements > L1.B"] },
   { "id": "F005", "description": "Remove hourly-step wizard picker filtering by catalog billing method while preserving `item_kind=service` constraint.", "implemented": false, "prdRefs": ["Requirements > L1.B"] },

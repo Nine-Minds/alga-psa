@@ -1,7 +1,7 @@
 [
   { "id": "T001", "description": "Migration unit: hard-normalize all legacy `per_unit` values to `usage` and assert no residual rows.", "implemented": true, "featureIds": ["F001", "F037"] },
-  { "id": "T002", "description": "API unit: reject create/update payloads that still submit `per_unit` after cutover.", "implemented": false, "featureIds": ["F001", "F039"] },
-  { "id": "T003", "description": "Migration unit: create mode-default pricing table/indexes with tenant+service+mode+currency uniqueness.", "implemented": false, "featureIds": ["F002"] },
+  { "id": "T002", "description": "API unit: reject create/update payloads that still submit `per_unit` after cutover.", "implemented": true, "featureIds": ["F001", "F039"] },
+  { "id": "T003", "description": "Migration unit: create mode-default pricing table/indexes with tenant+service+mode+currency uniqueness.", "implemented": true, "featureIds": ["F002"] },
   { "id": "T004", "description": "Migration unit: one-way backfill populates mode-default pricing for all billable services.", "implemented": false, "featureIds": ["F003"] },
   { "id": "T005", "description": "Migration unit: one-way backfill fails fast when required source defaults are missing/invalid.", "implemented": false, "featureIds": ["F003"] },
   { "id": "T006", "description": "UI unit: fixed wizard picker includes services regardless of catalog billing method.", "implemented": false, "featureIds": ["F004"] },
