@@ -100,3 +100,21 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Completed F023-F025 guard rails by preserving existing hourly minimum/round/overtime logic, usage minimum/custom-rate/tier logic, and bucket overage path; added static assertions to lock these behaviors.
 - (2026-03-21) Added/updated tests: `server/src/test/unit/billingEngine.test.ts` (T030-T035 behavior coverage) and `server/src/test/unit/billing/billingEngine.contractLineAllocation.static.test.ts` (T028-T029, T036-T040 static guards).
 - (2026-03-21) Test run: `cd server && npx vitest run src/test/unit/billingEngine.test.ts src/test/unit/billing/billingEngine.contractLineAllocation.static.test.ts` (pass).
+- (2026-03-21) Completed F026/F027 by extending due-work materialization to append unresolved non-contract rows (time + usage) using deterministic `schedule:...:non_contract:<type>:<recordId>` selectors and client-level currency/tax metadata in `getAvailableRecurringDueWork`. Key refs: `packages/billing/src/actions/billingAndTax.ts`, `packages/billing/src/lib/billing/billingEngine.ts`.
+- (2026-03-21) Completed F028/F029/F030 by rendering non-contract child labels in grouped Automatic Invoices UI and preserving child-level generation targeting so contract-only and non-contract-only selection paths generate independently. Key ref: `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`.
+- (2026-03-21) Added non-contract selection handling in invoice generation scoping: non-contract selector keys bypass recurring obligation scoping and flow through dedicated `nonContractSelection` options. Key ref: `packages/billing/src/actions/invoiceGeneration.ts`.
+- (2026-03-21) Added tests for T041-T045:
+  - `server/src/test/unit/billing/nonContractDueWork.integration.test.ts`
+  - `server/src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
+- (2026-03-21) Updated preview summary copy to explicitly differentiate one combined invoice vs multiple separate invoices in grouped preview dialog (`AutomaticInvoices.tsx`).
+- (2026-03-21) Completed F031 by extending grouped UI combinability checks to include invoice-window scope alongside client/currency/tax/export/PO and by validating mixed selection behavior end-to-end in UI tests. Key ref: `AutomaticInvoices.tsx`.
+- (2026-03-21) Marked F032 complete after verifying grouped preview summary explicitly states one combined invoice vs N separate invoices (`preview-invoice-count-summary`), with test coverage in `automaticInvoices.nonContractSelection.ui.test.tsx`.
+- (2026-03-21) Added/updated `T011` in `server/src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx` to assert compatible mixed selections combine as a parent-group target while incompatible scope selections (currency mismatch) split into child-level targets.
+- (2026-03-21) Marked `T001` complete by validating migration canonicalization + mode-default schema/backfill suites (`billingMethodCanonicalizationMigration`, `serviceCatalogModeDefaultsMigration`, `serviceCatalogModeDefaultsBackfillMigration`).
+
+- (2026-03-21) Validation runbooks:
+  - `cd server && npx vitest run src/test/unit/billing/nonContractDueWork.integration.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
+  - `cd server && npx vitest run src/test/unit/billing/recurringDueWorkReader.integration.test.ts`
+  - `npx tsc -p packages/billing/tsconfig.json --noEmit` (fails on pre-existing unrelated package type errors; no new errors from the F026-F030 patch set).
+  - `cd server && npx vitest run src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx` (pass, includes T011 and T049 assertions)
+  - `cd server && npx vitest run src/test/unit/migrations/billingMethodCanonicalizationMigration.test.ts src/test/unit/migrations/serviceCatalogModeDefaultsMigration.test.ts src/test/unit/migrations/serviceCatalogModeDefaultsBackfillMigration.test.ts` (pass)

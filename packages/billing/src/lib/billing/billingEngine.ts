@@ -95,6 +95,11 @@ type RecurringChargeTimingSelections = Record<
 type CalculateBillingOptions = {
   recurringTimingSelections?: RecurringChargeTimingSelections;
   recurringTimingSelectionSource?: "derived" | "persisted";
+  nonContractSelection?: {
+    include: boolean;
+    timeEntryIds?: string[];
+    usageRecordIds?: string[];
+  };
 };
 
 type PersistedRecurringTimingSelectionRecord = Pick<
@@ -710,6 +715,7 @@ export class BillingEngine {
             cycle,
           )
         : {};
+    const nonContractSelection = options.nonContractSelection;
 
     const materialCharges = await this.calculateMaterialCharges(
       clientId,
@@ -717,7 +723,7 @@ export class BillingEngine {
       billingCurrency,
     );
 
-    if (clientContractLines.length === 0) {
+    if (clientContractLines.length === 0 && !nonContractSelection?.include) {
       if (materialCharges.length === 0) {
         return {
           charges: [],
@@ -868,6 +874,18 @@ export class BillingEngine {
       totalCharges = totalCharges.concat(materialCharges);
     }
 
+    if (nonContractSelection?.include) {
+      const nonContractCharges = await this.calculateUnresolvedNonContractCharges(
+        clientId,
+        billingPeriod,
+        {
+          timeEntryIds: nonContractSelection.timeEntryIds,
+          usageRecordIds: nonContractSelection.usageRecordIds,
+        },
+      );
+      totalCharges = totalCharges.concat(nonContractCharges);
+    }
+
     const totalAmount = totalCharges.reduce(
       (sum: number, charge: IBillingCharge) => sum + charge.total,
       0,
@@ -893,6 +911,364 @@ export class BillingEngine {
     );
 
     return finalCharges;
+  }
+
+  async calculateUnresolvedNonContractChargesForExecutionWindow(input: {
+    clientId: string;
+    windowStart: ISO8601String;
+    windowEnd: ISO8601String;
+    selectedTimeEntryIds?: string[];
+    selectedUsageRecordIds?: string[];
+  }): Promise<IBillingCharge[]> {
+    return this.withPinnedTransaction(async () => {
+      const billingPeriod: IBillingPeriod = {
+        startDate: toISODate(toPlainDate(input.windowStart)),
+        endDate: toISODate(toPlainDate(input.windowEnd)),
+      };
+      return this.calculateUnresolvedNonContractCharges(
+        input.clientId,
+        billingPeriod,
+        {
+          timeEntryIds: input.selectedTimeEntryIds,
+          usageRecordIds: input.selectedUsageRecordIds,
+        },
+      );
+    });
+  }
+
+  private async getEligibleContractLineIdsForServiceAtDate(input: {
+    clientId: string;
+    serviceId: string;
+    workDate: ISO8601String;
+  }): Promise<string[]> {
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const rows = await this.knex("client_contracts as cc")
+      .join("contracts as c", function () {
+        this.on("c.contract_id", "=", "cc.contract_id").andOn(
+          "c.tenant",
+          "=",
+          "cc.tenant",
+        );
+      })
+      .join("contract_lines as cl", function () {
+        this.on("cl.contract_id", "=", "c.contract_id").andOn(
+          "cl.tenant",
+          "=",
+          "c.tenant",
+        );
+      })
+      .join("contract_line_services as cls", function () {
+        this.on("cls.contract_line_id", "=", "cl.contract_line_id").andOn(
+          "cls.tenant",
+          "=",
+          "cl.tenant",
+        );
+      })
+      .where({
+        "cc.tenant": this.tenant,
+        "cc.client_id": input.clientId,
+        "cc.is_active": true,
+        "cls.service_id": input.serviceId,
+      })
+      .where("cc.start_date", "<=", input.workDate)
+      .where(function (this: Knex.QueryBuilder) {
+        this.whereNull("cc.end_date").orWhere("cc.end_date", ">=", input.workDate);
+      })
+      .distinct("cl.contract_line_id")
+      .select("cl.contract_line_id");
+
+    return rows
+      .map((row: any) => row.contract_line_id)
+      .filter((lineId: unknown): lineId is string =>
+        typeof lineId === "string" && lineId.length > 0,
+      );
+  }
+
+  private async calculateUnresolvedNonContractCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    selection?: {
+      timeEntryIds?: string[];
+      usageRecordIds?: string[];
+    },
+  ): Promise<IBillingCharge[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const selectedTimeEntryIds =
+      selection?.timeEntryIds && selection.timeEntryIds.length > 0
+        ? new Set(selection.timeEntryIds)
+        : null;
+    const selectedUsageRecordIds =
+      selection?.usageRecordIds && selection.usageRecordIds.length > 0
+        ? new Set(selection.usageRecordIds)
+        : null;
+
+    const client = await this.knex("clients")
+      .where({
+        client_id: clientId,
+        tenant: this.tenant,
+      })
+      .first();
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
+    }
+
+    const unresolvedCharges: Array<ITimeBasedCharge | IUsageBasedCharge> = [];
+    const defaultTaxRegion = await this.getClientDefaultTaxRegionCode(clientId);
+
+    const timeEntries = await this.knex("time_entries")
+      .join("users", function () {
+        this.on("time_entries.user_id", "=", "users.user_id").andOn(
+          "users.tenant",
+          "=",
+          "time_entries.tenant",
+        );
+      })
+      .leftJoin("service_catalog", function () {
+        this.on(
+          "service_catalog.service_id",
+          "=",
+          "time_entries.service_id",
+        ).andOn("service_catalog.tenant", "=", "time_entries.tenant");
+      })
+      .leftJoin("project_ticket_links", function () {
+        this.on(
+          "time_entries.work_item_id",
+          "=",
+          "project_ticket_links.ticket_id",
+        ).andOn("project_ticket_links.tenant", "=", "time_entries.tenant");
+      })
+      .leftJoin("project_tasks", function () {
+        this.on(
+          "time_entries.work_item_id",
+          "=",
+          "project_tasks.task_id",
+        ).andOn("project_tasks.tenant", "=", "time_entries.tenant");
+      })
+      .leftJoin("project_phases", function () {
+        this.on("project_tasks.phase_id", "=", "project_phases.phase_id").andOn(
+          "project_phases.tenant",
+          "=",
+          "project_tasks.tenant",
+        );
+      })
+      .leftJoin("projects", function () {
+        this.on("project_phases.project_id", "=", "projects.project_id").andOn(
+          "projects.tenant",
+          "=",
+          "project_phases.tenant",
+        );
+      })
+      .leftJoin("tickets", function () {
+        this.on("time_entries.work_item_id", "=", "tickets.ticket_id").andOn(
+          "tickets.tenant",
+          "=",
+          "time_entries.tenant",
+        );
+      })
+      .where({
+        "time_entries.tenant": this.tenant,
+      })
+      .where("time_entries.start_time", ">=", billingPeriod.startDate)
+      .where("time_entries.end_time", "<", billingPeriod.endDate)
+      .where("time_entries.invoiced", false)
+      .whereNull("time_entries.contract_line_id")
+      .whereNotNull("time_entries.service_id")
+      .where("time_entries.approval_status", "APPROVED")
+      .where(function (this: Knex.QueryBuilder) {
+        this.where("projects.client_id", clientId).orWhere(
+          "tickets.client_id",
+          clientId,
+        );
+      })
+      .select(
+        "time_entries.*",
+        "service_catalog.service_name",
+        "service_catalog.default_rate",
+        "service_catalog.tax_rate_id",
+      );
+
+    for (const entry of timeEntries) {
+      if (selectedTimeEntryIds && !selectedTimeEntryIds.has(entry.entry_id)) {
+        continue;
+      }
+      if (!entry.service_id) {
+        continue;
+      }
+      const workDate = toISODate(toPlainDate(entry.start_time));
+      const eligibleLineIds = await this.getEligibleContractLineIdsForServiceAtDate({
+        clientId,
+        serviceId: entry.service_id,
+        workDate,
+      });
+      if (eligibleLineIds.length === 1) {
+        continue;
+      }
+
+      const startDateTime = Temporal.PlainDateTime.from(
+        entry.start_time.toISOString().replace("Z", ""),
+      );
+      const endDateTime = Temporal.PlainDateTime.from(
+        entry.end_time.toISOString().replace("Z", ""),
+      );
+      const durationMinutes = Math.max(
+        1,
+        startDateTime.until(endDateTime, {
+          largestUnit: "minutes",
+        }).minutes,
+      );
+      const duration = Math.ceil(durationMinutes / 60);
+      const rate = Math.ceil(entry.custom_rate ?? entry.default_rate ?? 0);
+      const total = Math.round(duration * rate);
+      const { taxRegion: serviceTaxRegion, isTaxable } =
+        await this.getTaxInfoFromService({
+          service_id: entry.service_id,
+          tax_rate_id: entry.tax_rate_id,
+        });
+
+      let taxAmount = 0;
+      let taxRate = 0;
+      const effectiveTaxRegion = serviceTaxRegion ?? defaultTaxRegion ?? undefined;
+      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+        try {
+          const taxServiceInstance = new TaxService();
+          const taxResult = await taxServiceInstance.calculateTax(
+            client.client_id,
+            total,
+            billingPeriod.endDate,
+            effectiveTaxRegion,
+            true,
+            client.default_currency_code || "USD",
+          );
+          taxRate = taxResult.taxRate;
+          taxAmount = taxResult.taxAmount;
+        } catch (error) {
+          console.error(
+            `Error calculating tax for unresolved time entry ${entry.entry_id}:`,
+            error,
+          );
+        }
+      }
+
+      unresolvedCharges.push({
+        type: "time",
+        serviceId: entry.service_id,
+        serviceName: entry.service_name,
+        userId: entry.user_id,
+        duration,
+        quantity: duration,
+        rate,
+        total,
+        tax_amount: taxAmount,
+        tax_rate: taxRate,
+        tax_region: effectiveTaxRegion,
+        entryId: entry.entry_id,
+        is_taxable: isTaxable,
+        servicePeriodStart: billingPeriod.startDate,
+        servicePeriodEnd: billingPeriod.endDate,
+        billingTiming: "arrears",
+      } satisfies ITimeBasedCharge);
+    }
+
+    const usageRecords = await this.knex("usage_tracking")
+      .leftJoin("service_catalog", function () {
+        this.on(
+          "service_catalog.service_id",
+          "=",
+          "usage_tracking.service_id",
+        ).andOn("service_catalog.tenant", "=", "usage_tracking.tenant");
+      })
+      .where({
+        "usage_tracking.client_id": clientId,
+        "usage_tracking.tenant": this.tenant,
+        "usage_tracking.invoiced": false,
+      })
+      .where("usage_tracking.usage_date", ">=", billingPeriod.startDate)
+      .where("usage_tracking.usage_date", "<", billingPeriod.endDate)
+      .whereNull("usage_tracking.contract_line_id")
+      .whereNotNull("usage_tracking.service_id")
+      .select(
+        "usage_tracking.*",
+        "service_catalog.service_name",
+        "service_catalog.default_rate",
+        "service_catalog.tax_rate_id",
+      );
+
+    for (const record of usageRecords) {
+      if (selectedUsageRecordIds && !selectedUsageRecordIds.has(record.usage_id)) {
+        continue;
+      }
+      if (!record.service_id) {
+        continue;
+      }
+      const workDate = toISODate(toPlainDate(record.usage_date));
+      const eligibleLineIds = await this.getEligibleContractLineIdsForServiceAtDate({
+        clientId,
+        serviceId: record.service_id,
+        workDate,
+      });
+      if (eligibleLineIds.length === 1) {
+        continue;
+      }
+
+      const quantity = Math.max(0, Number(record.quantity ?? 0));
+      const rate = Math.ceil(record.custom_rate ?? record.default_rate ?? 0);
+      const total = Math.ceil(quantity * rate);
+      const { taxRegion: serviceTaxRegion, isTaxable } =
+        await this.getTaxInfoFromService({
+          service_id: record.service_id,
+          tax_rate_id: record.tax_rate_id,
+        });
+
+      let taxAmount = 0;
+      let taxRate = 0;
+      const effectiveTaxRegion = serviceTaxRegion ?? defaultTaxRegion ?? undefined;
+      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+        try {
+          const taxServiceInstance = new TaxService();
+          const taxResult = await taxServiceInstance.calculateTax(
+            client.client_id,
+            total,
+            billingPeriod.endDate,
+            effectiveTaxRegion,
+            true,
+            client.default_currency_code || "USD",
+          );
+          taxRate = taxResult.taxRate;
+          taxAmount = taxResult.taxAmount;
+        } catch (error) {
+          console.error(
+            `Error calculating tax for unresolved usage record ${record.usage_id}:`,
+            error,
+          );
+        }
+      }
+
+      unresolvedCharges.push({
+        type: "usage",
+        serviceId: record.service_id,
+        serviceName: record.service_name,
+        quantity,
+        rate,
+        total,
+        tax_amount: taxAmount,
+        tax_rate: taxRate,
+        tax_region: effectiveTaxRegion,
+        usageId: record.usage_id,
+        is_taxable: isTaxable,
+        servicePeriodStart: billingPeriod.startDate,
+        servicePeriodEnd: billingPeriod.endDate,
+        billingTiming: "arrears",
+      } satisfies IUsageBasedCharge);
+    }
+
+    return unresolvedCharges;
   }
 
   private async getClientContractLinesForBillingPeriod(

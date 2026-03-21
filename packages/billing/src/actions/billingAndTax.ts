@@ -41,6 +41,7 @@ import {
     buildClientCadencePostDropObligationRef,
     CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import { BillingEngine } from '../lib/billing/billingEngine';
 
 // Types for paginated billing periods
 export interface BillingPeriodWithMeta extends IClientContractLineCycle {
@@ -106,6 +107,11 @@ interface RecurringDueWorkGroupingMetadata {
     taxSource?: string | null;
     exportShapeKey?: string | null;
 }
+
+type ClientBillingMetadata = {
+    currencyCode: string | null;
+    taxSource: string | null;
+};
 
 interface ClientCadenceRecurringLineActivityRow {
     client_id: string;
@@ -590,6 +596,119 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
     });
 }
 
+async function fetchClientBillingMetadataById(
+    trx: BillingQueryExecutor,
+    tenant: string,
+    clientIds: string[],
+): Promise<Map<string, ClientBillingMetadata>> {
+    if (clientIds.length === 0) {
+        return new Map();
+    }
+
+    const rows = await trx('clients as c')
+        .leftJoin('client_tax_settings as cts', function () {
+            this.on('cts.client_id', '=', 'c.client_id')
+                .andOn('cts.tenant', '=', 'c.tenant');
+        })
+        .where('c.tenant', tenant)
+        .whereIn('c.client_id', clientIds)
+        .select(
+            'c.client_id',
+            'c.default_currency_code',
+            'cts.tax_source_override as tax_source',
+        );
+
+    return new Map<string, ClientBillingMetadata>(
+        rows.map((row: any) => [
+            row.client_id,
+            {
+                currencyCode: row.default_currency_code ?? null,
+                taxSource: row.tax_source ?? null,
+            },
+        ] as const),
+    );
+}
+
+async function fetchUnresolvedNonContractDueWorkRows(
+    candidateBillingPeriods: BillingPeriodWithMeta[],
+    asOf: ISO8601String,
+    tenant: string,
+    clientMetadataById: Map<string, ClientBillingMetadata>,
+): Promise<IRecurringDueWorkRow[]> {
+    if (candidateBillingPeriods.length === 0) {
+        return [];
+    }
+
+    const billingEngine = new BillingEngine();
+    const rows: IRecurringDueWorkRow[] = [];
+
+    for (const period of candidateBillingPeriods) {
+        if (!period.period_start_date || !period.period_end_date) {
+            continue;
+        }
+
+        const unresolvedCharges = await billingEngine.calculateUnresolvedNonContractChargesForExecutionWindow({
+            clientId: period.client_id,
+            windowStart: period.period_start_date,
+            windowEnd: period.period_end_date,
+        }).catch((error) => {
+            if (error instanceof Error && error.message.includes('tenant context not found')) {
+                return [];
+            }
+            throw error;
+        });
+
+        for (const charge of unresolvedCharges) {
+            const isTimeCharge = charge.type === 'time';
+            const recordId = isTimeCharge
+                ? (charge as ITimeBasedCharge).entryId
+                : (charge as IUsageBasedCharge).usageId;
+            if (!recordId) {
+                continue;
+            }
+
+            const scheduleKey = `schedule:${tenant}:non_contract:${isTimeCharge ? 'time' : 'usage'}:${recordId}`;
+            const periodKey = `period:${period.period_start_date}:${period.period_end_date}:${isTimeCharge ? 'time' : 'usage'}:${recordId}`;
+            const selectorInput = buildClientCadenceDueSelectionInput({
+                clientId: period.client_id,
+                scheduleKey,
+                periodKey,
+                windowStart: period.period_start_date,
+                windowEnd: period.period_end_date,
+            });
+            const metadata = clientMetadataById.get(period.client_id);
+
+            const dueWorkRow = buildRecurringDueWorkRow({
+                selectorInput,
+                cadenceSource: 'client_schedule',
+                billingCycleId: period.billing_cycle_id ?? null,
+                servicePeriodStart: charge.servicePeriodStart ?? period.period_start_date,
+                servicePeriodEnd: charge.servicePeriodEnd ?? period.period_end_date,
+                clientName: period.client_name,
+                asOf,
+                scheduleKey,
+                periodKey,
+                recordId: `non-contract:${isTimeCharge ? 'time' : 'usage'}:${recordId}`,
+                contractName: null,
+                contractLineName: isTimeCharge
+                    ? 'Non-contract time entry'
+                    : 'Non-contract usage record',
+                purchaseOrderScopeKey: null,
+                currencyCode: metadata?.currencyCode ?? null,
+                taxSource: metadata?.taxSource ?? null,
+                exportShapeKey: null,
+            });
+
+            rows.push({
+                ...dueWorkRow,
+                amountCents: charge.total,
+            } as IRecurringDueWorkRow);
+        }
+    }
+
+    return rows;
+}
+
 function buildRecurringDueWorkInvoiceCandidates(
     rows: IRecurringDueWorkRow[],
     metadataByRecordId: Map<string, RecurringDueWorkGroupingMetadata> = new Map(),
@@ -609,7 +728,12 @@ function buildRecurringDueWorkInvoiceCandidates(
             servicePeriod: {
                 kind: 'service_period',
                 cadenceOwner: row.cadenceOwner,
-                duePosition: row.executionWindow.duePosition,
+                duePosition:
+                    row.scheduleKey?.includes(':arrears')
+                        ? 'arrears'
+                        : row.cadenceOwner === 'contract'
+                            ? 'arrears'
+                            : 'advance',
                 sourceObligation: {
                     obligationId: row.executionIdentityKey,
                     obligationType: row.contractLineId ? 'contract_line' : 'client_contract_line',
@@ -622,7 +746,12 @@ function buildRecurringDueWorkInvoiceCandidates(
             invoiceWindow: {
                 kind: 'invoice_window',
                 cadenceOwner: row.cadenceOwner,
-                duePosition: row.executionWindow.duePosition,
+                duePosition:
+                    row.scheduleKey?.includes(':arrears')
+                        ? 'arrears'
+                        : row.cadenceOwner === 'contract'
+                            ? 'arrears'
+                            : 'advance',
                 start: row.invoiceWindowStart,
                 end: row.invoiceWindowEnd,
                 semantics: RECURRING_RANGE_SEMANTICS,
@@ -650,8 +779,8 @@ function buildRecurringDueWorkInvoiceCandidates(
         })),
     );
 
-    return grouped
-        .map((candidate) => {
+    const candidates = grouped
+        .map((candidate): IRecurringDueWorkInvoiceCandidate | null => {
             const members = candidate.dueSelections
                 .map((selection) => rowByExecutionIdentityKey.get(selection.servicePeriod.sourceObligation.obligationId))
                 .filter((row): row is IRecurringDueWorkRow => Boolean(row));
@@ -696,8 +825,9 @@ function buildRecurringDueWorkInvoiceCandidates(
                 members,
             } satisfies IRecurringDueWorkInvoiceCandidate;
         })
-        .filter((candidate): candidate is IRecurringDueWorkInvoiceCandidate => Boolean(candidate))
-        .sort((left, right) => {
+        .filter((candidate): candidate is IRecurringDueWorkInvoiceCandidate => Boolean(candidate));
+
+    return candidates.sort((left, right) => {
             if (left.windowEnd !== right.windowEnd) {
                 return right.windowEnd.localeCompare(left.windowEnd);
             }
@@ -988,6 +1118,13 @@ export const getAvailableRecurringDueWork = withAuth(async (
             tenant,
             options,
         );
+        const clientMetadataById = await fetchClientBillingMetadataById(
+            knex,
+            tenant,
+            Array.from(
+                new Set(candidateBillingPeriods.map((period) => period.client_id).filter(Boolean)),
+            ),
+        );
         const rawMaterializationGaps = await fetchClientCadenceMaterializationGaps(
             knex,
             tenant,
@@ -1015,8 +1152,14 @@ export const getAvailableRecurringDueWork = withAuth(async (
             asOf,
             groupingMetadataByRecordId,
         );
+        const unresolvedNonContractRows = await fetchUnresolvedNonContractDueWorkRows(
+            candidateBillingPeriods,
+            asOf,
+            tenant,
+            clientMetadataById,
+        );
         const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
-            persistedRows,
+            [...persistedRows, ...unresolvedNonContractRows],
             groupingMetadataByRecordId,
         );
         const persistedIdentityKeys = new Set(

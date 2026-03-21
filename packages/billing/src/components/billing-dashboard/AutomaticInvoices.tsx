@@ -222,7 +222,33 @@ const summarizeCadenceSources = (cadenceSources: Array<string | null | undefined
   return labels.join(' + ');
 };
 
+const parseNonContractSelectionFromScheduleKey = (scheduleKey: string | null | undefined): {
+  chargeType: 'time' | 'usage';
+  recordId: string;
+} | null => {
+  if (!scheduleKey) {
+    return null;
+  }
+
+  const match = scheduleKey.match(/:non_contract:(time|usage):([^:]+)$/);
+  if (!match?.[1] || !match?.[2]) {
+    return null;
+  }
+
+  return {
+    chargeType: match[1] as 'time' | 'usage',
+    recordId: match[2],
+  };
+};
+
 const getRecurringAssignmentContext = (member: IRecurringDueWorkInvoiceCandidate['members'][number]): string | null => {
+  const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
+  if (nonContractSelection) {
+    return nonContractSelection.chargeType === 'time'
+      ? 'Non-contract time entry'
+      : 'Non-contract usage record';
+  }
+
   if (member.contractLineId?.trim()) {
     return `Assignment line ${member.contractLineId.trim()}`;
   }
@@ -257,12 +283,20 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
   }
 
   const reasons: string[] = [];
+  const uniqueWindows = new Set(
+    members.map((member) =>
+      `${normalizeScopeValue(member.windowStart)}:${normalizeScopeValue(member.windowEnd)}`,
+    ),
+  );
   const uniqueClients = new Set(members.map((member) => normalizeScopeValue(member.clientId)));
   const uniqueCurrencies = new Set(members.map((member) => normalizeScopeValue(member.currencyCode)));
   const uniquePoScopes = new Set(members.map((member) => normalizeScopeValue(member.purchaseOrderScopeKey)));
   const uniqueTaxSources = new Set(members.map((member) => normalizeScopeValue(member.taxSource)));
   const uniqueExportShapes = new Set(members.map((member) => normalizeScopeValue(member.exportShapeKey)));
 
+  if (uniqueWindows.size > 1) {
+    reasons.push('Invoice window differs');
+  }
   if (uniqueClients.size > 1) {
     reasons.push('Client differs');
   }
@@ -1421,8 +1455,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
 	                  return (
 	                    <div className="min-w-[20rem] space-y-2">
-	                      {record.childExecutionRows.map((member) => {
+                      {record.childExecutionRows.map((member) => {
 	                        const assignmentContext = getRecurringAssignmentContext(member);
+                          const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
 	                        const cadenceSource = formatCadenceSourceBadge(member.cadenceSource).label;
 	                        const duePosition = (member.selectorInput.executionWindow as { duePosition?: string }).duePosition;
 	                        const billingTiming = duePosition === 'advance' ? 'Advance' : 'Arrears';
@@ -1458,6 +1493,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                       {member.contractLineName?.trim() && member.contractLineName?.trim() !== childTitle ? (
                                         <div className="text-sm text-muted-foreground">{member.contractLineName.trim()}</div>
                                       ) : null}
+                                      {nonContractSelection ? (
+                                        <div className="text-xs text-muted-foreground" data-testid={`non-contract-child-${member.executionIdentityKey}`}>
+                                          Non-contract work
+                                        </div>
+                                      ) : null}
                                     </div>
                                     <div className="shrink-0 text-sm font-medium">
                                       {typeof amountCents === 'number' ? formatCurrency(amountCents / 100) : 'Pending amount'}
@@ -1466,8 +1506,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                   <div className="text-xs text-muted-foreground">Cadence: {cadenceSource}</div>
                                   <div className="text-xs text-muted-foreground">Billing timing: {billingTiming}</div>
                                   <div className="text-xs text-muted-foreground">Service period: {member.servicePeriodLabel}</div>
-                                  {!member.canGenerate && member.blockedReason ? (
-                                    <div className="text-xs text-muted-foreground">{member.blockedReason}</div>
+                                  {!member.canGenerate && (member as { blockedReason?: string | null }).blockedReason ? (
+                                    <div className="text-xs text-muted-foreground">
+                                      {(member as { blockedReason?: string | null }).blockedReason}
+                                    </div>
                                   ) : null}
                                 </div>
                               </div>
@@ -1707,7 +1749,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           ) : previewState.previews.length > 0 && (
             <div className="space-y-4">
               <div className="rounded border border-border/70 bg-muted/10 px-3 py-2 text-sm" data-testid="preview-invoice-count-summary">
-                This selection will generate {previewState.invoiceCount} invoice{previewState.invoiceCount === 1 ? '' : 's'}.
+                {previewState.invoiceCount === 1
+                  ? 'This selection will generate one combined invoice.'
+                  : `This selection will generate ${previewState.invoiceCount} separate invoices.`}
               </div>
               {previewState.previews.map((previewEntry, previewIndex) => (
                 <div key={previewEntry.previewGroupKey} className="space-y-4 rounded border border-border/70 p-3" data-testid={`preview-group-${previewEntry.previewGroupKey}`}>

@@ -472,6 +472,16 @@ async function normalizeRecurringSelectorInput(params: {
     params.selectorInput.windowEnd,
   );
 
+  if (isNonContractSelectorInput(params.selectorInput)) {
+    return buildClientCadenceDueSelectionInput({
+      clientId: params.selectorInput.clientId,
+      scheduleKey: params.selectorInput.executionWindow.scheduleKey ?? '',
+      periodKey: params.selectorInput.executionWindow.periodKey ?? '',
+      windowStart: normalizedWindowStart,
+      windowEnd: normalizedWindowEnd,
+    });
+  }
+
   if (params.selectorInput.executionWindow.kind === 'client_cadence_window') {
     const recurringServicePeriod = await withTransaction(
       params.knex,
@@ -625,11 +635,47 @@ function parseClientContractLineIdFromScheduleKey(scheduleKey: string | null | u
   return match?.[1] ?? null;
 }
 
+function parseNonContractSelectionFromScheduleKey(scheduleKey: string | null | undefined): {
+  chargeType: 'time' | 'usage';
+  recordId: string;
+} | null {
+  if (!scheduleKey) {
+    return null;
+  }
+
+  const match = scheduleKey.match(/:non_contract:(time|usage):([^:]+)$/);
+  if (!match?.[1] || !match?.[2]) {
+    return null;
+  }
+
+  return {
+    chargeType: match[1] as 'time' | 'usage',
+    recordId: match[2],
+  };
+}
+
+function isNonContractSelectorInput(selectorInput: IRecurringDueSelectionInput): boolean {
+  if (selectorInput.executionWindow.kind !== 'client_cadence_window') {
+    return false;
+  }
+
+  return Boolean(
+    parseNonContractSelectionFromScheduleKey(selectorInput.executionWindow.scheduleKey ?? null),
+  );
+}
+
 function getSelectedRecurringObligationIdFromSelectorInput(
   selectorInput: IRecurringDueSelectionInput,
 ): string {
   const executionWindow = selectorInput.executionWindow;
   if (executionWindow.kind === 'client_cadence_window') {
+    const nonContractSelection = parseNonContractSelectionFromScheduleKey(
+      executionWindow.scheduleKey,
+    );
+    if (nonContractSelection) {
+      return `__non_contract__:${nonContractSelection.chargeType}:${nonContractSelection.recordId}`;
+    }
+
     const selectedClientContractLineId = parseClientContractLineIdFromScheduleKey(
       executionWindow.scheduleKey,
     );
@@ -669,14 +715,21 @@ function scopeRecurringTimingSelectionsForSelectorInputs(
   const selectedObligationIds = Array.from(
     new Set(selectorInputs.map(getSelectedRecurringObligationIdFromSelectorInput)),
   );
+  const selectedContractObligationIds = selectedObligationIds.filter(
+    (obligationId) => !obligationId.startsWith('__non_contract__:'),
+  );
   const selectionEntries = Object.entries(recurringTimingSelections ?? {});
   if (selectionEntries.length === 0) {
     return recurringTimingSelections ?? {};
   }
 
+  if (selectedContractObligationIds.length === 0) {
+    return {};
+  }
+
   const scoped = Object.fromEntries(
     selectionEntries.filter(([obligationId]) =>
-      selectedObligationIds.some((selectedId) =>
+      selectedContractObligationIds.some((selectedId) =>
         matchesObligationId(obligationId, selectedId),
       ),
     ),
@@ -715,6 +768,24 @@ export async function calculateBillingForSelectionInputs(input: {
   selectorInputs: IRecurringDueSelectionInput[];
 }) {
   const canonicalSelection = assertSameRecurringSelectionWindow(input.selectorInputs);
+  const selectedNonContractSelections = input.selectorInputs
+    .map((selectorInput) =>
+      parseNonContractSelectionFromScheduleKey(
+        selectorInput.executionWindow.kind === 'client_cadence_window'
+          ? selectorInput.executionWindow.scheduleKey ?? null
+          : null,
+      ),
+    )
+    .filter((selection): selection is { chargeType: 'time' | 'usage'; recordId: string } =>
+      Boolean(selection),
+    );
+  const nonContractTimeEntryIds = selectedNonContractSelections
+    .filter((selection) => selection.chargeType === 'time')
+    .map((selection) => selection.recordId);
+  const nonContractUsageRecordIds = selectedNonContractSelections
+    .filter((selection) => selection.chargeType === 'usage')
+    .map((selection) => selection.recordId);
+
   const recurringTimingSelections =
     await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
       canonicalSelection.clientId,
@@ -733,6 +804,11 @@ export async function calculateBillingForSelectionInputs(input: {
     {
       recurringTimingSelections: scopedRecurringTimingSelections,
       recurringTimingSelectionSource: 'persisted',
+      nonContractSelection: {
+        include: selectedNonContractSelections.length > 0,
+        timeEntryIds: nonContractTimeEntryIds,
+        usageRecordIds: nonContractUsageRecordIds,
+      },
     },
   );
 }
