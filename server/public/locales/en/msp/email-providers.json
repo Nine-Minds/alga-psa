@@ -213,7 +213,8 @@
       },
       "messages": {
         "setupIncomplete": "Provider saved but setup incomplete: {{error}}",
-        "warningsTitle": "Setup completed with warnings:"
+        "warningsTitle": "Setup completed with warnings:",
+        "settingUp": "Setting up Gmail notifications..."
       },
       "requiredFields": {
         "providerName": "Provider Name",
@@ -229,6 +230,7 @@
         "setupLabel": "Google Cloud Console",
         "notConfigured": "Google integration is not configured for this tenant.",
         "setupHelp": "Configure tenant-owned Google OAuth + Pub/Sub first: Settings → Integrations → Providers.",
+        "openSettings": "Open Google Settings",
         "requiredTitle": "OAuth Authorization Required",
         "requiredDescription": "You must complete OAuth authorization above before {{action}} the provider to enable Gmail notifications.",
         "stepTitle": "Step 1: OAuth Authorization",

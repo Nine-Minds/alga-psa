@@ -15,6 +15,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ExternalLink, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './types';
 import {
@@ -27,18 +28,16 @@ import {
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
 
-const microsoftProviderSchema = z.object({
-  providerName: z.string().min(1, 'Provider name is required'),
-  mailbox: z.string().email('Valid email address is required'),
-  redirectUri: z.string().url('Valid redirect URI is required'),
-  isActive: z.boolean(),
-  autoProcessEmails: z.boolean(),
-  folderFilters: z.string().optional(),
-  maxEmailsPerSync: z.number().min(1).max(1000),
-  inboundTicketDefaultsId: z.string().uuid().optional()
-});
-
-type MicrosoftProviderFormData = z.infer<typeof microsoftProviderSchema>;
+type MicrosoftProviderFormData = {
+  providerName: string;
+  mailbox: string;
+  redirectUri: string;
+  isActive: boolean;
+  autoProcessEmails: boolean;
+  folderFilters?: string;
+  maxEmailsPerSync: number;
+  inboundTicketDefaultsId?: string;
+};
 
 interface MicrosoftProviderFormProps {
   tenant: string;
@@ -53,6 +52,7 @@ export function MicrosoftProviderForm({
   onSuccess, 
   onCancel 
 }: MicrosoftProviderFormProps) {
+  const { t } = useTranslation('msp/email-providers');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [providerSetupReady, setProviderSetupReady] = useState(false);
@@ -64,6 +64,17 @@ export function MicrosoftProviderForm({
   const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
 
   const isEditing = !!provider;
+
+  const microsoftProviderSchema = z.object({
+    providerName: z.string().min(1, t('forms.microsoft.validation.providerNameRequired', { defaultValue: 'Provider name is required' })),
+    mailbox: z.string().email(t('forms.microsoft.validation.emailRequired', { defaultValue: 'Valid email address is required' })),
+    redirectUri: z.string().url(t('forms.microsoft.validation.redirectRequired', { defaultValue: 'Valid redirect URI is required' })),
+    isActive: z.boolean(),
+    autoProcessEmails: z.boolean(),
+    folderFilters: z.string().optional(),
+    maxEmailsPerSync: z.number().min(1).max(1000),
+    inboundTicketDefaultsId: z.string().uuid().optional()
+  });
 
   const form = useForm<MicrosoftProviderFormData>({
     resolver: zodResolver(microsoftProviderSchema) as any,
@@ -177,7 +188,7 @@ export function MicrosoftProviderForm({
       const isValid = await form.trigger();
       if (!isValid) {
         setOauthStatus('error');
-        setError('Please fill in all required fields before authorizing');
+        setError(t('forms.microsoft.validation.authorizeRequiresValid', { defaultValue: 'Please fill in all required fields before authorizing' }));
         return;
       }
 
@@ -213,7 +224,7 @@ export function MicrosoftProviderForm({
         providerId: providerId,
       });
       if (!oauthInit.success) {
-        throw new Error((oauthInit as { success: false; error: string }).error || 'Failed to initiate OAuth');
+        throw new Error((oauthInit as { success: false; error: string }).error || t('forms.microsoft.validation.oauthInitiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
       }
       const { authUrl } = oauthInit;
 
@@ -225,7 +236,7 @@ export function MicrosoftProviderForm({
       );
 
       if (!popup) {
-        throw new Error('Failed to open OAuth popup. Please allow popups for this site.');
+        throw new Error(t('forms.microsoft.validation.popupBlocked', { defaultValue: 'Failed to open OAuth popup. Please allow popups for this site.' }));
       }
 
       // Monitor popup for completion
@@ -234,7 +245,7 @@ export function MicrosoftProviderForm({
           clearInterval(checkClosed);
           if (oauthStatus === 'authorizing' && !oauthMessageReceived) {
             setOauthStatus('error');
-            setError('Authorization window closed before completing. Please try again.');
+            setError(t('forms.microsoft.validation.closedEarly', { defaultValue: 'Authorization window closed before completing. Please try again.' }));
           }
         }
       }, 1000);
@@ -251,7 +262,7 @@ export function MicrosoftProviderForm({
             setOauthStatus('success');
           } else {
             setOauthStatus('error');
-            setError(event.data.errorDescription || event.data.error || 'Authorization failed');
+            setError(event.data.errorDescription || event.data.error || t('forms.microsoft.validation.authorizationFailed', { defaultValue: 'Authorization failed' }));
           }
           
           window.removeEventListener('message', messageHandler);
@@ -272,11 +283,11 @@ export function MicrosoftProviderForm({
       {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
         <Alert variant="destructive">
           <AlertDescription>
-            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <p className="font-medium mb-2">{t('forms.common.validation.requiredFieldsTitle', { defaultValue: 'Please fill in the required fields:' })}</p>
             <ul className="list-disc list-inside space-y-1">
-              {form.formState.errors.providerName && <li>Provider Name</li>}
-              {form.formState.errors.mailbox && <li>Email Address</li>}
-              {form.formState.errors.redirectUri && <li>Redirect URI</li>}
+              {form.formState.errors.providerName && <li>{t('forms.microsoft.requiredFields.providerName', { defaultValue: 'Provider Name' })}</li>}
+              {form.formState.errors.mailbox && <li>{t('forms.microsoft.requiredFields.emailAddress', { defaultValue: 'Email Address' })}</li>}
+              {form.formState.errors.redirectUri && <li>{t('forms.microsoft.requiredFields.redirectUri', { defaultValue: 'Redirect URI' })}</li>}
             </ul>
           </AlertDescription>
         </Alert>
@@ -291,19 +302,19 @@ export function MicrosoftProviderForm({
       {/* Basic Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Basic Configuration</CardTitle>
+          <CardTitle>{t('forms.microsoft.basic.title', { defaultValue: 'Basic Configuration' })}</CardTitle>
           <CardDescription>
-            Basic settings for your Microsoft 365 email provider
+            {t('forms.microsoft.basic.description', { defaultValue: 'Basic settings for your Microsoft 365 email provider' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="providerName">Provider Name *</Label>
+              <Label htmlFor="providerName">{t('forms.microsoft.basic.providerNameLabel', { defaultValue: 'Provider Name *' })}</Label>
               <Input
                 id="providerName"
                 {...form.register('providerName')}
-                placeholder="e.g., Support Email"
+                placeholder={t('forms.microsoft.basic.providerNamePlaceholder', { defaultValue: 'e.g., Support Email' })}
                 className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
               />
               {form.formState.errors.providerName && (
@@ -312,12 +323,12 @@ export function MicrosoftProviderForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="mailbox">Email Address *</Label>
+              <Label htmlFor="mailbox">{t('forms.microsoft.basic.emailLabel', { defaultValue: 'Email Address *' })}</Label>
               <Input
                 id="mailbox"
                 type="email"
                 {...form.register('mailbox')}
-                placeholder="support@client.com"
+                placeholder={t('forms.microsoft.basic.emailPlaceholder', { defaultValue: 'support@client.com' })}
                 className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-red-500' : ''}
               />
               {form.formState.errors.mailbox && (
@@ -332,7 +343,7 @@ export function MicrosoftProviderForm({
               checked={form.watch('isActive')}
               onCheckedChange={(checked: boolean) => form.setValue('isActive', checked)}
             />
-            <Label htmlFor="isActive">Enable this provider</Label>
+            <Label htmlFor="isActive">{t('forms.microsoft.basic.enableProvider', { defaultValue: 'Enable this provider' })}</Label>
           </div>
       </CardContent>
     </Card>
@@ -340,9 +351,9 @@ export function MicrosoftProviderForm({
     {/* Ticket Defaults selection */}
     <Card>
       <CardHeader>
-        <CardTitle>Ticket Defaults</CardTitle>
+        <CardTitle>{t('forms.common.ticketDefaults.title', { defaultValue: 'Ticket Defaults' })}</CardTitle>
         <CardDescription>
-          Select defaults to apply to email-created tickets
+          {t('forms.common.ticketDefaults.description', { defaultValue: 'Select defaults to apply to email-created tickets' })}
           <Button
             id="manage-defaults-link"
             type="button"
@@ -350,23 +361,23 @@ export function MicrosoftProviderForm({
             className="ml-2 p-0 h-auto"
             onClick={() => window.dispatchEvent(new CustomEvent('open-defaults-tab'))}
           >
-            Manage defaults
+            {t('forms.common.actions.manageDefaults', { defaultValue: 'Manage defaults' })}
           </Button>
         </CardDescription>
       </CardHeader>
       <CardContent>
         <CustomSelect
           id="microsoft-inbound-defaults-select"
-          label="Inbound Ticket Defaults"
+          label={t('forms.common.ticketDefaults.label', { defaultValue: 'Inbound Ticket Defaults' })}
           value={(form.watch('inboundTicketDefaultsId') as any) || ''}
           onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
           options={defaultsOptions}
-          placeholder="Select defaults (optional)"
+          placeholder={t('forms.common.ticketDefaults.placeholder', { defaultValue: 'Select defaults (optional)' })}
           allowClear
         />
         <div className="text-right">
           <Button id="refresh-defaults-list" type="button" variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('inbound-defaults-updated'))}>
-            Refresh list
+            {t('forms.common.actions.refreshList', { defaultValue: 'Refresh list' })}
           </Button>
         </div>
       </CardContent>
@@ -375,9 +386,9 @@ export function MicrosoftProviderForm({
       {/* Microsoft OAuth Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Microsoft OAuth Configuration</CardTitle>
+          <CardTitle>{t('forms.microsoft.oauth.sectionTitle', { defaultValue: 'Microsoft OAuth Configuration' })}</CardTitle>
           <CardDescription>
-            Microsoft app credentials are configured in Providers settings and reused here.
+            {t('forms.microsoft.oauth.sectionDescription', { defaultValue: 'Microsoft app credentials are configured in Providers settings and reused here.' })}
             <Button 
               id="azure-portal-link"
               type="button" 
@@ -386,7 +397,7 @@ export function MicrosoftProviderForm({
               onClick={() => window.open('https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade', '_blank')}
             >
               <ExternalLink className="h-3 w-3 mr-1" />
-              Microsoft Entra
+              {t('forms.microsoft.oauth.setupLabel', { defaultValue: 'Microsoft Entra' })}
             </Button>
           </CardDescription>
         </CardHeader>
@@ -395,10 +406,10 @@ export function MicrosoftProviderForm({
             <Alert>
               <AlertDescription>
                 <div className="space-y-2">
-                  <div className="font-medium">Microsoft provider settings are not configured.</div>
+                  <div className="font-medium">{t('forms.microsoft.oauth.notConfigured', { defaultValue: 'Microsoft provider settings are not configured.' })}</div>
                   <div className="text-sm text-muted-foreground">
                     {providerSetupMessage ||
-                      'Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.'}
+                      t('forms.microsoft.oauth.setupHelp', { defaultValue: 'Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.' })}
                   </div>
                   <Button
                     id="configure-microsoft-providers-link"
@@ -407,7 +418,7 @@ export function MicrosoftProviderForm({
                     size="sm"
                     onClick={() => window.location.assign('/msp/settings?category=providers')}
                   >
-                    Open Providers Settings
+                    {t('forms.common.actions.openProvidersSettings', { defaultValue: 'Open Providers Settings' })}
                   </Button>
                 </div>
               </AlertDescription>
@@ -415,11 +426,11 @@ export function MicrosoftProviderForm({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="redirectUri">Redirect URI *</Label>
+            <Label htmlFor="redirectUri">{t('forms.microsoft.oauth.redirectUriLabel', { defaultValue: 'Redirect URI *' })}</Label>
             <Input
               id="redirectUri"
               {...form.register('redirectUri')}
-              placeholder="https://yourapp.com/api/auth/microsoft/callback"
+              placeholder={t('forms.microsoft.oauth.redirectUriPlaceholder', { defaultValue: 'https://yourapp.com/api/auth/microsoft/callback' })}
               className={hasAttemptedSubmit && form.formState.errors.redirectUri ? 'border-red-500' : ''}
             />
             {form.formState.errors.redirectUri && (
@@ -431,9 +442,9 @@ export function MicrosoftProviderForm({
           <div className="bg-muted/50 p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium">OAuth Authorization</h4>
+                <h4 className="font-medium">{t('forms.microsoft.oauth.authorizationTitle', { defaultValue: 'OAuth Authorization' })}</h4>
                 <p className="text-sm text-muted-foreground">
-                  Complete OAuth flow to grant access to the mailbox
+                  {t('forms.microsoft.oauth.authorizationDescription', { defaultValue: 'Complete OAuth flow to grant access to the mailbox' })}
                 </p>
               </div>
               <Button
@@ -443,9 +454,9 @@ export function MicrosoftProviderForm({
                 onClick={handleOAuthAuthorization}
                 disabled={!providerSetupReady || !form.watch('redirectUri') || oauthStatus === 'authorizing'}
               >
-                {oauthStatus === 'authorizing' && 'Authorizing...'}
-                {oauthStatus === 'success' && <><CheckCircle className="h-4 w-4 mr-2" />Authorized</>}
-                {(oauthStatus === 'idle' || oauthStatus === 'error') && 'Authorize Access'}
+                {oauthStatus === 'authorizing' && t('forms.common.oauth.authorizing', { defaultValue: 'Authorizing...' })}
+                {oauthStatus === 'success' && <><CheckCircle className="h-4 w-4 mr-2" />{t('forms.common.oauth.authorized', { defaultValue: 'Authorized' })}</>}
+                {(oauthStatus === 'idle' || oauthStatus === 'error') && t('forms.common.oauth.authorizeAccess', { defaultValue: 'Authorize Access' })}
               </Button>
             </div>
           </div>
@@ -455,27 +466,27 @@ export function MicrosoftProviderForm({
       {/* Advanced Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Advanced Settings</CardTitle>
+          <CardTitle>{t('forms.microsoft.advanced.title', { defaultValue: 'Advanced Settings' })}</CardTitle>
           <CardDescription>
-            Configure advanced email processing options
+            {t('forms.microsoft.advanced.description', { defaultValue: 'Configure advanced email processing options' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="folderFilters">Folder Filters</Label>
+              <Label htmlFor="folderFilters">{t('forms.microsoft.advanced.folderFiltersLabel', { defaultValue: 'Folder Filters' })}</Label>
               <Input
                 id="folderFilters"
                 {...form.register('folderFilters')}
-                placeholder="Inbox, Support, Custom Folder"
+                placeholder={t('forms.microsoft.advanced.folderFiltersPlaceholder', { defaultValue: 'Inbox, Support, Custom Folder' })}
               />
               <p className="text-xs text-muted-foreground">
-                Comma-separated list of folders to monitor (default: Inbox)
+                {t('forms.microsoft.advanced.folderFiltersHelp', { defaultValue: 'Comma-separated list of folders to monitor (default: Inbox)' })}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="maxEmailsPerSync">Max Emails Per Sync</Label>
+              <Label htmlFor="maxEmailsPerSync">{t('forms.microsoft.advanced.maxEmailsPerSync', { defaultValue: 'Max Emails Per Sync' })}</Label>
               <Input
                 id="maxEmailsPerSync"
                 type="number"
@@ -492,7 +503,7 @@ export function MicrosoftProviderForm({
       {/* Form Actions */}
       <div className="flex items-center justify-end space-x-2">
         <Button id="cancel-btn" type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t('forms.common.actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button 
           id="submit-btn" 
@@ -500,7 +511,11 @@ export function MicrosoftProviderForm({
           disabled={loading}
           className={Object.keys(form.formState.errors).length > 0 && !loading ? 'opacity-50' : ''}
         >
-          {loading ? 'Saving...' : isEditing ? 'Update Provider' : 'Add Provider'}
+          {loading
+            ? t('forms.common.actions.saving', { defaultValue: 'Saving...' })
+            : isEditing
+            ? t('forms.common.actions.updateProvider', { defaultValue: 'Update Provider' })
+            : t('forms.common.actions.addProvider', { defaultValue: 'Add Provider' })}
         </Button>
       </div>
     </form>
