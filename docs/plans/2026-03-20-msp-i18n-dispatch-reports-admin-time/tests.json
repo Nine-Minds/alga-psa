@@ -64,7 +64,7 @@
   {
     "id": "T020",
     "description": "validate-translations.cjs passes with 0 errors after admin batch (msp/admin keys consistent across all 9 locales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030", "F036", "F037"]
   },
   {
