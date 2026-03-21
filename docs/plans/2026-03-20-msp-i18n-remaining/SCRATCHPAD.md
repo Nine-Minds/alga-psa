@@ -23,6 +23,7 @@
 - (2026-03-20) `EntryPopup.tsx` (1,287 LOC, ~68 strings) is the densest — schedule entry create/edit popup
 - (2026-03-20) `AvailabilitySettings.tsx` (1,215 LOC, ~64 strings) — availability window management
 - (2026-03-20) 3 files have zero strings (TechnicianSidebar, AgentScheduleDrawerStyles, DynamicBigCalendar) — skip
+- (2026-03-21) Re-inventory showed the PRD undercounted the “zero-string” files: `TechnicianSidebar.tsx` has compare/reset button labels and tooltips, and `WeeklyScheduleEvent.tsx` has delete/continuation tooltip copy. Keep them in scope for `F012`.
 
 ### Knowledge Base (2b-15)
 - (2026-03-20) 10 files in `packages/documents/src/components/kb/`
@@ -124,6 +125,8 @@ done
 - (2026-03-21) Completed `F005`: added survey namespace files for `de`, `es`, `fr`, `it`, `nl`, and `pl`, then generated `xx` and `yy` from the English source. The survey locale set now exists in all 9 required locales under `server/public/locales/*/msp/surveys.json`.
 - (2026-03-21) Validation for `F005`: parsed the 6 translated JSON files with Node, ran `node scripts/generate-pseudo-locales.cjs`, restored unrelated pre-existing pseudo-locale interpolation differences outside the surveys namespace, and confirmed `node scripts/validate-translations.cjs` passed with `Errors: 0` and `Warnings: 0`.
 - (2026-03-21) Completed `F006`: ran the Italian accent audit against [server/public/locales/it/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/surveys.json). The broad grep only surfaced legitimate `e` conjunctions; a targeted search for known missing-accent spellings (`puo`, `gia`, `verra`, `funzionalita`, `necessario`) returned no matches, so no Italian copy changes were needed.
+- (2026-03-21) Completed `F010`: added [server/public/locales/en/msp/schedule.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/schedule.json) as the English schedule namespace. The file groups strings by `page`, `sidebar`, `agentView`, `calendar`, `weeklyEvent`, `requests`, `availabilitySettings`, and `entryPopup` so the upcoming wiring can move the schedule surface off hardcoded English in coherent slices.
+- (2026-03-21) Validation for `F010`: parsed `server/public/locales/en/msp/schedule.json` successfully with `node -e "JSON.parse(...)"`.
 
 ## Open Questions
 
