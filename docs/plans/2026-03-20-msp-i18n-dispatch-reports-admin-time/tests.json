@@ -125,7 +125,7 @@
   {
     "id": "T035",
     "description": "Time entry: Visual QA (xx locale) — /msp/time-sheet-approvals approval dashboard shows '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F062"]
   },
 
