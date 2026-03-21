@@ -57,6 +57,10 @@ Working notes for the grouped automatic-invoices selection redesign. This plan i
 - (2026-03-20) Completed `F003` by introducing explicit parent-group identity (`parentGroupKey`) and parent-selection identity (`parentSelectionKey`) in the ready-work view model, and routing group selection state through those keys instead of child selector identities. File: `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`.
 - (2026-03-20) Added optional parent aggregate amount summary (`aggregateAmountCents`) derived from child rows when amount data is present, with an explicit fallback when unavailable. File: `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`.
 - (2026-03-20) Completed `T002` by asserting grouped parent summary output (child count, invoice window label, aggregate amount) in the automatic invoices jsdom behavior test. File: `packages/billing/tests/automaticInvoices.groupedParentRows.test.tsx`.
+- (2026-03-20) Completed `F004` with explicit parent-row expand/collapse controls and inline child-row rendering in the automatic invoices grouped table.
+- (2026-03-20) Completed `F006` by rendering child details in the expanded group view, including assignment/contract context, cadence source, billing timing, service period, and amount.
+- (2026-03-20) Completed `F005` by rendering parent summary combinability state alongside client, window, child-count, and aggregate-amount summaries.
+- (2026-03-20) Completed `T003` by testing parent expansion and verifying child detail rendering in the automatic invoices grouped UI behavior test.
 
 ## Open Questions
 

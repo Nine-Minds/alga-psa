@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 let mockDueWorkResponse: any;
@@ -35,26 +35,30 @@ vi.mock('@alga-psa/billing/actions/billingCycleActions', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
-  DataTable: ({ id, data }: { id: string; data: any[] }) => (
+  DataTable: ({
+    id,
+    data,
+    columns = [],
+  }: {
+    id: string;
+    data: any[];
+    columns?: Array<{ dataIndex?: string; render?: (value: unknown, row: any, index: number) => React.ReactNode }>;
+  }) => (
     <div data-testid={id}>
       <div data-testid={`${id}-row-count`}>{data.length}</div>
-      {data.map((row) => (
+      {data.map((row, index) => (
         <div
           key={row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId}
           data-testid={`${id}-row`}
         >
-          {row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId}
-          {row.parentSummary ? (
-            <div data-testid={`${id}-summary-${row.parentSummary.parentGroupKey}`}>
-              <span>{row.parentSummary.childCount} obligations</span>
-              <span>{row.parentSummary.windowLabel}</span>
-              <span>
-                {typeof row.parentSummary.aggregateAmountCents === 'number'
-                  ? (row.parentSummary.aggregateAmountCents / 100).toFixed(2)
-                  : 'n/a'}
-              </span>
-            </div>
-          ) : null}
+          {columns.map((column, columnIndex) => {
+            const value = column.dataIndex ? row[column.dataIndex] : undefined;
+            return (
+              <div key={`${row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId}-${columnIndex}`}>
+                {column.render ? column.render(value, row, index) : String(value ?? '')}
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
@@ -126,12 +130,18 @@ describe('AutomaticInvoices grouped parent rows', () => {
             {
               executionIdentityKey: 'exec-1',
               billingCycleId: 'bc-1',
+              cadenceSource: 'contract_anniversary',
+              servicePeriodLabel: '2026-03-01 to 2026-04-01',
+              executionWindow: { duePosition: 'advance' },
               amountCents: 12500,
               selectorInput: { executionWindow: { windowStart: '2026-03-01', windowEnd: '2026-04-01', cadenceOwner: 'contract', duePosition: 'advance' } },
             },
             {
               executionIdentityKey: 'exec-2',
               billingCycleId: 'bc-2',
+              cadenceSource: 'contract_anniversary',
+              servicePeriodLabel: '2026-03-01 to 2026-04-01',
+              executionWindow: { duePosition: 'advance' },
               amountCents: 17500,
               selectorInput: { executionWindow: { windowStart: '2026-03-01', windowEnd: '2026-04-01', cadenceOwner: 'contract', duePosition: 'advance' } },
             },
@@ -166,14 +176,27 @@ describe('AutomaticInvoices grouped parent rows', () => {
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
-      expect(
-        screen.getByTestId('automatic-invoices-table-summary-parent-group:client-1:2026-03-01:2026-04-01'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('2 obligations')).toBeInTheDocument();
     });
 
-    const summary = screen.getByTestId('automatic-invoices-table-summary-parent-group:client-1:2026-03-01:2026-04-01');
-    expect(summary).toHaveTextContent('2 obligations');
-    expect(summary).toHaveTextContent('2026-03-01 to 2026-04-01');
-    expect(summary).toHaveTextContent('300.00');
+    expect(screen.getAllByText('2026-03-01 to 2026-04-01').length).toBeGreaterThan(0);
+    expect(screen.getByText('$300.00')).toBeInTheDocument();
+  });
+
+  it('expands a parent row to reveal child candidate details (T003)', async () => {
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const expandButton = await screen.findByRole('button', { name: 'Expand' });
+    fireEvent.click(expandButton);
+
+    expect(
+      await screen.findByTestId('child-row-parent-group:client-1:2026-03-01:2026-04-01-exec-1'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Execution exec-1')).toBeInTheDocument();
+    expect(screen.getAllByText('Cadence: Contract anniversary').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Service period: 2026-03-01 to 2026-04-01').length).toBeGreaterThan(0);
+    expect(screen.getByText('Amount: $125.00')).toBeInTheDocument();
   });
 });

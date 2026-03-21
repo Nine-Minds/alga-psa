@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Expanding a parent row reveals child candidates with contract or assignment identity, cadence source, service period, and amount.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F006"]
   },
   {

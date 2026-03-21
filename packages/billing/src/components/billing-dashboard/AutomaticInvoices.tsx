@@ -66,6 +66,8 @@ interface RecurringInvoiceParentGroup {
     servicePeriodLabel: string;
     childCount: number;
     aggregateAmountCents: number | null;
+    isCombinable: boolean;
+    combinabilitySummary: string;
     canGenerate: boolean;
     blockedReason: string | null;
   };
@@ -82,6 +84,7 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
       memberAmounts.length > 0 && memberAmounts.length === candidate.members.length
         ? memberAmounts.reduce((sum, amount) => sum + amount, 0)
         : null;
+    const isCombinable = candidate.splitReasons.length === 0 && candidate.canGenerate;
 
     return {
       parentSummary: {
@@ -93,6 +96,8 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
       servicePeriodLabel: candidate.servicePeriodLabel,
       childCount: candidate.memberCount,
       aggregateAmountCents,
+      isCombinable,
+      combinabilitySummary: isCombinable ? 'Combinable as one invoice' : 'Not combinable as one invoice',
       canGenerate: candidate.canGenerate,
       blockedReason: candidate.blockedReason ?? null,
     },
@@ -174,6 +179,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const router = useRouter();
   // Drawer removed: client details quick view no longer used here
   const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
+  const [expandedParentGroups, setExpandedParentGroups] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
@@ -268,6 +274,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       if (initialLoadDone.current) {
         setCurrentReadyPage(1);
         setSelectedPeriods(new Set()); // Clear selection when filter changes
+        setExpandedParentGroups(new Set());
       }
     }, 300);
     return () => clearTimeout(timer);
@@ -278,12 +285,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     setPageSize(newPageSize);
     setCurrentReadyPage(1);
     setSelectedPeriods(new Set());
+    setExpandedParentGroups(new Set());
   };
 
   // Handle page change - clear selection (server-side pagination means selected items may not be visible)
   const handleReadyPageChange = (newPage: number) => {
     setCurrentReadyPage(newPage);
     setSelectedPeriods(new Set());
+    setExpandedParentGroups(new Set());
   };
 
   // Handle date range search - apply filter, reset page, and clear selection
@@ -291,6 +300,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     setAppliedDateRange(pendingDateRange);
     setCurrentReadyPage(1);
     setSelectedPeriods(new Set());
+    setExpandedParentGroups(new Set());
   };
 
   // Load available billing periods with server-side pagination
@@ -448,6 +458,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       newSelected.delete(parentSelectionKey);
     }
     setSelectedPeriods(newSelected);
+  };
+
+  const toggleParentGroupExpansion = (parentGroupKey: string) => {
+    setExpandedParentGroups((previous) => {
+      const next = new Set(previous);
+      if (next.has(parentGroupKey)) {
+        next.delete(parentGroupKey);
+      } else {
+        next.add(parentGroupKey);
+      }
+      return next;
+    });
   };
 
   const buildRecurringRunTarget = (period: { selectorInput: IRecurringDueSelectionInput; executionWindow: IRecurringDueSelectionInput['executionWindow'] }) => {
@@ -1012,11 +1034,34 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 )
               },
               {
+                title: 'Group',
+                dataIndex: 'parentGroupKey',
+                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
+                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
+                  return (
+                    <Button
+                      id={`toggle-group-${record.parentSummary.parentGroupKey}`}
+                      variant="outline"
+                      size="sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleParentGroupExpansion(record.parentSummary.parentGroupKey);
+                      }}
+                    >
+                      {isExpanded ? 'Collapse' : 'Expand'}
+                    </Button>
+                  );
+                },
+              },
+              {
                 title: 'Client',
                 dataIndex: 'clientName',
                 render: (_: unknown, record: RecurringInvoiceParentGroup) => (
                   <div className="space-y-1">
                     <div>{record.parentSummary.clientName ?? 'Unknown client'}</div>
+                    <Badge variant={record.parentSummary.isCombinable ? 'outline' : 'secondary'}>
+                      {record.parentSummary.combinabilitySummary}
+                    </Badge>
                     {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
                       <div className="text-xs text-muted-foreground">{record.parentSummary.blockedReason}</div>
                     ) : null}
@@ -1067,6 +1112,49 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 title: 'Invoice Window',
                 dataIndex: 'windowLabel',
                 render: (_: unknown, record: RecurringInvoiceParentGroup) => record.parentSummary.windowLabel,
+              },
+              {
+                title: 'Children',
+                dataIndex: 'childExecutionRows',
+                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
+                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
+                  if (!isExpanded) {
+                    return (
+                      <div className="text-xs text-muted-foreground">
+                        {record.parentSummary.childCount} child candidate{record.parentSummary.childCount === 1 ? '' : 's'}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      {record.childExecutionRows.map((member) => {
+                        const assignmentContext = getRecurringAssignmentContext(member);
+                        const cadenceSource = formatCadenceSourceBadge(member.cadenceSource).label;
+                        const billingTiming = member.executionWindow.duePosition === 'advance' ? 'Advance' : 'Arrears';
+                        const amountCents = (member as { amountCents?: number | null }).amountCents;
+
+                        return (
+                          <div
+                            key={`${record.parentSummary.parentGroupKey}:${member.executionIdentityKey}`}
+                            className="rounded border border-border/60 p-2"
+                            data-testid={`child-row-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
+                          >
+                            <div className="text-sm font-medium">
+                              {assignmentContext ?? member.contractLineName ?? member.executionIdentityKey}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Cadence: {cadenceSource}</div>
+                            <div className="text-xs text-muted-foreground">Billing timing: {billingTiming}</div>
+                            <div className="text-xs text-muted-foreground">Service period: {member.servicePeriodLabel}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Amount: {typeof amountCents === 'number' ? formatCurrency(amountCents / 100) : 'Amount unavailable'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                },
               },
               {
                 title: 'Contract',

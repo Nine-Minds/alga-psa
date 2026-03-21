@@ -20,19 +20,19 @@
   {
     "id": "F004",
     "description": "Replace the flat automatic-invoices ready table with an expandable parent/child grouped UI.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements"]
   },
   {
     "id": "F005",
     "description": "Render parent-row summaries including client name, invoice window, child count, aggregate amount, and combinability state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements"]
   },
   {
     "id": "F006",
     "description": "Render child-row detail with contract or assignment identity, cadence source, billing timing, service period, and amount.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements"]
   },
   {
