@@ -1,0 +1,11 @@
+{
+  "reduceModal": {
+    "title": "Licenties verminderen",
+    "enterpriseOnly": "Deze functie is alleen beschikbaar in de Enterprise-editie."
+  },
+  "purchaseForm": {
+    "title": "Licentieaankoop",
+    "enterpriseOnlyHosted": "Licenties aanschaffen is beschikbaar in de Enterprise-editie voor gehoste implementaties.",
+    "communityEditionUnlimited": "De zelf-gehoste Community Edition heeft onbeperkte gebruikers zonder extra kosten."
+  }
+}

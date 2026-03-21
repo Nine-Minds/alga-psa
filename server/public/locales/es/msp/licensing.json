@@ -1,0 +1,11 @@
+{
+  "reduceModal": {
+    "title": "Reducir licencias",
+    "enterpriseOnly": "Esta función solo está disponible en la edición Enterprise."
+  },
+  "purchaseForm": {
+    "title": "Compra de licencias",
+    "enterpriseOnlyHosted": "La compra de licencias está disponible en la edición Enterprise para implementaciones alojadas.",
+    "communityEditionUnlimited": "La Community Edition autohospedada tiene usuarios ilimitados sin costo adicional."
+  }
+}

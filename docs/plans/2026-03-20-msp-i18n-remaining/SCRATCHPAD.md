@@ -188,6 +188,8 @@ done
 - (2026-03-22) Validation for `F065`: parsed the new licensing namespace successfully with Node, counted 5 leaf strings, and confirmed `git diff --check` stayed clean before the component rewrites.
 - (2026-03-22) Completed `F066`: rewired the CE licensing stubs to `msp/licensing`: [ReduceLicensesModal.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/ee/src/components/licensing/ReduceLicensesModal.tsx) now reads its title and Enterprise-only body copy from the new namespace while reusing `common.actions.close`, and [LicensePurchaseForm.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/ee/src/components/licensing/LicensePurchaseForm.tsx) now reads its title plus both hosted/self-hosted stub messages from `msp/licensing`.
 - (2026-03-22) Validation for `F066`: `git diff --check` stayed clean, `rg` confirmed the licensing stub strings now only remain as `defaultValue` fallbacks in the two CE components, and `npx tsc -p server/tsconfig.json --noEmit` passed after the namespace swap.
+- (2026-03-22) Completed `F067`: added licensing namespace files for `de`, `es`, `fr`, `it`, `nl`, and `pl`, then generated targeted `xx` and `yy` pseudo-locales from the English source. The licensing batch is intentionally small, so the locale files were translated directly from the 5-key English source rather than reusing a broader settings namespace.
+- (2026-03-22) Validation for `F067`: counted 5 leaf strings in each generated real and pseudo licensing locale file, confirmed `git diff --check` stayed clean, and re-ran `node scripts/validate-translations.cjs` with `Errors: 0` and `Warnings: 0`.
 
 ## Open Questions
 
