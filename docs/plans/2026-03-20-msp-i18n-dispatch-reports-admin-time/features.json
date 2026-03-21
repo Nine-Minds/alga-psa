@@ -12,7 +12,7 @@
   {"id": "F011", "description": "Update ROUTE_NAMESPACES for /msp/technician-dispatch to load msp/dispatch", "implemented": true, "prdRefs": ["D-FR9"]},
   {"id": "F012", "description": "Generate dispatch translations for all 6 non-English locales (fr, es, de, nl, it, pl)", "implemented": true},
   {"id": "F013", "description": "Create dispatch pseudo-locale files (xx, yy)", "implemented": true},
-  {"id": "F014", "description": "Italian accent audit on it/msp/dispatch.json", "implemented": false},
+  {"id": "F014", "description": "Italian accent audit on it/msp/dispatch.json", "implemented": true},
 
   {"id": "F020", "description": "Create en/msp/reports.json with ~99 keys following naming convention", "implemented": false, "prdRefs": ["R-FR1 to R-FR4"]},
   {"id": "F021", "description": "ContractReports.tsx: wire useTranslation('msp/reports'), translate tab labels, descriptions, summary cards, all 4 report table columns, empty states, unit labels", "implemented": false, "prdRefs": ["R-FR1"]},
