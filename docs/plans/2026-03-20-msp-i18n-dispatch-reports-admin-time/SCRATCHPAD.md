@@ -29,6 +29,7 @@
 - (2026-03-20) `Reports.tsx` (in packages/ui/src/pages/) is a placeholder page with chart placeholders — 9 strings.
 - (2026-03-20) Unit labels "hrs", "days", "%" are scattered through column definitions — consolidate into a `units.*` section.
 - (2026-03-20) Tab IDs in ContractReports are already stable strings — no CustomTabs refactoring needed.
+- (2026-03-20) `ContractReports.tsx`, `ContractPerformance.tsx`, and `ContractUsageReport.tsx` all mix hardcoded text with hardcoded date/currency formatting. The namespace should cover literal strings, while the component wiring step should switch formatting to `useFormatters()` where practical.
 
 ### Admin (2b-8)
 - (2026-03-20) 4 files across 2 packages (ui + integrations). ~123 strings total.
@@ -132,6 +133,7 @@ SCRIPT
 - (2026-03-20) `T002` passed: `npx tsc -p packages/scheduling/tsconfig.json --noEmit --pretty false` completed successfully after wiring the dispatch components, giving package-level TypeScript coverage for the `useTranslation('msp/dispatch')` changes.
 - (2026-03-20) `T003` passed: a direct route-config assertion confirmed `ROUTE_NAMESPACES['/msp/technician-dispatch']` exactly equals `['common', 'msp/core', 'msp/dispatch']`.
 - (2026-03-20) `T004` passed: the Italian accent audit grep returned no matches for `server/public/locales/it/msp/dispatch.json`, confirming the known unaccented text patterns are absent.
+- (2026-03-20) `F020` completed: created `server/public/locales/en/msp/reports.json` with shared sections for the billing report tabs, summary cards, table headers, empty/error states, select/refresh controls, usage/performance summaries, and the standalone placeholder reports page.
 
 ### Key file paths — Dispatch
 | File | Strings |

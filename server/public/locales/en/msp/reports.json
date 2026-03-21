@@ -1,0 +1,171 @@
+{
+  "page": {
+    "title": "Reports"
+  },
+  "actions": {
+    "refresh": "Refresh"
+  },
+  "placeholders": {
+    "selectContract": "Select contract..."
+  },
+  "units": {
+    "hoursShort": "hrs",
+    "days": "days",
+    "percent": "%",
+    "dash": "\u2014"
+  },
+  "reportsPage": {
+    "cards": {
+      "timeUtilization": {
+        "title": "Time Utilization",
+        "placeholder": "[Time Utilization Chart Placeholder]"
+      },
+      "projectProgress": {
+        "title": "Project Progress",
+        "placeholder": "[Project Progress Chart Placeholder]"
+      },
+      "revenueByClient": {
+        "title": "Revenue by Client",
+        "placeholder": "[Revenue by Client Chart Placeholder]"
+      },
+      "teamPerformance": {
+        "title": "Team Performance",
+        "placeholder": "[Team Performance Chart Placeholder]"
+      }
+    }
+  },
+  "contractReports": {
+    "title": "Contract Reports",
+    "description": "Analyze contract performance, revenue, and utilization metrics",
+    "errors": {
+      "loadingTitle": "Error Loading Reports",
+      "loadData": "Failed to load report data"
+    },
+    "summary": {
+      "totalMRR": {
+        "title": "Total MRR",
+        "subtitle": "Monthly Recurring Revenue"
+      },
+      "ytdRevenue": {
+        "title": "YTD Revenue",
+        "subtitle": "Year to Date"
+      },
+      "activeContracts": {
+        "title": "Active Contracts",
+        "subtitle": "Billable clients"
+      }
+    },
+    "tabs": {
+      "revenue": "Contract Revenue",
+      "expiration": "Expiration",
+      "bucketUsage": "Bucket Hours",
+      "profitability": "Profitability"
+    },
+    "sections": {
+      "revenue": {
+        "title": "Contract Revenue Report",
+        "description": "Overview of monthly recurring revenue and year-to-date billing by contract",
+        "empty": "No contract revenue data available"
+      },
+      "expiration": {
+        "title": "Contract Expiration and Renewal Decisions",
+        "description": "Track upcoming contract expirations and renewal decision due dates.",
+        "empty": "No upcoming contract expirations or renewal decisions in the near term"
+      },
+      "bucketUsage": {
+        "title": "Bucket Hours Utilization",
+        "description": "Monitor bucket hours usage and identify overage situations",
+        "empty": "No bucket-based contracts found"
+      },
+      "profitability": {
+        "title": "Simple Profitability Report",
+        "description": "Basic profit margins and revenue vs. cost analysis by contract",
+        "empty": "No profitability data available"
+      }
+    },
+    "table": {
+      "contract": "Contract",
+      "client": "Client",
+      "monthlyRecurring": "Monthly Recurring",
+      "totalBilledYtd": "Total Billed (YTD)",
+      "status": "Status",
+      "endDate": "End Date",
+      "daysUntilExpiration": "Days Until Expiration",
+      "monthlyValue": "Monthly Value",
+      "autoRenew": "Auto-Renew",
+      "totalHours": "Total Hours",
+      "usedHours": "Used Hours",
+      "remaining": "Remaining",
+      "utilization": "Utilization",
+      "overage": "Overage",
+      "revenueYtd": "Revenue (YTD)",
+      "costYtd": "Cost (YTD)",
+      "profit": "Profit",
+      "margin": "Margin"
+    },
+    "statusValues": {
+      "active": "Active",
+      "upcoming": "Upcoming",
+      "yes": "Yes",
+      "no": "No"
+    }
+  },
+  "contractPerformance": {
+    "title": "Contract Performance Metrics",
+    "errors": {
+      "loadData": "Failed to load contract data"
+    },
+    "metrics": {
+      "totalClients": "Total Clients",
+      "activeClients": "Active Clients",
+      "totalPlans": "Total Plans",
+      "averagePlansPerClient": "Avg. Plans Per Client",
+      "totalRevenue": "Total Revenue",
+      "averageRevenuePerClient": "Avg. Revenue Per Client"
+    },
+    "empty": {
+      "selectContract": "Select a contract to view performance metrics",
+      "noContracts": "No contracts available"
+    },
+    "comparison": {
+      "title": "Contract Comparison",
+      "table": {
+        "contract": "Contract",
+        "clients": "Clients",
+        "plans": "Plans",
+        "revenue": "Revenue"
+      }
+    }
+  },
+  "contractUsage": {
+    "title": "Contract Usage Report",
+    "errors": {
+      "loadInitialData": "Failed to load initial data",
+      "loadUsageData": "Failed to load contract usage data"
+    },
+    "empty": {
+      "noClientsUsingContract": "No clients are using this contract",
+      "selectContract": "Select a contract to view usage data"
+    },
+    "table": {
+      "client": "Client",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "contractLines": "Contract Lines",
+      "totalBilled": "Total Billed",
+      "status": "Status"
+    },
+    "statusValues": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "ongoing": "Ongoing",
+      "unknownClient": "Unknown Client"
+    },
+    "summary": {
+      "title": "Summary",
+      "totalClients": "Total Clients",
+      "activeAssignments": "Active Assignments",
+      "totalBilled": "Total Billed"
+    }
+  }
+}
