@@ -2,6 +2,10 @@
   "navigation": {
     "heading": "Extensions"
   },
+  "enterpriseFeature": {
+    "title": "Enterprise Feature",
+    "description": "{{feature}} require Enterprise Edition. Please upgrade to access this feature."
+  },
   "settings": {
     "title": "Extension Management",
     "description": "Install, configure, and manage extensions to extend Alga PSA functionality.",
@@ -20,6 +24,13 @@
     "loading": {
       "extensions": "Loading extensions...",
       "installer": "Loading installer..."
+    },
+    "featureNames": {
+      "settings": "Extension settings",
+      "details": "Extension details",
+      "permissions": "Extension permissions",
+      "management": "Extensions management",
+      "installer": "Extension installer"
     }
   },
   "communityEdition": {
@@ -37,8 +48,22 @@
   },
   "detail": {
     "metadataTitle": "Extensions - Enterprise Feature",
-    "enterpriseFeatureTitle": "Enterprise Feature",
-    "enterpriseFeatureDescription": "Extensions require Enterprise Edition. Please upgrade to access this feature.",
     "extensionId": "Extension ID: {{id}}"
+  },
+  "detailsPage": {
+    "metadata": {
+      "title": "Extension Details",
+      "description": "View extension details"
+    },
+    "title": "Extension Details",
+    "description": "Extension details are available in Enterprise Edition."
+  },
+  "settingsPage": {
+    "metadata": {
+      "title": "Extension Settings",
+      "description": "Configure extension settings"
+    },
+    "title": "Extension Settings",
+    "description": "Extension settings are available in Enterprise Edition."
   }
 }

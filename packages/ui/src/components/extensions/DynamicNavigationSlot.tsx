@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { listAppMenuItemsForTenant, type AppMenuItem } from '@alga-psa/product-extension-actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface DynamicNavigationSlotProps {
   collapsed?: boolean;
@@ -16,6 +17,7 @@ interface DynamicNavigationSlotProps {
 export const DynamicNavigationSlot: React.FC<DynamicNavigationSlotProps> = ({ collapsed }) => {
   const [items, setItems] = useState<AppMenuItem[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const { t } = useTranslation('msp/extensions');
 
   useEffect(() => {
     let mounted = true;
@@ -39,7 +41,9 @@ export const DynamicNavigationSlot: React.FC<DynamicNavigationSlotProps> = ({ co
   return (
     <div>
       {!collapsed && (
-        <div className="px-2 pb-2 text-xs uppercase tracking-wide text-gray-400">Extensions</div>
+        <div className="px-2 pb-2 text-xs uppercase tracking-wide text-gray-400">
+          {t('navigation.heading', { defaultValue: 'Extensions' })}
+        </div>
       )}
       <ul className="space-y-1">
         {items.map((it) => (
