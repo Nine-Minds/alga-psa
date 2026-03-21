@@ -35,7 +35,7 @@
   { "id": "F034", "description": "Update shared billing-clients service query helpers to decoupled semantics.", "implemented": true, "prdRefs": ["Requirements > L1.F"] },
   { "id": "F035", "description": "Update scheduling time-entry service lookup APIs to stop using catalog billing method as service identity/type proxy.", "implemented": true, "prdRefs": ["Requirements > L1.F"] },
   { "id": "F036", "description": "Update client-portal availability service mapping to decoupled semantics.", "implemented": true, "prdRefs": ["Requirements > L1.F"] },
-  { "id": "F037", "description": "Update product catalog create/update logic to canonical mode behavior with no active `per_unit` writes.", "implemented": false, "prdRefs": ["Requirements > L1.A", "Requirements > L1.F"] },
+  { "id": "F037", "description": "Update product catalog create/update logic to canonical mode behavior with no active `per_unit` writes.", "implemented": true, "prdRefs": ["Requirements > L1.A", "Requirements > L1.F"] },
   { "id": "F038", "description": "Update service API schemas to hard-cutover decoupled contracts with no legacy alias compatibility.", "implemented": false, "prdRefs": ["Requirements > L1.F"] },
   { "id": "F039", "description": "Update product API schemas to hard-cutover canonical vocabulary with no legacy alias compatibility.", "implemented": false, "prdRefs": ["Requirements > L1.F"] },
   { "id": "F040", "description": "Update financial/contract-line schemas and shared interfaces to hard-cutover decoupled semantics.", "implemented": false, "prdRefs": ["Requirements > L1.F"] },

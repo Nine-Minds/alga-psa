@@ -118,6 +118,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Completed F035 by removing scheduling lookup proxying (`sc.billing_method as service_type`) in `timeEntryCrudActions`; service identity now resolves from `service_types.name`, while billing metadata is returned separately as `billing_mode` + `item_kind`.
 - (2026-03-21) Completed F036 by updating client-portal availability service queries to join `service_types` and expose `service_type` from taxonomy instead of aliasing `billing_method`; `billing_mode` and `item_kind` are returned as metadata fields.
 - (2026-03-21) Added static guard coverage `T015` in `server/src/test/unit/billing/schedulingAvailabilityDecoupling.static.test.ts` to prevent regression to `billing_method as service_type` proxying in scheduling and client-portal availability reads.
+- (2026-03-21) Completed F037 by canonicalizing product catalog writes in `ProductCatalogService` create/update paths from legacy `per_unit` to `usage` so active product writes no longer emit legacy billing vocabulary.
+- (2026-03-21) Added static write guard `server/src/test/unit/api/productCatalogCanonicalWrites.static.test.ts` to enforce canonical product billing writes and prevent reintroduction of `billing_method: 'per_unit'` in product service APIs.
 
 - (2026-03-21) Validation runbooks:
   - `cd server && npx vitest run src/test/unit/billing/nonContractDueWork.integration.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
@@ -127,3 +129,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run src/test/unit/migrations/billingMethodCanonicalizationMigration.test.ts src/test/unit/migrations/serviceCatalogModeDefaultsMigration.test.ts src/test/unit/migrations/serviceCatalogModeDefaultsBackfillMigration.test.ts` (pass)
   - `cd server && npx vitest run src/test/unit/billing/serviceQueryDecoupling.static.test.ts` (pass, T014 guards)
   - `cd server && npx vitest run src/test/unit/billing/schedulingAvailabilityDecoupling.static.test.ts` (pass, T015 guards)
+  - `cd server && npx vitest run src/test/unit/api/productCatalogCanonicalWrites.static.test.ts` (pass)
