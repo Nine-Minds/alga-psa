@@ -88,7 +88,7 @@
   {
     "id": "T024",
     "description": "Admin: Visual QA (xx locale) — /msp/settings telemetry and email tabs show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
 

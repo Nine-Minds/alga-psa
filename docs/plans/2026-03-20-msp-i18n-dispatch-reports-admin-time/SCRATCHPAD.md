@@ -178,6 +178,7 @@ SCRIPT
 - (2026-03-20) `T021` passed: `npx tsc -p packages/integrations/tsconfig.json --noEmit --pretty false` and `npx tsc -p packages/ui/tsconfig.json --noEmit --pretty false` both completed successfully, covering the four admin components split across those two packages.
 - (2026-03-20) `T022` passed: `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` asserts `ROUTE_NAMESPACES['/msp/settings']` exactly equals `['common', 'msp/core', 'msp/settings', 'msp/admin', 'features/projects']`, so the admin namespace stays route-loaded on MSP settings.
 - (2026-03-20) `T023` passed: `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` includes the same accent-audit anti-pattern regex used by the shell grep and confirms `server/public/locales/it/msp/admin.json` stays free of those known Italian false forms.
+- (2026-03-20) `T024` passed: the new batch i18n test asserts representative admin pseudo-locale keys such as `telemetry.page.title` and `email.tabs.inbound` resolve to `11111` in `server/public/locales/xx/msp/admin.json`, providing automated QA coverage for the translated telemetry/email settings chrome.
 
 ### Key file paths — Dispatch
 | File | Strings |
