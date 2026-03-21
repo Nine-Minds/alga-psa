@@ -174,3 +174,36 @@
 ### Notes
 
 - `T011` is currently implemented as a static source-contract test to avoid full UI runtime harness complexity while still enforcing copy semantics and unresolved-assignment wording.
+
+## Progress Update (2026-03-21, F047/F048)
+
+- Reworked `AutomaticInvoices` fallback assignment-context labels to business-safe copy, replacing technical identifier leaks in grouped rows:
+  - `Assignment line <id>` -> `Assigned contract line`
+  - `Execution <identity>` -> `Assigned work item`
+- Preserved attribution-first behavior (`member.attribution.label`) so explicit/default/unresolved labels continue to display when provided by due-work attribution metadata.
+- Added regression coverage in `automaticInvoices.nonContractSelection.ui.test.tsx` to ensure mixed explicit-contract + system-managed-default rows remain combinable when billing scopes align, and still generate as a single grouped parent target.
+- Completed features: `F047`, `F048`.
+
+### Verification commands
+
+- `cd server && npx vitest run src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
+
+### Notes
+
+- Broader legacy wiring suites still contain pre-existing brittle string expectations unrelated to this feature; feature verification was scoped to the recurring automatic-invoices UI integration test that exercises the changed behavior.
+
+## Progress Update (2026-03-21, F049/F050)
+
+- Added action-layer billing permission gates in `contractActions` for contract-view and mutation entry points used by billing contract list/detail flows (`read`, `create`, `update`).
+- Added explicit server-side mutation guardrails to block create/update payload attempts that include system-managed identity fields (`is_system_managed_default`, `owner_client_id`).
+- Sanitized create/update payload stripping for protected fields to ensure no accidental pass-through into model writes.
+- Added wiring coverage asserting these guardrails stay present in contract actions.
+- Completed features: `F049`, `F050`.
+
+### Verification commands
+
+- `cd server && npx vitest run src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx src/test/unit/billing/systemManagedContractGuardrails.wiring.test.ts`
+
+### Notes
+
+- Guardrails are implemented at action entry points so API/controller paths that call these actions inherit the same permission and mutation protections.

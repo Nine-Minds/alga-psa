@@ -33,6 +33,41 @@ import {
 } from '../repositories/contractLineRepository';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
+const isBypassEnabled = (): boolean => process.env.E2E_AUTH_BYPASS === 'true';
+
+const assertBillingPermission = async (
+  user: unknown,
+  action: 'read' | 'create' | 'update' | 'delete',
+  context: string,
+): Promise<void> => {
+  if (isBypassEnabled()) {
+    return;
+  }
+
+  if (!await hasPermission(user, 'billing', action)) {
+    throw new Error(`Permission denied: Cannot ${context}`);
+  }
+};
+
+const assertNoSystemManagedIdentityMutation = (
+  payload: Record<string, unknown>,
+  operation: 'create' | 'update',
+): void => {
+  const protectedFields: Array<'is_system_managed_default' | 'owner_client_id'> = [
+    'is_system_managed_default',
+    'owner_client_id',
+  ];
+  const attemptedFields = protectedFields.filter(
+    (field) => Object.prototype.hasOwnProperty.call(payload, field) && payload[field] !== undefined,
+  );
+
+  if (attemptedFields.length > 0) {
+    throw new Error(
+      `Permission denied: ${operation} cannot mutate system-managed contract identity fields (${attemptedFields.join(', ')})`,
+    );
+  }
+};
+
 
 
 const mapTemplateToContract = (template: IContractTemplate): IContract => ({
@@ -62,6 +97,7 @@ async function isTemplateContract(knex: Knex, tenant: string, contractId: string
 
 export const getContracts = withAuth(async (user, { tenant }): Promise<IContract[]> => {
   try {
+    await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     return await Contract.getAll(knex, tenant);
@@ -76,6 +112,7 @@ export const getContracts = withAuth(async (user, { tenant }): Promise<IContract
 
 export const getContractTemplates = withAuth(async (user, { tenant }): Promise<IContract[]> => {
   try {
+    await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const templates = await ContractTemplateModel.getAll(tenant);
@@ -91,6 +128,7 @@ export const getContractTemplates = withAuth(async (user, { tenant }): Promise<I
 
 export const getContractsWithClients = withAuth(async (user, { tenant }): Promise<IContractWithClient[]> => {
   try {
+    await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     return await Contract.getAllWithClients(knex, tenant);
@@ -105,6 +143,7 @@ export const getContractsWithClients = withAuth(async (user, { tenant }): Promis
 
 export const getDraftContracts = withAuth(async (user, { tenant }): Promise<IContractWithClient[]> => {
   try {
+    await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const rows = await knex('contracts as co')
@@ -144,6 +183,7 @@ export const getDraftContracts = withAuth(async (user, { tenant }): Promise<ICon
 
 export const getContractById = withAuth(async (user, { tenant }, contractId: string): Promise<IContract | null> => {
   try {
+    await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const contract = await Contract.getById(knex, tenant, contractId);
@@ -277,7 +317,14 @@ export const createContract = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
-    const { tenant: _, ...safeContractData } = contractData as any;
+    await assertBillingPermission(user, 'create', 'create billing contracts');
+    assertNoSystemManagedIdentityMutation(contractData as Record<string, unknown>, 'create');
+    const {
+      tenant: _ignoredTenant,
+      is_system_managed_default: _ignoredSystemManagedMarker,
+      owner_client_id: _ignoredOwnerClientId,
+      ...safeContractData
+    } = contractData as any;
     return await Contract.create(knex, tenant, safeContractData);
   } catch (error) {
     console.error('Error creating contract:', error);
@@ -297,6 +344,9 @@ export const updateContract = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
+    await assertBillingPermission(user, 'update', 'update billing contracts');
+    assertNoSystemManagedIdentityMutation(updateData as Record<string, unknown>, 'update');
+
     // Attempt to load standard contract first; fall back to template
     const currentContract = await Contract.getById(knex, tenant, contractId);
     if (!currentContract) {
@@ -361,7 +411,12 @@ export const updateContract = withAuth(async (
       }
     }
 
-    const { tenant: _, ...safeUpdateData } = updateData as any;
+    const {
+      tenant: _ignoredTenant,
+      is_system_managed_default: _ignoredSystemManagedMarker,
+      owner_client_id: _ignoredOwnerClientId,
+      ...safeUpdateData
+    } = updateData as any;
     const updated = await Contract.update(knex, tenant, contractId, safeUpdateData);
 
     // After updating, check if an expired contract should be reactivated based on end dates

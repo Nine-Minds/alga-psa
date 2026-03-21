@@ -444,6 +444,41 @@ describe('AutomaticInvoices non-contract selection UI', () => {
     expect(within(summary).getByText('This selection will generate 2 separate invoices.')).toBeInTheDocument();
   });
 
+  it('T016/F048: mixed explicit-contract and system-managed-default rows stay combinable when billing scopes align', async () => {
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildCandidate([contractMember, defaultContractMember])],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await screen.findByText('Acme Co');
+    const parentCheckbox = document.getElementById(
+      'select-parent-group:client-1:2025-03-01:2025-04-01',
+    ) as HTMLInputElement;
+    expect(parentCheckbox.disabled).toBe(false);
+
+    fireEvent.click(parentCheckbox);
+    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices for Selected Periods/i }));
+
+    await waitFor(() => {
+      expect(generateGroupedInvoicesAsRecurringBillingRunMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          groupedTargets: [
+            {
+              groupKey: 'parent-selection:candidate-mixed-1',
+              selectorInputs: [contractMember.selectorInput, defaultContractMember.selectorInput],
+            },
+          ],
+        }),
+      );
+    });
+  });
+
   it('T011: mixed compatibility rules combine only compatible selections and split incompatible selections', async () => {
     const compatibleContractMember = cloneMember(contractMember, {
       executionIdentityKey: 'contract-compatible-1',

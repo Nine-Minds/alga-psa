@@ -254,23 +254,23 @@ const getRecurringAssignmentContext = (member: IRecurringDueWorkInvoiceCandidate
   }
 
   if (member.contractLineId?.trim()) {
-    return `Assignment line ${member.contractLineId.trim()}`;
+    return 'Assigned contract line';
   }
 
   const scheduleKey = member.scheduleKey?.trim();
   if (scheduleKey) {
     const contractLineMatch = scheduleKey.match(/contract_line:([^:]+)/);
     if (contractLineMatch?.[1]) {
-      return `Assignment line ${contractLineMatch[1]}`;
+      return 'Assigned contract line';
     }
     const clientContractLineMatch = scheduleKey.match(/client_contract_line:([^:]+)/);
     if (clientContractLineMatch?.[1]) {
-      return `Assignment line ${clientContractLineMatch[1]}`;
+      return 'Assigned contract line';
     }
   }
 
   return member.executionIdentityKey?.trim()
-    ? `Execution ${member.executionIdentityKey.trim()}`
+    ? 'Assigned work item'
     : null;
 };
 

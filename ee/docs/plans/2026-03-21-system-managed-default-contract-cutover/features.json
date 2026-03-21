@@ -388,7 +388,7 @@
   {
     "id": "F047",
     "description": "Replace technical assignment labels in automatic invoicing rows with business-safe labels.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 4"
     ]
@@ -396,7 +396,7 @@
   {
     "id": "F048",
     "description": "Ensure grouped-row combinability logic remains correct when rows include default-contract and explicit-contract work.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 16"
     ]
@@ -404,7 +404,7 @@
   {
     "id": "F049",
     "description": "Add route-safe permission checks so only authorized users can view/edit default-contract lifecycle controls.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions 1"
     ]
@@ -412,7 +412,7 @@
   {
     "id": "F050",
     "description": "Prevent unauthorized API mutations of system-managed markers/identity fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions 2"
     ]
