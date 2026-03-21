@@ -1108,6 +1108,16 @@ export class BillingEngine {
         workDate,
       });
       if (eligibleLineIds.length === 1) {
+        await this.knex("time_entries")
+          .where({
+            tenant: this.tenant,
+            entry_id: entry.entry_id,
+          })
+          .whereNull("contract_line_id")
+          .update({
+            contract_line_id: eligibleLineIds[0],
+            updated_at: this.knex.fn.now(),
+          });
         continue;
       }
 
@@ -1214,6 +1224,16 @@ export class BillingEngine {
         workDate,
       });
       if (eligibleLineIds.length === 1) {
+        await this.knex("usage_tracking")
+          .where({
+            tenant: this.tenant,
+            usage_id: record.usage_id,
+          })
+          .whereNull("contract_line_id")
+          .update({
+            contract_line_id: eligibleLineIds[0],
+            updated_at: this.knex.fn.now(),
+          });
         continue;
       }
 

@@ -223,7 +223,7 @@
   {
     "id": "F027",
     "description": "Remove display-only default-selection behavior that differs from persisted assignment behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 6"
     ]
@@ -231,7 +231,7 @@
   {
     "id": "F028",
     "description": "Implement billing-engine reconciliation write-back for unresolved time rows with deterministic single eligible line.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 7",
       "Execution Order 5"
@@ -240,7 +240,7 @@
   {
     "id": "F029",
     "description": "Implement billing-engine reconciliation write-back for unresolved usage rows with deterministic single eligible line.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 7",
       "Execution Order 5"
@@ -249,7 +249,7 @@
   {
     "id": "F030",
     "description": "Guard reconciliation updates with null-check predicates to avoid overriding explicit assignments.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 7"
     ]
@@ -257,7 +257,7 @@
   {
     "id": "F031",
     "description": "Ensure reconciliation logic is idempotent under repeated due-work runs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements 4"
     ]
@@ -265,7 +265,7 @@
   {
     "id": "F032",
     "description": "Update unresolved due-work query semantics to exclude reconciled deterministic records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 8"
     ]
@@ -273,7 +273,7 @@
   {
     "id": "F033",
     "description": "Keep ambiguous/no-match records unresolved and visible for explicit handling.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 8"
     ]

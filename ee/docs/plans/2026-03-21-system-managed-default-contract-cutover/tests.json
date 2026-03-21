@@ -54,7 +54,7 @@
   {
     "id": "T005",
     "description": "Billing-engine integration: unresolved time row with exactly one eligible line is persisted with contract_line_id and removed from unresolved output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F030",
@@ -65,7 +65,7 @@
   {
     "id": "T006",
     "description": "Billing-engine integration: unresolved usage row with exactly one eligible line is persisted with contract_line_id and removed from unresolved output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F030",
@@ -76,7 +76,7 @@
   {
     "id": "T007",
     "description": "Due-work integration: ambiguous or no-match records remain unresolved and visible; deterministic records do not surface as non-contract candidates.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033",
       "F034",

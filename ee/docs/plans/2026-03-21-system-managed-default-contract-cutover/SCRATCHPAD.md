@@ -92,14 +92,20 @@
 
 - Resolver/date cutover: both scheduling and billing `contractLineDisambiguation` now accept `effectiveDate` and apply date-window filtering using `start_date <= effectiveDate(end-of-day)` and `end_date is null || end_date >= effectiveDate(start-of-day)`.
 - Save/UI callers now pass effective dates consistently: time-entry save uses computed `work_date`, usage save/update uses `usage_date`, and UI eligible-lines queries pass entry/usage date.
+- Removed display-only ambiguous default selection in `ContractInfoBanner`; ambiguous multi-line matches now require explicit selection instead of showing a synthetic default.
+- Billing engine unresolved reconciliation now persists deterministic single eligible contract-line assignments for time/usage with `whereNull(contract_line_id)` guards, then excludes those records from unresolved output.
 - Completed features: `F019-F026`.
 - Completed tests: `T003`, `T004`.
+- Completed features: `F027-F033`.
+- Completed tests: `T005`, `T006`, `T007`.
 
 ## Additional Runbooks (2026-03-21)
 
 - Verify T003/T004 effective-date coverage:
   - `cd packages/scheduling && npx vitest run tests/timeEntryCrud.changeRequests.test.ts`
   - `cd server && npx vitest run ../packages/billing/tests/usageActions.effectiveDate.test.ts`
+- Verify reconciliation behavior for deterministic vs ambiguous unresolved work:
+  - `cd server && npx vitest run src/test/unit/billing/billingEngine.unresolvedReconciliation.test.ts`
 - Re-run default-contract ensure suite after fallback hook expansion:
   - `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
 - Typecheck touched shared/integration workspaces:
