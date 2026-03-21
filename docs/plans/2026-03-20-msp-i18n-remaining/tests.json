@@ -161,6 +161,30 @@
     "implemented": false,
     "featureIds": ["F063", "F067"]
   },
+  {
+    "id": "T064",
+    "description": "2b-20 follow-up: enterprise licensing purchase/reduction/success flow compiles with msp/licensing and no visible hardcoded licensing purchase-flow copy remains",
+    "implemented": false,
+    "featureIds": ["F069", "F070"]
+  },
+  {
+    "id": "T065",
+    "description": "2b-20 follow-up: validate-translations.cjs passes for the expanded msp/licensing namespace across all 9 locales",
+    "implemented": false,
+    "featureIds": ["F071"]
+  },
+  {
+    "id": "T066",
+    "description": "2b-20 follow-up: EE extension runtime/error states compile with msp/extensions and no visible hardcoded runtime-state copy remains",
+    "implemented": false,
+    "featureIds": ["F073", "F074"]
+  },
+  {
+    "id": "T067",
+    "description": "2b-20 follow-up: validate-translations.cjs passes for the expanded msp/extensions namespace across all 9 locales",
+    "implemented": false,
+    "featureIds": ["F075"]
+  },
 
   {
     "id": "T070",
@@ -170,13 +194,13 @@
   },
   {
     "id": "T071",
-    "description": "Cross-batch: validate-translations.cjs passes for ALL 6 namespaces (0 errors, 0 warnings)",
+    "description": "Cross-batch: validate-translations.cjs passes for all newly-added MSP namespaces (0 errors, 0 warnings)",
     "implemented": false,
     "featureIds": ["F091"]
   },
   {
     "id": "T072",
-    "description": "Cross-batch: pseudo-locales regenerated for all 6 namespaces",
+    "description": "Cross-batch: pseudo-locales regenerated for all newly-added MSP namespaces",
     "implemented": false,
     "featureIds": ["F092"]
   },

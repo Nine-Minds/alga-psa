@@ -45,9 +45,17 @@
   {"id": "F066", "description": "Wire useTranslation('msp/licensing') in CE licensing stub components (ReduceLicensesModal, LicensePurchaseForm)", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F067", "description": "Generate msp/licensing translations for 6 non-English locales + 2 pseudo-locales", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F068", "description": "Italian accent audit on it/msp/licensing.json", "implemented": true, "prdRefs": ["2b-20"]},
+  {"id": "F069", "description": "Expand en/msp/licensing.json for enterprise license purchase/reduction/success flow copy discovered after the CE stub pass", "implemented": true, "prdRefs": ["2b-20"]},
+  {"id": "F070", "description": "Wire useTranslation('msp/licensing') in enterprise licensing pages/components (purchase page, purchase success page, LicensePurchaseForm, ReduceLicensesModal) plus shared CE/EE wrappers", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F071", "description": "Regenerate msp/licensing translations for 6 non-English locales + 2 pseudo-locales after enterprise purchase-flow expansion", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F072", "description": "Italian accent audit on updated it/msp/licensing.json after enterprise purchase-flow expansion", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F073", "description": "Expand en/msp/extensions.json for EE extension runtime/error-state copy discovered after the CE/OSS follow-up pass", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F074", "description": "Wire useTranslation('msp/extensions') in packages/product-extensions/ee/entry.tsx runtime/error states", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F075", "description": "Regenerate msp/extensions translations for 6 non-English locales + 2 pseudo-locales after EE runtime-state expansion", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F076", "description": "Italian accent audit on updated it/msp/extensions.json after EE runtime-state expansion", "implemented": false, "prdRefs": ["2b-20"]},
 
   {"id": "F090", "description": "Update ROUTE_NAMESPACES for /msp/surveys, /msp/schedule, /msp/knowledge-base, /msp/jobs, /msp/settings (email-providers), /msp/profile, /msp/security-settings, /msp/platform-updates", "implemented": false},
-  {"id": "F091", "description": "validate-translations.cjs passes for all 6 new namespaces across all 9 locales", "implemented": false},
-  {"id": "F092", "description": "Regenerate pseudo-locales (xx, yy) for all 6 namespaces", "implemented": false},
+  {"id": "F091", "description": "validate-translations.cjs passes for all newly-added MSP namespaces across all 9 locales", "implemented": false},
+  {"id": "F092", "description": "Regenerate pseudo-locales (xx, yy) for all newly-added MSP namespaces", "implemented": false},
   {"id": "F093", "description": "npm run build succeeds with no TypeScript errors", "implemented": false}
 ]
