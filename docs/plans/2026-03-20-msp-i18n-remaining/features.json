@@ -13,7 +13,7 @@
   {"id": "F014", "description": "Italian accent audit on it/msp/schedule.json", "implemented": true, "prdRefs": ["2b-14"]},
 
   {"id": "F020", "description": "Create en/msp/knowledge-base.json with ~189 keys for 10 KB components", "implemented": true, "prdRefs": ["2b-15"]},
-  {"id": "F021", "description": "Wire useTranslation('msp/knowledge-base') in KBArticleEditor.tsx (~52), KBArticleList.tsx (~41), KnowledgeBasePage.tsx (~38)", "implemented": false, "prdRefs": ["2b-15"]},
+  {"id": "F021", "description": "Wire useTranslation('msp/knowledge-base') in KBArticleEditor.tsx (~52), KBArticleList.tsx (~41), KnowledgeBasePage.tsx (~38)", "implemented": true, "prdRefs": ["2b-15"]},
   {"id": "F022", "description": "Wire useTranslation in KBImportDialog.tsx (~35), KBPublishingControls.tsx (~28), KBReviewDashboard.tsx (~18), remaining files", "implemented": false, "prdRefs": ["2b-15"]},
   {"id": "F023", "description": "Generate msp/knowledge-base translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-15"]},
   {"id": "F024", "description": "Italian accent audit on it/msp/knowledge-base.json", "implemented": false, "prdRefs": ["2b-15"]},

@@ -9,8 +9,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { formatDate } from '@alga-psa/core/formatters';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   Save,
   ArrowLeft,
@@ -54,20 +53,20 @@ const STATUS_LABELS: Record<ArticleStatus, string> = {
   archived: 'Archived',
 };
 
-const TYPE_OPTIONS: SelectOption[] = [
+const TYPE_OPTION_DEFAULTS: SelectOption[] = [
   { value: 'how_to', label: 'How-To' },
   { value: 'faq', label: 'FAQ' },
   { value: 'troubleshooting', label: 'Troubleshooting' },
   { value: 'reference', label: 'Reference' },
 ];
 
-const AUDIENCE_OPTIONS: SelectOption[] = [
+const AUDIENCE_OPTION_DEFAULTS: SelectOption[] = [
   { value: 'internal', label: 'Internal' },
   { value: 'client', label: 'Client' },
   { value: 'public', label: 'Public' },
 ];
 
-const REVIEW_CYCLE_OPTIONS: SelectOption[] = [
+const REVIEW_CYCLE_OPTION_DEFAULTS: SelectOption[] = [
   { value: '', label: 'No review cycle' },
   { value: '30', label: '30 days' },
   { value: '60', label: '60 days' },
@@ -97,7 +96,8 @@ export default function KBArticleEditor({
   onSave,
   categories = [],
 }: KBArticleEditorProps) {
-  const { t } = useTranslation('features/documents');
+  const { t } = useTranslation('msp/knowledge-base');
+  const { formatDate } = useFormatters();
   const tRef = useRef(t);
   tRef.current = t;
 
@@ -129,8 +129,33 @@ export default function KBArticleEditor({
   const [categoryId, setCategoryId] = useState<string>('');
   const [reviewCycleDays, setReviewCycleDays] = useState<string>('');
 
+  const statusLabels: Record<ArticleStatus, string> = {
+    draft: t('shared.statusLabels.draft', { defaultValue: STATUS_LABELS.draft }),
+    review: t('shared.statusLabels.review', { defaultValue: STATUS_LABELS.review }),
+    published: t('shared.statusLabels.published', { defaultValue: STATUS_LABELS.published }),
+    archived: t('shared.statusLabels.archived', { defaultValue: STATUS_LABELS.archived }),
+  };
+
+  const typeOptions: SelectOption[] = TYPE_OPTION_DEFAULTS.map((option) => ({
+    ...option,
+    label: t(`shared.typeLabels.${option.value}`, { defaultValue: option.label }),
+  }));
+
+  const audienceOptions: SelectOption[] = AUDIENCE_OPTION_DEFAULTS.map((option) => ({
+    ...option,
+    label: t(`shared.audienceLabels.${option.value}`, { defaultValue: option.label }),
+  }));
+
+  const reviewCycleOptions: SelectOption[] = REVIEW_CYCLE_OPTION_DEFAULTS.map((option) => ({
+    ...option,
+    label: t(
+      option.value ? `shared.reviewCycleOptions.${option.value}` : 'shared.reviewCycleOptions.none',
+      { defaultValue: option.label }
+    ),
+  }));
+
   const categoryOptions: SelectOption[] = [
-    { value: '', label: t('kb.noCategory', 'No category') },
+    { value: '', label: t('editor.metadata.fields.noCategory', { defaultValue: 'No category' }) },
     ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
   ];
 
@@ -139,12 +164,12 @@ export default function KBArticleEditor({
     try {
       const result = await getArticle(articleId);
       if (result && typeof result === 'object' && 'code' in result) {
-        toast.error(tRef.current('kb.permissionDenied', 'Permission denied'));
+        toast.error(tRef.current('editor.feedback.permissionDenied', { defaultValue: 'Permission denied' }));
         return;
       }
       const articleData = result as IKBArticleWithDocument | null;
       if (!articleData) {
-        toast.error(tRef.current('kb.notFound', 'Article not found'));
+        toast.error(tRef.current('editor.feedback.notFound', { defaultValue: 'Article not found' }));
         return;
       }
       setArticle(articleData);
@@ -163,7 +188,7 @@ export default function KBArticleEditor({
         console.error('Failed to load article tags:', tagError);
       }
     } catch (error) {
-      handleError(error, tRef.current('kb.loadError', 'Failed to load article'));
+      handleError(error, tRef.current('editor.feedback.loadError', { defaultValue: 'Failed to load article' }));
     } finally {
       setIsLoading(false);
     }
@@ -201,22 +226,22 @@ export default function KBArticleEditor({
       }
 
       if (Object.keys(updates).length === 0) {
-        toast.success(t('kb.noChanges', 'No changes to save'));
+        toast.success(t('editor.feedback.noChanges', { defaultValue: 'No changes to save' }));
         return;
       }
 
       const result = await updateArticle(article.article_id, updates);
       if (typeof result === 'object' && 'code' in result) {
-        toast.error(t('kb.saveError', 'Failed to save article'));
+        toast.error(t('editor.feedback.saveError', { defaultValue: 'Failed to save article' }));
         return;
       }
-      toast.success(t('kb.saveSuccess', 'Article metadata saved'));
+      toast.success(t('editor.feedback.saveSuccess', { defaultValue: 'Article metadata saved' }));
       setHasUnsavedMetadata(false);
       onSave?.();
       // Reload article to get updated data
       await loadArticle();
     } catch (error) {
-      handleError(error, t('kb.saveError', 'Failed to save article'));
+      handleError(error, t('editor.feedback.saveError', { defaultValue: 'Failed to save article' }));
     } finally {
       setIsSaving(false);
     }
@@ -234,25 +259,25 @@ export default function KBArticleEditor({
       if (newStatus === 'published') {
         const result = await publishArticle(article.article_id);
         if (typeof result === 'object' && 'code' in result) {
-          toast.error(t('kb.publishError', 'Failed to publish article'));
+          toast.error(t('editor.feedback.publishError', { defaultValue: 'Failed to publish article' }));
           return;
         }
-        toast.success(t('kb.publishSuccess', 'Article published'));
+        toast.success(t('editor.feedback.publishSuccess', { defaultValue: 'Article published' }));
       } else {
         const result = await updateArticle(article.article_id, { status: newStatus });
         if (typeof result === 'object' && 'code' in result) {
-          toast.error(t('kb.statusChangeError', 'Failed to change article status'));
+          toast.error(t('editor.feedback.statusChangeError', { defaultValue: 'Failed to change article status' }));
           return;
         }
         toast.success(
           newStatus === 'review'
-            ? t('kb.submitForReviewSuccess', 'Article submitted for review')
-            : t('kb.archiveSuccess', 'Article archived')
+            ? t('editor.feedback.submitForReviewSuccess', { defaultValue: 'Article submitted for review' })
+            : t('editor.feedback.archiveSuccess', { defaultValue: 'Article archived' })
         );
       }
       await loadArticle();
     } catch (error) {
-      handleError(error, t('kb.statusChangeError', 'Failed to change article status'));
+      handleError(error, t('editor.feedback.statusChangeError', { defaultValue: 'Failed to change article status' }));
     } finally {
       setIsSaving(false);
     }
@@ -271,11 +296,11 @@ export default function KBArticleEditor({
   if (!article) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">{t('kb.notFound', 'Article not found')}</p>
+        <p className="text-muted-foreground">{t('editor.feedback.notFound', { defaultValue: 'Article not found' })}</p>
         {onBack && (
           <Button id="kb-editor-back" variant="outline" onClick={onBack} className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            {t('kb.back', 'Back')}
+            {t('editor.header.back', { defaultValue: 'Back' })}
           </Button>
         )}
       </div>
@@ -295,15 +320,15 @@ export default function KBArticleEditor({
               </Button>
             )}
             <div>
-              <h2 className="text-lg font-semibold">{title || t('kb.untitled', 'Untitled Article')}</h2>
+              <h2 className="text-lg font-semibold">{title || t('editor.header.untitled', { defaultValue: 'Untitled Article' })}</h2>
               <div className="flex items-center gap-2 mt-1">
                 <Badge className={STATUS_COLORS[article.status]}>
-                  {STATUS_LABELS[article.status]}
+                  {statusLabels[article.status]}
                 </Badge>
                 {isStale && (
                   <Badge className="bg-orange-100 text-orange-700">
                     <AlertCircle className="w-3 h-3 mr-1" />
-                    {t('kb.reviewOverdue', 'Review Overdue')}
+                    {t('editor.badges.reviewOverdue', { defaultValue: 'Review Overdue' })}
                   </Badge>
                 )}
               </div>
@@ -321,7 +346,7 @@ export default function KBArticleEditor({
                   disabled={isSaving}
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  {t('kb.submitForReview', 'Submit for Review')}
+                  {t('editor.actions.submitForReview', { defaultValue: 'Submit for Review' })}
                 </Button>
                 <Button
                   id="kb-editor-publish"
@@ -330,7 +355,7 @@ export default function KBArticleEditor({
                   disabled={isSaving}
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  {t('kb.publish', 'Publish')}
+                  {t('editor.actions.publish', { defaultValue: 'Publish' })}
                 </Button>
               </>
             )}
@@ -342,7 +367,7 @@ export default function KBArticleEditor({
                 disabled={isSaving}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                {t('kb.publish', 'Publish')}
+                {t('editor.actions.publish', { defaultValue: 'Publish' })}
               </Button>
             )}
             {article.status === 'published' && (
@@ -354,7 +379,7 @@ export default function KBArticleEditor({
                 disabled={isSaving}
               >
                 <Archive className="w-4 h-4 mr-2" />
-                {t('kb.archive', 'Archive')}
+                {t('editor.actions.archive', { defaultValue: 'Archive' })}
               </Button>
             )}
           </div>
@@ -389,27 +414,27 @@ export default function KBArticleEditor({
         {/* Article Stats */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t('kb.stats', 'Statistics')}</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('editor.stats.title', { defaultValue: 'Statistics' })}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2 text-muted-foreground">
                 <Eye className="w-4 h-4" />
-                {t('kb.views', 'Views')}
+                {t('editor.stats.views', { defaultValue: 'Views' })}
               </span>
               <span className="font-medium">{article.view_count}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2 text-muted-foreground">
                 <ThumbsUp className="w-4 h-4" />
-                {t('kb.helpful', 'Helpful')}
+                {t('editor.stats.helpful', { defaultValue: 'Helpful' })}
               </span>
               <span className="font-medium">{article.helpful_count}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2 text-muted-foreground">
                 <ThumbsDown className="w-4 h-4" />
-                {t('kb.notHelpful', 'Not helpful')}
+                {t('editor.stats.notHelpful', { defaultValue: 'Not helpful' })}
               </span>
               <span className="font-medium">{article.not_helpful_count}</span>
             </div>
@@ -417,7 +442,7 @@ export default function KBArticleEditor({
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2 text-muted-foreground">
                   <Calendar className="w-4 h-4" />
-                  {t('kb.published', 'Published')}
+                  {t('editor.stats.published', { defaultValue: 'Published' })}
                 </span>
                 <span className="font-medium">{formatDate(article.published_at)}</span>
               </div>
@@ -428,13 +453,13 @@ export default function KBArticleEditor({
         {/* Metadata Form */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t('kb.metadata', 'Metadata')}</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('editor.metadata.title', { defaultValue: 'Metadata' })}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Title */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                {t('kb.title', 'Title')}
+                {t('editor.metadata.fields.title', { defaultValue: 'Title' })}
               </label>
               <Input
                 type="text"
@@ -449,7 +474,7 @@ export default function KBArticleEditor({
             {/* Slug */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                {t('kb.slug', 'URL Slug')}
+                {t('editor.metadata.fields.slug', { defaultValue: 'URL Slug' })}
               </label>
               <Input
                 type="text"
@@ -464,10 +489,10 @@ export default function KBArticleEditor({
             {/* Article Type */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                {t('kb.articleType', 'Article Type')}
+                {t('editor.metadata.fields.articleType', { defaultValue: 'Article Type' })}
               </label>
               <CustomSelect
-                options={TYPE_OPTIONS}
+                options={typeOptions}
                 value={articleType}
                 onValueChange={(value) => {
                   setArticleType(value as ArticleType);
@@ -479,10 +504,10 @@ export default function KBArticleEditor({
             {/* Audience */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                {t('kb.audience', 'Audience')}
+                {t('editor.metadata.fields.audience', { defaultValue: 'Audience' })}
               </label>
               <CustomSelect
-                options={AUDIENCE_OPTIONS}
+                options={audienceOptions}
                 value={audience}
                 onValueChange={(value) => {
                   setAudience(value as ArticleAudience);
@@ -495,7 +520,7 @@ export default function KBArticleEditor({
             {categories.length > 0 && (
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  {t('kb.category', 'Category')}
+                  {t('editor.metadata.fields.category', { defaultValue: 'Category' })}
                 </label>
                 <CustomSelect
                   options={categoryOptions}
@@ -511,10 +536,10 @@ export default function KBArticleEditor({
             {/* Review Cycle */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                {t('kb.reviewCycle', 'Review Cycle')}
+                {t('editor.metadata.fields.reviewCycle', { defaultValue: 'Review Cycle' })}
               </label>
               <CustomSelect
-                options={REVIEW_CYCLE_OPTIONS}
+                options={reviewCycleOptions}
                 value={reviewCycleDays}
                 onValueChange={(value) => {
                   setReviewCycleDays(value);
@@ -523,7 +548,7 @@ export default function KBArticleEditor({
               />
               {article.next_review_due && (
                 <p className={`text-xs mt-1 ${isStale ? 'text-orange-600' : 'text-muted-foreground'}`}>
-                  {t('kb.nextReview', 'Next review')}: {formatDate(article.next_review_due)}
+                  {t('editor.metadata.fields.nextReview', { defaultValue: 'Next review' })}: {formatDate(article.next_review_due)}
                 </p>
               )}
             </div>
@@ -536,7 +561,9 @@ export default function KBArticleEditor({
               className="w-full"
             >
               <Save className="w-4 h-4 mr-2" />
-              {isSaving ? t('kb.saving', 'Saving...') : t('kb.saveMetadata', 'Save Metadata')}
+              {isSaving
+                ? t('editor.actions.saving', { defaultValue: 'Saving...' })
+                : t('editor.actions.saveMetadata', { defaultValue: 'Save Metadata' })}
             </Button>
           </CardContent>
         </Card>
@@ -546,7 +573,7 @@ export default function KBArticleEditor({
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Tags className="w-4 h-4" />
-              {t('kb.tags', 'Tags')}
+              {t('editor.tags.title', { defaultValue: 'Tags' })}
             </CardTitle>
           </CardHeader>
           <CardContent>

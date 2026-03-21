@@ -37,7 +37,7 @@ interface KnowledgeBasePageProps {
 }
 
 export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantEnabled = false }: KnowledgeBasePageProps) {
-  const { t } = useTranslation('features/documents');
+  const { t } = useTranslation('msp/knowledge-base');
   const tRef = useRef(t);
   tRef.current = t;
   const router = useRouter();
@@ -83,7 +83,7 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
     try {
       const result = await getArticlesWithTags(currentPage, pageSize, filters);
       if (typeof result === 'object' && 'code' in result) {
-        toast.error(tRef.current('kb.loadError', 'Failed to load articles'));
+        toast.error(tRef.current('page.feedback.loadError', { defaultValue: 'Failed to load articles' }));
         return;
       }
       const data = result as {
@@ -99,7 +99,7 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
       setArticleTags(data.articleTags);
       setAvailableTags(data.availableTags);
     } catch (error) {
-      handleError(error, tRef.current('kb.loadError', 'Failed to load articles'));
+      handleError(error, tRef.current('page.feedback.loadError', { defaultValue: 'Failed to load articles' }));
     } finally {
       setIsLoadingArticles(false);
     }
@@ -133,11 +133,11 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
           setUserName(nameParts.join(' ').trim() || user.email || 'User');
           setTenantId(user.tenant ?? '');
         } else {
-          setUserLoadError(t('kb.userLoadError', 'Failed to load user. Article editing is unavailable.'));
+          setUserLoadError(t('page.feedback.userLoadError', { defaultValue: 'Failed to load user. Article editing is unavailable.' }));
         }
       } catch (error) {
         console.error('Failed to get user:', error);
-        setUserLoadError(t('kb.userLoadError', 'Failed to load user. Article editing is unavailable.'));
+        setUserLoadError(t('page.feedback.userLoadError', { defaultValue: 'Failed to load user. Article editing is unavailable.' }));
       }
     };
     loadUser();
@@ -154,20 +154,20 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
   const handleCreateNew = useCallback(async () => {
     try {
       const result = await createArticle({
-        title: t('kb.newArticleTitle', 'New Article'),
+        title: t('page.newArticleTitle', { defaultValue: 'New Article' }),
         articleType: 'how_to',
         audience: 'internal',
       });
 
       if ('code' in result) {
-        toast.error(t('kb.createError', 'Failed to create article'));
+        toast.error(t('page.feedback.createError', { defaultValue: 'Failed to create article' }));
         return;
       }
 
       const article = result as IKBArticleWithDocument;
       updateUrl({ article: article.article_id });
     } catch (error) {
-      handleError(error, t('kb.createError', 'Failed to create article'));
+      handleError(error, t('page.feedback.createError', { defaultValue: 'Failed to create article' }));
     }
   }, [t, updateUrl]);
 
@@ -209,10 +209,10 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
           <BookOpen className="w-8 h-8 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">
-              {t('kb.pageTitle', 'Knowledge Base')}
+              {t('page.title', { defaultValue: 'Knowledge Base' })}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {t('kb.pageSubtitle', 'Create and manage knowledge base articles')}
+              {t('page.subtitle', { defaultValue: 'Create and manage knowledge base articles' })}
             </p>
           </div>
         </div>
@@ -225,11 +225,11 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
               disabled={!userId}
             >
               <Download className="w-4 h-4 mr-2" />
-              {t('kb.importArticles', 'Import')}
+              {t('page.actions.import', { defaultValue: 'Import' })}
             </Button>
             <Button id="kb-new-article" onClick={handleCreateNew} disabled={!userId}>
               <Plus className="w-4 h-4 mr-2" />
-              {t('kb.newArticle', 'New Article')}
+              {t('page.actions.newArticle', { defaultValue: 'New Article' })}
             </Button>
           </div>
         )}
@@ -246,11 +246,11 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
         <TabsList className="mb-4">
           <TabsTrigger value="articles">
             <BookOpen className="w-4 h-4 mr-2" />
-            {t('kb.tabArticles', 'Articles')}
+            {t('page.tabs.articles', { defaultValue: 'Articles' })}
           </TabsTrigger>
           <TabsTrigger value="review">
             <Clock className="w-4 h-4 mr-2" />
-            {t('kb.tabReview', 'Review Dashboard')}
+            {t('page.tabs.reviewDashboard', { defaultValue: 'Review Dashboard' })}
           </TabsTrigger>
         </TabsList>
       </Tabs>
