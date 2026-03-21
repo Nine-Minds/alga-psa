@@ -225,12 +225,13 @@ async function getExistingCadenceOwner(
 export const getClientContractLine = withAuth(async (
   _user,
   { tenant },
-  clientId: string
+  clientId: string,
+  clientContractId?: string
 ): Promise<IClientContractLine[]> => {
   try {
     const { knex: db } = await createTenantKnex();
     const clientContractLine = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contract_lines as cl')
+      const query = trx('contract_lines as cl')
         .join('client_contracts as cc', function () {
           this.on('cc.contract_id', '=', 'cl.contract_id')
             .andOn('cc.tenant', '=', 'cl.tenant');
@@ -260,6 +261,12 @@ export const getClientContractLine = withAuth(async (
           'sc.category_name as service_category_name'
         ])
         .orderBy('cc.start_date', 'desc');
+
+      if (clientContractId) {
+        query.andWhere('cc.client_contract_id', clientContractId);
+      }
+
+      return await query;
     });
 
     return clientContractLine.map((billing: IClientContractLine): IClientContractLine => {

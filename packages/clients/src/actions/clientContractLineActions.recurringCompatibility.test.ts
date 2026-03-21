@@ -21,7 +21,7 @@ vi.mock('../lib/billingHelpers', () => ({
 }));
 
 function buildReadTrx(rows: any[]) {
-  return ((table: string) => {
+  const trx = ((table: string) => {
     if (table !== 'contract_lines as cl') {
       throw new Error(`Unexpected read table: ${table}`);
     }
@@ -30,10 +30,14 @@ function buildReadTrx(rows: any[]) {
     builder.join = vi.fn(() => builder);
     builder.leftJoin = vi.fn(() => builder);
     builder.where = vi.fn(() => builder);
+    builder.andWhere = vi.fn(() => builder);
     builder.select = vi.fn(() => builder);
     builder.orderBy = vi.fn().mockResolvedValue(rows);
     return builder;
   }) as any;
+
+  trx.raw = vi.fn((value: string) => value);
+  return trx;
 }
 
 function buildWriteTrx(params: { templateLine: Record<string, unknown>; insertMock: any }) {

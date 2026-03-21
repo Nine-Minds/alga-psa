@@ -103,6 +103,14 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const [clientTaxRates, setClientTaxRates] = useState<IClientTaxRate[]>([]);
     // Removed selectedTaxRate state as it's no longer needed for the simplified ClientTaxRates component
 
+    const selectedAssignmentContractLines = React.useMemo(() => {
+        if (!selectedClientContractId) {
+            return [];
+        }
+
+        return clientContractLines.filter((line) => line.client_contract_id === selectedClientContractId);
+    }, [clientContractLines, selectedClientContractId]);
+
     // Formats a Date object or string into 'YYYY-MM-DD' string, handling potential UTC interpretation
     const formatStartDate = (date: Date | string | null): string => {
         // Log the input received by the function on the client side
@@ -576,7 +584,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
                     {/* Existing ContractLines component */}
                     <ContractLines
-                        clientContractLines={clientContractLines}
+                        clientContractLines={selectedAssignmentContractLines}
                         contractLines={contractLines}
                         assignments={clientContracts}
                         selectedClientContractId={selectedClientContractId}

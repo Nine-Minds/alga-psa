@@ -13,8 +13,10 @@ const clientLineModelSource = readFileSync(
 describe('Multi-active client contract-line read scoping wiring', () => {
   it('T025: contract-line reads encode assignment identity as client_contract_id + contract_line_id', () => {
     expect(clientLineActionsSource).toContain("concat('contract-', cc.client_contract_id, '-', cl.contract_line_id) as client_contract_line_id");
+    expect(clientLineActionsSource).toContain("query.andWhere('cc.client_contract_id', clientContractId);");
     expect(clientLineActionsSource).not.toContain('cl.contract_line_id as client_contract_line_id');
     expect(clientLineModelSource).toContain("concat('contract-', cc.client_contract_id, '-', cl.contract_line_id) as client_contract_line_id");
+    expect(clientLineModelSource).toContain("query.andWhere('cc.client_contract_id', clientContractId);");
   });
 
   it('T025: mutation and historical guard paths parse synthetic assignment identities safely', () => {

@@ -214,7 +214,12 @@ class ClientContractLine {
     }
   }
 
-  static async getByClientId(clientId: string, includeContractPlans: boolean = true, tenantId?: string): Promise<IClientContractLine[]> {
+  static async getByClientId(
+    clientId: string,
+    includeContractPlans: boolean = true,
+    tenantId?: string,
+    clientContractId?: string,
+  ): Promise<IClientContractLine[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching client contract lines');
@@ -229,6 +234,10 @@ class ClientContractLine {
         })
         .select(this.contractLineSelectColumns(db))
         .orderBy('cc.start_date', 'desc');
+
+      if (clientContractId) {
+        query.andWhere('cc.client_contract_id', clientContractId);
+      }
 
       if (!includeContractPlans) {
         query.where('cl.is_active', true);

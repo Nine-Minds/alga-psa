@@ -469,9 +469,16 @@ export async function getDetailedClientContract(
 
   const normalized = normalizeClientContract(clientContract);
 
-  const contractLines = await knexOrTrx('contract_lines')
-    .where({ contract_id: (normalized as any).contract_id, tenant })
-    .select('contract_line_name');
+  const contractLines = await knexOrTrx('client_contracts as cc')
+    .join('contract_lines as cl', function joinContractLines() {
+      this.on('cc.contract_id', '=', 'cl.contract_id').andOn('cc.tenant', '=', 'cl.tenant');
+    })
+    .where({
+      'cc.client_contract_id': clientContractId,
+      'cc.tenant': tenant,
+    })
+    .distinct('cl.contract_line_id', 'cl.contract_line_name')
+    .select('cl.contract_line_name');
 
   return {
     ...normalized,

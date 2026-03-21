@@ -83,10 +83,11 @@ export const updateClientContractLine = withAuth(async (
 export const getClientContractLine = withAuth(async (
   _user,
   { tenant },
-  clientId: string
+  clientId: string,
+  clientContractId?: string
 ): Promise<IClientContractLine[]> => {
   try {
-    const billings = await ClientContractLine.getByClientId(clientId);
+    const billings = await ClientContractLine.getByClientId(clientId, true, undefined, clientContractId);
     return billings;
   } catch (error) {
     console.error('Error fetching client billing:', error);
