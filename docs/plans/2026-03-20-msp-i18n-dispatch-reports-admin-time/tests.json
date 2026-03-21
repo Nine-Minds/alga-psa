@@ -76,7 +76,7 @@
   {
     "id": "T022",
     "description": "Admin: ROUTE_NAMESPACES maps /msp/settings to include msp/admin",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
