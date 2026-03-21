@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "validate-translations.cjs passes with 0 errors after dispatch batch (msp/dispatch keys consistent across all 9 locales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F012", "F013"]
   },
   {
