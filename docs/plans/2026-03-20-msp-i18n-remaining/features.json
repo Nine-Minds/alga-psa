@@ -7,7 +7,7 @@
   {"id": "F006", "description": "Italian accent audit on it/msp/surveys.json", "implemented": true, "prdRefs": ["2b-13"]},
 
   {"id": "F010", "description": "Create en/msp/schedule.json with ~211 keys for 11 schedule components", "implemented": true, "prdRefs": ["2b-14"]},
-  {"id": "F011", "description": "Wire useTranslation('msp/schedule') in EntryPopup.tsx (~68), AvailabilitySettings.tsx (~64), ScheduleCalendar.tsx (~42)", "implemented": false, "prdRefs": ["2b-14"]},
+  {"id": "F011", "description": "Wire useTranslation('msp/schedule') in EntryPopup.tsx (~68), AvailabilitySettings.tsx (~64), ScheduleCalendar.tsx (~42)", "implemented": true, "prdRefs": ["2b-14"]},
   {"id": "F012", "description": "Wire useTranslation in AppointmentRequestsPanel.tsx (~28) and remaining schedule files with strings", "implemented": false, "prdRefs": ["2b-14"]},
   {"id": "F013", "description": "Generate msp/schedule translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-14"]},
   {"id": "F014", "description": "Italian accent audit on it/msp/schedule.json", "implemented": false, "prdRefs": ["2b-14"]},

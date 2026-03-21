@@ -127,6 +127,8 @@ done
 - (2026-03-21) Completed `F006`: ran the Italian accent audit against [server/public/locales/it/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/surveys.json). The broad grep only surfaced legitimate `e` conjunctions; a targeted search for known missing-accent spellings (`puo`, `gia`, `verra`, `funzionalita`, `necessario`) returned no matches, so no Italian copy changes were needed.
 - (2026-03-21) Completed `F010`: added [server/public/locales/en/msp/schedule.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/schedule.json) as the English schedule namespace. The file groups strings by `page`, `sidebar`, `agentView`, `calendar`, `weeklyEvent`, `requests`, `availabilitySettings`, and `entryPopup` so the upcoming wiring can move the schedule surface off hardcoded English in coherent slices.
 - (2026-03-21) Validation for `F010`: parsed `server/public/locales/en/msp/schedule.json` successfully with `node -e "JSON.parse(...)"`.
+- (2026-03-21) Completed `F011`: wired the three largest schedule files to `useTranslation('msp/schedule')`. `EntryPopup.tsx` now uses translated dialog/validation/approval/recurrence copy and locale-aware date formatting for appointment request timestamps; `AvailabilitySettings.tsx` now translates dialog tabs, auto-approval/settings copy, tables, exceptions, and success/error toasts; `ScheduleCalendar.tsx` now translates the legend, toolbar, loading states, delete dialogs, and month-view event tooltips with locale-aware dates.
+- (2026-03-21) Validation for `F011`: `git diff --check` passed, and `npx tsc -p packages/scheduling/tsconfig.json --noEmit` passed after the schedule rewrites.
 
 ## Open Questions
 
