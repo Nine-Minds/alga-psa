@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ensureClientBillingSettingsRow } from '../billingClients/billingSettings';
+import { ensureClientBillingSettingsRow, updateClientBillingSettings } from '../billingClients/billingSettings';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../billingClients/defaultContract';
 
 type Row = Record<string, any>;
@@ -325,5 +325,27 @@ describe('default contract ensure on billing settings ensure', () => {
     expect(contract?.contract_name).toBe('System-managed default contract');
     expect(contract?.contract_description).toBe('Created automatically for uncontracted work');
     expect(state.client_contracts).toHaveLength(1);
+  });
+
+  it('T014: null billing-settings override deletes settings without recreating default contract artifacts', async () => {
+    const knex = createFakeKnex({
+      clients: [{ tenant: 'tenant-1', client_id: 'client-1', default_currency_code: 'USD' }],
+      default_billing_settings: [],
+      client_billing_settings: [{ tenant: 'tenant-1', client_id: 'client-1' }],
+      contracts: [],
+      client_contracts: [],
+    });
+
+    const trxLikeKnex = Object.assign(knex, {
+      commit: () => undefined,
+      rollback: () => undefined,
+    });
+
+    await updateClientBillingSettings(trxLikeKnex as any, 'tenant-1', 'client-1', null);
+
+    const state = knex.__state as TableState;
+    expect(state.client_billing_settings).toHaveLength(0);
+    expect(state.contracts).toHaveLength(0);
+    expect(state.client_contracts).toHaveLength(0);
   });
 });

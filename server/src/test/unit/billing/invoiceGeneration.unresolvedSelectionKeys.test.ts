@@ -93,4 +93,53 @@ describe('invoice generation unresolved selection keys', () => {
       }),
     );
   });
+
+  it('T016/F070: contract-cadence selections remain scoped to explicit obligations with no unresolved fallback leakage', async () => {
+    const billingEngine: any = {
+      selectDueRecurringServicePeriodsForBillingWindow: vi.fn(async () => ({
+        'line-contract-1': { duePosition: 'arrears' },
+        'line-contract-2': { duePosition: 'arrears' },
+      })),
+      calculateBillingForExecutionWindow: vi.fn(async () => ({
+        charges: [],
+        totalAmount: 0,
+        discounts: [],
+        adjustments: [],
+        finalAmount: 0,
+        currency_code: 'USD',
+      })),
+    };
+
+    await calculateBillingForSelectionInputs({
+      billingEngine,
+      selectorInputs: [
+        {
+          clientId: 'client-1',
+          windowStart: '2026-03-01',
+          windowEnd: '2026-04-01',
+          executionWindow: {
+            kind: 'contract_cadence_window',
+            contractLineId: 'line-contract-2',
+            identityKey: 'exec-contract-2',
+          },
+        } as any,
+      ],
+    });
+
+    expect(billingEngine.calculateBillingForExecutionWindow).toHaveBeenCalledWith(
+      'client-1',
+      '2026-03-01',
+      '2026-04-01',
+      expect.objectContaining({
+        recurringTimingSelections: {
+          'line-contract-2': { duePosition: 'arrears' },
+        },
+        nonContractSelection: {
+          include: false,
+          timeEntryIds: [],
+          usageRecordIds: [],
+        },
+      }),
+    );
+  });
 });

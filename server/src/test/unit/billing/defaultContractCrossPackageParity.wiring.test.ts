@@ -24,4 +24,12 @@ describe('default-contract cross-package parity wiring', () => {
     expect(billingCycleAnchorActionsSource).toContain('import { ensureClientBillingSettingsRow } from \'@shared/billingClients/billingSettings\';');
     expect(billingScheduleActionsSource).toContain('import { ensureClientBillingSettingsRow } from \'./billingCycleAnchorActions\';');
   });
+
+  it('T018: integration-created clients still rely on first qualifying billing-config touchpoint for default-contract ensure', () => {
+    const source = readRepo('packages/integrations/src/services/xeroCsvClientSyncService.ts');
+    expect(source).toContain('await trx(\'clients\').insert({');
+    expect(source).toContain('await ensureDefaultContractForClientIfBillingConfigured(trx, {');
+    expect(source).toContain('tenant,');
+    expect(source).toContain('clientId,');
+  });
 });

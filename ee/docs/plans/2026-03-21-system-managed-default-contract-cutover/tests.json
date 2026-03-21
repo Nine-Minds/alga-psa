@@ -133,7 +133,7 @@
   {
     "id": "T012",
     "description": "Lifecycle integration: client delete through package action removes billing settings/cycles and default-contract assignment artifacts without dangling references.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017",
@@ -144,7 +144,7 @@
   {
     "id": "T013",
     "description": "Lifecycle integration: client delete through API/controller path executes equivalent cleanup behavior (no orphaned default-contract links).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016",
@@ -154,7 +154,7 @@
   {
     "id": "T014",
     "description": "Integration: null-setting override/deletion paths do not recreate default contract unexpectedly, while valid active billing-configuration paths still ensure it.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F011",
@@ -166,7 +166,7 @@
   {
     "id": "T015",
     "description": "Migration test: schema migration for markers/pointers/uniqueness is idempotent and safe on already-migrated databases.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055",
       "F056",
@@ -176,7 +176,7 @@
   {
     "id": "T016",
     "description": "Regression integration: service-period and contract-cadence recurring invoicing scenarios remain correct after default-contract cutover.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048",
       "F060",
@@ -187,7 +187,7 @@
   {
     "id": "T017",
     "description": "Observability test: ensure/reconcile/route paths emit expected structured logs/markers with no PII leakage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051",
       "F052",
@@ -198,7 +198,7 @@
   {
     "id": "T018",
     "description": "Integration-import regression: clients created via integration pathways still receive default contract on first qualifying billing-configuration interaction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F057",

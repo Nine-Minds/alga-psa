@@ -509,7 +509,7 @@
   {
     "id": "F062",
     "description": "Update API schema contracts if default-contract metadata is exposed in billing settings/contract endpoints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations 2"
     ]
@@ -525,7 +525,7 @@
   {
     "id": "F064",
     "description": "Maintain multi-active-contract support while preserving deterministic resolver precedence for default contract only as fallback.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 16"
     ]
@@ -533,7 +533,7 @@
   {
     "id": "F065",
     "description": "Ensure invoice history and recurring history attribution fields display stable default-contract context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 4"
     ]
@@ -573,7 +573,7 @@
   {
     "id": "F070",
     "description": "Validate no regression in contract cadence and service-period invoicing flows when default-contract routing is enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 16"
     ]

@@ -341,6 +341,7 @@ export const contractResponseSchema = z.object({
   billing_frequency: billingFrequencySchema,
   status: contractStatusSchema,
   is_active: z.boolean(),
+  is_system_managed_default: z.boolean().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,

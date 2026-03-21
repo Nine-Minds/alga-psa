@@ -353,6 +353,9 @@ export interface RecurringInvoiceHistoryRow {
   invoiceWindowEnd: ISO8601String | null;
   invoiceWindowLabel: string;
   assignmentContractIds: string[];
+  assignmentDefaultContractIds: string[];
+  assignmentExplicitContractIds: string[];
+  assignmentSourceSummary: 'system_managed_default_contract' | 'explicit_contract' | 'mixed' | 'unassigned';
   isMultiAssignment: boolean;
   assignmentSummary: string;
 }
@@ -416,6 +419,55 @@ function normalizeHistoryAssignmentContractIds(value: unknown): string[] {
   return [];
 }
 
+function buildHistoryAssignmentSummary(input: {
+  assignmentContractIds: string[];
+  assignmentDefaultContractIds: string[];
+  assignmentExplicitContractIds: string[];
+}): {
+  assignmentSummary: string;
+  assignmentSourceSummary: RecurringInvoiceHistoryRow['assignmentSourceSummary'];
+} {
+  const totalAssignments = input.assignmentContractIds.length;
+  const defaultCount = input.assignmentDefaultContractIds.length;
+  const explicitCount =
+    input.assignmentExplicitContractIds.length > 0
+      ? input.assignmentExplicitContractIds.length
+      : Math.max(totalAssignments - defaultCount, 0);
+
+  if (totalAssignments === 0) {
+    return {
+      assignmentSummary: 'No assignment header',
+      assignmentSourceSummary: 'unassigned',
+    };
+  }
+
+  if (defaultCount > 0 && explicitCount === 0) {
+    return {
+      assignmentSummary:
+        totalAssignments > 1
+          ? `System-managed default contract (${totalAssignments} assignments)`
+          : 'System-managed default contract',
+      assignmentSourceSummary: 'system_managed_default_contract',
+    };
+  }
+
+  if (defaultCount > 0 && explicitCount > 0) {
+    return {
+      assignmentSummary:
+        `Mixed assignment (${explicitCount} explicit, ${defaultCount} system-managed default)`,
+      assignmentSourceSummary: 'mixed',
+    };
+  }
+
+  return {
+    assignmentSummary:
+      totalAssignments > 1
+        ? `Explicit contract assignments (${totalAssignments})`
+        : 'Explicit contract assignment',
+    assignmentSourceSummary: 'explicit_contract',
+  };
+}
+
 function mapRecurringHistoryRow(row: any): RecurringInvoiceHistoryRow {
   const servicePeriodStart = normalizeHistoryDate(row.service_period_start);
   const servicePeriodEnd = normalizeHistoryDate(row.service_period_end);
@@ -431,11 +483,17 @@ function mapRecurringHistoryRow(row: any): RecurringInvoiceHistoryRow {
   const assignmentContractIds = normalizeHistoryAssignmentContractIds(
     row.assignment_contract_ids,
   );
-  const assignmentSummary = assignmentContractIds.length > 1
-    ? `Multi-assignment invoice (${assignmentContractIds.length})`
-    : assignmentContractIds.length === 1
-      ? `Assignment ${assignmentContractIds[0]}`
-      : 'No assignment header';
+  const assignmentDefaultContractIds = normalizeHistoryAssignmentContractIds(
+    row.assignment_default_contract_ids,
+  );
+  const assignmentExplicitContractIds = normalizeHistoryAssignmentContractIds(
+    row.assignment_explicit_contract_ids,
+  );
+  const assignmentSummary = buildHistoryAssignmentSummary({
+    assignmentContractIds,
+    assignmentDefaultContractIds,
+    assignmentExplicitContractIds,
+  });
 
   return {
     invoiceId: row.invoice_id,
@@ -461,8 +519,11 @@ function mapRecurringHistoryRow(row: any): RecurringInvoiceHistoryRow {
       invoiceWindowEnd,
     ),
     assignmentContractIds,
+    assignmentDefaultContractIds,
+    assignmentExplicitContractIds,
+    assignmentSourceSummary: assignmentSummary.assignmentSourceSummary,
     isMultiAssignment: assignmentContractIds.length > 1,
-    assignmentSummary,
+    assignmentSummary: assignmentSummary.assignmentSummary,
   };
 }
 
@@ -650,7 +711,35 @@ async function fetchRecurringInvoiceHistoryPage(
           where ic.invoice_id = i.invoice_id
             and ic.tenant = i.tenant
             and ic.client_contract_id is not null
-        ), ARRAY[]::uuid[]) as assignment_contract_ids`)
+        ), ARRAY[]::uuid[]) as assignment_contract_ids`),
+        trx.raw(`coalesce((
+          select array_agg(distinct ic.client_contract_id)
+          from invoice_charges ic
+          join client_contracts cc
+            on cc.client_contract_id = ic.client_contract_id
+           and cc.tenant = ic.tenant
+          join contracts ct
+            on ct.contract_id = cc.contract_id
+           and ct.tenant = cc.tenant
+          where ic.invoice_id = i.invoice_id
+            and ic.tenant = i.tenant
+            and ic.client_contract_id is not null
+            and ct.is_system_managed_default = true
+        ), ARRAY[]::uuid[]) as assignment_default_contract_ids`),
+        trx.raw(`coalesce((
+          select array_agg(distinct ic.client_contract_id)
+          from invoice_charges ic
+          join client_contracts cc
+            on cc.client_contract_id = ic.client_contract_id
+           and cc.tenant = ic.tenant
+          join contracts ct
+            on ct.contract_id = cc.contract_id
+           and ct.tenant = cc.tenant
+          where ic.invoice_id = i.invoice_id
+            and ic.tenant = i.tenant
+            and ic.client_contract_id is not null
+            and (ct.is_system_managed_default is null or ct.is_system_managed_default = false)
+        ), ARRAY[]::uuid[]) as assignment_explicit_contract_ids`)
       )
       .orderByRaw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end, i.invoice_date) desc`)
       .orderBy('i.invoice_id', 'desc')

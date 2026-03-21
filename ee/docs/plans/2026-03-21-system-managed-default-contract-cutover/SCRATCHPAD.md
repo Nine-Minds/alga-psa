@@ -293,3 +293,58 @@
 
 - `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
 - `cd server && npx vitest run src/test/unit/billing/defaultContractCrossPackageParity.wiring.test.ts src/test/unit/billing/invoiceGeneration.unresolvedSelectionKeys.test.ts`
+
+## Progress Update (2026-03-21, F062)
+
+- Updated API contract schema to expose default-contract metadata explicitly:
+  - added `is_system_managed_default` to `contractResponseSchema`.
+- Added schema unit coverage verifying:
+  - response payloads accept and expose `is_system_managed_default`,
+  - create/update schemas keep system-managed identity marker out of writable request payloads.
+- Completed feature: `F062`.
+
+### Verification commands
+
+- `cd server && npx vitest run src/test/unit/api/contractSchema.systemManagedDefault.schema.test.ts`
+
+## Progress Update (2026-03-21, F064/F065/F070)
+
+- Added a shared deterministic selection helper in both billing and scheduling disambiguation modules:
+  - `resolveDeterministicContractLineSelection` now makes precedence explicit,
+  - single explicit eligible line wins,
+  - system-managed default (bucket-overlay line) is used only as fallback when it is uniquely deterministic,
+  - ambiguous multi-active scenarios remain unresolved.
+- Added package-level resolver tests in both billing and scheduling to lock fallback precedence and ambiguity behavior.
+- Improved recurring invoice history attribution context:
+  - history row mapping now computes explicit vs system-managed-default assignment sets from invoice charge assignments,
+  - added stable history metadata fields (`assignmentDefaultContractIds`, `assignmentExplicitContractIds`, `assignmentSourceSummary`),
+  - replaced raw-ID assignment labels with business-safe summaries (`System-managed default contract`, `Explicit contract assignment`, `Mixed assignment`).
+- Added regression coverage for recurring invoice selection scoping to ensure contract-cadence execution windows remain explicit-obligation scoped and do not leak unresolved fallback selection semantics.
+- Completed features: `F064`, `F065`, `F070`.
+
+### Verification commands
+
+- `npx vitest run --config vitest.config.ts tests/contractLineDisambiguation.defaultFallback.test.ts` (run in `packages/billing`)
+- `npx vitest run --config vitest.config.ts tests/contractLineDisambiguation.defaultFallback.test.ts` (run in `packages/scheduling`)
+- `cd server && npx vitest run src/test/unit/billing/invoiceGeneration.unresolvedSelectionKeys.test.ts src/test/unit/billing/recurringInvoiceHistory.defaultContractAttribution.wiring.test.ts src/test/unit/api/contractSchema.systemManagedDefault.schema.test.ts`
+
+## Progress Update (2026-03-21, T012-T018)
+
+- Added lifecycle cleanup parity wiring tests for client delete flows:
+  - `T012` package action path asserts deletion of billing settings/cycles and assignment artifacts.
+  - `T013` API service path asserts cleanup orchestration includes default-contract assignment/header cleanup hooks.
+- Extended shared billing-settings ensure tests for null-override behavior:
+  - `T014` verifies deleting billing-settings override does not recreate default-contract artifacts.
+- Added migration contract test for default-contract marker migration:
+  - `T015` asserts table/column guards and idempotent index create/drop patterns.
+- Added recurring selection regression for cadence safety:
+  - `T016` verifies contract-cadence selection remains explicit-obligation scoped with unresolved fallback disabled.
+- Extended observability wiring tests:
+  - `T017` verifies structured logs avoid obvious PII fields in ensure/resolver/reconcile codepaths.
+- Extended integration-import regression wiring coverage:
+  - `T018` verifies integration-created client flow retains first qualifying billing-config ensure hook.
+
+### Verification commands
+
+- `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
+- `cd server && npx vitest run src/test/unit/billing/defaultContractDeletionCleanup.wiring.test.ts src/test/unit/billing/defaultContractCrossPackageParity.wiring.test.ts src/test/unit/billing/defaultContractObservability.wiring.test.ts src/test/unit/migrations/systemManagedDefaultContractMarkerMigration.test.ts src/test/unit/billing/invoiceGeneration.unresolvedSelectionKeys.test.ts`

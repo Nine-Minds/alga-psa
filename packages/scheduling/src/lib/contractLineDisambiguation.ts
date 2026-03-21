@@ -54,6 +54,45 @@ const logResolverDecision = (payload: {
   });
 };
 
+export function resolveDeterministicContractLineSelection(
+  eligibleContractLines: EligibleContractLine[]
+): {
+  selectedContractLineId: string | null;
+  decision: 'explicit' | 'default' | 'ambiguous_or_unresolved';
+  overlayCount: number;
+} {
+  if (eligibleContractLines.length === 0) {
+    return {
+      selectedContractLineId: null,
+      decision: 'ambiguous_or_unresolved',
+      overlayCount: 0,
+    };
+  }
+
+  if (eligibleContractLines.length === 1) {
+    return {
+      selectedContractLineId: eligibleContractLines[0].client_contract_line_id,
+      decision: 'explicit',
+      overlayCount: Number(Boolean(eligibleContractLines[0].bucket_overlay?.config_id)),
+    };
+  }
+
+  const overlayContractLines = eligibleContractLines.filter((contractLine) => contractLine.bucket_overlay?.config_id);
+  if (overlayContractLines.length === 1) {
+    return {
+      selectedContractLineId: overlayContractLines[0].client_contract_line_id,
+      decision: 'default',
+      overlayCount: overlayContractLines.length,
+    };
+  }
+
+  return {
+    selectedContractLineId: null,
+    decision: 'ambiguous_or_unresolved',
+    overlayCount: overlayContractLines.length,
+  };
+}
+
 export async function determineDefaultContractLine(
   clientId: string,
   serviceId: string,
@@ -71,51 +110,7 @@ export async function determineDefaultContractLine(
 
   try {
     const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
-    const overlayContractLines = eligibleContractLines.filter((contractLine) => contractLine.bucket_overlay?.config_id);
-
-    if (eligibleContractLines.length === 1) {
-      const selected = eligibleContractLines[0].client_contract_line_id;
-      logResolverDecision({
-        tenant,
-        clientId,
-        serviceId,
-        effectiveDate,
-        eligibleCount: eligibleContractLines.length,
-        overlayCount: overlayContractLines.length,
-        decision: 'explicit',
-        selectedContractLineId: selected,
-      });
-      return selected;
-    }
-
-    if (eligibleContractLines.length === 0) {
-      logResolverDecision({
-        tenant,
-        clientId,
-        serviceId,
-        effectiveDate,
-        eligibleCount: 0,
-        overlayCount: 0,
-        decision: 'ambiguous_or_unresolved',
-        selectedContractLineId: null,
-      });
-      return null;
-    }
-
-    if (overlayContractLines.length === 1) {
-      const selected = overlayContractLines[0].client_contract_line_id;
-      logResolverDecision({
-        tenant,
-        clientId,
-        serviceId,
-        effectiveDate,
-        eligibleCount: eligibleContractLines.length,
-        overlayCount: overlayContractLines.length,
-        decision: 'default',
-        selectedContractLineId: selected,
-      });
-      return selected;
-    }
+    const resolution = resolveDeterministicContractLineSelection(eligibleContractLines);
 
     logResolverDecision({
       tenant,
@@ -123,11 +118,11 @@ export async function determineDefaultContractLine(
       serviceId,
       effectiveDate,
       eligibleCount: eligibleContractLines.length,
-      overlayCount: overlayContractLines.length,
-      decision: 'ambiguous_or_unresolved',
-      selectedContractLineId: null,
+      overlayCount: resolution.overlayCount,
+      decision: resolution.decision,
+      selectedContractLineId: resolution.selectedContractLineId,
     });
-    return null;
+    return resolution.selectedContractLineId;
   } catch (error) {
     console.error('Error determining default contract line:', error);
     return null;

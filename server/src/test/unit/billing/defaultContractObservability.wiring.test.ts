@@ -39,4 +39,20 @@ describe('default-contract observability wiring', () => {
     expect(source).toContain('"unmatched_resolved_deterministically"');
     expect(source).toContain('"unresolved_ambiguous_count"');
   });
+
+  it('T017: structured observability payloads avoid obvious PII fields', () => {
+    const ensureSource = readRepo('shared/billingClients/defaultContract.ts');
+    const schedulingSource = readRepo('packages/scheduling/src/lib/contractLineDisambiguation.ts');
+    const billingSource = readRepo('packages/billing/src/lib/contractLineDisambiguation.ts');
+    const engineSource = readRepo('packages/billing/src/lib/billing/billingEngine.ts');
+
+    expect(ensureSource).not.toContain('clientName');
+    expect(ensureSource).not.toContain('billing_email');
+    expect(schedulingSource).not.toContain('clientName');
+    expect(schedulingSource).not.toContain('email');
+    expect(billingSource).not.toContain('clientName');
+    expect(billingSource).not.toContain('email');
+    expect(engineSource).not.toContain('clientName');
+    expect(engineSource).not.toContain('email');
+  });
 });
