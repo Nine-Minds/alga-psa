@@ -124,7 +124,6 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         onValueChange={handleTabChange}
         className="w-full"
       >
-
         <Tabs.Content value="contract-templates">
           {searchParams?.has('contractId') ? (
             <ContractDetailSwitcher renderClientDetails={renderClientDetails} />
