@@ -140,7 +140,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">Create Your First Service</h2>
         <p className="text-sm text-gray-600">
-          Add a service type to your catalog. This will be used for time tracking. When billing becomes available, it will also be used for creating invoices.
+          Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior.
         </p>
       </div>
 
@@ -217,7 +217,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
           <div className="border rounded-lg p-4 space-y-4">
             <Alert variant="info" className="mb-4">
               <AlertDescription>
-                <span className="font-semibold">Note:</span> Service types define how services are billed. Fixed billing means a flat rate, hourly billing tracks time-based work, and usage billing charges per unit consumed.
+                <span className="font-semibold">Note:</span> Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service.
               </AlertDescription>
             </Alert>
             
@@ -558,6 +558,20 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
             )}
           </div>
         )}
+
+        <div className="space-y-2">
+          <Label htmlFor="serviceBillingMode">Billing Mode</Label>
+          <CustomSelect
+            id="serviceBillingMode"
+            value={data.serviceBillingMode || 'usage'}
+            onValueChange={(value) => updateData({ serviceBillingMode: value as 'fixed' | 'hourly' | 'usage' })}
+            options={[
+              { value: 'fixed', label: 'Fixed' },
+              { value: 'hourly', label: 'Hourly' },
+              { value: 'usage', label: 'Usage' },
+            ]}
+          />
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="servicePrice">Default Rate</Label>

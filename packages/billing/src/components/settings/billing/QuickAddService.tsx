@@ -356,15 +356,10 @@ if (createdService?.service_id) {
                 label="Service Type *"
                 value={serviceData.custom_service_type_id}
                 onChange={(value) => {
-                  // Find the selected service type to get its billing method
-                  const selectedType = allServiceTypes.find(t => t.id === value);
-
-                  // Update service data with the selected type ID and its billing method
+                  // Keep service-type taxonomy and billing-mode selection independent.
                   setServiceData({
                     ...serviceData,
                     custom_service_type_id: value,
-                    // Update billing_method based on the selected service type
-                    billing_method: selectedType?.billing_method || serviceData.billing_method,
                   });
                 }}
                 serviceTypes={allServiceTypes}

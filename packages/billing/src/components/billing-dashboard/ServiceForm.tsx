@@ -146,11 +146,6 @@ export const ServiceForm: React.FC = () => {
         value={serviceTypeId}
         onValueChange={(value) => {
           setServiceTypeId(value)
-          // Optionally update billing method based on selected service type
-          const selectedType = serviceTypes.find(t => t.id === value)
-          if (selectedType) {
-            setBillingMethod(selectedType.billing_method)
-          }
         }}
         placeholder="Select Service Type"
       />

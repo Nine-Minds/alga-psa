@@ -123,6 +123,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Completed F038/F039 by hard-cutting service/product schema contracts to canonical vocabulary: product schema now accepts/defaults `usage` (not `per_unit`), and schema tests explicitly reject legacy values. Key refs: `server/src/lib/api/schemas/productSchemas.ts`, `server/src/test/unit/api/productBillingMethodCutover.schema.test.ts`.
 - (2026-03-21) Completed F040 by removing `per_unit` from server/shared billing interface unions and adding static guards that financial + contract-line schemas remain canonical `fixed|hourly|usage`. Key refs: `server/src/interfaces/billing.interfaces.ts`, `packages/types/src/interfaces/billing.interfaces.ts`, `server/src/test/unit/api/billingInterfacesCutover.static.test.ts`.
 - (2026-03-21) Marked T012/T013 complete based on schema + interface guard suite run (service/product cutover schemas and financial/contract-line canonical enums).
+- (2026-03-21) Completed F041 by decoupling onboarding service creation from service-type billing metadata: onboarding now captures an explicit `serviceBillingMode` and `setupBilling` writes `service_catalog.billing_method` from onboarding input (fallback `usage`) instead of `service_types.billing_method`. Key refs: `packages/onboarding/src/actions/onboarding-actions/onboardingActions.ts`, `packages/onboarding/src/components/steps/BillingSetupStep.tsx`, `packages/onboarding/src/components/OnboardingWizard.tsx`, `packages/types/src/lib/onboardingWizard.ts`.
+- (2026-03-21) Completed F042 by removing service-type-driven billing auto-overwrite in service settings forms (`ServiceForm`, `QuickAddService`); changing service type now updates taxonomy only and preserves user-selected billing mode.
+- (2026-03-21) Added `T016` guard coverage in `server/src/test/unit/billing/onboardingServiceTypeDecoupling.static.test.ts` to enforce onboarding/service-settings decoupling and prevent regressions to identity-level billing coupling.
 
 - (2026-03-21) Validation runbooks:
   - `cd server && npx vitest run src/test/unit/billing/nonContractDueWork.integration.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
@@ -134,3 +137,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run src/test/unit/billing/schedulingAvailabilityDecoupling.static.test.ts` (pass, T015 guards)
   - `cd server && npx vitest run src/test/unit/api/productCatalogCanonicalWrites.static.test.ts` (pass)
   - `cd server && npx vitest run src/test/unit/api/serviceBillingMethodCutover.schema.test.ts src/test/unit/api/productBillingMethodCutover.schema.test.ts src/test/unit/api/billingInterfacesCutover.static.test.ts` (pass, T012/T013)
+  - `cd server && npx vitest run src/test/unit/billing/onboardingServiceTypeDecoupling.static.test.ts` (pass, T016)

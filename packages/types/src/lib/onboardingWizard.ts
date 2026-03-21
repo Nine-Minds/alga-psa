@@ -28,6 +28,7 @@ export interface WizardData {
   serviceName: string;
   serviceDescription: string;
   servicePrice: string;
+  serviceBillingMode?: 'fixed' | 'hourly' | 'usage';
   contractLineName: string;
   serviceTypeId?: string; // Selected service type
   serviceId?: string; // Track created service
@@ -88,4 +89,3 @@ export const ONBOARDING_WIZARD_STEPS = [
 ];
 
 export const ONBOARDING_WIZARD_REQUIRED_STEP_INDEXES = [0, 5]; // Client Info and Ticketing are required
-
