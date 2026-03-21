@@ -1,0 +1,85 @@
+{
+  "shared": {
+    "fallbacks": {
+      "empty": "-"
+    },
+    "statusLabels": {
+      "completed": "Voltooid",
+      "failed": "Mislukt",
+      "processing": "Verwerking",
+      "pending": "In behandeling"
+    },
+    "runnerLabels": {
+      "temporal": "Tijdelijk",
+      "pgboss": "PG baas"
+    }
+  },
+  "recentTable": {
+    "columns": {
+      "jobName": "Taaknaam",
+      "runner": "Loper",
+      "status": "Status",
+      "duration": "Duur",
+      "started": "Gestart",
+      "completed": "Voltooid"
+    },
+    "time": {
+      "justNow": "Zojuist",
+      "minutesAgo": "{{count}}m geleden",
+      "hoursAgo": "{{count}}u geleden"
+    },
+    "duration": {
+      "milliseconds": "{{count}}ms",
+      "seconds": "{{count}}s",
+      "minutesSeconds": "{{minutes}}m {{seconds}}s",
+      "hoursMinutes": "{{hours}}h {{minutes}}m"
+    },
+    "externalId": "ID: {{id}}..."
+  },
+  "metrics": {
+    "labels": {
+      "totalJobs": "Totaal aantal banen",
+      "totalJobsPgBoss": "Totaal aantal banen (PG Boss)",
+      "totalJobsTemporal": "Totaal aantal banen (tijdelijk)",
+      "completed": "Voltooid",
+      "failed": "Mislukt",
+      "pending": "In behandeling",
+      "processing": "Verwerking",
+      "pgboss": "PG baas",
+      "temporal": "Tijdelijk"
+    },
+    "successRate": "{{count}}% succespercentage"
+  },
+  "historyTable": {
+    "columns": {
+      "jobName": "Taaknaam",
+      "status": "Status",
+      "created": "Gemaakt",
+      "started": "Gestart",
+      "completed": "Voltooid"
+    }
+  },
+  "progress": {
+    "loading": "Vacaturegegevens laden...",
+    "labels": {
+      "created": "Gemaakt:",
+      "jobData": "Taakgegevens"
+    }
+  },
+  "drawer": {
+    "title": "Taakdetails",
+    "jobId": "ID: {{id}}",
+    "sections": {
+      "progress": "Vooruitgang van de baan",
+      "metrics": "Baanstatistieken",
+      "history": "Taakgeschiedenis"
+    }
+  },
+  "stepHistory": {
+    "title": "Taakstappen",
+    "labels": {
+      "processed": "Verwerkt:",
+      "retries": "Nieuwe pogingen:"
+    }
+  }
+}
