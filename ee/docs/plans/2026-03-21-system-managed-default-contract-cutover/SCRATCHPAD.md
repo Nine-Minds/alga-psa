@@ -207,3 +207,25 @@
 ### Notes
 
 - Guardrails are implemented at action entry points so API/controller paths that call these actions inherit the same permission and mutation protections.
+
+## Progress Update (2026-03-21, F051-F054)
+
+- Added structured ensure observability in `shared/billingClients/defaultContract.ts`:
+  - `default_contract.ensure` events for `created`, `reused`, and `skipped_no_billing_configuration` outcomes.
+  - Included metric markers: `default_contract_created`, `default_contract_reused`, and skip marker.
+- Added structured resolver routing logs in both scheduling and billing disambiguation libs:
+  - `contract_line_resolver.routing` events with decisions `explicit`, `default`, or `ambiguous_or_unresolved`.
+  - Included ambiguous marker metric `unresolved_ambiguous_count`.
+- Added billing-engine reconciliation observability for unresolved write-back flow:
+  - `billing_engine.reconcile.unresolved` events for deterministic single-match persistence and ambiguous/no-match skips.
+  - Included deterministic marker `unmatched_resolved_deterministically` and ambiguous marker `unresolved_ambiguous_count`.
+- Added wiring tests to lock observability contract points for ensure, resolver, and reconciliation paths.
+- Completed features: `F051`, `F052`, `F053`, `F054`.
+
+### Verification commands
+
+- `cd server && npx vitest run src/test/unit/billing/defaultContractObservability.wiring.test.ts src/test/unit/billing/systemManagedContractGuardrails.wiring.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
+
+### Notes
+
+- Structured payloads intentionally avoid end-user fields beyond tenant/client/record identifiers already present in server action context.

@@ -420,7 +420,7 @@
   {
     "id": "F051",
     "description": "Add structured log events for default contract ensure outcomes (created/reused).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Observability 1"
     ]
@@ -428,7 +428,7 @@
   {
     "id": "F052",
     "description": "Add structured log events for resolver routing decisions (explicit/default/ambiguous).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Observability 1"
     ]
@@ -436,7 +436,7 @@
   {
     "id": "F053",
     "description": "Add structured log events for reconciliation write-back updates and skips.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Observability 1"
     ]
@@ -444,7 +444,7 @@
   {
     "id": "F054",
     "description": "Add operational counters/trace markers for default contract created/reused and unresolved ambiguous counts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Observability 2"
     ]

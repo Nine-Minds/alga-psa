@@ -34,6 +34,26 @@ const resolveEffectiveDateRange = (
   };
 };
 
+const logResolverDecision = (payload: {
+  tenant: string;
+  clientId: string;
+  serviceId: string;
+  effectiveDate?: string | Date;
+  eligibleCount: number;
+  overlayCount: number;
+  decision: 'explicit' | 'default' | 'ambiguous_or_unresolved';
+  selectedContractLineId: string | null;
+}): void => {
+  console.info('[contract_line_resolver.routing]', {
+    event: 'contract_line_resolver.routing',
+    ...payload,
+    metric:
+      payload.decision === 'ambiguous_or_unresolved'
+        ? { name: 'unresolved_ambiguous_count', value: 1 }
+        : undefined,
+  });
+};
+
 export async function determineDefaultContractLine(
   clientId: string,
   serviceId: string,
@@ -51,20 +71,62 @@ export async function determineDefaultContractLine(
 
   try {
     const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
+    const overlayContractLines = eligibleContractLines.filter((contractLine) => contractLine.bucket_overlay?.config_id);
 
     if (eligibleContractLines.length === 1) {
-      return eligibleContractLines[0].client_contract_line_id;
+      const selected = eligibleContractLines[0].client_contract_line_id;
+      logResolverDecision({
+        tenant,
+        clientId,
+        serviceId,
+        effectiveDate,
+        eligibleCount: eligibleContractLines.length,
+        overlayCount: overlayContractLines.length,
+        decision: 'explicit',
+        selectedContractLineId: selected,
+      });
+      return selected;
     }
 
     if (eligibleContractLines.length === 0) {
+      logResolverDecision({
+        tenant,
+        clientId,
+        serviceId,
+        effectiveDate,
+        eligibleCount: 0,
+        overlayCount: 0,
+        decision: 'ambiguous_or_unresolved',
+        selectedContractLineId: null,
+      });
       return null;
     }
 
-    const overlayContractLines = eligibleContractLines.filter((contractLine) => contractLine.bucket_overlay?.config_id);
     if (overlayContractLines.length === 1) {
-      return overlayContractLines[0].client_contract_line_id;
+      const selected = overlayContractLines[0].client_contract_line_id;
+      logResolverDecision({
+        tenant,
+        clientId,
+        serviceId,
+        effectiveDate,
+        eligibleCount: eligibleContractLines.length,
+        overlayCount: overlayContractLines.length,
+        decision: 'default',
+        selectedContractLineId: selected,
+      });
+      return selected;
     }
 
+    logResolverDecision({
+      tenant,
+      clientId,
+      serviceId,
+      effectiveDate,
+      eligibleCount: eligibleContractLines.length,
+      overlayCount: overlayContractLines.length,
+      decision: 'ambiguous_or_unresolved',
+      selectedContractLineId: null,
+    });
     return null;
   } catch (error) {
     console.error('Error determining default contract line:', error);

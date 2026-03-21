@@ -22,6 +22,40 @@ export type EnsureDefaultContractFallbackResult = {
   result?: EnsureDefaultContractForClientResult;
 };
 
+type DefaultContractEnsureLogOutcome = 'created' | 'reused' | 'skipped_no_billing_configuration';
+
+const logDefaultContractEnsure = (
+  outcome: DefaultContractEnsureLogOutcome,
+  payload: {
+    tenant: string;
+    clientId: string;
+    contractId?: string;
+    clientContractId?: string;
+    createdContract?: boolean;
+    createdAssignment?: boolean;
+  },
+): void => {
+  console.info('[default_contract.ensure]', {
+    event: 'default_contract.ensure',
+    outcome,
+    tenant: payload.tenant,
+    clientId: payload.clientId,
+    contractId: payload.contractId,
+    clientContractId: payload.clientContractId,
+    createdContract: payload.createdContract ?? false,
+    createdAssignment: payload.createdAssignment ?? false,
+    metric: {
+      name:
+        outcome === 'created'
+          ? 'default_contract_created'
+          : outcome === 'reused'
+            ? 'default_contract_reused'
+            : 'default_contract_skipped_no_billing_configuration',
+      value: 1,
+    },
+  });
+};
+
 const isUniqueViolation = (error: unknown): boolean => {
   const code = (error as { code?: string } | undefined)?.code;
   return code === '23505';
@@ -164,12 +198,36 @@ export async function ensureDefaultContractForClient(
   params: EnsureDefaultContractForClientParams
 ): Promise<EnsureDefaultContractForClientResult> {
   if (isKnexTransaction(knexOrTrx)) {
-    return ensureDefaultContractForClientInTransaction(knexOrTrx, params);
+    const result = await ensureDefaultContractForClientInTransaction(knexOrTrx, params);
+    logDefaultContractEnsure(
+      result.createdContract || result.createdAssignment ? 'created' : 'reused',
+      {
+        tenant: params.tenant,
+        clientId: params.clientId,
+        contractId: result.contractId,
+        clientContractId: result.clientContractId,
+        createdContract: result.createdContract,
+        createdAssignment: result.createdAssignment,
+      },
+    );
+    return result;
   }
 
-  return (knexOrTrx as Knex).transaction(async (trx) =>
-    ensureDefaultContractForClientInTransaction(trx, params)
-  );
+  return (knexOrTrx as Knex).transaction(async (trx) => {
+    const result = await ensureDefaultContractForClientInTransaction(trx, params);
+    logDefaultContractEnsure(
+      result.createdContract || result.createdAssignment ? 'created' : 'reused',
+      {
+        tenant: params.tenant,
+        clientId: params.clientId,
+        contractId: result.contractId,
+        clientContractId: result.clientContractId,
+        createdContract: result.createdContract,
+        createdAssignment: result.createdAssignment,
+      },
+    );
+    return result;
+  });
 }
 
 export async function ensureDefaultContractForClientIfBillingConfigured(
@@ -182,6 +240,10 @@ export async function ensureDefaultContractForClientIfBillingConfigured(
     .first();
 
   if (!billingSettings?.client_id) {
+    logDefaultContractEnsure('skipped_no_billing_configuration', {
+      tenant: params.tenant,
+      clientId: params.clientId,
+    });
     return { ensured: false };
   }
 

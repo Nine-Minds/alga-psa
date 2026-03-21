@@ -1108,7 +1108,7 @@ export class BillingEngine {
         workDate,
       });
       if (eligibleLineIds.length === 1) {
-        await this.knex("time_entries")
+        const updatedCount = await this.knex("time_entries")
           .where({
             tenant: this.tenant,
             entry_id: entry.entry_id,
@@ -1118,8 +1118,35 @@ export class BillingEngine {
             contract_line_id: eligibleLineIds[0],
             updated_at: this.knex.fn.now(),
           });
+        console.info("[billing_engine.reconcile.unresolved]", {
+          event: "billing_engine.reconcile.unresolved",
+          recordType: "time_entry",
+          tenant: this.tenant,
+          clientId,
+          recordId: entry.entry_id,
+          decision: "deterministic_single_match",
+          selectedContractLineId: eligibleLineIds[0],
+          eligibleLineCount: eligibleLineIds.length,
+          persisted: updatedCount > 0,
+          metric: { name: "unmatched_resolved_deterministically", value: 1 },
+        });
         continue;
       }
+      console.info("[billing_engine.reconcile.unresolved]", {
+        event: "billing_engine.reconcile.unresolved",
+        recordType: "time_entry",
+        tenant: this.tenant,
+        clientId,
+        recordId: entry.entry_id,
+        decision: eligibleLineIds.length > 1 ? "ambiguous" : "no_match",
+        selectedContractLineId: null,
+        eligibleLineCount: eligibleLineIds.length,
+        persisted: false,
+        metric:
+          eligibleLineIds.length > 1
+            ? { name: "unresolved_ambiguous_count", value: 1 }
+            : undefined,
+      });
 
       const startDateTime = Temporal.PlainDateTime.from(
         entry.start_time.toISOString().replace("Z", ""),
@@ -1224,7 +1251,7 @@ export class BillingEngine {
         workDate,
       });
       if (eligibleLineIds.length === 1) {
-        await this.knex("usage_tracking")
+        const updatedCount = await this.knex("usage_tracking")
           .where({
             tenant: this.tenant,
             usage_id: record.usage_id,
@@ -1234,8 +1261,35 @@ export class BillingEngine {
             contract_line_id: eligibleLineIds[0],
             updated_at: this.knex.fn.now(),
           });
+        console.info("[billing_engine.reconcile.unresolved]", {
+          event: "billing_engine.reconcile.unresolved",
+          recordType: "usage_record",
+          tenant: this.tenant,
+          clientId,
+          recordId: record.usage_id,
+          decision: "deterministic_single_match",
+          selectedContractLineId: eligibleLineIds[0],
+          eligibleLineCount: eligibleLineIds.length,
+          persisted: updatedCount > 0,
+          metric: { name: "unmatched_resolved_deterministically", value: 1 },
+        });
         continue;
       }
+      console.info("[billing_engine.reconcile.unresolved]", {
+        event: "billing_engine.reconcile.unresolved",
+        recordType: "usage_record",
+        tenant: this.tenant,
+        clientId,
+        recordId: record.usage_id,
+        decision: eligibleLineIds.length > 1 ? "ambiguous" : "no_match",
+        selectedContractLineId: null,
+        eligibleLineCount: eligibleLineIds.length,
+        persisted: false,
+        metric:
+          eligibleLineIds.length > 1
+            ? { name: "unresolved_ambiguous_count", value: 1 }
+            : undefined,
+      });
 
       const quantity = Math.max(0, Number(record.quantity ?? 0));
       const rate = Math.ceil(record.custom_rate ?? record.default_rate ?? 0);
