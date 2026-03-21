@@ -167,14 +167,18 @@ export const verifyClientPortalPayment = withAuth(async (
         .first();
 
       const recurringSummaryResult = invoiceResult
-        ? await trx('invoice_charge_details')
+        ? await trx('invoice_charges as ic')
+            .join('invoice_charge_details as iid', function () {
+              this.on('ic.item_id', '=', 'iid.item_id')
+                .andOn('ic.tenant', '=', 'iid.tenant');
+            })
             .where({
-              tenant: tenantId,
-              invoice_id: invoiceId,
+              'ic.tenant': tenantId,
+              'ic.invoice_id': invoiceId,
             })
             .select(
-              trx.raw('MIN(service_period_start) as service_period_start'),
-              trx.raw('MAX(service_period_end) as service_period_end')
+              trx.raw('MIN(iid.service_period_start) as service_period_start'),
+              trx.raw('MAX(iid.service_period_end) as service_period_end')
             )
             .first()
         : null;
