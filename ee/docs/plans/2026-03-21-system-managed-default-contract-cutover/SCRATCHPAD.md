@@ -264,3 +264,32 @@
 - Added `DEVELOPER_RUNBOOK.md` covering default-contract lifecycle, routing, reconciliation, grouped-attribution behavior, and operational verification commands.
 - Documented forward guardrails to prevent reintroducing eager creation or identity-field bypasses.
 - Completed feature: `F061`.
+
+## Progress Update (2026-03-21, F069)
+
+- Enforced canonical system-managed default contract naming convention during ensure:
+  - existing default-contract rows are normalized to
+    - name: `System-managed default contract`
+    - description: `Created automatically for uncontracted work`
+  - normalization occurs on ensure touchpoints without creating duplicate contracts.
+- Added shared ensure regression coverage for legacy-named default contracts to guarantee canonical rename + assignment ensure behavior.
+- Completed feature: `F069`.
+
+### Verification commands
+
+- `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
+
+## Progress Update (2026-03-21, F060/F066/F067)
+
+- Removed obsolete legacy branch filtering in recurring invoice selection scoping:
+  - dropped dead `__non_contract__` obligation-prefix exclusion in invoice generation,
+  - retained legacy key parsing only at the schedule-key parser for backward compatibility.
+- Renamed internal selector helper in invoice generation from non-contract-centric wording to unresolved-centric wording to match cutover semantics.
+- Audited integration-created client pathway (`xeroCsvClientSyncService`) and confirmed first billing-config touchpoint hook still calls shared default-contract ensure.
+- Added/kept wiring coverage asserting package/shared billing settings + schedule/anchor paths continue to use shared ensure primitives, preventing cross-package drift.
+- Completed features: `F060`, `F066`, `F067`.
+
+### Verification commands
+
+- `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
+- `cd server && npx vitest run src/test/unit/billing/defaultContractCrossPackageParity.wiring.test.ts src/test/unit/billing/invoiceGeneration.unresolvedSelectionKeys.test.ts`

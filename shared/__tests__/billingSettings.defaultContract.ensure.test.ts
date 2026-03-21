@@ -293,4 +293,37 @@ describe('default contract ensure on billing settings ensure', () => {
     expect(state.contracts.filter((row) => row.is_system_managed_default === true)).toHaveLength(1);
     expect(state.client_contracts).toHaveLength(1);
   });
+
+  it('normalizes legacy system-managed default contract naming to canonical convention during ensure', async () => {
+    const knex = createFakeKnex({
+      clients: [{ tenant: 'tenant-1', client_id: 'client-1', default_currency_code: 'USD' }],
+      default_billing_settings: [],
+      client_billing_settings: [{ tenant: 'tenant-1', client_id: 'client-1' }],
+      contracts: [
+        {
+          tenant: 'tenant-1',
+          contract_id: 'contract-legacy',
+          owner_client_id: 'client-1',
+          is_system_managed_default: true,
+          is_template: false,
+          contract_name: 'Default contract',
+          contract_description: 'legacy description',
+        },
+      ],
+      client_contracts: [],
+    });
+
+    const result = await ensureDefaultContractForClientIfBillingConfigured(knex, {
+      tenant: 'tenant-1',
+      clientId: 'client-1',
+    });
+
+    expect(result.ensured).toBe(true);
+    const state = knex.__state as TableState;
+    const contract = state.contracts.find((row) => row.contract_id === 'contract-legacy');
+    expect(contract).toBeDefined();
+    expect(contract?.contract_name).toBe('System-managed default contract');
+    expect(contract?.contract_description).toBe('Created automatically for uncontracted work');
+    expect(state.client_contracts).toHaveLength(1);
+  });
 });

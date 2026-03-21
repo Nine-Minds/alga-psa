@@ -493,7 +493,7 @@
   {
     "id": "F060",
     "description": "Remove dead/obsolete fallback branches after cutover verification to reduce complexity debt.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration 6"
     ]
@@ -541,7 +541,7 @@
   {
     "id": "F066",
     "description": "Audit integration-created clients and ensure first billing-config touchpoint still triggers default-contract creation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations 5"
     ]
@@ -549,7 +549,7 @@
   {
     "id": "F067",
     "description": "Ensure cross-package shared helpers and package action layers do not diverge in default-contract behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 13"
     ]
@@ -565,7 +565,7 @@
   {
     "id": "F069",
     "description": "Define and enforce canonical naming convention for system-created default contracts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 1"
     ]

@@ -73,14 +73,14 @@ const isKnexTransaction = (
 async function findExistingDefaultContract(
   trx: Knex.Transaction,
   params: EnsureDefaultContractForClientParams
-): Promise<{ contract_id: string } | null> {
+): Promise<{ contract_id: string; contract_name?: string | null; contract_description?: string | null } | null> {
   const rows = await trx('contracts')
     .where({
       tenant: params.tenant,
       owner_client_id: params.clientId,
       is_system_managed_default: true,
     })
-    .select('contract_id', 'is_template');
+    .select('contract_id', 'contract_name', 'contract_description', 'is_template');
 
   const row = rows.find((candidate: { is_template?: boolean | null }) => candidate.is_template !== true);
   return row ? { contract_id: row.contract_id as string } : null;
@@ -178,6 +178,25 @@ async function ensureDefaultContractForClientInTransaction(
 
   if (!contractId) {
     throw new Error(`Unable to ensure default contract for client ${params.clientId}`);
+  }
+
+  if (
+    existing?.contract_id === contractId &&
+    (
+      existing.contract_name !== SYSTEM_MANAGED_DEFAULT_CONTRACT_NAME ||
+      (existing.contract_description ?? null) !== SYSTEM_MANAGED_DEFAULT_CONTRACT_DESCRIPTION
+    )
+  ) {
+    await trx('contracts')
+      .where({
+        tenant: params.tenant,
+        contract_id: contractId,
+      })
+      .update({
+        contract_name: SYSTEM_MANAGED_DEFAULT_CONTRACT_NAME,
+        contract_description: SYSTEM_MANAGED_DEFAULT_CONTRACT_DESCRIPTION,
+        updated_at: new Date().toISOString(),
+      });
   }
 
   const { clientContractId, createdAssignment } = await ensureClientContractAssignment(trx, {
