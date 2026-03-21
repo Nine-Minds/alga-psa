@@ -29,7 +29,7 @@
   {"id": "F032", "description": "EmailSettings.tsx: translate tab labels, provider options, all form labels/placeholders, domain statuses, general settings, error messages", "implemented": true, "prdRefs": ["A-FR2"]},
   {"id": "F033", "description": "Microsoft365DiagnosticsDialog.tsx: translate dialog title/description, status badges, diagnostic messages, buttons", "implemented": true, "prdRefs": ["A-FR3"]},
   {"id": "F034", "description": "InboundTicketDefaultsManager.tsx: translate heading, field labels, badges, empty states, How It Works section, dialog titles, buttons", "implemented": true, "prdRefs": ["A-FR4"]},
-  {"id": "F035", "description": "Update ROUTE_NAMESPACES for /msp/settings to include msp/admin", "implemented": false, "prdRefs": ["A-FR5"]},
+  {"id": "F035", "description": "Update ROUTE_NAMESPACES for /msp/settings to include msp/admin", "implemented": true, "prdRefs": ["A-FR5"]},
   {"id": "F036", "description": "Generate admin translations for all 6 non-English locales", "implemented": false},
   {"id": "F037", "description": "Create admin pseudo-locale files (xx, yy)", "implemented": false},
   {"id": "F038", "description": "Italian accent audit on it/msp/admin.json", "implemented": false},
