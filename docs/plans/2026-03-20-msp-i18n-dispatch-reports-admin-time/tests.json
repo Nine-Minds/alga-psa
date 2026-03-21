@@ -39,7 +39,7 @@
   {
     "id": "T011",
     "description": "Reports: all 4 component files compile with useTranslation('msp/reports') — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021", "F022", "F023", "F024"]
   },
   {
