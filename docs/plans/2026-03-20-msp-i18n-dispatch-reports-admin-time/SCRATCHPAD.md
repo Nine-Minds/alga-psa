@@ -137,6 +137,7 @@ SCRIPT
 - (2026-03-20) `F021` completed: wired `packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx` to `useTranslation('msp/reports')` for the report page title/description, summary cards, tab labels, section descriptions, empty states, status badges, yes/no labels, table headers, and unit strings. Also replaced the hardcoded US currency/date formatting with `useFormatters()` so report values follow the active locale.
 - (2026-03-20) `F022` completed: wired `packages/billing/src/components/billing-dashboard/reports/ContractPerformance.tsx` to `useTranslation('msp/reports')` for the report title, select placeholder, refresh action, metric labels, empty states, and comparison table headings. Revenue values now use `useFormatters().formatCurrency()` instead of manual dollar-string concatenation.
 - (2026-03-20) `F023` completed: wired `packages/billing/src/components/billing-dashboard/reports/ContractUsageReport.tsx` to `useTranslation('msp/reports')` for the heading, select placeholder, refresh action, table headers, ongoing/active/inactive/unknown-client status labels, empty states, and summary section labels. Start/end dates and billed totals now use `useFormatters()` for locale-aware formatting.
+- (2026-03-20) `F024` completed: wired `packages/ui/src/pages/Reports.tsx` to `useTranslation('msp/reports')` for the page heading and all four placeholder report-card titles/placeholders.
 
 ### Key file paths — Dispatch
 | File | Strings |
