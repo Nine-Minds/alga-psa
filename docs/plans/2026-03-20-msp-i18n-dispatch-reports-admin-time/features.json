@@ -49,7 +49,7 @@
   {"id": "F062", "description": "Create time-entry pseudo-locale files (xx, yy)", "implemented": true},
   {"id": "F063", "description": "Italian accent audit on it/msp/time-entry.json", "implemented": true},
 
-  {"id": "F090", "description": "Cross-check status badge translations (Submitted, Approved, etc.) are consistent across msp/time-entry and msp/dispatch in all languages", "implemented": false},
+  {"id": "F090", "description": "Cross-check status badge translations (Submitted, Approved, etc.) are consistent across msp/time-entry and msp/dispatch in all languages", "implemented": true},
   {"id": "F091", "description": "Validate all 36 new locale files with validate-translations.cjs", "implemented": false},
   {"id": "F092", "description": "Build verification: npm run build succeeds", "implemented": false}
 ]
