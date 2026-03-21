@@ -131,6 +131,7 @@ SCRIPT
 - (2026-03-20) `T001` passed: `node scripts/validate-translations.cjs` completed with `Errors: 0` and `Warnings: 0` after the dispatch locale and pseudo-locale files were added.
 - (2026-03-20) `T002` passed: `npx tsc -p packages/scheduling/tsconfig.json --noEmit --pretty false` completed successfully after wiring the dispatch components, giving package-level TypeScript coverage for the `useTranslation('msp/dispatch')` changes.
 - (2026-03-20) `T003` passed: a direct route-config assertion confirmed `ROUTE_NAMESPACES['/msp/technician-dispatch']` exactly equals `['common', 'msp/core', 'msp/dispatch']`.
+- (2026-03-20) `T004` passed: the Italian accent audit grep returned no matches for `server/public/locales/it/msp/dispatch.json`, confirming the known unaccented text patterns are absent.
 
 ### Key file paths — Dispatch
 | File | Strings |

@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "Dispatch: Italian accent audit passes for it/msp/dispatch.json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
