@@ -109,8 +109,8 @@ function createNonContractMember() {
   return buildRecurringDueWorkRow({
     selectorInput: buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:non_contract:usage:usage-1',
-      periodKey: 'period:2025-03-01:2025-04-01:usage:usage-1',
+      scheduleKey: 'schedule:tenant-1:unresolved:usage:usage-1',
+      periodKey: 'period:2025-03-01:2025-04-01:unresolved:usage:usage-1',
       windowStart: '2025-03-01',
       windowEnd: '2025-04-01',
     }),
@@ -118,11 +118,11 @@ function createNonContractMember() {
     servicePeriodStart: '2025-03-01',
     servicePeriodEnd: '2025-04-01',
     clientName: 'Acme Co',
-    scheduleKey: 'schedule:tenant-1:non_contract:usage:usage-1',
-    periodKey: 'period:2025-03-01:2025-04-01:usage:usage-1',
-    recordId: 'non-contract:usage:usage-1',
+    scheduleKey: 'schedule:tenant-1:unresolved:usage:usage-1',
+    periodKey: 'period:2025-03-01:2025-04-01:unresolved:usage:usage-1',
+    recordId: 'unresolved:usage:usage-1',
     contractName: null,
-    contractLineName: 'Non-contract usage record',
+    contractLineName: 'Unresolved usage record',
     currencyCode: 'USD',
     taxSource: 'internal',
   });
@@ -249,8 +249,8 @@ describe('AutomaticInvoices non-contract selection UI', () => {
     fireEvent.click(screen.getByLabelText('Expand'));
 
     await waitFor(() => {
-      expect(screen.getByText('Non-contract usage record')).toBeInTheDocument();
-      expect(screen.getByText('Non-contract work')).toBeInTheDocument();
+      expect(screen.getByText('Unresolved usage record')).toBeInTheDocument();
+      expect(screen.getByText('Unresolved work')).toBeInTheDocument();
     });
   });
 

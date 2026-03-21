@@ -635,7 +635,7 @@ function parseClientContractLineIdFromScheduleKey(scheduleKey: string | null | u
   return match?.[1] ?? null;
 }
 
-function parseNonContractSelectionFromScheduleKey(scheduleKey: string | null | undefined): {
+function parseUnresolvedSelectionFromScheduleKey(scheduleKey: string | null | undefined): {
   chargeType: 'time' | 'usage';
   recordId: string;
 } | null {
@@ -643,7 +643,7 @@ function parseNonContractSelectionFromScheduleKey(scheduleKey: string | null | u
     return null;
   }
 
-  const match = scheduleKey.match(/:non_contract:(time|usage):([^:]+)$/);
+  const match = scheduleKey.match(/:(?:unresolved|non_contract):(time|usage):([^:]+)$/);
   if (!match?.[1] || !match?.[2]) {
     return null;
   }
@@ -660,7 +660,7 @@ function isNonContractSelectorInput(selectorInput: IRecurringDueSelectionInput):
   }
 
   return Boolean(
-    parseNonContractSelectionFromScheduleKey(selectorInput.executionWindow.scheduleKey ?? null),
+    parseUnresolvedSelectionFromScheduleKey(selectorInput.executionWindow.scheduleKey ?? null),
   );
 }
 
@@ -669,11 +669,11 @@ function getSelectedRecurringObligationIdFromSelectorInput(
 ): string {
   const executionWindow = selectorInput.executionWindow;
   if (executionWindow.kind === 'client_cadence_window') {
-    const nonContractSelection = parseNonContractSelectionFromScheduleKey(
+    const nonContractSelection = parseUnresolvedSelectionFromScheduleKey(
       executionWindow.scheduleKey,
     );
     if (nonContractSelection) {
-      return `__non_contract__:${nonContractSelection.chargeType}:${nonContractSelection.recordId}`;
+      return `__unresolved__:${nonContractSelection.chargeType}:${nonContractSelection.recordId}`;
     }
 
     const selectedClientContractLineId = parseClientContractLineIdFromScheduleKey(
@@ -716,7 +716,7 @@ function scopeRecurringTimingSelectionsForSelectorInputs(
     new Set(selectorInputs.map(getSelectedRecurringObligationIdFromSelectorInput)),
   );
   const selectedContractObligationIds = selectedObligationIds.filter(
-    (obligationId) => !obligationId.startsWith('__non_contract__:'),
+    (obligationId) => !obligationId.startsWith('__unresolved__:') && !obligationId.startsWith('__non_contract__:'),
   );
   const selectionEntries = Object.entries(recurringTimingSelections ?? {});
   if (selectionEntries.length === 0) {
@@ -770,7 +770,7 @@ export async function calculateBillingForSelectionInputs(input: {
   const canonicalSelection = assertSameRecurringSelectionWindow(input.selectorInputs);
   const selectedNonContractSelections = input.selectorInputs
     .map((selectorInput) =>
-      parseNonContractSelectionFromScheduleKey(
+      parseUnresolvedSelectionFromScheduleKey(
         selectorInput.executionWindow.kind === 'client_cadence_window'
           ? selectorInput.executionWindow.scheduleKey ?? null
           : null,

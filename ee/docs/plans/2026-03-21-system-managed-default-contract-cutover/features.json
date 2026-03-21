@@ -281,7 +281,7 @@
   {
     "id": "F034",
     "description": "Refactor automatic invoicing candidate builder to consume default-contract-aware unresolved model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 8",
       "Execution Order 6"
@@ -290,7 +290,7 @@
   {
     "id": "F035",
     "description": "Refactor invoice generation selection-key parsing away from legacy non-contract key semantics in primary paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 9",
       "Execution Order 6"
@@ -299,7 +299,7 @@
   {
     "id": "F036",
     "description": "Maintain backward-safe parsing for historical keys only where migration compatibility is required.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration 5"
     ]
@@ -307,7 +307,7 @@
   {
     "id": "F037",
     "description": "Update recurring invoice run actions to use default-contract-aware selection data structures.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 9"
     ]

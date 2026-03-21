@@ -230,7 +230,7 @@ const parseNonContractSelectionFromScheduleKey = (scheduleKey: string | null | u
     return null;
   }
 
-  const match = scheduleKey.match(/:non_contract:(time|usage):([^:]+)$/);
+  const match = scheduleKey.match(/:(?:unresolved|non_contract):(time|usage):([^:]+)$/);
   if (!match?.[1] || !match?.[2]) {
     return null;
   }
@@ -245,8 +245,8 @@ const getRecurringAssignmentContext = (member: IRecurringDueWorkInvoiceCandidate
   const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
   if (nonContractSelection) {
     return nonContractSelection.chargeType === 'time'
-      ? 'Non-contract time entry'
-      : 'Non-contract usage record';
+      ? 'Unresolved time entry'
+      : 'Unresolved usage record';
   }
 
   if (member.contractLineId?.trim()) {
@@ -1495,7 +1495,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                       ) : null}
                                       {nonContractSelection ? (
                                         <div className="text-xs text-muted-foreground" data-testid={`non-contract-child-${member.executionIdentityKey}`}>
-                                          Non-contract work
+                                          Unresolved work
                                         </div>
                                       ) : null}
                                     </div>

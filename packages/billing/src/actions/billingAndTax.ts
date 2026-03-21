@@ -667,8 +667,8 @@ async function fetchUnresolvedNonContractDueWorkRows(
                 continue;
             }
 
-            const scheduleKey = `schedule:${tenant}:non_contract:${isTimeCharge ? 'time' : 'usage'}:${recordId}`;
-            const periodKey = `period:${period.period_start_date}:${period.period_end_date}:${isTimeCharge ? 'time' : 'usage'}:${recordId}`;
+            const scheduleKey = `schedule:${tenant}:unresolved:${isTimeCharge ? 'time' : 'usage'}:${recordId}`;
+            const periodKey = `period:${period.period_start_date}:${period.period_end_date}:unresolved:${isTimeCharge ? 'time' : 'usage'}:${recordId}`;
             const selectorInput = buildClientCadenceDueSelectionInput({
                 clientId: period.client_id,
                 scheduleKey,
@@ -688,11 +688,11 @@ async function fetchUnresolvedNonContractDueWorkRows(
                 asOf,
                 scheduleKey,
                 periodKey,
-                recordId: `non-contract:${isTimeCharge ? 'time' : 'usage'}:${recordId}`,
+                recordId: `unresolved:${isTimeCharge ? 'time' : 'usage'}:${recordId}`,
                 contractName: null,
                 contractLineName: isTimeCharge
-                    ? 'Non-contract time entry'
-                    : 'Non-contract usage record',
+                    ? 'Unresolved time entry'
+                    : 'Unresolved usage record',
                 purchaseOrderScopeKey: null,
                 currencyCode: metadata?.currencyCode ?? null,
                 taxSource: metadata?.taxSource ?? null,

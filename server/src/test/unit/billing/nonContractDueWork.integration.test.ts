@@ -174,7 +174,7 @@ describe('non-contract due-work reader', () => {
 
     expect(result.invoiceCandidates).toHaveLength(1);
     expect(result.invoiceCandidates[0]?.members[0]).toMatchObject({
-      scheduleKey: 'schedule:tenant-1:non_contract:time:te-1',
+      scheduleKey: 'schedule:tenant-1:unresolved:time:te-1',
       contractId: null,
       contractLineId: null,
     });
@@ -204,7 +204,7 @@ describe('non-contract due-work reader', () => {
 
     expect(result.invoiceCandidates).toHaveLength(1);
     expect(result.invoiceCandidates[0]?.members[0]).toMatchObject({
-      scheduleKey: 'schedule:tenant-1:non_contract:usage:usage-1',
+      scheduleKey: 'schedule:tenant-1:unresolved:usage:usage-1',
       contractId: null,
       contractLineId: null,
     });

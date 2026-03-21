@@ -94,10 +94,13 @@
 - Save/UI callers now pass effective dates consistently: time-entry save uses computed `work_date`, usage save/update uses `usage_date`, and UI eligible-lines queries pass entry/usage date.
 - Removed display-only ambiguous default selection in `ContractInfoBanner`; ambiguous multi-line matches now require explicit selection instead of showing a synthetic default.
 - Billing engine unresolved reconciliation now persists deterministic single eligible contract-line assignments for time/usage with `whereNull(contract_line_id)` guards, then excludes those records from unresolved output.
+- Recurring due-work now emits primary unresolved identity keys (`schedule:*:unresolved:*`) instead of legacy `non_contract` keys; invoice-generation and UI parsing now support both unresolved and legacy non-contract formats for backward compatibility.
 - Completed features: `F019-F026`.
 - Completed tests: `T003`, `T004`.
 - Completed features: `F027-F033`.
 - Completed tests: `T005`, `T006`, `T007`.
+- Completed features: `F034-F037`.
+- Completed tests: `T008`.
 
 ## Additional Runbooks (2026-03-21)
 
@@ -106,6 +109,8 @@
   - `cd server && npx vitest run ../packages/billing/tests/usageActions.effectiveDate.test.ts`
 - Verify reconciliation behavior for deterministic vs ambiguous unresolved work:
   - `cd server && npx vitest run src/test/unit/billing/billingEngine.unresolvedReconciliation.test.ts`
+- Verify unresolved-key candidate + generation compatibility:
+  - `cd server && npx vitest run src/test/unit/billing/invoiceGeneration.unresolvedSelectionKeys.test.ts src/test/unit/billing/nonContractDueWork.integration.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
 - Re-run default-contract ensure suite after fallback hook expansion:
   - `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
 - Typecheck touched shared/integration workspaces:

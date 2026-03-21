@@ -87,7 +87,7 @@
   {
     "id": "T008",
     "description": "Invoice-generation integration: selected recurring rows generate correctly with default-contract-aware keys and no primary-path dependence on legacy non-contract IDs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F036",
