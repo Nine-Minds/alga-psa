@@ -56,6 +56,17 @@ type ReadyPeriod = IRecurringDueWorkInvoiceCandidate;
 
 type InvoicedPeriod = RecurringInvoiceHistoryRow;
 
+interface RecurringInvoiceParentGroup {
+  candidate: ReadyPeriod;
+  children: ReadyPeriod['members'];
+}
+
+const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): RecurringInvoiceParentGroup[] =>
+  candidates.map((candidate) => ({
+    candidate,
+    children: candidate.members,
+  }));
+
 // Convert DateRange to API format using YYYY-MM-DD to avoid timezone drift
 const buildDateRangeFilter = (range: DateRange): BillingPeriodDateRange | undefined => {
   if (!range.from && !range.to) {
@@ -297,11 +308,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // For server-side pagination, filteredPeriods is just periods
   const filteredPeriods = periods;
-  const readyRows = filteredPeriods.flatMap((period) => period.members);
-  const selectedReadyPeriods = filteredPeriods.filter((period) =>
-    selectedPeriods.has(period.candidateKey),
+  const parentGroups = buildRecurringInvoiceParentGroups(filteredPeriods);
+  const readyRows = parentGroups.flatMap((group) => group.children);
+  const selectedParentGroups = parentGroups.filter((group) =>
+    selectedPeriods.has(group.candidate.candidateKey),
   );
-  const selectedPreviewCandidate = selectedReadyPeriods.length === 1 ? selectedReadyPeriods[0] ?? null : null;
+  const selectedPreviewCandidate = selectedParentGroups.length === 1
+    ? selectedParentGroups[0]?.candidate ?? null
+    : null;
   const selectedPreviewPeriod =
     selectedPreviewCandidate
     && selectedPreviewCandidate.memberCount === 1
@@ -786,7 +800,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             <div>
               <h2 className="text-lg font-semibold">Ready to Invoice</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Each row is an invoice candidate that groups all due obligations that should be generated together.
+                Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.
               </p>
             </div>
             <div className="flex gap-2 items-end">
