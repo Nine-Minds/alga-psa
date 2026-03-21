@@ -35,7 +35,7 @@
   {"id": "F038", "description": "Italian accent audit on it/msp/admin.json", "implemented": true},
 
   {"id": "F050", "description": "Create en/msp/time-entry.json with ~161 keys following naming convention", "implemented": true, "prdRefs": ["T-FR1 to T-FR9"]},
-  {"id": "F051", "description": "TimePeriodList.tsx: wire useTranslation('msp/time-entry'), translate heading, column headers, status badges, actions", "implemented": false, "prdRefs": ["T-FR1"]},
+  {"id": "F051", "description": "TimePeriodList.tsx: wire useTranslation('msp/time-entry'), translate heading, column headers, status badges, actions", "implemented": true, "prdRefs": ["T-FR1"]},
   {"id": "F052", "description": "TimeEntryEditForm.tsx: translate form labels, placeholders, validation messages, delete button, unsaved changes indicator", "implemented": false, "prdRefs": ["T-FR2"]},
   {"id": "F053", "description": "WorkItemPicker.tsx: translate ad-hoc entry UI, search placeholder, filter labels, type options, date labels, validation, empty/loading states", "implemented": false, "prdRefs": ["T-FR3"]},
   {"id": "F054", "description": "WorkItemList.tsx: translate assignment text with interpolation, type badges, contact/due date labels, pagination, empty state", "implemented": false, "prdRefs": ["T-FR4"]},

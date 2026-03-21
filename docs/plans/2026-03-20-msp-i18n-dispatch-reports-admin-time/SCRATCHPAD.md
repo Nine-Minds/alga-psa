@@ -156,6 +156,7 @@ SCRIPT
 - (2026-03-20) `F037` completed: generated `server/public/locales/xx/msp/admin.json` and `server/public/locales/yy/msp/admin.json` directly from the English admin namespace, collapsing every leaf value to `11111` / `55555` while preserving the exact nested key structure for pseudo-locale QA.
 - (2026-03-20) `F038` completed: ran the Italian accent audit grep against `server/public/locales/it/msp/admin.json`. It initially hit several standalone `e` false positives, so the affected lines were rephrased; the final grep returned no matches.
 - (2026-03-20) `F050` completed: created `server/public/locales/en/msp/time-entry.json` with shared actions, statuses, fallbacks, units, work-item types, and structured sections for the time-period list, time entry form, picker/list UI, timesheet header, approvals/comments, manager dashboard, list view, interval badges, and the smaller drawer/dialog/read-only components. The file was seeded from an inventory of the core `time-management` components so the upcoming wiring work can reuse stable keys instead of growing the namespace ad hoc.
+- (2026-03-20) `F051` completed: wired `packages/scheduling/src/components/time-management/time-entry/TimePeriodList.tsx` to `useTranslation('msp/time-entry')` for the page heading, manage button, table headers, status badges, current-period badge, and row action label. Hours, day counts, and last-entry timestamps now use locale-aware formatting via `useFormatters()` instead of hardcoded English number/date output.
 
 ### Key file paths — Dispatch
 | File | Strings |
