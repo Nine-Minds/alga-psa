@@ -229,3 +229,38 @@
 ### Notes
 
 - Structured payloads intentionally avoid end-user fields beyond tenant/client/record identifiers already present in server action context.
+
+## Progress Update (2026-03-21, F057/F058)
+
+- Validated and locked lazy backfill behavior via wiring coverage:
+  - `ensureDefaultContractForClientIfBillingConfigured` gates ensure on `client_billing_settings` existence and returns `{ ensured: false }` otherwise.
+  - This preserves no-forced-global-backfill behavior and first-qualifying-touchpoint creation semantics.
+- Validated and locked targeted reconciliation wiring:
+  - Due-work unresolved collection routes through `BillingEngine.calculateUnresolvedNonContractChargesForExecutionWindow`, which performs deterministic single-match write-back while leaving ambiguous/no-match rows unresolved.
+- Added a dedicated wiring test file for lazy-backfill + reconciliation path contracts.
+- Completed features: `F057`, `F058`.
+
+### Verification commands
+
+- `cd server && npx vitest run src/test/unit/billing/defaultContractLazyBackfill.wiring.test.ts src/test/unit/billing/defaultContractObservability.wiring.test.ts`
+
+## Progress Update (2026-03-21, F059)
+
+- Added explicit sequencing runbook at `SEQUENCING_RUNBOOK.md` with stage gates, required-state criteria, and verification commands.
+- Sequencing now formalizes cutover dependencies across:
+  - data model + ensure,
+  - hook coverage,
+  - resolver/date alignment,
+  - reconciliation semantics,
+  - invoice selection/attribution safeguards,
+  - UI guardrails,
+  - lifecycle cleanup parity,
+  - observability checks.
+- Included rollback/safety rules to avoid partial-cutover invalid states and premature fallback removal.
+- Completed feature: `F059`.
+
+## Progress Update (2026-03-21, F061)
+
+- Added `DEVELOPER_RUNBOOK.md` covering default-contract lifecycle, routing, reconciliation, grouped-attribution behavior, and operational verification commands.
+- Documented forward guardrails to prevent reintroducing eager creation or identity-field bypasses.
+- Completed feature: `F061`.

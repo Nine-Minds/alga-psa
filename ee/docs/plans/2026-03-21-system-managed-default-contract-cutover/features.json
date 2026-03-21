@@ -468,7 +468,7 @@
   {
     "id": "F057",
     "description": "Implement lazy backfill strategy: no forced full historical materialization; create/link on first qualifying interaction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 10",
       "Rollout / Migration 3"
@@ -477,7 +477,7 @@
   {
     "id": "F058",
     "description": "Implement targeted reconciliation routine for existing null contract_line_id records with deterministic single match.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration 4"
     ]
@@ -485,7 +485,7 @@
   {
     "id": "F059",
     "description": "Document and enforce execution sequencing to avoid partial-cutover invalid states.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Execution Order"
     ]
@@ -501,7 +501,7 @@
   {
     "id": "F061",
     "description": "Update developer docs/runbooks describing default contract lifecycle and routing semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Execution Order 9"
     ]
