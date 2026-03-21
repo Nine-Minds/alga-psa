@@ -150,7 +150,7 @@
   {
     "id": "T043",
     "description": "Cross-batch: msp-i18n-enabled OFF — dispatch, reports, admin, time-entry pages all show English text, no regressions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F092"]
   },
   {
