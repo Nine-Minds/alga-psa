@@ -1,0 +1,113 @@
+# Scratchpad — MSP i18n Remaining Batches
+
+- Plan slug: `2026-03-20-msp-i18n-remaining`
+- Created: `2026-03-20`
+
+## Decisions
+
+- (2026-03-20) **Combined all remaining batches into one plan**: 7 batches (2b-13 through 2b-20) in one plan since they're all small-to-medium and independent.
+- (2026-03-20) **2b-20 is empty**: Extensions and licensing components have zero user-visible strings. Close as "no work needed."
+- (2026-03-20) **Email split from admin**: Email provider forms (Microsoft, Gmail, IMAP) are in 2b-18 (msp/email-providers). Email admin settings (EmailSettings, InboundTicketDefaultsManager, M365Diagnostics) are in 2b-8 (msp/admin). Different namespaces, same settings route.
+- (2026-03-20) **Profile namespace is small**: Only ~64 strings across 8 files. Combines user profile, password change, security session management, role assignment, and platform updates.
+
+## Discoveries / Constraints
+
+### Surveys (2b-13)
+- (2026-03-20) 26 files in `packages/surveys/src/components/`, well-organized in subdirectories: triggers/, templates/, responses/, dashboard/, analytics/, shared/, public/
+- (2026-03-20) `SurveyResponsePage.tsx` is PUBLIC-FACING — rendered for end users taking surveys. Locale resolution may differ from MSP portal (no auth session). Needs investigation.
+- (2026-03-20) `useTriggerReferenceData.ts` (80 LOC) — hook with no strings, skip
+
+### Schedule (2b-14)
+- (2026-03-20) 11 files in `packages/scheduling/src/components/schedule/`
+- (2026-03-20) `EntryPopup.tsx` (1,287 LOC, ~68 strings) is the densest — schedule entry create/edit popup
+- (2026-03-20) `AvailabilitySettings.tsx` (1,215 LOC, ~64 strings) — availability window management
+- (2026-03-20) 3 files have zero strings (TechnicianSidebar, AgentScheduleDrawerStyles, DynamicBigCalendar) — skip
+
+### Knowledge Base (2b-15)
+- (2026-03-20) 10 files in `packages/documents/src/components/kb/`
+- (2026-03-20) Well-structured: editor, list, page, import, publishing, review, filters, categories, staleness badge
+- (2026-03-20) KB article content comes from database (Hocuspocus/ProseMirror) — NOT in translation scope. Only KB UI chrome is translated.
+
+### Jobs (2b-17)
+- (2026-03-20) Smallest batch — 7 files, ~29 strings total
+- (2026-03-20) All in `packages/jobs/src/components/monitoring/`
+- (2026-03-20) `JobStepHistory.tsx` has zero visible strings — skip
+
+### Email Providers (2b-18)
+- (2026-03-20) 10 files with strings in `packages/integrations/src/components/email/`
+- (2026-03-20) 13 files with zero strings (selectors, lists, wrappers, OAuth hooks, schemas, index files) — skip
+- (2026-03-20) Admin files (EmailSettings, InboundTicketDefaultsManager, M365Diagnostics) already in 2b-8 — DO NOT duplicate
+
+### Profile (2b-19)
+- (2026-03-20) Spans 3 packages: `packages/users/`, `server/src/components/settings/profile/`, `server/src/components/settings/security/`, `server/src/components/platform-updates/`
+- (2026-03-20) `SecuritySettingsPage.tsx` tab labels likely already covered by `msp/settings` namespace — only page-level strings are new
+- (2026-03-20) Extensions (`DynamicNavigationSlot.tsx`) and licensing (`ReduceLicensesModal.tsx`, `LicensePurchaseForm.tsx`) — all zero strings
+
+## Commands / Runbooks
+
+### Validation
+```bash
+node scripts/validate-translations.cjs
+npm run build
+```
+
+### Pseudo-locale generation
+```bash
+cat << 'SCRIPT' | node - server/public/locales/en/msp/<name>.json 11111
+const fs = require("fs");
+const fill = process.argv[3];
+const transform = (obj) => {
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    out[k] = typeof v === "object" && v !== null ? transform(v) : fill;
+  }
+  return out;
+};
+const src = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+console.log(JSON.stringify(transform(src), null, 2));
+SCRIPT
+```
+
+### Italian accent audit
+```bash
+for ns in surveys schedule knowledge-base jobs email-providers profile; do
+  echo "=== $ns ===";
+  grep -n ' e [a-z]\| puo \| gia \| verra \| funzionalita\| necessario' server/public/locales/it/msp/$ns.json 2>/dev/null || echo "(not yet created)";
+done
+```
+
+## Links / References
+
+- Translation plan: `.ai/translation/MSP_i18n_plan.md`
+- Translation guide: `.ai/translation/translation-guide.md`
+- All previous plans:
+  - `docs/plans/2026-03-19-msp-i18n-batch-2b1-core/` (complete)
+  - `docs/plans/2026-03-20-msp-i18n-dispatch-reports-admin-time/`
+  - `docs/plans/2026-03-20-msp-i18n-clients-assets-onboarding/`
+  - `docs/plans/2026-03-20-msp-i18n-contracts-billing/`
+  - `docs/plans/2026-03-20-msp-i18n-workflows/`
+
+### Key directories
+| Directory | Files | Strings | Batch |
+|-----------|-------|---------|-------|
+| `packages/surveys/src/components/` | 26 | ~217 | 2b-13 |
+| `packages/scheduling/src/components/schedule/` | 11 | ~211 | 2b-14 |
+| `packages/documents/src/components/kb/` | 10 | ~189 | 2b-15 |
+| `packages/jobs/src/components/monitoring/` | 7 | ~29 | 2b-17 |
+| `packages/integrations/src/components/email/` (providers only) | 10 | ~136 | 2b-18 |
+| `packages/users/` + `server/src/components/settings/` + `server/src/components/platform-updates/` | 8 | ~64 | 2b-19 |
+
+### Recommended execution order
+1. **2b-17 (jobs)** — 29 strings, trivial
+2. **2b-19 (profile)** — 64 strings, small
+3. **2b-18 (email-providers)** — 136 strings, moderate
+4. **2b-15 (knowledge-base)** — 189 strings, moderate
+5. **2b-14 (schedule)** — 211 strings, moderate
+6. **2b-13 (surveys)** — 217 strings, moderate
+7. **2b-20 (close)** — 0 strings, just mark done
+
+## Open Questions
+
+- **Public survey page locale**: How does SurveyResponsePage.tsx resolve locale without an authenticated MSP session?
+- **Security settings overlap**: Which SecuritySettingsPage strings are already in `msp/settings`?
+- **Email namespace loading**: Adding `msp/email-providers` to the already-loaded `/msp/settings` route increases namespace count. Check performance.

@@ -1,0 +1,44 @@
+[
+  {"id": "F001", "description": "Create en/msp/surveys.json with ~217 keys for 26 survey components", "implemented": false, "prdRefs": ["2b-13"]},
+  {"id": "F002", "description": "Wire useTranslation('msp/surveys') in TriggerForm.tsx (~35), TriggerList.tsx (~22), TemplateForm.tsx (~28), TemplateList.tsx (~24)", "implemented": false, "prdRefs": ["2b-13"]},
+  {"id": "F003", "description": "Wire useTranslation in SurveyResponsePage.tsx (~18), SurveySettings.tsx (~12), RatingDisplay.tsx (~14), response views (~21)", "implemented": false, "prdRefs": ["2b-13"]},
+  {"id": "F004", "description": "Wire useTranslation in dashboard components (metrics, trend chart, satisfaction, top issues, responses list) and analytics (filter, chart, export)", "implemented": false, "prdRefs": ["2b-13"]},
+  {"id": "F005", "description": "Generate msp/surveys translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-13"]},
+  {"id": "F006", "description": "Italian accent audit on it/msp/surveys.json", "implemented": false, "prdRefs": ["2b-13"]},
+
+  {"id": "F010", "description": "Create en/msp/schedule.json with ~211 keys for 11 schedule components", "implemented": false, "prdRefs": ["2b-14"]},
+  {"id": "F011", "description": "Wire useTranslation('msp/schedule') in EntryPopup.tsx (~68), AvailabilitySettings.tsx (~64), ScheduleCalendar.tsx (~42)", "implemented": false, "prdRefs": ["2b-14"]},
+  {"id": "F012", "description": "Wire useTranslation in AppointmentRequestsPanel.tsx (~28) and remaining schedule files with strings", "implemented": false, "prdRefs": ["2b-14"]},
+  {"id": "F013", "description": "Generate msp/schedule translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-14"]},
+  {"id": "F014", "description": "Italian accent audit on it/msp/schedule.json", "implemented": false, "prdRefs": ["2b-14"]},
+
+  {"id": "F020", "description": "Create en/msp/knowledge-base.json with ~189 keys for 10 KB components", "implemented": false, "prdRefs": ["2b-15"]},
+  {"id": "F021", "description": "Wire useTranslation('msp/knowledge-base') in KBArticleEditor.tsx (~52), KBArticleList.tsx (~41), KnowledgeBasePage.tsx (~38)", "implemented": false, "prdRefs": ["2b-15"]},
+  {"id": "F022", "description": "Wire useTranslation in KBImportDialog.tsx (~35), KBPublishingControls.tsx (~28), KBReviewDashboard.tsx (~18), remaining files", "implemented": false, "prdRefs": ["2b-15"]},
+  {"id": "F023", "description": "Generate msp/knowledge-base translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-15"]},
+  {"id": "F024", "description": "Italian accent audit on it/msp/knowledge-base.json", "implemented": false, "prdRefs": ["2b-15"]},
+
+  {"id": "F030", "description": "Create en/msp/jobs.json with ~29 keys for 7 job monitoring components", "implemented": false, "prdRefs": ["2b-17"]},
+  {"id": "F031", "description": "Wire useTranslation('msp/jobs') in RecentJobsDataTable.tsx (~10), JobMetricsDisplay.tsx (~8), JobHistoryTable.tsx (~6), remaining files", "implemented": false, "prdRefs": ["2b-17"]},
+  {"id": "F032", "description": "Generate msp/jobs translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-17"]},
+  {"id": "F033", "description": "Italian accent audit on it/msp/jobs.json", "implemented": false, "prdRefs": ["2b-17"]},
+
+  {"id": "F040", "description": "Create en/msp/email-providers.json with ~136 keys for 10 email provider components", "implemented": false, "prdRefs": ["2b-18"]},
+  {"id": "F041", "description": "Wire useTranslation('msp/email-providers') in MicrosoftProviderForm.tsx (~32), GmailProviderForm.tsx (~24), ImapProviderForm.tsx (~18)", "implemented": false, "prdRefs": ["2b-18"]},
+  {"id": "F042", "description": "Wire useTranslation in EmailProviderConfiguration.tsx (~26), InboundTicketDefaultsForm.tsx (~22), EmailProviderCard.tsx (~14)", "implemented": false, "prdRefs": ["2b-18"]},
+  {"id": "F043", "description": "Generate msp/email-providers translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-18"]},
+  {"id": "F044", "description": "Italian accent audit on it/msp/email-providers.json", "implemented": false, "prdRefs": ["2b-18"]},
+
+  {"id": "F050", "description": "Create en/msp/profile.json with ~64 keys for profile, password, security, platform-updates components", "implemented": false, "prdRefs": ["2b-19"]},
+  {"id": "F051", "description": "Wire useTranslation('msp/profile') in AdminSessionManagement.tsx (~16), PasswordChangeForm.tsx (~12), UserProfile.tsx (~17)", "implemented": false, "prdRefs": ["2b-19"]},
+  {"id": "F052", "description": "Wire useTranslation in UserRoleAssignment.tsx (~9), SecuritySettingsPage.tsx (~4), PlatformUpdateDetail.tsx (~6)", "implemented": false, "prdRefs": ["2b-19"]},
+  {"id": "F053", "description": "Generate msp/profile translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-19"]},
+  {"id": "F054", "description": "Italian accent audit on it/msp/profile.json", "implemented": false, "prdRefs": ["2b-19"]},
+
+  {"id": "F060", "description": "Close batch 2b-20 (extensions + licensing) as 'no translation needed' — 0 user-visible strings found", "implemented": false, "prdRefs": ["2b-20"]},
+
+  {"id": "F090", "description": "Update ROUTE_NAMESPACES for /msp/surveys, /msp/schedule, /msp/knowledge-base, /msp/jobs, /msp/settings (email-providers), /msp/profile, /msp/security-settings, /msp/platform-updates", "implemented": false},
+  {"id": "F091", "description": "validate-translations.cjs passes for all 6 new namespaces across all 9 locales", "implemented": false},
+  {"id": "F092", "description": "Regenerate pseudo-locales (xx, yy) for all 6 namespaces", "implemented": false},
+  {"id": "F093", "description": "npm run build succeeds with no TypeScript errors", "implemented": false}
+]
