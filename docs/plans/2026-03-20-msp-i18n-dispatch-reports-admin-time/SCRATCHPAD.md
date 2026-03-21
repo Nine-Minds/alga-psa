@@ -147,6 +147,7 @@ SCRIPT
 - (2026-03-20) `T012` passed: a direct route-config assertion confirmed `ROUTE_NAMESPACES['/msp/billing']` exactly equals `['common', 'msp/core', 'features/billing', 'msp/reports']`.
 - (2026-03-20) `T013` passed: the Italian accent audit grep returned no matches for `server/public/locales/it/msp/reports.json` after rephrasing the few lines that had caused conjunction-based false positives.
 - (2026-03-20) `F030` completed: created `server/public/locales/en/msp/admin.json` with shared action/state keys plus structured sections for telemetry settings, email settings, Microsoft 365 diagnostics, and inbound ticket defaults so the four admin components can wire against one namespace without inventing ad hoc keys later.
+- (2026-03-20) `F031` completed: wired `packages/ui/src/components/settings/admin/TenantTelemetrySettings.tsx` to `useTranslation('msp/admin')` for the loading/empty card states, telemetry headings and descriptions, alert text, anonymization option copy, privacy lists, and save/reset actions. Also switched the footer timestamp from `toLocaleString()` to `useFormatters().formatDate()` so the admin page respects the active locale instead of forcing English date formatting.
 
 ### Key file paths — Dispatch
 | File | Strings |

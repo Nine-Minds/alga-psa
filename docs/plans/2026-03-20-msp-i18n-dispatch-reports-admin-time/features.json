@@ -25,7 +25,7 @@
   {"id": "F028", "description": "Italian accent audit on it/msp/reports.json", "implemented": true},
 
   {"id": "F030", "description": "Create en/msp/admin.json with ~123 keys following naming convention", "implemented": true, "prdRefs": ["A-FR1 to A-FR4"]},
-  {"id": "F031", "description": "TenantTelemetrySettings.tsx: wire useTranslation('msp/admin'), translate headings, toggle labels, descriptions, anonymization options, compliance lists, buttons", "implemented": false, "prdRefs": ["A-FR1"]},
+  {"id": "F031", "description": "TenantTelemetrySettings.tsx: wire useTranslation('msp/admin'), translate headings, toggle labels, descriptions, anonymization options, compliance lists, buttons", "implemented": true, "prdRefs": ["A-FR1"]},
   {"id": "F032", "description": "EmailSettings.tsx: translate tab labels, provider options, all form labels/placeholders, domain statuses, general settings, error messages", "implemented": false, "prdRefs": ["A-FR2"]},
   {"id": "F033", "description": "Microsoft365DiagnosticsDialog.tsx: translate dialog title/description, status badges, diagnostic messages, buttons", "implemented": false, "prdRefs": ["A-FR3"]},
   {"id": "F034", "description": "InboundTicketDefaultsManager.tsx: translate heading, field labels, badges, empty states, How It Works section, dialog titles, buttons", "implemented": false, "prdRefs": ["A-FR4"]},
