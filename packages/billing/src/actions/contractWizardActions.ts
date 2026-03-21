@@ -252,6 +252,40 @@ const firstPositiveRateInCents = (...candidates: unknown[]): number | undefined 
   return undefined;
 };
 
+type ContractLineMode = 'Fixed' | 'Hourly' | 'Usage';
+type BillingMode = 'fixed' | 'hourly' | 'usage';
+
+const resolveBillingMode = (mode: ContractLineMode): BillingMode =>
+  mode === 'Hourly' ? 'hourly' : mode === 'Usage' ? 'usage' : 'fixed';
+
+const fetchModeDefaultRatesByServiceId = async (
+  trx: Knex.Transaction,
+  tenant: string,
+  serviceIds: string[],
+  mode: ContractLineMode,
+  currencyCode: string
+): Promise<Map<string, number>> => {
+  const uniqueServiceIds = Array.from(new Set(serviceIds.filter(Boolean)));
+  if (uniqueServiceIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await trx('service_catalog_mode_defaults')
+    .where({ tenant, billing_mode: resolveBillingMode(mode), currency_code: currencyCode })
+    .whereIn('service_id', uniqueServiceIds)
+    .select('service_id', 'rate');
+
+  const defaultsByServiceId = new Map<string, number>();
+  rows.forEach((row: { service_id: string; rate: number }) => {
+    const normalizedRate = toPositiveCentsOrUndefined(row.rate);
+    if (normalizedRate !== undefined) {
+      defaultsByServiceId.set(row.service_id, normalizedRate);
+    }
+  });
+
+  return defaultsByServiceId;
+};
+
 // ---------------------------------------------------------------------------
 // Template wizard
 // ---------------------------------------------------------------------------
@@ -304,11 +338,38 @@ export const createContractTemplateFromWizard = withAuth(async (
       ...filteredHourlyServices.map((s) => s.service_id),
       ...filteredUsageServices.map((s) => s.service_id),
     ];
+    const serviceCatalogById = new Map<string, any>();
+    const templateCurrencyCode = 'USD';
+    const fixedModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
+      trx,
+      tenant,
+      filteredFixedServices.map((s) => s.service_id),
+      'Fixed',
+      templateCurrencyCode
+    );
+    const hourlyModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
+      trx,
+      tenant,
+      filteredHourlyServices.map((s) => s.service_id),
+      'Hourly',
+      templateCurrencyCode
+    );
+    const usageModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
+      trx,
+      tenant,
+      filteredUsageServices.map((s) => s.service_id),
+      'Usage',
+      templateCurrencyCode
+    );
 
     if (allServiceIds.length > 0) {
       const services = await trx('service_catalog')
         .whereIn('service_id', allServiceIds)
-        .select('service_id', 'service_name', 'billing_method', 'item_kind', 'is_active');
+        .select('service_id', 'service_name', 'billing_method', 'item_kind', 'is_active', 'default_rate');
+
+      services.forEach((service: any) => {
+        serviceCatalogById.set(service.service_id, service);
+      });
 
       for (const item of filteredFixedServices) {
         const match = services.find((s) => s.service_id === item.service_id);
@@ -444,6 +505,12 @@ export const createContractTemplateFromWizard = withAuth(async (
             serviceBaseRate = Math.round(provisionalValue);
             allocated = Math.round(allocated + serviceBaseRate);
           }
+        } else {
+          serviceBaseRate =
+            firstPositiveRateInCents(
+              fixedModeDefaultsByServiceId.get(service.service_id),
+              serviceCatalogById.get(service.service_id)?.default_rate
+            ) ?? 0;
         }
 
         // Insert into template line services table (not contract_line_services)
@@ -554,7 +621,11 @@ export const createContractTemplateFromWizard = withAuth(async (
       const templateLineId = await recordTemplateMapping(hourlyPlanId, null);
 
       for (const service of filteredHourlyServices) {
-        const normalizedHourlyRate = toPositiveCentsOrUndefined(service.hourly_rate);
+        const normalizedHourlyRate = firstPositiveRateInCents(
+          service.hourly_rate,
+          hourlyModeDefaultsByServiceId.get(service.service_id),
+          serviceCatalogById.get(service.service_id)?.default_rate
+        );
 
         // Insert into template line services table (not contract_line_services)
         await trx('contract_template_line_services').insert({
@@ -634,7 +705,11 @@ export const createContractTemplateFromWizard = withAuth(async (
       const templateLineId = await recordTemplateMapping(usagePlanId, null);
 
       for (const service of filteredUsageServices) {
-        const normalizedUnitRate = toPositiveCentsOrUndefined(service.unit_rate);
+        const normalizedUnitRate = firstPositiveRateInCents(
+          service.unit_rate,
+          usageModeDefaultsByServiceId.get(service.service_id),
+          serviceCatalogById.get(service.service_id)?.default_rate
+        );
 
         // Insert into template line services table (not contract_line_services)
         await trx('contract_template_line_services').insert({
@@ -869,6 +944,10 @@ export const createClientContractFromWizard = withAuth(async (
       ...filteredUsageServices.map((s) => s.service_id),
     ];
     const serviceCatalogById = new Map<string, any>();
+    const contractCurrency = submission.currency_code || 'USD';
+    let fixedModeDefaultsByServiceId = new Map<string, number>();
+    let hourlyModeDefaultsByServiceId = new Map<string, number>();
+    let usageModeDefaultsByServiceId = new Map<string, number>();
 
     if (allServiceIds.length > 0) {
       const services = await trx('service_catalog')
@@ -880,7 +959,27 @@ export const createClientContractFromWizard = withAuth(async (
       });
 
       // Validate services have prices in the contract's currency OR have custom rates specified
-      const contractCurrency = submission.currency_code || 'USD';
+      fixedModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
+        trx,
+        tenant,
+        filteredFixedServices.map((s) => s.service_id),
+        'Fixed',
+        contractCurrency
+      );
+      hourlyModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
+        trx,
+        tenant,
+        filteredHourlyServices.map((s) => s.service_id),
+        'Hourly',
+        contractCurrency
+      );
+      usageModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
+        trx,
+        tenant,
+        filteredUsageServices.map((s) => s.service_id),
+        'Usage',
+        contractCurrency
+      );
 
       // Build a map of services with custom rates (user-entered rates override the need for currency prices)
       const servicesWithCustomRates = new Set<string>();
@@ -922,6 +1021,38 @@ export const createClientContractFromWizard = withAuth(async (
           }
         });
       }
+
+      // Mode-specific defaults (and legacy catalog defaults used as fallback) also satisfy pricing.
+      filteredFixedServices.forEach((service) => {
+        if (
+          firstPositiveRateInCents(
+            fixedModeDefaultsByServiceId.get(service.service_id),
+            serviceCatalogById.get(service.service_id)?.default_rate
+          ) !== undefined
+        ) {
+          servicesWithCustomRates.add(service.service_id);
+        }
+      });
+      filteredHourlyServices.forEach((service) => {
+        if (
+          firstPositiveRateInCents(
+            hourlyModeDefaultsByServiceId.get(service.service_id),
+            serviceCatalogById.get(service.service_id)?.default_rate
+          ) !== undefined
+        ) {
+          servicesWithCustomRates.add(service.service_id);
+        }
+      });
+      filteredUsageServices.forEach((service) => {
+        if (
+          firstPositiveRateInCents(
+            usageModeDefaultsByServiceId.get(service.service_id),
+            serviceCatalogById.get(service.service_id)?.default_rate
+          ) !== undefined
+        ) {
+          servicesWithCustomRates.add(service.service_id);
+        }
+      });
 
       // Only check currency prices for services WITHOUT custom rates
       const serviceIdsNeedingCurrencyCheck = allServiceIds.filter(id => !servicesWithCustomRates.has(id));
@@ -1057,6 +1188,12 @@ export const createClientContractFromWizard = withAuth(async (
             serviceBaseRate = Math.round(provisionalValue);
             allocated = Math.round(allocated + serviceBaseRate);
           }
+        } else {
+          serviceBaseRate =
+            firstPositiveRateInCents(
+              fixedModeDefaultsByServiceId.get(service.service_id),
+              serviceCatalogById.get(service.service_id)?.default_rate
+            ) ?? 0;
         }
 
         await planServiceConfigService.createConfiguration(
@@ -1165,6 +1302,7 @@ export const createClientContractFromWizard = withAuth(async (
         const normalizedHourlyRate =
           firstPositiveRateInCents(
             service.hourly_rate,
+            hourlyModeDefaultsByServiceId.get(service.service_id),
             serviceCatalogById.get(service.service_id)?.default_rate
           ) ?? 0;
         await trx('contract_line_services').insert({
@@ -1219,6 +1357,7 @@ export const createClientContractFromWizard = withAuth(async (
         const normalizedUnitRate =
           firstPositiveRateInCents(
             service.unit_rate,
+            usageModeDefaultsByServiceId.get(service.service_id),
             serviceCatalogById.get(service.service_id)?.default_rate
           ) ?? 0;
         await trx('contract_line_services').insert({

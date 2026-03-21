@@ -11,6 +11,7 @@ let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/con
 type CreatedIds = {
   serviceTypeId?: string;
   serviceId?: string;
+  additionalServiceIds?: string[];
   clientId?: string;
   contractId?: string;
   contractLineId?: string;
@@ -417,6 +418,293 @@ describe('createClientContractFromWizard', () => {
       })
     ).rejects.toThrow('must be a service to be added to usage contract lines');
   });
+
+  it('T021: resolves fixed-mode prefill from service+mode+currency defaults when no fixed override is provided', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'hourly');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const serviceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Fixed Mode Default Service',
+      billingMethod: 'hourly',
+      itemKind: 'service',
+      defaultRate: 4100,
+      unitOfMeasure: 'month',
+    });
+    createdIds.serviceId = serviceId;
+
+    await insertModeDefault(db, {
+      tenant: tenantId,
+      serviceId,
+      billingMode: 'fixed',
+      currencyCode: 'USD',
+      rate: 9900,
+    });
+
+    const clientId = await insertClient(db, tenantId, 'Fixed Mode Default Client');
+    createdIds.clientId = clientId;
+
+    const result = await createClientContractFromWizard({
+      contract_name: 'Fixed Mode Default Contract',
+      description: 'uses fixed mode defaults',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: true,
+      fixed_services: [{ service_id: serviceId, quantity: 1 }],
+      hourly_services: [],
+      usage_services: [],
+      po_required: false,
+    });
+    createdIds.contractId = result.contract_id;
+
+    const fixedLine = await db('contract_lines')
+      .where({ tenant: tenantId, contract_id: result.contract_id, contract_line_type: 'Fixed' })
+      .first();
+    expect(fixedLine).toBeTruthy();
+
+    const config = await db('contract_line_service_configuration')
+      .where({
+        tenant: tenantId,
+        contract_line_id: fixedLine!.contract_line_id,
+        service_id: serviceId,
+        configuration_type: 'Fixed',
+      })
+      .first();
+    expect(config).toBeTruthy();
+
+    const fixedConfig = await db('contract_line_service_fixed_config')
+      .where({ tenant: tenantId, config_id: config!.config_id })
+      .first();
+    expect(Number(fixedConfig?.base_rate ?? 0)).toBe(9900);
+  });
+
+  it('T022: resolves hourly-mode prefill from service+mode+currency defaults when no hourly override is provided', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'fixed');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const serviceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Hourly Mode Default Service',
+      billingMethod: 'fixed',
+      itemKind: 'service',
+      defaultRate: 3500,
+      unitOfMeasure: 'hour',
+    });
+    createdIds.serviceId = serviceId;
+
+    await insertModeDefault(db, {
+      tenant: tenantId,
+      serviceId,
+      billingMode: 'hourly',
+      currencyCode: 'USD',
+      rate: 8700,
+    });
+
+    const clientId = await insertClient(db, tenantId, 'Hourly Mode Default Client');
+    createdIds.clientId = clientId;
+
+    const result = await createClientContractFromWizard({
+      contract_name: 'Hourly Mode Default Contract',
+      description: 'uses hourly mode defaults',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: false,
+      fixed_services: [],
+      hourly_services: [{ service_id: serviceId }],
+      usage_services: [],
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+      po_required: false,
+    });
+    createdIds.contractId = result.contract_id;
+
+    const hourlyLine = await db('contract_lines')
+      .where({ tenant: tenantId, contract_id: result.contract_id, contract_line_type: 'Hourly' })
+      .first();
+    expect(hourlyLine).toBeTruthy();
+
+    const lineService = await db('contract_line_services')
+      .where({
+        tenant: tenantId,
+        contract_line_id: hourlyLine!.contract_line_id,
+        service_id: serviceId,
+      })
+      .first();
+    expect(Number(lineService?.unit_price ?? 0)).toBe(8700);
+  });
+
+  it('T023: resolves usage-mode prefill from service+mode+currency defaults when no usage override is provided', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'hourly');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const serviceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Usage Mode Default Service',
+      billingMethod: 'hourly',
+      itemKind: 'service',
+      defaultRate: 2300,
+      unitOfMeasure: 'unit',
+    });
+    createdIds.serviceId = serviceId;
+
+    await insertModeDefault(db, {
+      tenant: tenantId,
+      serviceId,
+      billingMode: 'usage',
+      currencyCode: 'USD',
+      rate: 6400,
+    });
+
+    const clientId = await insertClient(db, tenantId, 'Usage Mode Default Client');
+    createdIds.clientId = clientId;
+
+    const result = await createClientContractFromWizard({
+      contract_name: 'Usage Mode Default Contract',
+      description: 'uses usage mode defaults',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: false,
+      fixed_services: [],
+      hourly_services: [],
+      usage_services: [{ service_id: serviceId, unit_of_measure: 'unit' }],
+      po_required: false,
+    });
+    createdIds.contractId = result.contract_id;
+
+    const usageLine = await db('contract_lines')
+      .where({ tenant: tenantId, contract_id: result.contract_id, contract_line_type: 'Usage' })
+      .first();
+    expect(usageLine).toBeTruthy();
+
+    const lineService = await db('contract_line_services')
+      .where({
+        tenant: tenantId,
+        contract_line_id: usageLine!.contract_line_id,
+        service_id: serviceId,
+      })
+      .first();
+    expect(Number(lineService?.unit_price ?? 0)).toBe(6400);
+  });
+
+  it('T024: explicit fixed/hourly/usage overrides supersede catalog mode defaults', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'usage');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const fixedServiceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Fixed Override Service',
+      billingMethod: 'hourly',
+      itemKind: 'service',
+      defaultRate: 1200,
+      unitOfMeasure: 'month',
+    });
+    const hourlyServiceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Hourly Override Service',
+      billingMethod: 'usage',
+      itemKind: 'service',
+      defaultRate: 1300,
+      unitOfMeasure: 'hour',
+    });
+    const usageServiceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Usage Override Service',
+      billingMethod: 'fixed',
+      itemKind: 'service',
+      defaultRate: 1400,
+      unitOfMeasure: 'unit',
+    });
+    createdIds.serviceId = fixedServiceId;
+    createdIds.additionalServiceIds = [hourlyServiceId, usageServiceId];
+
+    await insertModeDefault(db, {
+      tenant: tenantId,
+      serviceId: fixedServiceId,
+      billingMode: 'fixed',
+      currencyCode: 'USD',
+      rate: 9500,
+    });
+    await insertModeDefault(db, {
+      tenant: tenantId,
+      serviceId: hourlyServiceId,
+      billingMode: 'hourly',
+      currencyCode: 'USD',
+      rate: 9600,
+    });
+    await insertModeDefault(db, {
+      tenant: tenantId,
+      serviceId: usageServiceId,
+      billingMode: 'usage',
+      currencyCode: 'USD',
+      rate: 9700,
+    });
+
+    const clientId = await insertClient(db, tenantId, 'Explicit Override Client');
+    createdIds.clientId = clientId;
+
+    const result = await createClientContractFromWizard({
+      contract_name: 'Explicit Override Contract',
+      description: 'explicit values beat mode defaults',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: true,
+      fixed_base_rate: 7777,
+      fixed_services: [{ service_id: fixedServiceId, quantity: 1 }],
+      hourly_services: [{ service_id: hourlyServiceId, hourly_rate: 8888 }],
+      usage_services: [{ service_id: usageServiceId, unit_rate: 9999, unit_of_measure: 'unit' }],
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+      po_required: false,
+    });
+    createdIds.contractId = result.contract_id;
+
+    const lines = await db('contract_lines')
+      .where({ tenant: tenantId, contract_id: result.contract_id })
+      .select('contract_line_id', 'contract_line_type');
+    const lineIdByType = new Map(lines.map((line) => [line.contract_line_type, line.contract_line_id]));
+
+    const fixedConfig = await db('contract_line_service_fixed_config')
+      .join('contract_line_service_configuration as cfg', function () {
+        this.on('contract_line_service_fixed_config.config_id', '=', 'cfg.config_id');
+      })
+      .where({
+        'contract_line_service_fixed_config.tenant': tenantId,
+        'cfg.contract_line_id': lineIdByType.get('Fixed'),
+        'cfg.service_id': fixedServiceId,
+      })
+      .first('contract_line_service_fixed_config.base_rate');
+    expect(Number(fixedConfig?.base_rate ?? 0)).toBe(7777);
+
+    const hourlyLineService = await db('contract_line_services')
+      .where({
+        tenant: tenantId,
+        contract_line_id: lineIdByType.get('Hourly'),
+        service_id: hourlyServiceId,
+      })
+      .first('unit_price');
+    expect(Number(hourlyLineService?.unit_price ?? 0)).toBe(8888);
+
+    const usageLineService = await db('contract_line_services')
+      .where({
+        tenant: tenantId,
+        contract_line_id: lineIdByType.get('Usage'),
+        service_id: usageServiceId,
+      })
+      .first('unit_price');
+    expect(Number(usageLineService?.unit_price ?? 0)).toBe(9999);
+  });
 });
 
 async function insertServiceType(connection: Knex, tenant: string, billingMethod: 'fixed' | 'hourly' | 'usage') {
@@ -474,6 +762,27 @@ async function insertClient(connection: Knex, tenant: string, clientNamePrefix: 
     updated_at: connection.fn.now(),
   });
   return clientId;
+}
+
+async function insertModeDefault(
+  connection: Knex,
+  params: {
+    tenant: string;
+    serviceId: string;
+    billingMode: 'fixed' | 'hourly' | 'usage';
+    currencyCode: string;
+    rate: number;
+  }
+) {
+  await connection('service_catalog_mode_defaults').insert({
+    tenant: params.tenant,
+    service_id: params.serviceId,
+    billing_mode: params.billingMode,
+    currency_code: params.currencyCode,
+    rate: params.rate,
+    created_at: connection.fn.now(),
+    updated_at: connection.fn.now(),
+  });
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {
@@ -582,6 +891,10 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
   }
 
   if (ids.serviceId) {
+    await safeDelete('service_catalog_mode_defaults', {
+      tenant: tenantId,
+      service_id: ids.serviceId
+    });
     await safeDelete('usage_tracking', {
       tenant: tenantId,
       service_id: ids.serviceId
@@ -590,6 +903,12 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
       tenant: tenantId,
       service_id: ids.serviceId
     });
+  }
+
+  if (ids.additionalServiceIds && ids.additionalServiceIds.length > 0) {
+    await safeDeleteIn('service_catalog_mode_defaults', 'service_id', ids.additionalServiceIds);
+    await safeDeleteIn('usage_tracking', 'service_id', ids.additionalServiceIds);
+    await safeDeleteIn('service_catalog', 'service_id', ids.additionalServiceIds);
   }
 
   if (ids.serviceTypeId) {

@@ -86,3 +86,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 ## Open Questions
 
 - None blocking. Hard cutover policy is set; remaining implementation work is execution order only.
+- (2026-03-21) Completed F012-F014 by resolving fixed/hourly/usage wizard prefill from `service_catalog_mode_defaults` keyed by line mode + currency, with fallback to catalog `default_rate` and explicit submission overrides taking precedence. Key ref: `packages/billing/src/actions/contractWizardActions.ts`.
+- (2026-03-21) Hardened wizard currency validation to treat mode-default/catalog-default resolved rates as priced inputs so contracts do not fail when no `service_prices` row exists but valid defaults do. Rationale: preserve prefill semantics under decoupled model.
+- (2026-03-21) Replaced temporary static checks with DB-backed integration tests `T021-T024` in `server/src/test/integration/contractWizard.integration.test.ts` covering mode-default prefill and override precedence for fixed/hourly/usage.
+- (2026-03-21) Test run: `cd server && npx vitest run src/test/integration/contractWizard.integration.test.ts` currently blocked locally by Postgres not listening on `127.0.0.1:5438`/`::1:5438`; suite collected and skipped tests due beforeAll connection failure.
