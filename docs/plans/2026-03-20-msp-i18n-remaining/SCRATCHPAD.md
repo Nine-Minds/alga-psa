@@ -131,6 +131,8 @@ done
 - (2026-03-21) Validation for `F011`: `git diff --check` passed, and `npx tsc -p packages/scheduling/tsconfig.json --noEmit` passed after the schedule rewrites.
 - (2026-03-21) Completed `F012`: localized the rest of the schedule surface. `AppointmentRequestsPanel.tsx` now translates the request list/detail/approval flow and uses locale-aware request timestamps; `SchedulePage.tsx`, `AgentScheduleView.tsx`, `WeeklyScheduleEvent.tsx`, and `TechnicianSidebar.tsx` now translate page chrome, overlay states, compare controls, delete tooltips, and event tooltip copy.
 - (2026-03-21) Validation for `F012`: `git diff --check` passed, and `npx tsc -p packages/scheduling/tsconfig.json --noEmit` passed after wiring the remaining schedule files with user-visible strings.
+- (2026-03-21) Completed `F013`: added schedule locale files for `de`, `es`, `fr`, `it`, `nl`, and `pl`, then generated targeted `xx` and `yy` pseudo-locales from the English source. The schedule namespace now exists in all 9 required locales under `server/public/locales/*/msp/schedule.json`.
+- (2026-03-21) Validation for `F013`: counted 293 leaf strings in each generated real locale, confirmed the pseudo-locale outputs return `11111` for schedule keys, and re-ran `node scripts/validate-translations.cjs` with `Errors: 0` and `Warnings: 0`.
 
 ## Open Questions
 
