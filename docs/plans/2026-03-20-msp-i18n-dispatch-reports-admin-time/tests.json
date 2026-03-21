@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Dispatch: ROUTE_NAMESPACES maps /msp/technician-dispatch to include msp/dispatch",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
