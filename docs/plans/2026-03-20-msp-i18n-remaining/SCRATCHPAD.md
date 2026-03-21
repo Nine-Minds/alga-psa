@@ -47,6 +47,7 @@
 - (2026-03-20) Spans 3 packages: `packages/users/`, `server/src/components/settings/profile/`, `server/src/components/settings/security/`, `server/src/components/platform-updates/`
 - (2026-03-20) `SecuritySettingsPage.tsx` tab labels likely already covered by `msp/settings` namespace — only page-level strings are new
 - (2026-03-20) Extensions (`DynamicNavigationSlot.tsx`) and licensing (`ReduceLicensesModal.tsx`, `LicensePurchaseForm.tsx`) — all zero strings
+- (2026-03-21) For `msp/profile`, the lowest-risk namespace shape is to preserve the existing `profile.*` and `security.*` key families from `msp/settings`, then add only the missing password/profile error/platform-update detail keys. That keeps the rewrites mechanical and avoids inventing a second taxonomy for already-translated settings/profile surfaces.
 
 ## Commands / Runbooks
 
@@ -164,6 +165,7 @@ done
 - (2026-03-21) Completed `F043`: added email-provider locale files for `de`, `es`, `fr`, `it`, `nl`, and `pl`, then regenerated targeted `xx` and `yy` pseudo-locales from the English source. During locale validation, the Gmail OAuth warning copy exposed a runtime issue in [GmailProviderForm.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/integrations/src/components/email/GmailProviderForm.tsx): it was still interpolating raw English action words into the localized sentence. That copy was split into separate add/update keys so every locale can render the warning naturally.
 - (2026-03-21) Validation for `F043`: `node scripts/validate-translations.cjs` passed with `Errors: 0` and `Warnings: 0`, `git diff --check` stayed clean after the locale generation, and a direct key-set comparison confirmed `server/public/locales/{de,es,fr,it,nl,pl,xx,yy}/msp/email-providers.json` now matches the English namespace exactly.
 - (2026-03-21) Completed `F044`: ran the Italian accent audit against [server/public/locales/it/msp/email-providers.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/email-providers.json). The broad grep only surfaced legitimate conjunctions, and a whole-word sweep for common missing-accent spellings (`puo`, `gia`, `verra`, `funzionalita`, `perche`) returned zero matches, so no Italian copy corrections were required.
+- (2026-03-21) Completed `F050`: added [server/public/locales/en/msp/profile.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/profile.json) as the English profile namespace source of truth. The file carries forward the existing `profile.*` and `security.*` shapes from `msp/settings`, adds the password-change strings currently living under the client-portal profile namespace, and introduces the missing profile load/save error and platform-update detail labels so the upcoming component rewrites can move to `msp/profile` without renaming every callsite.
 
 ## Open Questions
 
