@@ -1,0 +1,259 @@
+{
+  "common": {
+    "actions": {
+      "save": "Guardar configuración",
+      "saving": "Guardando...",
+      "reset": "Restablecer",
+      "refresh": "Actualizar",
+      "close": "Cerrar",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "deleting": "Eliminando…",
+      "verify": "Verificar"
+    },
+    "states": {
+      "active": "Activo",
+      "inactive": "Inactivo",
+      "loading": "Cargando..."
+    }
+  },
+  "telemetry": {
+    "loading": {
+      "title": "Configuración de telemetría de la organización",
+      "description": "Cargando..."
+    },
+    "empty": {
+      "title": "Configuración de telemetría de la organización",
+      "description": "Error al cargar la configuración",
+      "body": "No se pudo cargar la configuración de telemetría"
+    },
+    "page": {
+      "title": "Telemetría y análisis de la organización",
+      "description": "Configure los ajustes de telemetría para toda su organización. La telemetría está habilitada por defecto para mejorar la plataforma, pero los usuarios pueden excluirse individualmente a menos que desactive esta opción."
+    },
+    "toggles": {
+      "enableTelemetry": {
+        "title": "Habilitar telemetría",
+        "description": "Permitir la recopilación de datos de uso anónimos para mejorar la plataforma (habilitada por defecto)"
+      },
+      "allowUserOptOut": {
+        "title": "Permitir exclusión del usuario",
+        "description": "Permitir que los usuarios individuales se excluyan de la recopilación de telemetría"
+      }
+    },
+    "alerts": {
+      "enabled": "✓ Telemetría habilitada. Todas las categorías están habilitadas por defecto para los nuevos usuarios, pero pueden excluirse individualmente si lo desean.",
+      "centralizedControl": "Control centralizado: los usuarios no pueden excluirse individualmente. Asegúrese de cumplir con las normativas locales de privacidad."
+    },
+    "anonymization": {
+      "title": "Nivel de anonimización de datos",
+      "description": "Elija cuánto anonimizar los datos antes de recopilarlos",
+      "options": {
+        "none": {
+          "title": "Sin anonimización",
+          "description": "Recopilar los datos tal como están (no recomendado)"
+        },
+        "partial": {
+          "title": "Anonimización parcial",
+          "description": "Eliminar PII, conservar los ID de correlación"
+        },
+        "full": {
+          "title": "Anonimización completa",
+          "description": "Máxima privacidad, mínima correlación"
+        }
+      }
+    },
+    "compliance": {
+      "title": "Notas de cumplimiento"
+    },
+    "privacy": {
+      "collectTitle": "Qué recopilamos",
+      "collectItems": {
+        "errors": "• Información de errores (sin datos sensibles)",
+        "performance": "• Métricas de rendimiento (tiempos de carga de página, tiempos de respuesta de API)",
+        "usage": "• Patrones de uso de funciones (qué funciones se utilizan)",
+        "system": "• Métricas del sistema (para optimización de la infraestructura)"
+      },
+      "excludeTitle": "Qué NO recopilamos",
+      "excludeItems": {
+        "personalInfo": "• Información personal (nombres, correos electrónicos, direcciones)",
+        "clientData": "• Datos de clientes o información comercial",
+        "passwords": "• Contraseñas o tokens de autenticación",
+        "files": "• Contenido de archivos o documentos"
+      }
+    },
+    "footer": {
+      "lastUpdated": "Última actualización: {{value}}",
+      "updatedBy": " por {{user}}"
+    },
+    "errors": {
+      "loadTenantTelemetrySettings": "No se pudo cargar la configuración de telemetría de la organización",
+      "loadSettings": "No se pudo cargar la configuración",
+      "saveTelemetrySettings": "No se pudo guardar la configuración de telemetría",
+      "saveSettings": "No se pudo guardar la configuración"
+    }
+  },
+  "email": {
+    "loading": "Cargando configuración de correo...",
+    "error": "Error: {{error}}",
+    "tabs": {
+      "inbound": "Correo entrante",
+      "outbound": "Correo saliente"
+    },
+    "descriptions": {
+      "outbound": "Configure los ajustes SMTP o API para enviar correos desde su aplicación",
+      "inbound": "Configure los proveedores de correo para recibir y procesar correos como tickets"
+    },
+    "providerConfig": {
+      "title": "Configuración del proveedor de correo",
+      "providerLabel": "Proveedor de correo",
+      "options": {
+        "smtp": "SMTP (servidor de correo tradicional)",
+        "resend": "Resend (servicio API moderno)"
+      },
+      "placeholder": "Seleccione el proveedor de correo",
+      "descriptions": {
+        "smtp": "Configure los ajustes tradicionales del servidor de correo SMTP",
+        "resend": "Configure la API de Resend para un envío de correo moderno"
+      },
+      "status": {
+        "provider": "Proveedor {{provider}}"
+      }
+    },
+    "smtp": {
+      "host": {
+        "label": "Host SMTP",
+        "placeholder": "smtp.example.com"
+      },
+      "port": {
+        "label": "Puerto",
+        "placeholder": "587"
+      },
+      "username": {
+        "label": "Nombre de usuario",
+        "placeholder": "tu-correo@example.com"
+      },
+      "password": {
+        "label": "Contraseña",
+        "placeholder": "Introduzca la contraseña"
+      },
+      "fromAddress": {
+        "label": "Dirección del remitente",
+        "placeholder": "noreply@example.com"
+      }
+    },
+    "resend": {
+      "apiKey": {
+        "label": "Clave API de Resend",
+        "placeholder": "re_xxxxxxxxxxxxxxxxxx",
+        "helpPrefix": "Obtenga su clave API en"
+      },
+      "fromAddress": {
+        "label": "Dirección del remitente",
+        "placeholder": "noreply@yourdomain.com",
+        "help": "Debe pertenecer a un dominio verificado. Use la pestaña Dominios para agregar dominios personalizados."
+      }
+    },
+    "domains": {
+      "verified": "Verificado",
+      "failed": "Fallido",
+      "pending": "Pendiente",
+      "requiredDnsRecords": "Registros DNS requeridos:"
+    },
+    "general": {
+      "title": "Configuración general",
+      "trackingEnabled": "Habilitar seguimiento de correo",
+      "dailyLimit": "Límite diario de correos"
+    },
+    "errors": {
+      "loadEmailSettings": "No se pudo cargar la configuración de correo",
+      "saveSettings": "No se pudo guardar la configuración",
+      "addDomain": "No se pudo agregar el dominio",
+      "verifyDomain": "No se pudo verificar el dominio"
+    }
+  },
+  "microsoft365": {
+    "title": {
+      "microsoft": "Diagnósticos de Microsoft 365",
+      "default": "Diagnósticos"
+    },
+    "description": "Ejecuta una comprobación de Graph en vivo (incluida la creación y eliminación de suscripciones) para diagnosticar problemas de buzón, carpeta y permisos.",
+    "note": {
+      "label": "Nota:",
+      "body": "Los diagnósticos crearán una suscripción temporal de Microsoft Graph y luego la eliminarán. Si la eliminación falla, puede que deba quitar manualmente la suscripción en Microsoft 365."
+    },
+    "labels": {
+      "provider": "Proveedor:",
+      "mailbox": "Buzón:",
+      "overall": "General:",
+      "resource": "Recurso: {{resource}}",
+      "recommendations": "Recomendaciones",
+      "error": "Error"
+    },
+    "actions": {
+      "copySupportBundle": "Copiar paquete de soporte",
+      "copied": "Copiado"
+    },
+    "states": {
+      "running": "Ejecutando diagnósticos...",
+      "diagnosticsFailed": "Los diagnósticos fallaron"
+    },
+    "statuses": {
+      "pass": "Aprobado",
+      "warn": "Aviso",
+      "fail": "Fallido",
+      "skip": "Omitido"
+    }
+  },
+  "inboundDefaults": {
+    "loading": "Cargando valores predeterminados de tickets...",
+    "header": {
+      "title": "Valores predeterminados de tickets entrantes",
+      "description": "Configure los valores predeterminados para los tickets creados a partir del procesamiento de correos"
+    },
+    "actions": {
+      "addDefaults": "Agregar valores predeterminados"
+    },
+    "form": {
+      "editTitle": "Editar valores predeterminados del ticket",
+      "createTitle": "Crear valores predeterminados del ticket",
+      "description": "Configure los valores predeterminados que se aplicarán a los tickets creados a partir del procesamiento de correos"
+    },
+    "empty": {
+      "title": "No hay valores predeterminados de tickets configurados",
+      "description": "Cree su primera configuración para definir valores predeterminados para tickets generados por correo"
+    },
+    "badges": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "fields": {
+      "board": "Tablero:",
+      "status": "Estado:",
+      "priority": "Prioridad:",
+      "enteredBy": "Introducido por:"
+    },
+    "fallbacks": {
+      "notSet": "No establecido",
+      "system": "Sistema"
+    },
+    "menu": {
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "deleting": "Eliminando…"
+    },
+    "help": {
+      "title": "Cómo funciona",
+      "items": {
+        "providerReference": "• Cada proveedor de correo puede hacer referencia a una configuración de valores predeterminados de tickets",
+        "requiredValues": "• Cuando un correo crea un ticket, estos valores predeterminados proporcionan los campos requeridos",
+        "systemCreator": "• Los tickets generados por el sistema mostrarán \"Sistema\" como creador cuando entered_by sea nulo",
+        "scenarios": "• Puede crear diferentes valores predeterminados para distintos escenarios de correo (soporte, facturación, etc.)"
+      }
+    },
+    "errors": {
+      "load": "No se pudieron cargar los valores predeterminados de tickets",
+      "delete": "No se pudieron eliminar los valores predeterminados de tickets"
+    }
+  }
+}
