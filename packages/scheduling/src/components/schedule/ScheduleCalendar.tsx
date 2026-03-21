@@ -124,7 +124,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     } finally {
       setIsDeleteValidating(false);
     }
-  }, []);
+  }, [t]);
 
   const handleDeleteConfirm = (deleteType?: IEditScope) => {
     if (selectedEvent) {
@@ -367,7 +367,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       setEvents([]);
     }
     setIsLoading(false);
-  }, [date, view, viewingTechnicianIds]);
+  }, [date, t, view, viewingTechnicianIds]);
 
   useEffect(() => {
     fetchEvents();
@@ -1061,7 +1061,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         technicianMap={technicianMap}
       />
     );
-  }, [view, focusedTechnicianId, comparisonTechnicianIds, hoveredEventId, canModifySchedule, currentUserId, technicianMap, handleResizeStart, handleSelectEvent]);
+  }, [comparisonTechnicianIds, formatDate, focusedTechnicianId, handleResizeStart, handleSelectEvent, hoveredEventId, technicianMap, t, view]);
 
 
   // Show loading state until preferences are loaded

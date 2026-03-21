@@ -8,12 +8,14 @@ import AvailabilitySettings from './AvailabilitySettings';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAppointmentRequests } from '@alga-psa/scheduling/actions';
 import { getCurrentUserPermissions, getCurrentUser, getReportsToSubordinates } from '@alga-psa/user-composition/actions';
 import { getTeams } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 export default function SchedulePage() {
+  const { t } = useTranslation('msp/schedule');
   const searchParams = useSearchParams();
   const requestIdFromUrl = searchParams?.get('requestId') ?? null;
 
@@ -83,7 +85,9 @@ export default function SchedulePage() {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl font-bold">Schedule</h1>
+        <h1 className="text-2xl font-bold">
+          {t('page.title', { defaultValue: 'Schedule' })}
+        </h1>
         <div className="flex gap-2">
           {canConfigureAvailability && (
             <Button
@@ -92,7 +96,9 @@ export default function SchedulePage() {
               onClick={() => setShowAvailabilitySettings(true)}
             >
               <Settings className="h-4 w-4 mr-2" />
-              Configure Availability
+              {t('page.actions.configureAvailability', {
+                defaultValue: 'Configure Availability',
+              })}
             </Button>
           )}
           <Button
@@ -102,7 +108,9 @@ export default function SchedulePage() {
             className="relative"
           >
             <Calendar className="h-4 w-4 mr-2" />
-            Appointment Requests
+            {t('page.actions.appointmentRequests', {
+              defaultValue: 'Appointment Requests',
+            })}
             {pendingCount > 0 && (
               <Badge variant="error" className="ml-2 px-2 py-0.5">
                 {pendingCount}

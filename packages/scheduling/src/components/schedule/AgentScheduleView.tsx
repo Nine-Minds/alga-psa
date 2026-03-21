@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { momentLocalizer, View } from 'react-big-calendar';
 import moment from 'moment';
 import CalendarSkeleton from '@alga-psa/ui/components/skeletons/CalendarSkeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import { AgentScheduleDrawerStyles } from './AgentScheduleDrawerStyles';
@@ -34,6 +35,7 @@ interface AgentScheduleViewProps {
 }
 
 const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
+  const { t } = useTranslation('msp/schedule');
   const [events, setEvents] = useState<IScheduleEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,14 +87,20 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
         setUserPermissions(permissions || []);
       } catch (err) {
         if (!active) return;
-        setError(err instanceof Error ? err.message : 'Failed to load user permissions');
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('agentView.errors.loadPermissions', {
+                defaultValue: 'Failed to load user permissions',
+              })
+        );
       }
     };
     loadUser();
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let active = true;
@@ -107,7 +115,9 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
       if (!canViewAgent) {
         setEvents([]);
         setIsLoading(false);
-        setError('You do not have permission to view this schedule.');
+        setError(t('agentView.errors.forbidden', {
+          defaultValue: 'You do not have permission to view this schedule.',
+        }));
         return;
       }
 
@@ -127,7 +137,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
     return () => {
       active = false;
     };
-  }, [agentId, canViewAgent, currentUserId, permissionsLoaded, dateRange.end, dateRange.start]);
+  }, [agentId, canViewAgent, currentUserId, permissionsLoaded, dateRange.end, dateRange.start, t]);
 
   useEffect(() => {
     if (!hasScrolled && calendarRef.current && (view === 'day' || view === 'week')) {
@@ -183,7 +193,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
       <div className="flex-grow relative" ref={calendarRef}>
         {isLoading && (
           <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10">
-            Loading...
+            {t('agentView.loading', { defaultValue: 'Loading...' })}
           </div>
         )}
         {error && (
