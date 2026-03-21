@@ -133,6 +133,7 @@ done
 - (2026-03-21) Validation for `F012`: `git diff --check` passed, and `npx tsc -p packages/scheduling/tsconfig.json --noEmit` passed after wiring the remaining schedule files with user-visible strings.
 - (2026-03-21) Completed `F013`: added schedule locale files for `de`, `es`, `fr`, `it`, `nl`, and `pl`, then generated targeted `xx` and `yy` pseudo-locales from the English source. The schedule namespace now exists in all 9 required locales under `server/public/locales/*/msp/schedule.json`.
 - (2026-03-21) Validation for `F013`: counted 293 leaf strings in each generated real locale, confirmed the pseudo-locale outputs return `11111` for schedule keys, and re-ran `node scripts/validate-translations.cjs` with `Errors: 0` and `Warnings: 0`.
+- (2026-03-21) Completed `F014`: ran the Italian accent audit against [server/public/locales/it/msp/schedule.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/schedule.json). The broad grep only matched legitimate conjunctions such as `data e ora` and `Questo e gli eventi futuri`; a tighter search for common accentless spellings (`puo`, `gia`, `verra`, `funzionalita`, `perche`, weekday names without accents) returned no matches, so no Italian copy changes were required.
 
 ## Open Questions
 
