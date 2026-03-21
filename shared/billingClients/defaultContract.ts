@@ -17,6 +17,11 @@ export type EnsureDefaultContractForClientResult = {
   createdAssignment: boolean;
 };
 
+export type EnsureDefaultContractFallbackResult = {
+  ensured: boolean;
+  result?: EnsureDefaultContractForClientResult;
+};
+
 const isUniqueViolation = (error: unknown): boolean => {
   const code = (error as { code?: string } | undefined)?.code;
   return code === '23505';
@@ -165,4 +170,21 @@ export async function ensureDefaultContractForClient(
   return (knexOrTrx as Knex).transaction(async (trx) =>
     ensureDefaultContractForClientInTransaction(trx, params)
   );
+}
+
+export async function ensureDefaultContractForClientIfBillingConfigured(
+  knexOrTrx: Knex | Knex.Transaction,
+  params: EnsureDefaultContractForClientParams
+): Promise<EnsureDefaultContractFallbackResult> {
+  const billingSettings = await knexOrTrx('client_billing_settings')
+    .where({ tenant: params.tenant, client_id: params.clientId })
+    .select('client_id')
+    .first();
+
+  if (!billingSettings?.client_id) {
+    return { ensured: false };
+  }
+
+  const result = await ensureDefaultContractForClient(knexOrTrx, params);
+  return { ensured: true, result };
 }

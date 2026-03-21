@@ -32,6 +32,7 @@ import {
   buildClientUpdatedPayload,
 } from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
 import { buildContactPrimarySetPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders';
+import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
 
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
@@ -243,6 +244,11 @@ export class ClientService extends BaseService<IClient> {
       // Insert into clients table
       const [client] = await trx('clients').insert(clientData).returning('*');
 
+      await ensureDefaultContractForClientIfBillingConfigured(trx, {
+        tenant: context.tenant,
+        clientId: client.client_id,
+      });
+
       // Dual-write to clients table if enabled
       if (enableDualWrite) {
         try {
@@ -300,6 +306,131 @@ export class ClientService extends BaseService<IClient> {
     });
 
     return client;
+  }
+
+  async delete(id: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    await withTransaction(knex, async (trx) => {
+      const client = await trx('clients')
+        .where({ tenant: context.tenant, client_id: id })
+        .select('client_id')
+        .first();
+      if (!client?.client_id) {
+        throw new NotFoundError('Client not found');
+      }
+
+      await this.cleanupClientDeleteArtifacts(trx, context.tenant, id);
+
+      const deleted = await trx('clients')
+        .where({ tenant: context.tenant, client_id: id })
+        .delete();
+      if (!deleted) {
+        throw new NotFoundError('Client not found');
+      }
+    });
+  }
+
+  private async cleanupClientDeleteArtifacts(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string
+  ): Promise<void> {
+    await this.cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
+    await this.deleteFromTableIfExists(trx, 'client_billing_settings', { tenant, client_id: clientId });
+    await this.deleteFromTableIfExists(trx, 'client_billing_cycles', { tenant, client_id: clientId });
+    await this.deleteFromTableIfExists(trx, 'client_tax_settings', { tenant, client_id: clientId });
+    await this.deleteFromTableIfExists(trx, 'client_tax_rates', { tenant, client_id: clientId });
+    await this.deleteFromTableIfExists(trx, 'client_locations', { tenant, client_id: clientId });
+    await this.deleteFromTableIfExists(trx, 'client_payment_customers', { tenant, client_id: clientId });
+    await this.deleteFromTableIfExists(trx, 'tag_mappings', {
+      tenant,
+      tagged_type: 'client',
+      tagged_id: clientId,
+    });
+  }
+
+  private async cleanupDefaultContractsForDeletedClient(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string
+  ): Promise<void> {
+    const hasContractsTable = await trx.schema.hasTable('contracts');
+    const hasClientContractsTable = await trx.schema.hasTable('client_contracts');
+    if (!hasContractsTable || !hasClientContractsTable) {
+      return;
+    }
+
+    const defaultContracts = await trx('contracts')
+      .where({
+        tenant,
+        owner_client_id: clientId,
+        is_system_managed_default: true,
+      })
+      .select('contract_id');
+
+    const assignmentsForClient = await trx('client_contracts')
+      .where({ tenant, client_id: clientId })
+      .select('client_contract_id', 'contract_id');
+
+    const assignmentsById = new Map<string, string>();
+    for (const assignment of assignmentsForClient) {
+      assignmentsById.set(assignment.client_contract_id, assignment.contract_id);
+    }
+
+    const invoicedDefaultContractIds = new Set<string>();
+    if (assignmentsById.size > 0 && await trx.schema.hasTable('invoice_charges')) {
+      const invoiceRows = await trx('invoice_charges')
+        .where({ tenant })
+        .whereIn('client_contract_id', [...assignmentsById.keys()])
+        .distinct('client_contract_id');
+      for (const row of invoiceRows) {
+        const contractId = assignmentsById.get(row.client_contract_id);
+        if (contractId) {
+          invoicedDefaultContractIds.add(contractId);
+        }
+      }
+    }
+
+    await trx('client_contracts')
+      .where({ tenant, client_id: clientId })
+      .delete();
+
+    for (const contract of defaultContracts) {
+      const countRow = await trx('client_contracts')
+        .where({ tenant, contract_id: contract.contract_id })
+        .count<{ count?: string }>('client_contract_id as count')
+        .first();
+      const assignmentCount = Number(countRow?.count ?? 0);
+      if (assignmentCount > 0) {
+        continue;
+      }
+
+      if (invoicedDefaultContractIds.has(contract.contract_id)) {
+        await trx('contracts')
+          .where({ tenant, contract_id: contract.contract_id })
+          .update({
+            status: 'archived',
+            is_active: false,
+            updated_at: trx.fn.now(),
+          });
+      } else {
+        await trx('contracts')
+          .where({ tenant, contract_id: contract.contract_id })
+          .delete();
+      }
+    }
+  }
+
+  private async deleteFromTableIfExists(
+    trx: Knex.Transaction,
+    tableName: string,
+    where: Record<string, unknown>
+  ): Promise<void> {
+    if (!await trx.schema.hasTable(tableName)) {
+      return;
+    }
+    await trx(tableName).where(where).delete();
   }
 
   /**

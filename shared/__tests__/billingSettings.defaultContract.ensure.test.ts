@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ensureClientBillingSettingsRow } from '../billingClients/billingSettings';
+import { ensureDefaultContractForClientIfBillingConfigured } from '../billingClients/defaultContract';
 
 type Row = Record<string, any>;
 type TableState = Record<string, Row[]>;
@@ -252,5 +253,44 @@ describe('default contract ensure on billing settings ensure', () => {
       (row) => row.tenant === 'tenant-1' && row.owner_client_id === 'client-1' && row.is_system_managed_default === true
     );
     expect(defaultContracts).toHaveLength(1);
+  });
+
+  it('fallback ensure hook is a no-op when billing settings do not exist for the client', async () => {
+    const knex = createFakeKnex({
+      clients: [{ tenant: 'tenant-1', client_id: 'client-1', default_currency_code: 'USD' }],
+      default_billing_settings: [],
+      client_billing_settings: [],
+      contracts: [],
+      client_contracts: [],
+    });
+
+    const result = await ensureDefaultContractForClientIfBillingConfigured(knex, {
+      tenant: 'tenant-1',
+      clientId: 'client-1',
+    });
+
+    expect(result.ensured).toBe(false);
+    const state = knex.__state as TableState;
+    expect(state.contracts).toHaveLength(0);
+  });
+
+  it('fallback ensure hook provisions the default contract when billing settings already exist', async () => {
+    const knex = createFakeKnex({
+      clients: [{ tenant: 'tenant-1', client_id: 'client-1', default_currency_code: 'USD' }],
+      default_billing_settings: [],
+      client_billing_settings: [{ tenant: 'tenant-1', client_id: 'client-1' }],
+      contracts: [],
+      client_contracts: [],
+    });
+
+    const result = await ensureDefaultContractForClientIfBillingConfigured(knex, {
+      tenant: 'tenant-1',
+      clientId: 'client-1',
+    });
+
+    expect(result.ensured).toBe(true);
+    const state = knex.__state as TableState;
+    expect(state.contracts.filter((row) => row.is_system_managed_default === true)).toHaveLength(1);
+    expect(state.client_contracts).toHaveLength(1);
   });
 });

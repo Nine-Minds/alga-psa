@@ -12,6 +12,8 @@
 - (2026-03-21) Persist explicit default-contract identity on `contracts.is_system_managed_default` and enforce uniqueness via tenant+owner-client partial unique index; deterministic naming is `System-managed default contract`.
 - (2026-03-21) Centralize billing-settings row ensure in `shared/billingClients/billingSettings.ts` and make default-contract ensure part of that shared path, then route schedule/cycle-anchor/package settings/credit-expiration updates through it.
 - (2026-03-21) Null client-billing-settings overrides (`settings === null`) remain delete-only and do not trigger default-contract ensure; ensure is only invoked on non-null ensure/update touchpoints.
+- (2026-03-21) Add fallback client-create hook `ensureDefaultContractForClientIfBillingConfigured(...)` in shared default-contract domain and wire it into major create paths (clients package action, shared model, API service, integration import, email service) so bypass flows still reconcile when billing settings already exist.
+- (2026-03-21) For API-service client deletion, enforce domain cleanup before hard delete: remove assignment/billing artifacts, then apply orphan policy to default contracts (`delete` when uninvoiced orphan, `archive` when invoiced orphan).
 
 ## Discoveries / Constraints
 
@@ -23,6 +25,7 @@
 - UI copy has technical/non-business labels that do not communicate default-contract behavior clearly.
 - Existing package wiring tests include brittle source-string assertions for exact function signatures/throw style; those tests can fail even when runtime behavior is unchanged.
 - Shared vitest config only discovers `services/**/*.test.ts` and `**/__tests__/**/*.test.ts`, so shared tests for this plan need to live under `shared/__tests__/`.
+- `BaseService.delete` is generic hard-delete behavior; without `ClientService.delete` override it bypasses client-domain cleanup and can skip default-contract artifact cleanup.
 
 ## Commands / Runbooks
 
@@ -67,11 +70,16 @@
   - `packages/billing/src/actions/creditExpirationSettingsActions.ts`
   - `server/migrations/20260321150000_add_system_managed_default_contract_marker.cjs`
   - `shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
+  - `packages/clients/src/actions/clientActions.ts`
+  - `shared/models/clientModel.ts`
+  - `server/src/lib/api/services/ClientService.ts`
+  - `packages/integrations/src/services/xeroCsvClientSyncService.ts`
+  - `shared/services/emailService.ts`
   - `ee/docs/plans/2026-03-21-system-managed-default-contract-cutover/ENGINEERING_NOTES.md`
 
 ## Completed Checklist Progress
 
-- (2026-03-21) Completed features: `F001-F013`, `F055`, `F056`, `F063`.
+- (2026-03-21) Completed features: `F001-F018`, `F055`, `F056`, `F063`, `F068`.
 - (2026-03-21) Completed tests: `T001`, `T002`.
 
 ## Open Questions

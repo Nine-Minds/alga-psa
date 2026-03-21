@@ -116,7 +116,7 @@
   {
     "id": "F014",
     "description": "Add optional fallback reconciliation hook for client-created events that bypass billing settings flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations 5"
     ]
@@ -124,7 +124,7 @@
   {
     "id": "F015",
     "description": "Audit and patch API generic client-delete path to invoke domain cleanup equivalent to package-level delete action.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 13",
       "Execution Order 8"
@@ -133,7 +133,7 @@
   {
     "id": "F016",
     "description": "Implement explicit cleanup for default-contract assignments on client deletion.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 11"
     ]
@@ -141,7 +141,7 @@
   {
     "id": "F017",
     "description": "Define orphan default-contract cleanup policy for contract headers when assignments are removed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 11"
     ]
@@ -149,7 +149,7 @@
   {
     "id": "F018",
     "description": "Preserve non-destructive lifecycle for invoiced default contracts (soft lifecycle, no invalid hard-delete behavior).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 12"
     ]
@@ -557,7 +557,7 @@
   {
     "id": "F068",
     "description": "Add cleanup guardrails so deleting billing configuration/client cannot leave dangling references to default contract pointers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 11"
     ]

@@ -24,6 +24,7 @@ import {
   buildClientUpdatedPayload,
 } from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
 import { buildContactPrimarySetPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders';
+import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
 
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
@@ -371,6 +372,11 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
           updated_at: new Date().toISOString()
         })
         .returning('*');
+
+      await ensureDefaultContractForClientIfBillingConfigured(trx, {
+        tenant,
+        clientId: created.client_id,
+      });
 
       return created;
     });
