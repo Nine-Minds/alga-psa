@@ -1,0 +1,69 @@
+{
+  "navigation": {
+    "heading": "11111"
+  },
+  "enterpriseFeature": {
+    "title": "11111",
+    "description": "11111"
+  },
+  "settings": {
+    "title": "11111",
+    "description": "11111",
+    "tabs": {
+      "manage": "11111",
+      "install": "11111"
+    },
+    "enterpriseOnly": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "links": {
+      "needLogs": "11111",
+      "debugConsole": "11111"
+    },
+    "loading": {
+      "extensions": "11111",
+      "installer": "11111"
+    },
+    "featureNames": {
+      "settings": "11111",
+      "details": "11111",
+      "permissions": "11111",
+      "management": "11111",
+      "installer": "11111"
+    }
+  },
+  "communityEdition": {
+    "listUnavailable": "11111",
+    "dynamicListUnavailable": "11111",
+    "dynamicInstallUnavailable": "11111"
+  },
+  "page": {
+    "metadata": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "title": "11111",
+    "description": "11111"
+  },
+  "detail": {
+    "metadataTitle": "11111",
+    "extensionId": "11111"
+  },
+  "detailsPage": {
+    "metadata": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "title": "11111",
+    "description": "11111"
+  },
+  "settingsPage": {
+    "metadata": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "title": "11111",
+    "description": "11111"
+  }
+}

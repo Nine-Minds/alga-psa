@@ -1,0 +1,69 @@
+{
+  "navigation": {
+    "heading": "Erweiterungen"
+  },
+  "enterpriseFeature": {
+    "title": "Enterprise-Funktion",
+    "description": "Für {{feature}} ist die Enterprise-Edition erforderlich. Bitte führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen."
+  },
+  "settings": {
+    "title": "Erweiterungsverwaltung",
+    "description": "Installieren, konfigurieren und verwalten Sie Erweiterungen, um die Funktionalität von Alga PSA zu erweitern.",
+    "tabs": {
+      "manage": "Verwalten",
+      "install": "Installieren"
+    },
+    "enterpriseOnly": {
+      "title": "Enterprise-Funktion",
+      "description": "Erweiterungen sind in der Enterprise-Edition von Alga PSA verfügbar."
+    },
+    "links": {
+      "needLogs": "Erweiterungsprotokolle benötigt?",
+      "debugConsole": "Service-Proxy-Demo-Debug-Konsole öffnen"
+    },
+    "loading": {
+      "extensions": "Erweiterungen werden geladen...",
+      "installer": "Installationsprogramm wird geladen..."
+    },
+    "featureNames": {
+      "settings": "Erweiterungseinstellungen",
+      "details": "Erweiterungsdetails",
+      "permissions": "Erweiterungsberechtigungen",
+      "management": "Erweiterungsverwaltung",
+      "installer": "Erweiterungsinstallationsprogramm"
+    }
+  },
+  "communityEdition": {
+    "listUnavailable": "Erweiterungen sind in dieser Edition nicht verfügbar",
+    "dynamicListUnavailable": "Erweiterungen sind in der Community-Edition nicht verfügbar",
+    "dynamicInstallUnavailable": "Die Erweiterungsinstallation ist in der Community-Edition nicht verfügbar"
+  },
+  "page": {
+    "metadata": {
+      "title": "Erweiterungen",
+      "description": "Erweiterungen verwalten"
+    },
+    "title": "Erweiterungen",
+    "description": "Die Erweiterungsverwaltung ist in der Enterprise-Edition verfügbar."
+  },
+  "detail": {
+    "metadataTitle": "Erweiterungen - Enterprise-Funktion",
+    "extensionId": "Erweiterungs-ID: {{id}}"
+  },
+  "detailsPage": {
+    "metadata": {
+      "title": "Erweiterungsdetails",
+      "description": "Erweiterungsdetails anzeigen"
+    },
+    "title": "Erweiterungsdetails",
+    "description": "Erweiterungsdetails sind in der Enterprise-Edition verfügbar."
+  },
+  "settingsPage": {
+    "metadata": {
+      "title": "Erweiterungseinstellungen",
+      "description": "Erweiterungseinstellungen konfigurieren"
+    },
+    "title": "Erweiterungseinstellungen",
+    "description": "Erweiterungseinstellungen sind in der Enterprise-Edition verfügbar."
+  }
+}
