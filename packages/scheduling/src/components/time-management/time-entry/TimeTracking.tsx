@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { TimePeriodList } from './TimePeriodList';
 import { SkeletonTimeSheet } from './SkeletonTimeSheet';
 import { ITimePeriodWithStatusView } from '@alga-psa/types';
@@ -21,6 +22,7 @@ interface TimeTrackingProps {
 }
 
 export default function TimeTracking({ currentUser, isManager: _isManager }: TimeTrackingProps) {
+  const { t } = useTranslation('msp/time-entry');
   const router = useRouter();
   const { enabled: delegatedTimeEntryEnabled, loading: delegatedTimeEntryLoading } = useFeatureFlag(
     'delegated-time-entry',
@@ -91,7 +93,7 @@ export default function TimeTracking({ currentUser, isManager: _isManager }: Tim
       {showSubjectSelector && (
         <div className="w-full max-w-md">
           <UserPicker
-            label="User"
+            label={t('timeTracking.subjectUserLabel', { defaultValue: 'User' })}
             value={subjectUserId}
             onValueChange={setSubjectUserId}
             users={subjectUsers}
