@@ -39,7 +39,7 @@
   {"id": "F052", "description": "TimeEntryEditForm.tsx: translate form labels, placeholders, validation messages, delete button, unsaved changes indicator", "implemented": true, "prdRefs": ["T-FR2"]},
   {"id": "F053", "description": "WorkItemPicker.tsx: translate ad-hoc entry UI, search placeholder, filter labels, type options, date labels, validation, empty/loading states", "implemented": true, "prdRefs": ["T-FR3"]},
   {"id": "F054", "description": "WorkItemList.tsx: translate assignment text with interpolation, type badges, contact/due date labels, pagination, empty state", "implemented": true, "prdRefs": ["T-FR4"]},
-  {"id": "F055", "description": "TimeSheetHeader.tsx: translate status badges, heading template with interpolation, navigation labels, submit/reopen buttons, pagination", "implemented": false, "prdRefs": ["T-FR5"]},
+  {"id": "F055", "description": "TimeSheetHeader.tsx: translate status badges, heading template with interpolation, navigation labels, submit/reopen buttons, pagination", "implemented": true, "prdRefs": ["T-FR5"]},
   {"id": "F056", "description": "TimeSheetApproval.tsx: translate entry detail labels, suggestion placeholder, approve/request changes buttons", "implemented": false, "prdRefs": ["T-FR6"]},
   {"id": "F057", "description": "ApprovalActions.tsx: translate approve/reject/request changes buttons, dialog titles, rejection reason label", "implemented": false, "prdRefs": ["T-FR7"]},
   {"id": "F058", "description": "TimeSheetComments.tsx: translate role labels, placeholders, action buttons", "implemented": false, "prdRefs": ["T-FR8"]},
