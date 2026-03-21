@@ -9,6 +9,7 @@ import { mapClientCadenceInvoiceCandidatesToRecurringRunTargets } from '../../..
 const mocks = vi.hoisted(() => ({
   getCurrentUserAsync: vi.fn(),
   generateInvoiceForSelectionInput: vi.fn(),
+  generateInvoiceForSelectionInputs: vi.fn(),
   publishWorkflowEvent: vi.fn(),
   getAvailableRecurringDueWork: vi.fn(),
   buildRecurringBillingRunStartedPayload: vi.fn((input) => input),
@@ -22,6 +23,7 @@ vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
 
 vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => ({
   generateInvoiceForSelectionInput: mocks.generateInvoiceForSelectionInput,
+  generateInvoiceForSelectionInputs: mocks.generateInvoiceForSelectionInputs,
 }));
 
 vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration.constants', () => ({
@@ -42,7 +44,11 @@ vi.mock('@shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBu
   buildRecurringBillingRunFailedPayload: mocks.buildRecurringBillingRunFailedPayload,
 }));
 
-const { generateInvoicesAsRecurringBillingRun, selectClientCadenceRecurringRunTargets } = await import(
+const {
+  generateInvoicesAsRecurringBillingRun,
+  generateGroupedInvoicesAsRecurringBillingRun,
+  selectClientCadenceRecurringRunTargets,
+} = await import(
   '../../../../../packages/billing/src/actions/recurringBillingRunActions'
 );
 
@@ -96,6 +102,7 @@ describe('recurring billing run actions', () => {
       tenant: 'tenant-1',
     });
     mocks.generateInvoiceForSelectionInput.mockResolvedValue({ invoice_id: 'invoice-1' });
+    mocks.generateInvoiceForSelectionInputs.mockResolvedValue({ invoice_id: 'invoice-1' });
     mocks.publishWorkflowEvent.mockResolvedValue(undefined);
     mocks.getAvailableRecurringDueWork.mockResolvedValue({
       invoiceCandidates: [],
@@ -174,6 +181,94 @@ describe('recurring billing run actions', () => {
       }),
     );
     expect(result.invoicesCreated).toBe(1);
+  });
+
+  it('T018: grouped recurring run generation creates one invoice for a combinable parent selection group', async () => {
+    const firstTarget = buildContractCadenceTarget({ contractLineId: 'line-1' });
+    const secondTarget = buildContractCadenceTarget({ contractLineId: 'line-2' });
+
+    const result = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [
+        {
+          groupKey: 'parent-selection:invoice-candidate:client-1:2025-02-08:2025-03-08',
+          selectorInputs: [firstTarget.selectorInput, secondTarget.selectorInput],
+        },
+      ],
+    });
+
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledTimes(1);
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledWith(
+      [firstTarget.selectorInput, secondTarget.selectorInput],
+      { allowPoOverage: undefined },
+    );
+    expect(mocks.generateInvoiceForSelectionInput).not.toHaveBeenCalled();
+    expect(result.invoicesCreated).toBe(1);
+    expect(result.failedCount).toBe(0);
+  });
+
+  it('T019: grouped recurring run generation fans out non-combinable child selections into multiple invoices', async () => {
+    const firstTarget = buildContractCadenceTarget({ contractLineId: 'line-1' });
+    const secondTarget = buildContractCadenceTarget({ contractLineId: 'line-2' });
+
+    const result = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [
+        {
+          groupKey: 'child-selection:line-1',
+          selectorInputs: [firstTarget.selectorInput],
+        },
+        {
+          groupKey: 'child-selection:line-2',
+          selectorInputs: [secondTarget.selectorInput],
+        },
+      ],
+    });
+
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledTimes(2);
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenNthCalledWith(
+      1,
+      [firstTarget.selectorInput],
+      { allowPoOverage: undefined },
+    );
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenNthCalledWith(
+      2,
+      [secondTarget.selectorInput],
+      { allowPoOverage: undefined },
+    );
+    expect(result.invoicesCreated).toBe(2);
+    expect(result.failedCount).toBe(0);
+  });
+
+  it('T021: duplicate grouped/member selections are skipped without blocking unrelated sibling groups', async () => {
+    const duplicateInvoiceError = Object.assign(
+      new Error('Invoice already exists for this recurring execution window'),
+      { code: 'DUPLICATE_RECURRING_INVOICE' },
+    );
+    const firstTarget = buildContractCadenceTarget({ contractLineId: 'line-1' });
+    const secondTarget = buildContractCadenceTarget({ contractLineId: 'line-2' });
+
+    mocks.generateInvoiceForSelectionInputs
+      .mockRejectedValueOnce(duplicateInvoiceError)
+      .mockResolvedValueOnce({ invoice_id: 'invoice-2' });
+
+    const result = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [
+        {
+          groupKey: 'child-selection:line-1',
+          selectorInputs: [firstTarget.selectorInput],
+        },
+        {
+          groupKey: 'child-selection:line-2',
+          selectorInputs: [secondTarget.selectorInput],
+        },
+      ],
+    });
+
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({
+      invoicesCreated: 1,
+      failedCount: 0,
+      failures: [],
+    });
   });
 
   it('T023: recurring billing run retries keep deterministic selection and retry keys using only canonical execution identity', async () => {

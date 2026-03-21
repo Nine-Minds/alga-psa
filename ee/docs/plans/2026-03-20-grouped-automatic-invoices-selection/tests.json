@@ -104,25 +104,25 @@
   {
     "id": "T018",
     "description": "Generating a selected combinable parent creates exactly one invoice spanning all selected compatible children.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F016", "F017"]
   },
   {
     "id": "T019",
     "description": "Generating selected child rows from a non-combinable group creates multiple invoices while preserving the exact selected scope.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F016", "F018"]
   },
   {
     "id": "T020",
     "description": "Grouped generation does not re-expand into unselected siblings when the same client and invoice window contain additional candidates.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F016"]
   },
   {
     "id": "T021",
     "description": "Duplicate-prevention logic blocks re-invoicing the same grouped parent selection or member selection without blocking unrelated siblings.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {

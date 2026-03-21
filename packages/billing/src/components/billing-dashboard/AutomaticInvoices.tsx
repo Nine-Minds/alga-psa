@@ -20,7 +20,7 @@ import {
   getPurchaseOrderOverageForSelectionInput,
   previewGroupedInvoicesForSelectionInputs,
 } from '@alga-psa/billing/actions/invoiceGeneration';
-import { generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
+import { generateGroupedInvoicesAsRecurringBillingRun, generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
 import {
   getRecurringInvoiceHistoryPaginated,
@@ -76,8 +76,8 @@ interface RecurringInvoiceParentGroup {
   candidate: ReadyPeriod;
 }
 
-type RecurringPreviewGroup = {
-  previewGroupKey: string;
+type RecurringSelectionGroup = {
+  groupKey: string;
   selectorInputs: IRecurringDueSelectionInput[];
 };
 
@@ -416,9 +416,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   ].filter((member, index, allMembers) =>
     allMembers.findIndex((item) => item.executionIdentityKey === member.executionIdentityKey) === index,
   );
-  const selectedPreviewGroups: RecurringPreviewGroup[] = [
+  const selectedSelectionGroups: RecurringSelectionGroup[] = [
     ...selectedParentGroups.map((group) => ({
-      previewGroupKey: group.parentSummary.parentSelectionKey,
+      groupKey: group.parentSummary.parentSelectionKey,
       selectorInputs: group.childExecutionRows.map((member) => member.selectorInput),
     })),
     ...selectedChildRows
@@ -429,13 +429,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return !parentGroup || !selectedParentSelectionKeys.has(parentGroup.parentSummary.parentSelectionKey);
       })
       .map((member) => ({
-        previewGroupKey: childSelectionKeyForMember(member),
+        groupKey: childSelectionKeyForMember(member),
         selectorInputs: [member.selectorInput],
       })),
   ].filter((group) => group.selectorInputs.length > 0);
   const previewSupportsDirectGeneration =
-    selectedPreviewGroups.length === 1
-    && selectedPreviewGroups[0].selectorInputs.length === 1;
+    selectedSelectionGroups.length === 1
+    && selectedSelectionGroups[0].selectorInputs.length === 1;
   const isGroupFullySelected = (group: RecurringInvoiceParentGroup): boolean => {
     if (selectedTargets.has(group.parentSummary.parentSelectionKey)) {
       return true;
@@ -602,13 +602,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     });
   };
 
-  const buildRecurringRunTarget = (period: { selectorInput: IRecurringDueSelectionInput; executionWindow: IRecurringDueSelectionInput['executionWindow'] }) => {
-    return {
-      selectorInput: period.selectorInput,
-      executionWindow: period.executionWindow,
-    };
-  };
-
   const buildRecurringRunTargetFromSelection = (selection: {
     selectorInput: IRecurringDueSelectionInput;
   }) => {
@@ -636,7 +629,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     return clientName || failure.billingCycleId || failure.executionIdentityKey || 'Recurring invoice window';
   };
 
-  const handlePreviewSelection = async (groups: RecurringPreviewGroup[]) => {
+  const handlePreviewSelection = async (groups: RecurringSelectionGroup[]) => {
     if (groups.length === 0) {
       return;
     }
@@ -644,7 +637,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     const primarySelection = groups[0]?.selectorInputs[0] ?? null;
     setIsPreviewLoading(true);
     setErrors({}); // Clear previous errors
-    const response = await previewGroupedInvoicesForSelectionInputs(groups);
+    const response = await previewGroupedInvoicesForSelectionInputs(
+      groups.map((group) => ({
+        previewGroupKey: group.groupKey,
+        selectorInputs: group.selectorInputs,
+      })),
+    );
     if (response.success) {
       setPreviewState({
         previews: response.previews,
@@ -721,8 +719,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
-      const runResult = await generateInvoicesAsRecurringBillingRun({
-        targets: selectedExecutionPeriods.map(buildRecurringRunTarget),
+      const runResult = await generateGroupedInvoicesAsRecurringBillingRun({
+        groupedTargets: selectedSelectionGroups.map((group) => ({
+          groupKey: group.groupKey,
+          selectorInputs: group.selectorInputs,
+        })),
       });
       const newErrors: { [key: string]: string } = {};
       for (const failure of runResult.failures) {
@@ -770,8 +771,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }
       }
 
-      const runResult = await generateInvoicesAsRecurringBillingRun({
-        targets: toGenerate.map(buildRecurringRunTarget),
+      const runResult = await generateGroupedInvoicesAsRecurringBillingRun({
+        groupedTargets: toGenerate.map((period) => ({
+          groupKey: `child-selection:${period.executionIdentityKey}`,
+          selectorInputs: [period.selectorInput],
+        })),
         allowPoOverage: decision === 'allow',
       });
       for (const failure of runResult.failures) {
@@ -997,19 +1001,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 id='preview-selected-button'
                 variant="outline"
                 onClick={() => {
-                  if (selectedPreviewGroups.length > 0) {
-                    handlePreviewSelection(selectedPreviewGroups);
+                  if (selectedSelectionGroups.length > 0) {
+                    handlePreviewSelection(selectedSelectionGroups);
                   }
                 }}
                 disabled={
-                  selectedPreviewGroups.length === 0
+                  selectedSelectionGroups.length === 0
                   || isPreviewLoading
                 }
               >
                 <Eye className="h-4 w-4 mr-2" />
                 {isPreviewLoading ? 'Loading...' : 'Preview Selected'}
               </Button>
-              {!previewSupportsDirectGeneration && selectedPreviewGroups.length > 0 ? (
+              {!previewSupportsDirectGeneration && selectedSelectionGroups.length > 0 ? (
                 <span className="text-xs text-muted-foreground" data-testid="grouped-preview-unavailable-copy">
                   Preview supports grouped selections; direct "Generate from preview" remains single-selection only.
                 </span>

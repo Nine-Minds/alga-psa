@@ -86,31 +86,31 @@
   {
     "id": "F015",
     "description": "Add grouped generation request semantics so parent selections and arbitrary child selections execute exactly the selected scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F016",
     "description": "Implement exact-scope grouped execution so selected parent or child rows never re-expand into unselected sibling candidates.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {
     "id": "F017",
     "description": "Support true combined invoice generation for compatible grouped selections spanning multiple child candidates.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F018",
     "description": "Preserve fan-out generation for incompatible grouped selections so the same grouped UI can still produce multiple invoices safely.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
     "id": "F019",
     "description": "Redesign duplicate-prevention and idempotency logic so grouped parent selections and multi-child executions are safe against re-invoicing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {

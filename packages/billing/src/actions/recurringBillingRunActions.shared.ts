@@ -1,6 +1,6 @@
 import {
   IRecurringDueSelectionInput,
-  IRecurringDueWorkRow,
+  IRecurringDueWorkInvoiceCandidate,
   IRecurringRunExecutionWindowIdentity,
   RecurringRunExecutionWindowKind,
 } from '@alga-psa/types';
@@ -15,6 +15,11 @@ export type RecurringBillingRunInvoiceFailure = {
 export type RecurringBillingRunTarget = {
   selectorInput: IRecurringDueSelectionInput;
   executionWindow: IRecurringRunExecutionWindowIdentity;
+};
+
+export type RecurringBillingRunGroupedTarget = {
+  groupKey: string;
+  selectorInputs: IRecurringDueSelectionInput[];
 };
 
 export type ClientCadenceRecurringRunTarget = RecurringBillingRunTarget & {
@@ -34,19 +39,24 @@ export type RecurringBillingRunResult = {
   failures: RecurringBillingRunInvoiceFailure[];
 };
 
-export function mapClientCadenceDueWorkRowsToRecurringRunTargets(
-  rows: IRecurringDueWorkRow[],
+export function mapClientCadenceInvoiceCandidatesToRecurringRunTargets(
+  invoiceCandidates: IRecurringDueWorkInvoiceCandidate[],
 ): ClientCadenceRecurringRunTarget[] {
-  return rows
-    .filter((row) => row.cadenceOwner === 'client' && row.canGenerate)
-    .map((row) => ({
-      executionWindow: row.executionWindow,
-      selectorInput: row.selectorInput,
-      clientId: row.clientId,
-      clientName: row.clientName ?? 'Unknown client',
-      periodStart: row.invoiceWindowStart,
-      periodEnd: row.invoiceWindowEnd,
-      isEarly: row.isEarly,
+  return invoiceCandidates
+    .filter(
+      (candidate) =>
+        candidate.canGenerate &&
+        candidate.cadenceOwners.length === 1 &&
+        candidate.cadenceOwners[0] === 'client',
+    )
+    .map((candidate) => ({
+      executionWindow: candidate.executionWindow,
+      selectorInput: candidate.selectorInput,
+      clientId: candidate.clientId,
+      clientName: candidate.clientName ?? 'Unknown client',
+      periodStart: candidate.windowStart,
+      periodEnd: candidate.windowEnd,
+      isEarly: candidate.isEarly,
     }))
     .sort((left, right) => {
       if (left.periodStart !== right.periodStart) {

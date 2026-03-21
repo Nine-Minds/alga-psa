@@ -25,6 +25,7 @@ const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<
     },
   })),
 }));
+const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -44,6 +45,7 @@ vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({
 
 vi.mock('@alga-psa/billing/actions/recurringBillingRunActions', () => ({
   generateInvoicesAsRecurringBillingRun: vi.fn(async () => ({ failures: [] })),
+  generateGroupedInvoicesAsRecurringBillingRun: mockGenerateGroupedInvoicesAsRecurringBillingRun,
 }));
 
 vi.mock('@alga-psa/billing/actions/billingCycleActions', () => ({
@@ -136,6 +138,7 @@ vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({
 describe('AutomaticInvoices grouped parent rows', () => {
   beforeEach(() => {
     mockPreviewGroupedInvoicesForSelectionInputs.mockClear();
+    mockGenerateGroupedInvoicesAsRecurringBillingRun.mockClear();
     mockDueWorkResponse = {
       invoiceCandidates: [
         {
@@ -551,5 +554,55 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(previewPayload).toHaveLength(1);
     expect(previewPayload[0].selectorInputs).toHaveLength(1);
     expect(previewPayload[0].selectorInputs[0].executionWindow.contractLineId).toBe('line-1');
+  });
+
+  it('generation payload does not re-expand into unselected siblings from the same group (T020)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members.push({
+      executionIdentityKey: 'exec-3',
+      canGenerate: true,
+      billingCycleId: 'bc-3',
+      clientId: 'client-1',
+      purchaseOrderScopeKey: 'po-1',
+      currencyCode: 'USD',
+      taxSource: 'exclusive',
+      exportShapeKey: 'shape-a',
+      cadenceSource: 'contract_anniversary',
+      servicePeriodLabel: '2026-03-01 to 2026-04-01',
+      executionWindow: { duePosition: 'advance' },
+      amountCents: 5000,
+      selectorInput: {
+        clientId: 'client-1',
+        windowStart: '2026-03-01',
+        windowEnd: '2026-04-01',
+        executionWindow: {
+          kind: 'contract_cadence_window',
+          identityKey: 'contract-window:line-3:2026-03-01:2026-04-01',
+          cadenceOwner: 'contract',
+          contractId: 'contract-1',
+          contractLineId: 'line-3',
+        },
+      },
+    });
+    mockDueWorkResponse.invoiceCandidates[0].memberCount = 3;
+
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const expandButton = await screen.findByRole('button', { name: 'Expand' });
+    fireEvent.click(expandButton);
+
+    const childOne = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
+    ) as HTMLInputElement;
+    fireEvent.click(childOne);
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices for Selected Periods (1)' }));
+
+    await waitFor(() => {
+      expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
+    });
+    const generationPayload = mockGenerateGroupedInvoicesAsRecurringBillingRun.mock.calls[0][0];
+    expect(generationPayload.groupedTargets).toHaveLength(1);
+    expect(generationPayload.groupedTargets[0].selectorInputs).toHaveLength(1);
+    expect(generationPayload.groupedTargets[0].selectorInputs[0].executionWindow.contractLineId).toBe('line-1');
   });
 });

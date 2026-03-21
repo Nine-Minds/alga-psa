@@ -1477,57 +1477,64 @@ export const generateInvoiceForSelectionInput = withAuth(async (
       selectorInput,
     );
   }
-  const billing_cycle_id = resolveRecurringInvoiceBridgeId(bridgeMetadata);
-  const executionIdentityKey = normalizedSelectorInput.executionWindow.identityKey;
+
+  return generateInvoiceForNormalizedSelectionInputs({
+    user,
+    tenant,
+    knex,
+    normalizedSelectorInputs: [normalizedSelectorInput],
+    options,
+    bridgeMetadata,
+  });
+});
+
+async function generateInvoiceForNormalizedSelectionInputs(params: {
+  user: Session;
+  tenant: string;
+  knex: Knex;
+  normalizedSelectorInputs: IRecurringDueSelectionInput[];
+  options?: { allowPoOverage?: boolean };
+  bridgeMetadata?: RecurringBridgeMetadata;
+}): Promise<InvoiceViewModel | null> {
+  const { user, tenant, knex } = params;
+  const normalizedSelectorInput = assertSameRecurringSelectionWindow(params.normalizedSelectorInputs);
+  const billing_cycle_id = resolveRecurringInvoiceBridgeId(params.bridgeMetadata);
   const client_id = normalizedSelectorInput.clientId;
   const cycleStart = normalizedSelectorInput.windowStart;
   const cycleEnd = normalizedSelectorInput.windowEnd;
 
-  // Validate that the client has a billing email (required for online payments)
   const clientForValidation = await knex('clients')
     .where({ client_id, tenant })
     .select('client_name')
     .first();
-
   if (clientForValidation) {
     const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
     if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(
-        new Error(emailValidation.error),
-        normalizedSelectorInput,
-      );
+      throw withRecurringWindowErrorContext(new Error(emailValidation.error), normalizedSelectorInput);
     }
   }
 
-  const existingInvoice = await findExistingRecurringInvoiceForSelectionInput({
-    knex,
-    tenant,
-    selectorInput: normalizedSelectorInput,
-  });
-
-  if (existingInvoice) {
-    throw buildDuplicateRecurringInvoiceError({
-      selectorInput: normalizedSelectorInput,
-      invoiceId: existingInvoice.invoiceId,
+  for (const selectorInput of params.normalizedSelectorInputs) {
+    const existingInvoice = await findExistingRecurringInvoiceForSelectionInput({
+      knex,
+      tenant,
+      selectorInput,
     });
+    if (existingInvoice) {
+      throw buildDuplicateRecurringInvoiceError({
+        selectorInput,
+        invoiceId: existingInvoice.invoiceId,
+      });
+    }
   }
 
   const billingEngine = new BillingEngine();
-  const billingResult = await calculateBillingForSelectionInput({
+  const billingResult = await calculateBillingForSelectionInputs({
     billingEngine,
-    selectorInput: {
-      ...normalizedSelectorInput,
-      clientId: client_id,
-      windowStart: cycleStart,
-      windowEnd: cycleEnd,
-    },
+    selectorInputs: params.normalizedSelectorInputs,
   });
-
   if (billingResult.error) {
-    throw withRecurringWindowErrorContext(
-      new Error(billingResult.error),
-      normalizedSelectorInput,
-    );
+    throw withRecurringWindowErrorContext(new Error(billingResult.error), normalizedSelectorInput);
   }
 
   let clientContractId: string | null = null;
@@ -1542,16 +1549,11 @@ export const generateInvoiceForSelectionInput = withAuth(async (
     );
   }
   if (clientContractId) {
-    const poContext = await getClientContractPurchaseOrderContext({
-      knex,
-      tenant,
-      clientContractId
-    });
-
+    const poContext = await getClientContractPurchaseOrderContext({ knex, tenant, clientContractId });
     if (poContext.po_required && !poContext.po_number) {
       throw withRecurringWindowErrorContext(
         new Error(
-          'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.'
+          'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.',
         ),
         normalizedSelectorInput,
       );
@@ -1563,81 +1565,60 @@ export const generateInvoiceForSelectionInput = withAuth(async (
         billingResult.charges,
         client_id,
         cycleEnd,
-        defaultRegion || ''
+        defaultRegion || '',
       );
       const invoiceTotal = Math.trunc(billingResult.totalAmount + previewTax);
-
       const consumed = await getPurchaseOrderConsumedCents({ knex, tenant, clientContractId });
       const computed = computePurchaseOrderOverage({
         authorizedCents: poContext.po_amount,
         consumedCents: consumed,
         invoiceTotalCents: invoiceTotal,
       });
-
-      if (computed.overageCents > 0 && !options.allowPoOverage) {
+      if (computed.overageCents > 0 && !params.options?.allowPoOverage) {
         const currencyCode = billingResult.currency_code || 'USD';
         console.warn(
           `[generateInvoice] PO overage detected (client_contract_id=${clientContractId}). ` +
-            `Over by ${formatCurrencyFromMinorUnits(computed.overageCents, 'en-US', currencyCode)}; continuing because PO limits are advisory.`
+            `Over by ${formatCurrencyFromMinorUnits(computed.overageCents, 'en-US', currencyCode)}; continuing because PO limits are advisory.`,
         );
       }
     }
   }
 
-  // Get zero-dollar invoice settings
   const clientSettings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('client_billing_settings')
-      .where({ client_id: client_id, tenant })
-      .first();
+    return trx('client_billing_settings').where({ client_id, tenant }).first();
   });
-
   const defaultSettings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('default_billing_settings')
-      .where({ tenant: tenant })
-      .first();
+    return trx('default_billing_settings').where({ tenant }).first();
   });
-
   const settings = clientSettings || defaultSettings;
-
   if (!settings) {
     throw new Error('No billing settings found');
   }
 
   const zeroDollarInvoice = billingResult.finalAmount === 0;
   const zeroDollarHasPersistableContent = hasPersistedInvoiceContent(billingResult);
-
-  // Handle zero-dollar invoices. Empty windows may still be suppressed, but
-  // zero-dollar invoices with real persisted billing content must be created so
-  // canonical recurring detail rows and other financial artifacts are not lost.
   if (zeroDollarInvoice) {
     if (settings.suppress_zero_dollar_invoices && !zeroDollarHasPersistableContent) {
       return null;
     }
 
-    const createdInvoice = await createInvoiceFromBillingResult( // Uses local function
+    const createdInvoice = await createInvoiceFromBillingResult(
       billingResult,
       client_id,
       cycleStart,
       cycleEnd,
       billing_cycle_id,
-      user.user_id
+      user.user_id,
     );
-
     if (settings.zero_dollar_invoice_handling === 'finalized') {
       await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, user.user_id);
     }
-
-console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);
-    return await Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
+    return Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
   }
 
   if (billingResult.charges.length === 0) {
-    throw withRecurringWindowErrorContext(
-      new Error('Nothing to bill'),
-      normalizedSelectorInput,
-    );
+    throw withRecurringWindowErrorContext(new Error('Nothing to bill'), normalizedSelectorInput);
   }
-
   for (const charge of billingResult.charges) {
     if (charge.rate === undefined || charge.rate === null) {
       throw withRecurringWindowErrorContext(
@@ -1647,29 +1628,63 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
     }
   }
 
-  const createdInvoice = await createInvoiceFromBillingResult( // Uses local function
+  const createdInvoice = await createInvoiceFromBillingResult(
     billingResult,
     client_id,
     cycleStart,
     cycleEnd,
     billing_cycle_id,
-    user.user_id
+    user.user_id,
   );
 
-  // Get the next billing date as a PlainDate string (YYYY-MM-DD)
-  const nextBillingDateStr = await getNextBillingDate(client_id, cycleEnd); // Uses temporary import
-
-  // Convert the PlainDate string to a proper ISO 8601 timestamp for rolloverUnapprovedTime
+  const nextBillingDateStr = await getNextBillingDate(client_id, cycleEnd);
   const nextBillingDate = toPlainDate(nextBillingDateStr);
   const nextBillingTimestamp = toISOTimestamp(nextBillingDate);
-
-  // Pass the ISO timestamp to rolloverUnapprovedTime
   await billingEngine.rolloverUnapprovedTime(client_id, cycleEnd, nextBillingTimestamp);
 
-console.log(`[generateInvoice] Regular invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);
-  let invoiceView = await Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
+  return Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
+}
 
-  return invoiceView;
+export const generateInvoiceForSelectionInputs = withAuth(async (
+  user,
+  { tenant },
+  selectorInputs: IRecurringDueSelectionInput[],
+  options: { allowPoOverage?: boolean } = {},
+  bridgeMetadata?: RecurringBridgeMetadata,
+): Promise<InvoiceViewModel | null> => {
+  const { knex } = await createTenantKnex();
+  if (!Array.isArray(selectorInputs) || selectorInputs.length === 0) {
+    throw new Error('No recurring execution windows selected');
+  }
+
+  let normalizedSelectorInputs: IRecurringDueSelectionInput[];
+  try {
+    normalizedSelectorInputs = await Promise.all(
+      selectorInputs.map((selectorInput) =>
+        normalizeRecurringSelectorInput({
+          knex,
+          tenant,
+          selectorInput,
+        }),
+      ),
+    );
+  } catch (error) {
+    throw withRecurringWindowErrorContext(
+      error instanceof Error
+        ? error
+        : new Error('An error occurred while validating the recurring execution window.'),
+      selectorInputs[0],
+    );
+  }
+
+  return generateInvoiceForNormalizedSelectionInputs({
+    user,
+    tenant,
+    knex,
+    normalizedSelectorInputs,
+    options,
+    bridgeMetadata,
+  });
 });
 
 export const generateInvoiceNumber = withAuth(async (
