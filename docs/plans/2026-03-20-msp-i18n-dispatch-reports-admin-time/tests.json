@@ -156,7 +156,7 @@
   {
     "id": "T044",
     "description": "Cross-batch: German (de) locale — no visible text overflow in dispatch filters, report columns, admin forms, timesheet headers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F026", "F036", "F061"]
   }
 ]

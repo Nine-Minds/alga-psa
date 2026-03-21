@@ -189,6 +189,7 @@ SCRIPT
 - (2026-03-20) `T041` passed: `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` verifies both `xx` and `yy` key structures against the English files for all four batch namespaces (`msp/dispatch`, `msp/reports`, `msp/admin`, `msp/time-entry`), so pseudo-locale regeneration is now covered at the cross-batch level.
 - (2026-03-20) `T042` passed: reused the successful `npm run build` execution from `F092`. The end-to-end production build completed after the existing non-blocking webpack warnings, so the cross-batch TypeScript/build gate remains green.
 - (2026-03-20) `T043` passed: `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` now codifies the flag-off contract. It asserts the MSP layout keeps locale loading behind `msp-i18n-enabled` and that representative dispatch/reports/admin/time-entry components all call `t(..., { defaultValue: ... })`, which preserves English UI text when the flag is disabled.
+- (2026-03-20) `T044` passed: `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` adds German length-threshold checks for the documented overflow-sensitive surfaces in dispatch, reports, admin, and time entry. The current `de` copy stays within those guardrails.
 
 ### Key file paths — Dispatch
 | File | Strings |
