@@ -26,7 +26,7 @@
   {
     "id": "T005",
     "description": "Dispatch: Visual QA (xx locale) — /msp/technician-dispatch shows '11111' for schedule panel, work items, tooltips",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
 
