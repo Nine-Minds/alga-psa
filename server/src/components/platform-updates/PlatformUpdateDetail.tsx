@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { recordPlatformNotificationDetailView } from '@enterprise/lib/platformNotifications/actions';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface PlatformUpdateDetailProps {
   notificationId: string;
@@ -16,14 +17,6 @@ interface PlatformUpdateDetailProps {
 }
 
 type AlertVariant = 'default' | 'destructive' | 'success' | 'warning' | 'info';
-
-const variantLabels: Record<string, string> = {
-  info: 'Info',
-  warning: 'Warning',
-  destructive: 'Critical',
-  success: 'Success',
-  default: 'Notice',
-};
 
 function toAlertVariant(v: string): AlertVariant {
   const valid: AlertVariant[] = ['default', 'destructive', 'success', 'warning', 'info'];
@@ -39,9 +32,13 @@ export function PlatformUpdateDetail({
   createdAt,
 }: PlatformUpdateDetailProps) {
   const router = useRouter();
+  const { t } = useTranslation('msp/profile');
+  const { formatDate } = useFormatters();
   const viewRecorded = useRef(false);
   const variant = toAlertVariant(variantProp);
-  const label = variantLabels[variantProp] || 'Notice';
+  const label = t(`platformUpdates.detail.labels.${variantProp}`, {
+    defaultValue: t('platformUpdates.detail.labels.default', { defaultValue: 'Notice' }),
+  });
 
   // Record detail view on client mount — avoids overcounting from prefetch/RSC renders
   useEffect(() => {
@@ -60,7 +57,7 @@ export function PlatformUpdateDetail({
         className="mb-4"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
-        Back
+        {t('platformUpdates.detail.back', { defaultValue: 'Back' })}
       </Button>
 
       <div className="bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] p-6">
@@ -69,7 +66,7 @@ export function PlatformUpdateDetail({
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{label}</span>
               <span className="text-xs text-[rgb(var(--color-text-400))]">
-                {new Date(createdAt).toLocaleDateString()}
+                {formatDate(createdAt)}
               </span>
             </div>
           </AlertDescription>
