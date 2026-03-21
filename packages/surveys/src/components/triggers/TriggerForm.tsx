@@ -93,9 +93,13 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     () =>
       templates.map((template) => ({
         value: template.templateId,
-        label: template.templateName,
+        label: template.isDefault
+          ? `${template.templateName} (${t('settings.templateList.defaultBadge', {
+              defaultValue: 'Default',
+            })})`
+          : template.templateName,
       })),
-    [templates]
+    [t, templates]
   );
 
   const templateMissing = templateOptions.length === 0;
@@ -107,10 +111,19 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     reload: reloadReferenceData,
   } = useTriggerReferenceData();
 
-  const boards = referenceData?.boards ?? [];
-  const ticketStatuses = referenceData?.ticketStatuses ?? [];
-  const projectStatuses = referenceData?.projectStatuses ?? [];
-  const priorities = referenceData?.priorities ?? [];
+  const boards = useMemo(() => referenceData?.boards ?? [], [referenceData?.boards]);
+  const ticketStatuses = useMemo(
+    () => referenceData?.ticketStatuses ?? [],
+    [referenceData?.ticketStatuses]
+  );
+  const projectStatuses = useMemo(
+    () => referenceData?.projectStatuses ?? [],
+    [referenceData?.projectStatuses]
+  );
+  const priorities = useMemo(
+    () => referenceData?.priorities ?? [],
+    [referenceData?.priorities]
+  );
 
   const [formState, setFormState] = useState<FormState>({
     templateId: trigger?.templateId ?? (templateOptions[0]?.value ?? null),
@@ -206,7 +219,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       }
     });
     return map;
-  }, [ticketStatuses, projectStatuses]);
+  }, [projectStatuses, ticketStatuses]);
 
   const priorityMap = useMemo(() => {
     const map = new Map<string, IPriority>();
@@ -224,14 +237,10 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     return source
       .filter((status): status is IStatus & { status_id: string } => Boolean(status.status_id))
       .map((status) => ({
-        value: status.status_id!,
-        label: `${status.name}${
-          status.is_default
-            ? ` (${t('settings.templateList.defaultBadge', { defaultValue: 'Default' })})`
-            : ''
-        }`,
+        value: status.status_id,
+        label: status.name,
       }));
-  }, [formState.triggerType, projectStatuses, ticketStatuses, t]);
+  }, [formState.triggerType, projectStatuses, ticketStatuses]);
 
   interface PriorityOption {
     value: string;
@@ -246,7 +255,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       priorities
         .filter((priority): priority is IPriority & { priority_id: string } => Boolean(priority.priority_id))
         .map((priority) => ({
-          value: priority.priority_id!,
+          value: priority.priority_id,
           label: priority.priority_name,
           color: priority.color,
           is_from_itil_standard: priority.is_from_itil_standard,
@@ -310,15 +319,12 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     ? referenceDataError.message || referenceErrorFallback
     : null;
 
-  const handleChange = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+  const handleChange = <K extends keyof FormState>(key: K, value: FormState[K]): void => {
     setFormState((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleBoardSelect = (boardId: string) => {
-    if (formState.triggerType !== 'ticket_closed') {
-      return;
-    }
-    if (!boardId) {
+    if (formState.triggerType !== 'ticket_closed' || !boardId) {
       return;
     }
     setSelectedBoardIds((prev) => (prev.includes(boardId) ? prev : [...prev, boardId]));
@@ -342,10 +348,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
   };
 
   const handlePrioritySelect = (priorityId: string) => {
-    if (formState.triggerType !== 'ticket_closed') {
-      return;
-    }
-    if (!priorityId || priorityId === 'placeholder') {
+    if (formState.triggerType !== 'ticket_closed' || !priorityId || priorityId === 'placeholder') {
       return;
     }
     setSelectedPriorityIds((prev) => (prev.includes(priorityId) ? prev : [...prev, priorityId]));
@@ -361,8 +364,10 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
 
     if (!formState.templateId) {
       toast({
-        title: tCommon('messages.required', { defaultValue: 'This field is required' }),
-        description: t('settings.triggerForm.labels.template', { defaultValue: 'Survey template' }),
+        title: tCommon('errors.required', { defaultValue: 'This field is required' }),
+        description: t('settings.triggerForm.labels.template', {
+          defaultValue: 'Survey template',
+        }),
         variant: 'destructive',
       });
       return;
@@ -370,13 +375,13 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
 
     const triggerConditions: SurveyTriggerConditions = {};
     if (formState.triggerType === 'ticket_closed' && selectedBoardIds.length > 0) {
-      (triggerConditions as any).board_id = selectedBoardIds;
+      (triggerConditions as { board_id?: string[] }).board_id = selectedBoardIds;
     }
     if (selectedStatusIds.length > 0) {
       triggerConditions.status_id = selectedStatusIds;
     }
     if (formState.triggerType === 'ticket_closed' && selectedPriorityIds.length > 0) {
-      (triggerConditions as any).priority = selectedPriorityIds;
+      (triggerConditions as { priority?: string[] }).priority = selectedPriorityIds;
     }
 
     const payloadConditions = Object.values(triggerConditions).some(
@@ -384,7 +389,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     )
       ? triggerConditions
       : {};
-    const selectedTemplateName = templateOptions.find((option) => option.value === formState.templateId)?.label;
+    const selectedTemplateName = templates.find((item) => item.templateId === formState.templateId)?.templateName;
     const templateDescription = typeof selectedTemplateName === 'string' ? selectedTemplateName : '';
 
     setIsSubmitting(true);
@@ -399,7 +404,9 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           enabled: formState.enabled,
         });
         toast({
-          title: t('settings.triggerList.toasts.updated', { defaultValue: 'Trigger updated' }),
+          title: t('settings.triggerList.toasts.updated', {
+            defaultValue: 'Trigger updated',
+          }),
           description: templateDescription,
         });
       } else {
@@ -410,7 +417,9 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           enabled: formState.enabled,
         });
         toast({
-          title: t('settings.triggerList.toasts.created', { defaultValue: 'Trigger created' }),
+          title: t('settings.triggerList.toasts.created', {
+            defaultValue: 'Trigger created',
+          }),
           description: templateDescription,
         });
       }
@@ -419,7 +428,9 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     } catch (error) {
       console.error('[TriggerForm] Failed to save trigger', error);
       toast({
-        title: t('settings.triggerList.toasts.error', { defaultValue: 'Unable to save trigger' }),
+        title: t('settings.triggerList.toasts.error', {
+          defaultValue: 'Unable to save trigger',
+        }),
         description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
@@ -447,14 +458,18 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     try {
       await deleteSurveyTrigger(trigger.triggerId);
       toast({
-        title: t('settings.triggerList.toasts.deleted', { defaultValue: 'Trigger deleted' }),
+        title: t('settings.triggerList.toasts.deleted', {
+          defaultValue: 'Trigger deleted',
+        }),
         description: '',
       });
       onDeleteSuccess?.(trigger.triggerId);
     } catch (error) {
       console.error('[TriggerForm] Failed to delete trigger', error);
       toast({
-        title: t('settings.triggerList.toasts.deleteError', { defaultValue: 'Unable to delete trigger' }),
+        title: t('settings.triggerList.toasts.deleteError', {
+          defaultValue: 'Unable to delete trigger',
+        }),
         description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
@@ -509,9 +524,13 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           options={templateOptions}
           value={formState.templateId}
           onValueChange={(value) => handleChange('templateId', value || null)}
-          placeholder={t('settings.triggerForm.labels.template', { defaultValue: 'Survey template' })}
+          placeholder={t('settings.triggerForm.labels.template', {
+            defaultValue: 'Survey template',
+          })}
           disabled={templateOptions.length === 0}
-          label={t('settings.triggerForm.labels.template', { defaultValue: 'Survey template' })}
+          label={t('settings.triggerForm.labels.template', {
+            defaultValue: 'Survey template',
+          })}
         />
 
         <CustomSelect
@@ -524,8 +543,12 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           }))}
           value={formState.triggerType}
           onValueChange={(value) => handleChange('triggerType', (value as TriggerType) || 'ticket_closed')}
-          placeholder={t('settings.triggerForm.labels.triggerType', { defaultValue: 'Trigger type' })}
-          label={t('settings.triggerForm.labels.triggerType', { defaultValue: 'Trigger type' })}
+          placeholder={t('settings.triggerForm.labels.triggerType', {
+            defaultValue: 'Trigger type',
+          })}
+          label={t('settings.triggerForm.labels.triggerType', {
+            defaultValue: 'Trigger type',
+          })}
         />
       </div>
 
@@ -542,7 +565,9 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
               onSelect={handleBoardSelect}
               filterState={boardFilterState}
               onFilterStateChange={setBoardFilterState}
-              placeholder={t('settings.triggerForm.placeholders.boardIds', { defaultValue: 'Select board' })}
+              placeholder={t('settings.triggerForm.placeholders.boardIds', {
+                defaultValue: 'Select board',
+              })}
             />
             <SelectionChips
               items={selectedBoardIds}
@@ -564,7 +589,9 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
             options={statusOptions}
             value={statusSelectValue}
             onValueChange={handleStatusSelect}
-            placeholder={t('settings.triggerForm.placeholders.statusIds', { defaultValue: 'Add status' })}
+            placeholder={t('settings.triggerForm.placeholders.statusIds', {
+              defaultValue: 'Add status',
+            })}
             allowClear
           />
           <SelectionChips
@@ -587,7 +614,9 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
               value={prioritySelectValue}
               onValueChange={handlePrioritySelect}
               options={filteredPriorityOptions}
-              placeholder={t('settings.triggerForm.placeholders.priorities', { defaultValue: 'Add priority' })}
+              placeholder={t('settings.triggerForm.placeholders.priorities', {
+                defaultValue: 'Add priority',
+              })}
               isItilBoard={selectedPriorityType === 'itil'}
             />
             {selectedPriorityType === 'mixed' && (
@@ -610,7 +639,9 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           id={`${formInstanceId}-enabled`}
           checked={formState.enabled}
           onCheckedChange={(checked) => handleChange('enabled', Boolean(checked))}
-          label={t('settings.triggerForm.labels.enabled', { defaultValue: 'Trigger enabled' })}
+          label={t('settings.triggerForm.labels.enabled', {
+            defaultValue: 'Trigger enabled',
+          })}
         />
 
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
