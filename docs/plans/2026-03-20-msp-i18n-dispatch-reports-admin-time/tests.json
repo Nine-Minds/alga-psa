@@ -144,7 +144,7 @@
   {
     "id": "T042",
     "description": "Cross-batch: npm run build succeeds with no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F092"]
   },
   {

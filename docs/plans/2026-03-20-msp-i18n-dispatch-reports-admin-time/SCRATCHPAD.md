@@ -187,6 +187,7 @@ SCRIPT
 - (2026-03-20) `T035` passed: the same targeted i18n test now asserts `approval.sections.summary`, `managerDashboard.title`, and `managerDashboard.access.title` resolve to `11111` in `server/public/locales/xx/msp/time-entry.json`, giving automated pseudo-locale coverage for the approval dashboard route.
 - (2026-03-20) `T040` passed: the completed `node scripts/validate-translations.cjs` run serves as the cross-batch locale integrity check after all four namespaces landed. It finished with `Errors: 0` and `Warnings: 0` across `de`, `es`, `fr`, `it`, `nl`, `pl`, `xx`, and `yy`.
 - (2026-03-20) `T041` passed: `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` verifies both `xx` and `yy` key structures against the English files for all four batch namespaces (`msp/dispatch`, `msp/reports`, `msp/admin`, `msp/time-entry`), so pseudo-locale regeneration is now covered at the cross-batch level.
+- (2026-03-20) `T042` passed: reused the successful `npm run build` execution from `F092`. The end-to-end production build completed after the existing non-blocking webpack warnings, so the cross-batch TypeScript/build gate remains green.
 
 ### Key file paths — Dispatch
 | File | Strings |
