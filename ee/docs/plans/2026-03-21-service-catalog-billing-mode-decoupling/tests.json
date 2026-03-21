@@ -15,6 +15,6 @@
   { "id": "T014", "description": "Service query integration bundle: billing service list/search/sort and shared billing-clients service queries behave correctly after decoupling.", "implemented": true, "featureIds": ["F033", "F034"] },
   { "id": "T015", "description": "Scheduling + client-portal integration bundle: service lookups and availability payloads stop using billing mode as identity/type proxy.", "implemented": true, "featureIds": ["F035", "F036"] },
   { "id": "T016", "description": "Catalog settings/onboarding integration bundle: service-type changes no longer silently rewrite billing behavior and onboarding creates decoupled-compliant records.", "implemented": true, "featureIds": ["F041", "F042"] },
-  { "id": "T017", "description": "Usage tracking UI integration: usage picker behavior is driven by contract/usage context, not catalog billing-method gating.", "implemented": false, "featureIds": ["F043"] },
+  { "id": "T017", "description": "Usage tracking UI integration: usage picker behavior is driven by contract/usage context, not catalog billing-method gating.", "implemented": true, "featureIds": ["F043"] },
   { "id": "T018", "description": "Hard-cutover static/debt guard: no legacy compatibility branches, no service_type aliases, no catalog-method eligibility gates, and no unconditional null-line fallback clauses remain.", "implemented": false, "featureIds": ["F044", "F004", "F005", "F006", "F018", "F019"] }
 ]

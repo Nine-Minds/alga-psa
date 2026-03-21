@@ -126,6 +126,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Completed F041 by decoupling onboarding service creation from service-type billing metadata: onboarding now captures an explicit `serviceBillingMode` and `setupBilling` writes `service_catalog.billing_method` from onboarding input (fallback `usage`) instead of `service_types.billing_method`. Key refs: `packages/onboarding/src/actions/onboarding-actions/onboardingActions.ts`, `packages/onboarding/src/components/steps/BillingSetupStep.tsx`, `packages/onboarding/src/components/OnboardingWizard.tsx`, `packages/types/src/lib/onboardingWizard.ts`.
 - (2026-03-21) Completed F042 by removing service-type-driven billing auto-overwrite in service settings forms (`ServiceForm`, `QuickAddService`); changing service type now updates taxonomy only and preserves user-selected billing mode.
 - (2026-03-21) Added `T016` guard coverage in `server/src/test/unit/billing/onboardingServiceTypeDecoupling.static.test.ts` to enforce onboarding/service-settings decoupling and prevent regressions to identity-level billing coupling.
+- (2026-03-21) Completed F043 by removing usage-tracking picker gating on `service_catalog.billing_method='usage'`; usage tracking now sources picker options from service identity (`item_kind !== 'product'`) via a shared memoized options set used in both filter + create/edit dialog.
+- (2026-03-21) Added `T017` guard coverage in `server/src/test/unit/billing/usageTrackingPickerDecoupling.static.test.ts` to prevent reintroduction of billing-method-only filtering in usage tracking service pickers.
 
 - (2026-03-21) Validation runbooks:
   - `cd server && npx vitest run src/test/unit/billing/nonContractDueWork.integration.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
@@ -138,3 +140,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run src/test/unit/api/productCatalogCanonicalWrites.static.test.ts` (pass)
   - `cd server && npx vitest run src/test/unit/api/serviceBillingMethodCutover.schema.test.ts src/test/unit/api/productBillingMethodCutover.schema.test.ts src/test/unit/api/billingInterfacesCutover.static.test.ts` (pass, T012/T013)
   - `cd server && npx vitest run src/test/unit/billing/onboardingServiceTypeDecoupling.static.test.ts` (pass, T016)
+  - `cd server && npx vitest run src/test/unit/billing/usageTrackingPickerDecoupling.static.test.ts` (pass, T017)

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getEligibleContractLinesForUI } from '@alga-psa/billing/lib/contractLineDisambiguation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
@@ -75,6 +75,17 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  const usageServiceOptions = useMemo(
+    () =>
+      initialServices
+        .filter((service) => service.item_kind !== 'product')
+        .map((service) => ({
+          label: service.service_name,
+          value: service.service_id,
+        })),
+    [initialServices],
+  );
 
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {
@@ -443,10 +454,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   placeholder="Filter by service"
                   options={[
                     { value: 'all_services', label: 'All Services' },
-                    ...initialServices.map(service => ({
-                      label: service.service_name,
-                      value: service.service_id
-                    }))
+                    ...usageServiceOptions,
                   ]}
                 />
               </div>
@@ -530,12 +538,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 value={newUsage.service_id}
                 onValueChange={(value: string) => setNewUsage({ ...newUsage, service_id: value })}
                 placeholder="Select service"
-                options={initialServices
-                  .filter(service => service.billing_method === 'usage')
-                  .map(service => ({
-                    label: service.service_name,
-                    value: service.service_id
-                  }))}
+                options={usageServiceOptions}
               />
             </div>
             <div>
