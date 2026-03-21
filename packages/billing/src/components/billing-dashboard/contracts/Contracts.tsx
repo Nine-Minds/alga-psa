@@ -58,6 +58,13 @@ const Contracts: React.FC = () => {
     clientName: string;
   } | null>(null);
   const [isDiscardingDraft, setIsDiscardingDraft] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<{
+    contractId: string;
+    contractName: string;
+    kind: 'template' | 'client';
+    clientName?: string;
+  } | null>(null);
+  const [isDeletingContract, setIsDeletingContract] = useState(false);
   const [showTemplateWizard, setShowTemplateWizard] = useState(false);
   const [showClientWizard, setShowClientWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,17 +138,23 @@ const Contracts: React.FC = () => {
     router.replace(`/msp/billing?${params.toString()}`);
   };
 
-  const handleDeleteContract = async (contractId: string) => {
+  const confirmDeleteContract = async () => {
+    if (!contractToDelete) return;
+    setIsDeletingContract(true);
     try {
-      const result = await deleteContract(contractId);
+      const result = await deleteContract(contractToDelete.contractId);
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
+        setContractToDelete(null);
         return;
       }
       await fetchContracts();
+      setContractToDelete(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete contract';
       toast.error(message);
+    } finally {
+      setIsDeletingContract(false);
     }
   };
 
@@ -297,12 +310,16 @@ const renderStatusBadge = (status: string) => {
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
-              id="delete-contract-menu-item"
+              id="delete-template-contract-menu-item"
               className="text-red-600 focus:text-red-600"
               onClick={(event) => {
                 event.stopPropagation();
                 if (record.contract_id) {
-                  void handleDeleteContract(record.contract_id);
+                  setContractToDelete({
+                    contractId: record.contract_id,
+                    contractName: (record.contract_name?.trim() || 'Untitled template'),
+                    kind: 'template',
+                  });
                 }
               }}
             >
@@ -435,12 +452,17 @@ const renderStatusBadge = (status: string) => {
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
-              id="delete-contract-menu-item"
+              id="delete-client-contract-menu-item"
               className="text-red-600 focus:text-red-600"
               onClick={(event) => {
                 event.stopPropagation();
                 if (record.contract_id) {
-                  void handleDeleteContract(record.contract_id);
+                  setContractToDelete({
+                    contractId: record.contract_id,
+                    contractName: (record.contract_name?.trim() || 'Untitled contract'),
+                    kind: 'client',
+                    clientName: record.client_name?.trim() || undefined,
+                  });
                 }
               }}
             >
@@ -805,6 +827,33 @@ const renderStatusBadge = (status: string) => {
         cancelLabel="Cancel"
         confirmLabel="Discard"
         isConfirming={isDiscardingDraft}
+      />
+      <ConfirmationDialog
+        id="delete-contract-confirmation"
+        isOpen={!!contractToDelete}
+        onClose={() => {
+          if (!isDeletingContract) {
+            setContractToDelete(null);
+          }
+        }}
+        onConfirm={confirmDeleteContract}
+        title={
+          contractToDelete?.kind === 'client'
+            ? 'Delete client contract?'
+            : 'Delete contract template?'
+        }
+        message={
+          contractToDelete
+            ? contractToDelete.kind === 'client'
+              ? `Are you sure you want to permanently delete the client contract "${contractToDelete.contractName}"${
+                  contractToDelete.clientName ? ` for ${contractToDelete.clientName}` : ''
+                }? This action cannot be undone.`
+              : `Are you sure you want to permanently delete the template "${contractToDelete.contractName}"? This action cannot be undone.`
+            : ''
+        }
+        cancelLabel="Cancel"
+        confirmLabel={isDeletingContract ? 'Deleting…' : 'Delete'}
+        isConfirming={isDeletingContract}
       />
     </>
   );

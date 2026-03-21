@@ -18,6 +18,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContractWithClient } from '@alga-psa/types';
 import {
@@ -81,6 +82,12 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const [renewalsWindow, setRenewalsWindow] = useState<UpcomingRenewalWindow>('30');
   const [contractsViewTab, setContractsViewTab] = useState('contracts');
   const [pendingUpcomingRenewalActions, setPendingUpcomingRenewalActions] = useState<Record<string, PendingUpcomingRenewalAction | undefined>>({});
+  const [contractToDelete, setContractToDelete] = useState<{
+    contractId: string;
+    contractName: string;
+    clientName?: string;
+  } | null>(null);
+  const [isDeletingContract, setIsDeletingContract] = useState(false);
 
   useEffect(() => {
     void fetchClientContracts();
@@ -120,14 +127,24 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     }
   };
 
-  const handleDeleteContract = async (contractId: string) => {
+  const confirmDeleteContract = async () => {
+    if (!contractToDelete) return;
+    setIsDeletingContract(true);
     try {
-      await deleteContract(contractId);
+      const result = await deleteContract(contractToDelete.contractId);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        setContractToDelete(null);
+        return;
+      }
       await fetchClientContracts();
       onRefreshNeeded?.();
+      setContractToDelete(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete contract';
       toast.error(message);
+    } finally {
+      setIsDeletingContract(false);
     }
   };
 
@@ -346,12 +363,16 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
-              id="delete-contract-menu-item"
+              id="client-contracts-tab-delete-menu-item"
               className="text-red-600 focus:text-red-600"
               onClick={(event) => {
                 event.stopPropagation();
                 if (record.contract_id) {
-                  void handleDeleteContract(record.contract_id);
+                  setContractToDelete({
+                    contractId: record.contract_id,
+                    contractName: record.contract_name?.trim() || 'Untitled contract',
+                    clientName: record.client_name?.trim() || undefined,
+                  });
                 }
               }}
             >
@@ -754,6 +775,27 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
           onRefreshNeeded?.();
         }}
         editingContract={draftToResume}
+      />
+      <ConfirmationDialog
+        id="client-contracts-tab-delete-confirmation"
+        isOpen={!!contractToDelete}
+        onClose={() => {
+          if (!isDeletingContract) {
+            setContractToDelete(null);
+          }
+        }}
+        onConfirm={confirmDeleteContract}
+        title="Delete client contract?"
+        message={
+          contractToDelete
+            ? `Are you sure you want to permanently delete the client contract "${contractToDelete.contractName}"${
+                contractToDelete.clientName ? ` for ${contractToDelete.clientName}` : ''
+              }? This action cannot be undone.`
+            : ''
+        }
+        cancelLabel="Cancel"
+        confirmLabel={isDeletingContract ? 'Deleting…' : 'Delete'}
+        isConfirming={isDeletingContract}
       />
     </>
   );
