@@ -515,19 +515,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     };
   }, [invoicedCurrentPage, invoicedPageSize, debouncedInvoicedSearchTerm, refreshTrigger]);
 
-  // Debug effect to log preview data
-  useEffect(() => {
-    if (previewState.previews.length > 0) {
-      console.log("Preview invoice count:", previewState.invoiceCount);
-      console.log(
-        "Contract headers:",
-        previewState.previews.flatMap((preview) =>
-          preview.data.items.filter(item => item.description?.startsWith('Contract:')),
-        ),
-      );
-    }
-  }, [previewState.invoiceCount, previewState.previews]);
-
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       const nextSelections = new Set<string>();
@@ -995,6 +982,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               <p className="mt-1 text-sm text-muted-foreground">
                 Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.
               </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Select All chooses parent rows when a group is combinable and falls back to individual child rows when a group is not combinable.
+              </p>
             </div>
             <div className="flex gap-2 items-end">
               <Button
@@ -1441,6 +1431,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             onRowClick={handleRecurringHistoryRowClick}
             columns={[
               { title: 'Client', dataIndex: 'clientName' },
+              {
+                title: 'Assignment Scope',
+                dataIndex: 'assignmentSummary',
+                render: (_: unknown, record: InvoicedPeriod) => (
+                  <div className="space-y-1">
+                    <div>{record.assignmentSummary}</div>
+                    {record.isMultiAssignment ? (
+                      <Badge variant="secondary">Multi-contract invoice</Badge>
+                    ) : null}
+                  </div>
+                ),
+              },
               {
                 title: 'Cadence Source',
                 dataIndex: 'cadenceSource',

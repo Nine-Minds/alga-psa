@@ -243,6 +243,7 @@ export function groupDueServicePeriodsForInvoiceCandidates(
   const windowScopeSummary = new Map<
     string,
     {
+      clientIds: Set<string>;
       contractIds: Set<string>;
       purchaseOrderScopeKeys: Set<string>;
       financialScopeKeys: Set<string>;
@@ -250,6 +251,7 @@ export function groupDueServicePeriodsForInvoiceCandidates(
   >();
 
   for (const selection of dueSelections) {
+    const clientScope = selection.clientId ?? '__no_client_scope__';
     const contractScope = selection.clientContractId ?? '__no_contract_scope__';
     const purchaseOrderScope = selection.purchaseOrderScopeKey ?? '__no_po_scope__';
     const financialScope = [
@@ -257,14 +259,16 @@ export function groupDueServicePeriodsForInvoiceCandidates(
       selection.taxSource ?? '__no_tax_source__',
       selection.exportShapeKey ?? '__no_export_shape__',
     ].join(':');
-    const windowKey = `${selection.invoiceWindow.start}:${selection.invoiceWindow.end}`;
-    const key = `${windowKey}:${contractScope}:${purchaseOrderScope}:${financialScope}`;
+    const windowKey = `${clientScope}:${selection.invoiceWindow.start}:${selection.invoiceWindow.end}`;
+    const key = windowKey;
     const existing = grouped.get(key);
     const windowSummary = windowScopeSummary.get(windowKey) ?? {
+      clientIds: new Set<string>(),
       contractIds: new Set<string>(),
       purchaseOrderScopeKeys: new Set<string>(),
       financialScopeKeys: new Set<string>(),
     };
+    windowSummary.clientIds.add(clientScope);
     windowSummary.contractIds.add(contractScope);
     windowSummary.purchaseOrderScopeKeys.add(purchaseOrderScope);
     windowSummary.financialScopeKeys.add(financialScope);
@@ -309,7 +313,7 @@ export function groupDueServicePeriodsForInvoiceCandidates(
       }),
       splitReasons: (() => {
         const windowSummary = windowScopeSummary.get(
-          `${group.windowStart}:${group.windowEnd}`,
+          `${group.dueSelections[0]?.clientId ?? '__no_client_scope__'}:${group.windowStart}:${group.windowEnd}`,
         );
         const splitReasons: RecurringInvoiceSplitReason[] = [];
 
@@ -329,6 +333,11 @@ export function groupDueServicePeriodsForInvoiceCandidates(
     .sort((left, right) => {
       if (left.windowStart !== right.windowStart) {
         return left.windowStart.localeCompare(right.windowStart);
+      }
+      const leftClientId = left.dueSelections[0]?.clientId ?? '';
+      const rightClientId = right.dueSelections[0]?.clientId ?? '';
+      if (leftClientId !== rightClientId) {
+        return leftClientId.localeCompare(rightClientId);
       }
       if ((left.clientContractId ?? '') !== (right.clientContractId ?? '')) {
         return (left.clientContractId ?? '').localeCompare(right.clientContractId ?? '');

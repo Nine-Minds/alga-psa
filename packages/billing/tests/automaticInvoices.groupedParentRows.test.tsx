@@ -7,6 +7,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 let mockDueWorkResponse: any;
+let mockRecurringInvoiceHistoryResponse: any;
 const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<{ previewGroupKey: string; selectorInputs: any[] }>) => ({
   success: true,
   invoiceCount: groups.length,
@@ -49,7 +50,7 @@ vi.mock('@alga-psa/billing/actions/recurringBillingRunActions', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/billingCycleActions', () => ({
-  getRecurringInvoiceHistoryPaginated: vi.fn(async () => ({ rows: [], total: 0, page: 1, pageSize: 10 })),
+  getRecurringInvoiceHistoryPaginated: vi.fn(async () => mockRecurringInvoiceHistoryResponse),
   reverseRecurringInvoice: vi.fn(async () => undefined),
   hardDeleteRecurringInvoice: vi.fn(async () => undefined),
 }));
@@ -221,6 +222,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       pageSize: 10,
       totalPages: 1,
     };
+    mockRecurringInvoiceHistoryResponse = { rows: [], total: 0, page: 1, pageSize: 10 };
   });
 
   it('renders one parent group row for a shared client + invoice window instead of one top-level row per child (T001)', async () => {
@@ -604,5 +606,92 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(generationPayload.groupedTargets).toHaveLength(1);
     expect(generationPayload.groupedTargets[0].selectorInputs).toHaveLength(1);
     expect(generationPayload.groupedTargets[0].selectorInputs[0].executionWindow.contractLineId).toBe('line-1');
+  });
+
+  it('keeps parent non-combinable when PO scope differs across child candidates (T026)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members[1].purchaseOrderScopeKey = 'po-2';
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await waitFor(() => {
+      const parentCheckbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(parentCheckbox).not.toBeNull();
+      expect(parentCheckbox?.disabled).toBe(true);
+    });
+    expect(
+      screen.getByTestId('combinability-reasons-parent-group:client-1:2026-03-01:2026-04-01'),
+    ).toHaveTextContent('PO scope differs');
+  });
+
+  it('legacy single-assignment/single-child groups still generate through the existing flow (T028/T029)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members = [mockDueWorkResponse.invoiceCandidates[0].members[0]];
+    mockDueWorkResponse.invoiceCandidates[0].memberCount = 1;
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const parentCheckbox = await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      return checkbox as HTMLInputElement;
+    });
+    fireEvent.click(parentCheckbox);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
+        'This selection will generate 1 invoice.',
+      );
+    });
+    expect(screen.queryByTestId('grouped-preview-unavailable-copy')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices for Selected Periods (1)' }));
+    await waitFor(() => {
+      expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
+    });
+    const payload = mockGenerateGroupedInvoicesAsRecurringBillingRun.mock.calls[0][0];
+    expect(payload.groupedTargets).toHaveLength(1);
+    expect(payload.groupedTargets[0].selectorInputs).toHaveLength(1);
+  });
+
+  it('renders recurring history assignment scope summary and multi-contract badge for combined invoices (T024/T025)', async () => {
+    mockRecurringInvoiceHistoryResponse = {
+      rows: [
+        {
+          invoiceId: 'invoice-1',
+          invoiceNumber: 'INV-1001',
+          invoiceStatus: 'draft',
+          invoiceDate: '2026-03-08',
+          billingCycleId: null,
+          hasBillingCycleBridge: false,
+          clientId: 'client-1',
+          clientName: 'Acme Co',
+          cadenceSource: 'contract_anniversary',
+          servicePeriodStart: '2026-03-01',
+          servicePeriodEnd: '2026-04-01',
+          servicePeriodLabel: '2026-03-01 to 2026-04-01',
+          invoiceWindowStart: '2026-03-01',
+          invoiceWindowEnd: '2026-04-01',
+          invoiceWindowLabel: '2026-03-01 to 2026-04-01',
+          assignmentContractIds: ['assignment-1', 'assignment-2'],
+          isMultiAssignment: true,
+          assignmentSummary: 'Multi-assignment invoice (2)',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+    };
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('already-invoiced-table-row-count')).toHaveTextContent('1');
+    });
+    expect(screen.getByText('Multi-assignment invoice (2)')).toBeInTheDocument();
+    expect(screen.getByText('Multi-contract invoice')).toBeInTheDocument();
   });
 });

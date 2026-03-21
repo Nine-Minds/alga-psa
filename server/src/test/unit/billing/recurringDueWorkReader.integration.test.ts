@@ -552,7 +552,7 @@ describe('recurring due-work reader', () => {
     expect(result.invoiceCandidates.map((candidate) => candidate.clientId)).not.toContain('client-2');
   });
 
-  it('T106: due-work candidate grouping respects purchase-order scope, currency, tax, and export-shape split keys', async () => {
+  it('T106: due-work candidate grouping keeps one parent candidate per client + invoice window while surfacing financial split reasons', async () => {
     mocks.rowsByTable.recurring_service_periods = [
       {
         tenant: 'tenant-1',
@@ -612,11 +612,12 @@ describe('recurring due-work reader', () => {
       searchTerm: 'Acme',
     });
 
-    expect(result.invoiceCandidates).toHaveLength(2);
-    expect(result.invoiceCandidates.every((candidate) => candidate.splitReasons.includes('financial_constraint'))).toBe(true);
+    expect(result.invoiceCandidates).toHaveLength(1);
+    expect(result.invoiceCandidates[0]?.memberCount).toBe(2);
+    expect(result.invoiceCandidates[0]?.splitReasons).toContain('financial_constraint');
   });
 
-  it('T033: due-work candidate grouping stays split by client_contract_id for same-client same-window recurring rows', async () => {
+  it('T030: same-client no-PO recurring rows group into one parent candidate that remains combinable on PO scope', async () => {
     mocks.rowsByTable.recurring_service_periods = [
       {
         tenant: 'tenant-1',
@@ -639,6 +640,7 @@ describe('recurring due-work reader', () => {
         contract_line_id: 'assignment-1',
         contract_line_name: 'Acme Retainer',
         client_contract_id: 'cc-1',
+        po_required: false,
         currency_code: 'USD',
         tax_source: 'internal',
         export_shape_key: 'default-export',
@@ -664,6 +666,7 @@ describe('recurring due-work reader', () => {
         contract_line_id: 'assignment-2',
         contract_line_name: 'Acme Backup',
         client_contract_id: 'cc-2',
+        po_required: false,
         currency_code: 'USD',
         tax_source: 'internal',
         export_shape_key: 'default-export',
@@ -676,23 +679,78 @@ describe('recurring due-work reader', () => {
       searchTerm: 'Acme',
     });
 
-    expect(result.invoiceCandidates).toHaveLength(2);
-    expect(
-      result.invoiceCandidates
-        .map((candidate) => candidate.candidateKey)
-        .sort(),
-    ).toEqual([
-      expect.stringContaining(':cc-1:'),
-      expect.stringContaining(':cc-2:'),
-    ]);
-    expect(
-      result.invoiceCandidates
-        .map((candidate) => candidate.members[0]?.recordId)
-        .sort(),
-    ).toEqual(['rsp-contract-scope-1', 'rsp-contract-scope-2']);
-    expect(result.invoiceCandidates.every((candidate) => candidate.memberCount === 1)).toBe(true);
-    expect(result.invoiceCandidates.every((candidate) => candidate.splitReasons.includes('single_contract'))).toBe(true);
-    expect(result.invoiceCandidates.every((candidate) => candidate.splitReasons.includes('purchase_order_scope'))).toBe(true);
+    expect(result.invoiceCandidates).toHaveLength(1);
+    expect(result.invoiceCandidates[0]?.memberCount).toBe(2);
+    expect(result.invoiceCandidates[0]?.splitReasons).toContain('single_contract');
+    expect(result.invoiceCandidates[0]?.splitReasons).not.toContain('purchase_order_scope');
+  });
+
+  it('T031: same-client rows with incompatible PO scopes remain grouped in one parent candidate but carry purchase-order split reasons', async () => {
+    mocks.rowsByTable.recurring_service_periods = [
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-po-scope-1',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-03-01',
+        invoice_window_end: '2025-04-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: null,
+        contract_id: 'contract-2',
+        contract_name: 'Acme Monthly Support',
+        contract_line_id: 'assignment-1',
+        contract_line_name: 'Acme Retainer',
+        client_contract_id: 'cc-1',
+        po_required: true,
+        currency_code: 'USD',
+        tax_source: 'internal',
+        export_shape_key: 'default-export',
+      },
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-po-scope-2',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-2:client:advance',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-03-01',
+        invoice_window_end: '2025-04-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: null,
+        contract_id: 'contract-2',
+        contract_name: 'Acme Monthly Support',
+        contract_line_id: 'assignment-2',
+        contract_line_name: 'Acme Backup',
+        client_contract_id: 'cc-2',
+        po_required: true,
+        currency_code: 'USD',
+        tax_source: 'internal',
+        export_shape_key: 'default-export',
+      },
+    ];
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      searchTerm: 'Acme',
+    });
+
+    expect(result.invoiceCandidates).toHaveLength(1);
+    expect(result.invoiceCandidates[0]?.memberCount).toBe(2);
+    expect(result.invoiceCandidates[0]?.splitReasons).toContain('single_contract');
+    expect(result.invoiceCandidates[0]?.splitReasons).toContain('purchase_order_scope');
   });
 
   it('T039: a client-cadence materialization gap only blocks the matching assignment candidate and does not block sibling assignment candidates in the same client window', async () => {

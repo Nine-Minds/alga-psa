@@ -128,79 +128,79 @@
   {
     "id": "T022",
     "description": "A combined multi-assignment invoice persists successfully without requiring a fake invoice-header `client_contract_id` owner.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F020"]
   },
   {
     "id": "T023",
     "description": "Charge persistence preserves `client_contract_id` attribution per charge for a combined multi-assignment invoice.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020", "F021"]
   },
   {
     "id": "T024",
     "description": "Invoice reads and invoice-detail rendering expose enough per-charge assignment attribution to explain a combined multi-assignment invoice.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021", "F022"]
   },
   {
     "id": "T025",
     "description": "Invoice history shows a combined grouped invoice clearly and does not mislabel it as belonging to only one assignment when it spans several.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T026",
     "description": "Purchase-order enforcement keeps a parent non-combinable when child candidates do not share compatible PO scope.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F023"]
   },
   {
     "id": "T027",
     "description": "A valid no-PO grouped combination can generate as one invoice without tripping header-assignment PO checks.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F020", "F023"]
   },
   {
     "id": "T028",
     "description": "Legacy single-assignment parent groups still preview and generate exactly as before.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T029",
     "description": "A single-child group still behaves like the legacy one-row flow and remains fully supported by preview and generation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T030",
     "description": "DB-backed integration proves two active contracts for the same client with no PO constraint can be selected as one grouped parent and generated as one invoice.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F020", "F021"]
   },
   {
     "id": "T031",
     "description": "DB-backed integration proves two active contracts for the same client with incompatible PO scope remain grouped visually but require separate child-level invoicing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F012", "F018", "F023"]
   },
   {
     "id": "T032",
     "description": "DB-backed integration proves `Select All` combines compatible groups and fans out incompatible groups in the same run without cross-contamination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F017", "F018"]
   },
   {
     "id": "T033",
     "description": "DB-backed integration proves grouped duplicate protection remains correct when a prior combined invoice exists for part of the same client window.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
     "id": "T034",
     "description": "Static/wiring coverage proves in-product copy, docs, and runbook text describe parent grouping, disabled non-combinable parents, and smart `Select All` semantics.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   }
 ]

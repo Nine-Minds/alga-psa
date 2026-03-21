@@ -314,6 +314,7 @@ export interface IRecurringInvoiceCandidateGroup {
 }
 
 export interface IRecurringScopedDuePeriodSelection extends IRecurringDuePeriodSelection {
+  clientId?: string | null;
   clientContractId?: string | null;
   purchaseOrderScopeKey?: string | null;
   currencyCode?: string | null;

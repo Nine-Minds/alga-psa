@@ -271,6 +271,96 @@ describe('recurring billing run actions', () => {
     });
   });
 
+  it('T032: mixed grouped targets combine compatible parents and fan out incompatible child targets without cross-contamination', async () => {
+    const parentFirst = buildContractCadenceTarget({ contractLineId: 'line-parent-1' });
+    const parentSecond = buildContractCadenceTarget({ contractLineId: 'line-parent-2' });
+    const childA = buildContractCadenceTarget({ contractLineId: 'line-child-a' });
+    const childB = buildContractCadenceTarget({ contractLineId: 'line-child-b' });
+
+    const result = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [
+        {
+          groupKey: 'parent-selection:compatible-parent-window',
+          selectorInputs: [parentFirst.selectorInput, parentSecond.selectorInput],
+        },
+        {
+          groupKey: 'child-selection:incompatible-a',
+          selectorInputs: [childA.selectorInput],
+        },
+        {
+          groupKey: 'child-selection:incompatible-b',
+          selectorInputs: [childB.selectorInput],
+        },
+      ],
+    });
+
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledTimes(3);
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenNthCalledWith(
+      1,
+      [parentFirst.selectorInput, parentSecond.selectorInput],
+      { allowPoOverage: undefined },
+    );
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenNthCalledWith(
+      2,
+      [childA.selectorInput],
+      { allowPoOverage: undefined },
+    );
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenNthCalledWith(
+      3,
+      [childB.selectorInput],
+      { allowPoOverage: undefined },
+    );
+    expect(result).toMatchObject({
+      invoicesCreated: 3,
+      failedCount: 0,
+      failures: [],
+    });
+  });
+
+  it('T033: grouped duplicate protection skips prior combined selections without blocking unrelated sibling execution', async () => {
+    const duplicateInvoiceError = Object.assign(
+      new Error('Invoice already exists for this recurring execution window'),
+      { code: 'DUPLICATE_RECURRING_INVOICE' },
+    );
+    const combinedA = buildContractCadenceTarget({ contractLineId: 'line-combined-a' });
+    const combinedB = buildContractCadenceTarget({ contractLineId: 'line-combined-b' });
+    const siblingTarget = buildContractCadenceTarget({ contractLineId: 'line-sibling' });
+
+    mocks.generateInvoiceForSelectionInputs
+      .mockRejectedValueOnce(duplicateInvoiceError)
+      .mockResolvedValueOnce({ invoice_id: 'invoice-sibling' });
+
+    const result = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [
+        {
+          groupKey: 'parent-selection:already-invoiced-combined',
+          selectorInputs: [combinedA.selectorInput, combinedB.selectorInput],
+        },
+        {
+          groupKey: 'child-selection:fresh-sibling',
+          selectorInputs: [siblingTarget.selectorInput],
+        },
+      ],
+    });
+
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledTimes(2);
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenNthCalledWith(
+      1,
+      [combinedA.selectorInput, combinedB.selectorInput],
+      { allowPoOverage: undefined },
+    );
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenNthCalledWith(
+      2,
+      [siblingTarget.selectorInput],
+      { allowPoOverage: undefined },
+    );
+    expect(result).toMatchObject({
+      invoicesCreated: 1,
+      failedCount: 0,
+      failures: [],
+    });
+  });
+
   it('T023: recurring billing run retries keep deterministic selection and retry keys using only canonical execution identity', async () => {
     const clientTarget = buildClientCadenceTarget();
     const contractTarget = buildContractCadenceTarget();

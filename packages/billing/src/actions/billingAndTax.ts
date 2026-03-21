@@ -93,6 +93,7 @@ interface PersistedRecurringDueWorkDbRow {
     contract_line_id?: string | null;
     contract_line_name?: string | null;
     client_contract_id?: string | null;
+    po_required?: boolean | null;
     currency_code?: string | null;
     tax_source?: string | null;
     export_shape_key?: string | null;
@@ -312,6 +313,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'cl.contract_line_id',
             'cl.contract_line_name',
             'cc.client_contract_id',
+            'cc.po_required',
             'ct.currency_code',
             'cts.tax_source_override as tax_source',
         );
@@ -374,6 +376,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'cl.contract_line_id',
             'cl.contract_line_name',
             'cc.client_contract_id',
+            'cc.po_required',
             'ct.currency_code',
             'cts.tax_source_override as tax_source',
         );
@@ -601,6 +604,7 @@ function buildRecurringDueWorkInvoiceCandidates(
 
     const grouped = groupDueServicePeriodsForInvoiceCandidates(
         rows.map((row) => ({
+            clientId: row.clientId,
             ...(row.recordId ? metadataByRecordId.get(row.recordId) : undefined),
             servicePeriod: {
                 kind: 'service_period',
@@ -999,7 +1003,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
                 row.record_id,
                 {
                     clientContractId: row.client_contract_id ?? row.contract_id ?? null,
-                    purchaseOrderScopeKey: row.client_contract_id ?? null,
+                    purchaseOrderScopeKey: row.po_required ? row.client_contract_id ?? null : null,
                     currencyCode: row.currency_code ?? null,
                     taxSource: row.tax_source ?? null,
                     exportShapeKey: row.export_shape_key ?? null,

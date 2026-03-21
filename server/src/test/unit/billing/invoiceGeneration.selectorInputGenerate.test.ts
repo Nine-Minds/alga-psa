@@ -597,7 +597,7 @@ describe('selector-input recurring generation', () => {
     });
   });
 
-  it('T040: selector-input generation fails explicitly when billing charges span multiple client_contract_id values', async () => {
+  it('T022/T023/T027: multi-assignment combined generation persists without header owner, keeps charge attribution, and does not require header-level PO checks', async () => {
     mocks.calculateBillingForExecutionWindow.mockResolvedValueOnce({
       ...mocks.contractBillingResult,
       charges: [
@@ -621,10 +621,15 @@ describe('selector-input recurring generation', () => {
       windowEnd: '2025-03-08',
     });
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
-      message:
-        'Invoice spans multiple client contracts (assignment-1, assignment-2). Only one client contract per invoice is supported.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
-    });
+    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toBeTruthy();
+    expect(mocks.rowsByTable.invoices[0]?.client_contract_id ?? null).toBeNull();
+    expect(mocks.getClientContractPurchaseOrderContext).not.toHaveBeenCalled();
+    const persistedCharges = mocks.persistInvoiceCharges.mock.calls[0]?.[2] ?? [];
+    expect(persistedCharges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ client_contract_id: 'assignment-1' }),
+        expect.objectContaining({ client_contract_id: 'assignment-2' }),
+      ]),
+    );
   });
 });

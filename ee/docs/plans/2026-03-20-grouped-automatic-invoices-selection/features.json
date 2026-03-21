@@ -116,37 +116,37 @@
   {
     "id": "F020",
     "description": "Redesign invoice persistence so a combined multi-assignment invoice does not require a fake single `client_contract_id` invoice owner.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product Decisions", "Data / API / Integrations", "Rollout / Migration"]
   },
   {
     "id": "F021",
     "description": "Make charge-level assignment attribution authoritative for combined invoices and preserve that attribution through billing persistence.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product Decisions", "Data / API / Integrations"]
   },
   {
     "id": "F022",
     "description": "Update invoice reads, history, and billing query surfaces so combined invoices remain explainable and queryable without relying on invoice-header assignment ownership alone.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F023",
     "description": "Keep purchase-order enforcement safe by disabling combined execution when selected children do not share compatible PO scope and by preserving correct PO behavior for valid combinations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product Decisions", "Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F024",
     "description": "Preserve existing single-assignment and single-child recurring invoice behavior so the grouped model is additive rather than regressive.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Acceptance Criteria"]
   },
   {
     "id": "F025",
     "description": "Update billing docs, runbooks, and in-product explanatory copy to describe grouped selection, combinability, and smart `Select All` semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Rollout / Migration", "Acceptance Criteria"]
   }
 ]

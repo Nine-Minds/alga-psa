@@ -351,6 +351,9 @@ export interface RecurringInvoiceHistoryRow {
   invoiceWindowStart: ISO8601String | null;
   invoiceWindowEnd: ISO8601String | null;
   invoiceWindowLabel: string;
+  assignmentContractIds: string[];
+  isMultiAssignment: boolean;
+  assignmentSummary: string;
 }
 
 export type InvoicedRecurringHistoryRow = RecurringInvoiceHistoryRow;
@@ -380,6 +383,23 @@ function normalizeHistoryDate(value: unknown): string | null {
   return null;
 }
 
+function normalizeHistoryAssignmentContractIds(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      return trimmed
+        .slice(1, -1)
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+    }
+  }
+  return [];
+}
+
 function mapRecurringHistoryRow(row: any): RecurringInvoiceHistoryRow {
   const servicePeriodStart = normalizeHistoryDate(row.service_period_start);
   const servicePeriodEnd = normalizeHistoryDate(row.service_period_end);
@@ -392,6 +412,14 @@ function mapRecurringHistoryRow(row: any): RecurringInvoiceHistoryRow {
   const executionWindowKind = row.cadence_owner === 'contract'
     ? 'contract_cadence_window'
     : 'client_cadence_window';
+  const assignmentContractIds = normalizeHistoryAssignmentContractIds(
+    row.assignment_contract_ids,
+  );
+  const assignmentSummary = assignmentContractIds.length > 1
+    ? `Multi-assignment invoice (${assignmentContractIds.length})`
+    : assignmentContractIds.length === 1
+      ? `Assignment ${assignmentContractIds[0]}`
+      : 'No assignment header';
 
   return {
     invoiceId: row.invoice_id,
@@ -416,6 +444,9 @@ function mapRecurringHistoryRow(row: any): RecurringInvoiceHistoryRow {
       invoiceWindowStart,
       invoiceWindowEnd,
     ),
+    assignmentContractIds,
+    isMultiAssignment: assignmentContractIds.length > 1,
+    assignmentSummary,
   };
 }
 
@@ -590,12 +621,20 @@ async function fetchRecurringInvoiceHistoryPage(
         'i.invoice_date',
         'i.billing_cycle_id',
         'i.client_id',
+        'i.client_contract_id',
         'c.client_name',
         trx.raw(`coalesce(rsp_summary.service_period_start, (${detailServicePeriodStartSql})) as service_period_start`),
         trx.raw(`coalesce(rsp_summary.service_period_end, (${detailServicePeriodEndSql})) as service_period_end`),
         trx.raw(`coalesce(rsp_summary.invoice_window_start, i.billing_period_start) as invoice_window_start`),
         trx.raw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end) as invoice_window_end`),
-        trx.raw(`coalesce(rsp_summary.cadence_owner, 'client') as cadence_owner`)
+        trx.raw(`coalesce(rsp_summary.cadence_owner, 'client') as cadence_owner`),
+        trx.raw(`coalesce((
+          select array_agg(distinct ic.client_contract_id)
+          from invoice_charges ic
+          where ic.invoice_id = i.invoice_id
+            and ic.tenant = i.tenant
+            and ic.client_contract_id is not null
+        ), ARRAY[]::text[]) as assignment_contract_ids`)
       )
       .orderByRaw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end, i.invoice_date) desc`)
       .orderBy('i.invoice_id', 'desc')
