@@ -123,6 +123,7 @@ done
 - (2026-03-21) Follow-up survey cleanup before locale generation: kept `RatingDisplay.tsx` on the survey namespace for the rating-button aria label with text, and corrected `TriggerForm.tsx` to reuse `common.messages.required` instead of a missing `common.errors.required` key. Re-ran `npx tsc -p packages/surveys/tsconfig.json --noEmit` to confirm the worktree was clean before starting translated survey locale files.
 - (2026-03-21) Completed `F005`: added survey namespace files for `de`, `es`, `fr`, `it`, `nl`, and `pl`, then generated `xx` and `yy` from the English source. The survey locale set now exists in all 9 required locales under `server/public/locales/*/msp/surveys.json`.
 - (2026-03-21) Validation for `F005`: parsed the 6 translated JSON files with Node, ran `node scripts/generate-pseudo-locales.cjs`, restored unrelated pre-existing pseudo-locale interpolation differences outside the surveys namespace, and confirmed `node scripts/validate-translations.cjs` passed with `Errors: 0` and `Warnings: 0`.
+- (2026-03-21) Completed `F006`: ran the Italian accent audit against [server/public/locales/it/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/surveys.json). The broad grep only surfaced legitimate `e` conjunctions; a targeted search for known missing-accent spellings (`puo`, `gia`, `verra`, `funzionalita`, `necessario`) returned no matches, so no Italian copy changes were needed.
 
 ## Open Questions
 
