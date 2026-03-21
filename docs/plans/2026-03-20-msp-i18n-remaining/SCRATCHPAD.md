@@ -110,8 +110,10 @@ done
 
 ## Progress Log
 
-- (2026-03-21) Completed `F001`: added [server/public/locales/en/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/surveys.json) as the English source of truth for surveys. Keys were normalized to the new namespace root (`settings.*`, `dashboard.*`, `analytics.*`, `responses.*`, `summary.*`, `ratings.*`) so later component rewrites can move off `common` cleanly.
+- (2026-03-21) Completed `F001`: added [server/public/locales/en/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/surveys.json) as the English source of truth for surveys. Keys were normalized into feature-specific groups (`moduleFrame`, `settings`, `response`, `rating`, `responses`, `dashboard`, `analytics`, `clientSummary`, `ticketSummary`) so later component rewrites can move off `common` cleanly.
 - (2026-03-21) Validation for `F001`: parsed the new JSON successfully with `node -e "JSON.parse(...)"`.
+- (2026-03-21) Completed `F002`: rewired the survey settings surface to `useTranslation('msp/surveys')` in `TriggerForm.tsx`, `TriggerList.tsx`, `TemplateForm.tsx`, and `TemplateList.tsx`. Shared verbs stayed in `common`, while survey-specific copy moved to the new namespace root with `{ defaultValue }` options.
+- (2026-03-21) Validation for `F002`: `npx tsc -p packages/surveys/tsconfig.json --noEmit` passed after the settings rewrite.
 
 ## Open Questions
 

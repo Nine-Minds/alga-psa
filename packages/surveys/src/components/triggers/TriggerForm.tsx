@@ -84,7 +84,8 @@ const SelectionChips = ({ items, getLabel, onRemove, removeLabel, emptyLabel }: 
 };
 
 export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, onCancel }: TriggerFormProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('msp/surveys');
+  const { t: tCommon } = useTranslation('common');
   const { toast } = useToast();
   const formInstanceId = useId();
 
@@ -226,7 +227,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
         value: status.status_id!,
         label: `${status.name}${
           status.is_default
-            ? ` (${t('surveys.settings.templateList.defaultBadge', 'Default')})`
+            ? ` (${t('settings.templateList.defaultBadge', { defaultValue: 'Default' })})`
             : ''
         }`,
       }));
@@ -289,22 +290,21 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     return priorityOptions;
   }, [formState.triggerType, priorityOptions, selectedPriorityType]);
 
-  const removeLabel = t('actions.remove', 'Remove');
-  const anyLabel = t('surveys.settings.triggerList.conditions.any', 'Any');
-  const loadingText = t('surveys.common.loading', 'Loading...');
-  const fieldHelpText = t('surveys.settings.triggerForm.help.conditions', 'Leave a field blank to match any value.');
-  const referenceErrorFallback = t(
-    'surveys.settings.triggerForm.errors.reference',
-    'Unable to load trigger options. Please try again.'
-  );
-  const noTemplatesMessage = t(
-    'surveys.settings.triggerForm.noTemplates',
-    'Create a survey template before adding triggers.'
-  );
-  const mixedPriorityNotice = t(
-    'surveys.settings.triggerForm.prioritiesMixed',
-    'Selected boards use different priority types. Showing all priorities.'
-  );
+  const removeLabel = tCommon('actions.remove', { defaultValue: 'Remove' });
+  const anyLabel = t('settings.triggerList.conditions.any', { defaultValue: 'Any' });
+  const loadingText = t('common.loading', { defaultValue: 'Loading...' });
+  const fieldHelpText = t('settings.triggerForm.help.conditions', {
+    defaultValue: 'Leave a field blank to match any value.',
+  });
+  const referenceErrorFallback = t('settings.triggerForm.errors.reference', {
+    defaultValue: 'Unable to load trigger options. Please try again.',
+  });
+  const noTemplatesMessage = t('settings.triggerForm.noTemplates', {
+    defaultValue: 'Create a survey template before adding triggers.',
+  });
+  const mixedPriorityNotice = t('settings.triggerForm.prioritiesMixed', {
+    defaultValue: 'Selected boards use different priority types. Showing all priorities.',
+  });
 
   const referenceErrorMessage = referenceDataError
     ? referenceDataError.message || referenceErrorFallback
@@ -361,8 +361,8 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
 
     if (!formState.templateId) {
       toast({
-        title: t('errors.required', 'This field is required'),
-        description: t('surveys.settings.triggerForm.labels.template', 'Survey template'),
+        title: tCommon('messages.required', { defaultValue: 'This field is required' }),
+        description: t('settings.triggerForm.labels.template', { defaultValue: 'Survey template' }),
         variant: 'destructive',
       });
       return;
@@ -399,7 +399,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           enabled: formState.enabled,
         });
         toast({
-          title: t('surveys.settings.triggerList.toasts.updated', 'Trigger updated'),
+          title: t('settings.triggerList.toasts.updated', { defaultValue: 'Trigger updated' }),
           description: templateDescription,
         });
       } else {
@@ -410,7 +410,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           enabled: formState.enabled,
         });
         toast({
-          title: t('surveys.settings.triggerList.toasts.created', 'Trigger created'),
+          title: t('settings.triggerList.toasts.created', { defaultValue: 'Trigger created' }),
           description: templateDescription,
         });
       }
@@ -419,7 +419,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     } catch (error) {
       console.error('[TriggerForm] Failed to save trigger', error);
       toast({
-        title: t('surveys.settings.triggerList.toasts.error', 'Unable to save trigger'),
+        title: t('settings.triggerList.toasts.error', { defaultValue: 'Unable to save trigger' }),
         description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
@@ -434,10 +434,9 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     }
 
     const confirmed = window.confirm(
-      t(
-        'surveys.settings.triggerList.deleteConfirm',
-        'Delete this trigger? Invitations already queued will still be sent.'
-      )
+      t('settings.triggerList.deleteConfirm', {
+        defaultValue: 'Delete this trigger? Invitations already queued will still be sent.',
+      })
     );
 
     if (!confirmed) {
@@ -448,14 +447,14 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
     try {
       await deleteSurveyTrigger(trigger.triggerId);
       toast({
-        title: t('surveys.settings.triggerList.toasts.deleted', 'Trigger deleted'),
+        title: t('settings.triggerList.toasts.deleted', { defaultValue: 'Trigger deleted' }),
         description: '',
       });
       onDeleteSuccess?.(trigger.triggerId);
     } catch (error) {
       console.error('[TriggerForm] Failed to delete trigger', error);
       toast({
-        title: t('surveys.settings.triggerList.toasts.deleteError', 'Unable to delete trigger'),
+        title: t('settings.triggerList.toasts.deleteError', { defaultValue: 'Unable to delete trigger' }),
         description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
@@ -492,7 +491,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
               onClick={reloadReferenceData}
               disabled={isReferenceLoading}
             >
-              {t('actions.refresh', 'Refresh')}
+              {tCommon('actions.refresh', { defaultValue: 'Refresh' })}
             </Button>
           </div>
         </Alert>
@@ -510,24 +509,23 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           options={templateOptions}
           value={formState.templateId}
           onValueChange={(value) => handleChange('templateId', value || null)}
-          placeholder={t('surveys.settings.triggerForm.labels.template', 'Survey template')}
+          placeholder={t('settings.triggerForm.labels.template', { defaultValue: 'Survey template' })}
           disabled={templateOptions.length === 0}
-          label={t('surveys.settings.triggerForm.labels.template', 'Survey template')}
+          label={t('settings.triggerForm.labels.template', { defaultValue: 'Survey template' })}
         />
 
         <CustomSelect
           id={`${formInstanceId}-trigger-type`}
           options={TRIGGER_TYPE_OPTIONS.map((type) => ({
             value: type,
-            label: t(
-              `surveys.settings.triggerForm.triggerTypes.${type}`,
-              TRIGGER_TYPE_FALLBACK_LABELS[type]
-            ),
+            label: t(`settings.triggerForm.triggerTypes.${type}`, {
+              defaultValue: TRIGGER_TYPE_FALLBACK_LABELS[type],
+            }),
           }))}
           value={formState.triggerType}
           onValueChange={(value) => handleChange('triggerType', (value as TriggerType) || 'ticket_closed')}
-          placeholder={t('surveys.settings.triggerForm.labels.triggerType', 'Trigger type')}
-          label={t('surveys.settings.triggerForm.labels.triggerType', 'Trigger type')}
+          placeholder={t('settings.triggerForm.labels.triggerType', { defaultValue: 'Trigger type' })}
+          label={t('settings.triggerForm.labels.triggerType', { defaultValue: 'Trigger type' })}
         />
       </div>
 
@@ -535,7 +533,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
         {formState.triggerType === 'ticket_closed' && (
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-board-picker`}>
-              {t('surveys.settings.triggerForm.labels.boardIds', 'Boards')}
+              {t('settings.triggerForm.labels.boardIds', { defaultValue: 'Boards' })}
             </label>
             <BoardPicker
               id={`${formInstanceId}-board-picker`}
@@ -544,7 +542,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
               onSelect={handleBoardSelect}
               filterState={boardFilterState}
               onFilterStateChange={setBoardFilterState}
-              placeholder={t('surveys.settings.triggerForm.placeholders.boardIds', 'Select board')}
+              placeholder={t('settings.triggerForm.placeholders.boardIds', { defaultValue: 'Select board' })}
             />
             <SelectionChips
               items={selectedBoardIds}
@@ -559,14 +557,14 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-status`}>
-            {t('surveys.settings.triggerForm.labels.statusIds', 'Statuses')}
+            {t('settings.triggerForm.labels.statusIds', { defaultValue: 'Statuses' })}
           </label>
           <CustomSelect
             id={`${formInstanceId}-status`}
             options={statusOptions}
             value={statusSelectValue}
             onValueChange={handleStatusSelect}
-            placeholder={t('surveys.settings.triggerForm.placeholders.statusIds', 'Add status')}
+            placeholder={t('settings.triggerForm.placeholders.statusIds', { defaultValue: 'Add status' })}
             allowClear
           />
           <SelectionChips
@@ -582,14 +580,14 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
         {formState.triggerType === 'ticket_closed' && (
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-priority`}>
-              {t('surveys.settings.triggerForm.labels.priorities', 'Priorities')}
+              {t('settings.triggerForm.labels.priorities', { defaultValue: 'Priorities' })}
             </label>
             <PrioritySelect
               id={`${formInstanceId}-priority`}
               value={prioritySelectValue}
               onValueChange={handlePrioritySelect}
               options={filteredPriorityOptions}
-              placeholder={t('surveys.settings.triggerForm.placeholders.priorities', 'Add priority')}
+              placeholder={t('settings.triggerForm.placeholders.priorities', { defaultValue: 'Add priority' })}
               isItilBoard={selectedPriorityType === 'itil'}
             />
             {selectedPriorityType === 'mixed' && (
@@ -612,7 +610,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           id={`${formInstanceId}-enabled`}
           checked={formState.enabled}
           onCheckedChange={(checked) => handleChange('enabled', Boolean(checked))}
-          label={t('surveys.settings.triggerForm.labels.enabled', 'Trigger enabled')}
+          label={t('settings.triggerForm.labels.enabled', { defaultValue: 'Trigger enabled' })}
         />
 
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
@@ -624,7 +622,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
               onClick={handleDelete}
               disabled={isDeleting || isSubmitting}
             >
-              {t('surveys.settings.triggerForm.actions.delete', 'Delete trigger')}
+              {t('settings.triggerForm.actions.delete', { defaultValue: 'Delete trigger' })}
             </Button>
           )}
           <div className="flex items-center gap-2">
@@ -635,7 +633,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
               onClick={onCancel}
               disabled={isSubmitting}
             >
-              {t('actions.cancel', 'Cancel')}
+              {tCommon('actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id={`${formInstanceId}-submit`}
@@ -643,10 +641,10 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
               disabled={isSubmitDisabled}
             >
               {isSubmitting
-                ? t('actions.saving', 'Saving...')
+                ? tCommon('actions.saving', { defaultValue: 'Saving...' })
                 : trigger
-                ? t('surveys.settings.triggerForm.actions.save', 'Save changes')
-                : t('surveys.settings.triggerForm.actions.create', 'Create trigger')}
+                ? t('settings.triggerForm.actions.save', { defaultValue: 'Save changes' })
+                : t('settings.triggerForm.actions.create', { defaultValue: 'Create trigger' })}
             </Button>
           </div>
         </div>
