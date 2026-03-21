@@ -150,6 +150,7 @@ done
 - (2026-03-21) Validation for `F031`: `git diff --check` passed, `npx tsc -p packages/jobs/tsconfig.json --noEmit` passed after the jobs namespace swap, and the one TypeScript issue surfaced during the pass (`count` typed as a string in the seconds formatter) was fixed by keeping the interpolated count numeric.
 - (2026-03-21) Completed `F032`: added jobs namespace files for `de`, `es`, `fr`, `it`, `nl`, and `pl`, then generated targeted `xx` and `yy` pseudo-locales from the English source. The jobs namespace now exists in all 9 required locales under `server/public/locales/*/msp/jobs.json`.
 - (2026-03-21) Validation for `F032`: counted 47 leaf strings in each generated real locale, generated the jobs pseudo-locales directly from the English source without touching unrelated namespaces, and re-ran `node scripts/validate-translations.cjs` with `Errors: 0` and `Warnings: 0`.
+- (2026-03-21) Completed `F033`: ran the Italian accent audit against [server/public/locales/it/msp/jobs.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/jobs.json). Neither the broad grep nor the tighter search for common accentless spellings returned any matches, so no Italian copy changes were required.
 
 ## Open Questions
 
