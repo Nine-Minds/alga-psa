@@ -36,7 +36,7 @@
   },
   "contractReports": {
     "title": "Report contratti",
-    "description": "Analizzare le prestazioni dei contratti, i ricavi e le metriche di utilizzo",
+    "description": "Analizzare le prestazioni dei contratti, i ricavi, nonché le metriche di utilizzo",
     "errors": {
       "loadingTitle": "Errore durante il caricamento dei report",
       "loadData": "Impossibile caricare i dati del report"
@@ -64,22 +64,22 @@
     "sections": {
       "revenue": {
         "title": "Report ricavi contratti",
-        "description": "Panoramica dei ricavi ricorrenti mensili e della fatturazione da inizio anno per contratto",
+        "description": "Panoramica dei ricavi ricorrenti mensili, oltre alla fatturazione da inizio anno per contratto",
         "empty": "Nessun dato sui ricavi dei contratti disponibile"
       },
       "expiration": {
-        "title": "Scadenza dei contratti e decisioni di rinnovo",
-        "description": "Tenere traccia delle prossime scadenze dei contratti e delle date di decisione per il rinnovo.",
+        "title": "Scadenza dei contratti, decisioni di rinnovo",
+        "description": "Tenere traccia delle prossime scadenze dei contratti, oltre alle date di decisione per il rinnovo.",
         "empty": "Nessuna scadenza di contratto o decisione di rinnovo nel breve termine"
       },
       "bucketUsage": {
         "title": "Utilizzo delle ore a pacchetto",
-        "description": "Monitorare l'uso delle ore a pacchetto e individuare situazioni di eccedenza",
+        "description": "Monitorare l'uso delle ore a pacchetto, individuando situazioni di eccedenza",
         "empty": "Nessun contratto basato su pacchetti trovato"
       },
       "profitability": {
         "title": "Report di redditività semplice",
-        "description": "Analisi di base dei margini di profitto e dei ricavi rispetto ai costi per contratto",
+        "description": "Analisi di base dei margini di profitto, con confronto ricavi/costi per contratto",
         "empty": "Nessun dato di redditività disponibile"
       }
     },

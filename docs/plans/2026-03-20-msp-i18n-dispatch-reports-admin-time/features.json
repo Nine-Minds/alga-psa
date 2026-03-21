@@ -22,7 +22,7 @@
   {"id": "F025", "description": "Update ROUTE_NAMESPACES for /msp/billing to include msp/reports", "implemented": true, "prdRefs": ["R-FR5"]},
   {"id": "F026", "description": "Generate reports translations for all 6 non-English locales", "implemented": true},
   {"id": "F027", "description": "Create reports pseudo-locale files (xx, yy)", "implemented": true},
-  {"id": "F028", "description": "Italian accent audit on it/msp/reports.json", "implemented": false},
+  {"id": "F028", "description": "Italian accent audit on it/msp/reports.json", "implemented": true},
 
   {"id": "F030", "description": "Create en/msp/admin.json with ~123 keys following naming convention", "implemented": false, "prdRefs": ["A-FR1 to A-FR4"]},
   {"id": "F031", "description": "TenantTelemetrySettings.tsx: wire useTranslation('msp/admin'), translate headings, toggle labels, descriptions, anonymization options, compliance lists, buttons", "implemented": false, "prdRefs": ["A-FR1"]},
