@@ -1,0 +1,397 @@
+{
+  "common": {
+    "actions": {
+      "view": "Zobacz",
+      "back": "Wstecz",
+      "save": "Zapisz wpis",
+      "saveGeneric": "Zapisz",
+      "saving": "Zapisywanie...",
+      "cancel": "Anuluj",
+      "reset": "Resetuj",
+      "delete": "Usuń",
+      "change": "Zmień",
+      "select": "Wybierz",
+      "getStarted": "Rozpocznij",
+      "addItem": "Dodaj element",
+      "addEntry": "Wpis",
+      "addComment": "Dodaj komentarz",
+      "adding": "Dodawanie...",
+      "approve": "Zatwierdź",
+      "reject": "Odrzuć",
+      "requestChanges": "Poproś o zmiany",
+      "reverseApproval": "Cofnij zatwierdzenie",
+      "reopen": "Otwórz ponownie",
+      "reopenForEdits": "Otwórz ponownie do edycji",
+      "submitTimeSheet": "Prześlij arkusz czasu pracy",
+      "showDetails": "Pokaż szczegóły",
+      "hideDetails": "Ukryj szczegóły",
+      "copyToAnotherDay": "Skopiuj na inny dzień",
+      "viewDetails": "Zobacz szczegóły",
+      "manageTimePeriods": "Zarządzaj okresami czasu",
+      "selectWorkItem": "Wybierz element pracy"
+    },
+    "states": {
+      "inProgress": "W toku",
+      "submitted": "Złożony",
+      "approved": "Zatwierdzony",
+      "changesRequested": "Poproszono o zmiany",
+      "unknown": "Nieznany",
+      "current": "Aktualny",
+      "active": "Aktywny",
+      "addressed": "Obsłużone",
+      "changeRequested": "Zażądano zmiany",
+      "loading": "Ładowanie..."
+    },
+    "fallbacks": {
+      "na": "N/D",
+      "none": "Brak wpisów",
+      "notFound": "Nie znaleziono",
+      "untitled": "Bez tytułu",
+      "unassigned": "Nieprzypisane",
+      "noDueDate": "Brak terminu",
+      "noServiceSelected": "Nie wybrano usługi",
+      "noNotes": "Żadnych notatek",
+      "noUserFound": "Nie znaleziono użytkownika"
+    },
+    "units": {
+      "hoursShort": "g",
+      "minutesShort": "m",
+      "hoursAbbrev": "h",
+      "dayOne": "dzień",
+      "dayOther": "dni",
+      "percentBillable": "{{value}}% do rozliczenia"
+    },
+    "types": {
+      "all": "Wszystkie typy",
+      "ticket": "Zgłoszenie",
+      "tickets": "Zgłoszenia",
+      "projectTask": "Zadanie projektowe",
+      "projectTasks": "Zadania projektu",
+      "interaction": "Wzajemne oddziaływanie",
+      "interactions": "Interakcje",
+      "adHocEntry": "Wpis ad hoc",
+      "adHocEntries": "Wpisy ad hoc",
+      "billable": "Płatne"
+    }
+  },
+  "timeTracking": {
+    "subjectUserLabel": "Użytkownik"
+  },
+  "timeEntryProvider": {
+    "errors": {
+      "initialize": "Nie udało się zainicjować wpisów czasu"
+    }
+  },
+  "timePeriodList": {
+    "title": "Wybierz okres",
+    "columns": {
+      "period": "Okres",
+      "status": "Status",
+      "hoursEntered": "Wprowadzono godziny",
+      "daysLogged": "Zarejestrowane dni",
+      "lastEntry": "Ostatni wpis",
+      "actions": "Działania"
+    },
+    "lastEntry": {
+      "none": "Brak wpisów"
+    }
+  },
+  "timeEntryForm": {
+    "labels": {
+      "service": "Usługa",
+      "date": "Data",
+      "startTime": "Czas rozpoczęcia",
+      "endTime": "Czas zakończenia",
+      "duration": "Czas trwania",
+      "billable": "Płatne",
+      "notes": "Notatki",
+      "deleteTimeEntry": "Usuń wpis czasu",
+      "unsavedChanges": "Niezapisane zmiany"
+    },
+    "placeholders": {
+      "selectService": "Wybierz usługę",
+      "selectDate": "Wybierz datę",
+      "addNotes": "Dodaj notatki"
+    },
+    "validation": {
+      "startBeforeEnd": "Czas rozpoczęcia musi być wcześniejszy niż czas zakończenia",
+      "endAfterStart": "Czas zakończenia musi być późniejszy niż czas rozpoczęcia",
+      "durationMinimum": "Czas trwania musi wynosić co najmniej 1 minutę",
+      "minimumDuration": "Minimalny czas trwania to 1 minuta",
+      "serviceRequired": "Do wpisów czasu wymagana jest obsługa",
+      "timePeriodRange": "Data musi mieścić się w bieżącym okresie ({{periodRange}})",
+      "endAfterStartPicker": "Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia"
+    }
+  },
+  "workItemPicker": {
+    "actions": {
+      "createAdHocEntry": "Utwórz wpis ad hoc"
+    },
+    "placeholders": {
+      "search": "Szukaj zadań...",
+      "adHocTitle": "Wprowadź tytuł wpisu ad hoc",
+      "startTime": "Czas rozpoczęcia",
+      "endTime": "Czas końca"
+    },
+    "filters": {
+      "includeInactive": "Uwzględnij nieaktywne",
+      "filters": "Filtry",
+      "assignedTo": "Przypisany do",
+      "assignedToMe": "Przypisane mi",
+      "startDate": "Data rozpoczęcia",
+      "endDate": "Data końcowa"
+    },
+    "empty": {
+      "searching": "Badawczy...",
+      "noWorkItems": "Nie znaleziono żadnych elementów pracy"
+    }
+  },
+  "workItemList": {
+    "meta": {
+      "assignedTo": "Przypisany do: {{value}}",
+      "dueDate": "Termin: {{value}}",
+      "contact": "Kontakt: {{value}}",
+      "scheduledEnd": "Planowany koniec: {{value}}"
+    },
+    "assignment": {
+      "oneUser": "Przypisano 1 użytkownika",
+      "multipleUsers": "{{count}} przypisanych użytkowników",
+      "additionalUsers": "{{name}}, +{{count}} użytkownik",
+      "additionalUsersOther": "{{name}}, +{{count}} użytkowników"
+    },
+    "bundledTicket": "Bilet łączony — czas logowania na bilecie głównym{{suffix}}.",
+    "pagination": {
+      "previous": "Wstecz",
+      "next": "Dalej",
+      "pageInfo": "Strona {{current}} z {{total}} (łączna liczba rekordów {{records}})"
+    },
+    "interactionType": "{{type}} • {{client}}"
+  },
+  "timeSheetHeader": {
+    "title": "Arkusz czasu",
+    "titleFor": "Arkusz czasu pracy dla {{name}}",
+    "editedBy": "Edytowany przez {{name}}",
+    "aria": {
+      "previousWeek": "Poprzedni tydzień",
+      "nextWeek": "Przyszły tydzień"
+    },
+    "pagination": {
+      "pageInfo": "Strona {{current}} z {{total}}"
+    },
+    "labels": {
+      "status": "Status:",
+      "showIntervals": "Pokaż interwały",
+      "grid": "Siatka",
+      "list": "Lista"
+    }
+  },
+  "approval": {
+    "titleFor": "Zatwierdzenie karty czasu pracy dla {{name}}",
+    "sections": {
+      "summary": "Podsumowanie",
+      "breakdownByWorkItemType": "Podział według typu elementu pracy",
+      "dailyBreakdown": "Podział dzienny",
+      "detailedEntries": "Szczegółowe wpisy czasu",
+      "comments": "Uwagi",
+      "timeEntryDetails": "Szczegóły wpisu czasu"
+    },
+    "labels": {
+      "period": "Okres",
+      "submitted": "Złożony",
+      "total": "Całkowity",
+      "billable": "Płatne",
+      "nonBillable": "Niepodlegające rozliczeniu",
+      "workItem": "Przedmiot pracy",
+      "duration": "Czas trwania",
+      "notes": "Notatki",
+      "entryChangeSuggestion": "Sugestia zmiany wpisu",
+      "approver": "Osoba zatwierdzająca",
+      "employee": "Pracownik"
+    },
+    "table": {
+      "date": "Data",
+      "workItem": "Przedmiot pracy",
+      "start": "Start",
+      "end": "Koniec",
+      "billable": "Płatne",
+      "status": "Status"
+    },
+    "comments": {
+      "changesRequestedHint": "(Zażądano zmian – prosimy o zapoznanie się z komentarzami)",
+      "responsePlaceholder": "Dodaj swoją odpowiedź na żądane zmiany...",
+      "placeholder": "Dodaj komentarz...",
+      "respondToChanges": "Reaguj na zmiany"
+    },
+    "changeSuggestionPlaceholder": "Powiedz pracownikowi dokładnie, co ma poprawić w tym wpisie"
+  },
+  "approvalActions": {
+    "dialogs": {
+      "rejectTitle": "Odrzuć arkusz czasu pracy",
+      "requestChangesTitle": "Poproś o zmiany"
+    },
+    "labels": {
+      "rejectionReason": "Powód odrzucenia"
+    },
+    "placeholders": {
+      "rejectionReason": "Wpisz powód odrzucenia"
+    },
+    "confirm": {
+      "reject": "Potwierdź Odrzuć",
+      "changes": "Potwierdź zmiany"
+    }
+  },
+  "comments": {
+    "placeholder": "Dodaj komentarz...",
+    "responsePlaceholder": "Odpowiedz na żądane zmiany...",
+    "respondToChanges": "Reaguj na zmiany"
+  },
+  "feedback": {
+    "approverFeedback": "Opinia zatwierdzająca",
+    "viewHistory": "Wyświetl historię opinii",
+    "approverOn": "{{name}} na {{value}}"
+  },
+  "managerDashboard": {
+    "access": {
+      "title": "Wymagany dostęp lidera zespołu",
+      "description": "Aby zatwierdzać arkusze czasu pracy członków swojego zespołu, musisz być liderem zespołu.",
+      "goToTeamSettings": "Przejdź do Ustawień zespołu"
+    },
+    "title": "Zatwierdzenia arkuszy czasu pracy",
+    "actions": {
+      "hideApproved": "Ukryj zatwierdzone",
+      "showApproved": "Pokaż zatwierdzone",
+      "bulkApproveSelected": "Zatwierdź zaznaczone zbiorczo",
+      "reverse": "Cofnij"
+    },
+    "columns": {
+      "select": "Wybierz",
+      "employee": "Pracownik",
+      "period": "Okres",
+      "status": "Status",
+      "actions": "Działania"
+    },
+    "reverseApproval": {
+      "reason": "Zatwierdzenie cofnięte przez menedżera",
+      "error": "Nie udało się cofnąć zatwierdzenia: {{error}}"
+    }
+  },
+  "workItemDrawer": {
+    "errors": {
+      "genericTitle": "Błąd podczas wczytywania treści",
+      "genericDescription": "Spróbuj ponownie",
+      "failedInteraction": "Nie udało się wczytać szczegółów interakcji",
+      "interactionNotFound": "Nie znaleziono interakcji",
+      "noUserSession": "Nie znaleziono sesji użytkownika",
+      "failedTicket": "Nie udało się załadować biletu",
+      "failedTask": "Nie udało się załadować zadania",
+      "failedTaskPhase": "Nie udało się załadować fazy zadania",
+      "failedTaskProjectMetadata": "Nie udało się załadować metadanych projektu zadania",
+      "failedAdHoc": "Nie udało się wczytać danych wpisu ad hoc",
+      "unsupportedType": "Nieobsługiwany typ zadania"
+    }
+  },
+  "timeSheetClient": {
+    "errors": {
+      "delegationDisabled": "Delegowane wprowadzanie czasu jest wyłączone",
+      "failedReopen": "Nie udało się ponownie otworzyć arkusza czasu pracy"
+    },
+    "reopen": {
+      "success": "Arkusz czasu pracy ponownie otwarty do edycji",
+      "reason": "Ponownie otwarte do edycji",
+      "title": "Otworzyć ponownie do edycji?",
+      "message": "Spowoduje to przeniesienie arkusza czasu pracy z powrotem do żądanych zmian, aby można było edytować wpisy czasu."
+    }
+  },
+  "timeSheetList": {
+    "delete": {
+      "title": "Usuń element pracy",
+      "message": "Spowoduje to trwałe usunięcie wszystkich wpisów czasu dla tego elementu pracy. Tej akcji nie można cofnąć."
+    },
+    "summary": {
+      "entryOne": "wejście",
+      "entryOther": "wpisy",
+      "total": "Razem: {{value}}",
+      "billable": "Rozliczane: {{value}}"
+    },
+    "empty": {
+      "title": "Nie ma jeszcze wpisów czasu",
+      "description": "Dodaj element pracy i zacznij śledzić swój czas.",
+      "noEntries": "Brak wpisów"
+    },
+    "columns": {
+      "workItem": "Przedmiot pracy",
+      "timeEntry": "Ewidencja czasu",
+      "duration": "Czas trwania",
+      "billableDuration": "Rozliczany czas trwania",
+      "actions": "Działania"
+    },
+    "dayGroup": {
+      "entryOne": "{{count}} wpis",
+      "entryOther": "{{count}} wpisów"
+    }
+  },
+  "selectedWorkItem": {
+    "adHocNoWorkItem": "Wpis ad-hoc (brak elementu roboczego)"
+  },
+  "contractInfo": {
+    "noContract": "Nie znaleziono pozycji umowy dla tej usługi. Czas będzie naliczany według stawek domyślnych.",
+    "contract": "Kontrakt: {{name}}",
+    "defaultContract": "Umowa domyślna",
+    "multipleLines": "Dostępnych jest wiele linii kontraktu - przy użyciu wyboru domyślnego"
+  },
+  "billableLegend": {
+    "title": "Legenda płatna",
+    "description": "Kolorowe wskaźniki rozliczanych współczynników czasowych"
+  },
+  "intervalItem": {
+    "now": "Teraz",
+    "autoClosed": "Automatyczne zamykanie",
+    "active": "Aktywny"
+  },
+  "intervals": {
+    "title": "Przedziały czasowe biletów",
+    "hideShortIntervals": "Ukryj interwały poniżej 1 minuty",
+    "totalTime": "Całkowity czas: {{value}}",
+    "selectedOne": "Wybrano {{count}} interwał",
+    "selectedOther": "Wybrano {{count}} interwałów",
+    "tooltips": {
+      "createTimeEntry": "Utwórz wpis czasu z wybranych interwałów",
+      "deleteSelected": "Usuń wybrane interwały",
+      "mergeSelected": "Połącz wybrane interwały"
+    },
+    "actions": {
+      "selectAll": "Wybierz wszystko",
+      "deselectAll": "Odznacz wszystko",
+      "merge": "Łączyć"
+    },
+    "states": {
+      "loading": "Interwały ładowania...",
+      "noIntervalsThisPeriod": "Nie znaleziono interwałów dla tego okresu",
+      "noIntervalsThisTicket": "Nie znaleziono interwałów dla tego biletu",
+      "noIntervalsLongerThanMinute": "Nie znaleziono interwałów dłuższych niż 1 minuta"
+    },
+    "entryName": "Wejście w godzinach biletu",
+    "messages": {
+      "cannotFindTimeSheet": "Nie można utworzyć wpisu czasu — nie można znaleźć ani utworzyć arkusza czasu pracy",
+      "mergeFirst": "Przed utworzeniem wpisu czasu należy najpierw połączyć przedziały",
+      "sameTicketOnly": "Można tworzyć wpisy czasowe tylko z przedziałów tego samego biletu",
+      "mergeSameTicketOnly": "Można łączyć tylko interwały z tego samego biletu",
+      "mergeSuccess": "Przedziały zostały pomyślnie połączone",
+      "failedMerge": "Nie udało się scalić interwałów",
+      "noActivePeriod": "Nie znaleziono aktywnego okresu",
+      "failedFetchTimeSheet": "Nie udało się utworzyć lub pobrać arkusza czasu pracy",
+      "failedPrepareTimeEntry": "Nie udało się przygotować wpisu czasu",
+      "savedSuccess": "Wpis czasu został pomyślnie zapisany",
+      "failedSave": "Nie udało się zapisać wpisu czasu"
+    }
+  },
+  "addWorkItemDialog": {
+    "title": "Dodaj element pracy",
+    "description": "Wybierz element pracy, który chcesz dodać do grafiku",
+    "close": "Zamknij okno dodawania elementu roboczego",
+    "focus": "Skoncentruj się na oknie dialogowym dodawania elementu roboczego"
+  },
+  "timeEntryReadOnly": {
+    "viewEntryDetails": "Zobacz szczegóły wpisu"
+  }
+}

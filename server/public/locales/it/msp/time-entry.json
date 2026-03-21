@@ -1,0 +1,397 @@
+{
+  "common": {
+    "actions": {
+      "view": "Visualizza",
+      "back": "Indietro",
+      "save": "Salva voce",
+      "saveGeneric": "Salva",
+      "saving": "Salvataggio in corso...",
+      "cancel": "Annulla",
+      "reset": "Reimposta",
+      "delete": "Elimina",
+      "change": "Modifica",
+      "select": "Seleziona",
+      "getStarted": "Inizia",
+      "addItem": "Aggiungi elemento",
+      "addEntry": "Voce",
+      "addComment": "Aggiungi commento",
+      "adding": "Aggiunta...",
+      "approve": "Approva",
+      "reject": "Rifiuta",
+      "requestChanges": "Richiedi modifiche",
+      "reverseApproval": "Revoca approvazione",
+      "reopen": "Riapri",
+      "reopenForEdits": "Riaprire per modifiche",
+      "submitTimeSheet": "Invia foglio presenze",
+      "showDetails": "Mostra dettagli",
+      "hideDetails": "Nascondi dettagli",
+      "copyToAnotherDay": "Copia in un altro giorno",
+      "viewDetails": "Visualizza i dettagli",
+      "manageTimePeriods": "Gestisci periodi di tempo",
+      "selectWorkItem": "Seleziona elemento di lavoro"
+    },
+    "states": {
+      "inProgress": "In corso",
+      "submitted": "Inviato",
+      "approved": "Approvato",
+      "changesRequested": "Modifiche richieste",
+      "unknown": "Sconosciuto",
+      "current": "Attuale",
+      "active": "Attivo",
+      "addressed": "Gestito",
+      "changeRequested": "Modifica richiesta",
+      "loading": "Caricamento..."
+    },
+    "fallbacks": {
+      "na": "N/D",
+      "none": "Nessuna voce",
+      "notFound": "Non trovato",
+      "untitled": "Senza titolo",
+      "unassigned": "Non assegnato",
+      "noDueDate": "Nessuna data di scadenza",
+      "noServiceSelected": "Nessun servizio selezionato",
+      "noNotes": "Nessuna nota",
+      "noUserFound": "Nessun utente trovato"
+    },
+    "units": {
+      "hoursShort": "h",
+      "minutesShort": "m",
+      "hoursAbbrev": "h",
+      "dayOne": "giorno",
+      "dayOther": "giorni",
+      "percentBillable": "{{value}}% fatturabile"
+    },
+    "types": {
+      "all": "Tutti i tipi",
+      "ticket": "Ticket",
+      "tickets": "Ticket",
+      "projectTask": "Compito del progetto",
+      "projectTasks": "Compiti del progetto",
+      "interaction": "Interazione",
+      "interactions": "Interazioni",
+      "adHocEntry": "Inserimento ad hoc",
+      "adHocEntries": "Voci ad hoc",
+      "billable": "Fatturabile"
+    }
+  },
+  "timeTracking": {
+    "subjectUserLabel": "Utente"
+  },
+  "timeEntryProvider": {
+    "errors": {
+      "initialize": "Impossibile inizializzare le voci dell'orario"
+    }
+  },
+  "timePeriodList": {
+    "title": "Seleziona un periodo di tempo",
+    "columns": {
+      "period": "Periodo",
+      "status": "Stato",
+      "hoursEntered": "Ore inserite",
+      "daysLogged": "Giorni registrati",
+      "lastEntry": "Ultima voce",
+      "actions": "Azioni"
+    },
+    "lastEntry": {
+      "none": "Nessuna voce"
+    }
+  },
+  "timeEntryForm": {
+    "labels": {
+      "service": "Servizio",
+      "date": "Data",
+      "startTime": "Ora di inizio",
+      "endTime": "Ora di fine",
+      "duration": "Durata",
+      "billable": "Fatturabile",
+      "notes": "Note",
+      "deleteTimeEntry": "Elimina l'immissione dell'ora",
+      "unsavedChanges": "Modifiche non salvate"
+    },
+    "placeholders": {
+      "selectService": "Seleziona un servizio",
+      "selectDate": "Seleziona la data",
+      "addNotes": "Aggiungi note"
+    },
+    "validation": {
+      "startBeforeEnd": "L'ora di inizio deve essere precedente all'ora di fine",
+      "endAfterStart": "L'ora di fine deve essere successiva all'ora di inizio",
+      "durationMinimum": "La durata deve essere almeno 1 minuto",
+      "minimumDuration": "La durata minima è 1 minuto",
+      "serviceRequired": "Il servizio è richiesto per gli inserimenti dell'orario",
+      "timePeriodRange": "La data deve essere compresa nel periodo corrente ({{periodRange}})",
+      "endAfterStartPicker": "L'ora di fine deve essere successiva all'ora di inizio"
+    }
+  },
+  "workItemPicker": {
+    "actions": {
+      "createAdHocEntry": "Crea voce ad hoc"
+    },
+    "placeholders": {
+      "search": "Cerca elementi di lavoro...",
+      "adHocTitle": "Inserisci il titolo per la voce ad hoc",
+      "startTime": "Ora di inizio",
+      "endTime": "Ora di fine"
+    },
+    "filters": {
+      "includeInactive": "Includi non attivi",
+      "filters": "Filtri",
+      "assignedTo": "Assegnato a",
+      "assignedToMe": "Assegnato a me",
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine"
+    },
+    "empty": {
+      "searching": "Ricerca...",
+      "noWorkItems": "Nessun elemento di lavoro trovato"
+    }
+  },
+  "workItemList": {
+    "meta": {
+      "assignedTo": "Assegnato a: {{value}}",
+      "dueDate": "Data di scadenza: {{value}}",
+      "contact": "Contatto: {{value}}",
+      "scheduledEnd": "Fine programmata: {{value}}"
+    },
+    "assignment": {
+      "oneUser": "1 utente assegnato",
+      "multipleUsers": "{{count}} utenti assegnati",
+      "additionalUsers": "{{name}}, +{{count}} utente",
+      "additionalUsersOther": "{{name}}, +{{count}} utenti"
+    },
+    "bundledTicket": "Biglietto in bundle: registra l'ora sul biglietto principale{{suffix}}.",
+    "pagination": {
+      "previous": "Precedente",
+      "next": "Successivo",
+      "pageInfo": "Pagina {{current}} di {{total}} ({{records}} record totali)"
+    },
+    "interactionType": "{{type}} • {{client}}"
+  },
+  "timeSheetHeader": {
+    "title": "Foglio presenze",
+    "titleFor": "Foglio presenze per {{name}}",
+    "editedBy": "Modificato da {{name}}",
+    "aria": {
+      "previousWeek": "La settimana precedente",
+      "nextWeek": "La prossima settimana"
+    },
+    "pagination": {
+      "pageInfo": "Pagina {{current}} di {{total}}"
+    },
+    "labels": {
+      "status": "Stato:",
+      "showIntervals": "Mostra intervalli",
+      "grid": "Griglia",
+      "list": "Lista"
+    }
+  },
+  "approval": {
+    "titleFor": "Approvazione del foglio presenze per {{name}}",
+    "sections": {
+      "summary": "Riepilogo",
+      "breakdownByWorkItemType": "Ripartizione per tipo di elemento di lavoro",
+      "dailyBreakdown": "Ripartizione giornaliera",
+      "detailedEntries": "Voci di tempo dettagliate",
+      "comments": "Commenti",
+      "timeEntryDetails": "Dettagli sull'immissione dell'ora"
+    },
+    "labels": {
+      "period": "Periodo",
+      "submitted": "Inviato",
+      "total": "Totale",
+      "billable": "Fatturabile",
+      "nonBillable": "Non fatturabile",
+      "workItem": "Elemento di lavoro",
+      "duration": "Durata",
+      "notes": "Note",
+      "entryChangeSuggestion": "Suggerimento per la modifica della voce",
+      "approver": "Approvatore",
+      "employee": "Dipendente"
+    },
+    "table": {
+      "date": "Data",
+      "workItem": "Elemento di lavoro",
+      "start": "Inizio",
+      "end": "Fine",
+      "billable": "Fatturabile",
+      "status": "Stato"
+    },
+    "comments": {
+      "changesRequestedHint": "(Sono state richieste modifiche: rivedere i commenti)",
+      "responsePlaceholder": "Aggiungi la tua risposta alle modifiche richieste...",
+      "placeholder": "Aggiungi un commento...",
+      "respondToChanges": "Rispondere ai cambiamenti"
+    },
+    "changeSuggestionPlaceholder": "Spiega al dipendente esattamente cosa correggere in questa voce"
+  },
+  "approvalActions": {
+    "dialogs": {
+      "rejectTitle": "Rifiuta foglio presenze",
+      "requestChangesTitle": "Richiedi modifiche"
+    },
+    "labels": {
+      "rejectionReason": "Motivo del rifiuto"
+    },
+    "placeholders": {
+      "rejectionReason": "Inserisci il motivo del rifiuto"
+    },
+    "confirm": {
+      "reject": "Conferma Rifiuta",
+      "changes": "Conferma modifiche"
+    }
+  },
+  "comments": {
+    "placeholder": "Aggiungi un commento...",
+    "responsePlaceholder": "Rispondere alle modifiche richieste...",
+    "respondToChanges": "Rispondere ai cambiamenti"
+  },
+  "feedback": {
+    "approverFeedback": "Feedback dell'approvatore",
+    "viewHistory": "Visualizza la cronologia dei feedback",
+    "approverOn": "{{name}} il {{value}}"
+  },
+  "managerDashboard": {
+    "access": {
+      "title": "È richiesto l'accesso al responsabile del team",
+      "description": "Per approvare i fogli presenze per i membri del tuo team, devi essere un responsabile del team.",
+      "goToTeamSettings": "Vai alle impostazioni del team"
+    },
+    "title": "Approvazioni del foglio presenze",
+    "actions": {
+      "hideApproved": "Nascondi approvati",
+      "showApproved": "Mostra approvati",
+      "bulkApproveSelected": "Approva selezione in blocco",
+      "reverse": "Annulla"
+    },
+    "columns": {
+      "select": "Seleziona",
+      "employee": "Dipendente",
+      "period": "Periodo",
+      "status": "Stato",
+      "actions": "Azioni"
+    },
+    "reverseApproval": {
+      "reason": "Approvazione annullata dal manager",
+      "error": "Impossibile annullare l'approvazione: {{error}}"
+    }
+  },
+  "workItemDrawer": {
+    "errors": {
+      "genericTitle": "Errore durante il caricamento del contenuto",
+      "genericDescription": "Riprova",
+      "failedInteraction": "Impossibile caricare i dettagli dell'interazione",
+      "interactionNotFound": "Interazione non trovata",
+      "noUserSession": "Nessuna sessione utente trovata",
+      "failedTicket": "Impossibile caricare il biglietto",
+      "failedTask": "Impossibile caricare l'attività",
+      "failedTaskPhase": "Impossibile caricare la fase dell'attività",
+      "failedTaskProjectMetadata": "Impossibile caricare i metadati del progetto dell'attività",
+      "failedAdHoc": "Impossibile caricare i dati della voce ad hoc",
+      "unsupportedType": "Tipo di elemento di lavoro non supportato"
+    }
+  },
+  "timeSheetClient": {
+    "errors": {
+      "delegationDisabled": "L'immissione dell'orario delegato è disabilitata",
+      "failedReopen": "Impossibile riaprire il foglio presenze"
+    },
+    "reopen": {
+      "success": "Foglio presenze riaperto per modifiche",
+      "reason": "Riaperto per modifiche",
+      "title": "Riaprire per modifiche?",
+      "message": "Ciò riporterà il foglio presenze in Modifiche richieste in modo che le voci di tempo possano essere modificate."
+    }
+  },
+  "timeSheetList": {
+    "delete": {
+      "title": "Elimina elemento di lavoro",
+      "message": "Ciò eliminerà definitivamente tutte le voci relative all'orario per questo elemento di lavoro. Questa azione non può essere annullata."
+    },
+    "summary": {
+      "entryOne": "iscrizione",
+      "entryOther": "voci",
+      "total": "Totale: {{value}}",
+      "billable": "Fatturabile: {{value}}"
+    },
+    "empty": {
+      "title": "Nessun inserimento di orari ancora",
+      "description": "Aggiungi un elemento di lavoro e inizia a monitorare il tuo tempo.",
+      "noEntries": "Nessuna voce"
+    },
+    "columns": {
+      "workItem": "Elemento di lavoro",
+      "timeEntry": "Inserimento ore",
+      "duration": "Durata",
+      "billableDuration": "Durata fatturabile",
+      "actions": "Azioni"
+    },
+    "dayGroup": {
+      "entryOne": "{{count}} voce",
+      "entryOther": "{{count}} voci"
+    }
+  },
+  "selectedWorkItem": {
+    "adHocNoWorkItem": "Voce ad hoc (nessun elemento di lavoro)"
+  },
+  "contractInfo": {
+    "noContract": "Nessuna linea di contratto trovata per questo servizio. Il tempo verrà fatturato alle tariffe predefinite.",
+    "contract": "Contratto: {{name}}",
+    "defaultContract": "Contratto predefinito",
+    "multipleLines": "Sono disponibili più linee di contratto, utilizzando la selezione predefinita"
+  },
+  "billableLegend": {
+    "title": "Legenda fatturabile",
+    "description": "Indicatori colorati per i rapporti temporali fatturabili"
+  },
+  "intervalItem": {
+    "now": "Ora",
+    "autoClosed": "Chiusura automatica",
+    "active": "Attivo"
+  },
+  "intervals": {
+    "title": "Intervalli di tempo del biglietto",
+    "hideShortIntervals": "Nascondi intervalli inferiori a 1 minuto",
+    "totalTime": "Tempo totale: {{value}}",
+    "selectedOne": "{{count}} intervallo selezionato",
+    "selectedOther": "{{count}} intervalli selezionati",
+    "tooltips": {
+      "createTimeEntry": "Crea l'immissione dell'ora dagli intervalli selezionati",
+      "deleteSelected": "Elimina gli intervalli selezionati",
+      "mergeSelected": "Unisci gli intervalli selezionati"
+    },
+    "actions": {
+      "selectAll": "Seleziona tutto",
+      "deselectAll": "Deseleziona tutto",
+      "merge": "Unisci"
+    },
+    "states": {
+      "loading": "Caricamento intervalli...",
+      "noIntervalsThisPeriod": "Nessun intervallo trovato per questo periodo di tempo",
+      "noIntervalsThisTicket": "Nessun intervallo trovato per questo biglietto",
+      "noIntervalsLongerThanMinute": "Nessun intervallo più lungo di 1 minuto trovato"
+    },
+    "entryName": "Inserimento orario biglietto",
+    "messages": {
+      "cannotFindTimeSheet": "Impossibile creare l'inserimento dell'orario: impossibile trovare o creare il foglio presenze",
+      "mergeFirst": "Unisci gli intervalli prima di creare una voce temporale",
+      "sameTicketOnly": "È possibile creare voci orari solo da intervalli dello stesso ticket",
+      "mergeSameTicketOnly": "È possibile unire solo gli intervalli dello stesso ticket",
+      "mergeSuccess": "Gli intervalli sono stati uniti correttamente",
+      "failedMerge": "Impossibile unire gli intervalli",
+      "noActivePeriod": "Nessun periodo di tempo attivo trovato",
+      "failedFetchTimeSheet": "Impossibile creare o recuperare il foglio presenze",
+      "failedPrepareTimeEntry": "Impossibile preparare l'immissione dell'ora",
+      "savedSuccess": "Inserimento dell'ora salvato correttamente",
+      "failedSave": "Impossibile salvare l'immissione del tempo"
+    }
+  },
+  "addWorkItemDialog": {
+    "title": "Aggiungi elemento di lavoro",
+    "description": "Seleziona un elemento di lavoro da aggiungere alla scheda attività",
+    "close": "Chiudi la finestra di dialogo Aggiungi elemento di lavoro",
+    "focus": "Concentrarsi sulla finestra di dialogo Aggiungi elemento di lavoro"
+  },
+  "timeEntryReadOnly": {
+    "viewEntryDetails": "Visualizza i dettagli della voce"
+  }
+}
