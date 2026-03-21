@@ -57,7 +57,7 @@
   {
     "id": "T014",
     "description": "Reports: Visual QA (xx locale) — billing reports tab shows '11111' for tabs, columns, metrics, empty states",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
 

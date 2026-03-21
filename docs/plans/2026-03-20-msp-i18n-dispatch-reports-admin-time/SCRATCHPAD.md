@@ -173,6 +173,7 @@ SCRIPT
 - (2026-03-20) `F091` completed: ran `node scripts/validate-translations.cjs` after the time-entry production and pseudo locale files were added. The full locale tree validation finished with `Errors: 0` and `Warnings: 0`, covering the new `msp/time-entry` namespace alongside the earlier dispatch/reports/admin additions.
 - (2026-03-20) `F092` completed: ran `npm run build` end-to-end. The build succeeded after the usual Next.js/webpack warnings already present in the workspace (conflicting star exports in scheduling actions plus third-party dynamic-dependency/`require.extensions` warnings from `fluent-ffmpeg`, `handlebars`, `knex`, and Temporal), which did not block the production build.
 - (2026-03-20) `T013` passed: reran the Italian accent-audit grep against `server/public/locales/it/msp/reports.json`; it returned no matches for the known unaccented patterns.
+- (2026-03-20) `T014` passed: added `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` and ran `cd server && npx vitest run src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts`. The new test suite checks representative `xx` report keys (`contractReports.tabs.revenue`, `reportsPage.cards.timeUtilization.title`) and confirmed they resolve to `11111`, giving automated pseudo-locale coverage for the billing reports surface.
 
 ### Key file paths — Dispatch
 | File | Strings |
