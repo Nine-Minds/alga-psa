@@ -58,8 +58,12 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       ['admin', 'telemetry.page.title'],
       ['admin', 'email.tabs.inbound'],
       ['time-entry', 'timePeriodList.title'],
+      ['time-entry', 'timeEntryForm.labels.service'],
+      ['time-entry', 'workItemList.pagination.previous'],
+      ['time-entry', 'timeSheetHeader.title'],
       ['time-entry', 'workItemPicker.actions.createAdHocEntry'],
       ['time-entry', 'approval.sections.summary'],
+      ['time-entry', 'managerDashboard.title'],
       ['time-entry', 'managerDashboard.access.title'],
     ];
 
@@ -84,8 +88,12 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
     expect(getValue(xx.admin, 'telemetry.page.title')).toBe('11111');
     expect(getValue(xx.admin, 'email.tabs.inbound')).toBe('11111');
     expect(getValue(xx.timeEntry, 'timePeriodList.title')).toBe('11111');
+    expect(getValue(xx.timeEntry, 'timeEntryForm.labels.service')).toBe('11111');
+    expect(getValue(xx.timeEntry, 'workItemList.pagination.previous')).toBe('11111');
+    expect(getValue(xx.timeEntry, 'timeSheetHeader.title')).toBe('11111');
     expect(getValue(xx.timeEntry, 'workItemPicker.actions.createAdHocEntry')).toBe('11111');
     expect(getValue(xx.timeEntry, 'approval.sections.summary')).toBe('11111');
+    expect(getValue(xx.timeEntry, 'managerDashboard.title')).toBe('11111');
     expect(getValue(xx.timeEntry, 'managerDashboard.access.title')).toBe('11111');
 
     for (const [namespace, key] of representativeXXKeys) {

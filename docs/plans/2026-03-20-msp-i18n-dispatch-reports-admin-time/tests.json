@@ -119,7 +119,7 @@
   {
     "id": "T034",
     "description": "Time entry: Visual QA (xx locale) — /msp/time-entry timesheet, work items, edit form show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F062"]
   },
   {
