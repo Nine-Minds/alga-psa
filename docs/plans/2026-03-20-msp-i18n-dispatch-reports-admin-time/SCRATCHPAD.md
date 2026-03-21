@@ -154,6 +154,7 @@ SCRIPT
 - (2026-03-20) `F035` completed: added `msp/admin` to the `/msp/settings` route entry in `packages/core/src/lib/i18n/config.ts`, preserving the existing `common`, `msp/core`, `msp/settings`, and `features/projects` bundles so admin settings tabs load their translations with the rest of the settings shell.
 - (2026-03-20) `F036` completed: added real-locale admin files for `fr`, `es`, `de`, `nl`, `it`, and `pl`. A direct structural check against `server/public/locales/en/msp/admin.json` passed for all six files, and every interpolation variable (`{{value}}`, `{{user}}`, `{{provider}}`, `{{resource}}`, `{{error}}`) was preserved.
 - (2026-03-20) `F037` completed: generated `server/public/locales/xx/msp/admin.json` and `server/public/locales/yy/msp/admin.json` directly from the English admin namespace, collapsing every leaf value to `11111` / `55555` while preserving the exact nested key structure for pseudo-locale QA.
+- (2026-03-20) `F038` completed: ran the Italian accent audit grep against `server/public/locales/it/msp/admin.json`. It initially hit several standalone `e` false positives, so the affected lines were rephrased; the final grep returned no matches.
 
 ### Key file paths — Dispatch
 | File | Strings |

@@ -28,7 +28,7 @@
       "body": "Impossibile caricare le impostazioni di telemetria"
     },
     "page": {
-      "title": "Telemetria e analisi dell'organizzazione",
+      "title": "Telemetria con analisi dell'organizzazione",
       "description": "Configura le impostazioni di telemetria per l'intera organizzazione. La telemetria è abilitata per impostazione predefinita per migliorare la piattaforma, ma gli utenti possono scegliere individualmente di non partecipare, a meno che tu non disattivi questa opzione."
     },
     "toggles": {
@@ -102,7 +102,7 @@
     },
     "descriptions": {
       "outbound": "Configura le impostazioni SMTP o API per inviare email dalla tua applicazione",
-      "inbound": "Configura i provider email per ricevere e gestire le email come ticket"
+      "inbound": "Configura i provider email per ricevere nonché gestire le email come ticket"
     },
     "providerConfig": {
       "title": "Configurazione del provider email",
@@ -177,10 +177,10 @@
       "microsoft": "Diagnostica Microsoft 365",
       "default": "Diagnostica"
     },
-    "description": "Esegue un controllo Graph in tempo reale (inclusa la creazione e l'eliminazione della sottoscrizione) per diagnosticare problemi di casella di posta, cartella e autorizzazioni.",
+    "description": "Esegue un controllo Graph dal vivo (inclusi i passaggi di creazione seguiti dall'eliminazione della sottoscrizione) per diagnosticare problemi di casella di posta, cartella, oltre alle autorizzazioni.",
     "note": {
       "label": "Nota:",
-      "body": "La diagnostica creerà una sottoscrizione temporanea a Microsoft Graph e poi la eliminerà. Se l'eliminazione non riesce, potrebbe essere necessario rimuovere manualmente la sottoscrizione in Microsoft 365."
+      "body": "La diagnostica creerà una sottoscrizione temporanea a Microsoft Graph per poi eliminarla. Se l'eliminazione non riesce, potrebbe rendersi necessaria la rimozione manuale della sottoscrizione in Microsoft 365."
     },
     "labels": {
       "provider": "Provider:",

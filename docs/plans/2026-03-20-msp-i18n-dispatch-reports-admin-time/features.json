@@ -32,7 +32,7 @@
   {"id": "F035", "description": "Update ROUTE_NAMESPACES for /msp/settings to include msp/admin", "implemented": true, "prdRefs": ["A-FR5"]},
   {"id": "F036", "description": "Generate admin translations for all 6 non-English locales", "implemented": true},
   {"id": "F037", "description": "Create admin pseudo-locale files (xx, yy)", "implemented": true},
-  {"id": "F038", "description": "Italian accent audit on it/msp/admin.json", "implemented": false},
+  {"id": "F038", "description": "Italian accent audit on it/msp/admin.json", "implemented": true},
 
   {"id": "F050", "description": "Create en/msp/time-entry.json with ~161 keys following naming convention", "implemented": false, "prdRefs": ["T-FR1 to T-FR9"]},
   {"id": "F051", "description": "TimePeriodList.tsx: wire useTranslation('msp/time-entry'), translate heading, column headers, status badges, actions", "implemented": false, "prdRefs": ["T-FR1"]},
