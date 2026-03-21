@@ -333,10 +333,13 @@ export function GmailProviderForm({
           <AlertDescription>
             <h4 className="font-medium">{t('forms.gmail.oauth.requiredTitle', { defaultValue: 'OAuth Authorization Required' })}</h4>
             <p className="text-sm mt-1">
-              {t('forms.gmail.oauth.requiredDescription', {
-                defaultValue: 'You must complete OAuth authorization above before {{action}} the provider to enable Gmail notifications.',
-                action: isEditing ? 'updating' : 'adding',
-              })}
+              {isEditing
+                ? t('forms.gmail.oauth.requiredDescriptionUpdate', {
+                  defaultValue: 'You must complete OAuth authorization above before updating the provider to enable Gmail notifications.',
+                })
+                : t('forms.gmail.oauth.requiredDescriptionAdd', {
+                  defaultValue: 'You must complete OAuth authorization above before adding the provider to enable Gmail notifications.',
+                })}
             </p>
           </AlertDescription>
         </Alert>

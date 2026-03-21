@@ -315,7 +315,8 @@
         "setupHelp": "Configure tenant-owned Google OAuth + Pub/Sub first: Settings → Integrations → Providers.",
         "openSettings": "Open Google Settings",
         "requiredTitle": "OAuth Authorization Required",
-        "requiredDescription": "You must complete OAuth authorization above before {{action}} the provider to enable Gmail notifications.",
+        "requiredDescriptionAdd": "You must complete OAuth authorization above before adding the provider to enable Gmail notifications.",
+        "requiredDescriptionUpdate": "You must complete OAuth authorization above before updating the provider to enable Gmail notifications.",
         "stepTitle": "Step 1: OAuth Authorization",
         "stepDescription": "Complete OAuth flow to grant access to Gmail",
         "buttonSuccessSaving": "Successfully authorized! Saving your settings..."
