@@ -142,7 +142,7 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
         <div className="flex items-center">
           <Info className="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" />
           <p className="text-sm text-gray-600">
-            No contract line found for this service. Time will be billed at default rates.
+            No contract line found for this service. Time will be routed to the system-managed default contract.
           </p>
         </div>
       </div>
@@ -165,7 +165,7 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
       <FileText className="h-5 w-5" />
       <AlertDescription>
         <p className="font-medium">
-          Contract: {contractInfo.contractName || 'Default Contract'}
+          Contract: {contractInfo.contractName || 'System-managed default contract'}
         </p>
         <p className="text-xs mt-0.5">
           {contractInfo.contractLineName} ({contractInfo.contractLineType})

@@ -594,7 +594,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                     <div
                       className="cursor-help"
                       title={!newUsage.client_id
-                        ? "Client information not available. The system will use the default contract line."
+                        ? "Client information not available. Usage will route to the system-managed default contract."
                         : eligibleContractLines.length > 1
                           ? "This service appears in multiple contract lines. Please select which contract line to use. Bucket contract lines are typically used first until depleted."
                           : eligibleContractLines.length === 1
@@ -616,7 +616,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   disabled={!newUsage.client_id || eligibleContractLines.length <= 1}
                   className={`${eligibleContractLines.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
                   placeholder={!newUsage.client_id
-                    ? "Using default contract line"
+                    ? "Using system-managed default contract"
                     : eligibleContractLines.length === 0
                       ? "No eligible contract lines"
                       : eligibleContractLines.length === 1
@@ -639,7 +639,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
                 {!newUsage.client_id ? (
                   <small className="text-muted-foreground mt-1">
-                    Client information not available. The system will use the default contract line.
+                    Client information not available. Usage will route to the system-managed default contract.
                   </small>
                 ) : eligibleContractLines.length === 0 ? (
                   <small className="text-muted-foreground mt-1">

@@ -372,7 +372,7 @@
   {
     "id": "F045",
     "description": "Update time-entry contract banner copy from `default rates/non-contract` to `system-managed default contract` terminology.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 3"
     ]
@@ -380,7 +380,7 @@
   {
     "id": "F046",
     "description": "Update usage UI messaging to mirror time-entry default-contract terminology.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes 3"
     ]

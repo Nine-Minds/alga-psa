@@ -123,7 +123,7 @@
   {
     "id": "T011",
     "description": "UI test: time-entry and usage banners/messages use default-contract terminology and do not imply a persisted default when assignment is unresolved.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045",
       "F046",

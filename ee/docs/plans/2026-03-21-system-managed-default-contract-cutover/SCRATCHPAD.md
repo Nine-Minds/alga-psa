@@ -157,3 +157,20 @@
 ### Notes
 
 - `T010` is currently implemented as a static UI contract test due test-environment import-resolution issues when rendering full `ContractDetail` runtime dependencies in isolation.
+
+## Progress Update (2026-03-21, F045/F046/T011)
+
+- Updated time-entry contract banner copy to remove `default rates` fallback language and use explicit `system-managed default contract` terminology for unmatched service lines.
+- Updated fallback contract display label to `System-managed default contract` while preserving ambiguous-state messaging that requires explicit selection before persistence.
+- Updated usage tracking tooltip, placeholder, and helper copy to mirror the same system-managed default terminology when client context is missing.
+- Added a static UI terminology contract test covering both time-entry banner and usage tracking copy semantics, including guard text ensuring unresolved assignment remains explicit.
+- Completed features: `F045`, `F046`.
+- Completed test: `T011`.
+
+### Verification commands
+
+- `cd server && npx vitest run src/test/unit/billing/defaultContractTerminology.ui.static.test.ts`
+
+### Notes
+
+- `T011` is currently implemented as a static source-contract test to avoid full UI runtime harness complexity while still enforcing copy semantics and unresolved-assignment wording.
