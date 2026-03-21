@@ -74,7 +74,7 @@ function parseRatingLabels(input: string): Record<string, string> {
 function formatRatingLabels(labels: Record<string, string>): string {
   return Object.entries(labels)
     .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([_, label]) => label)
+    .map(([, label]) => label)
     .join('\n');
 }
 
@@ -133,17 +133,17 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
     [t]
   );
 
-  const handleChange = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+  const handleChange = <K extends keyof FormState>(key: K, value: FormState[K]): void => {
     setFormState((prev) => ({ ...prev, [key]: value }));
   };
 
   useEffect(() => {
-    const defaultLabels = getDefaultRatingLabels(formState.ratingType, formState.ratingScale);
+    const defaultLabels = getDefaultRatingLabels(formState.ratingType, formState.ratingScale, t);
     setFormState((prev) => ({
       ...prev,
       ratingLabelsText: formatRatingLabels(defaultLabels),
     }));
-  }, [formState.ratingType, formState.ratingScale]);
+  }, [formState.ratingType, formState.ratingScale, t]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -51,6 +51,8 @@
 node scripts/validate-translations.cjs
 npm run build
 node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/surveys.json','utf8'))"
+npx eslint packages/surveys/src/components/templates/TemplateList.tsx packages/surveys/src/components/templates/TemplateForm.tsx packages/surveys/src/components/triggers/TriggerList.tsx packages/surveys/src/components/triggers/TriggerForm.tsx
+npx tsc -p packages/surveys/tsconfig.json --noEmit
 ```
 
 ### Pseudo-locale generation
@@ -113,7 +115,9 @@ done
 - (2026-03-21) Completed `F001`: added [server/public/locales/en/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/surveys.json) as the English source of truth for surveys. Keys were normalized into feature-specific groups (`moduleFrame`, `settings`, `response`, `rating`, `responses`, `dashboard`, `analytics`, `clientSummary`, `ticketSummary`) so later component rewrites can move off `common` cleanly.
 - (2026-03-21) Validation for `F001`: parsed the new JSON successfully with `node -e "JSON.parse(...)"`.
 - (2026-03-21) Completed `F002`: rewired the survey settings surface to `useTranslation('msp/surveys')` in `TriggerForm.tsx`, `TriggerList.tsx`, `TemplateForm.tsx`, and `TemplateList.tsx`. Shared verbs stayed in `common`, while survey-specific copy moved to the new namespace root with `{ defaultValue }` options.
-- (2026-03-21) Validation for `F002`: `npx tsc -p packages/surveys/tsconfig.json --noEmit` passed after the settings rewrite.
+- (2026-03-21) Validation for `F002`: targeted `eslint` passed cleanly for the four edited survey settings files, and `npx tsc -p packages/surveys/tsconfig.json --noEmit` passed after the settings rewrite.
+- (2026-03-21) Completed `F003`: moved `SurveySettings.tsx`, `SurveyResponsePage.tsx`, `RatingDisplay.tsx`, `ResponseFilters.tsx`, `SurveyResponsesView.tsx`, and `ResponseDetailModal.tsx` onto `msp/surveys`. Response detail timestamps now use `useFormatters()`, and `TemplateForm` now requests translated default rating labels from the shared rating helper.
+- (2026-03-21) Validation for `F003`: `npx tsc -p packages/surveys/tsconfig.json --noEmit` still passed after the response-flow and shared helper rewrites.
 
 ## Open Questions
 

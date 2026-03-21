@@ -2,6 +2,7 @@
 
 import { Star } from 'lucide-react';
 import { cn } from '@alga-psa/ui/lib/utils';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export type RatingType = 'stars' | 'numbers' | 'emojis';
 
@@ -118,13 +119,23 @@ export function RatingButton({
   onClick,
   className,
 }: RatingButtonProps) {
+  const { t } = useTranslation('msp/surveys');
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       aria-pressed={selected}
-      aria-label={label ? `${rating} – ${label}` : `Rating ${rating} of ${scale}`}
+      aria-label={
+        label
+          ? `${rating} - ${label}`
+          : t('rating.buttonAria', {
+              defaultValue: 'Rating {{rating}} of {{scale}}',
+              rating,
+              scale,
+            })
+      }
       className={cn(
         'flex flex-col items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 transition-all',
         'hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
@@ -153,9 +164,22 @@ export function RatingButton({
 /**
  * Default labels for each rating type and scale
  */
-export function getDefaultRatingLabels(type: RatingType, scale: number): Record<string, string> {
-  // All rating types use the same text labels
-  const labels: Record<number, Record<string, string>> = {
+type RatingTranslate = (
+  key: string,
+  options?: {
+    defaultValue: string;
+    [key: string]: unknown;
+  }
+) => string;
+
+export function getDefaultRatingLabels(
+  type: RatingType,
+  scale: number,
+  t?: RatingTranslate
+): Record<string, string> {
+  void type;
+
+  const defaults: Record<number, Record<string, string>> = {
     3: {
       '1': 'Poor',
       '2': 'Good',
@@ -181,5 +205,16 @@ export function getDefaultRatingLabels(type: RatingType, scale: number): Record<
       '10': 'Perfect',
     },
   };
-  return labels[scale] ?? {};
+
+  const labels = defaults[scale] ?? {};
+  if (!t) {
+    return labels;
+  }
+
+  return Object.fromEntries(
+    Object.entries(labels).map(([key, value]) => [
+      key,
+      t(`rating.defaults.${scale}.${key}`, { defaultValue: value }),
+    ])
+  );
 }

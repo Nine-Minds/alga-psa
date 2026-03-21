@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import type { SurveyResponseListItem } from '@alga-psa/types';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ResponseDetailModalProps = {
   response: SurveyResponseListItem | null;
@@ -16,33 +17,50 @@ export default function ResponseDetailModal({
   isOpen,
   onClose,
 }: ResponseDetailModalProps) {
+  const { t } = useTranslation('msp/surveys');
+  const { formatDate } = useFormatters();
+
   const metadata = useMemo(() => {
     if (!response) {
       return null;
     }
 
     return [
-      { label: 'Submitted At', value: new Date(response.submittedAt).toLocaleString() },
-      { label: 'Client', value: response.clientName ?? 'Unknown' },
-      { label: 'Contact', value: response.contactName ?? '—' },
-      { label: 'Technician', value: response.technicianName ?? 'Unassigned' },
-      { label: 'Ticket', value: response.ticketNumber ?? response.ticketId },
-      { label: 'Rating', value: `${response.rating} ★` },
+      {
+        label: t('responses.detail.labels.submittedAt', { defaultValue: 'Submitted At' }),
+        value: formatDate(response.submittedAt, { dateStyle: 'medium', timeStyle: 'short' }),
+      },
+      {
+        label: t('responses.detail.labels.client', { defaultValue: 'Client' }),
+        value: response.clientName ?? t('responses.detail.fallbacks.unknown', { defaultValue: 'Unknown' }),
+      },
+      {
+        label: t('responses.detail.labels.contact', { defaultValue: 'Contact' }),
+        value: response.contactName ?? t('responses.detail.fallbacks.none', { defaultValue: '-' }),
+      },
+      {
+        label: t('responses.detail.labels.technician', { defaultValue: 'Technician' }),
+        value: response.technicianName ?? t('responses.detail.fallbacks.unassigned', { defaultValue: 'Unassigned' }),
+      },
+      { label: t('responses.detail.labels.ticket', { defaultValue: 'Ticket' }), value: response.ticketNumber ?? response.ticketId },
+      { label: t('responses.detail.labels.rating', { defaultValue: 'Rating' }), value: `${response.rating} ★` },
     ];
-  }, [response]);
+  }, [formatDate, response, t]);
 
   return (
     <Dialog
       id="survey-response-detail-dialog"
       isOpen={isOpen}
       onClose={onClose}
-      title="Survey Response Detail"
+      title={t('responses.detail.title', { defaultValue: 'Survey Response Detail' })}
       className="max-w-xl"
       hideCloseButton={false}
     >
       <DialogContent className="space-y-4">
         {!response ? (
-          <div className="text-sm text-muted-foreground">No response selected.</div>
+          <div className="text-sm text-muted-foreground">
+            {t('responses.detail.empty', { defaultValue: 'No response selected.' })}
+          </div>
         ) : (
           <>
             <div className="space-y-2">
@@ -55,10 +73,12 @@ export default function ResponseDetailModal({
             </div>
             <div className="rounded-lg bg-muted p-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Comment
+                {t('responses.detail.labels.comment', { defaultValue: 'Comment' })}
               </div>
               <p className="mt-2 text-sm text-gray-800">
-                {response.comment?.trim() ? response.comment : 'No comment provided.'}
+                {response.comment?.trim()
+                  ? response.comment
+                  : t('responses.detail.fallbacks.noComment', { defaultValue: 'No comment provided.' })}
               </p>
             </div>
           </>
