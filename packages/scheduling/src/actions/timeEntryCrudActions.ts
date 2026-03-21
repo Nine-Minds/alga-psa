@@ -189,7 +189,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
         throw new Error(`Unknown work item type: ${entry.work_item_type}`);
     }
 
-    // Fetch service information with new schema (using billing_method instead of service_type)
+    // Fetch service information without treating billing mode as service identity/type.
     const [service] = await db('service_catalog as sc')
       .leftJoin('service_types as st', function() {
         this.on('sc.custom_service_type_id', '=', 'st.id')
@@ -201,7 +201,9 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
       })
       .select(
         'sc.service_name',
-        'sc.billing_method as service_type', // Use billing_method as service_type for backwards compatibility
+        'st.name as service_type',
+        'sc.billing_method as billing_mode',
+        'sc.item_kind',
         db.raw('CAST(sc.default_rate AS FLOAT) as default_rate')
       );
 
@@ -218,6 +220,8 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
         id: entry.service_id,
         name: service.service_name,
         type: service.service_type,
+        billing_mode: service.billing_mode,
+        item_kind: service.item_kind,
         default_rate: service.default_rate
       } : null
     };
