@@ -41,7 +41,7 @@
   {"id": "F062", "description": "Wire useTranslation('msp/extensions') in DynamicNavigationSlot, ExtensionManagement, ExtensionComponentLoader, and OSS extension placeholder pages/components", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F063", "description": "Generate msp/extensions translations for 6 non-English locales + 2 pseudo-locales", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F064", "description": "Italian accent audit on it/msp/extensions.json", "implemented": true, "prdRefs": ["2b-20"]},
-  {"id": "F065", "description": "Create en/msp/licensing.json for CE licensing stub copy discovered in batch 2b-20 follow-up", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F065", "description": "Create en/msp/licensing.json for CE licensing stub copy discovered in batch 2b-20 follow-up", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F066", "description": "Wire useTranslation('msp/licensing') in CE licensing stub components (ReduceLicensesModal, LicensePurchaseForm)", "implemented": false, "prdRefs": ["2b-20"]},
   {"id": "F067", "description": "Generate msp/licensing translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-20"]},
   {"id": "F068", "description": "Italian accent audit on it/msp/licensing.json", "implemented": false, "prdRefs": ["2b-20"]},
