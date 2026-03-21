@@ -118,6 +118,8 @@ done
 - (2026-03-21) Validation for `F002`: targeted `eslint` passed cleanly for the four edited survey settings files, and `npx tsc -p packages/surveys/tsconfig.json --noEmit` passed after the settings rewrite.
 - (2026-03-21) Completed `F003`: moved `SurveySettings.tsx`, `SurveyResponsePage.tsx`, `RatingDisplay.tsx`, `ResponseFilters.tsx`, `SurveyResponsesView.tsx`, and `ResponseDetailModal.tsx` onto `msp/surveys`. Response detail timestamps now use `useFormatters()`, and `TemplateForm` now requests translated default rating labels from the shared rating helper.
 - (2026-03-21) Validation for `F003`: `npx tsc -p packages/surveys/tsconfig.json --noEmit` still passed after the response-flow and shared helper rewrites.
+- (2026-03-21) Completed `F004`: localized the remaining survey chrome and insights surface: dashboard widgets, analytics widgets/pages, `SurveyModuleFrame`, `ClientSurveySummaryCard`, and `TicketSurveySummaryCard`. Server components `SurveyDashboard.tsx` and `SurveyAnalyticsPage.tsx` now use `getServerTranslation('msp/surveys')`, and client summary/dashboard lists use `useFormatters()` for locale-aware timestamps.
+- (2026-03-21) Validation for `F004`: `npx tsc -p packages/surveys/tsconfig.json --noEmit` passed after the dashboard, analytics, and survey chrome rewrites.
 
 ## Open Questions
 
