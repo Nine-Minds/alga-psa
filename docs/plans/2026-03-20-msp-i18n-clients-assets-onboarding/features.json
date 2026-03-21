@@ -1,0 +1,37 @@
+[
+  {"id": "F001", "description": "Create en/msp/clients.json with all keys for 32 client components", "implemented": false, "prdRefs": ["2b-10"]},
+  {"id": "F002", "description": "Wire useTranslation('msp/clients') in ClientDetails.tsx and Clients.tsx (largest files, ~300-600 strings combined)", "implemented": false, "prdRefs": ["2b-10"]},
+  {"id": "F003", "description": "Wire useTranslation in QuickAddClient.tsx, ClientLocations.tsx, ClientsImportDialog.tsx", "implemented": false, "prdRefs": ["2b-10"]},
+  {"id": "F004", "description": "Wire useTranslation in BillingConfiguration.tsx, ClientContractAssignment.tsx, ClientContractLineDashboard.tsx, ClientBillingSchedule.tsx", "implemented": false, "prdRefs": ["2b-10"]},
+  {"id": "F005", "description": "Wire useTranslation in remaining ~21 client files (tax settings, service overlap, credit settings, grid cards, notes, etc.)", "implemented": false, "prdRefs": ["2b-10"]},
+  {"id": "F006", "description": "Generate msp/clients translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-10"]},
+  {"id": "F007", "description": "Italian accent audit on it/msp/clients.json", "implemented": false, "prdRefs": ["2b-10"]},
+
+  {"id": "F010", "description": "Create en/msp/contacts.json with all keys for 13 contact components", "implemented": false, "prdRefs": ["2b-11"]},
+  {"id": "F011", "description": "Wire useTranslation('msp/contacts') in ContactDetails.tsx, Contacts.tsx, ContactsImportDialog.tsx", "implemented": false, "prdRefs": ["2b-11"]},
+  {"id": "F012", "description": "Wire useTranslation in ContactPhoneNumbersEditor.tsx, ContactPortalTab.tsx, QuickAddContact.tsx", "implemented": false, "prdRefs": ["2b-11"]},
+  {"id": "F013", "description": "Wire useTranslation in remaining 7 contact files (details view/edit, client contacts list, notes, avatar, skeleton)", "implemented": false, "prdRefs": ["2b-11"]},
+  {"id": "F014", "description": "Generate msp/contacts translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-11"]},
+  {"id": "F015", "description": "Italian accent audit on it/msp/contacts.json", "implemented": false, "prdRefs": ["2b-11"]},
+
+  {"id": "F020", "description": "Create en/msp/assets.json with all keys for 39 asset components", "implemented": false, "prdRefs": ["2b-12"]},
+  {"id": "F021", "description": "Wire useTranslation('msp/assets') in AssetForm.tsx, AssetDashboardClient.tsx, AssetDetails.tsx (largest files)", "implemented": false, "prdRefs": ["2b-12"]},
+  {"id": "F022", "description": "Wire useTranslation in AssetDetailDrawerClient.tsx, AssociatedAssets.tsx, QuickAddAsset.tsx", "implemented": false, "prdRefs": ["2b-12"]},
+  {"id": "F023", "description": "Wire useTranslation in tab components (MaintenanceSchedulesTab, RelatedAssetsTab, ServiceHistoryTab, SoftwareInventoryTab, AuditLogTab, DocumentsPasswordsTab)", "implemented": false, "prdRefs": ["2b-12"]},
+  {"id": "F024", "description": "Wire useTranslation in panel components (AssetInfoPanel, RmmVitalsPanel, HardwareSpecsPanel, SecurityPatchingPanel, AssetNotesPanel)", "implemented": false, "prdRefs": ["2b-12"]},
+  {"id": "F025", "description": "Wire useTranslation in remaining asset files (StatusBadge, MetricsBanner, CommandPalette, CreateTicketFromAsset, DeleteAssetButton, etc.)", "implemented": false, "prdRefs": ["2b-12"]},
+  {"id": "F026", "description": "Generate msp/assets translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-12"]},
+  {"id": "F027", "description": "Italian accent audit on it/msp/assets.json", "implemented": false, "prdRefs": ["2b-12"]},
+
+  {"id": "F030", "description": "Create en/msp/onboarding.json with all keys for wizard steps (excluding already-translated dashboard components)", "implemented": false, "prdRefs": ["2b-16"]},
+  {"id": "F031", "description": "Wire useTranslation('msp/onboarding') in TicketingConfigStep.tsx (largest file, ~275-550 strings)", "implemented": false, "prdRefs": ["2b-16"]},
+  {"id": "F032", "description": "Wire useTranslation in BillingSetupStep.tsx, OnboardingWizard.tsx, TeamMembersStep.tsx", "implemented": false, "prdRefs": ["2b-16"]},
+  {"id": "F033", "description": "Wire useTranslation in ClientInfoStep.tsx, AddClientStep.tsx, ClientContactStep.tsx, OnboardingProvider.tsx", "implemented": false, "prdRefs": ["2b-16"]},
+  {"id": "F034", "description": "Generate msp/onboarding translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-16"]},
+  {"id": "F035", "description": "Italian accent audit on it/msp/onboarding.json", "implemented": false, "prdRefs": ["2b-16"]},
+
+  {"id": "F090", "description": "Update ROUTE_NAMESPACES for /msp/clients, /msp/contacts, /msp/assets, /msp/onboarding", "implemented": false},
+  {"id": "F091", "description": "validate-translations.cjs passes for all 4 new namespaces across all 9 locales", "implemented": false},
+  {"id": "F092", "description": "Regenerate pseudo-locales (xx, yy) for all 4 namespaces", "implemented": false},
+  {"id": "F093", "description": "npm run build succeeds with no TypeScript errors", "implemented": false}
+]
