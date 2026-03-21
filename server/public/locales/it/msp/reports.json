@@ -1,0 +1,171 @@
+{
+  "page": {
+    "title": "Report"
+  },
+  "actions": {
+    "refresh": "Aggiorna"
+  },
+  "placeholders": {
+    "selectContract": "Seleziona contratto..."
+  },
+  "units": {
+    "hoursShort": "h",
+    "days": "giorni",
+    "percent": "%",
+    "dash": "\u2014"
+  },
+  "reportsPage": {
+    "cards": {
+      "timeUtilization": {
+        "title": "Utilizzo del tempo",
+        "placeholder": "[Segnaposto del grafico di utilizzo del tempo]"
+      },
+      "projectProgress": {
+        "title": "Avanzamento del progetto",
+        "placeholder": "[Segnaposto del grafico di avanzamento del progetto]"
+      },
+      "revenueByClient": {
+        "title": "Ricavi per cliente",
+        "placeholder": "[Segnaposto del grafico dei ricavi per cliente]"
+      },
+      "teamPerformance": {
+        "title": "Prestazioni del team",
+        "placeholder": "[Segnaposto del grafico delle prestazioni del team]"
+      }
+    }
+  },
+  "contractReports": {
+    "title": "Report contratti",
+    "description": "Analizzare le prestazioni dei contratti, i ricavi e le metriche di utilizzo",
+    "errors": {
+      "loadingTitle": "Errore durante il caricamento dei report",
+      "loadData": "Impossibile caricare i dati del report"
+    },
+    "summary": {
+      "totalMRR": {
+        "title": "MRR totale",
+        "subtitle": "Ricavi ricorrenti mensili"
+      },
+      "ytdRevenue": {
+        "title": "Ricavi accumulati",
+        "subtitle": "Da inizio anno"
+      },
+      "activeContracts": {
+        "title": "Contratti attivi",
+        "subtitle": "Clienti fatturabili"
+      }
+    },
+    "tabs": {
+      "revenue": "Ricavi contratti",
+      "expiration": "Scadenza",
+      "bucketUsage": "Ore a pacchetto",
+      "profitability": "Redditività"
+    },
+    "sections": {
+      "revenue": {
+        "title": "Report ricavi contratti",
+        "description": "Panoramica dei ricavi ricorrenti mensili e della fatturazione da inizio anno per contratto",
+        "empty": "Nessun dato sui ricavi dei contratti disponibile"
+      },
+      "expiration": {
+        "title": "Scadenza dei contratti e decisioni di rinnovo",
+        "description": "Tenere traccia delle prossime scadenze dei contratti e delle date di decisione per il rinnovo.",
+        "empty": "Nessuna scadenza di contratto o decisione di rinnovo nel breve termine"
+      },
+      "bucketUsage": {
+        "title": "Utilizzo delle ore a pacchetto",
+        "description": "Monitorare l'uso delle ore a pacchetto e individuare situazioni di eccedenza",
+        "empty": "Nessun contratto basato su pacchetti trovato"
+      },
+      "profitability": {
+        "title": "Report di redditività semplice",
+        "description": "Analisi di base dei margini di profitto e dei ricavi rispetto ai costi per contratto",
+        "empty": "Nessun dato di redditività disponibile"
+      }
+    },
+    "table": {
+      "contract": "Contratto",
+      "client": "Cliente",
+      "monthlyRecurring": "Ricorrente mensile",
+      "totalBilledYtd": "Totale fatturato (YTD)",
+      "status": "Stato",
+      "endDate": "Data di fine",
+      "daysUntilExpiration": "Giorni alla scadenza",
+      "monthlyValue": "Valore mensile",
+      "autoRenew": "Rinnovo automatico",
+      "totalHours": "Ore totali",
+      "usedHours": "Ore utilizzate",
+      "remaining": "Residue",
+      "utilization": "Utilizzo",
+      "overage": "Eccedenza",
+      "revenueYtd": "Ricavi (YTD)",
+      "costYtd": "Costi (YTD)",
+      "profit": "Profitto",
+      "margin": "Margine"
+    },
+    "statusValues": {
+      "active": "Attivo",
+      "upcoming": "In arrivo",
+      "yes": "Sì",
+      "no": "No"
+    }
+  },
+  "contractPerformance": {
+    "title": "Metriche di prestazione dei contratti",
+    "errors": {
+      "loadData": "Impossibile caricare i dati del contratto"
+    },
+    "metrics": {
+      "totalClients": "Clienti totali",
+      "activeClients": "Clienti attivi",
+      "totalPlans": "Piani totali",
+      "averagePlansPerClient": "Media piani per cliente",
+      "totalRevenue": "Ricavi totali",
+      "averageRevenuePerClient": "Media ricavi per cliente"
+    },
+    "empty": {
+      "selectContract": "Seleziona un contratto per visualizzare le metriche di prestazione",
+      "noContracts": "Nessun contratto disponibile"
+    },
+    "comparison": {
+      "title": "Confronto contratti",
+      "table": {
+        "contract": "Contratto",
+        "clients": "Clienti",
+        "plans": "Piani",
+        "revenue": "Ricavi"
+      }
+    }
+  },
+  "contractUsage": {
+    "title": "Report utilizzo contratti",
+    "errors": {
+      "loadInitialData": "Impossibile caricare i dati iniziali",
+      "loadUsageData": "Impossibile caricare i dati di utilizzo del contratto"
+    },
+    "empty": {
+      "noClientsUsingContract": "Nessun cliente utilizza questo contratto",
+      "selectContract": "Seleziona un contratto per visualizzare i dati di utilizzo"
+    },
+    "table": {
+      "client": "Cliente",
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine",
+      "contractLines": "Righe contratto",
+      "totalBilled": "Totale fatturato",
+      "status": "Stato"
+    },
+    "statusValues": {
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "ongoing": "In corso",
+      "unknownClient": "Cliente sconosciuto"
+    },
+    "summary": {
+      "title": "Riepilogo",
+      "totalClients": "Clienti totali",
+      "activeAssignments": "Assegnazioni attive",
+      "totalBilled": "Totale fatturato"
+    }
+  }
+}

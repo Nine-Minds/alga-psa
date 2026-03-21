@@ -20,7 +20,7 @@
   {"id": "F023", "description": "ContractUsageReport.tsx: translate heading, column headers, summary section, status labels, empty states", "implemented": true, "prdRefs": ["R-FR3"]},
   {"id": "F024", "description": "Reports.tsx: translate heading and 4 card titles/placeholders", "implemented": true, "prdRefs": ["R-FR4"]},
   {"id": "F025", "description": "Update ROUTE_NAMESPACES for /msp/billing to include msp/reports", "implemented": true, "prdRefs": ["R-FR5"]},
-  {"id": "F026", "description": "Generate reports translations for all 6 non-English locales", "implemented": false},
+  {"id": "F026", "description": "Generate reports translations for all 6 non-English locales", "implemented": true},
   {"id": "F027", "description": "Create reports pseudo-locale files (xx, yy)", "implemented": false},
   {"id": "F028", "description": "Italian accent audit on it/msp/reports.json", "implemented": false},
 

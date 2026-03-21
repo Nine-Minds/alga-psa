@@ -1,0 +1,171 @@
+{
+  "page": {
+    "title": "Informes"
+  },
+  "actions": {
+    "refresh": "Actualizar"
+  },
+  "placeholders": {
+    "selectContract": "Seleccionar contrato..."
+  },
+  "units": {
+    "hoursShort": "h",
+    "days": "días",
+    "percent": "%",
+    "dash": "\u2014"
+  },
+  "reportsPage": {
+    "cards": {
+      "timeUtilization": {
+        "title": "Utilización del tiempo",
+        "placeholder": "[Marcador de posición del gráfico de utilización del tiempo]"
+      },
+      "projectProgress": {
+        "title": "Progreso del proyecto",
+        "placeholder": "[Marcador de posición del gráfico de progreso del proyecto]"
+      },
+      "revenueByClient": {
+        "title": "Ingresos por cliente",
+        "placeholder": "[Marcador de posición del gráfico de ingresos por cliente]"
+      },
+      "teamPerformance": {
+        "title": "Rendimiento del equipo",
+        "placeholder": "[Marcador de posición del gráfico de rendimiento del equipo]"
+      }
+    }
+  },
+  "contractReports": {
+    "title": "Informes de contratos",
+    "description": "Analizar el rendimiento de los contratos, los ingresos y las métricas de utilización",
+    "errors": {
+      "loadingTitle": "Error al cargar los informes",
+      "loadData": "No se pudieron cargar los datos del informe"
+    },
+    "summary": {
+      "totalMRR": {
+        "title": "MRR total",
+        "subtitle": "Ingresos recurrentes mensuales"
+      },
+      "ytdRevenue": {
+        "title": "Ingresos acumulados",
+        "subtitle": "En lo que va del año"
+      },
+      "activeContracts": {
+        "title": "Contratos activos",
+        "subtitle": "Clientes facturables"
+      }
+    },
+    "tabs": {
+      "revenue": "Ingresos por contrato",
+      "expiration": "Vencimiento",
+      "bucketUsage": "Horas de paquete",
+      "profitability": "Rentabilidad"
+    },
+    "sections": {
+      "revenue": {
+        "title": "Informe de ingresos por contrato",
+        "description": "Resumen de los ingresos recurrentes mensuales y la facturación acumulada por contrato",
+        "empty": "No hay datos de ingresos por contrato disponibles"
+      },
+      "expiration": {
+        "title": "Vencimiento de contratos y decisiones de renovación",
+        "description": "Seguimiento de los vencimientos de contratos próximos y de las fechas límite de decisión de renovación.",
+        "empty": "No hay vencimientos de contratos ni decisiones de renovación a corto plazo"
+      },
+      "bucketUsage": {
+        "title": "Utilización de horas de paquete",
+        "description": "Supervisar el uso de horas de paquete e identificar situaciones de exceso",
+        "empty": "No se encontraron contratos basados en paquetes"
+      },
+      "profitability": {
+        "title": "Informe de rentabilidad simple",
+        "description": "Análisis básico de márgenes de beneficio e ingresos frente a costos por contrato",
+        "empty": "No hay datos de rentabilidad disponibles"
+      }
+    },
+    "table": {
+      "contract": "Contrato",
+      "client": "Cliente",
+      "monthlyRecurring": "Recurrente mensual",
+      "totalBilledYtd": "Total facturado (YTD)",
+      "status": "Estado",
+      "endDate": "Fecha de fin",
+      "daysUntilExpiration": "Días hasta el vencimiento",
+      "monthlyValue": "Valor mensual",
+      "autoRenew": "Renovación automática",
+      "totalHours": "Horas totales",
+      "usedHours": "Horas usadas",
+      "remaining": "Restante",
+      "utilization": "Utilización",
+      "overage": "Exceso",
+      "revenueYtd": "Ingresos (YTD)",
+      "costYtd": "Coste (YTD)",
+      "profit": "Beneficio",
+      "margin": "Margen"
+    },
+    "statusValues": {
+      "active": "Activo",
+      "upcoming": "Próximo",
+      "yes": "Sí",
+      "no": "No"
+    }
+  },
+  "contractPerformance": {
+    "title": "Métricas de rendimiento de contratos",
+    "errors": {
+      "loadData": "No se pudieron cargar los datos del contrato"
+    },
+    "metrics": {
+      "totalClients": "Clientes totales",
+      "activeClients": "Clientes activos",
+      "totalPlans": "Planes totales",
+      "averagePlansPerClient": "Prom. de planes por cliente",
+      "totalRevenue": "Ingresos totales",
+      "averageRevenuePerClient": "Prom. de ingresos por cliente"
+    },
+    "empty": {
+      "selectContract": "Seleccione un contrato para ver las métricas de rendimiento",
+      "noContracts": "No hay contratos disponibles"
+    },
+    "comparison": {
+      "title": "Comparación de contratos",
+      "table": {
+        "contract": "Contrato",
+        "clients": "Clientes",
+        "plans": "Planes",
+        "revenue": "Ingresos"
+      }
+    }
+  },
+  "contractUsage": {
+    "title": "Informe de uso de contratos",
+    "errors": {
+      "loadInitialData": "No se pudieron cargar los datos iniciales",
+      "loadUsageData": "No se pudieron cargar los datos de uso del contrato"
+    },
+    "empty": {
+      "noClientsUsingContract": "Ningún cliente está usando este contrato",
+      "selectContract": "Seleccione un contrato para ver los datos de uso"
+    },
+    "table": {
+      "client": "Cliente",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "contractLines": "Líneas de contrato",
+      "totalBilled": "Total facturado",
+      "status": "Estado"
+    },
+    "statusValues": {
+      "active": "Activo",
+      "inactive": "Inactivo",
+      "ongoing": "En curso",
+      "unknownClient": "Cliente desconocido"
+    },
+    "summary": {
+      "title": "Resumen",
+      "totalClients": "Clientes totales",
+      "activeAssignments": "Asignaciones activas",
+      "totalBilled": "Total facturado"
+    }
+  }
+}
