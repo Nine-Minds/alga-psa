@@ -250,6 +250,10 @@
         "systemCreator": "\u2022 System-generated tickets will show \"System\" as the creator when entered_by is null",
         "scenarios": "\u2022 You can create different defaults for different email scenarios (support, billing, etc.)"
       }
+    },
+    "errors": {
+      "load": "Failed to load ticket defaults",
+      "delete": "Failed to delete ticket defaults"
     }
   }
 }
