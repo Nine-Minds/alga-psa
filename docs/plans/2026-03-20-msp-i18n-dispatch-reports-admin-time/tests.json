@@ -70,7 +70,7 @@
   {
     "id": "T021",
     "description": "Admin: all 4 component files compile with useTranslation('msp/admin') — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031", "F032", "F033", "F034"]
   },
   {

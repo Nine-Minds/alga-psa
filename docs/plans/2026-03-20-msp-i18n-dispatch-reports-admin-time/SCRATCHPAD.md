@@ -175,6 +175,7 @@ SCRIPT
 - (2026-03-20) `T013` passed: reran the Italian accent-audit grep against `server/public/locales/it/msp/reports.json`; it returned no matches for the known unaccented patterns.
 - (2026-03-20) `T014` passed: added `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` and ran `cd server && npx vitest run src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts`. The new test suite checks representative `xx` report keys (`contractReports.tabs.revenue`, `reportsPage.cards.timeUtilization.title`) and confirmed they resolve to `11111`, giving automated pseudo-locale coverage for the billing reports surface.
 - (2026-03-20) `T020` passed: reused the full-locale validation run from `node scripts/validate-translations.cjs`; it still reports `Errors: 0` and `Warnings: 0`, which covers the admin namespace key consistency across `en`, the six production locales, and both pseudo-locales.
+- (2026-03-20) `T021` passed: `npx tsc -p packages/integrations/tsconfig.json --noEmit --pretty false` and `npx tsc -p packages/ui/tsconfig.json --noEmit --pretty false` both completed successfully, covering the four admin components split across those two packages.
 
 ### Key file paths — Dispatch
 | File | Strings |
