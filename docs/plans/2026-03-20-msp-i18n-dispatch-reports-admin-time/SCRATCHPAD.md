@@ -135,6 +135,7 @@ SCRIPT
 - (2026-03-20) `T004` passed: the Italian accent audit grep returned no matches for `server/public/locales/it/msp/dispatch.json`, confirming the known unaccented text patterns are absent.
 - (2026-03-20) `F020` completed: created `server/public/locales/en/msp/reports.json` with shared sections for the billing report tabs, summary cards, table headers, empty/error states, select/refresh controls, usage/performance summaries, and the standalone placeholder reports page.
 - (2026-03-20) `F021` completed: wired `packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx` to `useTranslation('msp/reports')` for the report page title/description, summary cards, tab labels, section descriptions, empty states, status badges, yes/no labels, table headers, and unit strings. Also replaced the hardcoded US currency/date formatting with `useFormatters()` so report values follow the active locale.
+- (2026-03-20) `F022` completed: wired `packages/billing/src/components/billing-dashboard/reports/ContractPerformance.tsx` to `useTranslation('msp/reports')` for the report title, select placeholder, refresh action, metric labels, empty states, and comparison table headings. Revenue values now use `useFormatters().formatCurrency()` instead of manual dollar-string concatenation.
 
 ### Key file paths — Dispatch
 | File | Strings |
