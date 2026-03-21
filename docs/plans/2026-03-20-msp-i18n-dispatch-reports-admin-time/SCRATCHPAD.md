@@ -181,6 +181,7 @@ SCRIPT
 - (2026-03-20) `T024` passed: the new batch i18n test asserts representative admin pseudo-locale keys such as `telemetry.page.title` and `email.tabs.inbound` resolve to `11111` in `server/public/locales/xx/msp/admin.json`, providing automated QA coverage for the translated telemetry/email settings chrome.
 - (2026-03-20) `T030` passed: reused the same `node scripts/validate-translations.cjs` run from the completed feature batch. With `Errors: 0` and `Warnings: 0`, the validator confirms `msp/time-entry` stays aligned across English, six production locales, and both pseudo-locales.
 - (2026-03-20) `T031` passed: `npx tsc -p packages/scheduling/tsconfig.json --noEmit --pretty false` completed successfully after the time-entry component wiring and locale-file additions, giving package-level TypeScript coverage for the 33 translated scheduling/time-management surfaces.
+- (2026-03-20) `T032` passed: `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` locks the three time-entry route mappings to `['common', 'msp/core', 'msp/time-entry']` for `/msp/time-entry`, `/msp/time-sheet-approvals`, and `/msp/time-management`.
 
 ### Key file paths — Dispatch
 | File | Strings |

@@ -107,7 +107,7 @@
   {
     "id": "T032",
     "description": "Time entry: ROUTE_NAMESPACES maps /msp/time-entry, /msp/time-sheet-approvals, /msp/time-management to include msp/time-entry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F060"]
   },
   {
