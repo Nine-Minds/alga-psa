@@ -28,8 +28,11 @@ import {
   ContractReportSummary
 } from '@alga-psa/billing/actions/contractReportActions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const ContractReports: React.FC = () => {
+  const { t } = useTranslation('msp/reports');
+  const { formatCurrency, formatDate } = useFormatters();
   const [activeReport, setActiveReport] = useState('revenue');
   const [revenueData, setRevenueData] = useState<ContractRevenue[]>([]);
   const [expirationData, setExpirationData] = useState<ContractExpiration[]>([]);
@@ -71,29 +74,33 @@ const ContractReports: React.FC = () => {
         setSummary(summaryData);
       } catch (err) {
         console.error('Error loading report data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load report data');
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('contractReports.errors.loadData', { defaultValue: 'Failed to load report data' })
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
     loadReportData();
-  }, []);
+  }, [t]);
 
   // Format currency
-  const formatCurrency = (cents: number): string => {
-    return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCents = (cents: number): string => {
+    return formatCurrency(cents / 100, 'USD');
   };
 
   // Revenue Report Columns
   const revenueColumns: ColumnDefinition<ContractRevenue>[] = [
     {
-      title: 'Contract',
+      title: t('contractReports.table.contract', { defaultValue: 'Contract' }),
       dataIndex: 'contract_name',
       render: (value: string) => <span className="font-medium">{value}</span>
     },
     {
-      title: 'Client',
+      title: t('contractReports.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
       render: (value: string) => (
         <div className="flex items-center gap-2">
@@ -103,17 +110,17 @@ const ContractReports: React.FC = () => {
       )
     },
     {
-      title: 'Monthly Recurring',
+      title: t('contractReports.table.monthlyRecurring', { defaultValue: 'Monthly Recurring' }),
       dataIndex: 'monthly_recurring',
-      render: (value: number) => <span className="font-semibold text-green-600">{formatCurrency(value)}</span>
+      render: (value: number) => <span className="font-semibold text-green-600">{formatCents(value)}</span>
     },
     {
-      title: 'Total Billed (YTD)',
+      title: t('contractReports.table.totalBilledYtd', { defaultValue: 'Total Billed (YTD)' }),
       dataIndex: 'total_billed_ytd',
-      render: (value: number) => formatCurrency(value)
+      render: (value: number) => formatCents(value)
     },
     {
-      title: 'Status',
+      title: t('contractReports.table.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (value: string) => (
         <Badge
@@ -123,7 +130,11 @@ const ContractReports: React.FC = () => {
             'default-muted'
           }
         >
-          {value.charAt(0).toUpperCase() + value.slice(1)}
+          {value === 'active'
+            ? t('contractReports.statusValues.active', { defaultValue: 'Active' })
+            : value === 'upcoming'
+              ? t('contractReports.statusValues.upcoming', { defaultValue: 'Upcoming' })
+              : value.charAt(0).toUpperCase() + value.slice(1)}
         </Badge>
       )
     }
@@ -132,39 +143,41 @@ const ContractReports: React.FC = () => {
   // Expiration Report Columns
   const expirationColumns: ColumnDefinition<ContractExpiration>[] = [
     {
-      title: 'Contract',
+      title: t('contractReports.table.contract', { defaultValue: 'Contract' }),
       dataIndex: 'contract_name',
       render: (value: string) => <span className="font-medium">{value}</span>
     },
     {
-      title: 'Client',
+      title: t('contractReports.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name'
     },
     {
-      title: 'End Date',
+      title: t('contractReports.table.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
-      render: (value: string) => new Date(value).toLocaleDateString()
+      render: (value: string) => formatDate(value)
     },
     {
-      title: 'Days Until Expiration',
+      title: t('contractReports.table.daysUntilExpiration', { defaultValue: 'Days Until Expiration' }),
       dataIndex: 'days_until_expiration',
       render: (value: number) => (
         <span className={value <= 30 ? 'text-red-600 font-semibold' : value <= 60 ? 'text-amber-600' : ''}>
-          {value} days
+          {value} {t('units.days', { defaultValue: 'days' })}
         </span>
       )
     },
     {
-      title: 'Monthly Value',
+      title: t('contractReports.table.monthlyValue', { defaultValue: 'Monthly Value' }),
       dataIndex: 'monthly_value',
-      render: (value: number) => formatCurrency(value)
+      render: (value: number) => formatCents(value)
     },
     {
-      title: 'Auto-Renew',
+      title: t('contractReports.table.autoRenew', { defaultValue: 'Auto-Renew' }),
       dataIndex: 'auto_renew',
       render: (value: boolean) => (
         <Badge variant="secondary" className={value ? 'border-green-300 text-green-800' : 'border-[rgb(var(--color-border-300))] text-muted-foreground'}>
-          {value ? 'Yes' : 'No'}
+          {value
+            ? t('contractReports.statusValues.yes', { defaultValue: 'Yes' })
+            : t('contractReports.statusValues.no', { defaultValue: 'No' })}
         </Badge>
       )
     }
@@ -173,35 +186,35 @@ const ContractReports: React.FC = () => {
   // Bucket Usage Columns
   const bucketUsageColumns: ColumnDefinition<BucketUsage>[] = [
     {
-      title: 'Contract',
+      title: t('contractReports.table.contract', { defaultValue: 'Contract' }),
       dataIndex: 'contract_name',
       render: (value: string) => <span className="font-medium">{value}</span>
     },
     {
-      title: 'Client',
+      title: t('contractReports.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name'
     },
     {
-      title: 'Total Hours',
+      title: t('contractReports.table.totalHours', { defaultValue: 'Total Hours' }),
       dataIndex: 'total_hours',
-      render: (value: number) => `${value} hrs`
+      render: (value: number) => `${value} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
     },
     {
-      title: 'Used Hours',
+      title: t('contractReports.table.usedHours', { defaultValue: 'Used Hours' }),
       dataIndex: 'used_hours',
-      render: (value: number) => `${value} hrs`
+      render: (value: number) => `${value} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
     },
     {
-      title: 'Remaining',
+      title: t('contractReports.table.remaining', { defaultValue: 'Remaining' }),
       dataIndex: 'remaining_hours',
       render: (value: number) => (
         <span className={value === 0 ? 'text-red-600 font-semibold' : ''}>
-          {value} hrs
+          {value} {t('units.hoursShort', { defaultValue: 'hrs' })}
         </span>
       )
     },
     {
-      title: 'Utilization',
+      title: t('contractReports.table.utilization', { defaultValue: 'Utilization' }),
       dataIndex: 'utilization_percentage',
       render: (value: number) => (
         <div className="flex items-center gap-2">
@@ -212,17 +225,19 @@ const ContractReports: React.FC = () => {
             />
           </div>
           <span className={`text-sm font-medium ${value > 100 ? 'text-destructive' : ''}`}>
-            {value}%
+            {value}{t('units.percent', { defaultValue: '%' })}
           </span>
         </div>
       )
     },
     {
-      title: 'Overage',
+      title: t('contractReports.table.overage', { defaultValue: 'Overage' }),
       dataIndex: 'overage_hours',
       render: (value: number) => (
         <span className={value > 0 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}>
-          {value > 0 ? `+${value} hrs` : '—'}
+          {value > 0
+            ? `+${value} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
+            : t('units.dash', { defaultValue: '—' })}
         </span>
       )
     }
@@ -231,39 +246,39 @@ const ContractReports: React.FC = () => {
   // Profitability Columns
   const profitabilityColumns: ColumnDefinition<Profitability>[] = [
     {
-      title: 'Contract',
+      title: t('contractReports.table.contract', { defaultValue: 'Contract' }),
       dataIndex: 'contract_name',
       render: (value: string) => <span className="font-medium">{value}</span>
     },
     {
-      title: 'Client',
+      title: t('contractReports.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name'
     },
     {
-      title: 'Revenue (YTD)',
+      title: t('contractReports.table.revenueYtd', { defaultValue: 'Revenue (YTD)' }),
       dataIndex: 'revenue',
-      render: (value: number) => formatCurrency(value)
+      render: (value: number) => formatCents(value)
     },
     {
-      title: 'Cost (YTD)',
+      title: t('contractReports.table.costYtd', { defaultValue: 'Cost (YTD)' }),
       dataIndex: 'cost',
-      render: (value: number) => formatCurrency(value)
+      render: (value: number) => formatCents(value)
     },
     {
-      title: 'Profit',
+      title: t('contractReports.table.profit', { defaultValue: 'Profit' }),
       dataIndex: 'profit',
       render: (value: number) => (
-        <span className="font-semibold text-green-600">{formatCurrency(value)}</span>
+        <span className="font-semibold text-green-600">{formatCents(value)}</span>
       )
     },
     {
-      title: 'Margin',
+      title: t('contractReports.table.margin', { defaultValue: 'Margin' }),
       dataIndex: 'margin_percentage',
       render: (value: number) => (
         <Badge
           variant={value >= 40 ? 'success' : 'warning'}
         >
-          {value}%
+          {value}{t('units.percent', { defaultValue: '%' })}
         </Badge>
       )
     }
@@ -321,15 +336,21 @@ const ContractReports: React.FC = () => {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold mb-2">Contract Reports</h2>
+          <h2 className="text-2xl font-bold mb-2">
+            {t('contractReports.title', { defaultValue: 'Contract Reports' })}
+          </h2>
           <p className="text-muted-foreground text-sm">
-            Analyze contract performance, revenue, and utilization metrics
+            {t('contractReports.description', {
+              defaultValue: 'Analyze contract performance, revenue, and utilization metrics',
+            })}
           </p>
         </div>
 
         <Alert variant="destructive">
           <AlertDescription>
-            <p className="font-semibold mb-1">Error Loading Reports</p>
+            <p className="font-semibold mb-1">
+              {t('contractReports.errors.loadingTitle', { defaultValue: 'Error Loading Reports' })}
+            </p>
             <p>{error}</p>
           </AlertDescription>
         </Alert>
@@ -340,9 +361,13 @@ const ContractReports: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Contract Reports</h2>
+        <h2 className="text-2xl font-bold mb-2">
+          {t('contractReports.title', { defaultValue: 'Contract Reports' })}
+        </h2>
         <p className="text-muted-foreground text-sm">
-          Analyze contract performance, revenue, and utilization metrics
+          {t('contractReports.description', {
+            defaultValue: 'Analyze contract performance, revenue, and utilization metrics',
+          })}
         </p>
       </div>
 
@@ -351,60 +376,82 @@ const ContractReports: React.FC = () => {
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <Coins className="h-5 w-5 text-green-600" />
-            <h3 className="font-semibold">Total MRR</h3>
+            <h3 className="font-semibold">
+              {t('contractReports.summary.totalMRR.title', { defaultValue: 'Total MRR' })}
+            </h3>
           </div>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(summary?.totalMRR ?? 0)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Monthly Recurring Revenue</p>
+          <p className="text-2xl font-bold text-green-600">{formatCents(summary?.totalMRR ?? 0)}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t('contractReports.summary.totalMRR.subtitle', { defaultValue: 'Monthly Recurring Revenue' })}
+          </p>
         </Card>
 
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="h-5 w-5 text-blue-600" />
-            <h3 className="font-semibold">YTD Revenue</h3>
+            <h3 className="font-semibold">
+              {t('contractReports.summary.ytdRevenue.title', { defaultValue: 'YTD Revenue' })}
+            </h3>
           </div>
           <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.totalYTD ?? 0)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Year to Date by billed service period</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t('contractReports.summary.ytdRevenue.subtitle', { defaultValue: 'Year to Date by billed service period' })}
+          </p>
         </Card>
 
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="h-5 w-5 text-purple-600" />
-            <h3 className="font-semibold">Active Contracts</h3>
+            <h3 className="font-semibold">
+              {t('contractReports.summary.activeContracts.title', { defaultValue: 'Active Contracts' })}
+            </h3>
           </div>
           <p className="text-2xl font-bold text-purple-600">{summary?.activeContractCount ?? 0}</p>
-          <p className="text-xs text-muted-foreground mt-1">Active assignments</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t('contractReports.summary.activeContracts.subtitle', { defaultValue: 'Active assignments' })}
+          </p>
         </Card>
 
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <AlertCircle className="h-5 w-5 text-amber-600" />
-            <h3 className="font-semibold">Renewal Decisions Due</h3>
+            <h3 className="font-semibold">
+              {t('contractReports.summary.renewalDecisions.title', { defaultValue: 'Renewal Decisions Due' })}
+            </h3>
           </div>
           <p className="text-2xl font-bold text-amber-600">{summary?.atRiskDecisionCount ?? 0}</p>
-          <p className="text-xs text-muted-foreground mt-1">Decision due dates in the next 90 days</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t('contractReports.summary.renewalDecisions.subtitle', { defaultValue: 'Decision due dates in the next 90 days' })}
+          </p>
         </Card>
       </div>
 
       {/* Report Tabs */}
       <Tabs value={activeReport} onValueChange={setActiveReport}>
         <TabsList>
-          <TabsTrigger value="revenue">Contract Revenue</TabsTrigger>
-          <TabsTrigger value="expiration">Expiration</TabsTrigger>
-          <TabsTrigger value="bucket-usage">Bucket Hours</TabsTrigger>
-          <TabsTrigger value="profitability">Profitability</TabsTrigger>
+          <TabsTrigger value="revenue">{t('contractReports.tabs.revenue', { defaultValue: 'Contract Revenue' })}</TabsTrigger>
+          <TabsTrigger value="expiration">{t('contractReports.tabs.expiration', { defaultValue: 'Expiration' })}</TabsTrigger>
+          <TabsTrigger value="bucket-usage">{t('contractReports.tabs.bucketUsage', { defaultValue: 'Bucket Hours' })}</TabsTrigger>
+          <TabsTrigger value="profitability">{t('contractReports.tabs.profitability', { defaultValue: 'Profitability' })}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="revenue" className="mt-4">
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Coins className="h-5 w-5 text-green-600" />
-              <h3 className="text-lg font-semibold">Contract Revenue Report</h3>
+              <h3 className="text-lg font-semibold">
+                {t('contractReports.sections.revenue.title', { defaultValue: 'Contract Revenue Report' })}
+              </h3>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Overview of monthly recurring revenue and year-to-date billed service periods by contract.
+              {t('contractReports.sections.revenue.description', {
+                defaultValue: 'Overview of monthly recurring revenue and year-to-date billed service periods by contract.',
+              })}
             </p>
             {revenueData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No contract revenue data available</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                {t('contractReports.sections.revenue.empty', { defaultValue: 'No contract revenue data available' })}
+              </p>
             ) : (
               <DataTable
                 id="contract-reports-table"
@@ -424,13 +471,23 @@ const ContractReports: React.FC = () => {
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="h-5 w-5 text-amber-600" />
-              <h3 className="text-lg font-semibold">Contract Expiration and Renewal Decisions</h3>
+              <h3 className="text-lg font-semibold">
+                {t('contractReports.sections.expiration.title', {
+                  defaultValue: 'Contract Expiration and Renewal Decisions',
+                })}
+              </h3>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Track upcoming contract expirations and renewal decision due dates.
+              {t('contractReports.sections.expiration.description', {
+                defaultValue: 'Track upcoming contract expirations and renewal decision due dates.',
+              })}
             </p>
             {expirationData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No upcoming contract expirations or renewal decisions in the near term</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                {t('contractReports.sections.expiration.empty', {
+                  defaultValue: 'No upcoming contract expirations or renewal decisions in the near term',
+                })}
+              </p>
             ) : (
               <DataTable
                 id="contract-expiration-table"
@@ -450,13 +507,19 @@ const ContractReports: React.FC = () => {
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Clock className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-semibold">Bucket Hours Utilization</h3>
+              <h3 className="text-lg font-semibold">
+                {t('contractReports.sections.bucketUsage.title', { defaultValue: 'Bucket Hours Utilization' })}
+              </h3>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Monitor bucket hours usage and identify overage situations
+              {t('contractReports.sections.bucketUsage.description', {
+                defaultValue: 'Monitor bucket hours usage and identify overage situations',
+              })}
             </p>
             {bucketUsageData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No bucket-based contracts found</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                {t('contractReports.sections.bucketUsage.empty', { defaultValue: 'No bucket-based contracts found' })}
+              </p>
             ) : (
               <DataTable
                 id="bucket-usage-table"
@@ -476,13 +539,19 @@ const ContractReports: React.FC = () => {
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="h-5 w-5 text-green-600" />
-              <h3 className="text-lg font-semibold">Simple Profitability Report</h3>
+              <h3 className="text-lg font-semibold">
+                {t('contractReports.sections.profitability.title', { defaultValue: 'Simple Profitability Report' })}
+              </h3>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Basic profit margins and revenue vs. cost analysis by contract
+              {t('contractReports.sections.profitability.description', {
+                defaultValue: 'Basic profit margins and revenue vs. cost analysis by contract',
+              })}
             </p>
             {profitabilityData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No profitability data available</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                {t('contractReports.sections.profitability.empty', { defaultValue: 'No profitability data available' })}
+              </p>
             ) : (
               <DataTable
                 id="profitability-table"

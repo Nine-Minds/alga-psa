@@ -48,11 +48,15 @@
       },
       "ytdRevenue": {
         "title": "YTD Revenue",
-        "subtitle": "Year to Date"
+        "subtitle": "Year to Date by billed service period"
       },
       "activeContracts": {
         "title": "Active Contracts",
-        "subtitle": "Billable clients"
+        "subtitle": "Active assignments"
+      },
+      "renewalDecisions": {
+        "title": "Renewal Decisions Due",
+        "subtitle": "Decision due dates in the next 90 days"
       }
     },
     "tabs": {
@@ -64,7 +68,7 @@
     "sections": {
       "revenue": {
         "title": "Contract Revenue Report",
-        "description": "Overview of monthly recurring revenue and year-to-date billing by contract",
+        "description": "Overview of monthly recurring revenue and year-to-date billed service periods by contract.",
         "empty": "No contract revenue data available"
       },
       "expiration": {

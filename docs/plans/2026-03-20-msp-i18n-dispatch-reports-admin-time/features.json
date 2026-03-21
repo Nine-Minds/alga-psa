@@ -15,7 +15,7 @@
   {"id": "F014", "description": "Italian accent audit on it/msp/dispatch.json", "implemented": true},
 
   {"id": "F020", "description": "Create en/msp/reports.json with ~99 keys following naming convention", "implemented": true, "prdRefs": ["R-FR1 to R-FR4"]},
-  {"id": "F021", "description": "ContractReports.tsx: wire useTranslation('msp/reports'), translate tab labels, descriptions, summary cards, all 4 report table columns, empty states, unit labels", "implemented": false, "prdRefs": ["R-FR1"]},
+  {"id": "F021", "description": "ContractReports.tsx: wire useTranslation('msp/reports'), translate tab labels, descriptions, summary cards, all 4 report table columns, empty states, unit labels", "implemented": true, "prdRefs": ["R-FR1"]},
   {"id": "F022", "description": "ContractPerformance.tsx: translate metric labels, table headers, empty states, placeholder", "implemented": false, "prdRefs": ["R-FR2"]},
   {"id": "F023", "description": "ContractUsageReport.tsx: translate heading, column headers, summary section, status labels, empty states", "implemented": false, "prdRefs": ["R-FR3"]},
   {"id": "F024", "description": "Reports.tsx: translate heading and 4 card titles/placeholders", "implemented": false, "prdRefs": ["R-FR4"]},

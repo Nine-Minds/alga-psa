@@ -134,6 +134,7 @@ SCRIPT
 - (2026-03-20) `T003` passed: a direct route-config assertion confirmed `ROUTE_NAMESPACES['/msp/technician-dispatch']` exactly equals `['common', 'msp/core', 'msp/dispatch']`.
 - (2026-03-20) `T004` passed: the Italian accent audit grep returned no matches for `server/public/locales/it/msp/dispatch.json`, confirming the known unaccented text patterns are absent.
 - (2026-03-20) `F020` completed: created `server/public/locales/en/msp/reports.json` with shared sections for the billing report tabs, summary cards, table headers, empty/error states, select/refresh controls, usage/performance summaries, and the standalone placeholder reports page.
+- (2026-03-20) `F021` completed: wired `packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx` to `useTranslation('msp/reports')` for the report page title/description, summary cards, tab labels, section descriptions, empty states, status badges, yes/no labels, table headers, and unit strings. Also replaced the hardcoded US currency/date formatting with `useFormatters()` so report values follow the active locale.
 
 ### Key file paths — Dispatch
 | File | Strings |
