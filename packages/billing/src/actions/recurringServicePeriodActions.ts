@@ -23,7 +23,10 @@ import {
   type IRecurringServicePeriodRegenerationPlan,
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
-import { isClientCadencePostDropObligationType } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import {
+  isClientCadencePostDropObligationType,
+  POST_DROP_RECURRING_OBLIGATION_TYPES,
+} from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 
 const RECURRING_SERVICE_PERIOD_PERMISSION_RESOURCE = 'billing.recurring_service_periods';
 
@@ -107,6 +110,18 @@ export interface RecurringServicePeriodManagementView {
   contractLineName: string | null;
   summary: RecurringServicePeriodManagementSummary;
   rows: RecurringServicePeriodManagementRow[];
+}
+
+export interface RecurringServicePeriodScheduleSummary {
+  scheduleKey: string;
+  cadenceOwner: IRecurringServicePeriodRecord['cadenceOwner'];
+  duePosition: IRecurringServicePeriodRecord['duePosition'];
+  obligationType: RecurringObligationType;
+  obligationId: string;
+  clientName: string | null;
+  contractName: string | null;
+  contractLineName: string | null;
+  latestInvoiceWindowEnd: string | null;
 }
 
 export interface PreviewRecurringServicePeriodRegenerationInput {
@@ -485,6 +500,80 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
       summary: buildManagementSummary(rows),
       rows,
     } satisfies RecurringServicePeriodManagementView;
+  });
+});
+
+export const listRecurringServicePeriodScheduleSummaries = withAuth(async (
+  user,
+  { tenant },
+  limit: number = 50,
+): Promise<RecurringServicePeriodScheduleSummary[] | ActionPermissionError> => {
+  const denied = await requireRecurringServicePeriodPermission(
+    user,
+    'view',
+    'Permission denied: Cannot view recurring service periods',
+  );
+  if (denied) {
+    return denied;
+  }
+
+  const normalizedLimit = Number.isFinite(limit) ? Math.min(Math.max(Math.trunc(limit), 1), 200) : 50;
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx: any) => {
+    const rows = await trx('recurring_service_periods as rsp')
+      .leftJoin('contract_lines as cl', function () {
+        this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
+          .andOn('cl.tenant', '=', 'rsp.tenant');
+      })
+      .leftJoin('contracts as ct', function () {
+        this.on('ct.contract_id', '=', 'cl.contract_id')
+          .andOn('ct.tenant', '=', 'cl.tenant');
+      })
+      .leftJoin('clients as c', function () {
+        this.on('c.client_id', '=', 'ct.owner_client_id')
+          .andOn('c.tenant', '=', 'ct.tenant');
+      })
+      .where('rsp.tenant', tenant)
+      .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
+      .whereNotIn('rsp.lifecycle_state', ['superseded', 'archived'])
+      .whereNotNull('c.client_name')
+      .whereNotNull('ct.contract_name')
+      .whereNotNull('cl.contract_line_name')
+      .groupBy([
+        'rsp.schedule_key',
+        'rsp.cadence_owner',
+        'rsp.due_position',
+        'rsp.obligation_type',
+        'rsp.obligation_id',
+        'c.client_name',
+        'ct.contract_name',
+        'cl.contract_line_name',
+      ])
+      .select(
+        'rsp.schedule_key',
+        'rsp.cadence_owner',
+        'rsp.due_position',
+        'rsp.obligation_type',
+        'rsp.obligation_id',
+        'c.client_name',
+        'ct.contract_name',
+        'cl.contract_line_name',
+      )
+      .max('rsp.invoice_window_end as latest_invoice_window_end')
+      .orderBy('latest_invoice_window_end', 'desc')
+      .limit(normalizedLimit);
+
+    return rows.map((row: any) => ({
+      scheduleKey: row.schedule_key,
+      cadenceOwner: row.cadence_owner,
+      duePosition: row.due_position,
+      obligationType: row.obligation_type,
+      obligationId: row.obligation_id,
+      clientName: row.client_name ?? null,
+      contractName: row.contract_name ?? null,
+      contractLineName: row.contract_line_name ?? null,
+      latestInvoiceWindowEnd: normalizeDateOnlyValue(row.latest_invoice_window_end),
+    }));
   });
 });
 

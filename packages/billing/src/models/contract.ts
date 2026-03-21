@@ -136,6 +136,11 @@ const Contract = {
         .pluck('contract_line_id');
 
       if (contractLineIds.length > 0) {
+        await knexOrTrx('recurring_service_periods')
+          .where({ tenant })
+          .whereIn('obligation_id', contractLineIds)
+          .delete();
+
         // Clear contract_line_id in time_entries before deleting contract_lines
         await knexOrTrx('time_entries')
           .where({ tenant })

@@ -31,8 +31,28 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       );
       return builder;
     }),
+    whereIn: vi.fn((column: string, expectedValues: any[]) => {
+      const normalizedColumn = normalizeColumn(column);
+      resultRows = resultRows.filter((row) => expectedValues.includes(row[normalizedColumn]));
+      return builder;
+    }),
+    whereNotIn: vi.fn((column: string, excludedValues: any[]) => {
+      const normalizedColumn = normalizeColumn(column);
+      resultRows = resultRows.filter((row) => !excludedValues.includes(row[normalizedColumn]));
+      return builder;
+    }),
+    whereNotNull: vi.fn((column: string) => {
+      resultRows = resultRows.filter((row) => {
+        const value = row[normalizeColumn(column)];
+        return value !== null && value !== undefined;
+      });
+      return builder;
+    }),
     select: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
+    groupBy: vi.fn(() => builder),
+    max: vi.fn(() => builder),
+    limit: vi.fn(() => builder),
     first: vi.fn(async () => resultRows[0]),
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
@@ -93,6 +113,7 @@ vi.mock('@alga-psa/db', () => ({
 
 const {
   getRecurringServicePeriodManagementView,
+  listRecurringServicePeriodScheduleSummaries,
   previewRecurringServicePeriodInvoiceLinkageRepair,
   previewRecurringServicePeriodRegeneration,
 } = await import('../../../../../packages/billing/src/actions/recurringServicePeriodActions');
@@ -318,5 +339,45 @@ describe('recurring service period actions', () => {
         generatedRows: 1,
       },
     });
+  });
+
+  it('filters orphaned recurring schedule summaries from deleted contracts', async () => {
+    mocks.rowsByTable.recurring_service_periods = [
+      {
+        ...mocks.rowsByTable.recurring_service_periods[0],
+        lifecycle_state: 'generated',
+        client_name: 'Acme Corp',
+        contract_name: 'Acme Managed Services',
+        contract_line_name: 'Managed Router',
+      },
+      {
+        ...mocks.rowsByTable.recurring_service_periods[0],
+        record_id: 'rsp-orphan-1',
+        schedule_key: 'schedule:tenant-1:contract_line:orphan-line:contract:arrears',
+        obligation_id: 'orphan-line',
+        lifecycle_state: 'generated',
+        client_name: null,
+        contract_name: null,
+        contract_line_name: null,
+      },
+      {
+        ...mocks.rowsByTable.recurring_service_periods[0],
+        record_id: 'rsp-superseded-1',
+        schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+        lifecycle_state: 'superseded',
+        client_name: 'Acme Corp',
+        contract_name: 'Acme Managed Services',
+        contract_line_name: 'Managed Router',
+      },
+    ];
+
+    await expect(listRecurringServicePeriodScheduleSummaries()).resolves.toEqual([
+      expect.objectContaining({
+        scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+        clientName: 'Acme Corp',
+        contractName: 'Acme Managed Services',
+        contractLineName: 'Managed Router',
+      }),
+    ]);
   });
 });

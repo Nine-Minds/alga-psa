@@ -10,6 +10,7 @@ import { ISO8601String } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { toPlainDate } from '@alga-psa/core';
 
 
 export const getBillingCycle = withAuth(async (
@@ -358,16 +359,31 @@ export interface RecurringInvoiceHistoryRow {
 
 export type InvoicedRecurringHistoryRow = RecurringInvoiceHistoryRow;
 
+function formatHistoryDisplayDate(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return toPlainDate(value).toString();
+  } catch {
+    return value;
+  }
+}
+
 function formatHistoryRangeLabel(start?: string | null, end?: string | null) {
-  if (!start && !end) {
+  const formattedStart = formatHistoryDisplayDate(start);
+  const formattedEnd = formatHistoryDisplayDate(end);
+
+  if (!formattedStart && !formattedEnd) {
     return 'Unavailable';
   }
 
-  if (!start || !end) {
-    return start ?? end ?? 'Unavailable';
+  if (!formattedStart || !formattedEnd) {
+    return formattedStart ?? formattedEnd ?? 'Unavailable';
   }
 
-  return `${start} to ${end}`;
+  return `${formattedStart} to ${formattedEnd}`;
 }
 
 function normalizeHistoryDate(value: unknown): string | null {
@@ -634,7 +650,7 @@ async function fetchRecurringInvoiceHistoryPage(
           where ic.invoice_id = i.invoice_id
             and ic.tenant = i.tenant
             and ic.client_contract_id is not null
-        ), ARRAY[]::text[]) as assignment_contract_ids`)
+        ), ARRAY[]::uuid[]) as assignment_contract_ids`)
       )
       .orderByRaw(`coalesce(rsp_summary.invoice_window_end, i.billing_period_end, i.invoice_date) desc`)
       .orderBy('i.invoice_id', 'desc')

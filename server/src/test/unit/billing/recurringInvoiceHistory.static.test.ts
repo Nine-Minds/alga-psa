@@ -21,6 +21,8 @@ describe('recurring invoice history naming', () => {
     expect(actionsSource).not.toContain(
       "coalesce(rsp_summary.cadence_owner, case when i.billing_cycle_id is not null then 'client' else null end) as cadence_owner"
     );
+    expect(actionsSource).toContain('ARRAY[]::uuid[]) as assignment_contract_ids');
+    expect(actionsSource).not.toContain('ARRAY[]::text[]) as assignment_contract_ids');
     expect(automaticInvoicesSource).toContain('getRecurringInvoiceHistoryPaginated');
     expect(automaticInvoicesSource).toContain('Recurring Invoice History');
     expect(automaticInvoicesSource).not.toContain('Already Invoiced');

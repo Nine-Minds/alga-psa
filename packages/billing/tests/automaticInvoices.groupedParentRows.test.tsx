@@ -266,7 +266,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(screen.getByText('Execution exec-1')).toBeInTheDocument();
     expect(screen.getAllByText('Cadence: Contract anniversary').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Service period: 2026-03-01 to 2026-04-01').length).toBeGreaterThan(0);
-    expect(screen.getByText('Amount: $125.00')).toBeInTheDocument();
+    expect(screen.getByText('$125.00')).toBeInTheDocument();
   });
 
   it('is combinable only when all ready children share client/currency/PO/tax/export scope (T004)', async () => {
@@ -480,6 +480,8 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(
       screen.getByTestId('child-row-parent-group:client-1:2026-03-01:2026-04-01-exec-2'),
     ).toBeInTheDocument();
+    expect(screen.getByText('Contains blocked items')).toBeInTheDocument();
+    expect(screen.queryByText('Must invoice separately')).not.toBeInTheDocument();
     expect(blockedChild.disabled).toBe(true);
     expect(blockedChild.checked).toBe(false);
     expect(readyChild.checked).toBe(true);

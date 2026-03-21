@@ -19,6 +19,7 @@ const createMockKnex = () => {
   const mockAndWhere = vi.fn().mockReturnThis();
   const mockWhereNot = vi.fn().mockReturnThis();
   const mockWhereIn = vi.fn().mockReturnThis();
+  const mockWhereNotNull = vi.fn().mockReturnThis();
   const mockWhereNull = vi.fn().mockReturnThis();
   const mockOrWhere = vi.fn().mockReturnThis();
   const mockFirst = vi.fn();
@@ -39,6 +40,7 @@ const createMockKnex = () => {
     andWhere: mockAndWhere,
     whereNot: mockWhereNot,
     whereIn: mockWhereIn,
+    whereNotNull: mockWhereNotNull,
     whereNull: mockWhereNull,
     orWhere: mockOrWhere,
     first: mockFirst,
@@ -67,6 +69,8 @@ const createMockKnex = () => {
       select: mockSelect,
       count: mockCount,
       pluck: mockPluck,
+      whereIn: mockWhereIn,
+      whereNotNull: mockWhereNotNull,
     },
   };
 };
@@ -99,6 +103,22 @@ describe('Contract Model', () => {
       await expect(Contract.delete(knex, '', 'contract-123')).rejects.toThrow(
         'Tenant context is required for deleting contracts'
       );
+    });
+
+    it('deletes recurring service periods linked to contract lines before removing the contract lines', async () => {
+      const { knex, mocks } = createMockKnex();
+      mocks.first.mockResolvedValueOnce({ count: '0' });
+      mocks.pluck
+        .mockResolvedValueOnce(['client-contract-1'])
+        .mockResolvedValueOnce(['line-1', 'line-2'])
+        .mockResolvedValueOnce([]);
+      mocks.delete.mockResolvedValue(1);
+
+      await Contract.delete(knex, 'tenant-1', 'contract-123');
+
+      expect(knex).toHaveBeenCalledWith('recurring_service_periods');
+      expect(mocks.where).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+      expect(mocks.whereIn).toHaveBeenCalledWith('obligation_id', ['line-1', 'line-2']);
     });
   });
 

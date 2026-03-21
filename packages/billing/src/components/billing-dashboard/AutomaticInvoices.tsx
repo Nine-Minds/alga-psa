@@ -10,7 +10,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Search, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
+import { Search, AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown } from 'lucide-react';
 import type {
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
@@ -81,6 +81,47 @@ type RecurringSelectionGroup = {
   selectorInputs: IRecurringDueSelectionInput[];
 };
 
+const getParentGroupSummary = ({
+  isCombinable,
+  canGenerate,
+  incompatibilityReasons,
+  childCount,
+}: {
+  isCombinable: boolean;
+  canGenerate: boolean;
+  incompatibilityReasons: string[];
+  childCount: number;
+}): {
+  label: string;
+  className: string;
+} => {
+  if (isCombinable) {
+    return {
+      label: 'Can combine into 1 invoice',
+      className: 'border-border/70 text-foreground',
+    };
+  }
+
+  if (incompatibilityReasons.length > 0) {
+    return {
+      label: 'Must invoice separately',
+      className: 'border-warning/40 text-warning',
+    };
+  }
+
+  if (!canGenerate) {
+    return {
+      label: childCount > 1 ? 'Contains blocked items' : 'Not ready to invoice',
+      className: 'border-border/60 text-muted-foreground',
+    };
+  }
+
+  return {
+    label: 'Must invoice separately',
+    className: 'border-warning/40 text-warning',
+  };
+};
+
 const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): RecurringInvoiceParentGroup[] =>
   candidates.map((candidate) => {
     const memberAmounts = candidate.members
@@ -92,6 +133,12 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
         : null;
     const incompatibilityReasons = resolveIncompatibilityReasons(candidate);
     const isCombinable = candidate.canGenerate && incompatibilityReasons.length === 0;
+    const parentGroupSummary = getParentGroupSummary({
+      isCombinable,
+      canGenerate: candidate.canGenerate,
+      incompatibilityReasons,
+      childCount: candidate.memberCount,
+    });
 
     return {
       parentSummary: {
@@ -104,7 +151,7 @@ const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): Recurring
       childCount: candidate.memberCount,
       aggregateAmountCents,
       isCombinable,
-      combinabilitySummary: isCombinable ? 'Combinable as one invoice' : 'Not combinable as one invoice',
+      combinabilitySummary: parentGroupSummary.label,
       incompatibilityReasons,
       canGenerate: candidate.canGenerate,
       blockedReason: candidate.blockedReason ?? null,
@@ -159,6 +206,20 @@ const formatCadenceSourceBadge = (
         variant: 'secondary',
       };
   }
+};
+
+const summarizeCadenceSources = (cadenceSources: Array<string | null | undefined>): string => {
+  const labels = Array.from(
+    new Set(
+      cadenceSources.map((source) => formatCadenceSourceBadge(source).label),
+    ),
+  );
+
+  if (labels.length === 0) {
+    return 'Unknown cadence source';
+  }
+
+  return labels.join(' + ');
 };
 
 const getRecurringAssignmentContext = (member: IRecurringDueWorkInvoiceCandidate['members'][number]): string | null => {
@@ -1137,15 +1198,20 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             columns={[
               {
                 title: (
+                  <div className="flex justify-center">
                     <Checkbox
-                    id="select-all"
-                    checked={allGroupsFullySelected}
-                    indeterminate={!allGroupsFullySelected && hasAnyGroupSelection}
-                    onChange={handleSelectAll}
-                    disabled={parentGroups.length === 0}
-                  />
+                      id="select-all"
+                      checked={allGroupsFullySelected}
+                      indeterminate={!allGroupsFullySelected && hasAnyGroupSelection}
+                      onChange={handleSelectAll}
+                      disabled={parentGroups.length === 0}
+                    />
+                  </div>
                 ),
                 dataIndex: 'candidateKey',
+                width: '6rem',
+                headerClassName: 'px-2 text-center',
+                cellClassName: 'px-2 text-center',
                 render: (_: unknown, record: RecurringInvoiceParentGroup) => {
                   const isParentSelected = selectedTargets.has(record.parentSummary.parentSelectionKey);
                   const selectedChildrenCount = record.childExecutionRows.filter((member) =>
@@ -1153,255 +1219,266 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   ).length;
                   const isPartiallySelected = !isParentSelected && selectedChildrenCount > 0;
                   return (
-                    <Checkbox
-                      id={`select-${record.parentSummary.parentGroupKey}`}
-                      checked={isParentSelected}
-                      indeterminate={isPartiallySelected}
-                      disabled={!record.parentSummary.canGenerate || !record.parentSummary.isCombinable}
-                      // Stop propagation to prevent row click when clicking checkbox
-                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                        event.stopPropagation();
-                        handleSelectParentGroup(record, event);
-                      }}
-                      onClick={(e) => e.stopPropagation()} // Also stop propagation on click
-                    />
+                    <div className="flex justify-center">
+                      <Checkbox
+                        id={`select-${record.parentSummary.parentGroupKey}`}
+                        checked={isParentSelected}
+                        indeterminate={isPartiallySelected}
+                        disabled={!record.parentSummary.canGenerate || !record.parentSummary.isCombinable}
+                        // Stop propagation to prevent row click when clicking checkbox
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                          event.stopPropagation();
+                          handleSelectParentGroup(record, event);
+                        }}
+                        onClick={(e) => e.stopPropagation()} // Also stop propagation on click
+                      />
+                    </div>
                   );
                 }
               },
-              {
-                title: 'Group',
-                dataIndex: 'parentGroupKey',
-                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
-                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
-                  return (
-                    <Button
-                      id={`toggle-group-${record.parentSummary.parentGroupKey}`}
-                      variant="outline"
-                      size="sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        toggleParentGroupExpansion(record.parentSummary.parentGroupKey);
-                      }}
-                    >
-                      {isExpanded ? 'Collapse' : 'Expand'}
-                    </Button>
-                  );
-                },
-              },
-              {
-                title: 'Client',
-                dataIndex: 'clientName',
-                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
-                  <div className="space-y-1">
-                    <div>{record.parentSummary.clientName ?? 'Unknown client'}</div>
-                    <Badge variant={record.parentSummary.isCombinable ? 'outline' : 'secondary'}>
-                      {record.parentSummary.combinabilitySummary}
-                    </Badge>
-                    {!record.parentSummary.isCombinable && record.parentSummary.incompatibilityReasons.length > 0 ? (
-                      <div
-                        className="text-xs text-muted-foreground"
-                        data-testid={`combinability-reasons-${record.parentSummary.parentGroupKey}`}
-                      >
-                        {record.parentSummary.incompatibilityReasons.join(', ')}
-                      </div>
-                    ) : null}
-                    {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
-                      <div className="text-xs text-muted-foreground">{record.parentSummary.blockedReason}</div>
-                    ) : null}
-                  </div>
-                ),
-              },
-              {
-                title: 'Cadence Source',
-                dataIndex: 'cadenceSources',
-                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
-                  <div className="space-y-1">
-                    {record.candidate.cadenceSources.map((source) => {
-                      const formattedSource = formatCadenceSourceBadge(source);
-                      return (
-                      <Badge
-                        key={`${record.parentSummary.candidateKey}:${source ?? 'missing'}`}
-                        variant={formattedSource.variant}
-                        data-testid={`cadence-source-${record.parentSummary.candidateKey}-${source ?? 'missing'}`}
-                      >
-                        {formattedSource.label}
-                      </Badge>
+	              {
+	                title: 'Group',
+	                dataIndex: 'parentGroupKey',
+	                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
+	                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
+                    const contractNames = Array.from(
+                      new Set(
+                        record.childExecutionRows
+                          .map((member) => member.contractName?.trim())
+                          .filter((name): name is string => Boolean(name)),
+                      ),
+                    );
+                    const contractLineNames = Array.from(
+                      new Set(
+                        record.childExecutionRows
+                          .map((member) => member.contractLineName?.trim())
+                          .filter((name): name is string => Boolean(name)),
+                      ),
+                    );
+                    const contractMetadataMissingCount = record.childExecutionRows.filter((member) => {
+                      const hasContractSignal = Boolean(
+                        member.cadenceOwner === 'contract'
+                        || member.contractId
+                        || member.contractLineId
+                        || member.contractName?.trim()
+                        || member.contractLineName?.trim(),
                       );
-                    })}
-                    {record.childExecutionRows.some((member) => !member.billingCycleId) ? (
-                      <Badge variant="secondary">Service-period-backed</Badge>
-                    ) : null}
-                  </div>
-                ),
-              },
-              {
-                title: 'Service Period',
-                dataIndex: 'servicePeriodLabel',
-                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
-                  <div className="space-y-1">
-                    <div>{record.parentSummary.servicePeriodLabel}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {record.parentSummary.childCount} obligation{record.parentSummary.childCount === 1 ? '' : 's'}
-                    </div>
-                    <div className="text-xs text-muted-foreground" data-testid={`group-amount-${record.parentSummary.parentGroupKey}`}>
-                      {record.parentSummary.aggregateAmountCents === null
-                        ? 'Amount unavailable'
-                        : formatCurrency(record.parentSummary.aggregateAmountCents / 100)}
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                title: 'Invoice Window',
-                dataIndex: 'windowLabel',
-                render: (_: unknown, record: RecurringInvoiceParentGroup) => record.parentSummary.windowLabel,
-              },
-              {
-                title: 'Children',
-                dataIndex: 'childExecutionRows',
-                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
-                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
-                  if (!isExpanded) {
-                    return (
-                      <div className="text-xs text-muted-foreground">
-                        {record.parentSummary.childCount} child candidate{record.parentSummary.childCount === 1 ? '' : 's'}
-                      </div>
+                      if (!hasContractSignal) {
+                        return false;
+                      }
+
+                      const missingContractIdentity =
+                        !member.contractId
+                        && !member.contractName?.trim();
+                      const missingContractLineIdentity =
+                        !member.contractLineId
+                        && !member.contractLineName?.trim();
+                      const missingContractName = Boolean(member.contractId && !member.contractName?.trim());
+                      const missingContractLineName = Boolean(member.contractLineId && !member.contractLineName?.trim());
+
+                      return (
+                        missingContractIdentity
+                        || missingContractLineIdentity
+                        || missingContractName
+                        || missingContractLineName
+                      );
+                    }).length;
+                    const assignmentContexts = Array.from(
+                      new Set(
+                        record.childExecutionRows
+                          .map((member) => getRecurringAssignmentContext(member))
+                          .filter((value): value is string => Boolean(value)),
+                      ),
                     );
-                  }
-
-                  return (
-                    <div className="space-y-2">
-                      {record.childExecutionRows.map((member) => {
-                        const assignmentContext = getRecurringAssignmentContext(member);
-                        const cadenceSource = formatCadenceSourceBadge(member.cadenceSource).label;
-                        const duePosition = (member.selectorInput.executionWindow as { duePosition?: string }).duePosition;
-                        const billingTiming = duePosition === 'advance' ? 'Advance' : 'Arrears';
-                        const amountCents = (member as { amountCents?: number | null }).amountCents;
-                        const isChildSelected = selectedTargets.has(childSelectionKeyForMember(member));
-
-                        return (
-                          <div
-                            key={`${record.parentSummary.parentGroupKey}:${member.executionIdentityKey}`}
-                            className="rounded border border-border/60 p-2"
-                            data-testid={`child-row-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
+	                    const cadenceSummary = summarizeCadenceSources(record.candidate.cadenceSources);
+                      const shouldShowAssignmentContexts =
+                        !isExpanded && contractNames.length === 0 && contractLineNames.length === 0;
+	                  return (
+                      <div className="min-w-[16rem] space-y-2">
+                        <div className="flex items-start gap-2">
+                          <Button
+                            id={`toggle-group-${record.parentSummary.parentGroupKey}`}
+                            variant="ghost"
+                            size="sm"
+                            className="mt-0.5 h-8 w-8 shrink-0 p-0"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleParentGroupExpansion(record.parentSummary.parentGroupKey);
+                            }}
+                            aria-label={isExpanded ? 'Collapse' : 'Expand'}
                           >
-                            <div className="mb-1">
-                              <Checkbox
-                                id={`select-child-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
-                                checked={isChildSelected}
-                                disabled={!member.canGenerate}
-                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                                  event.stopPropagation();
-                                  handleSelectChild(record, member, event);
-                                }}
-                              />
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
+                          <div className="min-w-0 space-y-1">
+                            <div className="font-medium">{record.parentSummary.clientName ?? 'Unknown client'}</div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                              <span>{record.parentSummary.childCount} item{record.parentSummary.childCount === 1 ? '' : 's'}</span>
+                              {contractNames.length > 0 ? (
+                                <span title={contractNames.join(', ')}>
+                                  {contractNames.length} contract{contractNames.length === 1 ? '' : 's'}
+                                </span>
+                              ) : null}
+                              {contractLineNames.length > 0 ? (
+                                <span title={contractLineNames.join(', ')}>
+                                  {contractLineNames.length} line{contractLineNames.length === 1 ? '' : 's'}
+                                </span>
+                              ) : null}
+                              <span>{cadenceSummary}</span>
+                              {record.childExecutionRows.some((member) => !member.billingCycleId) ? (
+                                <span>Service-period-backed</span>
+                              ) : null}
                             </div>
-                            <div className="text-sm font-medium">
-                              {assignmentContext ?? member.contractLineName ?? member.executionIdentityKey}
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              <span
+                                className={`inline-flex rounded-full border px-2 py-0.5 font-medium ${getParentGroupSummary({
+                                  isCombinable: record.parentSummary.isCombinable,
+                                  canGenerate: record.parentSummary.canGenerate,
+                                  incompatibilityReasons: record.parentSummary.incompatibilityReasons,
+                                  childCount: record.parentSummary.childCount,
+                                }).className}`}
+                              >
+                                {record.parentSummary.combinabilitySummary}
+                              </span>
                             </div>
-                            <div className="text-xs text-muted-foreground">Cadence: {cadenceSource}</div>
-                            <div className="text-xs text-muted-foreground">Billing timing: {billingTiming}</div>
-                            <div className="text-xs text-muted-foreground">Service period: {member.servicePeriodLabel}</div>
-                            <div className="text-xs text-muted-foreground">
-                              Amount: {typeof amountCents === 'number' ? formatCurrency(amountCents / 100) : 'Amount unavailable'}
-                            </div>
+                            {!record.parentSummary.isCombinable && record.parentSummary.incompatibilityReasons.length > 0 ? (
+                              <div
+                                className="text-xs text-muted-foreground"
+                                data-testid={`combinability-reasons-${record.parentSummary.parentGroupKey}`}
+                              >
+                                {record.parentSummary.incompatibilityReasons.join(', ')}
+                              </div>
+                            ) : null}
+                            {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
+                              <div className="text-xs text-muted-foreground">{record.parentSummary.blockedReason}</div>
+                            ) : null}
+                            {shouldShowAssignmentContexts ? assignmentContexts.map((contextValue) => (
+                              <div
+                                key={`${record.parentSummary.candidateKey}:assignment:${contextValue}`}
+                                className="text-xs text-muted-foreground"
+                                data-testid={`contract-assignment-context-${record.parentSummary.candidateKey}`}
+                              >
+                                {contextValue}
+                              </div>
+                            )) : null}
+                            {contractMetadataMissingCount > 0 ? (
+                              <div
+                                className="text-xs text-warning"
+                                data-testid={`contract-metadata-warning-${record.parentSummary.candidateKey}`}
+                              >
+                                Contract metadata missing ({contractMetadataMissingCount} obligation{contractMetadataMissingCount === 1 ? '' : 's'})
+                              </div>
+                            ) : null}
                           </div>
-                        );
-                      })}
-                    </div>
-                  );
-                },
-              },
-              {
-                title: 'Contract',
-                dataIndex: 'contractName',
-                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
-                  const contractNames = Array.from(
-                    new Set(
-                      record.childExecutionRows
-                        .map((member) => member.contractName?.trim())
-                        .filter((name): name is string => Boolean(name)),
-                    ),
-                  );
-                  const contractLineNames = Array.from(
-                    new Set(
-                      record.childExecutionRows
-                        .map((member) => member.contractLineName?.trim())
-                        .filter((name): name is string => Boolean(name)),
-                    ),
-                  );
-                  const contractMetadataMissingCount = record.childExecutionRows.filter((member) => {
-                    const hasContractSignal = Boolean(
-                      member.cadenceOwner === 'contract'
-                      || member.contractId
-                      || member.contractLineId
-                      || member.contractName?.trim()
-                      || member.contractLineName?.trim(),
-                    );
-                    if (!hasContractSignal) {
-                      return false;
-                    }
-
-                    const missingContractIdentity =
-                      !member.contractId
-                      && !member.contractName?.trim();
-                    const missingContractLineIdentity =
-                      !member.contractLineId
-                      && !member.contractLineName?.trim();
-                    const missingContractName = Boolean(member.contractId && !member.contractName?.trim());
-                    const missingContractLineName = Boolean(member.contractLineId && !member.contractLineName?.trim());
-
-                    return (
-                      missingContractIdentity
-                      || missingContractLineIdentity
-                      || missingContractName
-                      || missingContractLineName
-                    );
-                  }).length;
-                  const assignmentContexts = Array.from(
-                    new Set(
-                      record.childExecutionRows
-                        .map((member) => getRecurringAssignmentContext(member))
-                        .filter((value): value is string => Boolean(value)),
-                    ),
-                  );
-
-                  if (contractNames.length === 0 && contractLineNames.length === 0 && contractMetadataMissingCount === 0) {
-                    return <span className="text-muted-foreground">No contract context</span>;
-                  }
-
-                  return (
+                        </div>
+                      </div>
+	                  );
+	                },
+	              },
+	              {
+	                title: 'Service Period',
+	                dataIndex: 'servicePeriodLabel',
+	                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
+	                  <div className="space-y-1">
+	                    <div>{record.parentSummary.servicePeriodLabel}</div>
+	                    <div className="text-xs text-muted-foreground">
+	                      {record.parentSummary.childCount} obligation{record.parentSummary.childCount === 1 ? '' : 's'}
+	                    </div>
+	                    {record.parentSummary.aggregateAmountCents !== null ? (
+	                      <div
+	                        className="text-sm font-medium"
+	                        data-testid={`group-amount-${record.parentSummary.parentGroupKey}`}
+	                      >
+	                        {formatCurrency(record.parentSummary.aggregateAmountCents / 100)}
+	                      </div>
+	                    ) : null}
+	                  </div>
+	                ),
+	              },
+	              {
+	                title: 'Invoice Window',
+	                dataIndex: 'windowLabel',
+	                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
                     <div className="space-y-1">
-                      {contractNames.map((name) => (
-                        <div key={`${record.parentSummary.candidateKey}:contract:${name}`}>{name}</div>
-                      ))}
-                      {contractLineNames.map((lineName) => (
-                        <div key={`${record.parentSummary.candidateKey}:${lineName}`} className="text-xs text-muted-foreground">
-                          {lineName}
-                        </div>
-                      ))}
-                      {assignmentContexts.map((contextValue) => (
-                        <div
-                          key={`${record.parentSummary.candidateKey}:assignment:${contextValue}`}
-                          className="text-xs text-muted-foreground"
-                          data-testid={`contract-assignment-context-${record.parentSummary.candidateKey}`}
-                        >
-                          {contextValue}
-                        </div>
-                      ))}
-                      {contractMetadataMissingCount > 0 ? (
-                        <div
-                          className="text-xs text-warning"
-                          data-testid={`contract-metadata-warning-${record.parentSummary.candidateKey}`}
-                        >
-                          Contract metadata missing ({contractMetadataMissingCount} obligation{contractMetadataMissingCount === 1 ? '' : 's'})
-                        </div>
-                      ) : null}
+                      <div>{record.parentSummary.windowLabel}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {record.parentSummary.isCombinable ? '1 invoice if parent selected' : 'Select items individually'}
+                      </div>
                     </div>
-                  );
-                },
-              }
-            ]}
+                  ),
+	              },
+	              {
+	                title: 'Included',
+	                dataIndex: 'childExecutionRows',
+	                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
+	                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
+	                  if (!isExpanded) {
+	                    return (
+	                      <div className="text-xs text-muted-foreground">
+	                        {record.parentSummary.childCount} item{record.parentSummary.childCount === 1 ? '' : 's'} included
+	                      </div>
+	                    );
+	                  }
+
+	                  return (
+	                    <div className="min-w-[20rem] space-y-2">
+	                      {record.childExecutionRows.map((member) => {
+	                        const assignmentContext = getRecurringAssignmentContext(member);
+	                        const cadenceSource = formatCadenceSourceBadge(member.cadenceSource).label;
+	                        const duePosition = (member.selectorInput.executionWindow as { duePosition?: string }).duePosition;
+	                        const billingTiming = duePosition === 'advance' ? 'Advance' : 'Arrears';
+	                        const amountCents = (member as { amountCents?: number | null }).amountCents;
+	                        const isChildSelected = selectedTargets.has(childSelectionKeyForMember(member));
+                          const childTitle =
+                            member.contractName?.trim()
+                            || assignmentContext
+                            || member.contractLineName?.trim()
+                            || member.executionIdentityKey;
+
+	                        return (
+	                          <div
+	                            key={`${record.parentSummary.parentGroupKey}:${member.executionIdentityKey}`}
+	                            className="rounded-md border border-border/60 bg-background p-3"
+	                            data-testid={`child-row-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
+	                          >
+	                            <div className="flex items-start gap-3">
+	                              <Checkbox
+	                                id={`select-child-${record.parentSummary.parentGroupKey}-${member.executionIdentityKey}`}
+	                                checked={isChildSelected}
+	                                disabled={!member.canGenerate}
+                                  className="mt-0.5"
+	                                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+	                                  event.stopPropagation();
+	                                  handleSelectChild(record, member, event);
+	                                }}
+	                              />
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="font-medium">{childTitle}</div>
+                                      {member.contractLineName?.trim() && member.contractLineName?.trim() !== childTitle ? (
+                                        <div className="text-sm text-muted-foreground">{member.contractLineName.trim()}</div>
+                                      ) : null}
+                                    </div>
+                                    <div className="shrink-0 text-sm font-medium">
+                                      {typeof amountCents === 'number' ? formatCurrency(amountCents / 100) : 'Pending amount'}
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">Cadence: {cadenceSource}</div>
+                                  <div className="text-xs text-muted-foreground">Billing timing: {billingTiming}</div>
+                                  <div className="text-xs text-muted-foreground">Service period: {member.servicePeriodLabel}</div>
+                                  {!member.canGenerate && member.blockedReason ? (
+                                    <div className="text-xs text-muted-foreground">{member.blockedReason}</div>
+                                  ) : null}
+                                </div>
+                              </div>
+	                          </div>
+	                        );
+	                      })}
+	                    </div>
+	                  );
+	                },
+	              },
+	            ]}
             pagination={true}
             currentPage={currentReadyPage}
             onPageChange={handleReadyPageChange}
