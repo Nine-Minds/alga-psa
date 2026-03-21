@@ -56,7 +56,16 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [taxSource, setTaxSource] = useState<TaxSource>('internal');
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const selectedTemplate = templates.find(t => t.template_id === selectedTemplateId) || null;
+  // Match Drafts/Finalized row selection: default to first template when URL has invoiceId but no templateId (e.g. deep link from recurring history).
+  const effectiveTemplateId =
+    selectedTemplateId && templates.some((t) => t.template_id === selectedTemplateId)
+      ? selectedTemplateId
+      : templates[0]?.template_id ?? null;
+
+  const selectedTemplate = effectiveTemplateId
+    ? templates.find((t) => t.template_id === effectiveTemplateId) ?? null
+    : null;
+
   const resolvedPreviewPrintSettings = useMemo(
     () => resolveInvoiceTemplatePrintSettingsFromAst(selectedTemplate?.templateAst ?? null),
     [selectedTemplate]
@@ -178,7 +187,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               )
             }))}
             onValueChange={onTemplateChange}
-            value={selectedTemplateId || ''}
+            value={effectiveTemplateId || ''}
             placeholder="Select invoice template..."
           />
         </div>
