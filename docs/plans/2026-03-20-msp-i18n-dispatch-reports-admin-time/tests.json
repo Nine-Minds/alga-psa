@@ -45,7 +45,7 @@
   {
     "id": "T012",
     "description": "Reports: ROUTE_NAMESPACES maps /msp/billing to include msp/reports",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {

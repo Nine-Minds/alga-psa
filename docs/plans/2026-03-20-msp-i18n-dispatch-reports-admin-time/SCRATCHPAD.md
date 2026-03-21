@@ -145,6 +145,7 @@ SCRIPT
 - (2026-03-20) `T010` passed: `node scripts/validate-translations.cjs` completed with `Errors: 0` and `Warnings: 0` after the reports locale and pseudo-locale files were added.
 - (2026-03-20) `T011` passed: `npx tsc -p packages/billing/tsconfig.json --noEmit --pretty false` and `npx tsc -p packages/ui/tsconfig.json --noEmit --pretty false` both completed successfully after wiring the four reports components.
 - (2026-03-20) `T012` passed: a direct route-config assertion confirmed `ROUTE_NAMESPACES['/msp/billing']` exactly equals `['common', 'msp/core', 'features/billing', 'msp/reports']`.
+- (2026-03-20) `T013` passed: the Italian accent audit grep returned no matches for `server/public/locales/it/msp/reports.json` after rephrasing the few lines that had caused conjunction-based false positives.
 
 ### Key file paths — Dispatch
 | File | Strings |
