@@ -15,6 +15,7 @@ import * as billingCycleActions from '@alga-psa/billing/actions/billingCycleActi
 import * as billingAndTaxActions from '@alga-psa/billing/actions/billingAndTax';
 import * as invoiceGenerationActions from '@alga-psa/billing/actions/invoiceGeneration';
 import * as recurringBillingRunActions from '@alga-psa/billing/actions/recurringBillingRunActions';
+import type { IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ data, columns, id }: any) => {
@@ -28,7 +29,7 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
       <table data-testid={id || 'data-table'}>
         <tbody>
           {data.map((row: any, rowIndex: number) => (
-            <tr key={row.billing_cycle_id ?? rowIndex}>
+            <tr key={row.candidateKey ?? row.billing_cycle_id ?? rowIndex}>
               {columns.map((col: any, colIndex: number) => (
                 <td key={colIndex}>
                   {col.render
@@ -146,6 +147,44 @@ function createPeriods() {
   ] as any;
 }
 
+function buildInvoiceCandidate(
+  members: any[],
+  options: { candidateKey?: string } = {},
+): IRecurringDueWorkInvoiceCandidate {
+  const first = members[0];
+  const servicePeriodStart = members
+    .map((member) => member.servicePeriodStart)
+    .sort()[0];
+  const servicePeriodEnd = members
+    .map((member) => member.servicePeriodEnd)
+    .sort()
+    .slice(-1)[0];
+  const windowStart = first.invoiceWindowStart;
+  const windowEnd = first.invoiceWindowEnd;
+  const canGenerate = members.every((member) => Boolean(member.canGenerate));
+
+  return {
+    candidateKey: options.candidateKey ?? `candidate:${first.executionIdentityKey}`,
+    clientId: first.clientId,
+    clientName: first.clientName ?? null,
+    windowStart,
+    windowEnd,
+    windowLabel: `${windowStart} to ${windowEnd}`,
+    servicePeriodStart,
+    servicePeriodEnd,
+    servicePeriodLabel: `${servicePeriodStart} to ${servicePeriodEnd}`,
+    cadenceOwners: Array.from(new Set(members.map((member) => member.cadenceOwner))),
+    cadenceSources: Array.from(new Set(members.map((member) => member.cadenceSource))),
+    contractId: first.contractId ?? null,
+    contractName: first.contractName ?? null,
+    splitReasons: [],
+    memberCount: members.length,
+    canGenerate,
+    blockedReason: canGenerate ? null : 'Blocked',
+    members,
+  };
+}
+
 function createContractRow() {
   return buildServicePeriodRecurringDueWorkRow({
     clientId: 'client-9',
@@ -210,8 +249,9 @@ describe('Contract PO UI flows', () => {
       totalPages: 0
     });
     // Mock paginated available billing periods with test data
+    const periods = createPeriods();
     getAvailableRecurringDueWorkMock.mockResolvedValue({
-      rows: createPeriods(),
+      invoiceCandidates: periods.map((period) => buildInvoiceCandidate([period])),
       materializationGaps: [],
       total: 2,
       page: 1,
@@ -410,7 +450,7 @@ describe('Contract PO UI flows', () => {
   it('T036: batch PO-overage analysis resolves a contract-cadence row with no billing_cycle_id', async () => {
     const contractRow = createContractRow();
     getAvailableRecurringDueWorkMock.mockResolvedValue({
-      rows: [contractRow],
+      invoiceCandidates: [buildInvoiceCandidate([contractRow])],
       materializationGaps: [],
       total: 1,
       page: 1,
@@ -445,7 +485,7 @@ describe('Contract PO UI flows', () => {
   it('T093: compatibility client-cadence PO-overage checks still run through selector-input identity without changing legacy batch behavior', async () => {
     const [clientRow] = createPeriods();
     getAvailableRecurringDueWorkMock.mockResolvedValue({
-      rows: [clientRow],
+      invoiceCandidates: [buildInvoiceCandidate([clientRow])],
       materializationGaps: [],
       total: 1,
       page: 1,
@@ -497,7 +537,7 @@ describe('Contract PO UI flows', () => {
   it('T037/T038: selector-input preview generate supports contract-cadence rows, survives reopen, and submits recurring targets without a billing-cycle bridge', async () => {
     const contractRow = createContractRow();
     getAvailableRecurringDueWorkMock.mockResolvedValue({
-      rows: [contractRow],
+      invoiceCandidates: [buildInvoiceCandidate([contractRow])],
       materializationGaps: [],
       total: 1,
       page: 1,

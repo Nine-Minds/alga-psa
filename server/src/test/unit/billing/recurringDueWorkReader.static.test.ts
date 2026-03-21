@@ -16,7 +16,9 @@ describe('recurring due-work reader source', () => {
   it('T001: recurring due-work reader does not merge synthesized client_billing_cycles rows into ready recurring work', () => {
     expect(billingAndTaxSource).not.toContain('mergeRecurringDueWorkRows');
     expect(billingAndTaxSource).not.toContain('buildClientScheduleDueWorkRow');
-    expect(billingAndTaxSource).toContain('rows: persistedRows.slice(offset, offset + pageSize)');
+    expect(billingAndTaxSource).toContain(
+      'invoiceCandidates: blockedInvoiceCandidates.slice(offset, offset + pageSize)',
+    );
   });
 
   it('T005: recurring due-work code no longer accepts missing-table or missing-column schema fallback paths', () => {
