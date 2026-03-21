@@ -617,32 +617,6 @@ async function calculatePreviewTax(
   return totalTax;
 }
 
-export async function calculateBillingForSelectionInput(input: {
-  billingEngine: BillingEngine;
-  selectorInput: IRecurringDueSelectionInput;
-}) {
-  const recurringTimingSelections =
-    await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
-      input.selectorInput.clientId,
-      input.selectorInput.windowStart,
-      input.selectorInput.windowEnd,
-    );
-  const scopedRecurringTimingSelections = scopeRecurringTimingSelectionsForSelectorInput(
-    recurringTimingSelections,
-    input.selectorInput,
-  );
-
-  return input.billingEngine.calculateBillingForExecutionWindow(
-    input.selectorInput.clientId,
-    input.selectorInput.windowStart,
-    input.selectorInput.windowEnd,
-    {
-      recurringTimingSelections: scopedRecurringTimingSelections,
-      recurringTimingSelectionSource: 'persisted',
-    },
-  );
-}
-
 function parseClientContractLineIdFromScheduleKey(scheduleKey: string | null | undefined): string | null {
   if (!scheduleKey) {
     return null;
@@ -652,24 +626,10 @@ function parseClientContractLineIdFromScheduleKey(scheduleKey: string | null | u
   return match?.[1] ?? null;
 }
 
-function scopeRecurringTimingSelectionsForSelectorInput(
-  recurringTimingSelections: Record<string, unknown>,
+function getSelectedRecurringObligationIdFromSelectorInput(
   selectorInput: IRecurringDueSelectionInput,
-): Record<string, unknown> {
-  const matchesObligationId = (obligationId: string, selectedId: string): boolean => {
-    return (
-      obligationId === selectedId
-      || obligationId.endsWith(`:${selectedId}`)
-      || obligationId.endsWith(`-${selectedId}`)
-    );
-  };
-
+): string {
   const executionWindow = selectorInput.executionWindow;
-  const selectionEntries = Object.entries(recurringTimingSelections ?? {});
-  if (selectionEntries.length === 0) {
-    return recurringTimingSelections ?? {};
-  }
-
   if (executionWindow.kind === 'client_cadence_window') {
     const selectedClientContractLineId = parseClientContractLineIdFromScheduleKey(
       executionWindow.scheduleKey,
@@ -679,18 +639,7 @@ function scopeRecurringTimingSelectionsForSelectorInput(
         'Recurring selector input is missing client-cadence assignment identity (schedule key).',
       );
     }
-
-    const scoped = Object.fromEntries(
-      selectionEntries.filter(([obligationId]) =>
-        matchesObligationId(obligationId, selectedClientContractLineId),
-      ),
-    );
-    if (Object.keys(scoped).length === 0) {
-      throw new Error(
-        'Recurring service periods were not materialized for this recurring execution window.',
-      );
-    }
-    return scoped;
+    return selectedClientContractLineId;
   }
 
   if (executionWindow.kind === 'contract_cadence_window') {
@@ -700,21 +649,103 @@ function scopeRecurringTimingSelectionsForSelectorInput(
         'Recurring selector input is missing contract-cadence assignment identity (contract line).',
       );
     }
-
-    const scoped = Object.fromEntries(
-      selectionEntries.filter(([obligationId]) =>
-        matchesObligationId(obligationId, selectedContractLineId),
-      ),
-    );
-    if (Object.keys(scoped).length === 0) {
-      throw new Error(
-        'Recurring service periods were not materialized for this recurring execution window.',
-      );
-    }
-    return scoped;
+    return selectedContractLineId;
   }
 
-  return recurringTimingSelections;
+  throw new Error('Recurring selector input execution window kind is not supported.');
+}
+
+function scopeRecurringTimingSelectionsForSelectorInputs(
+  recurringTimingSelections: Record<string, unknown>,
+  selectorInputs: IRecurringDueSelectionInput[],
+): Record<string, unknown> {
+  const matchesObligationId = (obligationId: string, selectedId: string): boolean => {
+    return (
+      obligationId === selectedId
+      || obligationId.endsWith(`:${selectedId}`)
+      || obligationId.endsWith(`-${selectedId}`)
+    );
+  };
+
+  const selectedObligationIds = Array.from(
+    new Set(selectorInputs.map(getSelectedRecurringObligationIdFromSelectorInput)),
+  );
+  const selectionEntries = Object.entries(recurringTimingSelections ?? {});
+  if (selectionEntries.length === 0) {
+    return recurringTimingSelections ?? {};
+  }
+
+  const scoped = Object.fromEntries(
+    selectionEntries.filter(([obligationId]) =>
+      selectedObligationIds.some((selectedId) =>
+        matchesObligationId(obligationId, selectedId),
+      ),
+    ),
+  );
+  if (Object.keys(scoped).length === 0) {
+    throw new Error(
+      'Recurring service periods were not materialized for this recurring execution window.',
+    );
+  }
+  return scoped;
+}
+
+function assertSameRecurringSelectionWindow(
+  selectorInputs: IRecurringDueSelectionInput[],
+): IRecurringDueSelectionInput {
+  if (selectorInputs.length === 0) {
+    throw new Error('No recurring execution windows selected');
+  }
+
+  const first = selectorInputs[0];
+  const hasMismatchedWindow = selectorInputs.some((selectorInput) =>
+    selectorInput.clientId !== first.clientId
+    || selectorInput.windowStart !== first.windowStart
+    || selectorInput.windowEnd !== first.windowEnd,
+  );
+  if (hasMismatchedWindow) {
+    throw new Error(
+      'Grouped recurring selection inputs must share the same client and invoice window.',
+    );
+  }
+  return first;
+}
+
+export async function calculateBillingForSelectionInputs(input: {
+  billingEngine: BillingEngine;
+  selectorInputs: IRecurringDueSelectionInput[];
+}) {
+  const canonicalSelection = assertSameRecurringSelectionWindow(input.selectorInputs);
+  const recurringTimingSelections =
+    await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
+      canonicalSelection.clientId,
+      canonicalSelection.windowStart,
+      canonicalSelection.windowEnd,
+    );
+  const scopedRecurringTimingSelections = scopeRecurringTimingSelectionsForSelectorInputs(
+    recurringTimingSelections,
+    input.selectorInputs,
+  );
+
+  return input.billingEngine.calculateBillingForExecutionWindow(
+    canonicalSelection.clientId,
+    canonicalSelection.windowStart,
+    canonicalSelection.windowEnd,
+    {
+      recurringTimingSelections: scopedRecurringTimingSelections,
+      recurringTimingSelectionSource: 'persisted',
+    },
+  );
+}
+
+export async function calculateBillingForSelectionInput(input: {
+  billingEngine: BillingEngine;
+  selectorInput: IRecurringDueSelectionInput;
+}) {
+  return calculateBillingForSelectionInputs({
+    billingEngine: input.billingEngine,
+    selectorInputs: [input.selectorInput],
+  });
 }
 
 export type PurchaseOrderOverageDecision = 'allow' | 'skip';
@@ -990,15 +1021,19 @@ async function adaptToWasmViewModel(
   };
 }
 
-async function buildPreviewInvoiceForSelectionInput(params: {
+async function buildPreviewInvoiceForSelectionInputs(params: {
   knex: Knex;
   tenant: string;
-  selectorInput: IRecurringDueSelectionInput;
+  selectorInputs: IRecurringDueSelectionInput[];
 }): Promise<WasmInvoiceViewModel> {
-  const { knex, tenant, selectorInput } = params;
-  const client_id = selectorInput.clientId;
-  const cycleEnd = selectorInput.windowEnd;
-  const previewInvoiceKey = selectorInput.executionWindow.identityKey;
+  const { knex, tenant, selectorInputs } = params;
+  const canonicalSelection = assertSameRecurringSelectionWindow(selectorInputs);
+  const client_id = canonicalSelection.clientId;
+  const cycleEnd = canonicalSelection.windowEnd;
+  const previewInvoiceKey = selectorInputs
+    .map((selectorInput) => selectorInput.executionWindow.identityKey)
+    .sort()
+    .join('|');
 
   const clientForValidation = await knex('clients')
     .where({ client_id, tenant })
@@ -1013,22 +1048,22 @@ async function buildPreviewInvoiceForSelectionInput(params: {
       clientForValidation.client_name,
     );
     if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(new Error(emailValidation.error!), selectorInput);
+      throw withRecurringWindowErrorContext(new Error(emailValidation.error!), canonicalSelection);
     }
   }
 
   const billingEngine = new BillingEngine();
-  const billingResult = await calculateBillingForSelectionInput({
+  const billingResult = await calculateBillingForSelectionInputs({
     billingEngine,
-    selectorInput,
+    selectorInputs,
   });
 
   if (billingResult.error) {
-    throw withRecurringWindowErrorContext(new Error(billingResult.error), selectorInput);
+    throw withRecurringWindowErrorContext(new Error(billingResult.error), canonicalSelection);
   }
 
   if (billingResult.charges.length === 0) {
-    throw withRecurringWindowErrorContext(new Error('Nothing to bill'), selectorInput);
+    throw withRecurringWindowErrorContext(new Error('Nothing to bill'), canonicalSelection);
   }
 
   const client = await getClientDetails(knex, tenant, client_id);
@@ -1156,6 +1191,99 @@ async function buildPreviewInvoiceForSelectionInput(params: {
     tenant,
   );
 }
+
+async function buildPreviewInvoiceForSelectionInput(params: {
+  knex: Knex;
+  tenant: string;
+  selectorInput: IRecurringDueSelectionInput;
+}): Promise<WasmInvoiceViewModel> {
+  return buildPreviewInvoiceForSelectionInputs({
+    knex: params.knex,
+    tenant: params.tenant,
+    selectorInputs: [params.selectorInput],
+  });
+}
+
+export type RecurringGroupedPreviewSelectionInput = {
+  previewGroupKey: string;
+  selectorInputs: IRecurringDueSelectionInput[];
+};
+
+export type RecurringGroupedPreviewResponse = {
+  success: true;
+  invoiceCount: number;
+  previews: Array<{
+    previewGroupKey: string;
+    data: WasmInvoiceViewModel;
+    selectorInputs: IRecurringDueSelectionInput[];
+  }>;
+} | {
+  success: false;
+  error: string;
+  executionIdentityKey?: string;
+};
+
+export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
+  user,
+  { tenant },
+  groupedSelections: RecurringGroupedPreviewSelectionInput[],
+): Promise<RecurringGroupedPreviewResponse> => {
+  const { knex } = await createTenantKnex();
+  let normalizedGroupedSelections = groupedSelections;
+
+  try {
+    if (!hasPermission(user, 'invoice', 'create') && !hasPermission(user, 'invoice', 'generate')) {
+      throw new Error('Permission denied: Cannot preview invoices');
+    }
+    if (!Array.isArray(groupedSelections) || groupedSelections.length === 0) {
+      throw new Error('No recurring selections were provided for preview.');
+    }
+
+    normalizedGroupedSelections = await Promise.all(
+      groupedSelections.map(async (group) => ({
+        previewGroupKey: group.previewGroupKey,
+        selectorInputs: await Promise.all(
+          (group.selectorInputs ?? []).map((selectorInput) =>
+            normalizeRecurringSelectorInput({
+              knex,
+              tenant,
+              selectorInput,
+            }),
+          ),
+        ),
+      })),
+    );
+
+    const previews = await Promise.all(
+      normalizedGroupedSelections.map(async (group) => ({
+        previewGroupKey: group.previewGroupKey,
+        selectorInputs: group.selectorInputs,
+        data: await buildPreviewInvoiceForSelectionInputs({
+          knex,
+          tenant,
+          selectorInputs: group.selectorInputs,
+        }),
+      })),
+    );
+
+    return {
+      success: true,
+      invoiceCount: previews.length,
+      previews,
+    };
+  } catch (error) {
+    const fallbackSelectorInput = normalizedGroupedSelections[0]?.selectorInputs?.[0];
+    return fallbackSelectorInput
+      ? buildPreviewInvoiceFailure(
+          fallbackSelectorInput,
+          error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
+        )
+      : {
+          success: false,
+          error: error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
+        };
+  }
+});
 
 export const previewInvoiceForSelectionInput = withAuth(async (
   user,

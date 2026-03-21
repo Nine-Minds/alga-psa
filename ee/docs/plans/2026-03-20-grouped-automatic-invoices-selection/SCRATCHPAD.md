@@ -21,6 +21,7 @@ Working notes for the grouped automatic-invoices selection redesign. This plan i
 - (2026-03-20) Preview is currently gated to a single selected candidate with exactly one child member. Grouped preview behavior does not exist today.
 - (2026-03-20) The shared grouping logic already computes split reasons `single_contract`, `purchase_order_scope`, and `financial_constraint` per invoice window. Files: `shared/billingClients/recurringTiming.ts`, `packages/billing/src/actions/billingAndTax.ts`.
 - (2026-03-20) The current preview/generate APIs are strictly single-selector. `IRecurringDueSelectionInput` represents one selector only; generation scopes to one canonical line/window before billing. Files: `packages/types/src/interfaces/recurringTiming.interfaces.ts`, `packages/billing/src/actions/invoiceGeneration.ts`.
+- (2026-03-20) Grouped preview now supports exact parent/child selection bundles through `previewGroupedInvoicesForSelectionInputs`, while direct "Generate from preview" remains intentionally single-selector until grouped generation semantics (`F015/F016`) land. Files: `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`, `packages/billing/src/actions/invoiceGeneration.ts`.
 - (2026-03-20) Current recurring generation explicitly throws if charges span more than one `client_contract_id`. A true combined multi-assignment invoice is not representable without backend changes. File: `packages/billing/src/actions/invoiceGeneration.ts`.
 - (2026-03-20) PO enforcement and consumption are currently header-assignment scoped through `invoices.client_contract_id`, so grouped combination must not bypass PO compatibility constraints. Files: `packages/billing/src/services/purchaseOrderService.ts`, `packages/billing/src/actions/invoiceQueries.ts`.
 - (2026-03-20) Charge-level assignment attribution exists on `invoice_charges`, but invoice read models do not currently expose enough of that provenance for a combined invoice UX. Files: `packages/billing/src/services/invoiceService.ts`, `packages/billing/src/models/invoice.ts`.
@@ -72,6 +73,11 @@ Working notes for the grouped automatic-invoices selection redesign. This plan i
 - (2026-03-20) Completed `F010` by implementing smart `Select All`: combinable groups select parent targets, non-combinable groups select child targets.
 - (2026-03-20) Completed `F011` by keeping blocked child rows visible while preventing blocked child selection in both direct child selection and `Select All`.
 - (2026-03-20) Completed `T009`-`T014` with UI behavior tests covering parent selection semantics, child selection availability, parent tri-state, smart `Select All`, and blocked child visibility/selection guardrails.
+- (2026-03-20) Completed `F013` by adding grouped preview request semantics end-to-end: `AutomaticInvoices` now emits grouped preview payloads from parent/child selection state and `invoiceGeneration` now exposes `previewGroupedInvoicesForSelectionInputs` with exact selector-scope support.
+- (2026-03-20) Completed `F014` by updating preview rendering to show explicit invoice-count messaging (`This selection will generate N invoice(s).`) and render grouped preview cards for one-or-many preview outputs.
+- (2026-03-20) Completed `T015`-`T017` with jsdom behavior tests that validate grouped parent preview count, split child preview count, and exact-scope preview payloads (no unselected siblings).
+- (2026-03-20) Validation run:
+  - `cd packages/billing && npx vitest run tests/automaticInvoices.groupedParentRows.test.tsx`
 
 ## Open Questions
 

@@ -18,7 +18,7 @@ import type {
 } from '@alga-psa/types';
 import {
   getPurchaseOrderOverageForSelectionInput,
-  previewInvoiceForSelectionInput,
+  previewGroupedInvoicesForSelectionInputs,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
@@ -75,6 +75,11 @@ interface RecurringInvoiceParentGroup {
   childExecutionRows: ReadyPeriod['members'];
   candidate: ReadyPeriod;
 }
+
+type RecurringPreviewGroup = {
+  previewGroupKey: string;
+  selectorInputs: IRecurringDueSelectionInput[];
+};
 
 const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): RecurringInvoiceParentGroup[] =>
   candidates.map((candidate) => {
@@ -257,11 +262,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   } | null>(null);
   // State to hold preview data and the canonical selector metadata used to generate it.
   const [previewState, setPreviewState] = useState<{
-    data: WasmInvoiceViewModel | null; // Use the directly imported ViewModel type
+    previews: Array<{ previewGroupKey: string; data: WasmInvoiceViewModel; selectorInputs: IRecurringDueSelectionInput[] }>;
+    invoiceCount: number;
     billingCycleId: string | null;
     executionIdentityKey: string | null;
     selectorInput: IRecurringDueSelectionInput | null;
-  }>({ data: null, billingCycleId: null, executionIdentityKey: null, selectorInput: null });
+  }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null });
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isGeneratingFromPreview, setIsGeneratingFromPreview] = useState(false); // Loading state for generate from preview
   const [poOverageDialogState, setPoOverageDialogState] = useState<{
@@ -400,6 +406,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const selectedParentGroups = parentGroups.filter((group) =>
     selectedTargets.has(group.parentSummary.parentSelectionKey),
   );
+  const selectedParentSelectionKeys = new Set(
+    selectedParentGroups.map((group) => group.parentSummary.parentSelectionKey),
+  );
   const selectedChildRows = readyRows.filter((member) => selectedTargets.has(childSelectionKeyForMember(member)));
   const selectedExecutionRows = [
     ...selectedParentGroups.flatMap((group) => group.childExecutionRows),
@@ -407,8 +416,26 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   ].filter((member, index, allMembers) =>
     allMembers.findIndex((item) => item.executionIdentityKey === member.executionIdentityKey) === index,
   );
-  const selectedPreviewPeriod = selectedExecutionRows.length === 1 ? selectedExecutionRows[0] ?? null : null;
-  const groupedPreviewSelection = selectedExecutionRows.length > 1;
+  const selectedPreviewGroups: RecurringPreviewGroup[] = [
+    ...selectedParentGroups.map((group) => ({
+      previewGroupKey: group.parentSummary.parentSelectionKey,
+      selectorInputs: group.childExecutionRows.map((member) => member.selectorInput),
+    })),
+    ...selectedChildRows
+      .filter((member) => {
+        const parentGroup = parentGroups.find((group) =>
+          group.childExecutionRows.some((groupMember) => groupMember.executionIdentityKey === member.executionIdentityKey),
+        );
+        return !parentGroup || !selectedParentSelectionKeys.has(parentGroup.parentSummary.parentSelectionKey);
+      })
+      .map((member) => ({
+        previewGroupKey: childSelectionKeyForMember(member),
+        selectorInputs: [member.selectorInput],
+      })),
+  ].filter((group) => group.selectorInputs.length > 0);
+  const previewSupportsDirectGeneration =
+    selectedPreviewGroups.length === 1
+    && selectedPreviewGroups[0].selectorInputs.length === 1;
   const isGroupFullySelected = (group: RecurringInvoiceParentGroup): boolean => {
     if (selectedTargets.has(group.parentSummary.parentSelectionKey)) {
       return true;
@@ -490,12 +517,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // Debug effect to log preview data
   useEffect(() => {
-    if (previewState.data) {
-      console.log("Preview data items:", previewState.data.items); // Use items
-      // Need to check item structure for contract headers if needed, assuming 'description' for now
-      console.log("Contract headers:", previewState.data.items.filter(item => item.description?.startsWith('Contract:')));
+    if (previewState.previews.length > 0) {
+      console.log("Preview invoice count:", previewState.invoiceCount);
+      console.log(
+        "Contract headers:",
+        previewState.previews.flatMap((preview) =>
+          preview.data.items.filter(item => item.description?.startsWith('Contract:')),
+        ),
+      );
     }
-  }, [previewState.data]);
+  }, [previewState.invoiceCount, previewState.previews]);
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
@@ -605,26 +636,30 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     return clientName || failure.billingCycleId || failure.executionIdentityKey || 'Recurring invoice window';
   };
 
-  const handlePreviewInvoice = async (period: {
-    selectorInput: IRecurringDueSelectionInput;
-    billingCycleId?: string | null;
-    executionIdentityKey: string;
-  }) => {
+  const handlePreviewSelection = async (groups: RecurringPreviewGroup[]) => {
+    if (groups.length === 0) {
+      return;
+    }
+
+    const primarySelection = groups[0]?.selectorInputs[0] ?? null;
     setIsPreviewLoading(true);
     setErrors({}); // Clear previous errors
-    const response = await previewInvoiceForSelectionInput(period.selectorInput);
+    const response = await previewGroupedInvoicesForSelectionInputs(groups);
     if (response.success) {
-      // No cast needed now, types should match directly
       setPreviewState({
-        data: response.data,
-        billingCycleId: period.billingCycleId ?? null,
-        executionIdentityKey: period.executionIdentityKey,
-        selectorInput: period.selectorInput,
+        previews: response.previews,
+        invoiceCount: response.invoiceCount,
+        billingCycleId: null,
+        executionIdentityKey: primarySelection?.executionWindow.identityKey ?? null,
+        selectorInput: response.previews.length === 1 && response.previews[0].selectorInputs.length === 1
+          ? response.previews[0].selectorInputs[0]
+          : null,
       });
       setShowPreviewDialog(true);
     } else {
       setPreviewState({
-        data: null,
+        previews: [],
+        invoiceCount: 0,
         billingCycleId: null,
         executionIdentityKey: null,
         selectorInput: null,
@@ -832,7 +867,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       }
       setShowPreviewDialog(false); // Close dialog on success
       setPreviewState({
-        data: null,
+        previews: [],
+        invoiceCount: 0,
         billingCycleId: null,
         executionIdentityKey: null,
         selectorInput: null,
@@ -879,7 +915,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       }
       setShowPreviewDialog(false);
       setPreviewState({
-        data: null,
+        previews: [],
+        invoiceCount: 0,
         billingCycleId: null,
         executionIdentityKey: null,
         selectorInput: null,
@@ -960,22 +997,21 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 id='preview-selected-button'
                 variant="outline"
                 onClick={() => {
-                  if (selectedPreviewPeriod) {
-                    handlePreviewInvoice(selectedPreviewPeriod);
+                  if (selectedPreviewGroups.length > 0) {
+                    handlePreviewSelection(selectedPreviewGroups);
                   }
                 }}
                 disabled={
-                  selectedExecutionRows.length !== 1
-                  || !selectedPreviewPeriod
+                  selectedPreviewGroups.length === 0
                   || isPreviewLoading
                 }
               >
                 <Eye className="h-4 w-4 mr-2" />
                 {isPreviewLoading ? 'Loading...' : 'Preview Selected'}
               </Button>
-              {groupedPreviewSelection ? (
+              {!previewSupportsDirectGeneration && selectedPreviewGroups.length > 0 ? (
                 <span className="text-xs text-muted-foreground" data-testid="grouped-preview-unavailable-copy">
-                  Preview is only available for single-obligation candidates.
+                  Preview supports grouped selections; direct "Generate from preview" remains single-selection only.
                 </span>
               ) : null}
               <Button
@@ -1566,7 +1602,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         onClose={() => {
           setShowPreviewDialog(false);
           setPreviewState({
-            data: null,
+            previews: [],
+            invoiceCount: 0,
             billingCycleId: null,
             executionIdentityKey: null,
             selectorInput: null,
@@ -1584,102 +1621,97 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               {/* Display error message if present */}
               <p className="text-red-600">{errors.preview}</p>
             </div>
-          ) : previewState.data && ( // Check previewState.data instead of previewData
+          ) : previewState.previews.length > 0 && (
             <div className="space-y-4">
-              <div className="border-b pb-4">
-                <h3 className="font-semibold">Client Details</h3>
-                {/* Use customer property */}
-                <p>{previewState.data.customer?.name}</p>
-                <p>{previewState.data.customer?.address}</p>
+              <div className="rounded border border-border/70 bg-muted/10 px-3 py-2 text-sm" data-testid="preview-invoice-count-summary">
+                This selection will generate {previewState.invoiceCount} invoice{previewState.invoiceCount === 1 ? '' : 's'}.
               </div>
+              {previewState.previews.map((previewEntry, previewIndex) => (
+                <div key={previewEntry.previewGroupKey} className="space-y-4 rounded border border-border/70 p-3" data-testid={`preview-group-${previewEntry.previewGroupKey}`}>
+                  <h3 className="font-semibold">Invoice {previewIndex + 1}</h3>
+                  <div className="border-b pb-4">
+                    <h4 className="font-semibold">Client Details</h4>
+                    <p>{previewEntry.data.customer?.name}</p>
+                    <p>{previewEntry.data.customer?.address}</p>
+                  </div>
+                  <div className="border-b pb-4">
+                    <h4 className="font-semibold">Invoice Details</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Invoice Number</p>
+                        <p>{previewEntry.data.invoiceNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Date</p>
+                        <p>{toPlainDate(previewEntry.data.issueDate).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Due Date</p>
+                        <p>{toPlainDate(previewEntry.data.dueDate).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">Line Items</h4>
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2">Description</th>
+                          <th className="text-right py-2">Quantity</th>
+                          <th className="text-right py-2">Rate</th>
+                          <th className="text-right py-2">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewEntry.data.items.map((item) => {
+                          const isContractHeader = item.description?.startsWith('Contract:');
+                          const isDetailLine = !isContractHeader && item.quantity === undefined && item.unitPrice === undefined;
 
-              <div className="border-b pb-4">
-                <h3 className="font-semibold">Invoice Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Invoice Number</p>
-                    {/* Use invoiceNumber */}
-                    <p>{previewState.data.invoiceNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date</p>
-                    {/* Use issueDate and convert */}
-                    <p>{toPlainDate(previewState.data.issueDate).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Due Date</p>
-                    {/* Use dueDate and convert */}
-                    <p>{toPlainDate(previewState.data.dueDate).toLocaleString()}</p>
+                          if (isContractHeader) {
+                            return (
+                              <tr key={item.id} className="border-b bg-muted/50 font-semibold">
+                                <td className="py-2 px-2" colSpan={4}>{item.description}</td>
+                              </tr>
+                            );
+                          }
+                          if (isDetailLine) {
+                            return (
+                              <tr key={item.id} className="border-b">
+                                <td className="py-2 px-2">{item.description}</td>
+                                <td className="text-right py-2 px-2"></td>
+                                <td className="text-right py-2 px-2"></td>
+                                <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
+                              </tr>
+                            );
+                          }
+                          return (
+                            <tr key={item.id} className="border-b">
+                              <td className="py-2 px-2">{item.description}</td>
+                              <td className="text-right py-2 px-2">{item.quantity}</td>
+                              <td className="text-right py-2 px-2">{formatCurrency(item.unitPrice / 100)}</td>
+                              <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan={3} className="text-right py-2 font-semibold">Subtotal</td>
+                          <td className="text-right py-2">{formatCurrency(previewEntry.data.subtotal / 100)}</td>
+                        </tr>
+                        <tr>
+                          <td colSpan={3} className="text-right py-2 font-semibold">Tax</td>
+                          <td className="text-right py-2">{formatCurrency(previewEntry.data.tax / 100)}</td>
+                        </tr>
+                        <tr>
+                          <td colSpan={3} className="text-right py-2 font-semibold">Total</td>
+                          <td className="text-right py-2">{formatCurrency(previewEntry.data.total / 100)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Line Items</h3>
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2">Description</th>
-                      <th className="text-right py-2">Quantity</th>
-                      <th className="text-right py-2">Rate</th>
-                      <th className="text-right py-2">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Map over previewState.data.items */}
-                    {previewState.data.items.map((item) => {
-                      // Check for contract header based on description (adjust if needed)
-                      const isContractHeader = item.description?.startsWith('Contract:');
-                      // Check for detail line (assuming no quantity/unitPrice for now)
-                      const isDetailLine = !isContractHeader && item.quantity === undefined && item.unitPrice === undefined;
-
-                      if (isContractHeader) {
-                        // Render contract header style
-                        return (
-                          <tr key={item.id} className="border-b bg-muted/50 font-semibold">
-                            <td className="py-2 px-2" colSpan={4}>{item.description}</td>
-                          </tr>
-                        );
-                      } else if (isDetailLine) {
-                        // Render detail line (blank Qty/Rate)
-                        return (
-                          <tr key={item.id} className="border-b">
-                            <td className="py-2 px-2">{item.description}</td>
-                            <td className="text-right py-2 px-2"></td> {/* Blank Quantity */}
-                            <td className="text-right py-2 px-2"></td> {/* Blank Rate */}
-                            <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
-                          </tr>
-                        );
-                      } else {
-                        // Render regular standalone item
-                        return (
-                          <tr key={item.id} className="border-b">
-                            <td className="py-2 px-2">{item.description}</td>
-                            <td className="text-right py-2 px-2">{item.quantity}</td>
-                            <td className="text-right py-2 px-2">{formatCurrency(item.unitPrice / 100)}</td>
-                            <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
-                          </tr>
-                        );
-                      }
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colSpan={3} className="text-right py-2 font-semibold">Subtotal</td>
-                      {/* Use previewState.data properties */}
-                      <td className="text-right py-2">{formatCurrency(previewState.data.subtotal / 100)}</td>
-                    </tr>
-                    <tr>
-                      <td colSpan={3} className="text-right py-2 font-semibold">Tax</td>
-                      <td className="text-right py-2">{formatCurrency(previewState.data.tax / 100)}</td>
-                    </tr>
-                    <tr>
-                      <td colSpan={3} className="text-right py-2 font-semibold">Total</td>
-                      <td className="text-right py-2">{formatCurrency(previewState.data.total / 100)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+              ))}
             </div>
           )}
         </DialogContent>
@@ -1691,7 +1723,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             onClick={() => {
               setShowPreviewDialog(false);
               setPreviewState({
-                data: null,
+                previews: [],
+                invoiceCount: 0,
                 billingCycleId: null,
                 executionIdentityKey: null,
                 selectorInput: null,
@@ -1709,10 +1742,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             // Disable if there's an error, no data, or generation is in progress
             disabled={
               !!errors.preview
-              || !previewState.data
+              || previewState.previews.length === 0
               || !previewState.selectorInput
               || isGeneratingFromPreview
               || isPreviewLoading
+              || !previewSupportsDirectGeneration
             }
           >
             {isGeneratingFromPreview ? 'Generating...' : 'Generate Invoice'}

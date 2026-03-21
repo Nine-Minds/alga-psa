@@ -74,13 +74,13 @@
   {
     "id": "F013",
     "description": "Add grouped preview request semantics so the preview stack can accept parent selections and exact child selections rather than only one selector input.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F014",
     "description": "Render preview output that clearly states whether the current selection will produce one invoice or several, with grouped or split preview presentation as appropriate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements"]
   },
   {

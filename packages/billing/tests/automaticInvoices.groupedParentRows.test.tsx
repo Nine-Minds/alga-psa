@@ -7,6 +7,24 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 let mockDueWorkResponse: any;
+const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<{ previewGroupKey: string; selectorInputs: any[] }>) => ({
+  success: true,
+  invoiceCount: groups.length,
+  previews: groups.map((group) => ({
+    previewGroupKey: group.previewGroupKey,
+    selectorInputs: group.selectorInputs,
+    data: {
+      invoiceNumber: 'PREVIEW',
+      issueDate: '2026-03-01',
+      dueDate: '2026-03-31',
+      customer: { name: 'Acme Co', address: '123 Main St' },
+      items: [],
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+    },
+  })),
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -21,7 +39,7 @@ vi.mock('@alga-psa/billing/actions/billingAndTax', () => ({
 
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({
   getPurchaseOrderOverageForSelectionInput: vi.fn(async () => ({ overage_cents: 0, po_number: null })),
-  previewInvoiceForSelectionInput: vi.fn(async () => ({ success: false, error: 'Not used in this test' })),
+  previewGroupedInvoicesForSelectionInputs: mockPreviewGroupedInvoicesForSelectionInputs,
 }));
 
 vi.mock('@alga-psa/billing/actions/recurringBillingRunActions', () => ({
@@ -117,6 +135,7 @@ vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({
 
 describe('AutomaticInvoices grouped parent rows', () => {
   beforeEach(() => {
+    mockPreviewGroupedInvoicesForSelectionInputs.mockClear();
     mockDueWorkResponse = {
       invoiceCandidates: [
         {
@@ -151,7 +170,18 @@ describe('AutomaticInvoices grouped parent rows', () => {
               servicePeriodLabel: '2026-03-01 to 2026-04-01',
               executionWindow: { duePosition: 'advance' },
               amountCents: 12500,
-              selectorInput: { executionWindow: { windowStart: '2026-03-01', windowEnd: '2026-04-01', cadenceOwner: 'contract', duePosition: 'advance' } },
+              selectorInput: {
+                clientId: 'client-1',
+                windowStart: '2026-03-01',
+                windowEnd: '2026-04-01',
+                executionWindow: {
+                  kind: 'contract_cadence_window',
+                  identityKey: 'contract-window:line-1:2026-03-01:2026-04-01',
+                  cadenceOwner: 'contract',
+                  contractId: 'contract-1',
+                  contractLineId: 'line-1',
+                },
+              },
             },
             {
               executionIdentityKey: 'exec-2',
@@ -166,7 +196,18 @@ describe('AutomaticInvoices grouped parent rows', () => {
               servicePeriodLabel: '2026-03-01 to 2026-04-01',
               executionWindow: { duePosition: 'advance' },
               amountCents: 17500,
-              selectorInput: { executionWindow: { windowStart: '2026-03-01', windowEnd: '2026-04-01', cadenceOwner: 'contract', duePosition: 'advance' } },
+              selectorInput: {
+                clientId: 'client-1',
+                windowStart: '2026-03-01',
+                windowEnd: '2026-04-01',
+                executionWindow: {
+                  kind: 'contract_cadence_window',
+                  identityKey: 'contract-window:line-2:2026-03-01:2026-04-01',
+                  cadenceOwner: 'contract',
+                  contractId: 'contract-1',
+                  contractLineId: 'line-2',
+                },
+              },
             },
           ],
         },
@@ -437,5 +478,78 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(blockedChild.disabled).toBe(true);
     expect(blockedChild.checked).toBe(false);
     expect(readyChild.checked).toBe(true);
+  });
+
+  it('previewing a selected combinable parent renders one combined invoice preview count (T015)', async () => {
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const parentCheckbox = await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-parent-group:client-1:2026-03-01:2026-04-01',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      return checkbox as HTMLInputElement;
+    });
+    fireEvent.click(parentCheckbox);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
+        'This selection will generate 1 invoice.',
+      );
+    });
+    expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(1);
+    const previewPayload = mockPreviewGroupedInvoicesForSelectionInputs.mock.calls[0][0];
+    expect(previewPayload).toHaveLength(1);
+    expect(previewPayload[0].selectorInputs).toHaveLength(2);
+  });
+
+  it('previewing mixed child selection renders multi-invoice preview count (T016)', async () => {
+    mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const expandButton = await screen.findByRole('button', { name: 'Expand' });
+    fireEvent.click(expandButton);
+
+    const childOne = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
+    ) as HTMLInputElement;
+    const childTwo = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-2',
+    ) as HTMLInputElement;
+    fireEvent.click(childOne);
+    fireEvent.click(childTwo);
+    fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
+        'This selection will generate 2 invoices.',
+      );
+    });
+  });
+
+  it('preview request uses exact selected child scope without unselected siblings (T017)', async () => {
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    const expandButton = await screen.findByRole('button', { name: 'Expand' });
+    fireEvent.click(expandButton);
+
+    const childOne = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
+    ) as HTMLInputElement;
+    fireEvent.click(childOne);
+    fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
+
+    await waitFor(() => {
+      expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(1);
+    });
+    const previewPayload = mockPreviewGroupedInvoicesForSelectionInputs.mock.calls[0][0];
+    expect(previewPayload).toHaveLength(1);
+    expect(previewPayload[0].selectorInputs).toHaveLength(1);
+    expect(previewPayload[0].selectorInputs[0].executionWindow.contractLineId).toBe('line-1');
   });
 });

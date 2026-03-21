@@ -86,19 +86,19 @@
   {
     "id": "T015",
     "description": "Previewing a selected combinable parent renders one combined invoice preview and states `This selection will generate 1 invoice`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F014", "F017"]
   },
   {
     "id": "T016",
     "description": "Previewing a non-combinable mixed child selection renders a multi-invoice preview state or summary with the correct invoice count.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F014", "F018"]
   },
   {
     "id": "T017",
     "description": "Preview executes against the exact selected parent or child scope and does not include unselected sibling candidates from the same group.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F016"]
   },
   {
