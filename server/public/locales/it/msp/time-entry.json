@@ -315,7 +315,7 @@
     },
     "empty": {
       "title": "Nessun inserimento di orari ancora",
-      "description": "Aggiungi un elemento di lavoro e inizia a monitorare il tuo tempo.",
+      "description": "Aggiungi un elemento di lavoro, quindi inizia a monitorare il tuo tempo.",
       "noEntries": "Nessuna voce"
     },
     "columns": {
