@@ -153,6 +153,7 @@ SCRIPT
 - (2026-03-20) `F034` completed: wired `packages/integrations/src/components/email/admin/InboundTicketDefaultsManager.tsx` to `useTranslation('msp/admin')` for the loading state, header copy, add/edit form titles and description, empty state, active/inactive badges, field labels, menu actions, and help bullets. Added `inboundDefaults.errors.load` and `inboundDefaults.errors.delete` to the English namespace so the list view has translated fallbacks when server actions fail without a custom message.
 - (2026-03-20) `F035` completed: added `msp/admin` to the `/msp/settings` route entry in `packages/core/src/lib/i18n/config.ts`, preserving the existing `common`, `msp/core`, `msp/settings`, and `features/projects` bundles so admin settings tabs load their translations with the rest of the settings shell.
 - (2026-03-20) `F036` completed: added real-locale admin files for `fr`, `es`, `de`, `nl`, `it`, and `pl`. A direct structural check against `server/public/locales/en/msp/admin.json` passed for all six files, and every interpolation variable (`{{value}}`, `{{user}}`, `{{provider}}`, `{{resource}}`, `{{error}}`) was preserved.
+- (2026-03-20) `F037` completed: generated `server/public/locales/xx/msp/admin.json` and `server/public/locales/yy/msp/admin.json` directly from the English admin namespace, collapsing every leaf value to `11111` / `55555` while preserving the exact nested key structure for pseudo-locale QA.
 
 ### Key file paths — Dispatch
 | File | Strings |
