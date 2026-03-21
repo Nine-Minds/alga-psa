@@ -42,7 +42,7 @@
   {"id": "F055", "description": "TimeSheetHeader.tsx: translate status badges, heading template with interpolation, navigation labels, submit/reopen buttons, pagination", "implemented": true, "prdRefs": ["T-FR5"]},
   {"id": "F056", "description": "TimeSheetApproval.tsx: translate entry detail labels, suggestion placeholder, approve/request changes buttons", "implemented": false, "prdRefs": ["T-FR6"]},
   {"id": "F057", "description": "ApprovalActions.tsx: translate approve/reject/request changes buttons, dialog titles, rejection reason label", "implemented": true, "prdRefs": ["T-FR7"]},
-  {"id": "F058", "description": "TimeSheetComments.tsx: translate role labels, placeholders, action buttons", "implemented": false, "prdRefs": ["T-FR8"]},
+  {"id": "F058", "description": "TimeSheetComments.tsx: translate role labels, placeholders, action buttons", "implemented": true, "prdRefs": ["T-FR8"]},
   {"id": "F059", "description": "Remaining ~20 files: translate ManagerApprovalDashboard, TimeEntryChangeRequestFeedback, WorkItemDrawer, TimeSheetClient, TimeSheetListView, SelectedWorkItem, ContractInfoBanner, BillableLegend, IntervalItem, AddWorkItemDialog, TimeEntryReadOnly, and minor files", "implemented": false, "prdRefs": ["T-FR9"]},
   {"id": "F060", "description": "Update ROUTE_NAMESPACES for /msp/time-entry, /msp/time-sheet-approvals, /msp/time-management to load msp/time-entry", "implemented": false, "prdRefs": ["T-FR10"]},
   {"id": "F061", "description": "Generate time-entry translations for all 6 non-English locales", "implemented": false},
