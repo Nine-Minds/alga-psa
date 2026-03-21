@@ -140,6 +140,7 @@ SCRIPT
 - (2026-03-20) `F024` completed: wired `packages/ui/src/pages/Reports.tsx` to `useTranslation('msp/reports')` for the page heading and all four placeholder report-card titles/placeholders.
 - (2026-03-20) `F025` completed: added `'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/reports']` to `packages/core/src/lib/i18n/config.ts` so the reports namespace is loaded with the billing dashboard route.
 - (2026-03-20) `F026` completed: added real-locale reports files for `fr`, `es`, `de`, `nl`, `it`, and `pl`. Structural checks against `server/public/locales/en/msp/reports.json` passed for all six locales, and placeholder/interpolation variables were preserved.
+- (2026-03-20) `F027` completed: generated `server/public/locales/xx/msp/reports.json` and `server/public/locales/yy/msp/reports.json` with all leaf values collapsed to `11111` / `55555`, matching the English key structure without carrying through interpolation tokens.
 
 ### Key file paths — Dispatch
 | File | Strings |
