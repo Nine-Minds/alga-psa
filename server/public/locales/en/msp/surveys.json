@@ -1,0 +1,399 @@
+{
+  "common": {
+    "loading": "Loading..."
+  },
+  "frame": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "responses": "Responses",
+      "analytics": "Analytics",
+      "setup": "Setup"
+    },
+    "title": "Customer Satisfaction Surveys",
+    "description": "Monitor response quality, analyze satisfaction trends, and follow up on feedback.",
+    "insightsBadge": "Satisfaction Insights"
+  },
+  "settings": {
+    "title": "Customer Satisfaction Surveys",
+    "subtitle": "Configure templates, triggers, and delivery to collect post-ticket feedback.",
+    "tabs": {
+      "templates": "Templates",
+      "triggers": "Triggers"
+    },
+    "templateList": {
+      "title": "Survey templates",
+      "description": "Manage the prompts and rating scales sent to your clients.",
+      "createButton": "New template",
+      "emptyTitle": "No survey templates yet",
+      "emptyDescription": "Create your first template to define the survey wording and rating scale.",
+      "defaultBadge": "Default",
+      "table": {
+        "name": "Template",
+        "rating": "Rating scale",
+        "status": "Status",
+        "updated": "Updated",
+        "actions": "Actions"
+      },
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "actions": {
+        "setDefault": "Set as default",
+        "openMenu": "Open actions for {{name}}"
+      },
+      "toasts": {
+        "updated": "Template updated",
+        "created": "Template created",
+        "deleted": "Template deleted",
+        "setDefault": "Default template updated",
+        "error": "Unable to save template"
+      },
+      "errors": {
+        "load": "Unable to load survey templates."
+      },
+      "deleteEntityFallback": "this survey template"
+    },
+    "templateForm": {
+      "titleCreate": "Create survey template",
+      "titleEdit": "Edit survey template",
+      "labels": {
+        "name": "Template name",
+        "ratingType": "Rating type",
+        "ratingScale": "Rating scale",
+        "ratingLabels": "Rating labels",
+        "preview": "Preview",
+        "promptText": "Survey prompt",
+        "commentPrompt": "Comment prompt",
+        "thankYouText": "Thank-you message",
+        "isDefault": "Set as default template",
+        "enabled": "Template enabled"
+      },
+      "placeholders": {
+        "ratingLabels": "Example:\nVery Poor\nPoor\nAverage\nGood\nExcellent"
+      },
+      "help": {
+        "ratingLabels": "Provide one label per line, in order from lowest to highest rating."
+      },
+      "ratingTypes": {
+        "stars": "Stars",
+        "numbers": "Numbers",
+        "emojis": "Emojis"
+      },
+      "actions": {
+        "create": "Create template",
+        "save": "Save changes",
+        "delete": "Delete template"
+      },
+      "deleteEntityFallback": "this survey template"
+    },
+    "triggerList": {
+      "title": "Survey triggers",
+      "description": "Automatically send invitations when tickets or projects reach completion.",
+      "createButton": "New trigger",
+      "emptyTitle": "No survey triggers configured",
+      "emptyDescription": "Create a trigger to send surveys when tickets close or projects finish.",
+      "table": {
+        "template": "Template",
+        "type": "Trigger",
+        "conditions": "Conditions",
+        "status": "Status",
+        "updated": "Updated",
+        "actions": "Actions"
+      },
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "conditions": {
+        "boards": "Boards",
+        "statuses": "Statuses",
+        "priorities": "Priorities",
+        "any": "Any",
+        "unrestricted": "Applies to every ticket and project"
+      },
+      "toasts": {
+        "updated": "Trigger updated",
+        "created": "Trigger created",
+        "deleted": "Trigger deleted",
+        "error": "Unable to save trigger",
+        "deleteError": "Unable to delete trigger"
+      },
+      "deleteConfirm": "Delete this trigger? Invitations already queued will still be sent.",
+      "errors": {
+        "load": "Unable to load survey triggers."
+      },
+      "actions": {
+        "openMenu": "Open actions for trigger targeting {{name}}"
+      }
+    },
+    "triggerForm": {
+      "titleCreate": "Create survey trigger",
+      "titleEdit": "Edit survey trigger",
+      "labels": {
+        "template": "Survey template",
+        "triggerType": "Trigger type",
+        "boardIds": "Boards",
+        "statusIds": "Statuses",
+        "priorities": "Priorities",
+        "enabled": "Trigger enabled"
+      },
+      "placeholders": {
+        "boardIds": "Select board",
+        "statusIds": "Add status",
+        "priorities": "Add priority"
+      },
+      "triggerTypes": {
+        "ticket_closed": "Ticket closed",
+        "project_completed": "Project completed"
+      },
+      "help": {
+        "conditions": "Leave a field blank to match any value."
+      },
+      "errors": {
+        "reference": "Unable to load trigger options. Please try again."
+      },
+      "noTemplates": "Create a survey template before adding triggers.",
+      "prioritiesMixed": "Selected boards use different priority types. Showing all priorities.",
+      "actions": {
+        "create": "Create trigger",
+        "save": "Save changes",
+        "delete": "Delete trigger"
+      }
+    }
+  },
+  "response": {
+    "errorMessage": "We could not record your feedback. Please try again.",
+    "selectRatingError": "Select a rating before submitting.",
+    "submittedTitle": "Thank you for your response!",
+    "submittedMessage": "{{thankYouText}}",
+    "ratingSubmitted": "Feedback submitted",
+    "ratingPrompt": "How was your experience?",
+    "submitting": "Submitting feedback...",
+    "ratingAssistive": "Select a score from 1 to {{scale}}",
+    "commentLabel": "Additional comments (optional)",
+    "submitButton": "Submit feedback"
+  },
+  "responses": {
+    "filters": {
+      "title": "Filter Responses",
+      "labels": {
+        "template": "Template",
+        "technician": "Technician",
+        "client": "Client",
+        "dateRange": "Date Range"
+      },
+      "placeholders": {
+        "template": "All templates",
+        "technician": "All technicians",
+        "client": "All clients"
+      },
+      "options": {
+        "allTemplates": "All templates",
+        "allTechnicians": "All technicians"
+      },
+      "actions": {
+        "reset": "Reset",
+        "apply": "Apply"
+      }
+    },
+    "view": {
+      "loading": "Refreshing responses...",
+      "errors": {
+        "load": "Unable to load survey responses. Please try again."
+      },
+      "pagination": {
+        "itemLabel": "responses",
+        "perPage10": "10 per page",
+        "perPage25": "25 per page",
+        "perPage50": "50 per page"
+      }
+    },
+    "detail": {
+      "title": "Survey Response Detail",
+      "empty": "No response selected.",
+      "labels": {
+        "submittedAt": "Submitted At",
+        "client": "Client",
+        "contact": "Contact",
+        "technician": "Technician",
+        "ticket": "Ticket",
+        "rating": "Rating",
+        "comment": "Comment"
+      },
+      "values": {
+        "unknown": "Unknown",
+        "none": "-",
+        "unassigned": "Unassigned",
+        "noComment": "No comment provided."
+      }
+    }
+  },
+  "dashboard": {
+    "loadingInsights": "Loading survey insights...",
+    "metrics": {
+      "sent": "Invitations Sent",
+      "responses": "Responses Received",
+      "responseRate": "Response Rate",
+      "averageRating": "Average Rating",
+      "outstandingInvitations": "Outstanding Invitations",
+      "awaitingResponses": "Awaiting responses",
+      "negativeResponses": "Negative Responses (<= 2 stars)",
+      "needsReview": "Needs review"
+    },
+    "trend": {
+      "title": "Response Trend",
+      "emptyTitle": "No responses captured for the selected period.",
+      "emptyDescription": "Check back after customers submit feedback.",
+      "tooltip": {
+        "averageRating": "Average Rating",
+        "responses": "Responses",
+        "date": "Date: {{label}}"
+      }
+    },
+    "list": {
+      "title": "Recent Responses",
+      "emptyTitle": "No survey responses available yet.",
+      "emptyDescription": "Encourage customers to provide feedback to populate this view.",
+      "table": {
+        "submitted": "Submitted",
+        "client": "Client",
+        "technician": "Technician",
+        "rating": "Rating",
+        "comment": "Comment",
+        "ticket": "Ticket"
+      },
+      "values": {
+        "unknownClient": "Unknown Client",
+        "unassigned": "Unassigned",
+        "noComment": "No comment"
+      }
+    },
+    "distribution": {
+      "title": "Satisfaction Distribution",
+      "emptyTitle": "No survey ratings recorded yet.",
+      "emptyDescription": "Distribution will appear after feedback is collected.",
+      "axes": {
+        "rating": "Rating",
+        "responses": "Responses"
+      },
+      "tooltip": {
+        "percent": "Percent",
+        "responses": "Responses",
+        "rating": "Rating: {{label}}"
+      }
+    },
+    "topIssues": {
+      "title": "Top Issues",
+      "emptyTitle": "No negative feedback recorded for the selected filters.",
+      "emptyDescription": "This is a good sign! Keep up the great work.",
+      "unknownClient": "Unknown Client",
+      "ticket": "Ticket {{ticket}}",
+      "noComment": "No comment left.",
+      "assignedTo": "Assigned to: {{name}}"
+    }
+  },
+  "analytics": {
+    "page": {
+      "filtersTitle": "Analytics Filters",
+      "overviewTitle": "Satisfaction Overview",
+      "overviewDescription": "Compare average satisfaction and response rates over time. Additional segmentation will arrive in later iterations."
+    },
+    "filters": {
+      "labels": {
+        "segment": "Customer Segment",
+        "template": "Survey Template",
+        "timeframe": "Timeframe",
+        "calendarView": "Calendar View"
+      },
+      "defaults": {
+        "segments": {
+          "all": "All customers",
+          "managed": "Managed clients",
+          "project": "Project-only clients"
+        },
+        "templates": {
+          "all": "All templates",
+          "default": "Phase 1 CSAT template"
+        },
+        "timeframes": {
+          "30d": "Last 30 days",
+          "90d": "Last 90 days",
+          "365d": "Year to date"
+        }
+      },
+      "actions": {
+        "comingSoon": "Coming soon",
+        "reset": "Reset",
+        "apply": "Apply Filters"
+      }
+    },
+    "chart": {
+      "empty": "Select filters above to explore advanced analytics. (Coming soon)",
+      "tooltip": {
+        "averageRating": "Average Rating",
+        "responseRate": "Response Rate"
+      },
+      "series": {
+        "averageRating": "Average Rating",
+        "responseRate": "Response Rate"
+      }
+    },
+    "export": {
+      "csv": "Export CSV",
+      "shareSnapshot": "Share Snapshot",
+      "emailDigest": "Email Digest"
+    }
+  },
+  "summary": {
+    "client": {
+      "title": "CSAT Summary",
+      "empty": "No survey data available for this client yet. Surveys sent after ticket closures will populate this view.",
+      "averageRating": "Average Rating",
+      "responseRate": "Response Rate",
+      "totalResponses": "Total responses",
+      "lastResponse": "Last response",
+      "noResponsesYet": "No responses yet",
+      "rollingTrend": "Rolling Trend"
+    },
+    "ticket": {
+      "title": "Customer Feedback",
+      "empty": "No survey responses received for this ticket yet.",
+      "latestRating": "Latest Rating",
+      "comment": "Comment",
+      "totalResponses": "Total responses"
+    }
+  },
+  "ratings": {
+    "button": {
+      "ariaLabel": "{{rating}} - {{label}}",
+      "ariaLabelFallback": "Rating {{rating}} of {{scale}}"
+    },
+    "defaultLabels": {
+      "3": {
+        "1": "Poor",
+        "2": "Good",
+        "3": "Excellent"
+      },
+      "5": {
+        "1": "Very Poor",
+        "2": "Poor",
+        "3": "Average",
+        "4": "Good",
+        "5": "Excellent"
+      },
+      "10": {
+        "1": "Terrible",
+        "2": "Very Poor",
+        "3": "Poor",
+        "4": "Below Average",
+        "5": "Average",
+        "6": "Above Average",
+        "7": "Good",
+        "8": "Very Good",
+        "9": "Excellent",
+        "10": "Perfect"
+      }
+    }
+  }
+}

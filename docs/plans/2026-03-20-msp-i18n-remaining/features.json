@@ -1,5 +1,5 @@
 [
-  {"id": "F001", "description": "Create en/msp/surveys.json with ~217 keys for 26 survey components", "implemented": false, "prdRefs": ["2b-13"]},
+  {"id": "F001", "description": "Create en/msp/surveys.json with ~217 keys for 26 survey components", "implemented": true, "prdRefs": ["2b-13"]},
   {"id": "F002", "description": "Wire useTranslation('msp/surveys') in TriggerForm.tsx (~35), TriggerList.tsx (~22), TemplateForm.tsx (~28), TemplateList.tsx (~24)", "implemented": false, "prdRefs": ["2b-13"]},
   {"id": "F003", "description": "Wire useTranslation in SurveyResponsePage.tsx (~18), SurveySettings.tsx (~12), RatingDisplay.tsx (~14), response views (~21)", "implemented": false, "prdRefs": ["2b-13"]},
   {"id": "F004", "description": "Wire useTranslation in dashboard components (metrics, trend chart, satisfaction, top issues, responses list) and analytics (filter, chart, export)", "implemented": false, "prdRefs": ["2b-13"]},

@@ -16,6 +16,7 @@
 - (2026-03-20) 26 files in `packages/surveys/src/components/`, well-organized in subdirectories: triggers/, templates/, responses/, dashboard/, analytics/, shared/, public/
 - (2026-03-20) `SurveyResponsePage.tsx` is PUBLIC-FACING — rendered for end users taking surveys. Locale resolution may differ from MSP portal (no auth session). Needs investigation.
 - (2026-03-20) `useTriggerReferenceData.ts` (80 LOC) — hook with no strings, skip
+- (2026-03-21) Survey components were already partially keyed under `surveys.*` while still using `useTranslation('common')`; this batch should normalize those keys into the dedicated `msp/surveys` namespace rather than copy them into `common`.
 
 ### Schedule (2b-14)
 - (2026-03-20) 11 files in `packages/scheduling/src/components/schedule/`
@@ -49,6 +50,7 @@
 ```bash
 node scripts/validate-translations.cjs
 npm run build
+node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/surveys.json','utf8'))"
 ```
 
 ### Pseudo-locale generation
@@ -105,6 +107,11 @@ done
 5. **2b-14 (schedule)** — 211 strings, moderate
 6. **2b-13 (surveys)** — 217 strings, moderate
 7. **2b-20 (close)** — 0 strings, just mark done
+
+## Progress Log
+
+- (2026-03-21) Completed `F001`: added [server/public/locales/en/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/surveys.json) as the English source of truth for surveys. Keys were normalized to the new namespace root (`settings.*`, `dashboard.*`, `analytics.*`, `responses.*`, `summary.*`, `ratings.*`) so later component rewrites can move off `common` cleanly.
+- (2026-03-21) Validation for `F001`: parsed the new JSON successfully with `node -e "JSON.parse(...)"`.
 
 ## Open Questions
 
