@@ -206,7 +206,6 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                     value={service.service_id}
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
-                    billingMethods={['fixed']}
                     itemKinds={['service']}
                     placeholder="Select a service"
                   />
