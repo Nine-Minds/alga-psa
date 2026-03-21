@@ -25,7 +25,7 @@ export const billingFrequencySchema = z.enum(['weekly', 'bi-weekly', 'monthly', 
 export const configurationTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage', 'Bucket']);
 export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
 export const cadenceOwnerSchema = z.enum(['client', 'contract']);
-export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage', 'per_unit']);
+export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
 export const contractStatusSchema = z.enum(['active', 'draft', 'terminated', 'expired', 'published', 'archived']);
 
 // ============================================================================
