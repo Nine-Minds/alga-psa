@@ -21,7 +21,7 @@ import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHand
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
-  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage' }[]; // Updated billing methods
+  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' }[]; // Updated billing methods
   onServiceTypesChange: () => void; // Add callback to refresh service types
   // Optional controlled mode props for quick create integration
   isOpen?: boolean;
@@ -35,7 +35,7 @@ interface QuickAddServiceProps {
 interface ServiceFormData {
   service_name: string;
   custom_service_type_id: string; // Required for form state
-  billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage' | '';
+  billing_method: 'fixed' | 'hourly' | 'usage' | '';
   default_rate: number;
   currency_code: string; // Currency of the default_rate (ISO 4217 code)
   unit_of_measure: string;
@@ -62,7 +62,7 @@ const LICENSE_TERM_OPTIONS = [
 const BILLING_METHOD_OPTIONS = [
   { value: 'fixed', label: 'Fixed Fee' },
   { value: 'hourly', label: 'Hourly' },
-  { value: 'per_unit', label: 'Per Unit' },
+  { value: 'usage', label: 'Usage' },
   { value: 'usage', label: 'Usage Based' }
 ];
 
@@ -366,7 +366,7 @@ if (createdService?.service_id) {
                 onCreateType={async (name) => {
                   await createServiceTypeInline(
                     name,
-                    (serviceData.billing_method || 'fixed') as 'fixed' | 'hourly' | 'per_unit' | 'usage'
+                    (serviceData.billing_method || 'fixed') as 'fixed' | 'hourly' | 'usage'
                   );
                   onServiceTypesChange(); // Refresh the service types list
                 }}
@@ -388,7 +388,7 @@ if (createdService?.service_id) {
               <CustomSelect
                 options={BILLING_METHOD_OPTIONS}
                 value={serviceData.billing_method}
-                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'hourly' | 'per_unit' | 'usage' | '' })}
+                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'hourly' | 'usage' | '' })}
                 placeholder="Select billing method..."
                 className={`w-full ${hasAttemptedSubmit && !serviceData.billing_method ? 'ring-1 ring-red-500' : ''}`}
               />
@@ -410,7 +410,7 @@ if (createdService?.service_id) {
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                   Pricing *
                   <span className="text-xs font-normal text-muted-foreground ml-2">
-                    ({serviceData.billing_method === 'fixed' ? 'Monthly' : serviceData.billing_method === 'hourly' ? 'Per Hour' : serviceData.billing_method === 'usage' ? 'Per Unit' : 'Rate'})
+                    ({serviceData.billing_method === 'fixed' ? 'Monthly' : serviceData.billing_method === 'hourly' ? 'Per Hour' : serviceData.billing_method === 'usage' ? 'Usage' : 'Rate'})
                   </span>
                 </label>
                 <Button

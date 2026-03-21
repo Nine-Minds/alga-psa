@@ -46,7 +46,7 @@ interface ContractLineDialogProps {
   editingPlan?: IContractLinePreset | null;
   onClose?: () => void;
   triggerButton?: React.ReactNode;
-  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard: boolean }[];
+  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[];
 }
 
 export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
@@ -481,7 +481,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       setFixedServices(next);
                       markDirty();
                     }}
-                    billingMethods={['fixed', 'per_unit']}
+                    itemKinds={['service', 'product']}
                     placeholder="Select an item"
                     className="w-full"
                   />
@@ -642,7 +642,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       }
                       markDirty();
                     }}
-                    billingMethods={['hourly']}
+                    itemKinds={['service']}
                     placeholder="Select a service"
                     className="w-full"
                   />
@@ -855,9 +855,8 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         unit_of_measure: item.unit_of_measure,
                       })
                     }
-                    billingMethods={['usage']}
-                    itemKinds={['service', 'product']}
-                    placeholder="Search services/products..."
+                    itemKinds={['service']}
+                    placeholder="Search services..."
                     debounceMs={300}
                   />
                 </div>

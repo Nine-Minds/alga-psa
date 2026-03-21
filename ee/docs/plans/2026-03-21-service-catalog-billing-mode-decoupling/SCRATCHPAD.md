@@ -128,6 +128,13 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Added `T016` guard coverage in `server/src/test/unit/billing/onboardingServiceTypeDecoupling.static.test.ts` to enforce onboarding/service-settings decoupling and prevent regressions to identity-level billing coupling.
 - (2026-03-21) Completed F043 by removing usage-tracking picker gating on `service_catalog.billing_method='usage'`; usage tracking now sources picker options from service identity (`item_kind !== 'product'`) via a shared memoized options set used in both filter + create/edit dialog.
 - (2026-03-21) Added `T017` guard coverage in `server/src/test/unit/billing/usageTrackingPickerDecoupling.static.test.ts` to prevent reintroduction of billing-method-only filtering in usage tracking service pickers.
+- (2026-03-21) Completed F044 debt purge by removing remaining catalog-method eligibility gates in contract-line authoring dialogs (`ContractLineDialog`, `CreateCustomContractLineDialog`), deleting template-attach fixed-method coupling in `contractLineServiceActions`, and eliminating active `per_unit` compatibility references from billing UI/models/action types plus e2e constraint normalization.
+- (2026-03-21) Added hard-cutover guard suite `server/src/test/unit/billing/hardCutoverDebtGuard.static.test.ts` (T018) to assert no `per_unit` compatibility in active billing paths, no picker `billingMethods` gates in contract authoring, no unconditional `contract_line_id IS NULL` fallback SQL in billing engine, and no `billing_method as service_type` alias proxying.
+- (2026-03-21) Added `server/src/test/unit/billing/contractAuthoringDecouplingChecklist.static.test.ts` to lock T003-T006 checklist behaviors (service-identity validation in wizard flows, template/draft resume decoupled mode-default hooks, contract-line attach mode validation, and override/default precedence hooks).
+- (2026-03-21) Marked T007-T010 complete from passing billing engine + automatic invoice suites:
+  - `billingEngine.contractLineAllocation.static.test.ts`
+  - `billingEngine.test.ts`
+  - `automaticInvoices.nonContractSelection.ui.test.tsx`
 
 - (2026-03-21) Validation runbooks:
   - `cd server && npx vitest run src/test/unit/billing/nonContractDueWork.integration.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
@@ -141,3 +148,5 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run src/test/unit/api/serviceBillingMethodCutover.schema.test.ts src/test/unit/api/productBillingMethodCutover.schema.test.ts src/test/unit/api/billingInterfacesCutover.static.test.ts` (pass, T012/T013)
   - `cd server && npx vitest run src/test/unit/billing/onboardingServiceTypeDecoupling.static.test.ts` (pass, T016)
   - `cd server && npx vitest run src/test/unit/billing/usageTrackingPickerDecoupling.static.test.ts` (pass, T017)
+  - `cd server && npx vitest run src/test/unit/billingEngine.test.ts src/test/unit/billing/billingEngine.contractLineAllocation.static.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx` (pass, T007-T010)
+  - `cd server && npx vitest run src/test/unit/billing/contractAuthoringDecouplingChecklist.static.test.ts src/test/unit/billing/hardCutoverDebtGuard.static.test.ts` (pass, T003-T006 and T018)

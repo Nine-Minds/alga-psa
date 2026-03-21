@@ -42,5 +42,5 @@
   { "id": "F041", "description": "Update onboarding service/service-type creation flows to stop enforcing identity-level billing-mode coupling.", "implemented": true, "prdRefs": ["Requirements > L1.F"] },
   { "id": "F042", "description": "Update service settings forms to stop auto-overwriting billing behavior from service-type selection.", "implemented": true, "prdRefs": ["Requirements > L1.F"] },
   { "id": "F043", "description": "Update usage tracking service pickers to contract-context behavior instead of catalog-method gating.", "implemented": true, "prdRefs": ["Requirements > L1.B", "Requirements > L1.F"] },
-  { "id": "F044", "description": "Remove stale compatibility branches and static-fallback paths so the codebase operates in single-mode hard-cutover state.", "implemented": false, "prdRefs": ["Rollout / Migration", "Non-functional Requirements"] }
+  { "id": "F044", "description": "Remove stale compatibility branches and static-fallback paths so the codebase operates in single-mode hard-cutover state.", "implemented": true, "prdRefs": ["Rollout / Migration", "Non-functional Requirements"] }
 ]

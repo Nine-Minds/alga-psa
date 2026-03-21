@@ -34,7 +34,7 @@ export interface ServiceListOptions {
    */
   item_kind?: 'service' | 'product' | 'any';
   is_active?: boolean;
-  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit';
+  billing_method?: 'fixed' | 'hourly' | 'usage';
   category_id?: string | null;
   custom_service_type_id?: string;
   sort?: 'service_name' | 'billing_method' | 'default_rate';
@@ -47,7 +47,7 @@ export interface CatalogPickerSearchOptions {
   limit?: number;
   is_active?: boolean;
   item_kinds?: Array<'service' | 'product'>;
-  billing_methods?: Array<'fixed' | 'hourly' | 'usage' | 'per_unit'>;
+  billing_methods?: Array<'fixed' | 'hourly' | 'usage'>;
 }
 
 export type CatalogPickerItem = Pick<
@@ -660,7 +660,7 @@ export const getServicesByCategory = withAuth(async (user, { tenant }, categoryI
 });
 
 // New action to get combined service types for UI selection
-export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]> => {
+export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]> => {
    try {
        const { knex: db } = await createTenantKnex();
        const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -794,7 +794,7 @@ export const createServiceTypeInline = withAuth(async (
   user,
   { tenant },
   name: string,
-  billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage' = 'usage'
+  billing_method: 'fixed' | 'hourly' | 'usage' = 'usage'
 ): Promise<IServiceType> => {
   try {
     const { knex: db } = await createTenantKnex();

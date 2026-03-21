@@ -292,7 +292,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       };
                       setFixedServices(next);
                     }}
-                    billingMethods={['fixed', 'per_unit']}
+                    itemKinds={['service', 'product']}
                     placeholder="Select an item"
                     className="w-full"
                   />
@@ -446,7 +446,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         }));
                       }
                     }}
-                    billingMethods={['hourly']}
+                    itemKinds={['service']}
                     placeholder="Select a service"
                     className="w-full"
                   />
@@ -639,7 +639,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         }));
                       }
                     }}
-                    billingMethods={['usage']}
+                    itemKinds={['service']}
                     placeholder="Select a service"
                     className="w-full"
                   />

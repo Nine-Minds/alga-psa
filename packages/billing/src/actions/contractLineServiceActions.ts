@@ -155,10 +155,6 @@ async function addServiceToTemplateLine(
     throw new Error(`Service ${serviceId} not found`);
   }
 
-  if (service.item_kind === 'service' && service.billing_method && service.billing_method !== 'fixed') {
-    throw new Error('Only fixed billing method services can be attached to this template line.');
-  }
-
   const now = trx.fn.now();
   const resolvedQuantity = typeof quantity === 'number' && quantity > 0 ? quantity : 1;
   const resolvedRate =
