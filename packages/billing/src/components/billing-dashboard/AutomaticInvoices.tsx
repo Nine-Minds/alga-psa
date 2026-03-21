@@ -57,15 +57,49 @@ type ReadyPeriod = IRecurringDueWorkInvoiceCandidate;
 type InvoicedPeriod = RecurringInvoiceHistoryRow;
 
 interface RecurringInvoiceParentGroup {
+  parentSummary: {
+    parentGroupKey: string;
+    parentSelectionKey: string;
+    candidateKey: string;
+    clientName: string | null;
+    windowLabel: string;
+    servicePeriodLabel: string;
+    childCount: number;
+    aggregateAmountCents: number | null;
+    canGenerate: boolean;
+    blockedReason: string | null;
+  };
+  childExecutionRows: ReadyPeriod['members'];
   candidate: ReadyPeriod;
-  children: ReadyPeriod['members'];
 }
 
 const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): RecurringInvoiceParentGroup[] =>
-  candidates.map((candidate) => ({
+  candidates.map((candidate) => {
+    const memberAmounts = candidate.members
+      .map((member) => (member as { amountCents?: number | null }).amountCents)
+      .filter((amount): amount is number => typeof amount === 'number' && Number.isFinite(amount));
+    const aggregateAmountCents =
+      memberAmounts.length > 0 && memberAmounts.length === candidate.members.length
+        ? memberAmounts.reduce((sum, amount) => sum + amount, 0)
+        : null;
+
+    return {
+      parentSummary: {
+      parentGroupKey: `parent-group:${candidate.clientId}:${candidate.windowStart}:${candidate.windowEnd}`,
+      parentSelectionKey: `parent-selection:${candidate.candidateKey}`,
+      candidateKey: candidate.candidateKey,
+      clientName: candidate.clientName ?? null,
+      windowLabel: candidate.windowLabel,
+      servicePeriodLabel: candidate.servicePeriodLabel,
+      childCount: candidate.memberCount,
+      aggregateAmountCents,
+      canGenerate: candidate.canGenerate,
+      blockedReason: candidate.blockedReason ?? null,
+    },
+    childExecutionRows: candidate.members,
     candidate,
-    children: candidate.members,
-  }));
+    };
+  });
 
 // Convert DateRange to API format using YYYY-MM-DD to avoid timezone drift
 const buildDateRangeFilter = (range: DateRange): BillingPeriodDateRange | undefined => {
@@ -309,9 +343,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // For server-side pagination, filteredPeriods is just periods
   const filteredPeriods = periods;
   const parentGroups = buildRecurringInvoiceParentGroups(filteredPeriods);
-  const readyRows = parentGroups.flatMap((group) => group.children);
+  const readyRows = parentGroups.flatMap((group) => group.childExecutionRows);
   const selectedParentGroups = parentGroups.filter((group) =>
-    selectedPeriods.has(group.candidate.candidateKey),
+    selectedPeriods.has(group.parentSummary.parentSelectionKey),
   );
   const selectedPreviewCandidate = selectedParentGroups.length === 1
     ? selectedParentGroups[0]?.candidate ?? null
@@ -395,23 +429,23 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const validIds = filteredPeriods
-        .filter((period) => period.canGenerate)
-        .map((period) => period.candidateKey);
+      const validIds = parentGroups
+        .filter((group) => group.parentSummary.canGenerate)
+        .map((group) => group.parentSummary.parentSelectionKey);
       setSelectedPeriods(new Set(validIds));
     } else {
       setSelectedPeriods(new Set());
     }
   };
 
-  const handleSelectPeriod = (candidateKey: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!candidateKey) return;
+  const handleSelectPeriod = (parentSelectionKey: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!parentSelectionKey) return;
 
     const newSelected = new Set(selectedPeriods);
     if (event.target.checked) {
-      newSelected.add(candidateKey);
+      newSelected.add(parentSelectionKey);
     } else {
-      newSelected.delete(candidateKey);
+      newSelected.delete(parentSelectionKey);
     }
     setSelectedPeriods(newSelected);
   };
@@ -484,9 +518,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const handleGenerateInvoices = async () => {
-    const selectedCandidates = periods.filter((period) =>
-      selectedPeriods.has(period.candidateKey),
-    );
+    const selectedCandidates = parentGroups
+      .filter((group) => selectedPeriods.has(group.parentSummary.parentSelectionKey))
+      .map((group) => group.candidate);
     if (selectedCandidates.length === 0) {
       return;
     }
@@ -943,7 +977,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <DataTable
             id="automatic-invoices-table"
             key={`${currentReadyPage}-${pageSize}`}
-            data={filteredPeriods}
+            data={parentGroups}
             // Add onRowClick prop - implementation depends on DataTable component
             // Assuming it takes a function like this:
             // Temporarily disabled invoice preview on row click
@@ -957,21 +991,21 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 title: (
                     <Checkbox
                     id="select-all"
-                    checked={filteredPeriods.length > 0 && selectedPeriods.size === filteredPeriods.filter((period) => period.canGenerate).length}
+                    checked={parentGroups.length > 0 && selectedPeriods.size === parentGroups.filter((group) => group.parentSummary.canGenerate).length}
                     onChange={handleSelectAll}
-                    disabled={!filteredPeriods.some((period) => period.canGenerate)}
+                    disabled={!parentGroups.some((group) => group.parentSummary.canGenerate)}
                   />
                 ),
                 dataIndex: 'candidateKey',
-                render: (_: unknown, record: ReadyPeriod) => (
+                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
                   <Checkbox
-                    id={`select-${record.candidateKey}`}
-                    checked={selectedPeriods.has(record.candidateKey)}
-                    disabled={!record.canGenerate}
+                    id={`select-${record.parentSummary.parentGroupKey}`}
+                    checked={selectedPeriods.has(record.parentSummary.parentSelectionKey)}
+                    disabled={!record.parentSummary.canGenerate}
                     // Stop propagation to prevent row click when clicking checkbox
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                       event.stopPropagation();
-                      handleSelectPeriod(record.candidateKey, event);
+                      handleSelectPeriod(record.parentSummary.parentSelectionKey, event);
                     }}
                     onClick={(e) => e.stopPropagation()} // Also stop propagation on click
                   />
@@ -980,11 +1014,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               {
                 title: 'Client',
                 dataIndex: 'clientName',
-                render: (_: unknown, record: ReadyPeriod) => (
+                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
                   <div className="space-y-1">
-                    <div>{record.clientName ?? 'Unknown client'}</div>
-                    {!record.canGenerate && record.blockedReason ? (
-                      <div className="text-xs text-muted-foreground">{record.blockedReason}</div>
+                    <div>{record.parentSummary.clientName ?? 'Unknown client'}</div>
+                    {!record.parentSummary.canGenerate && record.parentSummary.blockedReason ? (
+                      <div className="text-xs text-muted-foreground">{record.parentSummary.blockedReason}</div>
                     ) : null}
                   </div>
                 ),
@@ -992,21 +1026,21 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               {
                 title: 'Cadence Source',
                 dataIndex: 'cadenceSources',
-                render: (_: unknown, record: ReadyPeriod) => (
+                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
                   <div className="space-y-1">
-                    {record.cadenceSources.map((source) => {
+                    {record.candidate.cadenceSources.map((source) => {
                       const formattedSource = formatCadenceSourceBadge(source);
                       return (
                       <Badge
-                        key={`${record.candidateKey}:${source ?? 'missing'}`}
+                        key={`${record.parentSummary.candidateKey}:${source ?? 'missing'}`}
                         variant={formattedSource.variant}
-                        data-testid={`cadence-source-${record.candidateKey}-${source ?? 'missing'}`}
+                        data-testid={`cadence-source-${record.parentSummary.candidateKey}-${source ?? 'missing'}`}
                       >
                         {formattedSource.label}
                       </Badge>
                       );
                     })}
-                    {record.members.some((member) => !member.billingCycleId) ? (
+                    {record.childExecutionRows.some((member) => !member.billingCycleId) ? (
                       <Badge variant="secondary">Service-period-backed</Badge>
                     ) : null}
                   </div>
@@ -1015,11 +1049,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               {
                 title: 'Service Period',
                 dataIndex: 'servicePeriodLabel',
-                render: (_: unknown, record: ReadyPeriod) => (
+                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
                   <div className="space-y-1">
-                    <div>{record.servicePeriodLabel}</div>
+                    <div>{record.parentSummary.servicePeriodLabel}</div>
                     <div className="text-xs text-muted-foreground">
-                      {record.memberCount} obligation{record.memberCount === 1 ? '' : 's'}
+                      {record.parentSummary.childCount} obligation{record.parentSummary.childCount === 1 ? '' : 's'}
+                    </div>
+                    <div className="text-xs text-muted-foreground" data-testid={`group-amount-${record.parentSummary.parentGroupKey}`}>
+                      {record.parentSummary.aggregateAmountCents === null
+                        ? 'Amount unavailable'
+                        : formatCurrency(record.parentSummary.aggregateAmountCents / 100)}
                     </div>
                   </div>
                 ),
@@ -1027,27 +1066,27 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               {
                 title: 'Invoice Window',
                 dataIndex: 'windowLabel',
-                render: (_: unknown, record: ReadyPeriod) => record.windowLabel,
+                render: (_: unknown, record: RecurringInvoiceParentGroup) => record.parentSummary.windowLabel,
               },
               {
                 title: 'Contract',
                 dataIndex: 'contractName',
-                render: (_: unknown, record: ReadyPeriod) => {
+                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
                   const contractNames = Array.from(
                     new Set(
-                      record.members
+                      record.childExecutionRows
                         .map((member) => member.contractName?.trim())
                         .filter((name): name is string => Boolean(name)),
                     ),
                   );
                   const contractLineNames = Array.from(
                     new Set(
-                      record.members
+                      record.childExecutionRows
                         .map((member) => member.contractLineName?.trim())
                         .filter((name): name is string => Boolean(name)),
                     ),
                   );
-                  const contractMetadataMissingCount = record.members.filter((member) => {
+                  const contractMetadataMissingCount = record.childExecutionRows.filter((member) => {
                     const hasContractSignal = Boolean(
                       member.cadenceOwner === 'contract'
                       || member.contractId
@@ -1077,7 +1116,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   }).length;
                   const assignmentContexts = Array.from(
                     new Set(
-                      record.members
+                      record.childExecutionRows
                         .map((member) => getRecurringAssignmentContext(member))
                         .filter((value): value is string => Boolean(value)),
                     ),
@@ -1090,18 +1129,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   return (
                     <div className="space-y-1">
                       {contractNames.map((name) => (
-                        <div key={`${record.candidateKey}:contract:${name}`}>{name}</div>
+                        <div key={`${record.parentSummary.candidateKey}:contract:${name}`}>{name}</div>
                       ))}
                       {contractLineNames.map((lineName) => (
-                        <div key={`${record.candidateKey}:${lineName}`} className="text-xs text-muted-foreground">
+                        <div key={`${record.parentSummary.candidateKey}:${lineName}`} className="text-xs text-muted-foreground">
                           {lineName}
                         </div>
                       ))}
                       {assignmentContexts.map((contextValue) => (
                         <div
-                          key={`${record.candidateKey}:assignment:${contextValue}`}
+                          key={`${record.parentSummary.candidateKey}:assignment:${contextValue}`}
                           className="text-xs text-muted-foreground"
-                          data-testid={`contract-assignment-context-${record.candidateKey}`}
+                          data-testid={`contract-assignment-context-${record.parentSummary.candidateKey}`}
                         >
                           {contextValue}
                         </div>
@@ -1109,7 +1148,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       {contractMetadataMissingCount > 0 ? (
                         <div
                           className="text-xs text-warning"
-                          data-testid={`contract-metadata-warning-${record.candidateKey}`}
+                          data-testid={`contract-metadata-warning-${record.parentSummary.candidateKey}`}
                         >
                           Contract metadata missing ({contractMetadataMissingCount} obligation{contractMetadataMissingCount === 1 ? '' : 's'})
                         </div>

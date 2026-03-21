@@ -8,13 +8,13 @@
   {
     "id": "F002",
     "description": "Refactor the automatic-invoices ready-work view model so each group carries explicit parent summary data separate from child execution rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F003",
     "description": "Add stable parent-group identity and grouped selection keys for parent rows, distinct from child selector inputs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {

@@ -39,8 +39,22 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
     <div data-testid={id}>
       <div data-testid={`${id}-row-count`}>{data.length}</div>
       {data.map((row) => (
-        <div key={row.candidateKey ?? row.invoiceId} data-testid={`${id}-row`}>
-          {row.candidateKey ?? row.invoiceId}
+        <div
+          key={row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId}
+          data-testid={`${id}-row`}
+        >
+          {row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId}
+          {row.parentSummary ? (
+            <div data-testid={`${id}-summary-${row.parentSummary.parentGroupKey}`}>
+              <span>{row.parentSummary.childCount} obligations</span>
+              <span>{row.parentSummary.windowLabel}</span>
+              <span>
+                {typeof row.parentSummary.aggregateAmountCents === 'number'
+                  ? (row.parentSummary.aggregateAmountCents / 100).toFixed(2)
+                  : 'n/a'}
+              </span>
+            </div>
+          ) : null}
         </div>
       ))}
     </div>
@@ -112,11 +126,13 @@ describe('AutomaticInvoices grouped parent rows', () => {
             {
               executionIdentityKey: 'exec-1',
               billingCycleId: 'bc-1',
+              amountCents: 12500,
               selectorInput: { executionWindow: { windowStart: '2026-03-01', windowEnd: '2026-04-01', cadenceOwner: 'contract', duePosition: 'advance' } },
             },
             {
               executionIdentityKey: 'exec-2',
               billingCycleId: 'bc-2',
+              amountCents: 17500,
               selectorInput: { executionWindow: { windowStart: '2026-03-01', windowEnd: '2026-04-01', cadenceOwner: 'contract', duePosition: 'advance' } },
             },
           ],
@@ -142,5 +158,22 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(screen.getByText('Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.')).toBeInTheDocument();
     expect(screen.getByTestId('automatic-invoices-table')).toBeInTheDocument();
     expect(screen.getAllByTestId('automatic-invoices-table-row')).toHaveLength(1);
+  });
+
+  it('renders parent summary child count, aggregate amount, and invoice window (T002)', async () => {
+    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('automatic-invoices-table-summary-parent-group:client-1:2026-03-01:2026-04-01'),
+      ).toBeInTheDocument();
+    });
+
+    const summary = screen.getByTestId('automatic-invoices-table-summary-parent-group:client-1:2026-03-01:2026-04-01');
+    expect(summary).toHaveTextContent('2 obligations');
+    expect(summary).toHaveTextContent('2026-03-01 to 2026-04-01');
+    expect(summary).toHaveTextContent('300.00');
   });
 });

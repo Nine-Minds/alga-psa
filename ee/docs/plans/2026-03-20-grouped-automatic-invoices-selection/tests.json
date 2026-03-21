@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "Parent rows display child count, aggregate amount, and invoice window summary correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F005"]
   },
   {

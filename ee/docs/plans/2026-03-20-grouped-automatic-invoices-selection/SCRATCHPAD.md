@@ -53,6 +53,10 @@ Working notes for the grouped automatic-invoices selection redesign. This plan i
 - (2026-03-20) Added a jsdom UI behavior test that mocks due-work responses and verifies one top-level automatic-invoices row renders for a multi-member shared `client + invoice window` candidate. File: `packages/billing/tests/automaticInvoices.groupedParentRows.test.tsx`.
 - (2026-03-20) Targeted validation for the new grouped parent-row behavior test:
   - `cd packages/billing && npx vitest run tests/automaticInvoices.groupedParentRows.test.tsx`
+- (2026-03-20) Completed `F002` by refactoring the ready-work UI model into explicit parent summaries (`parentSummary`) and child execution rows (`childExecutionRows`), while keeping generation/preview wired to selected parent-group candidates. File: `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`.
+- (2026-03-20) Completed `F003` by introducing explicit parent-group identity (`parentGroupKey`) and parent-selection identity (`parentSelectionKey`) in the ready-work view model, and routing group selection state through those keys instead of child selector identities. File: `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`.
+- (2026-03-20) Added optional parent aggregate amount summary (`aggregateAmountCents`) derived from child rows when amount data is present, with an explicit fallback when unavailable. File: `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`.
+- (2026-03-20) Completed `T002` by asserting grouped parent summary output (child count, invoice window label, aggregate amount) in the automatic invoices jsdom behavior test. File: `packages/billing/tests/automaticInvoices.groupedParentRows.test.tsx`.
 
 ## Open Questions
 
