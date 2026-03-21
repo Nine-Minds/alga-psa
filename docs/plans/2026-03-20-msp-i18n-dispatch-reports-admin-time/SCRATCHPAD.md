@@ -182,6 +182,7 @@ SCRIPT
 - (2026-03-20) `T030` passed: reused the same `node scripts/validate-translations.cjs` run from the completed feature batch. With `Errors: 0` and `Warnings: 0`, the validator confirms `msp/time-entry` stays aligned across English, six production locales, and both pseudo-locales.
 - (2026-03-20) `T031` passed: `npx tsc -p packages/scheduling/tsconfig.json --noEmit --pretty false` completed successfully after the time-entry component wiring and locale-file additions, giving package-level TypeScript coverage for the 33 translated scheduling/time-management surfaces.
 - (2026-03-20) `T032` passed: `server/src/test/unit/i18n/mspDispatchReportsAdminTimeEntryBatch.test.ts` locks the three time-entry route mappings to `['common', 'msp/core', 'msp/time-entry']` for `/msp/time-entry`, `/msp/time-sheet-approvals`, and `/msp/time-management`.
+- (2026-03-20) `T033` passed: the batch i18n test codifies the Italian accent-audit pattern for `server/public/locales/it/msp/time-entry.json`, so the one false-positive line fixed during `F063` stays protected from regression.
 
 ### Key file paths — Dispatch
 | File | Strings |

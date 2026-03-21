@@ -113,7 +113,7 @@
   {
     "id": "T033",
     "description": "Time entry: Italian accent audit passes for it/msp/time-entry.json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F063"]
   },
   {
