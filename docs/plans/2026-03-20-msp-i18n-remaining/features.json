@@ -26,7 +26,7 @@
   {"id": "F040", "description": "Create en/msp/email-providers.json with ~136 keys for 10 email provider components", "implemented": true, "prdRefs": ["2b-18"]},
   {"id": "F041", "description": "Wire useTranslation('msp/email-providers') in MicrosoftProviderForm.tsx (~32), GmailProviderForm.tsx (~24), ImapProviderForm.tsx (~18)", "implemented": true, "prdRefs": ["2b-18"]},
   {"id": "F042", "description": "Wire useTranslation in EmailProviderConfiguration.tsx (~26), InboundTicketDefaultsForm.tsx (~22), EmailProviderCard.tsx (~14)", "implemented": true, "prdRefs": ["2b-18"]},
-  {"id": "F045", "description": "Wire useTranslation in EmailProviderList.tsx, EmailProviderSelector.tsx, ProviderSetupWizardDialog.tsx, and gmail helper components/hooks with visible provider setup copy", "implemented": false, "prdRefs": ["2b-18"]},
+  {"id": "F045", "description": "Wire useTranslation in EmailProviderList.tsx, EmailProviderSelector.tsx, ProviderSetupWizardDialog.tsx, and gmail helper components/hooks with visible provider setup copy", "implemented": true, "prdRefs": ["2b-18"]},
   {"id": "F043", "description": "Generate msp/email-providers translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-18"]},
   {"id": "F044", "description": "Italian accent audit on it/msp/email-providers.json", "implemented": false, "prdRefs": ["2b-18"]},
 

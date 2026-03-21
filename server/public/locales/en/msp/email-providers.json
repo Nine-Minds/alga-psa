@@ -63,6 +63,77 @@
       }
     }
   },
+  "list": {
+    "header": {
+      "title": "Email Providers ({{count}})"
+    },
+    "filters": {
+      "searchPlaceholder": "Search providers...",
+      "allProviders": "All Providers"
+    },
+    "actions": {
+      "refresh": "Refresh"
+    }
+  },
+  "selector": {
+    "header": {
+      "title": "Choose Your Email Provider",
+      "description": "Select the email service you want to use for inbound email processing. You can configure multiple email providers per account."
+    },
+    "cards": {
+      "google": {
+        "title": "Gmail",
+        "description": "Google Workspace / Gmail Integration",
+        "features": {
+          "accounts": "✓ Gmail and Google Workspace accounts",
+          "filtering": "✓ Label-based email filtering",
+          "processing": "✓ Real-time email processing",
+          "authentication": "✓ Automatic OAuth authentication"
+        },
+        "action": "Set up Gmail"
+      },
+      "microsoft": {
+        "title": "Microsoft 365",
+        "description": "Microsoft 365 / Outlook Integration",
+        "features": {
+          "accounts": "✓ Microsoft 365 and Outlook accounts",
+          "filtering": "✓ Folder-based email filtering",
+          "processing": "✓ Real-time email processing",
+          "authentication": "✓ Azure AD OAuth integration"
+        },
+        "action": "Set up Microsoft 365"
+      },
+      "imap": {
+        "title": "IMAP",
+        "description": "Custom IMAP Server Integration",
+        "features": {
+          "accounts": "✓ Any IMAP-compliant mailbox",
+          "filtering": "✓ Folder-based email filtering",
+          "authentication": "✓ OAuth2 or password authentication",
+          "listener": "✓ Real-time IDLE listener"
+        },
+        "action": "Set up IMAP"
+      }
+    },
+    "actions": {
+      "cancel": "Cancel"
+    },
+    "help": {
+      "enterprise": "Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.",
+      "standard": "Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; otherwise choose IMAP. You can change this later by removing and reconfiguring your email provider."
+    }
+  },
+  "wizard": {
+    "title": {
+      "select": "Choose Email Provider",
+      "setup": "{{provider}} Configuration"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "back": "Back",
+      "close": "Close"
+    }
+  },
   "providerCard": {
     "subscription": {
       "expired": "Expired",
@@ -212,7 +283,11 @@
         "gmailAddressRequired": "Valid Gmail address is required",
         "authorizeRequiresValid": "Please fill in all required fields before authorizing",
         "googleNotConfigured": "Google integration is not configured for this tenant. Configure Google first, then retry.",
-        "oauthInitiateFailed": "Failed to initiate OAuth"
+        "oauthInitiateFailed": "Failed to initiate OAuth",
+        "popupBlocked": "Failed to open OAuth popup. Please allow popups for this site.",
+        "closedEarly": "Authorization window was closed before completing.",
+        "authorizationFailed": "Authorization failed",
+        "popupFailed": "OAuth popup failed"
       },
       "messages": {
         "setupIncomplete": "Provider saved but setup incomplete: {{error}}",
@@ -225,7 +300,12 @@
       },
       "basic": {
         "title": "Basic Configuration",
-        "description": "Basic settings for your Gmail email provider"
+        "description": "Basic settings for your Gmail email provider",
+        "providerNameLabel": "Provider Name *",
+        "providerNamePlaceholder": "e.g., Support Gmail",
+        "mailboxLabel": "Gmail Address *",
+        "mailboxPlaceholder": "support@client.com",
+        "enableProvider": "Enable this provider"
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -244,6 +324,11 @@
         "title": "Advanced Settings",
         "description": "Configure advanced email processing options",
         "completeSetupSuffix": " & Complete Setup"
+      },
+      "processing": {
+        "labelFiltersLabel": "Gmail Labels to Monitor",
+        "labelFiltersPlaceholder": "INBOX, Support, Custom Label",
+        "labelFiltersHelp": "Comma-separated list of Gmail labels to monitor (default: INBOX)"
       }
     },
     "imap": {

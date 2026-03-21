@@ -20,7 +20,7 @@ import { useOAuthPopup } from './providers/gmail/useOAuthPopup';
 import { BasicConfigCard } from './providers/gmail/BasicConfigCard';
 import { ProcessingSettingsCard } from './providers/gmail/ProcessingSettingsCard';
 import { OAuthSection } from './providers/gmail/OAuthSection';
-import { ceGmailProviderSchema } from './providers/gmail/schemas';
+import { createCeGmailProviderSchema } from './providers/gmail/schemas';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
 import { getGoogleIntegrationStatus } from '@alga-psa/integrations/actions';
@@ -50,11 +50,12 @@ export function GmailProviderForm({
   const [googleConfigReady, setGoogleConfigReady] = useState(false);
 
   const isEditing = !!provider;
+  const gmailProviderSchema = createCeGmailProviderSchema(t);
 
   // No manual cleanup needed; handled by hook
 
   const form = useForm<GmailProviderFormData>({
-    resolver: zodResolver(ceGmailProviderSchema) as any,
+    resolver: zodResolver(gmailProviderSchema) as any,
     defaultValues: provider && provider.googleConfig ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,

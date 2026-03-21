@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Button } from '@alga-psa/ui/components/Button';
 import { Search, Building2, Mail } from 'lucide-react';
 import { isMicrosoftConsumerEnterpriseEdition } from '../../lib/microsoftConsumerVisibility';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface EmailProviderSelectorProps {
   onProviderSelected: (providerType: 'google' | 'microsoft' | 'imap') => void;
@@ -22,6 +23,7 @@ export function EmailProviderSelector({
   onCancel,
   hideHeader = false,
 }: EmailProviderSelectorProps) {
+  const { t } = useTranslation('msp/email-providers');
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   
   const handleProviderClick = (providerType: 'google' | 'microsoft' | 'imap') => {
@@ -33,10 +35,13 @@ export function EmailProviderSelector({
       {/* Header */}
       {!hideHeader && (
         <div className="text-center">
-          <h3 className="text-lg font-semibold">Choose Your Email Provider</h3>
+          <h3 className="text-lg font-semibold">{t('selector.header.title', {
+            defaultValue: 'Choose Your Email Provider',
+          })}</h3>
           <p className="text-muted-foreground mt-2">
-            Select the email service you want to use for inbound email processing. 
-            You can configure multiple email providers per account.
+            {t('selector.header.description', {
+              defaultValue: 'Select the email service you want to use for inbound email processing. You can configure multiple email providers per account.',
+            })}
           </p>
         </div>
       )}
@@ -64,17 +69,21 @@ export function EmailProviderSelector({
                 </div>
               </div>
             </div>
-            <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">Gmail</CardTitle>
+            <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">{t('selector.cards.google.title', {
+              defaultValue: 'Gmail',
+            })}</CardTitle>
             <CardDescription className="text-base text-[rgb(var(--color-text-600))]">
-              Google Workspace / Gmail Integration
+              {t('selector.cards.google.description', {
+                defaultValue: 'Google Workspace / Gmail Integration',
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <div className="text-sm text-[rgb(var(--color-text-600))] space-y-2">
-              <p>✓ Gmail and Google Workspace accounts</p>
-              <p>✓ Label-based email filtering</p>
-              <p>✓ Real-time email processing</p>
-              <p>✓ Automatic OAuth authentication</p>
+              <p>{t('selector.cards.google.features.accounts', { defaultValue: '✓ Gmail and Google Workspace accounts' })}</p>
+              <p>{t('selector.cards.google.features.filtering', { defaultValue: '✓ Label-based email filtering' })}</p>
+              <p>{t('selector.cards.google.features.processing', { defaultValue: '✓ Real-time email processing' })}</p>
+              <p>{t('selector.cards.google.features.authentication', { defaultValue: '✓ Automatic OAuth authentication' })}</p>
             </div>
             <Button 
               id="setup-google-provider-button"
@@ -84,7 +93,9 @@ export function EmailProviderSelector({
                 handleProviderClick('google');
               }}
             >
-              Set up Gmail
+              {t('selector.cards.google.action', {
+                defaultValue: 'Set up Gmail',
+              })}
             </Button>
           </CardContent>
         </Card>
@@ -103,17 +114,21 @@ export function EmailProviderSelector({
                   </div>
                 </div>
               </div>
-              <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">Microsoft 365</CardTitle>
+              <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">{t('selector.cards.microsoft.title', {
+                defaultValue: 'Microsoft 365',
+              })}</CardTitle>
               <CardDescription className="text-base text-[rgb(var(--color-text-600))]">
-                Microsoft 365 / Outlook Integration
+                {t('selector.cards.microsoft.description', {
+                  defaultValue: 'Microsoft 365 / Outlook Integration',
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center space-y-4">
               <div className="text-sm text-[rgb(var(--color-text-600))] space-y-2">
-                <p>✓ Microsoft 365 and Outlook accounts</p>
-                <p>✓ Folder-based email filtering</p>
-                <p>✓ Real-time email processing</p>
-                <p>✓ Azure AD OAuth integration</p>
+                <p>{t('selector.cards.microsoft.features.accounts', { defaultValue: '✓ Microsoft 365 and Outlook accounts' })}</p>
+                <p>{t('selector.cards.microsoft.features.filtering', { defaultValue: '✓ Folder-based email filtering' })}</p>
+                <p>{t('selector.cards.microsoft.features.processing', { defaultValue: '✓ Real-time email processing' })}</p>
+                <p>{t('selector.cards.microsoft.features.authentication', { defaultValue: '✓ Azure AD OAuth integration' })}</p>
               </div>
               <Button 
                 id="setup-microsoft-provider-button"
@@ -123,7 +138,9 @@ export function EmailProviderSelector({
                   handleProviderClick('microsoft');
                 }}
               >
-                Set up Microsoft 365
+                {t('selector.cards.microsoft.action', {
+                  defaultValue: 'Set up Microsoft 365',
+                })}
               </Button>
             </CardContent>
           </Card>
@@ -143,17 +160,21 @@ export function EmailProviderSelector({
                 </div>
               </div>
             </div>
-            <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">IMAP</CardTitle>
+            <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">{t('selector.cards.imap.title', {
+              defaultValue: 'IMAP',
+            })}</CardTitle>
             <CardDescription className="text-base text-[rgb(var(--color-text-600))]">
-              Custom IMAP Server Integration
+              {t('selector.cards.imap.description', {
+                defaultValue: 'Custom IMAP Server Integration',
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <div className="text-sm text-[rgb(var(--color-text-600))] space-y-2">
-              <p>✓ Any IMAP-compliant mailbox</p>
-              <p>✓ Folder-based email filtering</p>
-              <p>✓ OAuth2 or password authentication</p>
-              <p>✓ Real-time IDLE listener</p>
+              <p>{t('selector.cards.imap.features.accounts', { defaultValue: '✓ Any IMAP-compliant mailbox' })}</p>
+              <p>{t('selector.cards.imap.features.filtering', { defaultValue: '✓ Folder-based email filtering' })}</p>
+              <p>{t('selector.cards.imap.features.authentication', { defaultValue: '✓ OAuth2 or password authentication' })}</p>
+              <p>{t('selector.cards.imap.features.listener', { defaultValue: '✓ Real-time IDLE listener' })}</p>
             </div>
             <Button
               id="setup-imap-provider-button"
@@ -163,7 +184,9 @@ export function EmailProviderSelector({
                 handleProviderClick('imap');
               }}
             >
-              Set up IMAP
+              {t('selector.cards.imap.action', {
+                defaultValue: 'Set up IMAP',
+              })}
             </Button>
           </CardContent>
         </Card>
@@ -177,7 +200,9 @@ export function EmailProviderSelector({
             variant="outline" 
             onClick={onCancel}
           >
-            Cancel
+            {t('selector.actions.cancel', {
+              defaultValue: 'Cancel',
+            })}
           </Button>
         </div>
       )}
@@ -186,8 +211,12 @@ export function EmailProviderSelector({
       <div className="text-center">
         <p className="text-xs text-muted-foreground max-w-2xl mx-auto">
           {isEnterpriseEdition
-            ? 'Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.'
-            : 'Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; otherwise choose IMAP. You can change this later by removing and reconfiguring your email provider.'}
+            ? t('selector.help.enterprise', {
+              defaultValue: 'Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.',
+            })
+            : t('selector.help.standard', {
+              defaultValue: 'Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; otherwise choose IMAP. You can change this later by removing and reconfiguring your email provider.',
+            })}
         </p>
       </div>
     </div>
