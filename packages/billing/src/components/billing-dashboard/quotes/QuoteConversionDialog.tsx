@@ -10,6 +10,7 @@ import {
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import type { IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import {
   getQuoteConversionPreview,
@@ -184,39 +185,18 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
 
             <section className="space-y-3">
               <h4 className="font-medium text-foreground">Conversion Mode</h4>
-              <div className="grid gap-2">
-                {(['contract', 'invoice', 'both'] as ConversionMode[]).map((mode) => {
-                  const isDisabled =
-                    (mode === 'contract' && !canConvertToContract) ||
-                    (mode === 'invoice' && !canConvertToInvoice) ||
-                    (mode === 'both' && !canConvertToBoth);
-
-                  return (
-                    <label
-                      key={mode}
-                      className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
-                        selectedMode === mode
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-muted-foreground/50'
-                      } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <input
-                        type="radio"
-                        name="conversionMode"
-                        value={mode}
-                        checked={selectedMode === mode}
-                        onChange={() => setSelectedMode(mode)}
-                        disabled={isDisabled}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium">{getModeLabel(mode)}</div>
-                        <div className="text-sm text-muted-foreground">{getModeDescription(mode)}</div>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
+              <RadioGroup
+                id="quote-conversion-mode"
+                name="conversionMode"
+                value={selectedMode ?? undefined}
+                onChange={(value) => setSelectedMode(value as ConversionMode)}
+                orientation="vertical"
+                options={([
+                  { value: 'contract', label: getModeLabel('contract'), description: getModeDescription('contract'), disabled: !canConvertToContract },
+                  { value: 'invoice', label: getModeLabel('invoice'), description: getModeDescription('invoice'), disabled: !canConvertToInvoice },
+                  { value: 'both', label: getModeLabel('both'), description: getModeDescription('both'), disabled: !canConvertToBoth },
+                ])}
+              />
             </section>
 
             <section className="space-y-3">

@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { ColumnDefinition, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
 import { listQuotes } from '../../../actions/quoteActions';
 import QuoteDetail from './QuoteDetail';
@@ -165,42 +166,47 @@ const QuotesTab: React.FC = () => {
           <div className="space-y-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-                Status
-                <select
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
-                  className="min-w-[180px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="all">All</option>
-                  <option value="draft">Drafts</option>
-                  <option value="pending_approval">Pending Approval</option>
-                  <option value="approved">Approved</option>
-                  <option value="sent">Sent</option>
-                  <option value="accepted">Accepted</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="expired">Expired</option>
-                  <option value="converted">Converted</option>
-                  <option value="cancelled">Cancelled</option>
-                  <option value="archived">Archived</option>
-                </select>
-              </label>
+              <div className="flex flex-col gap-1 text-sm font-medium text-foreground">
+                <label htmlFor="quotes-status-filter">Status</label>
+                <div className="min-w-[180px]">
+                  <CustomSelect
+                    id="quotes-status-filter"
+                    value={statusFilter}
+                    onValueChange={(value) => setStatusFilter(value)}
+                    options={[
+                      { value: 'all', label: 'All' },
+                      { value: 'draft', label: 'Drafts' },
+                      { value: 'pending_approval', label: 'Pending Approval' },
+                      { value: 'approved', label: 'Approved' },
+                      { value: 'sent', label: 'Sent' },
+                      { value: 'accepted', label: 'Accepted' },
+                      { value: 'rejected', label: 'Rejected' },
+                      { value: 'expired', label: 'Expired' },
+                      { value: 'converted', label: 'Converted' },
+                      { value: 'cancelled', label: 'Cancelled' },
+                      { value: 'archived', label: 'Archived' },
+                    ]}
+                  />
+                </div>
+              </div>
 
-              <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-                Client
-                <select
-                  value={clientFilter}
-                  onChange={(event) => setClientFilter(event.target.value)}
-                  className="min-w-[220px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="all">All clients</option>
-                  {clientOptions.map((clientName) => (
-                    <option key={clientName} value={clientName}>
-                      {clientName}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="flex flex-col gap-1 text-sm font-medium text-foreground">
+                <label htmlFor="quotes-client-filter">Client</label>
+                <div className="min-w-[220px]">
+                  <CustomSelect
+                    id="quotes-client-filter"
+                    value={clientFilter}
+                    onValueChange={(value) => setClientFilter(value)}
+                    options={[
+                      { value: 'all', label: 'All clients' },
+                      ...clientOptions.map((clientName) => ({
+                        value: clientName,
+                        label: clientName,
+                      })),
+                    ]}
+                  />
+                </div>
+              </div>
             </div>
 
               <div className="flex flex-wrap gap-2">

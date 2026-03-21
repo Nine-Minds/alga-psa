@@ -6,6 +6,7 @@ import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { ColumnDefinition, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
@@ -161,17 +162,20 @@ const QuoteApprovalDashboard: React.FC = () => {
                 </span>
               </div>
             </div>
-            <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-              Status
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as 'pending_approval' | 'approved')}
-                className="min-w-[180px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="pending_approval">Pending Approval</option>
-                <option value="approved">Approved</option>
-              </select>
-            </label>
+            <div className="flex flex-col gap-1 text-sm font-medium text-foreground">
+              <label htmlFor="quote-approvals-status-filter">Status</label>
+              <div className="min-w-[180px]">
+                <CustomSelect
+                  id="quote-approvals-status-filter"
+                  value={statusFilter}
+                  onValueChange={(value) => setStatusFilter(value as 'pending_approval' | 'approved')}
+                  options={[
+                    { value: 'pending_approval', label: 'Pending Approval' },
+                    { value: 'approved', label: 'Approved' },
+                  ]}
+                />
+              </div>
+            </div>
             <Button id="quote-approvals-back-billing" variant="outline" onClick={() => router.push('/msp/billing?tab=quotes')}>
               Back to Quotes
             </Button>

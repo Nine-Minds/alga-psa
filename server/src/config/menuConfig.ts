@@ -279,6 +279,13 @@ export const extensionsNavigationSections: NavigationSection[] = [
 // Billing navigation sections - used when sidebar is in 'billing' mode
 export const billingNavigationSections: NavigationSection[] = [
   {
+    title: 'Quotes',
+    translationKey: 'nav.billing.sections.quotes',
+    items: [
+      { name: 'Quotes', translationKey: 'nav.billing.quotes', icon: FileText, href: '/msp/billing?tab=quotes' },
+    ]
+  },
+  {
     title: 'Contracts',
     translationKey: 'nav.billing.sections.contracts',
     items: [

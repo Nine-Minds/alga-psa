@@ -6,7 +6,9 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteListItem } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, removeQuoteItem, reorderQuoteItems, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
@@ -32,6 +34,7 @@ interface QuoteFormState {
   opportunity_id: string;
   client_notes: string;
   terms_and_conditions: string;
+  currency_code: string;
 }
 
 const EMPTY_FORM: QuoteFormState = {
@@ -46,6 +49,7 @@ const EMPTY_FORM: QuoteFormState = {
   opportunity_id: '',
   client_notes: '',
   terms_and_conditions: '',
+  currency_code: 'USD',
 };
 
 const toDateInputValue = (value?: string | null): string => value ? value.slice(0, 10) : '';
@@ -98,6 +102,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
           opportunity_id: quote.opportunity_id || '',
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
+          currency_code: quote.currency_code || 'USD',
         });
         setLineItems((quote.quote_items || []).map(createDraftQuoteItemFromQuoteItem));
         setPersistedQuoteItemIds((quote.quote_items || []).map((item) => item.quote_item_id));
@@ -166,7 +171,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
         discount_total: 0,
         tax: 0,
         total_amount: 0,
-        currency_code: 'USD',
+        currency_code: form.currency_code,
         is_template: false,
       };
 
@@ -336,56 +341,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
         )}
 
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Client
-            <select
-              value={form.client_id}
-              onChange={(event) => handleChange('client_id', event.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              <option value="">Select client</option>
-              {clients.map((client) => (
-                <option key={client.client_id} value={client.client_id}>
-                  {client.client_name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Contact
-            <select
-              value={form.contact_id}
-              onChange={(event) => handleChange('contact_id', event.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              <option value="">Select contact</option>
-              {availableContacts.map((contact) => (
-                <option key={contact.contact_name_id} value={contact.contact_name_id}>
-                  {contact.full_name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {!isEditMode && (
-            <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
-              Create From Template
-              <select
-                value={form.template_id}
-                onChange={(event) => handleChange('template_id', event.target.value)}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">Start from scratch</option>
-                {templates.map((template) => (
-                  <option key={template.quote_id} value={template.quote_id}>
-                    {template.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
           <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
             Title
             <Input value={form.title} onChange={(event) => handleChange('title', event.target.value)} />
@@ -395,6 +350,63 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
             Description / Scope
             <TextArea value={form.description} onChange={(event) => handleChange('description', event.target.value)} rows={4} />
           </label>
+
+          <div className="flex flex-col gap-1 text-sm font-medium">
+            <label htmlFor="quote-client">Client</label>
+            <CustomSelect
+              id="quote-client"
+              value={form.client_id || undefined}
+              onValueChange={(value) => handleChange('client_id', value)}
+              placeholder="Select client"
+              options={clients.map((client) => ({
+                value: client.client_id,
+                label: client.client_name,
+              }))}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 text-sm font-medium">
+            <label htmlFor="quote-contact">Contact</label>
+            <CustomSelect
+              id="quote-contact"
+              value={form.contact_id || undefined}
+              onValueChange={(value) => handleChange('contact_id', value)}
+              placeholder="Select contact"
+              allowClear
+              options={availableContacts.map((contact) => ({
+                value: contact.contact_name_id,
+                label: contact.full_name,
+              }))}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 text-sm font-medium">
+            <label htmlFor="quote-currency">Currency</label>
+            <CustomSelect
+              id="quote-currency"
+              value={form.currency_code}
+              onValueChange={(value) => handleChange('currency_code', value)}
+              placeholder="Select currency"
+              options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
+            />
+          </div>
+
+          {!isEditMode && (
+            <div className="flex flex-col gap-1 text-sm font-medium">
+              <label htmlFor="quote-template">Create From Template</label>
+              <CustomSelect
+                id="quote-template"
+                value={form.template_id || undefined}
+                onValueChange={(value) => handleChange('template_id', value)}
+                placeholder="Start from scratch"
+                allowClear
+                options={templates.map((template) => ({
+                  value: template.quote_id,
+                  label: template.title,
+                }))}
+              />
+            </div>
+          )}
 
           <label className="flex flex-col gap-1 text-sm font-medium">
             Quote Date
@@ -424,7 +436,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
 
         <QuoteLineItemsEditor
           items={lineItems}
-          currencyCode="USD"
+          currencyCode={form.currency_code}
           onChange={setLineItems}
           disabled={isSaving}
         />
@@ -432,19 +444,19 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
         <section className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-2 xl:grid-cols-4">
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Subtotal</div>
-            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.subtotal, 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.subtotal, form.currency_code)}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Discounts</div>
-            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.discount_total, 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.discount_total, form.currency_code)}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Tax</div>
-            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.tax, 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.tax, form.currency_code)}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Total</div>
-            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.total_amount, 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.total_amount, form.currency_code)}</div>
           </div>
         </section>
       </Box>

@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { CatalogPickerItem } from '../../../actions/serviceActions';
 import ServiceCatalogPicker from '../contracts/ServiceCatalogPicker';
 import {
@@ -235,17 +236,18 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             })}
           />
           {item.is_recurring ? (
-            <select
+            <CustomSelect
+              id={`quote-line-frequency-${item.local_id}`}
               value={item.billing_frequency ?? 'monthly'}
-              onChange={(event) => updateItem(item.local_id, { billing_frequency: event.target.value })}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              onValueChange={(value) => updateItem(item.local_id, { billing_frequency: value })}
               disabled={disabled}
-            >
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="quarterly">Quarterly</option>
-              <option value="annually">Annually</option>
-            </select>
+              options={[
+                { value: 'weekly', label: 'Weekly' },
+                { value: 'monthly', label: 'Monthly' },
+                { value: 'quarterly', label: 'Quarterly' },
+                { value: 'annually', label: 'Annually' },
+              ]}
+            />
           ) : null}
         </div>
       </td>
@@ -343,15 +345,16 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
       </div>
 
       <div className="grid gap-3 rounded-md border border-dashed border-border p-3 lg:grid-cols-[1fr,1fr,1fr,1fr,auto]">
-        <select
+        <CustomSelect
+          id="quote-discount-type"
           value={discountType}
-          onChange={(event) => setDiscountType(event.target.value as 'percentage' | 'fixed')}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          onValueChange={(value) => setDiscountType(value as 'percentage' | 'fixed')}
           disabled={disabled}
-        >
-          <option value="percentage">Percentage discount</option>
-          <option value="fixed">Fixed discount</option>
-        </select>
+          options={[
+            { value: 'percentage', label: 'Percentage discount' },
+            { value: 'fixed', label: 'Fixed discount' },
+          ]}
+        />
         <Input
           type="number"
           min="0"
@@ -361,48 +364,42 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
           disabled={disabled}
           placeholder={discountType === 'percentage' ? '10' : '0.00'}
         />
-        <select
+        <CustomSelect
+          id="quote-discount-target-type"
           value={discountTargetType}
-          onChange={(event) => {
-            const nextTargetType = event.target.value as 'quote' | 'item' | 'service';
+          onValueChange={(value) => {
+            const nextTargetType = value as 'quote' | 'item' | 'service';
             setDiscountTargetType(nextTargetType);
             setDiscountTargetValue('');
           }}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
           disabled={disabled}
-        >
-          <option value="quote">Whole quote</option>
-          <option value="item">Specific item</option>
-          <option value="service">Specific service</option>
-        </select>
+          options={[
+            { value: 'quote', label: 'Whole quote' },
+            { value: 'item', label: 'Specific item' },
+            { value: 'service', label: 'Specific service' },
+          ]}
+        />
         {discountTargetType === 'item' ? (
-          <select
-            value={discountTargetValue}
-            onChange={(event) => setDiscountTargetValue(event.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          <CustomSelect
+            id="quote-discount-target-item"
+            value={discountTargetValue || undefined}
+            onValueChange={(value) => setDiscountTargetValue(value)}
             disabled={disabled}
-          >
-            <option value="">Select item</option>
-            {itemTargetOptions.map((item) => (
-              <option key={item.local_id} value={item.local_id}>
-                {item.description}
-              </option>
-            ))}
-          </select>
+            placeholder="Select item"
+            options={itemTargetOptions.map((item) => ({
+              value: item.local_id,
+              label: item.description,
+            }))}
+          />
         ) : discountTargetType === 'service' ? (
-          <select
-            value={discountTargetValue}
-            onChange={(event) => setDiscountTargetValue(event.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          <CustomSelect
+            id="quote-discount-target-service"
+            value={discountTargetValue || undefined}
+            onValueChange={(value) => setDiscountTargetValue(value)}
             disabled={disabled}
-          >
-            <option value="">Select service</option>
-            {serviceTargetOptions.map((service) => (
-              <option key={service.value} value={service.value}>
-                {service.label}
-              </option>
-            ))}
-          </select>
+            placeholder="Select service"
+            options={serviceTargetOptions}
+          />
         ) : (
           <div className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
             Applies to the full quote subtotal
