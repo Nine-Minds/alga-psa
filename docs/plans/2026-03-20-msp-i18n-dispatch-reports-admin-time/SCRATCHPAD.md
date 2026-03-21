@@ -129,6 +129,7 @@ SCRIPT
 - (2026-03-20) `F013` completed: generated `server/public/locales/xx/msp/dispatch.json` and `server/public/locales/yy/msp/dispatch.json` with all leaf values collapsed to `11111` / `55555`. Kept the exact key structure from English while intentionally not preserving interpolation tokens so pseudo-locale QA highlights extraction coverage rather than variable formatting.
 - (2026-03-20) `F014` completed: ran the Italian accent audit grep against `server/public/locales/it/msp/dispatch.json`; it returned no matches for the known unaccented patterns.
 - (2026-03-20) `T001` passed: `node scripts/validate-translations.cjs` completed with `Errors: 0` and `Warnings: 0` after the dispatch locale and pseudo-locale files were added.
+- (2026-03-20) `T002` passed: `npx tsc -p packages/scheduling/tsconfig.json --noEmit --pretty false` completed successfully after wiring the dispatch components, giving package-level TypeScript coverage for the `useTranslation('msp/dispatch')` changes.
 
 ### Key file paths — Dispatch
 | File | Strings |

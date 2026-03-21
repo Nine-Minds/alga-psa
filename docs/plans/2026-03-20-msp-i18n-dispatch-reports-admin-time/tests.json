@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "Dispatch: all 13 component files compile with useTranslation('msp/dispatch') — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F003", "F004", "F005", "F006", "F007", "F008", "F009", "F010"]
   },
   {
