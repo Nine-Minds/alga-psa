@@ -41,6 +41,7 @@
 - (2026-03-20) 13 files with zero strings (selectors, lists, wrappers, OAuth hooks, schemas, index files) — skip
 - (2026-03-20) Admin files (EmailSettings, InboundTicketDefaultsManager, M365Diagnostics) already in 2b-8 — DO NOT duplicate
 - (2026-03-21) Implementation inventory found extra in-scope provider setup copy beyond the original estimate: `EmailProviderList.tsx`, `EmailProviderSelector.tsx`, `ProviderSetupWizardDialog.tsx`, `providers/gmail/BasicConfigCard.tsx`, `providers/gmail/ProcessingSettingsCard.tsx`, `providers/gmail/OAuthSection.tsx`, `providers/gmail/schemas.ts`, and `providers/gmail/useOAuthPopup.ts` all contain visible or user-facing fallback/validation strings. Added follow-up feature `F045` and test `T043` so the provider namespace migration covers these surfaces before locale generation.
+- (2026-03-21) `features.json` lagged behind the repo for `F040`: [server/public/locales/en/msp/email-providers.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/email-providers.json) was already created and documented in the progress log, so the checklist was reconciled before continuing with the remaining email-provider implementation work.
 
 ### Profile (2b-19)
 - (2026-03-20) Spans 3 packages: `packages/users/`, `server/src/components/settings/profile/`, `server/src/components/settings/security/`, `server/src/components/platform-updates/`
