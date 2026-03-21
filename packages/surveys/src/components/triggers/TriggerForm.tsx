@@ -364,7 +364,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
 
     if (!formState.templateId) {
       toast({
-        title: tCommon('errors.required', { defaultValue: 'This field is required' }),
+        title: tCommon('messages.required', { defaultValue: 'This field is required' }),
         description: t('settings.triggerForm.labels.template', {
           defaultValue: 'Survey template',
         }),

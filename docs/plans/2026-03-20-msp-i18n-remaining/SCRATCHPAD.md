@@ -120,6 +120,7 @@ done
 - (2026-03-21) Validation for `F003`: `npx tsc -p packages/surveys/tsconfig.json --noEmit` still passed after the response-flow and shared helper rewrites.
 - (2026-03-21) Completed `F004`: localized the remaining survey chrome and insights surface: dashboard widgets, analytics widgets/pages, `SurveyModuleFrame`, `ClientSurveySummaryCard`, and `TicketSurveySummaryCard`. Server components `SurveyDashboard.tsx` and `SurveyAnalyticsPage.tsx` now use `getServerTranslation('msp/surveys')`, and client summary/dashboard lists use `useFormatters()` for locale-aware timestamps.
 - (2026-03-21) Validation for `F004`: `npx tsc -p packages/surveys/tsconfig.json --noEmit` passed after the dashboard, analytics, and survey chrome rewrites.
+- (2026-03-21) Follow-up survey cleanup before locale generation: kept `RatingDisplay.tsx` on the survey namespace for the rating-button aria label with text, and corrected `TriggerForm.tsx` to reuse `common.messages.required` instead of a missing `common.errors.required` key. Re-ran `npx tsc -p packages/surveys/tsconfig.json --noEmit` to confirm the worktree was clean before starting translated survey locale files.
 
 ## Open Questions
 

@@ -129,7 +129,11 @@ export function RatingButton({
       aria-pressed={selected}
       aria-label={
         label
-          ? `${rating} - ${label}`
+          ? t('rating.buttonAriaWithLabel', {
+              defaultValue: '{{rating}} - {{label}}',
+              rating,
+              label,
+            })
           : t('rating.buttonAria', {
               defaultValue: 'Rating {{rating}} of {{scale}}',
               rating,
