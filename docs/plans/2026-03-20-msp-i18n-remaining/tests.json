@@ -139,9 +139,27 @@
 
   {
     "id": "T060",
-    "description": "2b-20: confirmed 0 user-visible strings in extensions/licensing components — batch closed",
+    "description": "2b-20: re-inventory recorded the stale 'no work needed' assumption and added concrete extension/licensing follow-up items for discovered visible strings",
     "implemented": false,
     "featureIds": ["F060"]
+  },
+  {
+    "id": "T061",
+    "description": "2b-20 follow-up: extension surfaces compile with msp/extensions and no visible hardcoded extension placeholder copy remains",
+    "implemented": false,
+    "featureIds": ["F061", "F062"]
+  },
+  {
+    "id": "T062",
+    "description": "2b-20 follow-up: licensing CE stubs compile with msp/licensing and no visible hardcoded stub copy remains",
+    "implemented": false,
+    "featureIds": ["F065", "F066"]
+  },
+  {
+    "id": "T063",
+    "description": "2b-20 follow-up: validate-translations.cjs passes for msp/extensions and msp/licensing across all 9 locales",
+    "implemented": false,
+    "featureIds": ["F063", "F067"]
   },
 
   {

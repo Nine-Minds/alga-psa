@@ -36,7 +36,15 @@
   {"id": "F053", "description": "Generate msp/profile translations for 6 non-English locales + 2 pseudo-locales", "implemented": true, "prdRefs": ["2b-19"]},
   {"id": "F054", "description": "Italian accent audit on it/msp/profile.json", "implemented": true, "prdRefs": ["2b-19"]},
 
-  {"id": "F060", "description": "Close batch 2b-20 (extensions + licensing) as 'no translation needed' — 0 user-visible strings found", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F060", "description": "Re-inventory batch 2b-20 and record follow-up scope for extension/licensing strings discovered after the original 'no work needed' assumption", "implemented": true, "prdRefs": ["2b-20"]},
+  {"id": "F061", "description": "Create en/msp/extensions.json for extension nav/settings/OSS placeholder surfaces discovered in batch 2b-20 follow-up", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F062", "description": "Wire useTranslation('msp/extensions') in DynamicNavigationSlot, ExtensionManagement, ExtensionComponentLoader, and OSS extension placeholder pages/components", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F063", "description": "Generate msp/extensions translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F064", "description": "Italian accent audit on it/msp/extensions.json", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F065", "description": "Create en/msp/licensing.json for CE licensing stub copy discovered in batch 2b-20 follow-up", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F066", "description": "Wire useTranslation('msp/licensing') in CE licensing stub components (ReduceLicensesModal, LicensePurchaseForm)", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F067", "description": "Generate msp/licensing translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F068", "description": "Italian accent audit on it/msp/licensing.json", "implemented": false, "prdRefs": ["2b-20"]},
 
   {"id": "F090", "description": "Update ROUTE_NAMESPACES for /msp/surveys, /msp/schedule, /msp/knowledge-base, /msp/jobs, /msp/settings (email-providers), /msp/profile, /msp/security-settings, /msp/platform-updates", "implemented": false},
   {"id": "F091", "description": "validate-translations.cjs passes for all 6 new namespaces across all 9 locales", "implemented": false},
