@@ -33,7 +33,7 @@
   {
     "id": "T010",
     "description": "validate-translations.cjs passes with 0 errors after reports batch (msp/reports keys consistent across all 9 locales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020", "F026", "F027"]
   },
   {
