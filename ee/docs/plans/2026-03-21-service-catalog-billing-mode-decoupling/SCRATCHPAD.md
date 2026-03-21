@@ -17,6 +17,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Hard cutover selected: no dual-read/dual-write and no transitional alias retention after migration. Rationale: avoid long-term complexity debt and hidden fallback regressions.
 - (2026-03-21) Wave 0 canonicalization starts by rejecting `per_unit` at server write-schema boundaries (`serviceSchemas`, `financialSchemas`, `contractLineSchemas`) and hardening migration post-conditions. Rationale: immediate write-path guardrails plus deterministic migration safety without waiting for downstream UI/type cleanup waves.
 - (2026-03-21) Mode-specific catalog defaults are stored in a dedicated table (`service_catalog_mode_defaults`) rather than overloading existing `service_prices`. Rationale: keep contract-mode defaults explicit and avoid breaking multi-currency price reads while migration/backfill work lands.
+- (2026-03-21) Backfill semantics for mode-defaults are one-way and service-scoped: seed from `service_prices` first, fallback to `service_catalog.default_rate` only when no per-currency rows exist, and fail on unresolved active-service mappings. Rationale: preserve the richest existing pricing data while preventing silent gaps.
 
 ## Discoveries / Constraints
 
@@ -29,6 +30,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-21) Existing migration `20251016120000_update_billing_method_to_text.cjs` normalized `per_unit` to `usage` but did not fail when residual legacy rows remained; added explicit residual-count guard + throw.
 - (2026-03-21) Product flows still actively write `billing_method: 'per_unit'` (`ProductCatalogService`, `productSchemas`), so canonicalization for product writes remains follow-up in `F037/F039`.
 - (2026-03-21) Added migration `20260321110000_create_service_catalog_mode_defaults.cjs` with tenant+service scoped FK, strict unique key `(tenant, service_id, billing_mode, currency_code)`, billing_mode check (`fixed|hourly|usage`), and non-negative rate check.
+- (2026-03-21) Added migration `20260321113000_backfill_service_catalog_mode_defaults.cjs` that normalizes `per_unit -> usage`, inserts from `service_prices`, falls back to `service_catalog` defaults, and throws when active services with source defaults still have no mode-default rows.
 
 ## Commands / Runbooks
 
@@ -46,6 +48,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run src/test/unit/migrations/billingMethodCanonicalizationMigration.test.ts src/test/unit/api/contractLineCadenceOwner.schema.test.ts src/test/unit/api/defaultBillingSettings.cadenceOwner.schema.test.ts`
 - (2026-03-21) Validate API rejection + mode-default table migration tests:
   - `cd server && npx vitest run src/test/unit/api/serviceBillingMethodCutover.schema.test.ts src/test/unit/migrations/serviceCatalogModeDefaultsMigration.test.ts src/test/unit/migrations/billingMethodCanonicalizationMigration.test.ts`
+- (2026-03-21) Validate mode-default backfill migration tests:
+  - `cd server && npx vitest run src/test/unit/migrations/serviceCatalogModeDefaultsMigration.test.ts src/test/unit/migrations/serviceCatalogModeDefaultsBackfillMigration.test.ts`
 
 ## Links / References
 
