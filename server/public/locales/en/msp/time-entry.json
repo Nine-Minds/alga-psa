@@ -64,9 +64,13 @@
     "types": {
       "all": "All Types",
       "ticket": "Ticket",
+      "tickets": "Tickets",
       "projectTask": "Project Task",
+      "projectTasks": "Project Tasks",
       "interaction": "Interaction",
+      "interactions": "Interactions",
       "adHocEntry": "Ad-hoc Entry",
+      "adHocEntries": "Ad-hoc Entries",
       "billable": "Billable"
     }
   },
