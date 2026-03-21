@@ -2522,6 +2522,23 @@ export class BillingEngine {
         userTypeRates: userRateMap,
       });
     }
+    let configuredServiceIds = Array.from(serviceConfigMap.keys());
+    if (configuredServiceIds.length === 0) {
+      configuredServiceIds = await this.getServiceIdsForContractLine(
+        clientContractLine.contract_line_id,
+      );
+    }
+    if (configuredServiceIds.length === 0) {
+      return [];
+    }
+    const uniquelyAssignableServiceIds =
+      await this.getUniquelyAssignableServiceIdsForLine({
+        clientId,
+        serviceIds: configuredServiceIds,
+        contractLineId: clientContractLine.contract_line_id,
+        servicePeriodStartExclusive,
+        servicePeriodEndExclusive,
+      });
 
     const query = this.knex("time_entries")
       .join("users", function () {
@@ -2579,16 +2596,22 @@ export class BillingEngine {
       .where("time_entries.start_time", ">=", servicePeriodStartExclusive)
       .where("time_entries.end_time", "<", servicePeriodEndExclusive)
       .where("time_entries.invoiced", false)
+      .whereIn("time_entries.service_id", configuredServiceIds)
       .where(function (this: Knex.QueryBuilder) {
         // Either the time entry has the specific contract line ID (use contract_line_id for contract associations)
         this.where(
           "time_entries.contract_line_id",
           clientContractLine.contract_line_id,
-        ) // Use contract_line_id here
-          // Or it has no contract line ID (for backward compatibility) and should be allocated to this plan
-          .orWhere(function (this: Knex.QueryBuilder) {
-            this.whereNull("time_entries.contract_line_id");
+        );
+        if (uniquelyAssignableServiceIds.length > 0) {
+          // Unassigned time is allocatable only when service-to-line matching is unique.
+          this.orWhere(function (this: Knex.QueryBuilder) {
+            this.whereNull("time_entries.contract_line_id").whereIn(
+              "time_entries.service_id",
+              uniquelyAssignableServiceIds,
+            );
           });
+        }
       })
       .where(function (this: Knex.QueryBuilder) {
         this.where(function (this: Knex.QueryBuilder) {
@@ -2850,6 +2873,23 @@ export class BillingEngine {
         rateTiers,
       });
     }
+    let configuredServiceIds = Array.from(serviceConfigMap.keys());
+    if (configuredServiceIds.length === 0) {
+      configuredServiceIds = await this.getServiceIdsForContractLine(
+        clientContractLine.contract_line_id,
+      );
+    }
+    if (configuredServiceIds.length === 0) {
+      return [];
+    }
+    const uniquelyAssignableServiceIds =
+      await this.getUniquelyAssignableServiceIdsForLine({
+        clientId,
+        serviceIds: configuredServiceIds,
+        contractLineId: clientContractLine.contract_line_id,
+        servicePeriodStartExclusive,
+        servicePeriodEndExclusive,
+      });
 
     const usageRecordQuery = this.knex("usage_tracking")
       .leftJoin("service_catalog", function () {
@@ -2864,6 +2904,7 @@ export class BillingEngine {
         "usage_tracking.tenant": this.tenant,
         "usage_tracking.invoiced": false,
       })
+      .whereIn("usage_tracking.service_id", configuredServiceIds)
       .where("usage_tracking.usage_date", ">=", servicePeriodStartExclusive)
       .where("usage_tracking.usage_date", "<", servicePeriodEndExclusive)
       .where(function (this: Knex.QueryBuilder) {
@@ -2871,11 +2912,16 @@ export class BillingEngine {
         this.where(
           "usage_tracking.contract_line_id",
           clientContractLine.contract_line_id,
-        ) // Use contract_line_id here
-          // Or it has no contract line ID (for backward compatibility) and should be allocated to this plan
-          .orWhere(function (this: Knex.QueryBuilder) {
-            this.whereNull("usage_tracking.contract_line_id");
+        );
+        if (uniquelyAssignableServiceIds.length > 0) {
+          // Unassigned usage is allocatable only when service-to-line matching is unique.
+          this.orWhere(function (this: Knex.QueryBuilder) {
+            this.whereNull("usage_tracking.contract_line_id").whereIn(
+              "usage_tracking.service_id",
+              uniquelyAssignableServiceIds,
+            );
           });
+        }
       })
       .select(
         "usage_tracking.*",
@@ -2997,6 +3043,89 @@ export class BillingEngine {
     const usageBasedCharges = await Promise.all(usageBasedChargesPromises);
 
     return usageBasedCharges;
+  }
+
+  private async getUniquelyAssignableServiceIdsForLine(input: {
+    clientId: string;
+    serviceIds: string[];
+    contractLineId: string;
+    servicePeriodStartExclusive: ISO8601String;
+    servicePeriodEndExclusive: ISO8601String;
+  }): Promise<string[]> {
+    if (!this.tenant || input.serviceIds.length === 0) {
+      return [];
+    }
+
+    const rows = await this.knex("client_contracts as cc")
+      .join("contracts as c", function () {
+        this.on("c.contract_id", "=", "cc.contract_id").andOn(
+          "c.tenant",
+          "=",
+          "cc.tenant",
+        );
+      })
+      .join("contract_lines as cl", function () {
+        this.on("cl.contract_id", "=", "c.contract_id").andOn(
+          "cl.tenant",
+          "=",
+          "c.tenant",
+        );
+      })
+      .join("contract_line_services as cls", function () {
+        this.on("cls.contract_line_id", "=", "cl.contract_line_id").andOn(
+          "cls.tenant",
+          "=",
+          "cl.tenant",
+        );
+      })
+      .where({
+        "cc.tenant": this.tenant,
+        "cc.client_id": input.clientId,
+      })
+      .whereIn("cls.service_id", input.serviceIds)
+      .where("cc.start_date", "<", input.servicePeriodEndExclusive)
+      .where(function (this: Knex.QueryBuilder) {
+        this.whereNull("cc.end_date").orWhere(
+          "cc.end_date",
+          ">=",
+          input.servicePeriodStartExclusive,
+        );
+      })
+      .groupBy("cls.service_id")
+      .select(
+        "cls.service_id",
+        this.knex.raw("COUNT(DISTINCT cl.contract_line_id) as line_count"),
+        this.knex.raw("MIN(cl.contract_line_id) as only_line_id"),
+      );
+
+    return rows
+      .filter(
+        (row: any) =>
+          Number(row.line_count) === 1 &&
+          row.only_line_id === input.contractLineId,
+      )
+      .map((row: any) => row.service_id);
+  }
+
+  private async getServiceIdsForContractLine(
+    contractLineId: string,
+  ): Promise<string[]> {
+    if (!this.tenant) {
+      return [];
+    }
+
+    const rows = await this.knex("contract_line_services")
+      .where({
+        tenant: this.tenant,
+        contract_line_id: contractLineId,
+      })
+      .select("service_id");
+
+    return rows
+      .map((row: any) => row.service_id)
+      .filter((serviceId: unknown): serviceId is string =>
+        typeof serviceId === "string" && serviceId.length > 0,
+      );
   }
 
   private async calculateRecurringQuantityCharges(

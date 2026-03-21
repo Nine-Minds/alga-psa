@@ -180,6 +180,22 @@ describe('BillingEngine', () => {
         });
       }
 
+      if (table === 'contract_line_services') {
+        return buildChainableQuery({
+          selectResult: [
+            { service_id: 'service1' },
+            { service_id: 'service2' },
+            { service_id: 'service3' },
+          ],
+          firstResult: null,
+          thenResult: [
+            { service_id: 'service1' },
+            { service_id: 'service2' },
+            { service_id: 'service3' },
+          ],
+        });
+      }
+
       const defaultBuilder = buildChainableQuery({ selectResult: [], firstResult: null, thenResult: [] });
       defaultBuilder.count = vi.fn().mockResolvedValue([{ count: 0 }]);
       return defaultBuilder;
@@ -224,6 +240,7 @@ describe('BillingEngine', () => {
     builder.whereNull = vi.fn().mockImplementation(() => builder);
     builder.whereNotNull = vi.fn().mockImplementation(() => builder);
     builder.whereIn = vi.fn().mockImplementation(() => builder);
+    builder.groupBy = vi.fn().mockImplementation(() => builder);
     builder.orderBy = vi.fn().mockImplementation(() => builder);
     builder.__setResolveValue = vi.fn((value: any) => {
       resolveValue = value;
@@ -1190,7 +1207,7 @@ describe('BillingEngine', () => {
     });
 
     describe('calculateTimeBasedCharges with contract line disambiguation', () => {
-      it('should filter time entries by contract line ID', async () => {
+      it('T030: explicit contract_line_id time entry still bills through assigned line', async () => {
         const mockTimeEntries = [
           {
             entry_id: 'entry-1',
@@ -1238,7 +1255,7 @@ describe('BillingEngine', () => {
         timeEntriesBuilder.select.mockImplementation(() => {
           timeEntriesBuilder.__setResolveValue(
             mockTimeEntries.filter(
-              (entry) => entry.contract_line_id === 'contract_line_1' || entry.contract_line_id === null
+              (entry) => entry.contract_line_id === 'contract_line_1'
             )
           );
           return timeEntriesBuilder;
@@ -1267,18 +1284,101 @@ describe('BillingEngine', () => {
           { service_category: 'test_category', contract_line_id: 'test_contract_line_id', client_contract_line_id: 'contract_line_1' }
         );
 
-        // Should only include entries with contract_line_id = 'contract_line_1' or null
-        expect(result).toHaveLength(2);
+        // Only explicitly assigned records should flow without unique service-line disambiguation.
+        expect(result).toHaveLength(1);
         expect(result[0].serviceName).toBe('Service 1');
-        expect(result[1].serviceName).toBe('Service 3');
         
         // Verify that the where function was called with the correct contract line ID
         expect(timeEntriesBuilder.where).toHaveBeenCalled();
       });
+
+      it('T032: unassigned time entry with a single eligible service-line match is allocated once', async () => {
+        const baseKnex = (billingEngine as any).knex;
+        const timeEntriesBuilder = buildChainableQuery({
+          selectResult: [
+            {
+              entry_id: 'entry-unassigned-1',
+              work_item_id: 'service1',
+              service_id: 'service1',
+              service_name: 'Service 1',
+              user_id: 'user1',
+              start_time: new Date('2023-01-01T10:00:00.000Z'),
+              end_time: new Date('2023-01-01T12:00:00.000Z'),
+              default_rate: 40,
+              tax_rate_id: null,
+              contract_line_id: null,
+            },
+          ],
+          thenResult: [
+            {
+              entry_id: 'entry-unassigned-1',
+              work_item_id: 'service1',
+              service_id: 'service1',
+              service_name: 'Service 1',
+              user_id: 'user1',
+              start_time: new Date('2023-01-01T10:00:00.000Z'),
+              end_time: new Date('2023-01-01T12:00:00.000Z'),
+              default_rate: 40,
+              tax_rate_id: null,
+              contract_line_id: null,
+            },
+          ],
+        });
+        const uniqueBuilder = buildChainableQuery({
+          selectResult: [{ service_id: 'service1', line_count: '1', only_line_id: 'test_contract_line_id' }],
+          thenResult: [{ service_id: 'service1', line_count: '1', only_line_id: 'test_contract_line_id' }],
+        });
+        (billingEngine as any).knex = vi.fn((table: string) => {
+          if (table === 'time_entries') return timeEntriesBuilder;
+          if (table === 'client_contracts as cc') return uniqueBuilder;
+          return baseKnex(table);
+        });
+        (billingEngine as any).knex.raw = baseKnex.raw;
+
+        const result = await (billingEngine as any).calculateTimeBasedCharges(
+          mockClientId,
+          { startDate: mockStartDate, endDate: mockEndDate },
+          {
+            service_category: 'test_category',
+            contract_line_id: 'test_contract_line_id',
+            client_contract_line_id: 'contract_line_1',
+          }
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].entryId).toBe('entry-unassigned-1');
+      });
+
+      it('T034: ambiguous unassigned time entry remains unresolved non-contract', async () => {
+        const baseKnex = (billingEngine as any).knex;
+        const timeEntriesBuilder = buildChainableQuery({ selectResult: [], thenResult: [] });
+        const ambiguousBuilder = buildChainableQuery({
+          selectResult: [{ service_id: 'service1', line_count: '2', only_line_id: 'test_contract_line_id' }],
+          thenResult: [{ service_id: 'service1', line_count: '2', only_line_id: 'test_contract_line_id' }],
+        });
+        (billingEngine as any).knex = vi.fn((table: string) => {
+          if (table === 'time_entries') return timeEntriesBuilder;
+          if (table === 'client_contracts as cc') return ambiguousBuilder;
+          return baseKnex(table);
+        });
+        (billingEngine as any).knex.raw = baseKnex.raw;
+
+        const result = await (billingEngine as any).calculateTimeBasedCharges(
+          mockClientId,
+          { startDate: mockStartDate, endDate: mockEndDate },
+          {
+            service_category: 'test_category',
+            contract_line_id: 'test_contract_line_id',
+            client_contract_line_id: 'contract_line_1',
+          }
+        );
+
+        expect(result).toEqual([]);
+      });
     });
 
     describe('calculateUsageBasedCharges with contract line disambiguation', () => {
-      it('should filter usage records by contract line ID', async () => {
+      it('T031: explicit contract_line_id usage record still bills through assigned line', async () => {
         const mockUsageRecords = [
           {
             service_id: 'service1',
@@ -1308,7 +1408,7 @@ describe('BillingEngine', () => {
         usageBuilder.select.mockImplementation(() => {
           usageBuilder.__setResolveValue(
             mockUsageRecords.filter((record) =>
-              record.contract_line_id === 'contract_line_1' || record.contract_line_id === null
+              record.contract_line_id === 'contract_line_1'
             )
           );
           return usageBuilder;
@@ -1325,11 +1425,15 @@ describe('BillingEngine', () => {
         const result = await (billingEngine as any).calculateUsageBasedCharges(
           mockClientId,
           { startDate: mockStartDate, endDate: mockEndDate },
-          { service_category: 'test_category', client_contract_line_id: 'contract_line_1' }
+          {
+            service_category: 'test_category',
+            contract_line_id: 'test_contract_line_id',
+            client_contract_line_id: 'contract_line_1',
+          }
         );
 
-        // Should only include records with contract_line_id = 'contract_line_1' or null
-        expect(result).toHaveLength(2);
+        // Only explicitly assigned records should flow without unique service-line disambiguation.
+        expect(result).toHaveLength(1);
         expect(result[0]).toMatchObject({
           serviceId: 'service1',
           serviceName: 'Service 1',
@@ -1337,13 +1441,84 @@ describe('BillingEngine', () => {
           servicePeriodEnd: '2022-12-31',
           billingTiming: 'arrears'
         });
-        expect(result[1]).toMatchObject({
-          serviceId: 'service3',
-          serviceName: 'Service 3',
-          servicePeriodStart: '2022-12-01',
-          servicePeriodEnd: '2022-12-31',
-          billingTiming: 'arrears'
+      });
+
+      it('T033: unassigned usage record with a single eligible service-line match is allocated once', async () => {
+        const baseKnex = (billingEngine as any).knex;
+        const usageBuilder = buildChainableQuery({
+          selectResult: [
+            {
+              usage_id: 'usage-unassigned-1',
+              service_id: 'service1',
+              service_name: 'Service 1',
+              quantity: 8,
+              default_rate: 5,
+              tax_rate_id: null,
+              contract_line_id: null,
+            },
+          ],
+          thenResult: [
+            {
+              usage_id: 'usage-unassigned-1',
+              service_id: 'service1',
+              service_name: 'Service 1',
+              quantity: 8,
+              default_rate: 5,
+              tax_rate_id: null,
+              contract_line_id: null,
+            },
+          ],
         });
+        const uniqueBuilder = buildChainableQuery({
+          selectResult: [{ service_id: 'service1', line_count: '1', only_line_id: 'test_contract_line_id' }],
+          thenResult: [{ service_id: 'service1', line_count: '1', only_line_id: 'test_contract_line_id' }],
+        });
+        (billingEngine as any).knex = vi.fn((table: string) => {
+          if (table === 'usage_tracking') return usageBuilder;
+          if (table === 'client_contracts as cc') return uniqueBuilder;
+          return baseKnex(table);
+        });
+        (billingEngine as any).knex.raw = baseKnex.raw;
+
+        const result = await (billingEngine as any).calculateUsageBasedCharges(
+          mockClientId,
+          { startDate: mockStartDate, endDate: mockEndDate },
+          {
+            service_category: 'test_category',
+            contract_line_id: 'test_contract_line_id',
+            client_contract_line_id: 'contract_line_1',
+          }
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].usageId).toBe('usage-unassigned-1');
+      });
+
+      it('T035: ambiguous unassigned usage record remains unresolved non-contract', async () => {
+        const baseKnex = (billingEngine as any).knex;
+        const usageBuilder = buildChainableQuery({ selectResult: [], thenResult: [] });
+        const ambiguousBuilder = buildChainableQuery({
+          selectResult: [{ service_id: 'service1', line_count: '2', only_line_id: 'test_contract_line_id' }],
+          thenResult: [{ service_id: 'service1', line_count: '2', only_line_id: 'test_contract_line_id' }],
+        });
+        (billingEngine as any).knex = vi.fn((table: string) => {
+          if (table === 'usage_tracking') return usageBuilder;
+          if (table === 'client_contracts as cc') return ambiguousBuilder;
+          return baseKnex(table);
+        });
+        (billingEngine as any).knex.raw = baseKnex.raw;
+
+        const result = await (billingEngine as any).calculateUsageBasedCharges(
+          mockClientId,
+          { startDate: mockStartDate, endDate: mockEndDate },
+          {
+            service_category: 'test_category',
+            contract_line_id: 'test_contract_line_id',
+            client_contract_line_id: 'contract_line_1',
+          }
+        );
+
+        expect(result).toEqual([]);
       });
     });
 
