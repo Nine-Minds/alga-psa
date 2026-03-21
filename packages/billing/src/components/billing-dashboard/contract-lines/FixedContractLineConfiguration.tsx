@@ -18,7 +18,6 @@ import {
   updateContractLine,
   updateContractLineFixedConfig,
   getContractLineFixedConfig,
-  upsertContractLineTerms,
 } from '@alga-psa/billing/actions/contractLineAction';
 import { IService, IContractLine } from '@alga-psa/types';
 import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import the actual component
@@ -161,6 +160,7 @@ export function FixedPlanConfiguration({
       const planData: Partial<IContractLine> = {
         contract_line_name: planName,
         billing_frequency: billingFrequency,
+        billing_timing: planType === 'Fixed' ? billingTiming : 'arrears',
         is_custom: isCustom,
         contract_line_type: planType!,
         cadence_owner: cadenceOwner,
@@ -180,11 +180,6 @@ export function FixedPlanConfiguration({
             }),
           });
         }
-
-        await upsertContractLineTerms(
-          plan.contract_line_id,
-          planType === 'Fixed' ? billingTiming : 'arrears'
-        );
       }
 
       await fetchPlanData();

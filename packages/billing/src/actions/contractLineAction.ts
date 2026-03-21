@@ -21,6 +21,7 @@ import {
     normalizeLiveRecurringStorage,
     normalizeTemplateRecurringStorage,
 } from '@shared/billingClients/recurrenceStorageModel';
+import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
 export const getContractLines = withAuth(async (
     user,
@@ -152,6 +153,14 @@ export const createContractLine = withAuth(async (
             const plan = await ContractLine.create(trx, safePlanData);
             const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
+            if (enrichedPlan.contract_line_id) {
+                await syncRecurringServicePeriodsForContractLine(trx, {
+                    tenant,
+                    contractLineId: enrichedPlan.contract_line_id,
+                    sourceRunPrefix: 'contract_line_create',
+                });
+            }
+
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
             analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, {
@@ -217,6 +226,12 @@ export const updateContractLine = withAuth(async (
             const plan = await ContractLine.update(trx, planId, safeUpdateData);
             const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
+            await syncRecurringServicePeriodsForContractLine(trx, {
+                tenant,
+                contractLineId: planId,
+                sourceRunPrefix: 'contract_line_update',
+            });
+
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
             analytics.capture(AnalyticsEvents.BILLING_RULE_UPDATED, {
@@ -274,6 +289,12 @@ export const upsertContractLineTerms = withAuth(async (
                 billing_timing: billingTiming,
                 updated_at: trx.fn.now(),
             });
+
+        await syncRecurringServicePeriodsForContractLine(trx, {
+            tenant,
+            contractLineId,
+            sourceRunPrefix: 'contract_line_terms_update',
+        });
 
     });
 });

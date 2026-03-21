@@ -4,10 +4,13 @@ import React, { startTransition, useEffect, useMemo, useState } from 'react';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getRecurringServicePeriodManagementView,
+  listRecurringServicePeriodScheduleSummaries,
   previewRecurringServicePeriodRegeneration,
   type PreviewRecurringServicePeriodRegenerationInput,
+  type RecurringServicePeriodScheduleSummary,
   type RecurringServicePeriodManagementView,
 } from '@alga-psa/billing/actions/recurringServicePeriodActions';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
 type ManagementViewResult = RecurringServicePeriodManagementView | ActionPermissionError;
 type RegenerationPreviewResult =
@@ -39,6 +42,8 @@ interface RecurringServicePeriodsTabProps {
 const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
   initialScheduleKey,
 }) => {
+  const [scheduleOptions, setScheduleOptions] = useState<RecurringServicePeriodScheduleSummary[]>([]);
+  const [selectedScheduleKey, setSelectedScheduleKey] = useState<string>('');
   const [scheduleKeyInput, setScheduleKeyInput] = useState(initialScheduleKey ?? '');
   const [view, setView] = useState<RecurringServicePeriodManagementView | null>(null);
   const [loading, setLoading] = useState(false);
@@ -69,6 +74,7 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
 
       setView(result);
       setScheduleKeyInput(result.scheduleKey);
+      setSelectedScheduleKey(result.scheduleKey);
     } catch (loadError) {
       setView(null);
       setError(loadError instanceof Error ? loadError.message : 'Failed to load recurring service periods.');
@@ -76,6 +82,21 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    startTransition(() => {
+      void (async () => {
+        try {
+          const result = await listRecurringServicePeriodScheduleSummaries(100);
+          if (!isPermissionError(result)) {
+            setScheduleOptions(result);
+          }
+        } catch (_error) {
+          // Keep the page usable with direct schedule-key entry even if list loading fails.
+        }
+      })();
+    });
+  }, []);
 
   useEffect(() => {
     if (!initialScheduleKey) {
@@ -98,6 +119,14 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
 
     return view.clientName ?? view.obligationId;
   }, [view]);
+
+  const formatScheduleOptionLabel = (option: RecurringServicePeriodScheduleSummary) => {
+    const cadenceLabel = option.cadenceOwner === 'contract' ? 'Contract anniversary' : 'Client schedule';
+    const timingLabel = option.duePosition === 'advance' ? 'Advance' : 'Arrears';
+    const entityLabel = option.contractLineName ?? option.contractName ?? option.obligationId;
+
+    return `${option.clientName ?? 'Unknown client'} · ${entityLabel} · ${cadenceLabel} · ${timingLabel}`;
+  };
 
   const handlePreviewRegeneration = async () => {
     if (!view) {
@@ -141,14 +170,32 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
   return (
     <div className="space-y-6" data-testid="recurring-service-periods-tab">
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold">Service Periods</h2>
+        <h2 className="text-2xl font-semibold">Recurring Service Periods</h2>
         <p className="text-sm text-muted-foreground">
-          Inspect persisted recurring service periods for one obligation, including future generated rows,
-          edited exceptions, and billed history linked to invoice detail.
+          Review recurring invoice coverage windows for a client contract line, troubleshoot why work is or is not
+          due, and inspect billed history linked to invoice detail rows.
         </p>
       </div>
 
       <div className="rounded-lg border p-4 space-y-3">
+        <label className="block text-sm font-medium">
+          Choose a Schedule
+          <CustomSelect
+            value={selectedScheduleKey}
+            onValueChange={(value: string) => {
+              setSelectedScheduleKey(value);
+              setScheduleKeyInput(value);
+            }}
+            options={[
+              { value: '', label: 'Select a recent recurring schedule' },
+              ...scheduleOptions.map((option) => ({
+                value: option.scheduleKey,
+                label: formatScheduleOptionLabel(option),
+              })),
+            ]}
+            className="mt-1"
+          />
+        </label>
         <div className="flex flex-col gap-2 md:flex-row md:items-end">
           <label className="flex-1 text-sm font-medium">
             Schedule Key
@@ -156,7 +203,7 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
               className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
               value={scheduleKeyInput}
               onChange={(event) => setScheduleKeyInput(event.target.value)}
-              placeholder="schedule:tenant:obligation:..."
+              placeholder="Paste a schedule key (optional if selected above)"
             />
           </label>
           <button
@@ -169,7 +216,7 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
             }}
             disabled={loading}
           >
-            {loading ? 'Loading…' : 'Load Service Periods'}
+            {loading ? 'Loading…' : 'Open Schedule'}
           </button>
         </div>
         {error ? (
@@ -182,14 +229,17 @@ const RecurringServicePeriodsTab: React.FC<RecurringServicePeriodsTabProps> = ({
       {view ? (
         <>
           <div className="rounded-lg border p-4 space-y-2">
-            <div className="text-sm text-muted-foreground">Obligation</div>
+            <div className="text-sm text-muted-foreground">Recurring Obligation</div>
             <div className="text-lg font-semibold">{contextLabel}</div>
             <div className="grid gap-2 text-sm md:grid-cols-3">
               <div>
                 <span className="font-medium">Client:</span> {view.clientName ?? 'Not linked'}
               </div>
               <div>
-                <span className="font-medium">Cadence:</span> {view.cadenceOwner} / {view.duePosition}
+                <span className="font-medium">Cadence source:</span> {view.cadenceOwner === 'contract' ? 'Contract anniversary' : 'Client schedule'}
+              </div>
+              <div>
+                <span className="font-medium">Billing timing:</span> {view.duePosition === 'advance' ? 'Advance' : 'Arrears'}
               </div>
               <div>
                 <span className="font-medium">Charge family:</span> {view.chargeFamily}

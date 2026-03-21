@@ -12,15 +12,14 @@ const contractLineActionSource = readFileSync(
 );
 
 describe('fixed contract line recurring authoring wiring', () => {
-  it('T232: inline fixed-line editing preserves cadence owner through updateContractLine and billing timing through upsertContractLineTerms', () => {
+  it('T232: inline fixed-line editing persists cadence owner and billing timing through one updateContractLine mutation', () => {
     expect(fixedConfigurationSource).toContain('cadence_owner: cadenceOwner,');
+    expect(fixedConfigurationSource).toContain("billing_timing: planType === 'Fixed' ? billingTiming : 'arrears',");
     expect(fixedConfigurationSource).toContain('await updateContractLine(plan.contract_line_id, planData);');
-    expect(fixedConfigurationSource).toContain(
-      "await upsertContractLineTerms(\n          plan.contract_line_id,\n          planType === 'Fixed' ? billingTiming : 'arrears'\n        );",
-    );
+    expect(fixedConfigurationSource).not.toContain('await upsertContractLineTerms(');
 
     expect(contractLineActionSource).toContain(
-      "import { resolveRecurringAuthoringPolicy } from '@shared/billingClients/recurringAuthoringPolicy';",
+      'resolveRecurringAuthoringPolicy',
     );
     expect(contractLineActionSource).toContain(
       'safeUpdateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;',

@@ -22,6 +22,7 @@ import {
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
 
 function requireClientReadPermission(user: IUserWithRoles): void {
   if (!hasPermission(user, 'client', 'read')) {
@@ -117,7 +118,15 @@ export const createClientContractForBilling = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    return createClientContractAssignment(trx, tenant, input);
+    const created = await createClientContractAssignment(trx, tenant, input);
+    if (created.is_active) {
+      await syncRecurringServicePeriodsForContract(trx, {
+        tenant,
+        contractId: created.contract_id,
+        sourceRunPrefix: 'client_contract_assignment_create',
+      });
+    }
+    return created;
   });
 });
 
@@ -130,10 +139,15 @@ export const updateClientContractForBilling = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const updated = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return updateClientContractAssignment(trx, tenant, clientContractId, updateData);
+    const updatedAssignment = await updateClientContractAssignment(trx, tenant, clientContractId, updateData);
+    await syncRecurringServicePeriodsForContract(trx, {
+      tenant,
+      contractId: updatedAssignment.contract_id,
+      sourceRunPrefix: 'client_contract_assignment_update',
+    });
+    return updatedAssignment;
   });
 
   await checkAndReactivateExpiredContract(knex, tenant, updated.contract_id);
   return updated;
 });
-

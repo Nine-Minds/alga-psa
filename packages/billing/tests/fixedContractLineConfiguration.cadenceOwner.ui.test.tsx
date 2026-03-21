@@ -8,7 +8,6 @@ const getContractLineById = vi.fn();
 const updateContractLine = vi.fn();
 const updateContractLineFixedConfig = vi.fn();
 const getContractLineFixedConfig = vi.fn();
-const upsertContractLineTerms = vi.fn();
 
 vi.mock('@alga-psa/billing/actions', () => ({
   getServices: vi.fn().mockResolvedValue([]),
@@ -19,7 +18,6 @@ vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
   updateContractLine: (...args: any[]) => updateContractLine(...args),
   updateContractLineFixedConfig: (...args: any[]) => updateContractLineFixedConfig(...args),
   getContractLineFixedConfig: (...args: any[]) => getContractLineFixedConfig(...args),
-  upsertContractLineTerms: (...args: any[]) => upsertContractLineTerms(...args),
 }));
 
 vi.mock('@alga-psa/ui/components/providers/TenantProvider', () => ({
@@ -49,7 +47,6 @@ describe('FixedContractLineConfiguration cadence owner UI', () => {
     });
     updateContractLine.mockResolvedValue(undefined);
     updateContractLineFixedConfig.mockResolvedValue(undefined);
-    upsertContractLineTerms.mockResolvedValue(undefined);
   });
 
   it('T111 and T145: recurring contract line configuration uses business-language cadence owner labels and leaves contract cadence selectable', async () => {
@@ -57,13 +54,13 @@ describe('FixedContractLineConfiguration cadence owner UI', () => {
 
     render(<FixedPlanConfiguration contractLineId="line-1" />);
 
-    expect(await screen.findByText('Invoice on client billing schedule')).toBeInTheDocument();
+    expect(await screen.findByText('Invoice on client billing schedule')).toBeTruthy();
     const clientOption = screen.getByLabelText('Invoice on client billing schedule') as HTMLInputElement;
     const contractOption = screen.getByLabelText('Invoice on contract anniversary') as HTMLInputElement;
 
     expect(clientOption.checked).toBe(true);
     expect(contractOption.disabled).toBe(false);
-    expect(screen.getByText(/Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing/i)).toBeInTheDocument();
+    expect(screen.getByText(/Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing/i)).toBeTruthy();
 
     fireEvent.change(screen.getByDisplayValue('Managed Support'), {
       target: { value: 'Managed Support Plus' },
@@ -76,6 +73,7 @@ describe('FixedContractLineConfiguration cadence owner UI', () => {
         'line-1',
         expect.objectContaining({
           contract_line_name: 'Managed Support Plus',
+          billing_timing: 'arrears',
           cadence_owner: 'client',
           tenant: 'tenant-1',
         }),

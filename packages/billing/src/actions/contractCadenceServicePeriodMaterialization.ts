@@ -1,32 +1,28 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type {
-  BillingCycleType,
   DuePosition,
   IRecurringServicePeriodRecord,
   ISO8601String,
   RecurringChargeFamily,
 } from '@alga-psa/types';
-import {
-  ensureUtcMidnightIsoDate,
-  type NormalizedBillingCycleAnchorSettings,
-} from '../lib/billing/billingCycleAnchors';
-import { materializeClientCadenceServicePeriods } from '@shared/billingClients/materializeClientCadenceServicePeriods';
+import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
+import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
-import {
-  buildPersistedClientCadencePostDropObligationRef,
-  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-} from '@shared/billingClients/postDropRecurringObligationIdentity';
 
-type ClientCadenceRecurringObligationRow = {
-  client_contract_line_id: string;
-  start_date: unknown;
-  end_date: unknown;
-  contract_line_type: string | null;
-  billing_timing: string | null;
-};
+type ContractCadenceBillingCycle = 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
 
 const recurringServicePeriodRecordIdFactory = () => uuidv4();
+
+type ContractCadenceObligationRow = {
+  contract_line_id: string;
+  contract_line_type: string | null;
+  cadence_owner: string | null;
+  billing_frequency: string | null;
+  billing_timing: string | null;
+  assignment_start_date: unknown;
+  assignment_end_date: unknown;
+};
 
 type RecurringServicePeriodDbRow = {
   record_id: string;
@@ -79,6 +75,9 @@ function normalizeDateOnlyValue(value: unknown): ISO8601String | null {
     try {
       return ensureUtcMidnightIsoDate(value);
     } catch (_error) {
+      // DB date columns can be hydrated as timezone-shifted midnight timestamps
+      // (for example, 2026-03-08T05:00:00.000Z for America/New_York). Treat these
+      // as date-only values and normalize to canonical UTC midnight.
       const parsed = new Date(value);
       if (!Number.isNaN(parsed.getTime())) {
         return toUtcMidnightDateOnly(parsed);
@@ -238,78 +237,33 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
   };
 }
 
-function buildScheduleSourceRuleVersion(
-  billingCycle: BillingCycleType,
-  anchor: NormalizedBillingCycleAnchorSettings,
-) {
-  return [
-    'client_schedule',
-    billingCycle,
-    `dom:${anchor.dayOfMonth ?? 'none'}`,
-    `moy:${anchor.monthOfYear ?? 'none'}`,
-    `dow:${anchor.dayOfWeek ?? 'none'}`,
-    `ref:${anchor.referenceDate ?? 'none'}`,
-  ].join('|');
-}
-
-async function loadLastInvoicedClientBillingBoundary(
-  trx: Knex.Transaction,
-  params: { tenant: string; clientId: string },
-) {
-  const lastInvoiced = await trx('client_billing_cycles as cbc')
-    .join('invoices as i', function () {
-      this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
-    })
-    .where('cbc.tenant', params.tenant)
-    .andWhere('cbc.client_id', params.clientId)
-    .orderBy('cbc.period_end_date', 'desc')
-    .first()
-    .select('cbc.period_end_date');
-
-  return lastInvoiced?.period_end_date
-    ? normalizeDateOnlyValue(lastInvoiced.period_end_date)
-    : null;
-}
-
-async function loadClientCadenceRecurringObligations(
-  trx: Knex.Transaction,
-  params: { tenant: string; clientId: string },
-): Promise<ClientCadenceRecurringObligationRow[]> {
-  return trx('client_contracts as cc')
-    .join('contracts as ct', function () {
-      // template_contract_id is provenance only; regeneration must read the
-      // client-owned contract that owns the live cloned lines.
-      this.on('ct.contract_id', '=', 'cc.contract_id')
-        .andOn('ct.tenant', '=', 'cc.tenant');
-    })
-    .join('contract_lines as cl', function () {
-      this.on('cl.contract_id', '=', 'ct.contract_id')
-        .andOn('cl.tenant', '=', 'ct.tenant');
-    })
-    .where('cc.tenant', params.tenant)
-    .andWhere('cc.client_id', params.clientId)
-    .where('cc.is_active', true)
-    .where('cl.cadence_owner', 'client')
-    .whereNotNull('cl.billing_timing')
-    .select(
-      'cl.contract_line_id as client_contract_line_id',
-      'cc.start_date',
-      'cc.end_date',
-      'cl.contract_line_type',
-      'cl.billing_timing',
-    );
+function normalizeContractCadenceBillingCycle(value: string | null): ContractCadenceBillingCycle | null {
+  switch ((value ?? '').toLowerCase()) {
+    case 'monthly':
+      return 'monthly';
+    case 'quarterly':
+      return 'quarterly';
+    case 'semi-annually':
+    case 'semiannually':
+      return 'semi-annually';
+    case 'annually':
+    case 'annual':
+      return 'annually';
+    default:
+      return null;
+  }
 }
 
 async function loadExistingRecurringServicePeriodRecords(
   trx: Knex.Transaction,
-  params: { tenant: string; obligationId: string },
+  params: { tenant: string; contractLineId: string },
 ): Promise<IRecurringServicePeriodRecord[]> {
   const rows = await trx('recurring_service_periods')
     .where({
       tenant: params.tenant,
-      obligation_id: params.obligationId,
-      obligation_type: CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-      cadence_owner: 'client',
+      obligation_id: params.contractLineId,
+      obligation_type: 'contract_line',
+      cadence_owner: 'contract',
     })
     .orderBy('service_period_start', 'asc')
     .orderBy('revision', 'asc')
@@ -372,99 +326,214 @@ async function persistRecurringServicePeriodRegeneration(
   }
 }
 
-export async function regenerateClientCadenceServicePeriodsForScheduleChange(
+async function retireFutureContractCadenceRowsForLine(
   trx: Knex.Transaction,
-  params: {
-    tenant: string;
-    clientId: string;
-    billingCycle: BillingCycleType;
-    anchor: NormalizedBillingCycleAnchorSettings;
-  },
-): Promise<void> {
-  const billedBoundaryEnd = await loadLastInvoicedClientBillingBoundary(trx, params);
-  const obligations = await loadClientCadenceRecurringObligations(trx, params);
-  const materializedAt = new Date().toISOString();
-  const sourceRuleVersion = buildScheduleSourceRuleVersion(
-    params.billingCycle,
-    params.anchor,
-  );
-  const sourceRunKey = `client-schedule-change:${params.clientId}:${materializedAt}`;
-
-  for (const obligation of obligations) {
-    const obligationStart =
-      normalizeDateOnlyValue(obligation.start_date) ?? ensureUtcMidnightIsoDate(materializedAt);
-    const regenerationStart = billedBoundaryEnd
-      ? maxIsoDateOnly(obligationStart, billedBoundaryEnd)
-      : obligationStart;
-    const obligationEnd = normalizeDateOnlyValue(obligation.end_date);
-
-    if (obligationEnd && compareIsoDateOnly(obligationEnd, regenerationStart) <= 0) {
-      continue;
-    }
-
-    const duePosition: DuePosition =
-      obligation.billing_timing === 'advance' ? 'advance' : 'arrears';
-    const existingRecords = await loadExistingRecurringServicePeriodRecords(trx, {
-      tenant: params.tenant,
-      obligationId: obligation.client_contract_line_id,
-    });
-
-    const candidateRecords = materializeClientCadenceServicePeriods({
-      asOf: regenerationStart,
-      materializedAt,
-      billingCycle: params.billingCycle,
-      sourceObligation: buildPersistedClientCadencePostDropObligationRef({
-        tenant: params.tenant,
-        contractLineId: obligation.client_contract_line_id,
-        chargeFamily: resolveRecurringChargeFamily(obligation.contract_line_type),
-      }),
-      duePosition,
-      sourceRuleVersion,
-      sourceRunKey,
-      anchorSettings: params.anchor,
-      recordIdFactory: recurringServicePeriodRecordIdFactory,
-    }).records;
-
-    const regenerationPlan = backfillRecurringServicePeriods({
-      candidateRecords,
-      existingRecords,
-      backfilledAt: materializedAt,
-      sourceRuleVersion,
-      sourceRunKey,
-      legacyBilledThroughEnd: billedBoundaryEnd,
-      regenerationReasonCode: 'billing_schedule_changed',
-      recordIdFactory: recurringServicePeriodRecordIdFactory,
-    });
-
-    await persistRecurringServicePeriodRegeneration(trx, {
-      tenant: params.tenant,
-      recordsToSupersede: regenerationPlan.supersededRecords,
-      recordsToInsert: [
-        ...regenerationPlan.backfilledRecords,
-        ...regenerationPlan.realignedRecords,
-      ],
-    });
-  }
-}
-
-export async function retireFutureClientCadenceRowsForLine(
-  trx: Knex.Transaction,
-  params: {
-    tenant: string;
-    contractLineId: string;
-    retiredAt: string;
-  },
-): Promise<void> {
+  params: { tenant: string; contractLineId: string; retiredAt: string },
+) {
   await trx('recurring_service_periods')
     .where({
       tenant: params.tenant,
       obligation_id: params.contractLineId,
-      obligation_type: CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-      cadence_owner: 'client',
+      obligation_type: 'contract_line',
+      cadence_owner: 'contract',
     })
     .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed'])
     .update({
       lifecycle_state: 'superseded',
       updated_at: params.retiredAt,
     });
+}
+
+async function loadContractCadenceObligations(
+  trx: Knex.Transaction,
+  params: { tenant: string; contractId?: string; contractLineId?: string },
+): Promise<ContractCadenceObligationRow[]> {
+  const query = trx('contract_lines as cl')
+    .join('client_contracts as cc', function () {
+      this.on('cc.contract_id', '=', 'cl.contract_id')
+        .andOn('cc.tenant', '=', 'cl.tenant');
+    })
+    .where('cl.tenant', params.tenant)
+    .where('cc.is_active', true)
+    .whereNotNull('cc.start_date')
+    .select(
+      'cl.contract_line_id',
+      'cl.contract_line_type',
+      'cl.cadence_owner',
+      'cl.billing_frequency',
+      'cl.billing_timing',
+      'cc.start_date as assignment_start_date',
+      'cc.end_date as assignment_end_date',
+    );
+
+  if (params.contractId) {
+    query.andWhere('cl.contract_id', params.contractId);
+  }
+
+  if (params.contractLineId) {
+    query.andWhere('cl.contract_line_id', params.contractLineId);
+  }
+
+  return query;
+}
+
+async function syncContractCadenceObligation(
+  trx: Knex.Transaction,
+  params: {
+    tenant: string;
+    obligation: ContractCadenceObligationRow;
+    sourceRunPrefix: string;
+  },
+) {
+  const materializedAt = new Date().toISOString();
+  const assignmentStart = normalizeDateOnlyValue(params.obligation.assignment_start_date);
+  if (!assignmentStart) {
+    await retireFutureContractCadenceRowsForLine(trx, {
+      tenant: params.tenant,
+      contractLineId: params.obligation.contract_line_id,
+      retiredAt: materializedAt,
+    });
+    return;
+  }
+
+  const frequency = normalizeContractCadenceBillingCycle(params.obligation.billing_frequency);
+  const cadenceOwner = params.obligation.cadence_owner;
+  if (
+    cadenceOwner !== 'contract'
+    || !frequency
+    || (params.obligation.billing_timing !== 'advance' && params.obligation.billing_timing !== 'arrears')
+  ) {
+    await retireFutureContractCadenceRowsForLine(trx, {
+      tenant: params.tenant,
+      contractLineId: params.obligation.contract_line_id,
+      retiredAt: materializedAt,
+    });
+    return;
+  }
+
+  const assignmentEnd = normalizeDateOnlyValue(params.obligation.assignment_end_date);
+  if (assignmentEnd && compareIsoDateOnly(assignmentEnd, assignmentStart) <= 0) {
+    await retireFutureContractCadenceRowsForLine(trx, {
+      tenant: params.tenant,
+      contractLineId: params.obligation.contract_line_id,
+      retiredAt: materializedAt,
+    });
+    return;
+  }
+
+  const duePosition: DuePosition =
+    params.obligation.billing_timing === 'advance' ? 'advance' : 'arrears';
+  const sourceRuleVersion = [
+    'contract_cadence',
+    `billing_cycle:${frequency}`,
+    `anchor:${assignmentStart.slice(0, 10)}`,
+    `due:${duePosition}`,
+  ].join('|');
+  const sourceRunKey = `${params.sourceRunPrefix}:${params.obligation.contract_line_id}:${materializedAt}`;
+  const existingRecords = await loadExistingRecurringServicePeriodRecords(trx, {
+    tenant: params.tenant,
+    contractLineId: params.obligation.contract_line_id,
+  });
+  const billedBoundaryEnd = existingRecords
+    .filter((record) => record.lifecycleState === 'billed' || record.invoiceLinkage != null)
+    .map((record) => record.servicePeriod.end)
+    .sort((left, right) => compareIsoDateOnly(right, left))[0] ?? null;
+  const regenerationStart = billedBoundaryEnd
+    ? maxIsoDateOnly(assignmentStart, billedBoundaryEnd)
+    : assignmentStart;
+
+  const candidateRecords = materializeContractCadenceServicePeriods({
+    asOf: regenerationStart,
+    materializedAt,
+    billingCycle: frequency,
+    anchorDate: assignmentStart,
+    sourceObligation: {
+      tenant: params.tenant,
+      obligationId: params.obligation.contract_line_id,
+      obligationType: 'contract_line',
+      chargeFamily: resolveRecurringChargeFamily(params.obligation.contract_line_type),
+    },
+    duePosition,
+    sourceRuleVersion,
+    sourceRunKey,
+    recordIdFactory: recurringServicePeriodRecordIdFactory,
+  }).records.filter((record) => {
+    if (!assignmentEnd) {
+      return true;
+    }
+    return compareIsoDateOnly(record.servicePeriod.start, assignmentEnd) < 0;
+  });
+
+  const regenerationPlan = backfillRecurringServicePeriods({
+    candidateRecords,
+    existingRecords,
+    backfilledAt: materializedAt,
+    sourceRuleVersion,
+    sourceRunKey,
+    legacyBilledThroughEnd: billedBoundaryEnd,
+    regenerationReasonCode: 'source_rule_changed',
+    recordIdFactory: recurringServicePeriodRecordIdFactory,
+  });
+
+  await persistRecurringServicePeriodRegeneration(trx, {
+    tenant: params.tenant,
+    recordsToSupersede: regenerationPlan.supersededRecords,
+    recordsToInsert: [
+      ...regenerationPlan.backfilledRecords,
+      ...regenerationPlan.realignedRecords,
+    ],
+  });
+}
+
+export async function materializeContractCadenceServicePeriodsForContract(
+  trx: Knex.Transaction,
+  params: {
+    tenant: string;
+    contractId: string;
+    sourceRunPrefix: string;
+  },
+): Promise<void> {
+  const obligations = await loadContractCadenceObligations(trx, {
+    tenant: params.tenant,
+    contractId: params.contractId,
+  });
+
+  for (const obligation of obligations) {
+    await syncContractCadenceObligation(trx, {
+      tenant: params.tenant,
+      obligation,
+      sourceRunPrefix: params.sourceRunPrefix,
+    });
+  }
+}
+
+export async function materializeContractCadenceServicePeriodsForContractLine(
+  trx: Knex.Transaction,
+  params: {
+    tenant: string;
+    contractLineId: string;
+    sourceRunPrefix: string;
+  },
+): Promise<void> {
+  const obligations = await loadContractCadenceObligations(trx, {
+    tenant: params.tenant,
+    contractLineId: params.contractLineId,
+  });
+
+  if (obligations.length === 0) {
+    await retireFutureContractCadenceRowsForLine(trx, {
+      tenant: params.tenant,
+      contractLineId: params.contractLineId,
+      retiredAt: new Date().toISOString(),
+    });
+    return;
+  }
+
+  for (const obligation of obligations) {
+    await syncContractCadenceObligation(trx, {
+      tenant: params.tenant,
+      obligation,
+      sourceRunPrefix: params.sourceRunPrefix,
+    });
+  }
 }

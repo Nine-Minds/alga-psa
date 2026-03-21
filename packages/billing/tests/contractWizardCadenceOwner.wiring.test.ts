@@ -25,6 +25,13 @@ describe('contract wizard cadence_owner wiring', () => {
       resolve(__dirname, '../src/components/billing-dashboard/contracts/ContractWizard.tsx'),
       'utf8'
     );
+    const contractBasicsSource = readFileSync(
+      resolve(
+        __dirname,
+        '../src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx'
+      ),
+      'utf8'
+    );
     const fixedFeeStepSource = readFileSync(
       resolve(
         __dirname,
@@ -39,10 +46,14 @@ describe('contract wizard cadence_owner wiring', () => {
     expect(wizardSource).toContain('billing_timing: snapshot.billing_timing ?? prev.billing_timing');
     expect(wizardSource).toContain("cadence_owner: wizardData.cadence_owner ?? 'client'");
     expect(wizardSource).toContain("billing_timing: wizardData.billing_timing ?? 'arrears'");
-    expect(fixedFeeStepSource).toContain('Invoice on client billing schedule');
-    expect(fixedFeeStepSource).toContain('Invoice on contract anniversary');
-    expect(fixedFeeStepSource).toContain(
-      "Choose which schedule defines this recurring line&apos;s service periods."
+    expect(contractBasicsSource).toContain('Invoice on client billing schedule');
+    expect(contractBasicsSource).toContain('Invoice on contract anniversary');
+    expect(contractBasicsSource).toContain(
+      'Sets the default cadence owner applied to recurring lines created in this wizard.'
+    );
+    expect(contractBasicsSource).toContain('Recurring Cadence Default');
+    expect(contractBasicsSource).toContain(
+      "updateData({ cadence_owner: value as ContractWizardData['cadence_owner'] })"
     );
     expect(fixedFeeStepSource).toContain("import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';");
     expect(fixedFeeStepSource).toContain('Recurring Preview Before Save');
@@ -50,9 +61,6 @@ describe('contract wizard cadence_owner wiring', () => {
     expect(fixedFeeStepSource).toContain('billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency');
     expect(fixedFeeStepSource).toContain('recurringPreview.materializedPeriodsHeading');
     expect(fixedFeeStepSource).toContain('recurringPreview.materializedPeriods.map');
-    expect(fixedFeeStepSource).toContain(
-      "updateData({ cadence_owner: value as ContractWizardData['cadence_owner'] })"
-    );
   });
 
   it('T062: wizard and template boundaries keep client cadence as an explicit product default while write helpers stay bridge-free', () => {

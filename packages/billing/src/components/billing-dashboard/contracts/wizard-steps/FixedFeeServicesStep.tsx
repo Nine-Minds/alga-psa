@@ -5,7 +5,6 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import { Plus, X, Package, HelpCircle, Coins } from 'lucide-react';
@@ -21,21 +20,6 @@ interface FixedFeeServicesStepProps {
   data: ContractWizardData;
   updateData: (data: Partial<ContractWizardData>) => void;
 }
-
-const CADENCE_OWNER_OPTIONS = [
-  {
-    value: 'client',
-    label: 'Invoice on client billing schedule',
-    description:
-      'Use the client billing calendar so this recurring line stays aligned with the client’s normal invoice cadence.',
-  },
-  {
-    value: 'contract',
-    label: 'Invoice on contract anniversary',
-    description:
-      'Use this contract line’s own anniversary dates. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing.',
-  },
-];
 
 export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepProps) {
   const [baseRateInput, setBaseRateInput] = useState<string>('');
@@ -137,27 +121,6 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md">
           <p className="text-sm text-[rgb(var(--color-accent-800))]">
             <strong>What are Fixed Fee Services?</strong> These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <Label className="text-sm font-medium">Cadence Owner</Label>
-            <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">
-              Choose which schedule defines this recurring line&apos;s service periods.
-            </p>
-          </div>
-          <RadioGroup
-            id="contract-wizard-cadence-owner"
-            name="contract-wizard-cadence-owner"
-            options={CADENCE_OWNER_OPTIONS}
-            value={data.cadence_owner ?? 'client'}
-            onChange={(value) =>
-              updateData({ cadence_owner: value as ContractWizardData['cadence_owner'] })
-            }
-          />
-          <p className="text-xs text-[rgb(var(--color-text-400))]">
-            Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing.
           </p>
         </div>
 

@@ -23,6 +23,7 @@ import ContractLine from '../models/contractLine';
 import ContractLineFixedConfig from '../models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import { IContractLineServiceConfiguration } from '@alga-psa/types';
+import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
 export const getContractLinePresets = withAuth(async (user, { tenant }): Promise<IContractLinePreset[]> => {
     try {
@@ -518,6 +519,12 @@ export const copyPresetToContractLine = withAuth(async (
                 contract_id: contractId
             }, user.user_id);
 
+            await syncRecurringServicePeriodsForContractLine(trx, {
+                tenant: tenantId,
+                contractLineId,
+                sourceRunPrefix: 'contract_line_preset_copy',
+            });
+
             return contractLineId;
         });
     } catch (error) {
@@ -741,6 +748,12 @@ export const createCustomContractLine = withAuth(async (
                 is_custom: true,
                 contract_id: contractId
             }, user.user_id);
+
+            await syncRecurringServicePeriodsForContractLine(trx, {
+                tenant: tenantId,
+                contractLineId,
+                sourceRunPrefix: 'contract_line_custom_create',
+            });
 
             return contractLineId;
         });

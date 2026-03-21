@@ -5,14 +5,43 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     testTimeout: 10000,
   },
   resolve: {
-    alias: {
-      '@shared': path.resolve(__dirname, '../../shared'),
-      '@alga-psa/event-bus': path.resolve(__dirname, '../event-bus/src'),
-      '@alga-psa/types': path.resolve(__dirname, '../types/src'),
-    },
+    alias: [
+      {
+        find: /^@alga-psa\/billing\/(.*)$/,
+        replacement: `${path.resolve(__dirname, './src')}/$1`,
+      },
+      {
+        find: /^@alga-psa\/ui\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../ui/src')}/$1`,
+      },
+      {
+        find: /^@alga-psa\/shared\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../../shared')}/$1`,
+      },
+      {
+        find: /^@alga-psa\/([^/]+)\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '..')}/$1/src/$2`,
+      },
+      {
+        find: /^@alga-psa\/([^/]+)$/,
+        replacement: `${path.resolve(__dirname, '..')}/$1/src`,
+      },
+      {
+        find: '@shared',
+        replacement: path.resolve(__dirname, '../../shared'),
+      },
+      {
+        find: '@alga-psa/event-bus',
+        replacement: path.resolve(__dirname, '../event-bus/src'),
+      },
+      {
+        find: '@alga-psa/types',
+        replacement: path.resolve(__dirname, '../types/src'),
+      },
+    ],
   },
 });

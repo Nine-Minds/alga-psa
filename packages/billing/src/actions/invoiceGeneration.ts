@@ -108,9 +108,8 @@ function getSingleClientContractIdFromCharges(charges: IBillingCharge[]): string
     return null;
   }
   if (ids.length > 1) {
-    throw new Error(
-      `Invoice spans multiple client contracts (${ids.join(', ')}). Only one client contract per invoice is supported.`
-    );
+    // Multi-assignment combined invoices do not require a synthetic header owner.
+    return null;
   }
   return ids[0];
 }
@@ -1537,17 +1536,7 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
     throw withRecurringWindowErrorContext(new Error(billingResult.error), normalizedSelectorInput);
   }
 
-  let clientContractId: string | null = null;
-  try {
-    clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
-  } catch (error) {
-    throw withRecurringWindowErrorContext(
-      error instanceof Error
-        ? error
-        : new Error('Recurring invoice generation failed because invoice scope could not be resolved.'),
-      normalizedSelectorInput,
-    );
-  }
+  const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
   if (clientContractId) {
     const poContext = await getClientContractPurchaseOrderContext({ knex, tenant, clientContractId });
     if (poContext.po_required && !poContext.po_number) {
