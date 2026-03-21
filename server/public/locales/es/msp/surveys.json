@@ -1,0 +1,427 @@
+{
+  "common": {
+    "loading": "Cargando..."
+  },
+  "moduleFrame": {
+    "title": "Encuestas de satisfacción del cliente",
+    "description": "Supervise la calidad de las respuestas, analice las tendencias de satisfacción y haga seguimiento de los comentarios.",
+    "badge": "Información de satisfacción",
+    "nav": {
+      "dashboard": "Panel",
+      "responses": "Respuestas",
+      "analytics": "Analítica",
+      "setup": "Configuración"
+    }
+  },
+  "settings": {
+    "tabLabel": "Encuestas",
+    "title": "Encuestas de satisfacción del cliente",
+    "subtitle": "Configure plantillas, activadores y envíos para recopilar comentarios posteriores al ticket.",
+    "tabs": {
+      "templates": "Plantillas",
+      "triggers": "Activadores"
+    },
+    "templateList": {
+      "title": "Plantillas de encuesta",
+      "description": "Gestione los mensajes y las escalas de valoración que se envían a sus clientes.",
+      "createButton": "Nueva plantilla",
+      "emptyTitle": "Todavía no hay plantillas de encuesta",
+      "emptyDescription": "Cree su primera plantilla para definir el texto de la encuesta y la escala de valoración.",
+      "defaultBadge": "Predeterminada",
+      "table": {
+        "name": "Plantilla",
+        "rating": "Escala de valoración",
+        "status": "Estado",
+        "updated": "Actualizada",
+        "actions": "Acciones"
+      },
+      "status": {
+        "enabled": "Habilitada",
+        "disabled": "Deshabilitada"
+      },
+      "actions": {
+        "setDefault": "Establecer como predeterminada"
+      },
+      "toasts": {
+        "created": "Plantilla creada",
+        "updated": "Plantilla actualizada",
+        "deleted": "Plantilla eliminada",
+        "error": "No se pudo guardar la plantilla",
+        "setDefault": "Plantilla predeterminada actualizada"
+      },
+      "errors": {
+        "load": "No se pudieron cargar las plantillas de encuesta."
+      },
+      "delete": {
+        "validationFailed": "No se pudo validar la eliminación. Inténtelo de nuevo.",
+        "error": "No se pudo eliminar la plantilla",
+        "entityFallback": "esta plantilla de encuesta"
+      },
+      "actionsMenuAria": "Abrir acciones para {{name}}"
+    },
+    "templateForm": {
+      "titleCreate": "Crear plantilla de encuesta",
+      "titleEdit": "Editar plantilla de encuesta",
+      "ratingTypes": {
+        "stars": "Estrellas",
+        "numbers": "Números",
+        "emojis": "Emojis"
+      },
+      "defaults": {
+        "promptText": "Pregunta de la encuesta",
+        "commentPrompt": "Comentarios adicionales (opcional)",
+        "thankYouText": "¡Gracias!"
+      },
+      "labels": {
+        "name": "Nombre de la plantilla",
+        "ratingType": "Tipo de valoración",
+        "ratingScale": "Escala de valoración",
+        "ratingLabels": "Etiquetas de valoración",
+        "preview": "Vista previa",
+        "promptText": "Pregunta de la encuesta",
+        "commentPrompt": "Mensaje de comentario",
+        "thankYouText": "Mensaje de agradecimiento",
+        "isDefault": "Establecer como plantilla predeterminada",
+        "enabled": "Plantilla habilitada"
+      },
+      "placeholders": {
+        "ratingLabels": "Ejemplo:\nMuy malo\nMalo\nNormal\nBueno\nExcelente"
+      },
+      "help": {
+        "ratingLabels": "Proporcione una etiqueta por línea, en orden de la valoración más baja a la más alta."
+      },
+      "actions": {
+        "create": "Crear plantilla",
+        "save": "Guardar cambios",
+        "delete": "Eliminar plantilla"
+      },
+      "delete": {
+        "validationFailed": "No se pudo validar la eliminación. Inténtelo de nuevo.",
+        "error": "No se pudo eliminar la plantilla",
+        "entityFallback": "esta plantilla de encuesta"
+      }
+    },
+    "triggerList": {
+      "title": "Activadores de encuesta",
+      "description": "Envíe invitaciones automáticamente cuando tickets o proyectos lleguen a su fin.",
+      "createButton": "Nuevo activador",
+      "emptyTitle": "No hay activadores de encuesta configurados",
+      "emptyDescription": "Cree un activador para enviar encuestas cuando se cierren tickets o finalicen proyectos.",
+      "table": {
+        "template": "Plantilla",
+        "type": "Activador",
+        "conditions": "Condiciones",
+        "status": "Estado",
+        "updated": "Actualizado",
+        "actions": "Acciones"
+      },
+      "status": {
+        "enabled": "Habilitado",
+        "disabled": "Deshabilitado"
+      },
+      "conditions": {
+        "unrestricted": "Se aplica a todos los tickets y proyectos",
+        "boards": "Tableros",
+        "statuses": "Estados",
+        "priorities": "Prioridades",
+        "any": "Cualquiera"
+      },
+      "toasts": {
+        "created": "Activador creado",
+        "updated": "Activador actualizado",
+        "deleted": "Activador eliminado",
+        "error": "No se pudo guardar el activador",
+        "deleteError": "No se pudo eliminar el activador"
+      },
+      "errors": {
+        "load": "No se pudieron cargar los activadores de encuesta."
+      },
+      "deleteConfirm": "¿Eliminar este activador? Las invitaciones ya programadas seguirán enviándose.",
+      "actionsMenuAria": "Abrir acciones para el activador dirigido a {{target}}"
+    },
+    "triggerForm": {
+      "titleCreate": "Crear activador de encuesta",
+      "titleEdit": "Editar activador de encuesta",
+      "triggerTypes": {
+        "ticket_closed": "Ticket cerrado",
+        "project_completed": "Proyecto completado"
+      },
+      "labels": {
+        "template": "Plantilla de encuesta",
+        "triggerType": "Tipo de activador",
+        "boardIds": "Tableros",
+        "statusIds": "Estados",
+        "priorities": "Prioridades",
+        "enabled": "Activador habilitado"
+      },
+      "placeholders": {
+        "boardIds": "Seleccionar tablero",
+        "statusIds": "Agregar estado",
+        "priorities": "Agregar prioridad"
+      },
+      "boardFilters": {
+        "active": "Tableros activos",
+        "inactive": "Tableros inactivos",
+        "all": "Todos los tableros"
+      },
+      "help": {
+        "conditions": "Deje un campo vacío para que coincida con cualquier valor."
+      },
+      "actions": {
+        "create": "Crear activador",
+        "save": "Guardar cambios",
+        "delete": "Eliminar activador"
+      },
+      "noTemplates": "Cree una plantilla de encuesta antes de agregar activadores.",
+      "prioritiesMixed": "Los tableros seleccionados usan tipos de prioridad diferentes. Se muestran todas las prioridades.",
+      "errors": {
+        "reference": "No se pudieron cargar las opciones del activador. Inténtelo de nuevo."
+      }
+    }
+  },
+  "response": {
+    "pageTitle": "Encuesta de satisfacción del cliente",
+    "invalidTitle": "Encuesta no disponible",
+    "invalidMessage": "Este enlace de comentarios ya no es válido o ya se ha utilizado.",
+    "ratingPrompt": "¿Cómo fue su experiencia?",
+    "ratingAssistive": "Seleccione una puntuación del 1 al {{scale}}",
+    "commentLabel": "Comentarios adicionales (opcional)",
+    "submitButton": "Enviar comentarios",
+    "submitting": "Enviando comentarios...",
+    "submittedTitle": "¡Gracias por su respuesta!",
+    "submittedMessage": "{{thankYouText}}",
+    "ratingSubmitted": "Comentarios enviados",
+    "retryButton": "Intentar de nuevo",
+    "selectRatingError": "Seleccione una valoración antes de enviarla.",
+    "errorMessage": "No pudimos registrar sus comentarios. Inténtelo de nuevo.",
+    "supportMessage": "Si tiene preguntas, contacte con su técnico."
+  },
+  "rating": {
+    "buttonAriaWithLabel": "{{rating}} - {{label}}",
+    "buttonAria": "Valoración {{rating}} de {{scale}}",
+    "defaults": {
+      "3": {
+        "1": "Malo",
+        "2": "Bueno",
+        "3": "Excelente"
+      },
+      "5": {
+        "1": "Muy malo",
+        "2": "Malo",
+        "3": "Normal",
+        "4": "Bueno",
+        "5": "Excelente"
+      },
+      "10": {
+        "1": "Terrible",
+        "2": "Muy malo",
+        "3": "Malo",
+        "4": "Por debajo de la media",
+        "5": "Normal",
+        "6": "Por encima de la media",
+        "7": "Bueno",
+        "8": "Muy bueno",
+        "9": "Excelente",
+        "10": "Perfecto"
+      }
+    }
+  },
+  "responses": {
+    "filters": {
+      "labels": {
+        "template": "Plantilla",
+        "technician": "Técnico",
+        "client": "Cliente",
+        "dateRange": "Intervalo de fechas"
+      },
+      "placeholders": {
+        "allTemplates": "Todas las plantillas",
+        "allTechnicians": "Todos los técnicos",
+        "allClients": "Todos los clientes"
+      },
+      "actions": {
+        "apply": "Aplicar",
+        "reset": "Restablecer"
+      }
+    },
+    "page": {
+      "filterTitle": "Filtrar respuestas",
+      "loading": "Actualizando respuestas...",
+      "error": "No se pudieron cargar las respuestas de la encuesta. Inténtelo de nuevo.",
+      "pageSizeOptions": {
+        "10": "10 por página",
+        "25": "25 por página",
+        "50": "50 por página"
+      },
+      "itemLabel": "respuestas"
+    },
+    "detail": {
+      "title": "Detalle de respuesta de la encuesta",
+      "empty": "No se ha seleccionado ninguna respuesta.",
+      "labels": {
+        "submittedAt": "Enviada el",
+        "client": "Cliente",
+        "contact": "Contacto",
+        "technician": "Técnico",
+        "ticket": "Ticket",
+        "rating": "Valoración",
+        "comment": "Comentario"
+      },
+      "fallbacks": {
+        "unknown": "Desconocido",
+        "unassigned": "Sin asignar",
+        "none": "-",
+        "noComment": "No se proporcionó ningún comentario."
+      }
+    }
+  },
+  "dashboard": {
+    "loadingInsights": "Cargando información de la encuesta...",
+    "responseMetrics": {
+      "cards": {
+        "sent": "Invitaciones enviadas",
+        "responses": "Respuestas recibidas",
+        "responseRate": "Tasa de respuesta",
+        "averageRating": "Valoración media",
+        "outstanding": "Invitaciones pendientes",
+        "negative": "Respuestas negativas (<= 2 estrellas)"
+      },
+      "badges": {
+        "awaitingResponses": "Esperando respuestas",
+        "needsReview": "Requiere revisión"
+      }
+    },
+    "responseTrend": {
+      "title": "Tendencia de respuestas",
+      "emptyTitle": "No se registraron respuestas en el período seleccionado.",
+      "emptyDescription": "Vuelva cuando los clientes envíen sus comentarios.",
+      "tooltip": {
+        "averageRating": "Valoración media",
+        "responses": "Respuestas",
+        "date": "Fecha: {{label}}"
+      }
+    },
+    "responsesList": {
+      "title": "Respuestas recientes",
+      "emptyTitle": "Todavía no hay respuestas de encuestas.",
+      "emptyDescription": "Anime a los clientes a enviar comentarios para completar esta vista.",
+      "table": {
+        "submitted": "Enviada",
+        "client": "Cliente",
+        "technician": "Técnico",
+        "rating": "Valoración",
+        "comment": "Comentario",
+        "ticket": "Ticket"
+      },
+      "fallbacks": {
+        "unknownClient": "Cliente desconocido",
+        "unassigned": "Sin asignar",
+        "noComment": "Sin comentario"
+      }
+    },
+    "satisfactionDistribution": {
+      "title": "Distribución de satisfacción",
+      "emptyTitle": "Todavía no se han registrado valoraciones de encuestas.",
+      "emptyDescription": "La distribución aparecerá después de recopilar comentarios.",
+      "axes": {
+        "rating": "Valoración",
+        "responses": "Respuestas"
+      },
+      "tooltip": {
+        "percent": "Porcentaje",
+        "responses": "Respuestas",
+        "rating": "Valoración: {{label}}"
+      }
+    },
+    "topIssues": {
+      "title": "Principales incidencias",
+      "emptyTitle": "No se registraron comentarios negativos con los filtros seleccionados.",
+      "emptyDescription": "Es una buena señal. Sigan así.",
+      "fallbacks": {
+        "unknownClient": "Cliente desconocido",
+        "ticket": "Ticket {{ticket}}",
+        "noComment": "No dejó comentarios.",
+        "assignedTo": "Asignado a: {{name}}"
+      }
+    }
+  },
+  "analytics": {
+    "filters": {
+      "labels": {
+        "customerSegment": "Segmento de clientes",
+        "surveyTemplate": "Plantilla de encuesta",
+        "timeframe": "Período",
+        "calendarView": "Vista de calendario"
+      },
+      "defaults": {
+        "segments": {
+          "all": "Todos los clientes",
+          "managed": "Clientes gestionados",
+          "project": "Clientes solo de proyectos"
+        },
+        "templates": {
+          "all": "Todas las plantillas",
+          "default": "Plantilla CSAT fase 1"
+        },
+        "timeframes": {
+          "30d": "Últimos 30 días",
+          "90d": "Últimos 90 días",
+          "365d": "Año hasta la fecha"
+        }
+      },
+      "actions": {
+        "apply": "Aplicar filtros",
+        "reset": "Restablecer",
+        "calendar": "Próximamente"
+      }
+    },
+    "page": {
+      "filtersTitle": "Filtros de analítica",
+      "overviewTitle": "Resumen de satisfacción",
+      "overviewDescription": "Compare la satisfacción media y las tasas de respuesta a lo largo del tiempo. La segmentación adicional llegará en iteraciones posteriores."
+    },
+    "chart": {
+      "empty": "Seleccione filtros arriba para explorar analítica avanzada. (Próximamente)",
+      "tooltip": {
+        "averageRating": "Valoración media",
+        "responseRate": "Tasa de respuesta"
+      },
+      "legend": {
+        "averageRating": "Valoración media",
+        "responseRate": "Tasa de respuesta"
+      }
+    },
+    "export": {
+      "csv": "Exportar CSV",
+      "shareSnapshot": "Compartir captura",
+      "emailDigest": "Resumen por email"
+    }
+  },
+  "clientSummary": {
+    "title": "Resumen de CSAT",
+    "empty": "Todavía no hay datos de encuestas disponibles para este cliente. Las encuestas enviadas tras el cierre de tickets completarán esta vista.",
+    "labels": {
+      "averageRating": "Valoración media",
+      "responseRate": "Tasa de respuesta",
+      "totalResponses": "Respuestas totales",
+      "lastResponse": "Última respuesta",
+      "rollingTrend": "Tendencia continua"
+    },
+    "fallbacks": {
+      "none": "-",
+      "noResponsesYet": "Aún no hay respuestas"
+    }
+  },
+  "ticketSummary": {
+    "title": "Comentarios del cliente",
+    "empty": "Todavía no se han recibido respuestas de la encuesta para este ticket.",
+    "labels": {
+      "latestRating": "Última valoración",
+      "comment": "Comentario",
+      "totalResponses": "Respuestas totales"
+    },
+    "fallbacks": {
+      "none": "-"
+    }
+  }
+}

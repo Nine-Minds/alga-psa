@@ -3,7 +3,7 @@
   {"id": "F002", "description": "Wire useTranslation('msp/surveys') in TriggerForm.tsx (~35), TriggerList.tsx (~22), TemplateForm.tsx (~28), TemplateList.tsx (~24)", "implemented": true, "prdRefs": ["2b-13"]},
   {"id": "F003", "description": "Wire useTranslation in SurveyResponsePage.tsx (~18), SurveySettings.tsx (~12), RatingDisplay.tsx (~14), response views (~21)", "implemented": true, "prdRefs": ["2b-13"]},
   {"id": "F004", "description": "Wire useTranslation in dashboard components (metrics, trend chart, satisfaction, top issues, responses list) and analytics (filter, chart, export)", "implemented": true, "prdRefs": ["2b-13"]},
-  {"id": "F005", "description": "Generate msp/surveys translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-13"]},
+  {"id": "F005", "description": "Generate msp/surveys translations for 6 non-English locales + 2 pseudo-locales", "implemented": true, "prdRefs": ["2b-13"]},
   {"id": "F006", "description": "Italian accent audit on it/msp/surveys.json", "implemented": false, "prdRefs": ["2b-13"]},
 
   {"id": "F010", "description": "Create en/msp/schedule.json with ~211 keys for 11 schedule components", "implemented": false, "prdRefs": ["2b-14"]},
