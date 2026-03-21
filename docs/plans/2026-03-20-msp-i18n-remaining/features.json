@@ -37,7 +37,7 @@
   {"id": "F054", "description": "Italian accent audit on it/msp/profile.json", "implemented": true, "prdRefs": ["2b-19"]},
 
   {"id": "F060", "description": "Re-inventory batch 2b-20 and record follow-up scope for extension/licensing strings discovered after the original 'no work needed' assumption", "implemented": true, "prdRefs": ["2b-20"]},
-  {"id": "F061", "description": "Create en/msp/extensions.json for extension nav/settings/OSS placeholder surfaces discovered in batch 2b-20 follow-up", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F061", "description": "Create en/msp/extensions.json for extension nav/settings/OSS placeholder surfaces discovered in batch 2b-20 follow-up", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F062", "description": "Wire useTranslation('msp/extensions') in DynamicNavigationSlot, ExtensionManagement, ExtensionComponentLoader, and OSS extension placeholder pages/components", "implemented": false, "prdRefs": ["2b-20"]},
   {"id": "F063", "description": "Generate msp/extensions translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-20"]},
   {"id": "F064", "description": "Italian accent audit on it/msp/extensions.json", "implemented": false, "prdRefs": ["2b-20"]},

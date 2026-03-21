@@ -1,0 +1,44 @@
+{
+  "navigation": {
+    "heading": "Extensions"
+  },
+  "settings": {
+    "title": "Extension Management",
+    "description": "Install, configure, and manage extensions to extend Alga PSA functionality.",
+    "tabs": {
+      "manage": "Manage",
+      "install": "Install"
+    },
+    "enterpriseOnly": {
+      "title": "Enterprise feature",
+      "description": "Extensions are available in the Enterprise edition of Alga PSA."
+    },
+    "links": {
+      "needLogs": "Need extension logs?",
+      "debugConsole": "Open Service Proxy Demo Debug Console"
+    },
+    "loading": {
+      "extensions": "Loading extensions...",
+      "installer": "Loading installer..."
+    }
+  },
+  "communityEdition": {
+    "listUnavailable": "Extensions not available in this edition",
+    "dynamicListUnavailable": "Extensions not available in Community Edition",
+    "dynamicInstallUnavailable": "Extension installation not available in Community Edition"
+  },
+  "page": {
+    "metadata": {
+      "title": "Extensions",
+      "description": "Manage extensions"
+    },
+    "title": "Extensions",
+    "description": "Extensions management is available in Enterprise Edition."
+  },
+  "detail": {
+    "metadataTitle": "Extensions - Enterprise Feature",
+    "enterpriseFeatureTitle": "Enterprise Feature",
+    "enterpriseFeatureDescription": "Extensions require Enterprise Edition. Please upgrade to access this feature.",
+    "extensionId": "Extension ID: {{id}}"
+  }
+}
