@@ -18,7 +18,27 @@ type EligibleContractLine = IClientContractLine & {
   };
 };
 
-export async function determineDefaultContractLine(clientId: string, serviceId: string): Promise<string | null> {
+const resolveEffectiveDateRange = (
+  effectiveDate?: string | Date
+): { rangeStart: string; rangeEnd: string } => {
+  const source =
+    effectiveDate instanceof Date
+      ? effectiveDate.toISOString()
+      : typeof effectiveDate === 'string' && effectiveDate.trim().length > 0
+        ? effectiveDate
+        : new Date().toISOString();
+  const normalizedDate = source.slice(0, 10);
+  return {
+    rangeStart: `${normalizedDate}T00:00:00.000Z`,
+    rangeEnd: `${normalizedDate}T23:59:59.999Z`,
+  };
+};
+
+export async function determineDefaultContractLine(
+  clientId: string,
+  serviceId: string,
+  effectiveDate?: string | Date
+): Promise<string | null> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('User not authenticated');
@@ -30,7 +50,7 @@ export async function determineDefaultContractLine(clientId: string, serviceId: 
   }
 
   try {
-    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
 
     if (eligibleContractLines.length === 1) {
       return eligibleContractLines[0].client_contract_line_id;
@@ -56,8 +76,11 @@ export async function getEligibleContractLines(
   knex: Knex,
   tenant: string,
   clientId: string,
-  serviceId: string
+  serviceId: string,
+  effectiveDate?: string | Date
 ): Promise<EligibleContractLine[]> {
+  const { rangeStart, rangeEnd } = resolveEffectiveDateRange(effectiveDate);
+
   const serviceInfo = await knex('service_catalog')
     .where({
       'service_catalog.service_id': serviceId,
@@ -108,7 +131,10 @@ export async function getEligibleContractLines(
       'contract_line_services.service_id': serviceId,
     })
     .where(function (this: Knex.QueryBuilder) {
-      this.whereNull('client_contracts.end_date').orWhere('client_contracts.end_date', '>', new Date().toISOString());
+      this.where('client_contracts.start_date', '<=', rangeEnd);
+    })
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('client_contracts.end_date').orWhere('client_contracts.end_date', '>=', rangeStart);
     });
 
   const rows = await query.select(
@@ -163,7 +189,8 @@ export async function getEligibleContractLines(
 
 export async function getEligibleContractLinesForUI(
   clientId: string,
-  serviceId: string
+  serviceId: string,
+  effectiveDate?: string | Date
 ): Promise<
   Array<{
     client_contract_line_id: string;
@@ -187,7 +214,7 @@ export async function getEligibleContractLinesForUI(
   }
 
   try {
-    const contractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    const contractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
 
     return contractLines.map((contractLine) => {
       const hasBucketOverlay = Boolean(contractLine.bucket_overlay?.config_id);
@@ -248,4 +275,3 @@ export async function getClientIdForWorkItem(workItemId: string, workItemType: s
     return null;
   }
 }
-

@@ -412,6 +412,7 @@ export const saveTimeEntry = withAuth(async (
     // If no contract line ID is provided, try to determine the default one
     if (!contract_line_id && service_id) {
       try {
+        const effectiveDateForContractResolution = work_date || start_time;
         const defaultPlanId = await determineDefaultContractLine(
           work_item_type === 'project_task' ?
             (await db('project_tasks')
@@ -437,7 +438,8 @@ export const saveTimeEntry = withAuth(async (
                   })
                   .first('client_id'))?.client_id
                 : null,
-          service_id
+          service_id,
+          effectiveDateForContractResolution
         );
 
         if (defaultPlanId) {

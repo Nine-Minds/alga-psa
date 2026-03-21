@@ -15,6 +15,22 @@ type EligibleContractLine = IClientContractLine & {
   };
 };
 
+const resolveEffectiveDateRange = (
+  effectiveDate?: string | Date
+): { rangeStart: string; rangeEnd: string } => {
+  const source =
+    effectiveDate instanceof Date
+      ? effectiveDate.toISOString()
+      : typeof effectiveDate === 'string' && effectiveDate.trim().length > 0
+        ? effectiveDate
+        : new Date().toISOString();
+  const normalizedDate = source.slice(0, 10);
+  return {
+    rangeStart: `${normalizedDate}T00:00:00.000Z`,
+    rangeEnd: `${normalizedDate}T23:59:59.999Z`,
+  };
+};
+
 /**
  * Determines the default contract line for a time entry or usage record
  * @param clientId The client ID
@@ -23,7 +39,8 @@ type EligibleContractLine = IClientContractLine & {
  */
 export async function determineDefaultContractLine(
   clientId: string,
-  serviceId: string
+  serviceId: string,
+  effectiveDate?: string | Date
 ): Promise<string | null> {
   const { knex, tenant } = await createTenantKnex();
   
@@ -33,7 +50,7 @@ export async function determineDefaultContractLine(
 
   try {
     // Get all contract lines for the client that include this service
-    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
 
     // If only one contract line exists, use it
     if (eligibleContractLines.length === 1) {
@@ -71,8 +88,11 @@ export async function getEligibleContractLines(
   knex: Knex,
   tenant: string,
   clientId: string,
-  serviceId: string
+  serviceId: string,
+  effectiveDate?: string | Date
 ): Promise<EligibleContractLine[]> {
+  const { rangeStart, rangeEnd } = resolveEffectiveDateRange(effectiveDate);
+
   // First, get the service category for the given service
   const serviceInfo = await knex('service_catalog')
     .where({
@@ -119,8 +139,11 @@ export async function getEligibleContractLines(
       'contract_line_services.service_id': serviceId
     })
     .where(function(this: Knex.QueryBuilder) {
+      this.where('client_contracts.start_date', '<=', rangeEnd);
+    })
+    .where(function(this: Knex.QueryBuilder) {
       this.whereNull('client_contracts.end_date')
-        .orWhere('client_contracts.end_date', '>', new Date().toISOString());
+        .orWhere('client_contracts.end_date', '>=', rangeStart);
     });
 
   // Execute the query and return the results
@@ -186,7 +209,8 @@ export async function getEligibleContractLines(
 export async function validateContractLineForService(
   clientId: string,
   serviceId: string,
-  contractLineId: string
+  contractLineId: string,
+  effectiveDate?: string | Date
 ): Promise<boolean> {
   const { knex, tenant } = await createTenantKnex();
   
@@ -195,7 +219,7 @@ export async function validateContractLineForService(
   }
 
   try {
-    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
     return eligibleContractLines.some(contractLine => contractLine.client_contract_line_id === contractLineId);
   } catch (error) {
     console.error('Error validating contract line for service:', error);
@@ -213,7 +237,8 @@ export async function validateContractLineForService(
 export async function shouldAllocateUnassignedEntry(
   clientId: string,
   serviceId: string,
-  contractLineId: string
+  contractLineId: string,
+  effectiveDate?: string | Date
 ): Promise<boolean> {
   const { knex, tenant } = await createTenantKnex();
 
@@ -222,7 +247,7 @@ export async function shouldAllocateUnassignedEntry(
   }
 
   try {
-    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
 
     // If this is the only eligible contract line, allocate to it
     if (eligibleContractLines.length === 1 && eligibleContractLines[0].client_contract_line_id === contractLineId) {
@@ -251,7 +276,8 @@ export async function shouldAllocateUnassignedEntry(
  */
 export async function getEligibleContractLinesForUI(
   clientId: string,
-  serviceId: string
+  serviceId: string,
+  effectiveDate?: string | Date
 ): Promise<Array<{
   client_contract_line_id: string;
   contract_line_name: string;
@@ -269,7 +295,7 @@ export async function getEligibleContractLinesForUI(
   }
 
   try {
-    const contractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId);
+    const contractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
 
     // Transform to a simpler structure for UI
     // Transform to the structure expected by the UI, including dates

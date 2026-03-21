@@ -87,3 +87,22 @@
 - Should default-contract pointer be persisted in billing settings or inferred by deterministic query?
 - Should API base delete always delegate to domain delete orchestration for client entity type?
 - What is final policy when billing settings are explicitly set to null/default state: keep default contract dormant or remove assignment?
+
+## Progress Update (2026-03-21)
+
+- Resolver/date cutover: both scheduling and billing `contractLineDisambiguation` now accept `effectiveDate` and apply date-window filtering using `start_date <= effectiveDate(end-of-day)` and `end_date is null || end_date >= effectiveDate(start-of-day)`.
+- Save/UI callers now pass effective dates consistently: time-entry save uses computed `work_date`, usage save/update uses `usage_date`, and UI eligible-lines queries pass entry/usage date.
+- Completed features: `F019-F026`.
+- Completed tests: `T003`, `T004`.
+
+## Additional Runbooks (2026-03-21)
+
+- Verify T003/T004 effective-date coverage:
+  - `cd packages/scheduling && npx vitest run tests/timeEntryCrud.changeRequests.test.ts`
+  - `cd server && npx vitest run ../packages/billing/tests/usageActions.effectiveDate.test.ts`
+- Re-run default-contract ensure suite after fallback hook expansion:
+  - `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
+- Typecheck touched shared/integration workspaces:
+  - `npm -w shared run typecheck`
+  - `npm -w @alga-psa/integrations run typecheck`
+  - `npm -w @alga-psa/scheduling run typecheck` (currently fails due pre-existing `packages/clients` type errors unrelated to this plan)

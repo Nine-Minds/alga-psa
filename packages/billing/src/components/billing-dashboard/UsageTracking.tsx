@@ -127,7 +127,11 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       }
 
       try {
-        const plans = await getEligibleContractLinesForUI(newUsage.client_id, newUsage.service_id);
+        const plans = await getEligibleContractLinesForUI(
+          newUsage.client_id,
+          newUsage.service_id,
+          newUsage.usage_date
+        );
         setEligibleContractLines(plans);
 
         // Always show the contract line selector, but set a default when appropriate

@@ -157,7 +157,7 @@
   {
     "id": "F019",
     "description": "Update scheduling resolver signature to accept `effectiveDate` for default contract-line determination.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 5",
       "Execution Order 4"
@@ -166,7 +166,7 @@
   {
     "id": "F020",
     "description": "Update billing resolver signature to accept `effectiveDate` for default contract-line determination.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 5",
       "Execution Order 4"
@@ -175,7 +175,7 @@
   {
     "id": "F021",
     "description": "Update resolver eligibility filters to use `start_date <= effectiveDate` and `end_date >= effectiveDate or null`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 5"
     ]
@@ -183,7 +183,7 @@
   {
     "id": "F022",
     "description": "Pass time-entry work date/start timestamp-derived date into scheduling save-path resolver.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 5"
     ]
@@ -191,7 +191,7 @@
   {
     "id": "F023",
     "description": "Pass usage effective date into usage save/update resolver.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 5"
     ]
@@ -199,7 +199,7 @@
   {
     "id": "F024",
     "description": "Align UI eligible-contract-lines endpoint/helper to use same effective-date-aware resolver logic.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 6"
     ]
@@ -207,7 +207,7 @@
   {
     "id": "F025",
     "description": "Update time-entry UI caller to provide effective date to eligible-lines query.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 6"
     ]
@@ -215,7 +215,7 @@
   {
     "id": "F026",
     "description": "Update usage UI caller to provide effective date to eligible-lines query.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements 6"
     ]

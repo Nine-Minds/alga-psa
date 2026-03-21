@@ -28,7 +28,7 @@
   {
     "id": "T003",
     "description": "Unit+integration: time-entry save resolves default line by effective work date (covers backdated, current, future dates).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F021",
@@ -41,7 +41,7 @@
   {
     "id": "T004",
     "description": "Unit+integration: usage create/update resolves default line by effective usage date and remains consistent with UI eligibility endpoint.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021",

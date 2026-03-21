@@ -82,8 +82,12 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
       }
 
       try {
-        const plans = await getEligibleContractLinesForUI(clientId, serviceId) as EligiblePlanUI[];
         const date = entryDate || new Date();
+        const plans = await getEligibleContractLinesForUI(
+          clientId,
+          serviceId,
+          date.toISOString()
+        ) as EligiblePlanUI[];
 
         // Filter by date (compare date parts only, ignoring time/timezone)
         const eligiblePlans = plans.filter(plan => {
