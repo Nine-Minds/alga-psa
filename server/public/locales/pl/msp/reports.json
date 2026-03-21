@@ -1,0 +1,171 @@
+{
+  "page": {
+    "title": "Raporty"
+  },
+  "actions": {
+    "refresh": "Odśwież"
+  },
+  "placeholders": {
+    "selectContract": "Wybierz kontrakt..."
+  },
+  "units": {
+    "hoursShort": "h",
+    "days": "dni",
+    "percent": "%",
+    "dash": "—"
+  },
+  "reportsPage": {
+    "cards": {
+      "timeUtilization": {
+        "title": "Wykorzystanie czasu",
+        "placeholder": "[Miejsce na wykres wykorzystania czasu]"
+      },
+      "projectProgress": {
+        "title": "Postęp projektu",
+        "placeholder": "[Miejsce na wykres postępu projektu]"
+      },
+      "revenueByClient": {
+        "title": "Przychód według klienta",
+        "placeholder": "[Miejsce na wykres przychodu według klienta]"
+      },
+      "teamPerformance": {
+        "title": "Wydajność zespołu",
+        "placeholder": "[Miejsce na wykres wydajności zespołu]"
+      }
+    }
+  },
+  "contractReports": {
+    "title": "Raporty kontraktów",
+    "description": "Analizuj wydajność kontraktów, przychody i wskaźniki wykorzystania",
+    "errors": {
+      "loadingTitle": "Błąd podczas ładowania raportów",
+      "loadData": "Nie udało się załadować danych raportu"
+    },
+    "summary": {
+      "totalMRR": {
+        "title": "Łączne MRR",
+        "subtitle": "Miesięczny przychód cykliczny"
+      },
+      "ytdRevenue": {
+        "title": "Przychód od początku roku",
+        "subtitle": "Od początku roku"
+      },
+      "activeContracts": {
+        "title": "Aktywne kontrakty",
+        "subtitle": "Rozliczani klienci"
+      }
+    },
+    "tabs": {
+      "revenue": "Przychód z kontraktów",
+      "expiration": "Wygaśnięcie",
+      "bucketUsage": "Pula godzin",
+      "profitability": "Rentowność"
+    },
+    "sections": {
+      "revenue": {
+        "title": "Raport przychodu z kontraktów",
+        "description": "Przegląd miesięcznego przychodu cyklicznego i rozliczeń od początku roku według kontraktu",
+        "empty": "Brak danych o przychodach z kontraktów"
+      },
+      "expiration": {
+        "title": "Wygaśnięcie kontraktu i decyzje o odnowieniu",
+        "description": "Śledź nadchodzące wygaśnięcia kontraktów i terminy decyzji o odnowieniu.",
+        "empty": "Brak nadchodzących wygaśnięć kontraktów lub decyzji o odnowieniu w najbliższym czasie"
+      },
+      "bucketUsage": {
+        "title": "Wykorzystanie puli godzin",
+        "description": "Monitoruj wykorzystanie puli godzin i identyfikuj przekroczenia",
+        "empty": "Nie znaleziono kontraktów opartych na puli godzin"
+      },
+      "profitability": {
+        "title": "Prosty raport rentowności",
+        "description": "Podstawowe marże zysku oraz analiza przychodu względem kosztów według kontraktu",
+        "empty": "Brak danych o rentowności"
+      }
+    },
+    "table": {
+      "contract": "Kontrakt",
+      "client": "Klient",
+      "monthlyRecurring": "Miesięczny cykliczny",
+      "totalBilledYtd": "Łącznie rozliczone (YTD)",
+      "status": "Status",
+      "endDate": "Data zakończenia",
+      "daysUntilExpiration": "Dni do wygaśnięcia",
+      "monthlyValue": "Wartość miesięczna",
+      "autoRenew": "Automatyczne odnowienie",
+      "totalHours": "Łączne godziny",
+      "usedHours": "Wykorzystane godziny",
+      "remaining": "Pozostało",
+      "utilization": "Wykorzystanie",
+      "overage": "Nadwyżka",
+      "revenueYtd": "Przychód (YTD)",
+      "costYtd": "Koszt (YTD)",
+      "profit": "Zysk",
+      "margin": "Marża"
+    },
+    "statusValues": {
+      "active": "Aktywny",
+      "upcoming": "Nadchodzący",
+      "yes": "Tak",
+      "no": "Nie"
+    }
+  },
+  "contractPerformance": {
+    "title": "Metryki wydajności kontraktu",
+    "errors": {
+      "loadData": "Nie udało się załadować danych kontraktu"
+    },
+    "metrics": {
+      "totalClients": "Łączna liczba klientów",
+      "activeClients": "Aktywni klienci",
+      "totalPlans": "Łączna liczba planów",
+      "averagePlansPerClient": "Średnia liczba planów na klienta",
+      "totalRevenue": "Łączny przychód",
+      "averageRevenuePerClient": "Średni przychód na klienta"
+    },
+    "empty": {
+      "selectContract": "Wybierz kontrakt, aby zobaczyć metryki wydajności",
+      "noContracts": "Brak dostępnych kontraktów"
+    },
+    "comparison": {
+      "title": "Porównanie kontraktów",
+      "table": {
+        "contract": "Kontrakt",
+        "clients": "Klienci",
+        "plans": "Plany",
+        "revenue": "Przychód"
+      }
+    }
+  },
+  "contractUsage": {
+    "title": "Raport wykorzystania kontraktu",
+    "errors": {
+      "loadInitialData": "Nie udało się załadować danych początkowych",
+      "loadUsageData": "Nie udało się załadować danych wykorzystania kontraktu"
+    },
+    "empty": {
+      "noClientsUsingContract": "Żaden klient nie korzysta z tego kontraktu",
+      "selectContract": "Wybierz kontrakt, aby zobaczyć dane wykorzystania"
+    },
+    "table": {
+      "client": "Klient",
+      "startDate": "Data rozpoczęcia",
+      "endDate": "Data zakończenia",
+      "contractLines": "Pozycje kontraktu",
+      "totalBilled": "Łącznie rozliczone",
+      "status": "Status"
+    },
+    "statusValues": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "ongoing": "Trwający",
+      "unknownClient": "Nieznany klient"
+    },
+    "summary": {
+      "title": "Podsumowanie",
+      "totalClients": "Łączna liczba klientów",
+      "activeAssignments": "Aktywne przypisania",
+      "totalBilled": "Łącznie rozliczone"
+    }
+  }
+}
