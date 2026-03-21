@@ -138,7 +138,7 @@
   {
     "id": "T041",
     "description": "Cross-batch: pseudo-locales regenerated — xx and yy files for all 4 namespaces match en key structure",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F027", "F037", "F062"]
   },
   {
