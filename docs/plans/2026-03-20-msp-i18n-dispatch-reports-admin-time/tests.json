@@ -101,7 +101,7 @@
   {
     "id": "T031",
     "description": "Time entry: all 33 component files compile with useTranslation('msp/time-entry') — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F051", "F052", "F053", "F054", "F055", "F056", "F057", "F058", "F059"]
   },
   {
