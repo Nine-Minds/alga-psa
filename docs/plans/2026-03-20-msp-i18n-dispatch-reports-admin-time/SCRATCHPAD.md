@@ -146,6 +146,7 @@ SCRIPT
 - (2026-03-20) `T011` passed: `npx tsc -p packages/billing/tsconfig.json --noEmit --pretty false` and `npx tsc -p packages/ui/tsconfig.json --noEmit --pretty false` both completed successfully after wiring the four reports components.
 - (2026-03-20) `T012` passed: a direct route-config assertion confirmed `ROUTE_NAMESPACES['/msp/billing']` exactly equals `['common', 'msp/core', 'features/billing', 'msp/reports']`.
 - (2026-03-20) `T013` passed: the Italian accent audit grep returned no matches for `server/public/locales/it/msp/reports.json` after rephrasing the few lines that had caused conjunction-based false positives.
+- (2026-03-20) `F030` completed: created `server/public/locales/en/msp/admin.json` with shared action/state keys plus structured sections for telemetry settings, email settings, Microsoft 365 diagnostics, and inbound ticket defaults so the four admin components can wire against one namespace without inventing ad hoc keys later.
 
 ### Key file paths — Dispatch
 | File | Strings |
