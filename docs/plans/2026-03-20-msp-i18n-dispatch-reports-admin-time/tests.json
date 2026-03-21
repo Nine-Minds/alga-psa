@@ -95,7 +95,7 @@
   {
     "id": "T030",
     "description": "validate-translations.cjs passes with 0 errors after time-entry batch (msp/time-entry keys consistent across all 9 locales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F050", "F061", "F062"]
   },
   {
