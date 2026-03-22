@@ -40,7 +40,6 @@ import {
   getClientByIdForBilling,
 } from '@alga-psa/billing/actions/billingClientsActions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
