@@ -204,5 +204,66 @@
       "F057",
       "F066"
     ]
+  },
+  {
+    "id": "T019",
+    "description": "DB integration: saving a client billing schedule with an optional historical bootstrap date and no existing cycles creates client_billing_cycles from the normalized containing boundary through the present.",
+    "implemented": true,
+    "featureIds": [
+      "F077",
+      "F078",
+      "F079",
+      "F082"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "DB integration: moving the historical bootstrap earlier while cycles remain uninvoiced regenerates historical client billing cycles deterministically without gaps or overlaps.",
+    "implemented": true,
+    "featureIds": [
+      "F078",
+      "F080",
+      "F082",
+      "F083"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "DB integration: attempting to move the historical bootstrap earlier than the earliest invoiced cycle boundary is rejected and does not mutate invoiced history.",
+    "implemented": true,
+    "featureIds": [
+      "F081",
+      "F083"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "UI integration: system-managed default contract detail/list render attribution-only copy and block contract-line, cadence, pricing-schedule, and assignment-date authoring surfaces.",
+    "implemented": true,
+    "featureIds": [
+      "F071",
+      "F073",
+      "F074"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "End-to-end billing integration: back-dated unmatched time/usage for a client with historical bootstrap enabled routes through the system-managed default contract attribution path and invoices on the client billing schedule window.",
+    "implemented": true,
+    "featureIds": [
+      "F075",
+      "F076",
+      "F079",
+      "F084"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Regression integration: system-managed default contracts never materialize recurring service periods or appear as schedulable recurring obligations in service-period/admin flows.",
+    "implemented": true,
+    "featureIds": [
+      "F072",
+      "F085"
+    ]
   }
 ]

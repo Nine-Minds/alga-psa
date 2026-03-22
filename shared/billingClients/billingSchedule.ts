@@ -78,6 +78,7 @@ export type UpdateClientBillingScheduleInput = {
   clientId: string;
   billingCycle: BillingCycleType;
   anchor: BillingCycleAnchorSettingsInput;
+  billingHistoryStartDate?: ISO8601String | null;
 };
 
 export async function updateClientBillingSchedule(
@@ -127,6 +128,17 @@ async function updateInTransaction(
       updated_at: trx.fn.now()
     });
 
+  if (input.billingHistoryStartDate) {
+    await regenerateHistoricalClientBillingCyclesFromBootstrap(trx, {
+      tenant,
+      clientId: input.clientId,
+      billingCycle: input.billingCycle,
+      anchor: normalized,
+      billingHistoryStartDate: input.billingHistoryStartDate,
+    });
+    return;
+  }
+
   const lastInvoiced = await trx('client_billing_cycles as cbc')
     .join('invoices as i', function () {
       this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
@@ -158,6 +170,176 @@ async function updateInTransaction(
       is_active: false,
       updated_at: trx.fn.now()
     });
+  }
+}
+
+function normalizeIsoDateOnly(value: ISO8601String): ISO8601String {
+  return `${value.slice(0, 10)}T00:00:00Z` as ISO8601String;
+}
+
+function getTodayUtcMidnightIso(): ISO8601String {
+  return `${new Date().toISOString().slice(0, 10)}T00:00:00Z` as ISO8601String;
+}
+
+function resolveNormalizedBootstrapBoundary(input: {
+  billingHistoryStartDate: ISO8601String;
+  billingCycle: BillingCycleType;
+  anchor: NormalizedBillingCycleAnchorSettings;
+}): ISO8601String {
+  const requested = ensureUtcMidnightIsoDate(input.billingHistoryStartDate);
+  const containingPeriod = getBillingPeriodForDate(requested, input.billingCycle, input.anchor);
+  return normalizeIsoDateOnly(containingPeriod.periodStartDate);
+}
+
+export type BillingHistoryBootstrapPreview = {
+  requestedHistoryStartDate: ISO8601String;
+  normalizedHistoryStartBoundary: ISO8601String;
+  earliestInvoicedCycleStartBoundary: ISO8601String | null;
+  status: 'eligible' | 'blocked_invoiced_history';
+  blockedReason: string | null;
+  affectedUninvoicedCycleCount: number;
+};
+
+export async function previewBillingHistoryBootstrap(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  input: {
+    clientId: string;
+    billingCycle: BillingCycleType;
+    anchor: BillingCycleAnchorSettingsInput;
+    billingHistoryStartDate: ISO8601String;
+  },
+): Promise<BillingHistoryBootstrapPreview> {
+  validateAnchorSettingsForCycle(input.billingCycle, input.anchor);
+  const normalizedAnchor = normalizeAnchorSettingsForCycle(input.billingCycle, input.anchor);
+  const normalizedBoundary = resolveNormalizedBootstrapBoundary({
+    billingHistoryStartDate: input.billingHistoryStartDate,
+    billingCycle: input.billingCycle,
+    anchor: normalizedAnchor,
+  });
+
+  const earliestInvoiced = await knexOrTrx('client_billing_cycles as cbc')
+    .join('invoices as i', function () {
+      this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
+    })
+    .where('cbc.tenant', tenant)
+    .andWhere('cbc.client_id', input.clientId)
+    .orderBy('cbc.period_start_date', 'asc')
+    .first()
+    .select('cbc.period_start_date');
+
+  const earliestInvoicedBoundary = earliestInvoiced?.period_start_date
+    ? normalizeDbIsoUtcMidnight(earliestInvoiced.period_start_date)
+    : null;
+
+  const affectedUninvoicedRows = await knexOrTrx('client_billing_cycles')
+    .where({ tenant, client_id: input.clientId })
+    .andWhere('period_start_date', '>=', normalizedBoundary)
+    .whereNotExists(function () {
+      this.select(1)
+        .from('invoices')
+        .whereRaw('invoices.tenant = client_billing_cycles.tenant')
+        .andWhereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id');
+    })
+    .count<{ count: number | string }>('billing_cycle_id as count')
+    .first();
+
+  if (earliestInvoicedBoundary && normalizedBoundary < earliestInvoicedBoundary) {
+    return {
+      requestedHistoryStartDate: ensureUtcMidnightIsoDate(input.billingHistoryStartDate),
+      normalizedHistoryStartBoundary: normalizedBoundary,
+      earliestInvoicedCycleStartBoundary: earliestInvoicedBoundary,
+      status: 'blocked_invoiced_history',
+      blockedReason:
+        `Cannot move billing history earlier than invoiced history boundary (${earliestInvoicedBoundary.slice(0, 10)}).`,
+      affectedUninvoicedCycleCount: Number(affectedUninvoicedRows?.count ?? 0),
+    };
+  }
+
+  return {
+    requestedHistoryStartDate: ensureUtcMidnightIsoDate(input.billingHistoryStartDate),
+    normalizedHistoryStartBoundary: normalizedBoundary,
+    earliestInvoicedCycleStartBoundary: earliestInvoicedBoundary,
+    status: 'eligible',
+    blockedReason: null,
+    affectedUninvoicedCycleCount: Number(affectedUninvoicedRows?.count ?? 0),
+  };
+}
+
+async function regenerateHistoricalClientBillingCyclesFromBootstrap(
+  trx: Knex.Transaction,
+  input: {
+    tenant: string;
+    clientId: string;
+    billingCycle: BillingCycleType;
+    anchor: NormalizedBillingCycleAnchorSettings;
+    billingHistoryStartDate: ISO8601String;
+  },
+): Promise<void> {
+  const preview = await previewBillingHistoryBootstrap(trx, input.tenant, {
+    clientId: input.clientId,
+    billingCycle: input.billingCycle,
+    anchor: input.anchor,
+    billingHistoryStartDate: input.billingHistoryStartDate,
+  });
+
+  if (preview.status === 'blocked_invoiced_history') {
+    throw new Error(preview.blockedReason ?? 'Billing history bootstrap is blocked by invoiced history.');
+  }
+
+  await trx('client_billing_cycles')
+    .where({ tenant: input.tenant, client_id: input.clientId })
+    .andWhere('period_start_date', '>=', preview.normalizedHistoryStartBoundary)
+    .whereNotExists(function () {
+      this.select(1)
+        .from('invoices')
+        .whereRaw('invoices.tenant = client_billing_cycles.tenant')
+        .andWhereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id');
+    })
+    .del();
+
+  const today = getTodayUtcMidnightIso();
+  let cursor = preview.normalizedHistoryStartBoundary;
+
+  while (cursor <= today) {
+    const nextBoundary = normalizeIsoDateOnly(
+      getNextBillingBoundaryAfter(cursor, input.billingCycle, input.anchor),
+    );
+
+    const existingInvoicedCycle = await trx('client_billing_cycles as cbc')
+      .join('invoices as i', function () {
+        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id').andOn('i.tenant', '=', 'cbc.tenant');
+      })
+      .where('cbc.tenant', input.tenant)
+      .andWhere('cbc.client_id', input.clientId)
+      .andWhere('cbc.period_start_date', cursor)
+      .first('cbc.billing_cycle_id');
+
+    if (!existingInvoicedCycle) {
+      const existingCycle = await trx('client_billing_cycles')
+        .where({
+          tenant: input.tenant,
+          client_id: input.clientId,
+          period_start_date: cursor,
+        })
+        .first('billing_cycle_id');
+
+      if (!existingCycle) {
+        await trx('client_billing_cycles').insert({
+          tenant: input.tenant,
+          client_id: input.clientId,
+          billing_cycle: input.billingCycle,
+          effective_date: cursor,
+          period_start_date: cursor,
+          period_end_date: nextBoundary,
+          is_active: true,
+          created_at: trx.fn.now(),
+          updated_at: trx.fn.now(),
+        });
+      }
+    }
+
+    cursor = nextBoundary;
   }
 }
 
@@ -210,7 +392,21 @@ export async function createNextBillingCycle(
   if (!client) {
     throw new Error('Client not found');
   }
-  return createClientContractLineCycles(knexOrTrx as any, client as IClient, { manual: true, effectiveDate });
+  if (!effectiveDate) {
+    return createClientContractLineCycles(knexOrTrx as any, client as IClient, { manual: true });
+  }
+
+  const schedule = await getClientBillingCycleAnchor(knexOrTrx, tenant, clientId);
+  const normalizedEffectiveBoundary = resolveNormalizedBootstrapBoundary({
+    billingHistoryStartDate: ensureUtcMidnightIsoDate(effectiveDate),
+    billingCycle: schedule.billingCycle,
+    anchor: schedule.anchor,
+  });
+
+  return createClientContractLineCycles(knexOrTrx as any, client as IClient, {
+    manual: true,
+    effectiveDate: normalizedEffectiveBoundary,
+  });
 }
 
 function isKnexTransaction(knexOrTrx: Knex | Knex.Transaction): knexOrTrx is Knex.Transaction {

@@ -6,7 +6,7 @@ vi.mock('@alga-psa/db', () => ({
 
 describe('contract line disambiguation default fallback precedence (billing)', () => {
   it('F064: returns explicit decision when a single eligible line exists', async () => {
-    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation');
+    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation.shared');
     const resolution = resolveDeterministicContractLineSelection([
       {
         client_contract_line_id: 'line-explicit',
@@ -21,7 +21,7 @@ describe('contract line disambiguation default fallback precedence (billing)', (
   });
 
   it('uses system-managed default only as fallback when exactly one overlay line exists among multiple eligibles', async () => {
-    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation');
+    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation.shared');
     const resolution = resolveDeterministicContractLineSelection([
       {
         client_contract_line_id: 'line-explicit',
@@ -40,7 +40,7 @@ describe('contract line disambiguation default fallback precedence (billing)', (
   });
 
   it('keeps ambiguous multi-active scenarios unresolved when fallback is not deterministic', async () => {
-    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation');
+    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation.shared');
     expect(
       resolveDeterministicContractLineSelection([
         { client_contract_line_id: 'line-a' } as any,

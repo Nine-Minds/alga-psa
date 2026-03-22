@@ -15,6 +15,7 @@ import {
 import { ensureClientBillingSettingsRow } from './billingCycleAnchorActions';
 import { regenerateClientCadenceServicePeriodsForScheduleChange } from './clientCadenceScheduleRegeneration';
 import { withAuth } from '@alga-psa/auth';
+import { updateClientBillingSchedule as updateClientBillingScheduleShared } from '@alga-psa/shared/billingClients';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -86,6 +87,7 @@ export type UpdateClientBillingScheduleInput = {
   clientId: string;
   billingCycle: BillingCycleType;
   anchor: BillingCycleAnchorSettingsInput;
+  billingHistoryStartDate?: ISO8601String | null;
 };
 
 export const updateClientBillingSchedule = withAuth(async (
@@ -107,24 +109,27 @@ export const updateClientBillingSchedule = withAuth(async (
     validateAnchorSettingsForCycle(input.billingCycle, input.anchor);
     const normalized = normalizeAnchorSettingsForCycle(input.billingCycle, input.anchor);
 
-    // Update billing cycle type (if changed).
-    if ((client.billing_cycle ?? 'monthly') !== input.billingCycle) {
-      await trx('clients')
+    if (input.billingHistoryStartDate) {
+      await updateClientBillingScheduleShared(trx, tenant, input);
+    } else {
+      if ((client.billing_cycle ?? 'monthly') !== input.billingCycle) {
+        await trx('clients')
+          .where({ tenant, client_id: input.clientId })
+          .update({ billing_cycle: input.billingCycle, updated_at: trx.fn.now() });
+      }
+
+      await ensureClientBillingSettingsRow(trx, { tenant, clientId: input.clientId });
+
+      await trx('client_billing_settings')
         .where({ tenant, client_id: input.clientId })
-        .update({ billing_cycle: input.billingCycle, updated_at: trx.fn.now() });
+        .update({
+          billing_cycle_anchor_day_of_month: normalized.dayOfMonth,
+          billing_cycle_anchor_month_of_year: normalized.monthOfYear,
+          billing_cycle_anchor_day_of_week: normalized.dayOfWeek,
+          billing_cycle_anchor_reference_date: normalized.referenceDate,
+          updated_at: trx.fn.now()
+        });
     }
-
-    await ensureClientBillingSettingsRow(trx, { tenant, clientId: input.clientId });
-
-    await trx('client_billing_settings')
-      .where({ tenant, client_id: input.clientId })
-      .update({
-        billing_cycle_anchor_day_of_month: normalized.dayOfMonth,
-        billing_cycle_anchor_month_of_year: normalized.monthOfYear,
-        billing_cycle_anchor_day_of_week: normalized.dayOfWeek,
-        billing_cycle_anchor_reference_date: normalized.referenceDate,
-        updated_at: trx.fn.now()
-      });
 
     await regenerateClientCadenceServicePeriodsForScheduleChange(trx, {
       tenant,

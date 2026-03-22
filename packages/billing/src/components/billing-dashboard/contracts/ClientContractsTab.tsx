@@ -286,7 +286,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
             {isSystemManagedDefault ? (
               <>
                 <Badge variant="info">System-managed default</Badge>
-                <p className="text-xs text-muted-foreground">Created automatically for uncontracted work</p>
+                <p className="text-xs text-muted-foreground">Attribution-only. Created automatically for uncontracted work.</p>
               </>
             ) : null}
           </div>

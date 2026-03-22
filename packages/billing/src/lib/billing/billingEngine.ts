@@ -1415,6 +1415,7 @@ export class BillingEngine {
         "cc.template_contract_id",
         "c.contract_id",
         "c.contract_name",
+        "c.is_system_managed_default",
         "c.currency_code",
         "cl.contract_line_name",
         "cl.contract_line_type",
@@ -1443,6 +1444,7 @@ export class BillingEngine {
         | "arrears"
         | "advance";
       plan.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
+      plan.is_system_managed_default = plan.is_system_managed_default === true;
 
       // custom_rate is already stored in cents in the database, just parse it
       if (plan.custom_rate !== null && plan.custom_rate !== undefined) {
@@ -2613,7 +2615,11 @@ export class BillingEngine {
       | "advance";
     const currentStart = toISODate(toPlainDate(billingPeriod.startDate));
     const currentEndExclusive = toISODate(toPlainDate(billingPeriod.endDate));
-    const cadenceOwner = resolveCadenceOwner(clientContractLine.cadence_owner);
+    const isSystemManagedDefault = (clientContractLine as { is_system_managed_default?: boolean | null })
+      .is_system_managed_default === true;
+    const cadenceOwner = isSystemManagedDefault
+      ? "client"
+      : resolveCadenceOwner(clientContractLine.cadence_owner);
     const sourceObligation = buildClientCadencePostDropObligationRef({
       contractLineId: clientContractLine.client_contract_line_id,
       chargeFamily: "fixed",
@@ -3106,13 +3112,15 @@ export class BillingEngine {
 
         // Get the service configuration if available
         const serviceConfig = serviceConfigMap.get(entry.service_id);
+        const isSystemManagedDefault = (clientContractLine as { is_system_managed_default?: boolean | null })
+          .is_system_managed_default === true;
 
         // Calculate duration based on configuration settings
         let durationMinutes = startDateTime.until(endDateTime, {
           largestUnit: "minutes",
         }).minutes;
 
-        if (serviceConfig) {
+        if (serviceConfig && !isSystemManagedDefault) {
           // Apply minimum billable time
           if (durationMinutes < serviceConfig.config.minimum_billable_time) {
             durationMinutes = serviceConfig.config.minimum_billable_time;
@@ -3134,7 +3142,7 @@ export class BillingEngine {
 
         // Determine rate based on user type if applicable
         let rate = Math.ceil(entry.custom_rate ?? entry.default_rate);
-        if (serviceConfig && serviceConfig.userTypeRates.has(entry.user_type)) {
+        if (!isSystemManagedDefault && serviceConfig && serviceConfig.userTypeRates.has(entry.user_type)) {
           rate = serviceConfig.userTypeRates.get(entry.user_type) as number;
         }
 
@@ -3386,10 +3394,13 @@ export class BillingEngine {
       async (record: any): Promise<IUsageBasedCharge> => {
         // Get the service configuration if available
         const serviceConfig = serviceConfigMap.get(record.service_id);
+        const isSystemManagedDefault = (clientContractLine as { is_system_managed_default?: boolean | null })
+          .is_system_managed_default === true;
 
         // Apply minimum usage if configured
         let quantity = record.quantity;
         if (
+          !isSystemManagedDefault &&
           serviceConfig &&
           quantity < (serviceConfig.config.minimum_usage ?? 0)
         ) {
@@ -3401,13 +3412,14 @@ export class BillingEngine {
         let total = Math.ceil(quantity * rate);
 
         // If service has a custom rate in the configuration, use that
-        if (serviceConfig && serviceConfig.config.custom_rate) {
+        if (!isSystemManagedDefault && serviceConfig && serviceConfig.config.custom_rate) {
           rate = Math.ceil(serviceConfig.config.custom_rate);
           total = Math.ceil(quantity * rate);
         }
 
         // Apply tiered pricing if enabled
         if (
+          !isSystemManagedDefault &&
           serviceConfig &&
           serviceConfig.config.enable_tiered_pricing &&
           serviceConfig.rateTiers.length > 0

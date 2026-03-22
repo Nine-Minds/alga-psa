@@ -14,6 +14,11 @@
 - (2026-03-21) Null client-billing-settings overrides (`settings === null`) remain delete-only and do not trigger default-contract ensure; ensure is only invoked on non-null ensure/update touchpoints.
 - (2026-03-21) Add fallback client-create hook `ensureDefaultContractForClientIfBillingConfigured(...)` in shared default-contract domain and wire it into major create paths (clients package action, shared model, API service, integration import, email service) so bypass flows still reconcile when billing settings already exist.
 - (2026-03-21) For API-service client deletion, enforce domain cleanup before hard delete: remove assignment/billing artifacts, then apply orphan policy to default contracts (`delete` when uninvoiced orphan, `archive` when invoiced orphan).
+- (2026-03-21) Refine the target model: system-managed default contracts are attribution shells for unmatched time/usage, not recurring cadence authorities.
+- (2026-03-21) Unmatched default-contract work should invoice on the client billing schedule, not on default-contract billing frequency/timing.
+- (2026-03-21) System-managed default contracts should not allow contract-line authoring, recurring/service-period management, pricing-schedule authoring, or user-managed assignment date semantics.
+- (2026-03-21) Add an optional client billing schedule historical bootstrap date instead of trying to encode back-dated invoiceability through default-contract assignment start dates.
+- (2026-03-21) Historical bootstrap is optional, normalizes to the containing client-cycle boundary, and may move earlier only while preserving invoiced-history boundaries.
 
 ## Discoveries / Constraints
 
@@ -26,6 +31,11 @@
 - Existing package wiring tests include brittle source-string assertions for exact function signatures/throw style; those tests can fail even when runtime behavior is unchanged.
 - Shared vitest config only discovers `services/**/*.test.ts` and `**/__tests__/**/*.test.ts`, so shared tests for this plan need to live under `shared/__tests__/`.
 - `BaseService.delete` is generic hard-delete behavior; without `ClientService.delete` override it bypasses client-domain cleanup and can skip default-contract artifact cleanup.
+- `packages/clients/src/components/clients/BillingConfiguration.tsx` general save is not the right surface for historical client-cycle bootstrap; `ClientBillingSchedule.tsx` is the existing UX entry point for schedule-specific setup.
+- `shared/billingClients/createBillingCycles.ts` backfills from the current/reference cycle forward, but does not automatically create historical client cycles for back-dated work unless an explicit effective date is supplied.
+- `shared/billingClients/billingSchedule.ts` and `packages/billing/src/actions/billingScheduleActions.ts` already own schedule persistence and are the natural convergence points for optional bootstrap/backfill logic.
+- Blanket backdating of default-contract `client_contracts.start_date` is unsafe because contract-cadence and client-cadence recurring materialization both treat assignment start as the schedule-generation anchor/as-of boundary.
+- Back-dated billable work has a parallel gap on the client-schedule side today: a new billing configuration does not automatically create historical `client_billing_cycles`, so default-contract simplification alone does not solve historical invoiceability.
 
 ## Commands / Runbooks
 
@@ -42,6 +52,16 @@
   - `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
 - (Optional) Package wiring spot-check:
   - `cd packages/billing && npx vitest run tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/billingSettingsActions.renewalDefaultsWiring.test.ts tests/billingSettingsActions.cadenceOwnerDefaultsWiring.test.ts`
+- Inspect billing schedule UI/action insertion points for optional bootstrap:
+  - `sed -n '1,260p' packages/clients/src/components/clients/ClientBillingSchedule.tsx`
+  - `sed -n '1,260p' packages/billing/src/actions/billingScheduleActions.ts`
+- Inspect historical cycle creation/bootstrap behavior:
+  - `sed -n '1,320p' shared/billingClients/createBillingCycles.ts`
+  - `sed -n '1,280p' shared/billingClients/billingSchedule.ts`
+  - `sed -n '1,320p' packages/billing/src/actions/billingCycleActions.ts`
+- Inspect recurring-materialization coupling that makes assignment-start backdating unsafe:
+  - `sed -n '360,470p' packages/billing/src/actions/contractCadenceServicePeriodMaterialization.ts`
+  - `sed -n '380,430p' packages/billing/src/actions/clientCadenceScheduleRegeneration.ts`
 
 ## Links / References
 
@@ -65,9 +85,13 @@
   - `shared/billingClients/defaultContract.ts`
   - `shared/billingClients/billingSettings.ts`
   - `shared/billingClients/billingSchedule.ts`
+  - `shared/billingClients/createBillingCycles.ts`
   - `packages/billing/src/actions/billingCycleAnchorActions.ts`
+  - `packages/billing/src/actions/billingCycleActions.ts`
+  - `packages/billing/src/actions/billingScheduleActions.ts`
   - `packages/billing/src/actions/billingSettingsActions.ts`
   - `packages/billing/src/actions/creditExpirationSettingsActions.ts`
+  - `packages/clients/src/components/clients/ClientBillingSchedule.tsx`
   - `server/migrations/20260321150000_add_system_managed_default_contract_marker.cjs`
   - `shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
   - `packages/clients/src/actions/clientActions.ts`
@@ -87,6 +111,8 @@
 - Should default-contract pointer be persisted in billing settings or inferred by deterministic query?
 - Should API base delete always delegate to domain delete orchestration for client entity type?
 - What is final policy when billing settings are explicitly set to null/default state: keep default contract dormant or remove assignment?
+- Should the optional historical bootstrap date be persisted in `client_billing_settings` as durable metadata, or used as operational input that only shapes generated `client_billing_cycles`?
+- What exact pricing source should unmatched default-contract work use once the default contract no longer authors recurring lines?
 
 ## Progress Update (2026-03-21)
 
@@ -348,3 +374,68 @@
 
 - `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSettings.defaultContract.ensure.test.ts`
 - `cd server && npx vitest run src/test/unit/billing/defaultContractDeletionCleanup.wiring.test.ts src/test/unit/billing/defaultContractCrossPackageParity.wiring.test.ts src/test/unit/billing/defaultContractObservability.wiring.test.ts src/test/unit/migrations/systemManagedDefaultContractMarkerMigration.test.ts src/test/unit/billing/invoiceGeneration.unresolvedSelectionKeys.test.ts`
+
+## Progress Update (2026-03-21, F071-F074/F085)
+
+- Reclassified system-managed default contracts as attribution-only in runtime guardrails:
+  - backend mutation paths now block authoring for default contracts across contract update, contract-line mapping/line/config mutations, pricing schedules, and client-contract assignment mutation paths.
+- Removed system-managed default contracts from recurring cadence authority surfaces:
+  - contract cadence and client cadence materialization queries now explicitly exclude `contracts.is_system_managed_default = true`.
+  - recurring due-work persisted-row readers and client-cadence materialization-gap checks now exclude system-managed defaults.
+  - recurring service-period admin schedule listing filters out system-managed defaults, and direct management view for legacy schedule keys now hard-blocks with attribution-only messaging.
+- Updated contract UI to attribution-only semantics:
+  - contract detail alert copy now explains attribution-only behavior and points users to normal user-authored contracts for custom billing behavior.
+  - contract lines/pricing tabs are disabled on system-managed defaults; lines/pricing components run in read-only mode with explanatory copy.
+  - contract list helper copy now includes attribution-only wording.
+- Added/updated static wiring tests locking the above behavior:
+  - `systemManagedDefaultAttributionShell.wiring.test.ts`
+  - `systemManagedDefaultContracts.ui.static.test.ts`
+
+### Verification commands
+
+- `cd server && npx vitest run src/test/unit/billing/systemManagedDefaultAttributionShell.wiring.test.ts src/test/unit/billing/systemManagedDefaultContracts.ui.static.test.ts src/test/unit/billing/systemManagedContractGuardrails.wiring.test.ts`
+- `npm -w @alga-psa/billing run typecheck` *(fails with pre-existing workspace errors outside this change set; no new failing assertions in targeted tests)*
+
+### Completed checklist progress
+
+- Completed features: `F071`, `F072`, `F073`, `F074`, `F085`.
+
+## Progress Update (2026-03-21, F075/F076)
+
+- Updated billing engine runtime timing resolution so system-managed default contract lines always use client-schedule cadence windows:
+  - `buildRecurringChargeTimingSelection` now forces `cadenceOwner = client` whenever `is_system_managed_default` is true.
+  - prevents default-contract assignments from reintroducing contract-anniversary timing semantics.
+- Added legacy-safety pricing guardrails for system-managed default line charges:
+  - time-charge rating now skips contract-line service-config rounding/minimum/user-type overrides when line is system-managed default.
+  - usage-charge rating now skips contract-line service-config minimum/custom/tiered overrides when line is system-managed default.
+  - this keeps unmatched default-contract billing on default/service-catalog pricing semantics.
+- Added wiring tests to lock client-schedule timing + pricing override bypass behavior.
+- Completed features: `F075`, `F076`.
+
+### Verification commands
+
+- `cd server && npx vitest run src/test/unit/billing/defaultContractClientSchedulePricing.wiring.test.ts src/test/unit/billing/systemManagedDefaultAttributionShell.wiring.test.ts`
+
+## Progress Update (2026-03-21, F077-F084/F086, T019-T024)
+
+- Implemented optional historical billing bootstrap flow on client billing schedule save:
+  - Added optional `billingHistoryStartDate` through shared schedule domain, package action, client helper, and client UI.
+  - Added shared bootstrap preview contract with normalized boundary, uninvoiced regeneration count, and invoiced-history lock status.
+- Added deterministic historical client-cycle regeneration/backfill behavior:
+  - User-entered history date normalizes to containing cycle boundary.
+  - Uninvoiced cycles from normalized boundary are rebuilt contiguously through current date.
+  - Bootstrap requests earlier than earliest invoiced cycle boundary are blocked with explicit message.
+- Converged manual effective-date bootstrap + schedule bootstrap boundary behavior in shared schedule helpers (`createNextBillingCycle` normalization).
+- Completed attribution-shell and recurring-exclusion regression coverage:
+  - Added UI wiring contract test for attribution-only list/detail semantics and disabled line/pricing/assignment edit surfaces.
+  - Added wiring contract test for historical bootstrap + default-contract billing route semantics.
+  - Added wiring contract test for recurring/service-period materialization and recurring admin exclusion of system-managed defaults.
+- Updated plan docs/runbooks for attribution-shell model and historical bootstrap workflow/gates (`ENGINEERING_NOTES.md`, `DEVELOPER_RUNBOOK.md`, `SEQUENCING_RUNBOOK.md`).
+- Completed features: `F077`, `F078`, `F079`, `F080`, `F081`, `F082`, `F083`, `F084`, `F086`.
+- Completed tests: `T019`, `T020`, `T021`, `T022`, `T023`, `T024`.
+
+### Verification commands
+
+- `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSchedule.historyBootstrap.test.ts`
+- `cd server && npx vitest run src/test/unit/billing/ClientBillingSchedule.ui.test.tsx src/test/unit/billing/defaultContractClientSchedulePricing.wiring.test.ts src/test/unit/billing/systemManagedDefaultAttributionShell.wiring.test.ts src/test/unit/billing/systemManagedDefaultContracts.ui.static.test.ts src/test/unit/billing/defaultContractDeletionCleanup.wiring.test.ts src/test/unit/billing/systemManagedContractGuardrails.wiring.test.ts`
+- `cd server && npx vitest run src/test/unit/billing/systemManagedDefaultAttributionOnly.ui.wiring.test.ts src/test/unit/billing/defaultContractHistoricalBootstrapAndBillingRoute.wiring.test.ts src/test/unit/billing/systemManagedDefaultRecurringExclusion.wiring.test.ts src/test/unit/billing/systemManagedDefaultAttributionShell.wiring.test.ts src/test/unit/billing/defaultContractClientSchedulePricing.wiring.test.ts src/test/unit/billing/systemManagedDefaultContracts.ui.static.test.ts`

@@ -37,6 +37,7 @@ import { getCurrencySymbol } from '@alga-psa/core';
 interface ContractLinesProps {
   contract: IContract;
   onContractLinesChanged?: () => void;
+  isReadOnly?: boolean;
 }
 
 interface DetailedContractLineMapping {
@@ -75,7 +76,7 @@ interface ServiceConfiguration {
   bucketConfig?: any; // Add bucketConfig property for merged bucket data
 }
 
-const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged }) => {
+const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged, isReadOnly = false }) => {
   const cadenceOwnerOptions = [
     { value: 'client', label: 'Client schedule' },
     { value: 'contract', label: 'Contract anniversary' },
@@ -432,7 +433,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
           <div>
             <h3 className="text-lg font-medium">Contract Lines</h3>
             <p className="text-sm text-muted-foreground">
-              Manage the contract lines and services for this contract
+              {isReadOnly
+                ? 'This system-managed default contract is attribution-only. Contract line authoring is disabled.'
+                : 'Manage the contract lines and services for this contract'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -440,6 +443,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
               id="add-contract-line-from-preset-btn"
               variant="outline"
               onClick={() => setShowAddDialog(true)}
+              disabled={isReadOnly}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add from Presets
@@ -447,6 +451,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
             <Button
               id="create-custom-contract-line-btn"
               onClick={() => setShowCreateCustomDialog(true)}
+              disabled={isReadOnly}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Custom
@@ -547,6 +552,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           handleEditContractLine(line);
                         }}
                         className="h-8 text-muted-foreground hover:text-[rgb(var(--color-text-700))] hover:bg-muted"
+                        disabled={isReadOnly}
                       >
                         <Edit className="h-4 w-4 mr-1" />
                         Edit
@@ -560,6 +566,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           handleRemoveContractLine(line.contract_line_id);
                         }}
                         className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        disabled={isReadOnly}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
                         Remove
@@ -996,19 +1003,23 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         )}
       </Box>
 
-      <AddContractLinesDialog
-        isOpen={showAddDialog}
-        onClose={() => setShowAddDialog(false)}
-        contractId={contract.contract_id}
-        onAdd={handleAddContractLines}
-      />
+      {!isReadOnly ? (
+        <>
+          <AddContractLinesDialog
+            isOpen={showAddDialog}
+            onClose={() => setShowAddDialog(false)}
+            contractId={contract.contract_id}
+            onAdd={handleAddContractLines}
+          />
 
-      <CreateCustomContractLineDialog
-        isOpen={showCreateCustomDialog}
-        onClose={() => setShowCreateCustomDialog(false)}
-        contractId={contract.contract_id}
-        onCreated={handleAddContractLines}
-      />
+          <CreateCustomContractLineDialog
+            isOpen={showCreateCustomDialog}
+            onClose={() => setShowCreateCustomDialog(false)}
+            contractId={contract.contract_id}
+            onCreated={handleAddContractLines}
+          />
+        </>
+      ) : null}
     </Card>
   );
 };

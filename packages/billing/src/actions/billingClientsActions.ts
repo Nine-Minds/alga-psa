@@ -24,6 +24,27 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
 
+async function assertClientContractAssignmentIsAuthorable(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientContractId: string,
+): Promise<void> {
+  const row = await trx('client_contracts as cc')
+    .join('contracts as c', function joinContracts() {
+      this.on('cc.contract_id', '=', 'c.contract_id')
+        .andOn('cc.tenant', '=', 'c.tenant');
+    })
+    .where('cc.tenant', tenant)
+    .andWhere('cc.client_contract_id', clientContractId)
+    .first('c.is_system_managed_default');
+
+  if (row?.is_system_managed_default === true) {
+    throw new Error(
+      'System-managed default contracts are attribution-only; assignment lifecycle and date edits are disabled.',
+    );
+  }
+}
+
 function requireClientReadPermission(user: IUserWithRoles): void {
   if (!hasPermission(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
@@ -118,6 +139,15 @@ export const createClientContractForBilling = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const contract = await trx('contracts')
+      .where({ tenant, contract_id: input.contract_id })
+      .first('is_system_managed_default');
+    if (contract?.is_system_managed_default === true) {
+      throw new Error(
+        'System-managed default contracts are attribution-only; manual assignment authoring is disabled.',
+      );
+    }
+
     const created = await createClientContractAssignment(trx, tenant, input);
     if (created.is_active) {
       await syncRecurringServicePeriodsForContract(trx, {
@@ -139,6 +169,7 @@ export const updateClientContractForBilling = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const updated = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await assertClientContractAssignmentIsAuthorable(trx, tenant, clientContractId);
     const updatedAssignment = await updateClientContractAssignment(trx, tenant, clientContractId, updateData);
     await syncRecurringServicePeriodsForContract(trx, {
       tenant,

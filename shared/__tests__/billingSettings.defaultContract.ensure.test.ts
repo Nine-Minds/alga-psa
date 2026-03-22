@@ -32,6 +32,10 @@ class FakeQueryBuilder {
     return this;
   }
 
+  forUpdate(): this {
+    return this;
+  }
+
   first(...columns: string[]): this {
     if (columns.length > 0) {
       this.selectedColumns = columns;
@@ -253,6 +257,14 @@ describe('default contract ensure on billing settings ensure', () => {
       (row) => row.tenant === 'tenant-1' && row.owner_client_id === 'client-1' && row.is_system_managed_default === true
     );
     expect(defaultContracts).toHaveLength(1);
+
+    const assignments = state.client_contracts.filter(
+      (row) =>
+        row.tenant === 'tenant-1' &&
+        row.client_id === 'client-1' &&
+        row.contract_id === defaultContracts[0].contract_id
+    );
+    expect(assignments).toHaveLength(1);
   });
 
   it('fallback ensure hook is a no-op when billing settings do not exist for the client', async () => {

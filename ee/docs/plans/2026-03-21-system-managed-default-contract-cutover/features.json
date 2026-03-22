@@ -577,5 +577,148 @@
     "prdRefs": [
       "Functional Requirements 16"
     ]
+  },
+  {
+    "id": "F071",
+    "description": "Redefine system-managed default contracts as non-authorable attribution shells rather than recurring cadence authorities.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 4",
+      "Functional Requirements 17"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Remove system-managed default contracts from recurring cadence/service-period materialization and due-work schedule authority paths.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 17",
+      "Execution Order 7"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Hide or disable contract-line authoring, cadence edits, pricing-schedule authoring, and assignment date edits on system-managed default contracts across UI and backend actions.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes 2",
+      "Functional Requirements 18"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Update system-managed default contract detail/list copy to explain that the contract is attribution-only and that custom billing behavior requires a normal user-authored contract.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes 3",
+      "Acceptance Criteria 2"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Route unmatched default-contract work into client billing schedule windows instead of reading cadence/timing semantics from the default contract record.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 5",
+      "Functional Requirements 19"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Define and implement default/service-catalog pricing behavior for unmatched default-contract work so invoice rating does not depend on default-contract-authored recurring lines.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 20",
+      "Open Questions 5"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Add an optional historical bootstrap date to the client billing schedule UI for first-time or pre-invoiced historical client-cycle setup.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes 6",
+      "Functional Requirements 21"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Normalize a user-chosen historical bootstrap date to the containing client billing-cycle boundary before cycle creation or regeneration.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 22"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Generate historical client billing cycles from the normalized bootstrap boundary through the present when a client has billing configuration but no prior cycles.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 21",
+      "Acceptance Criteria 5"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Allow moving the historical bootstrap earlier when only uninvoiced historical cycles are affected, regenerating those cycles deterministically from the new normalized boundary.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 24",
+      "Acceptance Criteria 6"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Block historical bootstrap changes that would move earlier than the earliest invoiced cycle boundary, with clear user-facing explanation.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 23",
+      "Functional Requirements 25"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Ensure manual cycle creation/bootstrap helpers and normal billing-schedule save flows converge on the same historical cycle-generation rules and continuity guarantees.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 26",
+      "Data / API / Integrations 7"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Surface bootstrap preview and state messaging in the client billing schedule UI, including normalized boundary preview, regeneration impact, and invoiced-history lock reasons.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes 6",
+      "Functional Requirements 25"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Keep invoice history, automatic invoicing labels, and default-contract attribution fields meaningful after removing recurrence semantics from the default contract.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 27",
+      "Acceptance Criteria 9"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Audit recurring/service-period admin screens so system-managed default contracts never surface as schedulable recurring obligations or repair targets.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 17",
+      "Execution Order 7"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Update plan docs/runbooks/engineering notes to describe the attribution-only default contract model and optional historical client-cycle bootstrap workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration 7",
+      "Acceptance Criteria 11"
+    ]
   }
 ]

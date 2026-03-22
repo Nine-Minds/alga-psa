@@ -83,6 +83,17 @@ Gate checks:
 - `cd server && npx vitest run src/test/unit/billing/defaultContractObservability.wiring.test.ts`
 - Validate log payloads in lower env traces for expected event names.
 
+## Stage 9: Attribution-Shell + Historical Bootstrap Finalization
+
+Required state:
+- System-managed default contracts are attribution-only and excluded from recurring/service-period authority flows.
+- Optional historical bootstrap can backfill/regenerate uninvoiced client billing cycles from normalized boundaries.
+- Invoiced-history boundary guardrails block unsafe backwards bootstrap moves.
+
+Gate checks:
+- `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSchedule.historyBootstrap.test.ts`
+- `cd server && npx vitest run src/test/unit/billing/systemManagedDefaultAttributionOnly.ui.wiring.test.ts src/test/unit/billing/defaultContractHistoricalBootstrapAndBillingRoute.wiring.test.ts src/test/unit/billing/systemManagedDefaultRecurringExclusion.wiring.test.ts`
+
 ## Rollback / Safety Rules
 
 - Do not remove compatibility parsing until Stage 5 gates pass in CI and staging.

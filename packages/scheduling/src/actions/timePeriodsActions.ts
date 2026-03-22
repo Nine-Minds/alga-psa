@@ -35,11 +35,34 @@ interface TimePeriodInput {
   end_date: string;
 }
 
-export const getLatestTimePeriod = withAuth(async (_user, { tenant }): Promise<ITimePeriod | null> => {
+const serializeDateOnly = (value: unknown): string => {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value && typeof (value as { toString?: () => string }).toString === 'function') {
+    return (value as { toString: () => string }).toString();
+  }
+
+  return String(value ?? '');
+};
+
+const toTimePeriodView = (period: ITimePeriod): ITimePeriodView => ({
+  ...period,
+  start_date: serializeDateOnly(period.start_date),
+  end_date: serializeDateOnly(period.end_date),
+});
+
+export const getLatestTimePeriod = withAuth(async (_user, { tenant }): Promise<ITimePeriodView | null> => {
   try {
     const { knex } = await createTenantKnex();
     const latestPeriod = await TimePeriod.getLatest(knex, tenant);
-    return latestPeriod ? validateData(timePeriodSchema, latestPeriod) : null;
+    if (!latestPeriod) {
+      return null;
+    }
+
+    const validatedPeriod = validateData(timePeriodSchema, latestPeriod);
+    return toTimePeriodView(validatedPeriod);
   } catch (error) {
     console.error('Error fetching latest time period:', error)
     throw new Error('Failed to fetch latest time period')
@@ -61,7 +84,7 @@ export const createTimePeriod = withAuth(async (
   _user,
   { tenant },
   input: TimePeriodInput
-): Promise<ITimePeriod> => {
+): Promise<ITimePeriodView> => {
   // Convert string dates to Temporal.PlainDate (Next.js server actions can't receive Temporal objects)
   const timePeriodData = {
     start_date: toPlainDate(input.start_date),
@@ -90,7 +113,7 @@ export const createTimePeriod = withAuth(async (
         // Ignore revalidation errors when called outside request context (e.g., from jobs)
       }
 
-      return validatedPeriod;
+      return toTimePeriodView(validatedPeriod);
     } catch (error) {
       console.error('Error in createTimePeriod function:', error);
       throw error;
@@ -379,7 +402,7 @@ export const updateTimePeriod = withAuth(async (
   { tenant },
   periodId: string,
   input: Partial<TimePeriodInput>
-): Promise<ITimePeriod> => {
+): Promise<ITimePeriodView> => {
   // Convert string dates to Temporal.PlainDate (Next.js server actions can't receive Temporal objects)
   const updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>> = {};
   if (input.start_date) updates.start_date = toPlainDate(input.start_date);
@@ -414,7 +437,7 @@ export const updateTimePeriod = withAuth(async (
         const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
 
         revalidatePath('/msp/time-entry');
-        return validatedPeriod;
+        return toTimePeriodView(validatedPeriod);
       } catch (error: any) {
         if (error.message.includes('belongs to different tenant')) {
           throw new Error('Access denied: Cannot update time period');
@@ -429,7 +452,7 @@ export const updateTimePeriod = withAuth(async (
   });
 });
 
-export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, startDate: ISO8601String, endDate: ISO8601String): Promise<ITimePeriod[]> => {
+export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, startDate: ISO8601String, endDate: ISO8601String): Promise<ITimePeriodView[]> => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -461,7 +484,7 @@ export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, sta
       const validatedPeriods = validateArray(timePeriodSchema, savedPeriods);
 
       revalidatePath('/msp/time-entry');
-      return validatedPeriods;
+      return validatedPeriods.map((period): ITimePeriodView => toTimePeriodView(period));
     } catch (error) {
       console.error('Error generating and saving time periods:', error);
       throw new Error('Failed to generate and save time periods');

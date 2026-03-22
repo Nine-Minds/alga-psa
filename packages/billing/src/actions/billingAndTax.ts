@@ -348,6 +348,9 @@ async function fetchPersistedRecurringDueWorkDbRows(
         })
         .where('rsp.tenant', tenant)
         .where('rsp.obligation_type', 'contract_line')
+        .where((builder) =>
+            builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
+        )
         .whereIn('rsp.lifecycle_state', dueStates)
         .whereNull('rsp.invoice_charge_detail_id')
         .select(
@@ -412,6 +415,9 @@ async function fetchPersistedRecurringDueWorkDbRows(
         })
         .where('rsp.tenant', tenant)
         .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
+        .where((builder) =>
+            builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
+        )
         .whereIn('rsp.lifecycle_state', dueStates)
         .whereNull('rsp.invoice_charge_detail_id')
         .select(
@@ -477,6 +483,9 @@ async function fetchClientCadenceMaterializationGaps(
         .where('cc.tenant', tenant)
         .whereIn('cc.client_id', clientIds)
         .where('cc.is_active', true)
+        .where((builder) =>
+            builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
+        )
         .where('cl.cadence_owner', 'client')
         .whereNotNull('cl.billing_frequency')
         .whereNotNull('cl.billing_timing')

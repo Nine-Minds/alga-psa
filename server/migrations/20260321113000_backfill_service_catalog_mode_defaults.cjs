@@ -15,6 +15,11 @@ const ALLOWED_BILLING_MODES = ['fixed', 'hourly', 'usage'];
  * @returns { Promise<void> }
  */
 exports.up = async function up(knex) {
+  const hasServiceCatalogCurrencyCode = await knex.schema.hasColumn('service_catalog', 'currency_code');
+  const serviceCatalogCurrencyExpression = hasServiceCatalogCurrencyCode
+    ? "COALESCE(sc.currency_code, 'USD')"
+    : "'USD'";
+
   const normalizeBillingMode = knex.raw(
     "CASE sc.billing_method WHEN 'per_unit' THEN 'usage' ELSE sc.billing_method END"
   );
@@ -57,7 +62,7 @@ exports.up = async function up(knex) {
       sc.tenant,
       sc.service_id,
       CASE sc.billing_method WHEN 'per_unit' THEN 'usage' ELSE sc.billing_method END AS billing_mode,
-      COALESCE(sc.currency_code, 'USD') AS currency_code,
+      ${serviceCatalogCurrencyExpression} AS currency_code,
       sc.default_rate AS rate
     FROM service_catalog sc
     WHERE sc.item_kind = 'service'
@@ -87,7 +92,7 @@ exports.up = async function up(knex) {
           .andWhereRaw('sp.service_id = sc.service_id')
       ).orWhereNotNull('sc.default_rate');
     })
-    .andWhereNotExists(
+    .whereNotExists(
       knex('service_catalog_mode_defaults as md')
         .select(knex.raw('1'))
         .whereRaw('md.tenant = sc.tenant')

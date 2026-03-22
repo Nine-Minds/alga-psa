@@ -353,8 +353,15 @@ async function loadContractCadenceObligations(
       this.on('cc.contract_id', '=', 'cl.contract_id')
         .andOn('cc.tenant', '=', 'cl.tenant');
     })
+    .join('contracts as ct', function () {
+      this.on('ct.contract_id', '=', 'cl.contract_id')
+        .andOn('ct.tenant', '=', 'cl.tenant');
+    })
     .where('cl.tenant', params.tenant)
     .where('cc.is_active', true)
+    .where((builder) =>
+      builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
+    )
     .whereNotNull('cc.start_date')
     .select(
       'cl.contract_line_id',

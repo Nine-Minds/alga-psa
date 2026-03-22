@@ -10,7 +10,7 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 
 describe('contract line disambiguation default fallback precedence (scheduling)', () => {
   it('F064: explicit single-line selection remains deterministic', async () => {
-    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation');
+    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation.shared');
     const resolution = resolveDeterministicContractLineSelection([
       {
         client_contract_line_id: 'line-explicit',
@@ -25,7 +25,7 @@ describe('contract line disambiguation default fallback precedence (scheduling)'
   });
 
   it('uses default fallback only for the deterministic single-overlay case', async () => {
-    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation');
+    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation.shared');
     const deterministicFallback = resolveDeterministicContractLineSelection([
       { client_contract_line_id: 'line-explicit' } as any,
       { client_contract_line_id: 'line-default', bucket_overlay: { config_id: 'overlay-1' } } as any,

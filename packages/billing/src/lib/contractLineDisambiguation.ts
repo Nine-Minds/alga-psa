@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
+import { resolveDeterministicContractLineSelection } from './contractLineDisambiguation.shared';
 
 type EligibleContractLine = IClientContractLine & {
   contract_line_type: string;
@@ -50,45 +51,6 @@ const logResolverDecision = (payload: {
         : undefined,
   });
 };
-
-export function resolveDeterministicContractLineSelection(
-  eligibleContractLines: EligibleContractLine[]
-): {
-  selectedContractLineId: string | null;
-  decision: 'explicit' | 'default' | 'ambiguous_or_unresolved';
-  overlayCount: number;
-} {
-  if (eligibleContractLines.length === 0) {
-    return {
-      selectedContractLineId: null,
-      decision: 'ambiguous_or_unresolved',
-      overlayCount: 0,
-    };
-  }
-
-  if (eligibleContractLines.length === 1) {
-    return {
-      selectedContractLineId: eligibleContractLines[0].client_contract_line_id,
-      decision: 'explicit',
-      overlayCount: Number(Boolean(eligibleContractLines[0].bucket_overlay?.config_id)),
-    };
-  }
-
-  const overlayContractLines = eligibleContractLines.filter((contractLine) => contractLine.bucket_overlay?.config_id);
-  if (overlayContractLines.length === 1) {
-    return {
-      selectedContractLineId: overlayContractLines[0].client_contract_line_id,
-      decision: 'default',
-      overlayCount: overlayContractLines.length,
-    };
-  }
-
-  return {
-    selectedContractLineId: null,
-    decision: 'ambiguous_or_unresolved',
-    overlayCount: overlayContractLines.length,
-  };
-}
 
 /**
  * Determines the default contract line for a time entry or usage record

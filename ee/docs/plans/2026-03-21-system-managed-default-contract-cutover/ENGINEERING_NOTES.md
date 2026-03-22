@@ -8,6 +8,7 @@ Date: `2026-03-21`
   - `is_system_managed_default = true`
   - `owner_client_id = <target client>`
   - `tenant = <target tenant>`
+- Authority model: the system-managed default contract is an attribution shell only. It does not act as a recurring cadence authority, service-period authority, or user-authored pricing surface.
 - Assignment: every default contract must have a corresponding `client_contracts` row for the same tenant/client/contract.
 - Creation trigger: created on qualifying billing-settings ensure paths (shared and package wrappers), not at client create.
 
@@ -24,6 +25,23 @@ Date: `2026-03-21`
 5. Default contract has deterministic owner:
    - `owner_client_id = client_id`
 6. Default contract must have one reusable assignment relationship for that same client (`client_contracts`).
+7. System-managed default contracts are non-authorable:
+   - no contract-line authoring,
+   - no pricing-schedule authoring,
+   - no manual assignment/date lifecycle edits.
+8. Runtime timing for unmatched default-contract work must come from client billing schedule windows (client cadence), never from default-contract recurrence metadata.
+
+## Historical Billing Bootstrap Model
+
+- Optional input: `billingHistoryStartDate` on billing-schedule update flows.
+- Normalization: user-entered bootstrap date is normalized to the containing cycle boundary using shared cycle-anchor math (`resolveNormalizedBootstrapBoundary`).
+- Regeneration policy:
+  - delete/rebuild uninvoiced cycles from normalized boundary forward,
+  - keep invoiced boundaries immutable,
+  - block requests earlier than earliest invoiced cycle boundary.
+- Convergence:
+  - schedule save with bootstrap and manual effective-date cycle bootstrap both normalize through shared boundary rules,
+  - generated historical cycles remain contiguous through the current date.
 
 ## Persistence Strategy
 

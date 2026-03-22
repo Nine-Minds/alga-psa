@@ -23,6 +23,25 @@ import {
 } from '@shared/billingClients/recurrenceStorageModel';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
+async function assertContractLineIsAuthorable(
+    trx: Knex.Transaction,
+    tenant: string,
+    contractLineId: string,
+): Promise<void> {
+    const contract = await trx('contract_lines as cl')
+        .join('contracts as c', function joinContracts() {
+            this.on('cl.contract_id', '=', 'c.contract_id')
+                .andOn('cl.tenant', '=', 'c.tenant');
+        })
+        .where('cl.tenant', tenant)
+        .andWhere('cl.contract_line_id', contractLineId)
+        .first('c.is_system_managed_default');
+
+    if (contract?.is_system_managed_default === true) {
+        throw new Error('System-managed default contracts are attribution-only; contract-line authoring is disabled.');
+    }
+}
+
 export const getContractLines = withAuth(async (
     user,
     { tenant }
@@ -203,6 +222,7 @@ export const updateContractLine = withAuth(async (
                 // Handle case where plan is not found before update attempt
                 throw new Error(`Contract Line with ID ${planId} not found.`);
             }
+            await assertContractLineIsAuthorable(trx, tenant, planId);
 
             // Remove tenant field if present in updateData to prevent override
             const { tenant: _, ...safeUpdateData } = updateData;
@@ -276,6 +296,7 @@ export const upsertContractLineTerms = withAuth(async (
         if (!contractLine) {
             throw new Error(`Contract line ${contractLineId} not found.`);
         }
+        await assertContractLineIsAuthorable(trx, tenant, contractLineId);
 
         if (billingTiming === 'advance' && contractLine.contract_line_type !== 'Fixed') {
             throw new Error('Advance billing is only supported for fixed contract lines.');
@@ -508,6 +529,7 @@ export const updateContractLineFixedConfig = withAuth(async (
             if (!existingPlan) {
                 throw new Error(`Contract Line with ID ${planId} not found.`);
             }
+            await assertContractLineIsAuthorable(trx, tenant, planId);
             if (existingPlan.contract_line_type !== 'Fixed') {
                 throw new Error(`Cannot update fixed plan configuration for non-fixed plan type: ${existingPlan.contract_line_type}`);
             }
@@ -570,6 +592,7 @@ export const updatePlanServiceFixedConfigRate = withAuth(async (
             if (!existingPlan) {
                 throw new Error(`Contract Line with ID ${planId} not found.`);
             }
+            await assertContractLineIsAuthorable(trx, tenant, planId);
             if (existingPlan.contract_line_type !== 'Fixed') {
                 throw new Error(`Cannot update fixed service config rate for non-fixed plan type: ${existingPlan.contract_line_type}`);
             }

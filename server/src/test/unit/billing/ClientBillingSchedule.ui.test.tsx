@@ -78,12 +78,21 @@ const mockPreviewBillingPeriodsForSchedule = vi.fn(async () => ({
 }));
 
 const mockUpdateClientBillingSchedule = vi.fn(async () => ({ success: true }));
+const mockPreviewBillingHistoryBootstrap = vi.fn(async () => ({
+  requestedHistoryStartDate: '2025-01-15T00:00:00Z',
+  normalizedHistoryStartBoundary: '2025-01-01T00:00:00Z',
+  earliestInvoicedCycleStartBoundary: null,
+  status: 'eligible',
+  blockedReason: null,
+  affectedUninvoicedCycleCount: 0,
+}));
 
 const mockCreateNextBillingCycle = vi.fn(async () => ({ success: true }));
 
 vi.mock('../../../../../packages/clients/src/lib/billingHelpers', () => ({
   getClientBillingCycleAnchorAsync: (...args: any[]) => mockGetClientBillingCycleAnchor(...args),
   previewBillingPeriodsForScheduleAsync: (...args: any[]) => mockPreviewBillingPeriodsForSchedule(...args),
+  previewBillingHistoryBootstrapAsync: (...args: any[]) => mockPreviewBillingHistoryBootstrap(...args),
   updateClientBillingScheduleAsync: (...args: any[]) => mockUpdateClientBillingSchedule(...args),
   createNextBillingCycleAsync: (...args: any[]) => mockCreateNextBillingCycle(...args),
 }));
@@ -144,7 +153,8 @@ describe('ClientBillingSchedule', () => {
           monthOfYear: null,
           dayOfWeek: null,
           referenceDate: null
-        }
+        },
+        billingHistoryStartDate: null,
       });
     });
   });

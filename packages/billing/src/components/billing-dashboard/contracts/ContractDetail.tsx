@@ -1082,8 +1082,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-4 flex flex-wrap gap-2">
           <TabsTrigger value="edit">Overview</TabsTrigger>
-          <TabsTrigger value="lines">Contract Lines</TabsTrigger>
-          <TabsTrigger value="pricing">Pricing Schedules</TabsTrigger>
+          <TabsTrigger value="lines" disabled={isSystemManagedDefault}>Contract Lines</TabsTrigger>
+          <TabsTrigger value="pricing" disabled={isSystemManagedDefault}>Pricing Schedules</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
         </TabsList>
@@ -1112,7 +1112,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   <div className="space-y-1">
                     <div className="font-medium">System-managed default contract</div>
                     <div>Created automatically for uncontracted work.</div>
-                    <div>Lifecycle and ownership controls are read-only on this contract.</div>
+                    <div>This contract is attribution-only and does not control recurring billing behavior.</div>
+                    <div>To configure custom billing behavior, create or edit a normal user-authored contract.</div>
                   </div>
                 </AlertDescription>
               </Alert>
@@ -1927,11 +1928,21 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-3">
-                  <Button id="edit-manage-lines" variant="outline" onClick={() => handleTabChange('lines')}>
+                  <Button
+                    id="edit-manage-lines"
+                    variant="outline"
+                    onClick={() => handleTabChange('lines')}
+                    disabled={isSystemManagedDefault}
+                  >
                     <Layers3 className="mr-2 h-4 w-4" />
                     Manage Contract Lines
                   </Button>
-                  <Button id="edit-manage-pricing" variant="outline" onClick={() => handleTabChange('pricing')}>
+                  <Button
+                    id="edit-manage-pricing"
+                    variant="outline"
+                    onClick={() => handleTabChange('pricing')}
+                    disabled={isSystemManagedDefault}
+                  >
                     <CalendarClock className="mr-2 h-4 w-4" />
                     Manage Pricing Schedules
                   </Button>
@@ -1982,11 +1993,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         </TabsContent>
 
         <TabsContent value="lines">
-          <ContractLines contract={contract} onContractLinesChanged={handleContractLinesChanged} />
+          <ContractLines
+            contract={contract}
+            onContractLinesChanged={handleContractLinesChanged}
+            isReadOnly={isSystemManagedDefault}
+          />
         </TabsContent>
 
         <TabsContent value="pricing">
-          <PricingSchedules contractId={contract.contract_id} />
+          <PricingSchedules contractId={contract.contract_id} isReadOnly={isSystemManagedDefault} />
         </TabsContent>
 
         <TabsContent value="documents">

@@ -25,6 +25,19 @@ async function isTemplateContract(knex: Knex, tenant: string, contractId: string
   return Boolean(record);
 }
 
+async function assertContractIsAuthorable(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractId: string,
+): Promise<void> {
+  const contract = await trx('contracts')
+    .where({ tenant, contract_id: contractId })
+    .first('is_system_managed_default');
+  if (contract?.is_system_managed_default === true) {
+    throw new Error('System-managed default contracts are attribution-only; contract-line authoring is disabled.');
+  }
+}
+
 function normalizeContractLineMapping<T extends Partial<IContractLineMapping>>(
   line: T,
 ): T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'> {
@@ -479,6 +492,8 @@ export const addContractLine = withAuth(async (
         };
       }
 
+      await assertContractIsAuthorable(trx, tenant, contractId);
+
       return normalizeContractLineMapping(
         await ContractLineMapping.addContractLine(contractId, contractLineId, customRate),
       );
@@ -520,6 +535,8 @@ export const removeContractLine = withAuth(async (user, { tenant }, contractId: 
           });
         return;
       }
+
+      await assertContractIsAuthorable(trx, tenant, contractId);
 
       await ContractLineMapping.removeContractLine(contractId, contractLineId);
     });
@@ -612,6 +629,8 @@ export const updateContractLineAssociation = withAuth(async (
           cadence_owner: resolveCadenceOwner(row.cadence_owner),
         };
       }
+
+      await assertContractIsAuthorable(trx, tenant, contractId);
 
       return normalizeContractLineMapping(
         await ContractLineMapping.updateContractLineAssociation(contractId, contractLineId, dbUpdateData),

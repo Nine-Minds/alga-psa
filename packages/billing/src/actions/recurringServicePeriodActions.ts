@@ -69,6 +69,7 @@ type ObligationContextRow = {
   contract_name: string | null;
   contract_line_id: string | null;
   contract_line_name: string | null;
+  is_system_managed_default: boolean;
 };
 
 export interface RecurringServicePeriodManagementRow {
@@ -305,6 +306,7 @@ async function loadObligationContext(input: {
         'ct.contract_name',
         'cl.contract_line_id',
         'cl.contract_line_name',
+        'ct.is_system_managed_default',
       );
 
     return {
@@ -314,6 +316,7 @@ async function loadObligationContext(input: {
       contract_name: row?.contract_name ?? null,
       contract_line_id: row?.contract_line_id ?? null,
       contract_line_name: row?.contract_line_name ?? null,
+      is_system_managed_default: row?.is_system_managed_default === true,
     };
   }
 
@@ -336,6 +339,7 @@ async function loadObligationContext(input: {
         'ct.contract_name',
         'cl.contract_line_id',
         'cl.contract_line_name',
+        'ct.is_system_managed_default',
       );
 
     return {
@@ -345,6 +349,7 @@ async function loadObligationContext(input: {
       contract_name: row?.contract_name ?? null,
       contract_line_id: row?.contract_line_id ?? null,
       contract_line_name: row?.contract_line_name ?? null,
+      is_system_managed_default: row?.is_system_managed_default === true,
     };
   }
 
@@ -355,6 +360,7 @@ async function loadObligationContext(input: {
     contract_name: null,
     contract_line_id: null,
     contract_line_name: null,
+    is_system_managed_default: false,
   };
 }
 
@@ -468,6 +474,11 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
       obligationType: firstRow.obligation_type,
       obligationId: firstRow.obligation_id,
     });
+    if (context.is_system_managed_default) {
+      throw new Error(
+        'System-managed default contracts are attribution-only and cannot be managed in recurring service period admin tools.',
+      );
+    }
 
     const rows = baseRows.map((row: DbRecordRow) => {
       const record = mapRecurringServicePeriodRowToRecord(row);
@@ -521,21 +532,24 @@ export const listRecurringServicePeriodScheduleSummaries = withAuth(async (
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: any) => {
     const rows = await trx('recurring_service_periods as rsp')
-      .leftJoin('contract_lines as cl', function () {
+      .leftJoin('contract_lines as cl', function (this: any) {
         this.on('cl.contract_line_id', '=', 'rsp.obligation_id')
           .andOn('cl.tenant', '=', 'rsp.tenant');
       })
-      .leftJoin('contracts as ct', function () {
+      .leftJoin('contracts as ct', function (this: any) {
         this.on('ct.contract_id', '=', 'cl.contract_id')
           .andOn('ct.tenant', '=', 'cl.tenant');
       })
-      .leftJoin('clients as c', function () {
+      .leftJoin('clients as c', function (this: any) {
         this.on('c.client_id', '=', 'ct.owner_client_id')
           .andOn('c.tenant', '=', 'ct.tenant');
       })
       .where('rsp.tenant', tenant)
       .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
       .whereNotIn('rsp.lifecycle_state', ['superseded', 'archived'])
+      .where((builder: any) =>
+        builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
+      )
       .whereNotNull('c.client_name')
       .whereNotNull('ct.contract_name')
       .whereNotNull('cl.contract_line_name')

@@ -40,6 +40,7 @@ import {
   getServiceTypesForSelection,
   getTaxRates,
   previewBillingPeriodsForSchedule,
+  previewBillingHistoryBootstrap,
   setClientTemplate,
   updateClientBillingSchedule,
   updateClientBillingSettings,
@@ -51,6 +52,7 @@ import {
   type ClientBillingCycleAnchorConfig,
   type ClientCadenceScheduleContext,
   type BillingCycleCreationResult,
+  type BillingHistoryBootstrapPreview,
   type ClientBillingSettings,
   type ServiceListOptions,
   type PaginatedServicesResponse,
@@ -165,6 +167,21 @@ export const previewBillingPeriodsForScheduleAsync = withAuthCheck(async (
   periods: BillingCyclePeriodPreview[];
 }> => {
   return previewBillingPeriodsForSchedule(billingCycle, anchor, options);
+});
+
+export const previewBillingHistoryBootstrapAsync = withAuthCheck(async (
+  _user,
+  input: {
+    clientId: string;
+    billingCycle: BillingCycleType;
+    anchor: BillingCycleAnchorSettingsInput;
+    billingHistoryStartDate: ISO8601String;
+  },
+): Promise<BillingHistoryBootstrapPreview> => {
+  const { knex, tenant } = await createTenantKnex();
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return previewBillingHistoryBootstrap(trx, tenant, input);
+  });
 });
 
 export const addTaxRateAsync = withAuth(async (

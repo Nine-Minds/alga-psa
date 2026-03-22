@@ -10,6 +10,7 @@ Reference for engineers touching contract assignment, due-work generation, and r
 - Creation policy: lazy/on-demand only through billing-configuration touchpoints.
 - Deletion policy: client/billing-config cleanup must remove assignment artifacts and avoid dangling references.
 - Manual mutation policy: identity fields are server-guarded (`is_system_managed_default`, `owner_client_id`) and not user-editable.
+- Attribution-shell policy: system-managed defaults are non-authorable and should never be used as recurring/service-period schedule authorities.
 
 ## Routing Semantics
 
@@ -36,6 +37,14 @@ Reference for engineers touching contract assignment, due-work generation, and r
 - Missing required attribution metadata hard-blocks generation for affected grouped candidates.
 - Selection-key compatibility supports legacy `non_contract` parsing only where needed for migration-safe history reads.
 
+## Historical Client-Cycle Bootstrap
+
+- UI can provide an optional `billingHistoryStartDate` when saving client billing schedule.
+- Shared schedule domain normalizes that date to the containing cycle boundary before regeneration.
+- Regeneration only mutates uninvoiced cycles from the normalized boundary onward.
+- Bootstrap requests earlier than earliest invoiced cycle boundary are blocked with explicit user-facing copy.
+- Manual cycle bootstrap (`createNextBillingCycle(..., effectiveDate)`) and schedule-save bootstrap use the same boundary-normalization contract.
+
 ## Operational Verification
 
 - Default ensure + lifecycle:
@@ -44,6 +53,9 @@ Reference for engineers touching contract assignment, due-work generation, and r
   - `cd server && npx vitest run src/test/unit/billing/billingEngine.unresolvedReconciliation.test.ts src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx`
 - Observability wiring:
   - `cd server && npx vitest run src/test/unit/billing/defaultContractObservability.wiring.test.ts`
+- Historical bootstrap + attribution-shell routing:
+  - `npx vitest run --config shared/vitest.config.ts shared/__tests__/billingSchedule.historyBootstrap.test.ts`
+  - `cd server && npx vitest run src/test/unit/billing/defaultContractHistoricalBootstrapAndBillingRoute.wiring.test.ts src/test/unit/billing/systemManagedDefaultRecurringExclusion.wiring.test.ts`
 
 ## Guardrails For Future Changes
 

@@ -18,11 +18,13 @@ describe('default-contract client-delete cleanup parity wiring', () => {
   it('T013: API client delete path invokes shared cleanup including default-contract assignment/header cleanup', () => {
     const source = readRepo('server/src/lib/api/services/ClientService.ts');
 
-    expect(source).toContain('await this.cleanupClientDeleteArtifacts(trx, context.tenant, id);');
+    expect(source).toContain("await deleteEntityWithValidation('client', id, knex, context.tenant");
     expect(source).toContain('await this.cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);');
+    expect(source).toContain('await this.cleanupClientNotesDocument(trx, tenantId, id);');
+    expect(source).toContain('await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, id);');
     expect(source).toContain("await this.deleteFromTableIfExists(trx, 'client_billing_settings'");
     expect(source).toContain("await this.deleteFromTableIfExists(trx, 'client_billing_cycles'");
     expect(source).toContain("await trx('client_contracts')");
-    expect(source).toContain('is_system_managed_default: true');
+    expect(source).toContain(".andWhere('is_system_managed_default', true)");
   });
 });

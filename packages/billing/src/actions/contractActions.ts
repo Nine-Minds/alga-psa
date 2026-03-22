@@ -44,7 +44,7 @@ const assertBillingPermission = async (
     return;
   }
 
-  if (!await hasPermission(user, 'billing', action)) {
+  if (!await hasPermission(user as any, 'billing', action)) {
     throw new Error(`Permission denied: Cannot ${context}`);
   }
 };
@@ -53,10 +53,9 @@ const assertNoSystemManagedIdentityMutation = (
   payload: Record<string, unknown>,
   operation: 'create' | 'update',
 ): void => {
-  const protectedFields: Array<'is_system_managed_default' | 'owner_client_id'> = [
-    'is_system_managed_default',
-    'owner_client_id',
-  ];
+  const protectedFields: Array<'is_system_managed_default' | 'owner_client_id'> = operation === 'create'
+    ? ['is_system_managed_default']
+    : ['is_system_managed_default', 'owner_client_id'];
   const attemptedFields = protectedFields.filter(
     (field) => Object.prototype.hasOwnProperty.call(payload, field) && payload[field] !== undefined,
   );
@@ -322,7 +321,6 @@ export const createContract = withAuth(async (
     const {
       tenant: _ignoredTenant,
       is_system_managed_default: _ignoredSystemManagedMarker,
-      owner_client_id: _ignoredOwnerClientId,
       ...safeContractData
     } = contractData as any;
     return await Contract.create(knex, tenant, safeContractData);
@@ -381,6 +379,12 @@ export const updateContract = withAuth(async (
 
       const updatedTemplate = await ContractTemplateModel.update(contractId, templateUpdates, tenant);
       return mapTemplateToContract(updatedTemplate);
+    }
+
+    if (currentContract.is_system_managed_default === true) {
+      throw new Error(
+        'System-managed default contracts are attribution-only; contract authoring and lifecycle edits are disabled.',
+      );
     }
 
     // Special handling for expired contracts
@@ -459,6 +463,11 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
     if (templateExists) {
       await ContractTemplateModel.delete(contractId, tenant);
       return;
+    }
+
+    const currentContract = await Contract.getById(knex, tenant, contractId);
+    if (currentContract?.is_system_managed_default === true) {
+      throw new Error('System-managed default contracts cannot be deleted manually');
     }
 
     await Contract.delete(knex, tenant, contractId);
