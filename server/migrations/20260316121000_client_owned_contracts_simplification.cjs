@@ -66,7 +66,6 @@ const ensureOwnerClientColumn = async (knex) => {
       ADD CONSTRAINT ${CONTRACT_OWNER_FK}
       FOREIGN KEY (tenant, owner_client_id)
       REFERENCES clients (tenant, client_id)
-      ON DELETE SET NULL
     `);
   }
 };
