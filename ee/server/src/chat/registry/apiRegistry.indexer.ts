@@ -19,6 +19,10 @@ function computeScore(entry: ChatApiRegistryEntry, query: string) {
     { key: 'description', value: entry.description },
     { key: 'tags', value: entry.tags.join(' ') },
     { key: 'path', value: entry.path },
+    {
+      key: 'parameters',
+      value: entry.parameters.map((param) => `${param.name} ${param.in} ${param.description ?? ''}`).join(' '),
+    },
   ];
 
   let score = 0;
@@ -37,10 +41,15 @@ function computeScore(entry: ChatApiRegistryEntry, query: string) {
 }
 
 export function searchRegistry(query: string, limit = 5): RegistrySearchResult[] {
+  const normalized = query.trim().toLowerCase();
+  const mentionsIdLookup = /\b(by id|id|details?|detail|single)\b/.test(normalized);
+
   const results = chatApiRegistry
     .map((entry) => {
       const { score, fields } = computeScore(entry, query);
-      return { entry, score, matchedFields: fields };
+      const hasPathId = entry.parameters.some((param) => param.in === 'path' && param.name === 'id');
+      const boostedScore = score + (mentionsIdLookup && hasPathId ? 3 : 0);
+      return { entry, score: boostedScore, matchedFields: fields };
     })
     .filter((result) => result.score > 0)
     .sort((a, b) => b.score - a.score)

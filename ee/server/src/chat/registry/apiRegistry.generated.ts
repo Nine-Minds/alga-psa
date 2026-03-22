@@ -502,7 +502,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "TaskId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -607,12 +617,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/auth/{nextauth}",
     "displayName": "GET auth",
     "summary": "GET auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "auth"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "nextauth",
+        "in": "path",
+        "required": true,
+        "description": "Nextauth path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -629,7 +648,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "auth"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "nextauth",
+        "in": "path",
+        "required": true,
+        "description": "Nextauth path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -704,12 +733,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/chat/stream/{slug}",
     "displayName": "GET chat",
     "summary": "GET chat",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "chat"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "slug",
+        "in": "path",
+        "required": true,
+        "description": "Slug path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -726,7 +764,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "chat"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "slug",
+        "in": "path",
+        "required": true,
+        "description": "Slug path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -742,12 +790,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/documents/download/{fileId}",
     "displayName": "GET documents",
     "summary": "GET documents",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "documents"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "fileId",
+        "in": "path",
+        "required": true,
+        "description": "FileId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -759,12 +816,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/documents/view/{fileId}",
     "displayName": "GET documents",
     "summary": "GET documents",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "documents"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "fileId",
+        "in": "path",
+        "required": true,
+        "description": "FileId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -776,12 +842,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/documents/{documentId}/download",
     "displayName": "GET documents",
     "summary": "GET documents",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "documents"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "description": "DocumentId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -920,7 +995,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "ext"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "path",
+        "in": "path",
+        "required": true,
+        "description": "Path path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -937,7 +1031,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "ext"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "path",
+        "in": "path",
+        "required": true,
+        "description": "Path path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -958,7 +1071,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "ext"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "path",
+        "in": "path",
+        "required": true,
+        "description": "Path path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -979,7 +1111,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "ext"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "path",
+        "in": "path",
+        "required": true,
+        "description": "Path path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -1000,7 +1151,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "ext"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "path",
+        "in": "path",
+        "required": true,
+        "description": "Path path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1050,12 +1220,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/extensions/softwareone/agreements/{id}",
     "displayName": "GET extensions",
     "summary": "GET extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "extensions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1105,12 +1285,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/extensions/softwareone/statements/{id}",
     "displayName": "GET extensions",
     "summary": "GET extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "extensions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1122,12 +1312,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/extensions/softwareone/statements/{id}/charges",
     "displayName": "GET extensions",
     "summary": "GET extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "extensions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1160,12 +1360,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/extensions/{extensionId}/agreements",
     "displayName": "GET extensions",
     "summary": "GET extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "extensions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1177,12 +1386,31 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/extensions/{extensionId}/agreements/{id}",
     "displayName": "GET extensions",
     "summary": "GET extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "extensions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1194,12 +1422,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/extensions/{extensionId}/statements",
     "displayName": "GET extensions",
     "summary": "GET extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "extensions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1211,12 +1448,31 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/extensions/{extensionId}/statements/{id}",
     "displayName": "GET extensions",
     "summary": "GET extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "extensions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1228,12 +1484,31 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/extensions/{extensionId}/statements/{id}/charges",
     "displayName": "GET extensions",
     "summary": "GET extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "extensions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1250,7 +1525,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "extensions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "extensionId",
+        "in": "path",
+        "required": true,
+        "description": "ExtensionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -1266,12 +1551,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/files/{fileId}/download",
     "displayName": "GET files",
     "summary": "GET files",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "files"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "fileId",
+        "in": "path",
+        "required": true,
+        "description": "FileId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1542,7 +1836,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "associationId",
+        "in": "path",
+        "required": true,
+        "description": "AssociationId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1576,7 +1880,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "scheduleId",
+        "in": "path",
+        "required": true,
+        "description": "ScheduleId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -1597,7 +1911,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "scheduleId",
+        "in": "path",
+        "required": true,
+        "description": "ScheduleId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1614,7 +1938,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "relationshipId",
+        "in": "path",
+        "required": true,
+        "description": "RelationshipId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1660,12 +1994,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1677,12 +2021,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -1698,12 +2052,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1715,12 +2079,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/documents",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1737,7 +2111,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -1753,12 +2138,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/history",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1770,12 +2165,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/maintenance",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1792,7 +2197,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -1813,7 +2229,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -1829,12 +2256,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/relationships",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1851,7 +2288,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "assets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -1884,12 +2332,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/automation/executions/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "automation"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -1906,7 +2364,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "automation"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2036,12 +2505,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/automation/rules/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "automation"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2058,7 +2537,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "automation"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2079,7 +2569,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "automation"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2096,7 +2597,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "automation"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2167,12 +2679,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/automation/templates/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "automation"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2189,7 +2711,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "automation"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2416,12 +2949,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2433,12 +2976,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2454,12 +3007,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2476,7 +3039,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2492,12 +3066,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines/{id}/analytics",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2514,7 +3098,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2530,12 +3125,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines/{id}/fixed-config",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2552,7 +3157,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2568,12 +3184,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines/{id}/services",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2590,7 +3216,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2606,12 +3243,31 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines/{id}/services/{serviceId}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "serviceId",
+        "in": "path",
+        "required": true,
+        "description": "ServiceId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2628,7 +3284,27 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "serviceId",
+        "in": "path",
+        "required": true,
+        "description": "ServiceId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2649,7 +3325,27 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "serviceId",
+        "in": "path",
+        "required": true,
+        "description": "ServiceId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2661,12 +3357,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contract-lines/{id}/usage-metrics",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2733,12 +3439,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/categories/service/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "categories"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2755,7 +3471,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "categories"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2776,7 +3503,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "categories"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2917,12 +3655,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/categories/ticket/tree/{boardId}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "categories"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "boardId",
+        "in": "path",
+        "required": true,
+        "description": "BoardId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2934,12 +3681,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/categories/ticket/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "categories"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -2956,7 +3713,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "categories"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -2977,7 +3745,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "categories"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -3096,12 +3875,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "clients"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -3113,12 +3902,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "clients"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -3134,12 +3933,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "clients"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -3151,12 +3960,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}/contacts",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "clients"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -3236,7 +4055,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "clients"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -3290,12 +4120,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/client-contract-lines/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "client-contract-lines"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -3449,12 +4289,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contacts"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -3466,12 +4316,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contacts"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -3487,12 +4347,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "contacts"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -3787,7 +4657,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "financial"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -3808,7 +4689,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "financial"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -3862,12 +4754,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/financial/payment-methods/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "financial"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -3884,7 +4786,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "financial"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -3905,7 +4818,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "financial"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -3943,7 +4867,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "financial"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -4086,12 +5021,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/financial/transactions/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "financial"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -4108,7 +5053,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "financial"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -4260,7 +5216,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "integrations"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "mapping_id",
+        "in": "path",
+        "required": true,
+        "description": "Mapping Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -4466,12 +5432,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/integrations/quickbooks/mappings/{mapping_id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "integrations"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "mapping_id",
+        "in": "path",
+        "required": true,
+        "description": "Mapping Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -4488,7 +5463,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "integrations"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "mapping_id",
+        "in": "path",
+        "required": true,
+        "description": "Mapping Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -4509,7 +5494,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "integrations"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "mapping_id",
+        "in": "path",
+        "required": true,
+        "description": "Mapping Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -4694,12 +5689,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/integrations/quickbooks/sync/status/{sync_id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "integrations"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "sync_id",
+        "in": "path",
+        "required": true,
+        "description": "Sync Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -4716,7 +5720,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "integrations"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "sync_id",
+        "in": "path",
+        "required": true,
+        "description": "Sync Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -4737,7 +5751,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "integrations"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "sync_id",
+        "in": "path",
+        "required": true,
+        "description": "Sync Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5087,7 +6111,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5108,7 +6143,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5137,12 +6183,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5154,12 +6210,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5175,12 +6241,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5197,7 +6273,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5218,7 +6305,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5239,7 +6337,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5260,7 +6369,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5276,12 +6396,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/{id}/items",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5298,7 +6428,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5314,12 +6455,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/{id}/pdf",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5336,7 +6487,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5357,7 +6519,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5378,7 +6551,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5399,7 +6583,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5415,12 +6610,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/{id}/transactions",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "invoices"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5644,12 +6849,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/permissions/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "permissions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5661,12 +6876,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/permissions/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "permissions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5682,12 +6907,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/permissions/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "permissions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5699,12 +6934,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/permissions/{id}/roles",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "permissions"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5759,7 +7004,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "contracts"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "ContractId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -5780,7 +7035,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "contracts"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "contractId",
+        "in": "path",
+        "required": true,
+        "description": "ContractId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "contractLineId",
+        "in": "path",
+        "required": true,
+        "description": "ContractLineId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5818,7 +7092,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "contract-line-templates"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -6001,12 +7286,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/projects/tasks/{taskId}/checklist",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "TaskId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -6023,7 +7317,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "TaskId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -6039,12 +7343,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/projects/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -6056,12 +7370,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/projects/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -6077,12 +7401,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/projects/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -6094,12 +7428,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/projects/{id}/phases",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -6116,7 +7460,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -6137,7 +7492,27 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "phaseId",
+        "in": "path",
+        "required": true,
+        "description": "PhaseId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -6158,7 +7533,27 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "phaseId",
+        "in": "path",
+        "required": true,
+        "description": "PhaseId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -6170,12 +7565,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/projects/{id}/tickets",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "projects"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -6323,7 +7728,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "quickbooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "mapping_id",
+        "in": "path",
+        "required": true,
+        "description": "Mapping Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -6529,12 +7944,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/quickbooks/mappings/{mapping_id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "quickbooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "mapping_id",
+        "in": "path",
+        "required": true,
+        "description": "Mapping Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -6551,7 +7975,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "quickbooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "mapping_id",
+        "in": "path",
+        "required": true,
+        "description": "Mapping Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -6572,7 +8006,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "quickbooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "mapping_id",
+        "in": "path",
+        "required": true,
+        "description": "Mapping Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -6757,12 +8201,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/quickbooks/sync/status/{sync_id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "quickbooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "sync_id",
+        "in": "path",
+        "required": true,
+        "description": "Sync Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -6779,7 +8232,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "quickbooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "sync_id",
+        "in": "path",
+        "required": true,
+        "description": "Sync Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -6800,7 +8263,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "quickbooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "sync_id",
+        "in": "path",
+        "required": true,
+        "description": "Sync Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -6998,12 +8471,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/roles/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "roles"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7015,12 +8498,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/roles/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "roles"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7036,12 +8529,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/roles/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "roles"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7058,7 +8561,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "roles"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7074,12 +8588,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/roles/{id}/permissions",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "roles"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7096,7 +8620,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "roles"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7167,12 +8702,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "schedules"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7184,12 +8729,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "schedules"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7205,12 +8760,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "schedules"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7222,12 +8787,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/{id}/conflicts",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "schedules"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7458,12 +9033,30 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tags/entity/{entityType}/{entityId}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "tags"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "entityType",
+        "in": "path",
+        "required": true,
+        "description": "EntityType path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "entityId",
+        "in": "path",
+        "required": true,
+        "description": "EntityId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7480,7 +9073,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "tags"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "entityType",
+        "in": "path",
+        "required": true,
+        "description": "EntityType path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "entityId",
+        "in": "path",
+        "required": true,
+        "description": "EntityId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7501,7 +9113,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "tags"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "entityType",
+        "in": "path",
+        "required": true,
+        "description": "EntityType path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "entityId",
+        "in": "path",
+        "required": true,
+        "description": "EntityId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7530,12 +9161,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tags/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "tags"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7547,12 +9188,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tags/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "tags"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7568,12 +9219,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tags/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "tags"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7590,7 +9251,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "tags"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7611,7 +9283,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "tags"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7754,12 +9437,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/teams/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7771,12 +9464,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/teams/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7792,12 +9495,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/teams/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7809,12 +9522,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/teams/{id}/analytics",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7831,7 +9554,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7852,7 +9586,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7869,7 +9614,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7885,12 +9641,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/teams/{id}/members",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7907,7 +9673,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7928,7 +9705,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -7949,7 +9737,27 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "description": "UserId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7961,12 +9769,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/teams/{id}/permissions",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -7983,7 +9801,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -8004,7 +9833,27 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "permissionId",
+        "in": "path",
+        "required": true,
+        "description": "PermissionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -8016,12 +9865,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/teams/{id}/projects",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "teams"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -8050,7 +9909,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "List Tickets",
     "summary": "List tickets",
-    "description": "Returns a paginated list of tickets for the current tenant. Use this both for reporting and to sample existing board_id, status_id, priority_id, and assigned_to values before creating a new ticket.",
+    "description": "Returns a paginated list of tickets for the current tenant. Use this both for reporting and to sample existing board_id, status_id, priority_id, and assigned_to values before creating a new ticket. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
     "tags": [
       "tickets"
     ],
@@ -8125,6 +9984,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "description": "When true, only open tickets are returned.",
         "schema": {
           "type": "boolean"
+        }
+      },
+      {
+        "name": "fields",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated list of fields to return. Use only these exact values: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, or mobile_list. If you are not sure, omit fields entirely instead of guessing aliases.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "field_ranges[description_html]",
+        "in": "query",
+        "required": false,
+        "description": "Optional UTF-8 byte range for the description_html field, formatted as start-end (for example 0-4095). When returned data is truncated, inspect meta.truncated_fields for continuation offsets.",
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+-\\d+$"
         }
       }
     ],
@@ -8217,10 +10095,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "request": {
           "query": {
             "limit": 5,
+            "fields": "ticket_id,ticket_number,title,board_id,status_id,priority_id,assigned_to,entered_at",
             "is_open": true
           }
         },
-        "notes": "Inspect the response payload to reuse board_id, status_id, priority_id, and assigned_to values that are known to be valid. If you only need a single set of identifiers, take the first ticket in the data array that has non-null board_id, status_id, and priority_id and reuse those UUIDs for the new ticket."
+        "notes": "Inspect the response payload to reuse board_id, status_id, priority_id, and assigned_to values that are known to be valid. Prefer fields=... to keep payloads compact, but only use the documented field names exactly as written. If you are unsure which field names are valid, omit fields instead of guessing. If you only need a single set of identifiers, take the first ticket in the data array that has non-null board_id, status_id, and priority_id and reuse those UUIDs for the new ticket."
       }
     ]
   },
@@ -8447,18 +10326,51 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_tickets_id",
     "method": "get",
     "path": "/api/v1/tickets/{id}",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "Get Ticket",
+    "summary": "Get ticket by ID",
+    "description": "Returns the full ticket record for a specific ticket. Prefer this over expanding list responses when you already know the ticket_id.",
     "tags": [
       "tickets"
     ],
+    "rbacResource": "ticket",
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "field_ranges[description_html]",
+        "in": "query",
+        "required": false,
+        "description": "Optional UTF-8 byte range for description_html, formatted as start-end (for example 0-4095). When returned data is truncated, inspect meta.truncated_fields for continuation offsets.",
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+-\\d+$"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
-    }
+    },
+    "examples": [
+      {
+        "name": "Read one ticket in detail",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          }
+        },
+        "notes": "Use this endpoint after a list/search call gives you a ticket_id. If description_html is large, fetch it in byte windows with field_ranges[description_html]=start-end instead of asking for a bigger list payload."
+      }
+    ]
   },
   {
     "id": "put-_api_v1_tickets_id",
@@ -8466,12 +10378,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "tickets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -8487,12 +10409,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "tickets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -8509,7 +10441,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "tickets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -8523,18 +10466,100 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_tickets_id_comments",
     "method": "get",
     "path": "/api/v1/tickets/{id}/comments",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "Get Ticket Comments",
+    "summary": "List comments for a ticket",
+    "description": "Returns the comments attached to a ticket. Use small limits and field-scoped byte ranges when comment bodies are large.",
     "tags": [
       "tickets"
     ],
+    "rbacResource": "ticket",
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Maximum number of comments to return (1-200). Prefer small values when exploring ticket history.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        }
+      },
+      {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "description": "Zero-based comment offset.",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      {
+        "name": "order",
+        "in": "query",
+        "required": false,
+        "description": "Comment sort order.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      {
+        "name": "field_ranges[comment_text]",
+        "in": "query",
+        "required": false,
+        "description": "Optional UTF-8 byte range for comment_text, formatted as start-end (for example 0-4095). Use meta.truncated_fields to continue fetching long comments.",
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+-\\d+$"
+        }
+      },
+      {
+        "name": "field_ranges[comment_html]",
+        "in": "query",
+        "required": false,
+        "description": "Optional UTF-8 byte range for comment_html, formatted as start-end (for example 0-4095).",
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+-\\d+$"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
-    }
+    },
+    "examples": [
+      {
+        "name": "Read recent comments with ranged comment text",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "query": {
+            "limit": 5,
+            "order": "desc",
+            "field_ranges[comment_text]": "0-4095"
+          }
+        },
+        "notes": "Prefer this endpoint over large ticket list payloads when the user asks for comment history or long comment bodies."
+      }
+    ]
   },
   {
     "id": "post-_api_v1_tickets_id_comments",
@@ -8598,7 +10623,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "tickets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -8847,7 +10883,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "time-entries"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "description": "SessionId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -8880,12 +10926,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-entries"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -8897,12 +10953,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-entries"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -8918,12 +10984,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-entries"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -8990,12 +11066,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-periods"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9007,12 +11093,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-periods"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9028,12 +11124,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-periods"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9050,7 +11156,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "time-periods"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9071,7 +11188,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "time-periods"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9180,12 +11308,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9197,12 +11335,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9218,12 +11366,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9240,7 +11398,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9261,7 +11430,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9277,12 +11457,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/{id}/entries",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9299,7 +11489,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9320,7 +11521,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9337,7 +11549,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9358,7 +11581,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9379,7 +11613,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9395,12 +11640,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/{id}/summary",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "time-sheets"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9675,12 +11930,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9692,12 +11957,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9713,12 +11988,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9735,7 +12020,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9752,7 +12048,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9768,12 +12075,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}/activity",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9790,7 +12107,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9811,7 +12139,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9828,7 +12167,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9844,12 +12194,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}/permissions",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9861,12 +12221,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}/preferences",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9883,7 +12253,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9899,12 +12280,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}/roles",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9921,7 +12312,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9942,7 +12344,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -9963,7 +12376,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9975,12 +12399,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/{id}/teams",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -9997,7 +12431,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10018,7 +12463,27 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "users"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "teamId",
+        "in": "path",
+        "required": true,
+        "description": "TeamId path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10292,12 +12757,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/templates/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10314,7 +12789,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10335,7 +12821,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10352,7 +12849,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10452,12 +12960,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10469,12 +12987,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10490,12 +13018,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10507,12 +13045,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}/analytics",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10524,12 +13072,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}/deliveries",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10541,12 +13099,31 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}/deliveries/{delivery_id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "delivery_id",
+        "in": "path",
+        "required": true,
+        "description": "Delivery Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10563,7 +13140,27 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "delivery_id",
+        "in": "path",
+        "required": true,
+        "description": "Delivery Id path parameter.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10584,7 +13181,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10600,12 +13208,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}/health",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10622,7 +13240,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10638,12 +13267,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}/subscriptions",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10660,7 +13299,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10681,7 +13331,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10702,7 +13363,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10723,7 +13395,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "webhooks"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10832,12 +13515,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/workflows/events/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10929,12 +13622,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/workflows/executions/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -10951,7 +13654,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10972,7 +13686,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -10993,7 +13718,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -11014,7 +13750,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -11035,7 +13782,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -11165,12 +13923,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/workflows/tasks/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -11187,7 +13955,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -11208,7 +13987,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -11229,7 +14019,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -11283,12 +14084,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/workflows/templates/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -11305,7 +14116,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -11326,7 +14148,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -11338,12 +14171,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/workflows/{id}",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -11355,12 +14198,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/workflows/{id}",
     "displayName": "PUT v1",
     "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "requestBodySchema": {
       "type": "object",
       "properties": {}
@@ -11376,12 +14229,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/workflows/{id}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "workflows"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -11692,10 +14555,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     },
-    "playbooks": [
-      "kb/search-and-read",
-      "kb/find-relevant-articles"
-    ],
     "examples": [
       {
         "name": "List published articles",
@@ -11707,30 +14566,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "Search articles by keyword",
+        "name": "Search articles",
         "request": {
           "query": {
             "search": "password reset"
-          }
-        },
-        "notes": "Searches by title and slug. Use this to find relevant KB articles before answering user questions."
-      },
-      {
-        "name": "List troubleshooting articles for clients",
-        "request": {
-          "query": {
-            "status": "published",
-            "audience": "client",
-            "article_type": "troubleshooting"
-          }
-        },
-        "notes": "Filter by audience and type to find specific article sets."
-      },
-      {
-        "name": "List articles needing review",
-        "request": {
-          "query": {
-            "status": "review"
           }
         }
       }
@@ -11812,10 +14651,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     },
-    "playbooks": [
-      "kb/create-article",
-      "kb/create-from-resolution"
-    ],
     "examples": [
       {
         "name": "Create a how-to article with markdown content",
@@ -11827,8 +14662,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "content": "# Steps\n\n1. Navigate to Settings > Users\n2. Find the user\n3. Click Reset Password\n4. The user will receive an email with a reset link",
             "content_format": "markdown"
           }
-        },
-        "notes": "Always use content_format 'markdown' when generating content. Articles start in 'draft' status — call POST /api/v1/kb-articles/{id}/publish after creation to make them live."
+        }
       },
       {
         "name": "Create a troubleshooting article for clients",
@@ -11840,22 +14674,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "content": "# Problem\n\nVPN disconnects frequently.\n\n# Solution\n\n1. Check your internet connection\n2. Restart the VPN client\n3. If the issue persists, contact support",
             "content_format": "markdown"
           }
-        },
-        "notes": "Client-audience articles become visible in the client portal once published."
-      },
-      {
-        "name": "Create an FAQ article",
-        "request": {
-          "body": {
-            "title": "How do I change my notification settings?",
-            "article_type": "faq",
-            "audience": "client",
-            "content": "## Question\n\nHow do I change my notification settings?\n\n## Answer\n\nGo to **Settings > Notifications** in the client portal. You can toggle email and in-app notifications for each category.",
-            "content_format": "markdown",
-            "review_cycle_days": 90
-          }
-        },
-        "notes": "FAQ articles should be concise. review_cycle_days ensures articles are reviewed periodically."
+        }
       }
     ]
   },
@@ -12004,10 +14823,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "tags": [
       "Knowledge Base"
     ],
-    "playbooks": [
-      "kb/create-article",
-      "kb/publish-workflow"
-    ],
     "approvalRequired": false,
     "parameters": [
       {
@@ -12066,13 +14881,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/kb-articles/{id}/content",
     "displayName": "Get KB article content",
     "summary": "Get KB article content",
-    "description": "Get the body content of a KB article as readable markdown text. Use this to read what an article currently says. Always call this before answering questions about article content — do not rely on article metadata alone.",
+    "description": "Get the body content of a KB article as readable markdown text. Use this to read what an article currently says.",
     "tags": [
       "Knowledge Base"
-    ],
-    "playbooks": [
-      "kb/search-and-read",
-      "kb/find-relevant-articles"
     ],
     "approvalRequired": false,
     "parameters": [
@@ -12154,9 +14965,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     },
-    "playbooks": [
-      "kb/update-article-content"
-    ],
     "examples": [
       {
         "name": "Update content with markdown",
@@ -12165,18 +14973,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "content": "# Updated Article\n\nNew content goes here.",
             "format": "markdown"
           }
-        },
-        "notes": "Always use format 'markdown' for AI-generated content. Read the existing content first with GET /api/v1/kb-articles/{id}/content to preserve any sections that should remain."
-      },
-      {
-        "name": "Append a troubleshooting section",
-        "request": {
-          "body": {
-            "content": "# Problem\n\nUsers cannot log in after password reset.\n\n# Root Cause\n\nBrowser cached old session cookies.\n\n# Resolution\n\n1. Clear browser cookies for the application domain\n2. Close all browser tabs\n3. Open a new browser window and sign in",
-            "format": "markdown"
-          }
-        },
-        "notes": "When writing troubleshooting articles, structure with Problem, Root Cause, and Resolution sections."
+        }
       }
     ]
   },
@@ -12264,13 +15061,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/kb-articles/from-ticket/{ticketId}",
     "displayName": "Create KB article from ticket",
     "summary": "Create KB article from ticket",
-    "description": "Create a KB article pre-populated from a ticket's title, description, and resolution. Useful for turning resolved tickets into knowledge base documentation. The created article will be a 'troubleshooting' type in 'draft' status — review and publish after creation.",
+    "description": "Create a KB article pre-populated from a ticket's title, description, and resolution. Useful for turning resolved tickets into knowledge base documentation.",
     "tags": [
       "Knowledge Base"
-    ],
-    "playbooks": [
-      "kb/create-from-resolution",
-      "kb/capture-ticket-knowledge"
     ],
     "approvalRequired": false,
     "parameters": [
