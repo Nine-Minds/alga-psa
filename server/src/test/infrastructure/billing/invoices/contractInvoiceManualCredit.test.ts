@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createFixedPlanAssignment, createTestService, setupClientTaxConfiguration, assignServiceTaxRate, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
+import { createClient } from '../../../../../test-utils/testDataFactory';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
@@ -34,7 +35,9 @@ describe('Contract Invoice Manual Credit', () => {
         id: mockedUserId,
         tenant: mockedTenantId
       }
-    }))
+    })),
+    withAuth: (fn: unknown) => fn,
+    withAuthCheck: (fn: unknown) => fn
   }));
 
   vi.mock('server/src/lib/analytics/posthog', () => ({
@@ -317,5 +320,181 @@ describe('Contract Invoice Manual Credit', () => {
       });
 
     expect(creditDetails.length).toBe(0);
+  });
+
+  it('T022: invoice generation succeeds for a cloned assignment with duplicated contract-line configuration after migration', async () => {
+    const preservedClientId = context.clientId;
+    const clonedClientId = await createClient(context.db, context.tenantId, 'Cloned Contract Billing Client');
+    const startDate = createTestDateISO({ year: 2025, month: 3, day: 1 });
+    const periodEnd = createTestDateISO({ year: 2025, month: 4, day: 1 });
+
+    await setupClientTaxConfiguration(context, {
+      clientId: clonedClientId,
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 10.0
+    });
+
+    const baseServiceId = await createTestService(context, {
+      service_name: 'Managed Support Base',
+      billing_method: 'fixed',
+      default_rate: 20000,
+      tax_region: 'US-NY'
+    });
+    const addOnServiceId = await createTestService(context, {
+      service_name: 'Managed Support Add-on',
+      billing_method: 'fixed',
+      default_rate: 5000,
+      tax_region: 'US-NY'
+    });
+
+    const preservedBase = await createFixedPlanAssignment(context, baseServiceId, {
+      planName: 'Managed Support Base',
+      billingFrequency: 'monthly',
+      baseRateCents: 20000,
+      detailBaseRateCents: 20000,
+      quantity: 1,
+      startDate,
+      billingTiming: 'advance',
+      clientId: preservedClientId
+    });
+    const preservedAddOn = await createFixedPlanAssignment(context, addOnServiceId, {
+      planName: 'Managed Support Add-on',
+      billingFrequency: 'monthly',
+      baseRateCents: 5000,
+      detailBaseRateCents: 5000,
+      quantity: 1,
+      startDate,
+      billingTiming: 'advance',
+      clientId: preservedClientId
+    });
+    const clonedBase = await createFixedPlanAssignment(context, baseServiceId, {
+      planName: 'Managed Support Base',
+      billingFrequency: 'monthly',
+      baseRateCents: 20000,
+      detailBaseRateCents: 20000,
+      quantity: 1,
+      startDate,
+      billingTiming: 'advance',
+      clientId: clonedClientId
+    });
+    const clonedAddOn = await createFixedPlanAssignment(context, addOnServiceId, {
+      planName: 'Managed Support Add-on',
+      billingFrequency: 'monthly',
+      baseRateCents: 5000,
+      detailBaseRateCents: 5000,
+      quantity: 1,
+      startDate,
+      billingTiming: 'advance',
+      clientId: clonedClientId
+    });
+
+    const preservedContractId = await context.createEntity('contracts', {
+      contract_name: 'Managed IT Services',
+      billing_frequency: 'monthly',
+      is_active: true,
+      owner_client_id: preservedClientId,
+      status: 'active'
+    }, 'contract_id');
+    const clonedContractId = await context.createEntity('contracts', {
+      contract_name: 'Managed IT Services',
+      billing_frequency: 'monthly',
+      is_active: true,
+      owner_client_id: clonedClientId,
+      status: 'active'
+    }, 'contract_id');
+
+    const preservedClientContractId = await context.createEntity('client_contracts', {
+      client_id: preservedClientId,
+      contract_id: preservedContractId,
+      start_date: startDate,
+      end_date: null,
+      is_active: true
+    }, 'client_contract_id');
+    const clonedClientContractId = await context.createEntity('client_contracts', {
+      client_id: clonedClientId,
+      contract_id: clonedContractId,
+      start_date: startDate,
+      end_date: null,
+      is_active: true
+    }, 'client_contract_id');
+
+    await attachPlanToContract({
+      contractId: preservedContractId,
+      clientContractId: preservedClientContractId,
+      contractLineId: preservedBase.contractLineId,
+      clientContractLineId: preservedBase.clientContractLineId
+    });
+    await attachPlanToContract({
+      contractId: preservedContractId,
+      clientContractId: preservedClientContractId,
+      contractLineId: preservedAddOn.contractLineId,
+      clientContractLineId: preservedAddOn.clientContractLineId
+    });
+    await attachPlanToContract({
+      contractId: clonedContractId,
+      clientContractId: clonedClientContractId,
+      contractLineId: clonedBase.contractLineId,
+      clientContractLineId: clonedBase.clientContractLineId
+    });
+    await attachPlanToContract({
+      contractId: clonedContractId,
+      clientContractId: clonedClientContractId,
+      contractLineId: clonedAddOn.contractLineId,
+      clientContractLineId: clonedAddOn.clientContractLineId
+    });
+
+    await ensureClientBillingSettings(preservedClientId);
+    await ensureClientBillingSettings(clonedClientId);
+
+    const preservedBillingCycleId = await context.createEntity('client_billing_cycles', {
+      client_id: preservedClientId,
+      billing_cycle: 'monthly',
+      period_start_date: startDate,
+      period_end_date: periodEnd,
+      effective_date: startDate
+    }, 'billing_cycle_id');
+    const clonedBillingCycleId = await context.createEntity('client_billing_cycles', {
+      client_id: clonedClientId,
+      billing_cycle: 'monthly',
+      period_start_date: startDate,
+      period_end_date: periodEnd,
+      effective_date: startDate
+    }, 'billing_cycle_id');
+
+    const preservedInvoice = await generateInvoice(preservedBillingCycleId);
+    const clonedInvoice = await generateInvoice(clonedBillingCycleId);
+
+    expect(preservedInvoice).not.toBeNull();
+    expect(clonedInvoice).not.toBeNull();
+    expect(clonedInvoice!.invoice_id).not.toBe(preservedInvoice!.invoice_id);
+    expect(Number(clonedInvoice!.subtotal)).toBe(Number(preservedInvoice!.subtotal));
+    expect(Number(clonedInvoice!.tax)).toBe(Number(preservedInvoice!.tax));
+    expect(Number(clonedInvoice!.total_amount)).toBe(Number(preservedInvoice!.total_amount));
+
+    const preservedCharges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: preservedInvoice!.invoice_id })
+      .whereNotNull('contract_line_id')
+      .orderBy('description', 'asc');
+    const clonedCharges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: clonedInvoice!.invoice_id })
+      .whereNotNull('contract_line_id')
+      .orderBy('description', 'asc');
+
+    expect(preservedCharges).toHaveLength(2);
+    expect(clonedCharges).toHaveLength(2);
+    expect(clonedCharges.map((charge) => charge.contract_line_id)).toEqual([
+      clonedAddOn.contractLineId,
+      clonedBase.contractLineId,
+    ]);
+    expect(clonedCharges.some((charge) =>
+      charge.contract_line_id === preservedBase.contractLineId ||
+      charge.contract_line_id === preservedAddOn.contractLineId
+    )).toBe(false);
+    expect(clonedCharges.map((charge) => Number(charge.net_amount))).toEqual(
+      preservedCharges.map((charge) => Number(charge.net_amount))
+    );
   });
 });

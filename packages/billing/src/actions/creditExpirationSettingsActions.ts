@@ -3,6 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { ICreditExpirationSettings } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { updateClientBillingSettings as updateClientBillingSettingsShared } from '@shared/billingClients/billingSettings';
 
 /**
  * Get credit expiration settings for a client.
@@ -66,40 +67,11 @@ export const updateCreditExpirationSettings = withAuth(async (
     if (!tenant) throw new Error('No tenant found');
 
     await knex.transaction(async (trx) => {
-      const existingSettings = await trx('client_billing_settings')
-        .where({
-          client_id: clientId,
-          tenant,
-        })
-        .first();
-
-      const now = new Date().toISOString();
-
-      if (existingSettings) {
-        await trx('client_billing_settings')
-          .where({
-            client_id: clientId,
-            tenant,
-          })
-          .update({
-            enable_credit_expiration: settings.enable_credit_expiration,
-            credit_expiration_days: settings.credit_expiration_days,
-            credit_expiration_notification_days: settings.credit_expiration_notification_days,
-            updated_at: now,
-          });
-      } else {
-        await trx('client_billing_settings').insert({
-          client_id: clientId,
-          tenant,
-          enable_credit_expiration: settings.enable_credit_expiration,
-          credit_expiration_days: settings.credit_expiration_days,
-          credit_expiration_notification_days: settings.credit_expiration_notification_days,
-          created_at: now,
-          updated_at: now,
-          zero_dollar_invoice_handling: 'normal',
-          suppress_zero_dollar_invoices: false,
-        });
-      }
+      await updateClientBillingSettingsShared(trx, tenant, clientId, {
+        enableCreditExpiration: settings.enable_credit_expiration,
+        creditExpirationDays: settings.credit_expiration_days,
+        creditExpirationNotificationDays: settings.credit_expiration_notification_days,
+      });
     });
 
     return { success: true };

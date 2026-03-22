@@ -123,6 +123,10 @@ export class AccountingExportService {
     if (!batch) {
       return { batch: null, lines: [], errors: [] };
     }
+    // Mixed export batches are line-authoritative. Historical/header-fallback lines and
+    // canonical detail-backed recurring lines may coexist in one stored batch, and rereads
+    // must preserve each line's stored projection metadata instead of collapsing them to one
+    // batch-wide service-period basis.
     const [lines, errors] = await Promise.all([
       this.repository.listLines(batchId),
       this.repository.listErrors(batchId)
@@ -246,12 +250,15 @@ export class AccountingExportService {
       transformResult = await adapter.transform(context);
       const deliveryResult = await adapter.deliver(transformResult, context);
 
-      for (const delivered of deliveryResult.deliveredLines) {
-        await this.repository.updateLine(delivered.lineId, {
-          status: 'delivered',
-          external_document_ref: delivered.externalDocumentRef ?? null
-        });
-      }
+    for (const delivered of deliveryResult.deliveredLines) {
+      // Delivery/retry transitions may change transport state, but the stored line-level
+      // service-period projection stays immutable so replay, reread, and dashboard inspection
+      // keep the original canonical-vs-fallback provenance for each exported line.
+      await this.repository.updateLine(delivered.lineId, {
+        status: 'delivered',
+        external_document_ref: delivered.externalDocumentRef ?? null
+      });
+    }
 
       const transactionIds = collectTransactionIds(context.lines);
       if (transactionIds.length > 0) {
@@ -459,7 +466,10 @@ export class AccountingExportService {
       return;
     }
 
-    // Extract unique invoice IDs from the exported lines
+    // Automatic post-export tax import is invoice-centric. Canonical recurring
+    // service-period detail on export lines can explain coverage, but it must not
+    // fan one invoice out into multiple tax-import attempts.
+    // Extract unique invoice IDs from the exported lines.
     const invoiceIds = [...new Set(
       context.lines
         .filter(line => line.invoice_id)

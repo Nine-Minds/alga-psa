@@ -4,8 +4,14 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import type {
+  CadenceOwner,
+  IRecurringInvoiceWindow,
+  IRecurringServicePeriod,
+} from '@alga-psa/types';
 import { TestContext } from './testContext';
 import { ISO8601String } from 'server/src/types/types.d';
+import { buildMonthlyRecurringFixture } from './recurringTimingFixtures';
 
 export interface PricingScheduleOptions {
   effectiveDate: ISO8601String;
@@ -14,6 +20,52 @@ export interface PricingScheduleOptions {
   notes?: string;
   durationValue?: number;
   durationUnit?: 'days' | 'weeks' | 'months' | 'years';
+}
+
+export interface RecurringPricingScheduleFixture {
+  cadenceOwner: CadenceOwner;
+  duePosition: 'advance' | 'arrears';
+  servicePeriods: IRecurringServicePeriod[];
+  currentInvoiceWindow: IRecurringInvoiceWindow;
+  schedule: PricingScheduleOptions;
+}
+
+export interface RecurringPricingScheduleFixtureOptions {
+  cadenceOwner?: CadenceOwner;
+  duePosition?: 'advance' | 'arrears';
+  effectiveDate?: ISO8601String;
+  endDate?: ISO8601String | null;
+  customRate: number | null;
+  notes?: string;
+  durationValue?: number;
+  durationUnit?: 'days' | 'weeks' | 'months' | 'years';
+}
+
+export function buildRecurringPricingScheduleFixture(
+  options: RecurringPricingScheduleFixtureOptions
+): RecurringPricingScheduleFixture {
+  const cadenceOwner = options.cadenceOwner ?? 'client';
+  const duePosition = options.duePosition ?? 'advance';
+  const recurringFixture = buildMonthlyRecurringFixture({
+    cadenceOwner,
+    duePosition,
+    chargeFamily: 'fixed',
+  });
+
+  return {
+    cadenceOwner,
+    duePosition,
+    servicePeriods: recurringFixture.servicePeriods,
+    currentInvoiceWindow: recurringFixture.currentInvoiceWindow,
+    schedule: {
+      effectiveDate: options.effectiveDate ?? recurringFixture.servicePeriods[1]?.start ?? recurringFixture.currentInvoiceWindow.start,
+      endDate: options.endDate ?? null,
+      customRate: options.customRate,
+      notes: options.notes,
+      durationValue: options.durationValue,
+      durationUnit: options.durationUnit,
+    },
+  };
 }
 
 /**

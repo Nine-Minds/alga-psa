@@ -79,6 +79,7 @@ describe('MSP core locale batch 2b-1', () => {
       'nav.billing.invoicing': 'Invoicing',
       'nav.billing.invoiceTemplates': 'Invoice Templates',
       'nav.billing.billingCycles': 'Billing Cycles',
+      'nav.billing.servicePeriods': 'Service Periods',
       'nav.billing.serviceCatalog': 'Service Catalog',
       'nav.billing.products': 'Products',
       'nav.billing.taxRates': 'Tax Rates',
@@ -204,6 +205,7 @@ describe('MSP core locale batch 2b-1', () => {
       'nav.billing.sections.contracts',
       'nav.billing.contractTemplates',
       'nav.billing.invoiceTemplates',
+      'nav.billing.servicePeriods',
       'nav.billing.accountingExports',
       'settings.tabs.billing',
     ];
@@ -228,6 +230,7 @@ describe('MSP core locale batch 2b-1', () => {
     expect(getValue(xx, 'settings.tabs.language')).toBe('11111');
     expect(getValue(xx, 'nav.billing.sections.contracts')).toBe('11111');
     expect(getValue(xx, 'nav.billing.contractTemplates')).toBe('11111');
+    expect(getValue(xx, 'nav.billing.servicePeriods')).toBe('11111');
     expect(getValue(xx, 'header.quickCreate.options.ticket.label')).toBe('11111');
     expect(getValue(xx, 'header.quickCreate.options.ticket.description')).toBe('11111');
   });

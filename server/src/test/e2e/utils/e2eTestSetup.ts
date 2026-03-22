@@ -249,11 +249,11 @@ async function normalizeServiceBillingConstraints(db: Knex): Promise<void> {
   try {
     await adminDb.raw('ALTER TABLE service_types DROP CONSTRAINT IF EXISTS service_types_billing_method_check');
     await adminDb.raw('ALTER TABLE service_types DROP CONSTRAINT IF EXISTS billing_method_check');
-    await adminDb.raw("ALTER TABLE service_types ADD CONSTRAINT service_types_billing_method_check CHECK (billing_method IN ('fixed','per_unit','hourly','usage'))");
+    await adminDb.raw("ALTER TABLE service_types ADD CONSTRAINT service_types_billing_method_check CHECK (billing_method IN ('fixed','hourly','usage'))");
 
     await adminDb.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS service_catalog_billing_method_check');
     await adminDb.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS billing_method_check');
-    await adminDb.raw("ALTER TABLE service_catalog ADD CONSTRAINT service_catalog_billing_method_check CHECK (billing_method IN ('fixed','per_unit','hourly','usage'))");
+    await adminDb.raw("ALTER TABLE service_catalog ADD CONSTRAINT service_catalog_billing_method_check CHECK (billing_method IN ('fixed','hourly','usage'))");
   } finally {
     await adminDb.destroy();
   }

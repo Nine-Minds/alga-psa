@@ -22,6 +22,7 @@ import { IService, IContractLinePreset } from '@alga-psa/types';
 import FixedContractLinePresetServicesList from '../FixedContractLinePresetServicesList'; // Import the preset-specific component
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
+import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 
 interface FixedPresetConfigurationProps {
   presetId: string;
@@ -29,6 +30,16 @@ interface FixedPresetConfigurationProps {
 }
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
+const BILLING_TIMING_OPTIONS = [
+  {
+    value: 'arrears',
+    label: 'Arrears – invoice after the period closes',
+  },
+  {
+    value: 'advance',
+    label: 'Advance – invoice at the start of the period',
+  },
+] as const;
 
 export function FixedPresetConfiguration({
   presetId,
@@ -44,6 +55,7 @@ export function FixedPresetConfiguration({
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType>('Fixed');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
+  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [baseRateInput, setBaseRateInput] = useState<string>('');
   const [enableProration, setEnableProration] = useState<boolean>(false);
@@ -68,6 +80,7 @@ export function FixedPresetConfiguration({
         setPlanName(fetchedPlan.preset_name);
         setBillingFrequency(fetchedPlan.billing_frequency);
         setPlanType(fetchedPlan.contract_line_type as PlanType);
+        setBillingTiming(fetchedPlan.billing_timing ?? 'arrears');
 
         // Fetch fixed config
         if (fetchedPlan.preset_id) {
@@ -78,7 +91,12 @@ export function FixedPresetConfiguration({
               setBaseRateInput((cfg.base_rate / 100).toFixed(2));
             }
             setEnableProration(!!cfg.enable_proration);
-            setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
+            setBillingCycleAlignment(
+              resolveBillingCycleAlignmentForCompatibility({
+                billingCycleAlignment: cfg.billing_cycle_alignment,
+                enableProration: cfg.enable_proration,
+              }) as any,
+            );
           }
         }
         setIsDirty(false);
@@ -120,6 +138,8 @@ export function FixedPresetConfiguration({
         preset_name: planName,
         billing_frequency: billingFrequency,
         contract_line_type: planType!,
+        billing_timing: billingTiming,
+        cadence_owner: plan?.cadence_owner ?? 'client',
         tenant,
       };
 
@@ -130,7 +150,10 @@ export function FixedPresetConfiguration({
           await updateContractLinePresetFixedConfig(plan.preset_id, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
-            billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start',
+            billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+              billingCycleAlignment: billingCycleAlignment,
+              enableProration: enableProration,
+            }),
           });
         }
       }
@@ -230,7 +253,7 @@ export function FixedPresetConfiguration({
             <div>
               <h3 className="text-lg font-semibold">Fixed Fee Settings</h3>
               <p className="text-sm text-muted-foreground">
-                Define the recurring base rate and optional proration behavior. Service allocations can be tuned once the line is active.
+                Define the recurring base rate and whether partial-period coverage should adjust the charge. Service allocations can be tuned once the line is active.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -273,19 +296,45 @@ export function FixedPresetConfiguration({
               <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
-                    Enable Proration
+                    Adjust for Partial Periods
                   </Label>
                   <Switch
                     id="enable-proration"
                     checked={enableProration}
                     onCheckedChange={(checked) => {
                       setEnableProration(checked);
+                      setBillingCycleAlignment((currentAlignment) =>
+                        checked
+                          ? currentAlignment === 'start'
+                            ? 'prorated'
+                            : currentAlignment
+                          : 'start',
+                      );
                       markDirty();
                     }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Toggle this on if you want the base rate to be prorated when the contract starts mid-cycle.
+                  Enable this when the recurring fee should scale to the covered portion of a service period if the contract starts or ends inside that period.
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="billing-timing">Billing Timing</Label>
+                <CustomSelect
+                  id="billing-timing"
+                  value={billingTiming}
+                  onValueChange={(value) => {
+                    setBillingTiming(value as 'arrears' | 'advance');
+                    markDirty();
+                  }}
+                  options={BILLING_TIMING_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                  placeholder="Select billing timing"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  This preset keeps its cadence owner explicit when it is copied to a recurring line. Billing timing still controls whether the copied recurring line bills at the start or end of each covered period.
                 </p>
               </div>
             </div>

@@ -30,6 +30,7 @@
       "invoicing": "Facturation",
       "invoiceTemplates": "Modèles de facture",
       "billingCycles": "Cycles de facturation",
+      "servicePeriods": "Périodes de service",
       "serviceCatalog": "Catalogue de services",
       "products": "Produits",
       "taxRates": "Taux de taxe",

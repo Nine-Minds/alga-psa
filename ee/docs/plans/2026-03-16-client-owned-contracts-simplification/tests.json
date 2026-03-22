@@ -1,0 +1,290 @@
+[
+  {
+    "id": "T001",
+    "description": "Schema migration adds `contracts.owner_client_id` and keeps template contracts unaffected",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Type wiring exposes `owner_client_id` on contract interfaces used by billing actions and UI loaders",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Preflight query identifies shared non-template contracts with more than one distinct client",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Selection rule preserves the only invoiced assignment when a shared contract has invoice history on exactly one assignment",
+    "implemented": true,
+    "featureIds": ["F004", "F010"]
+  },
+  {
+    "id": "T005",
+    "description": "Selection rule preserves the earliest-starting assignment when a shared contract has no invoice history",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "Migration backfills `owner_client_id` on preserved non-template contracts to the preserved assignment client",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T007",
+    "description": "Migration clones contract header rows with fresh `contract_id` values for every non-preserved assignment",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T008",
+    "description": "Migration clones all source `contract_lines` to the new contract with fresh line IDs and preserved descriptive/rate fields",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T009",
+    "description": "Migration clones required contract-line child/configuration rows so cloned contracts remain billable",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T010",
+    "description": "Migration repoints non-preserved `client_contracts.contract_id` rows to the cloned contract IDs",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed sanity: preserved invoiced assignment still retains the original `contract_id` after migration",
+    "implemented": true,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T012",
+    "description": "Migration aborts with a clear error when a clone-target assignment has unsupported historical references that would require retargeting",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T013",
+    "description": "Non-template contract creation via supported app flow requires an owner client",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T014",
+    "description": "Attempting to create a non-template contract without owner client fails outside migration/internal exemption paths",
+    "implemented": true,
+    "featureIds": ["F012", "F015"]
+  },
+  {
+    "id": "T015",
+    "description": "Assigning a client-owned contract to a different client than `owner_client_id` is rejected",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T016",
+    "description": "Updating an existing assignment to point at a contract owned by a different client is rejected",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T017",
+    "description": "Renewal draft creation copies the source client as `owner_client_id` on the draft contract",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T018",
+    "description": "Legacy API/service path cannot create a new cross-client shared non-template contract after guardrails are added",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T019",
+    "description": "Contract model/list actions no longer treat contracts without client ownership as normal live client contracts",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T020",
+    "description": "Contract lifecycle helpers no longer derive live multi-client status by aggregating unrelated client assignments",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T021",
+    "description": "Billing engine still resolves billable lines correctly for preserved and cloned assignments after migration",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T022",
+    "description": "DB-backed integration: invoice generation succeeds for a migrated cloned assignment with the same cloned contract lines",
+    "implemented": true,
+    "featureIds": ["F008", "F009", "F018"]
+  },
+  {
+    "id": "T023",
+    "description": "Client contract lifecycle helper remains the source of truth for active/terminated/expired display state",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T024",
+    "description": "ClientContractsTab loads assignment-first rows and does not rely on `getContractsWithClients()` shared-contract semantics",
+    "implemented": true,
+    "featureIds": ["F020", "F021"]
+  },
+  {
+    "id": "T025",
+    "description": "ClientContractsTab status badge reflects assignment lifecycle when contract-header status differs",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T026",
+    "description": "ClientContractsTab live actions mutate assignment lifecycle instead of contract-header active/terminated state",
+    "implemented": true,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T027",
+    "description": "Client contract detail route can open the correct live contract using `clientContractId` as the primary context",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T028",
+    "description": "Contract detail view shows owner/assignment-derived semantics and no longer implies a non-template contract can span unrelated clients",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T029",
+    "description": "Templates UI still lists and edits reusable templates independently of client-owned contract instances",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T030",
+    "description": "Contract revenue action uses `client_contracts` as the fact source for live assigned contracts",
+    "implemented": true,
+    "featureIds": ["F027", "F028"]
+  },
+  {
+    "id": "T031",
+    "description": "Contract expiration action/report derives active/expiring rows from assignment truth rather than `contracts.is_active`",
+    "implemented": true,
+    "featureIds": ["F027", "F028"]
+  },
+  {
+    "id": "T032",
+    "description": "Report results for the two known shared contracts no longer appear as one shared contract spanning two clients after migration",
+    "implemented": true,
+    "featureIds": ["F027", "F028"]
+  },
+  {
+    "id": "T033",
+    "description": "API responses/documentation for `/contracts` reflect client-owned instantiated contract headers",
+    "implemented": true,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T034",
+    "description": "Documentation updates describe templates as the only reusable concept and non-template contracts as client-owned instances",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T035",
+    "description": "DB-backed post-migration sanity: no non-template contract is linked to more than one distinct client",
+    "implemented": true,
+    "featureIds": ["F001", "F005", "F009"]
+  },
+  {
+    "id": "T036",
+    "description": "DB-backed post-migration sanity: the preserved `Managed IT Services` assignment for The Green Thumb still has its invoice history intact",
+    "implemented": true,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T037",
+    "description": "DB-backed post-migration sanity: `Managed IT Services` for BTM Machinery points at a new cloned contract ID",
+    "implemented": true,
+    "featureIds": ["F006", "F009"]
+  },
+  {
+    "id": "T038",
+    "description": "DB-backed post-migration sanity: `Worry-Free Essentials` for The Benjamin Wolf Group points at a new cloned contract ID",
+    "implemented": true,
+    "featureIds": ["F006", "F009"]
+  },
+  {
+    "id": "T039",
+    "description": "DB-backed post-migration sanity: preserved `Worry-Free Essentials` contract remains on WorryNot Works IT Services as the earliest-start assignment",
+    "implemented": true,
+    "featureIds": ["F004", "F009"]
+  },
+  {
+    "id": "T040",
+    "description": "DB-backed post-migration sanity: cloned contracts have the same contract-line counts as their source contracts",
+    "implemented": true,
+    "featureIds": ["F007", "F008"]
+  },
+  {
+    "id": "T041",
+    "description": "No current production clone-target assignments require invoice/doc/time/usage retargeting, matching the migration preflight assumptions",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T042",
+    "description": "Resuming a draft contract still works when the draft contract is client-owned and its live status is not inferred from shared contract semantics",
+    "implemented": true,
+    "featureIds": ["F012", "F017", "F024"]
+  },
+  {
+    "id": "T043",
+    "description": "Renewals queue still creates and links draft contracts correctly after owner-client enforcement",
+    "implemented": true,
+    "featureIds": ["F014", "F019"]
+  },
+  {
+    "id": "T044",
+    "description": "API/service contract-line mutation paths continue to work for client-owned non-template contracts after cloning and owner enforcement",
+    "implemented": true,
+    "featureIds": ["F015", "F018", "F029"]
+  },
+  {
+    "id": "T045",
+    "description": "Client portal contract-linked document queries still return the correct documents for the owning client after a shared contract is split",
+    "implemented": true,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T046",
+    "description": "Client portal contract-linked document queries do not leak a migrated cloned contract's documents to the other client that used to share the original contract",
+    "implemented": true,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T047",
+    "description": "Client contract line overlap checks do not surface another client's contract-derived lines after a shared contract is split",
+    "implemented": true,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T048",
+    "description": "Client contract line listing returns only the requesting client's contract-derived lines for preserved and cloned contracts after migration",
+    "implemented": true,
+    "featureIds": ["F032"]
+  }
+]

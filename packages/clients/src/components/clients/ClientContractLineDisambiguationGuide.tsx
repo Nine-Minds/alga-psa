@@ -59,7 +59,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                   </li>
                   <li className="flex items-start">
                     <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-primary-500" />
-                    <span><strong>Default Plan:</strong> The system's automatic choice when a service appears in multiple contract lines for this client.</span>
+                    <span><strong>Explicit Assignment Required:</strong> When a service appears in multiple contract lines, users must choose the intended assignment context instead of relying on implicit fallback.</span>
                   </li>
                   <li className="flex items-start">
                     <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-primary-500" />
@@ -79,7 +79,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                 <ul className="text-sm space-y-2">
                   <li className="flex items-start">
                     <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                    <span>Incorrect billing due to automatic contract line selection</span>
+                    <span>Incorrect billing when assignment context is ambiguous</span>
                   </li>
                   <li className="flex items-start">
                     <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
@@ -249,8 +249,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
                     <li>Users will be prompted to select which contract line to bill against during time entry</li>
-                    <li>The most recently created contract line will be suggested as the default</li>
-                    <li>If no contract line is explicitly selected, the system will use the most recently created contract line</li>
+                    <li>If no contract line is explicitly selected, billing should stop with an ambiguity error that requires user choice</li>
                     <li>Consider consolidating these contract lines to avoid confusion</li>
                   </ul>
                 </div>
@@ -272,9 +271,8 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
                     <li>Users will be prompted to select which bucket to bill against during time entry</li>
-                    <li>The bucket with the earliest expiration date will be suggested as the default</li>
-                    <li>If no bucket is explicitly selected, the system will use the bucket with the earliest expiration date</li>
-                    <li>This helps ensure that hours in buckets that expire sooner are used first</li>
+                    <li>If no bucket is explicitly selected, billing should stop with an ambiguity error that requires user choice</li>
+                    <li>Teams can define internal guidance for choosing between overlapping buckets</li>
                   </ul>
                 </div>
               )}

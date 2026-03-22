@@ -83,6 +83,7 @@ export function OnboardingWizard({
     serviceName: '',
     serviceDescription: '',
     servicePrice: '',
+    serviceBillingMode: 'usage',
     contractLineName: 'hourly',
     currencyCode: 'USD',
 
@@ -207,6 +208,7 @@ export function OnboardingWizard({
                 serviceName: wizardData.serviceName,
                 serviceDescription: wizardData.serviceDescription,
                 servicePrice: wizardData.servicePrice,
+                serviceBillingMode: wizardData.serviceBillingMode,
                 contractLineName: wizardData.contractLineName,
                 serviceTypeId: wizardData.serviceTypeId,
                 currencyCode: wizardData.currencyCode,

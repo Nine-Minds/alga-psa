@@ -152,11 +152,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Billing details
   'credit_allocations', 'credit_reconciliation_reports', 'credit_tracking',
-  'usage_tracking', 'bucket_usage', 'transactions',
+  'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
   'contract_line_service_defaults', 'contract_pricing_schedules',
+  'service_catalog_mode_defaults',
   'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'discounts',
   'client_billing_cycles', 'client_billing_settings',
   'contract_line_services', 'contract_lines', 'contracts',

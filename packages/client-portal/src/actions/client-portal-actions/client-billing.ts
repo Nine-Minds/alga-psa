@@ -26,6 +26,7 @@ import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobService } from '@alga-psa/jobs';
 import { JobStatus } from '@alga-psa/jobs';
+import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 
 /**
  * Get clientId from user's contact - avoids nested withAuth calls
@@ -106,6 +107,8 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
           'cl.contract_line_id',
           'cl.contract_line_name',
           'cl.billing_frequency',
+          'cl.billing_timing',
+          'cl.cadence_owner',
           'cl.service_category',
           'cl.custom_rate',
           'cl.contract_id',
@@ -118,7 +121,7 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
         .first();
     });
 
-    return plan || null;
+    return plan ? normalizeLiveRecurringStorage(plan) : null;
   } catch (error) {
     console.error('Error fetching client contract line:', error);
     throw new Error('Failed to fetch contract line');
@@ -493,6 +496,8 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
         throw new Error('Unauthorized');
       }
 
+      const currentDate = new Date().toISOString().slice(0, 10);
+
       // Get current bucket usage if any
       const bucketUsage = await trx('bucket_usage')
         .select('*')
@@ -500,7 +505,9 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
           client_id: clientId,
           tenant
         })
-        .whereRaw('? BETWEEN period_start AND period_end', [new Date()])
+        .andWhere('period_start', '<=', currentDate)
+        .andWhere('period_end', '>', currentDate)
+        .orderBy('period_start', 'desc')
         .first();
 
       // Get all services associated with the client's plan
@@ -510,16 +517,21 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
           this.on('service_catalog.service_id', '=', 'contract_line_services.service_id')
             .andOn('service_catalog.tenant', '=', 'contract_line_services.tenant')
         })
-        .join('client_contract_lines', function() {
-          this.on('contract_line_services.contract_line_id', '=', 'client_contract_lines.contract_line_id')
-            .andOn('contract_line_services.tenant', '=', 'client_contract_lines.tenant')
+        .join('contract_lines as cl', function() {
+          this.on('contract_line_services.contract_line_id', '=', 'cl.contract_line_id')
+            .andOn('contract_line_services.tenant', '=', 'cl.tenant')
+        })
+        .join('client_contracts as cc', function() {
+          this.on('cl.contract_id', '=', 'cc.contract_id')
+            .andOn('cl.tenant', '=', 'cc.tenant')
         })
         .where({
-          'client_contract_lines.client_id': clientId,
-          'client_contract_lines.is_active': true,
+          'cc.client_id': clientId,
+          'cc.is_active': true,
           'service_catalog.tenant': tenant,
           'contract_line_services.tenant': tenant,
-          'client_contract_lines.tenant': tenant
+          'cl.tenant': tenant,
+          'cc.tenant': tenant
         });
 
       return {

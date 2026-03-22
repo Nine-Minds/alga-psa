@@ -31,7 +31,7 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   const router = useRouter();
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
-  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard?: boolean }[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard?: boolean }[]>([]);
   const [isLoadingServiceTypes, setIsLoadingServiceTypes] = useState(false);
 
   // Load clients when needed for projects and contacts

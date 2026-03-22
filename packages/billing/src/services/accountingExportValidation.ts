@@ -1,6 +1,50 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
 import { AccountingMappingResolver } from './accountingMappingResolver';
+import type { AccountingExportLine, AccountingExportServicePeriodSource } from '@alga-psa/types';
+
+type ChargeDetailProjection = {
+  item_id: string;
+  service_period_start?: string | Date | null;
+  service_period_end?: string | Date | null;
+  billing_timing?: 'arrears' | 'advance' | null;
+};
+
+type NormalizedRecurringPeriod = {
+  service_period_start: string | null;
+  service_period_end: string | null;
+  billing_timing: 'arrears' | 'advance' | null;
+};
+
+function buildLineServicePeriodMetadata(
+  line: Pick<AccountingExportLine, 'service_period_start' | 'service_period_end'>
+): Record<string, string> | null {
+  const metadata: Record<string, string> = {};
+
+  if (line.service_period_start) {
+    metadata.service_period_start = String(line.service_period_start);
+  }
+  if (line.service_period_end) {
+    metadata.service_period_end = String(line.service_period_end);
+  }
+
+  return Object.keys(metadata).length > 0 ? metadata : null;
+}
+
+function mergeErrorMetadata(
+  line: Pick<AccountingExportLine, 'service_period_start' | 'service_period_end'> | null | undefined,
+  metadata?: Record<string, unknown> | null
+): Record<string, unknown> | null {
+  const lineMetadata = line ? buildLineServicePeriodMetadata(line) : null;
+  if (!lineMetadata && !metadata) {
+    return null;
+  }
+
+  return {
+    ...(metadata ?? {}),
+    ...(lineMetadata ?? {})
+  };
+}
 
 export class AccountingExportValidation {
   static async ensureMappingsForBatch(batchId: string): Promise<void> {
@@ -29,12 +73,17 @@ export class AccountingExportValidation {
     const resolver = await AccountingMappingResolver.create();
     const adapterType = batch.adapter_type;
     const isQuickBooks = adapterType === 'quickbooks_online' || adapterType === 'quickbooks_csv';
+    // Company sync and mapping resolution stay period-agnostic. Export validation is the first
+    // accounting seam that should care about recurring timing, and it must use canonical
+    // export-line service periods rather than invoice-header billing dates.
 
     const chargeIds = new Set<string>();
     const invoiceIds = new Set<string>();
     const firstLineByInvoice = new Map<string, string>();
+    const lineById = new Map<string, AccountingExportLine>();
 
     for (const line of lines) {
+      lineById.set(line.line_id, line);
       if (line.invoice_charge_id) {
         chargeIds.add(line.invoice_charge_id);
       }
@@ -54,6 +103,24 @@ export class AccountingExportValidation {
             .andWhere({ tenant: batch.tenant })
         : [];
     const chargesById = new Map(charges.map((charge: any) => [charge.item_id, charge]));
+    const chargeDetailRows =
+      chargeIds.size > 0
+        ? await knex('invoice_charge_details')
+            .select('item_id', 'service_period_start', 'service_period_end', 'billing_timing')
+            .whereIn('item_id', Array.from(chargeIds))
+            .andWhere({ tenant: batch.tenant })
+            .orderBy('service_period_start', 'asc')
+        : [];
+    const canonicalPeriodsByChargeId = new Map<string, NormalizedRecurringPeriod[]>();
+    for (const detailRow of chargeDetailRows as ChargeDetailProjection[]) {
+      const normalized = normalizeRecurringPeriod(detailRow);
+      if (!normalized.service_period_start && !normalized.service_period_end) {
+        continue;
+      }
+      const existing = canonicalPeriodsByChargeId.get(detailRow.item_id) ?? [];
+      existing.push(normalized);
+      canonicalPeriodsByChargeId.set(detailRow.item_id, existing);
+    }
 
     const invoices =
       invoiceIds.size > 0
@@ -113,7 +180,8 @@ export class AccountingExportValidation {
           batch_id: batchId,
           line_id: line.line_id,
           code: 'missing_charge_id',
-          message: 'Line missing invoice_charge_id'
+          message: 'Line missing invoice_charge_id',
+          metadata: mergeErrorMetadata(line)
         });
         continue;
       }
@@ -124,9 +192,81 @@ export class AccountingExportValidation {
           batch_id: batchId,
           line_id: line.line_id,
           code: 'missing_service',
-          message: `Charge ${line.invoice_charge_id} missing associated service`
+          message: `Charge ${line.invoice_charge_id} missing associated service`,
+          metadata: mergeErrorMetadata(line)
         });
         continue;
+      }
+
+      const canonicalPeriods = canonicalPeriodsByChargeId.get(line.invoice_charge_id) ?? [];
+      const exportSource = normalizeExportLineServicePeriodSource(line.payload);
+      const exportSummaryStart = normalizeIsoString(line.service_period_start);
+      const exportSummaryEnd = normalizeIsoString(line.service_period_end);
+      const expectedSource: AccountingExportServicePeriodSource =
+        canonicalPeriods.length > 0
+          ? 'canonical_detail_periods'
+          : exportSummaryStart || exportSummaryEnd
+            ? 'invoice_header_fallback'
+            : 'financial_document_fallback';
+
+      if (canonicalPeriods.length > 0) {
+        const exportPeriods = normalizeExportLinePeriods(line.payload);
+        const expectedSummaryStart = canonicalPeriods[0]?.service_period_start ?? null;
+        const expectedSummaryEnd = canonicalPeriods[canonicalPeriods.length - 1]?.service_period_end ?? null;
+        const sourceMismatch = exportSource !== expectedSource;
+        const summaryMismatch =
+          exportSummaryStart !== expectedSummaryStart || exportSummaryEnd !== expectedSummaryEnd;
+        const detailMismatch = !areRecurringPeriodsEqual(exportPeriods, canonicalPeriods);
+
+        if (sourceMismatch || summaryMismatch || detailMismatch) {
+          await repo.addError({
+            batch_id: batchId,
+            line_id: line.line_id,
+            code: 'service_period_projection_mismatch',
+            message: 'Export line service periods do not match canonical invoice charge details',
+            metadata: {
+              invoice_charge_id: line.invoice_charge_id,
+              expected_summary: {
+                service_period_start: expectedSummaryStart,
+                service_period_end: expectedSummaryEnd
+              },
+              actual_summary: {
+                service_period_start: exportSummaryStart,
+                service_period_end: exportSummaryEnd
+              },
+              expected_source: expectedSource,
+              actual_source: exportSource ?? null,
+              expected_detail_periods: canonicalPeriods,
+              actual_detail_periods: exportPeriods
+            }
+          });
+          continue;
+        }
+      } else {
+        const exportPeriods = normalizeExportLinePeriods(line.payload);
+        const sourceMismatch = exportSource !== expectedSource;
+        const detailMismatch = exportPeriods.length > 0;
+
+        if (sourceMismatch || detailMismatch) {
+          await repo.addError({
+            batch_id: batchId,
+            line_id: line.line_id,
+            code: 'service_period_projection_mismatch',
+            message: 'Historical or financial export lines must not claim canonical recurring detail periods',
+            metadata: {
+              invoice_charge_id: line.invoice_charge_id,
+              expected_source: expectedSource,
+              actual_source: exportSource ?? null,
+              expected_detail_periods: [],
+              actual_detail_periods: exportPeriods,
+              actual_summary: {
+                service_period_start: exportSummaryStart,
+                service_period_end: exportSummaryEnd
+              }
+            }
+          });
+          continue;
+        }
       }
 
       const serviceMappingKey = `${charge.service_id}:${batch.target_realm ?? 'default'}`;
@@ -146,10 +286,10 @@ export class AccountingExportValidation {
             message: serviceName
               ? `No mapping for service "${serviceName}"`
               : `No mapping for service ${charge.service_id}`,
-            metadata: {
+            metadata: mergeErrorMetadata(line, {
               service_id: charge.service_id,
               service_name: serviceName
-            }
+            })
           });
           missingServiceMappings.add(serviceMappingKey);
         }
@@ -173,7 +313,10 @@ export class AccountingExportValidation {
               batch_id: batchId,
               line_id: line.line_id,
               code: 'missing_tax_mapping',
-              message: `No tax code mapping for region ${charge.tax_region}`
+              message: `No tax code mapping for region ${charge.tax_region}`,
+              metadata: mergeErrorMetadata(line, {
+                tax_region: charge.tax_region
+              })
             });
             missingTaxRegions.add(cacheKey);
           }
@@ -184,11 +327,13 @@ export class AccountingExportValidation {
 
     if (isQuickBooks) {
       if (adapterType === 'quickbooks_online' && !batch.target_realm && lines.length > 0) {
+        const firstLine = lines[0];
         await repo.addError({
           batch_id: batchId,
-          line_id: lines[0].line_id,
+          line_id: firstLine.line_id,
           code: 'missing_target_realm',
-          message: 'QuickBooks exports require a target realm.'
+          message: 'QuickBooks exports require a target realm.',
+          metadata: mergeErrorMetadata(firstLine)
         });
       }
 
@@ -196,12 +341,16 @@ export class AccountingExportValidation {
         const clientRef = invoice.client_id ?? null;
         if (!clientRef) {
           const lineId = firstLineByInvoice.get(invoice.invoice_id);
+          const line = lineId ? lineById.get(lineId) : null;
           if (lineId && !missingClientRefs.has(invoice.invoice_id)) {
             await repo.addError({
               batch_id: batchId,
               line_id: lineId,
               code: 'missing_client_reference',
-              message: `Invoice ${invoice.invoice_id} is missing a client association`
+              message: `Invoice ${invoice.invoice_id} is missing a client association`,
+              metadata: mergeErrorMetadata(line, {
+                invoice_id: invoice.invoice_id
+              })
             });
             missingClientRefs.add(invoice.invoice_id);
           }
@@ -219,12 +368,17 @@ export class AccountingExportValidation {
             });
             if (!termMapping && !missingPaymentTerms.has(paymentKey)) {
               const lineId = firstLineByInvoice.get(invoice.invoice_id);
+              const line = lineId ? lineById.get(lineId) : null;
               if (lineId) {
                 await repo.addError({
                   batch_id: batchId,
                   line_id: lineId,
                   code: 'missing_payment_term_mapping',
-                  message: `No payment term mapping for ${client.payment_terms}`
+                  message: `No payment term mapping for ${client.payment_terms}`,
+                  metadata: mergeErrorMetadata(line, {
+                    client_id: clientRef,
+                    payment_terms: client.payment_terms
+                  })
                 });
               }
               missingPaymentTerms.add(paymentKey);
@@ -240,4 +394,92 @@ export class AccountingExportValidation {
     const cleanedStatus = openErrors.length === 0 ? 'ready' : 'needs_attention';
     await repo.updateBatchStatus(batchId, { status: cleanedStatus });
   }
+}
+
+function normalizeIsoString(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
+function normalizeRecurringPeriod(input: {
+  service_period_start?: unknown;
+  service_period_end?: unknown;
+  billing_timing?: unknown;
+}): NormalizedRecurringPeriod {
+  return {
+    service_period_start: normalizeIsoString(input.service_period_start),
+    service_period_end: normalizeIsoString(input.service_period_end),
+    billing_timing:
+      input.billing_timing === 'advance' || input.billing_timing === 'arrears'
+        ? input.billing_timing
+        : null
+  };
+}
+
+function normalizeExportLinePeriods(
+  payload: { recurring_detail_periods?: unknown } | null | undefined
+): NormalizedRecurringPeriod[] {
+  if (!payload || !Array.isArray(payload.recurring_detail_periods)) {
+    return [];
+  }
+
+  return payload.recurring_detail_periods
+    .map((period) => normalizeRecurringPeriod((period ?? {}) as Record<string, unknown>))
+    .filter((period) => period.service_period_start || period.service_period_end)
+    .sort(compareRecurringPeriods);
+}
+
+function normalizeExportLineServicePeriodSource(
+  payload: { service_period_source?: unknown } | null | undefined
+): AccountingExportServicePeriodSource | null {
+  if (!payload) {
+    return null;
+  }
+
+  return payload.service_period_source === 'canonical_detail_periods' ||
+    payload.service_period_source === 'invoice_header_fallback' ||
+    payload.service_period_source === 'financial_document_fallback'
+    ? payload.service_period_source
+    : null;
+}
+
+function areRecurringPeriodsEqual(
+  left: NormalizedRecurringPeriod[],
+  right: NormalizedRecurringPeriod[]
+): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    if (
+      left[index].service_period_start !== right[index].service_period_start ||
+      left[index].service_period_end !== right[index].service_period_end ||
+      left[index].billing_timing !== right[index].billing_timing
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function compareRecurringPeriods(left: NormalizedRecurringPeriod, right: NormalizedRecurringPeriod): number {
+  if (left.service_period_start !== right.service_period_start) {
+    return String(left.service_period_start ?? '').localeCompare(String(right.service_period_start ?? ''));
+  }
+
+  if (left.service_period_end !== right.service_period_end) {
+    return String(left.service_period_end ?? '').localeCompare(String(right.service_period_end ?? ''));
+  }
+
+  return String(left.billing_timing ?? '').localeCompare(String(right.billing_timing ?? ''));
 }

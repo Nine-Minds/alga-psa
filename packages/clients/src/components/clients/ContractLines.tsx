@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import PlanPickerDialog from './PlanPickerDialog';
-import { IClientContractLine, IContractLine, IServiceCategory } from '@alga-psa/types';
+import { IClientContract, IClientContractLine, IContractLine, IServiceCategory } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -16,6 +16,9 @@ import {
 interface ContractLinesProps {
     clientContractLines: IClientContractLine[];
     contractLines: IContractLine[];
+    assignments: IClientContract[];
+    selectedClientContractId: string | null;
+    onSelectedClientContractChange: (clientContractId: string | null) => void;
     serviceCategories: IServiceCategory[];
     clientId: string;
     onEdit: (billing: IClientContractLine) => void;
@@ -29,6 +32,9 @@ interface ContractLinesProps {
 const ContractLines: React.FC<ContractLinesProps> = ({
     clientContractLines,
     contractLines,
+    assignments,
+    selectedClientContractId,
+    onSelectedClientContractChange,
     serviceCategories,
     onEdit,
     onDelete,
@@ -126,20 +132,35 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                 <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
                     Contract Lines
                 </h3>
-                <Button
-                    id="add-new-contract-line-btn"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setIsDialogOpen(true);
-                    }}
-                    type="button"
-                    size="default"
-                    className="bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] flex items-center gap-2"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add New Plan
-                </Button>
+                <div className="flex items-center gap-2">
+                    <div className="w-72">
+                        <CustomSelect
+                            id="contract-lines-assignment-select"
+                            value={selectedClientContractId ?? ''}
+                            onValueChange={(value) => onSelectedClientContractChange(value || null)}
+                            options={assignments.map((assignment) => ({
+                                value: assignment.client_contract_id!,
+                                label: `Assignment ${assignment.client_contract_id?.slice(0, 8)} • Contract ${assignment.contract_id} (${assignment.start_date} → ${assignment.end_date ?? 'ongoing'})`,
+                            }))}
+                            placeholder="Select assignment..."
+                        />
+                    </div>
+                    <Button
+                        id="add-new-contract-line-btn"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsDialogOpen(true);
+                        }}
+                        type="button"
+                        size="default"
+                        disabled={!selectedClientContractId}
+                        className="bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] flex items-center gap-2"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add New Plan
+                    </Button>
+                </div>
             </div>
             <div className="rounded-lg border border-[rgb(var(--color-border-200))]">
                 <DataTable
@@ -158,8 +179,12 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                 isOpen={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
                 onSelect={(plan, serviceCategory, startDate) => {
+                    if (!selectedClientContractId) {
+                        return;
+                    }
                     const newContractLine: Omit<IClientContractLine, "client_contract_line_id" | "tenant"> = {
                         client_id: clientId,
+                        client_contract_id: selectedClientContractId,
                         contract_line_id: plan.contract_line_id!,
                         service_category: serviceCategory,
                         start_date: startDate,

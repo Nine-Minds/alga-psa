@@ -82,6 +82,7 @@
       "@alga-psa/workflows": ["ee/packages/workflows/src"],
       "@alga-psa/workflows/*": ["ee/packages/workflows/src/*"],
       "@alga-psa/block-content": ["packages/block-content/src"],
+      "@alga-psa/block-content/actions": ["packages/block-content/src/actions.ts"],
       "@alga-psa/block-content/*": ["packages/block-content/src/*"],
       "@alga-psa/formatting": ["packages/formatting/src"],
       "@alga-psa/formatting/*": ["packages/formatting/src/*"],

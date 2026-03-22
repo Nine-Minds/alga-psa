@@ -21,6 +21,43 @@ export interface RecentActivity {
   description: string;
 }
 
+type RecentInvoiceActivityRow = {
+  invoice_number: string;
+  total: string | number | null;
+  timestamp: string;
+  service_period_start?: string | Date | null;
+  service_period_end?: string | Date | null;
+};
+
+function normalizeDateOnly(value: string | Date | null | undefined): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === 'string') return value.slice(0, 10);
+  return null;
+}
+
+function formatCurrencyFromCents(value: string | number | null | undefined): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format((Number(value ?? 0) || 0) / 100);
+}
+
+function formatRecentInvoiceDescription(invoice: RecentInvoiceActivityRow): string {
+  const totalLabel = formatCurrencyFromCents(invoice.total);
+  const servicePeriodStart = normalizeDateOnly(invoice.service_period_start);
+  const servicePeriodEnd = normalizeDateOnly(invoice.service_period_end);
+
+  // Recent invoice activity is one of the portal surfaces that is allowed to
+  // explain canonical recurring coverage when detail rows exist. The metric
+  // cards above stay invoice-state counts rather than service-period metrics.
+  if (servicePeriodStart || servicePeriodEnd) {
+    return `Service period: ${servicePeriodStart ?? 'Unknown start'} to ${servicePeriodEnd ?? 'Unknown end'} • Total amount: ${totalLabel}`;
+  }
+
+  return `Total amount: ${totalLabel}`;
+}
+
 export const getDashboardMetrics = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext
@@ -71,7 +108,8 @@ export const getDashboardMetrics = withAuth(async (
           })
           .count('project_id as count'),
 
-        // Get pending invoices count
+        // Pending invoice counts remain financial-document / invoice-state
+        // metrics. They should not silently pivot to recurring coverage dates.
         trx('invoices')
           .where({
             'invoices.tenant': tenant,
@@ -158,17 +196,28 @@ export const getRecentActivity = withAuth(async (
         .limit(3);
 
       // Get recent invoices
-      const invoices = await trx('invoices')
+      const invoices = await trx('invoices as inv')
         .select([
-          'invoice_number',
-          'total_amount as total',
-          'updated_at as timestamp'
+          'inv.invoice_number',
+          'inv.total_amount as total',
+          'inv.updated_at as timestamp',
+          trx.raw('MIN(iid.service_period_start) as service_period_start'),
+          trx.raw('MAX(iid.service_period_end) as service_period_end'),
         ])
-        .where({
-          'invoices.tenant': tenant,
-          'invoices.client_id': clientId
+        .leftJoin('invoice_charges as ic', function() {
+          this.on('inv.invoice_id', '=', 'ic.invoice_id')
+              .andOn('inv.tenant', '=', 'ic.tenant');
         })
-        .orderBy('updated_at', 'desc')
+        .leftJoin('invoice_charge_details as iid', function() {
+          this.on('ic.item_id', '=', 'iid.item_id')
+              .andOn('ic.tenant', '=', 'iid.tenant');
+        })
+        .where({
+          'inv.tenant': tenant,
+          'inv.client_id': clientId
+        })
+        .groupBy('inv.invoice_id', 'inv.invoice_number', 'inv.total_amount', 'inv.updated_at')
+        .orderBy('inv.updated_at', 'desc')
         .limit(3);
 
       // Get recent asset maintenance activities
@@ -200,11 +249,11 @@ export const getRecentActivity = withAuth(async (
         timestamp: t.timestamp,
         description: t.description || 'No description available'
       })),
-      ...result.invoices.map((i: { invoice_number: string; timestamp: string; total: number }): RecentActivity => ({
+      ...result.invoices.map((i: RecentInvoiceActivityRow): RecentActivity => ({
         type: 'invoice',
         title: `Invoice ${i.invoice_number} generated`,
         timestamp: i.timestamp,
-        description: `Total amount: $${i.total}`
+        description: formatRecentInvoiceDescription(i)
       })),
       ...result.assetActivities.map((a: { asset_name: string; timestamp: string; description: string }): RecentActivity => ({
         type: 'asset',

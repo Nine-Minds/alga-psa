@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import type { IClientContract } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import type { ClientContractAssignmentCreateInput } from './types';
+import { deriveClientContractStatus } from './clientContractStatus';
 
 type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
 
@@ -41,6 +42,52 @@ const normalizeDateOnly = (value: unknown): string | undefined => {
     return trimmed.slice(0, 10);
   }
   return undefined;
+};
+
+const findMixedCurrencyActiveAssignment = async (
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  params: {
+    clientId: string;
+    targetCurrencyCode?: string | null;
+  }
+): Promise<{ currency_code: string; contract_name: string | null } | null> => {
+  const targetCurrencyCode =
+    typeof params.targetCurrencyCode === 'string' && params.targetCurrencyCode.trim().length > 0
+      ? params.targetCurrencyCode.trim()
+      : null;
+  if (!targetCurrencyCode) return null;
+
+  const rows = await knexOrTrx('client_contracts as cc')
+    .join('contracts as c', function joinContracts() {
+      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+    })
+    .where({
+      'cc.client_id': params.clientId,
+      'cc.tenant': tenant,
+      'cc.is_active': true,
+      'c.is_active': true,
+    })
+    .whereNot('c.currency_code', targetCurrencyCode)
+    .select('cc.start_date', 'cc.end_date', 'c.currency_code', 'c.contract_name');
+
+  const activeRow = rows.find((row: {
+    start_date: string | null;
+    end_date: string | null;
+    currency_code?: string | null;
+  }) => deriveClientContractStatus({
+    isActive: true,
+    startDate: row.start_date,
+    endDate: row.end_date,
+  }) === 'active');
+  if (!activeRow || typeof activeRow.currency_code !== 'string' || activeRow.currency_code.trim().length === 0) {
+    return null;
+  }
+
+  return {
+    currency_code: activeRow.currency_code,
+    contract_name: typeof activeRow.contract_name === 'string' ? activeRow.contract_name : null,
+  };
 };
 
 const subtractDaysFromDateOnly = (dateOnly: string, days: number): string | undefined => {
@@ -239,10 +286,8 @@ export const normalizeClientContract = (row: any): IClientContract => {
   const normalizedStartDate = normalizeDateOnly(normalized.start_date);
   const effectiveNoticePeriodDays = normalizeNonNegativeInteger(normalized.effective_notice_period_days);
   const effectiveRenewalMode = normalizeRenewalMode(normalized.effective_renewal_mode);
-  const contractStatus = typeof normalized.contract_status === 'string' ? normalized.contract_status : undefined;
-  const isInactiveByStatus = contractStatus === 'terminated' || contractStatus === 'expired';
   const isInactiveAssignment = normalized.is_active !== true;
-  const shouldSkipForLifecycleState = isInactiveAssignment || isInactiveByStatus;
+  const shouldSkipForLifecycleState = isInactiveAssignment;
   normalized.evergreen_review_anchor_date =
     !shouldSkipForLifecycleState && !normalizedEndDate && normalizedStartDate
       ? computeNextEvergreenReviewAnchorDate({ startDate: normalizedStartDate })
@@ -283,6 +328,11 @@ export const normalizeClientContract = (row: any): IClientContract => {
   normalized.days_until_due = normalized.decision_due_date
     ? computeDaysUntilDate({ targetDate: normalized.decision_due_date as string })
     : undefined;
+  normalized.assignment_status = deriveClientContractStatus({
+    isActive: normalized.is_active === true,
+    startDate: normalizedStartDate ?? null,
+    endDate: normalizedEndDate ?? null,
+  });
 
   delete normalized.tenant_default_renewal_mode;
   delete normalized.tenant_default_notice_period_days;
@@ -419,9 +469,16 @@ export async function getDetailedClientContract(
 
   const normalized = normalizeClientContract(clientContract);
 
-  const contractLines = await knexOrTrx('contract_lines')
-    .where({ contract_id: (normalized as any).contract_id, tenant })
-    .select('contract_line_name');
+  const contractLines = await knexOrTrx('client_contracts as cc')
+    .join('contract_lines as cl', function joinContractLines() {
+      this.on('cc.contract_id', '=', 'cl.contract_id').andOn('cc.tenant', '=', 'cl.tenant');
+    })
+    .where({
+      'cc.client_contract_id': clientContractId,
+      'cc.tenant': tenant,
+    })
+    .distinct('cl.contract_line_id', 'cl.contract_line_name')
+    .select('cl.contract_line_name');
 
   return {
     ...normalized,
@@ -451,23 +508,22 @@ export async function createClientContractAssignment(
   }
 
   if (input.is_active) {
-    const overlapping = await knexOrTrx('client_contracts')
-      .where({ client_id: input.client_id, tenant, is_active: true })
-      .where(function overlap() {
-        this.where(function overlapsExistingEnd() {
-          this.where('end_date', '>', input.start_date).orWhereNull('end_date');
-        }).where(function overlapsExistingStart() {
-          if (input.end_date) {
-            this.where('start_date', '<', input.end_date);
-          } else {
-            this.whereRaw('1 = 1');
-          }
-        });
-      })
-      .first();
-
-    if (overlapping) {
-      throw new Error(`Client ${input.client_id} already has an active contract overlapping the specified range`);
+    const targetCurrencyCode =
+      typeof (contractExists as { currency_code?: string | null }).currency_code === 'string'
+        ? (contractExists as { currency_code: string }).currency_code
+        : null;
+    const mixedCurrencyConflict = await findMixedCurrencyActiveAssignment(knexOrTrx, tenant, {
+      clientId: input.client_id,
+      targetCurrencyCode,
+    });
+    if (mixedCurrencyConflict) {
+      const contractLabel = mixedCurrencyConflict.contract_name
+        ? ` ("${mixedCurrencyConflict.contract_name}")`
+        : '';
+      throw new Error(
+        `Client already has an active contract in ${mixedCurrencyConflict.currency_code}${contractLabel}. ` +
+        `Cannot create a contract in ${targetCurrencyCode}. Mixed-currency contracts for the same client are not supported.`
+      );
     }
   }
 
@@ -538,31 +594,6 @@ export async function updateClientContractAssignment(
 
     if (contract && contract.is_active) {
       throw new Error('Start date cannot be changed for active contracts. Set the contract to draft first.');
-    }
-  }
-
-  const effectiveStart = updateData.start_date ?? existing.start_date;
-  const effectiveEnd = updateData.end_date !== undefined ? updateData.end_date : existing.end_date;
-
-  if (effectiveStart) {
-    const overlapping = await knexOrTrx('client_contracts')
-      .where({ client_id: existing.client_id, tenant, is_active: true })
-      .whereNot({ client_contract_id: clientContractId })
-      .where(function overlap() {
-        this.where(function overlapsExistingEnd() {
-          this.where('end_date', '>', effectiveStart).orWhereNull('end_date');
-        }).where(function overlapsExistingStart() {
-          if (effectiveEnd) {
-            this.where('start_date', '<', effectiveEnd);
-          } else {
-            this.whereRaw('1 = 1');
-          }
-        });
-      })
-      .first();
-
-    if (overlapping) {
-      throw new Error(`Client ${existing.client_id} already has an active contract overlapping the specified range`);
     }
   }
 

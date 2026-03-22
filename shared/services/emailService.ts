@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import logger from '@alga-psa/core/logger';
 import { normalizeEmailAddress } from '../lib/email/addressUtils';
 import { ContactModel } from '../models/contactModel';
+import { ensureDefaultContractForClientIfBillingConfigured } from '../billingClients/defaultContract';
 
 // =============================================================================
 // INTERFACES
@@ -493,6 +494,11 @@ export class EmailService {
         source: input.source,
         created_at: now,
         updated_at: now
+      });
+
+      await ensureDefaultContractForClientIfBillingConfigured(this.knex, {
+        tenant: this.tenant,
+        clientId,
       });
 
       return {

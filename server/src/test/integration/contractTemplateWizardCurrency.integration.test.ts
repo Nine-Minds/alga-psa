@@ -659,9 +659,9 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
     });
   }
 
-  // Delete client_contract_lines and client_contracts
+  // Delete instantiated client-owned contracts
   for (const contractId of ids.contractIds) {
-    await safeDelete('client_contract_lines', {
+    await safeDelete('client_contracts', {
       tenant: tenantId,
       contract_id: contractId
     });

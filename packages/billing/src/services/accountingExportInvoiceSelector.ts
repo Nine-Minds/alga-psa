@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 
 import { createTenantKnex } from '@alga-psa/db';
 import { AccountingExportService } from './accountingExportService';
-import { AccountingExportBatch } from '@alga-psa/types';
+import { AccountingExportBatch, AccountingExportServicePeriodSource } from '@alga-psa/types';
 import { AppError } from '@alga-psa/core';
 
 type Nullable<T> = T | null | undefined;
@@ -30,6 +30,12 @@ export interface InvoicePreviewLine {
   currencyCode: string;
   servicePeriodStart?: string | null;
   servicePeriodEnd?: string | null;
+  recurringDetailPeriods?: Array<{
+    service_period_start?: string | null;
+    service_period_end?: string | null;
+    billing_timing?: 'arrears' | 'advance' | null;
+  }>;
+  servicePeriodSource: AccountingExportServicePeriodSource;
   isManualInvoice: boolean;
   isManualCharge: boolean;
   isMultiPeriod: boolean;
@@ -37,6 +43,27 @@ export interface InvoicePreviewLine {
   isZeroAmount: boolean;
   transactionIds: string[];
 }
+
+type InvoicePreviewSelectionRow = {
+  invoice_id: string;
+  invoice_number: string;
+  invoice_date: string | Date;
+  invoice_status: string;
+  tax_source?: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
+  currency_code?: string | null;
+  invoice_is_manual?: boolean | null;
+  billing_period_start?: string | Date | null;
+  billing_period_end?: string | Date | null;
+  total_amount?: number | string | null;
+  item_id: string;
+  total_price: number | string;
+  charge_is_manual?: boolean | null;
+  detail_service_period_start?: string | Date | null;
+  detail_service_period_end?: string | Date | null;
+  detail_billing_timing?: 'arrears' | 'advance' | null;
+};
 
 interface CreateBatchOptions {
   adapterType: string;
@@ -76,6 +103,9 @@ export class AccountingExportInvoiceSelector {
       .join('invoice_charges as ch', function joinCharges() {
         this.on('inv.invoice_id', '=', 'ch.invoice_id').andOn('inv.tenant', '=', 'ch.tenant');
       })
+      .leftJoin('invoice_charge_details as iid', function joinChargeDetails() {
+        this.on('ch.item_id', '=', 'iid.item_id').andOn('ch.tenant', '=', 'iid.tenant');
+      })
       .leftJoin('clients as cli', function joinClients() {
         this.on('inv.client_id', '=', 'cli.client_id').andOn('inv.tenant', '=', 'cli.tenant');
       })
@@ -94,7 +124,10 @@ export class AccountingExportInvoiceSelector {
         'inv.total_amount',
         'ch.item_id',
         'ch.total_price',
-        'ch.is_manual as charge_is_manual'
+        'ch.is_manual as charge_is_manual',
+        'iid.service_period_start as detail_service_period_start',
+        'iid.service_period_end as detail_service_period_end',
+        'iid.billing_timing as detail_billing_timing'
       ])
       .where('inv.tenant', this.tenantId)
       .andWhere('ch.tenant', this.tenantId);
@@ -149,7 +182,7 @@ export class AccountingExportInvoiceSelector {
       });
     }
 
-    const rows = await query.orderBy('inv.invoice_date', 'asc').orderBy('inv.invoice_number', 'asc');
+    const rows = (await query.orderBy('inv.invoice_date', 'asc').orderBy('inv.invoice_number', 'asc')) as InvoicePreviewSelectionRow[];
 
     if (rows.length === 0) {
       return [];
@@ -158,12 +191,79 @@ export class AccountingExportInvoiceSelector {
     const invoiceIds = Array.from(new Set(rows.map((row) => row.invoice_id))).filter(Boolean);
     const transactionMap = await this.fetchTransactions(invoiceIds);
 
-    return rows.map((row) => {
+    const rowsByChargeId = new Map<string, InvoicePreviewSelectionRow[]>();
+    for (const row of rows) {
+      const existing = rowsByChargeId.get(row.item_id) ?? [];
+      existing.push(row);
+      rowsByChargeId.set(row.item_id, existing);
+    }
+
+    return Array.from(rowsByChargeId.values()).map((chargeRows) => {
+      const row = chargeRows[0];
       const amountCents = toInteger(row.total_price);
       const totalAmountCents = toInteger(row.total_amount);
-      const servicePeriodStart = row.billing_period_start ? new Date(row.billing_period_start).toISOString() : null;
-      const servicePeriodEnd = row.billing_period_end ? new Date(row.billing_period_end).toISOString() : null;
-      const isMultiPeriod = Boolean(servicePeriodStart && servicePeriodEnd && servicePeriodStart !== servicePeriodEnd);
+      const detailServicePeriodStarts = chargeRows
+        .map((detailRow) => detailRow.detail_service_period_start)
+        .filter((value): value is string | Date => value !== null && value !== undefined)
+        .map(toIsoString)
+        .filter((value): value is string => value !== null)
+        .sort();
+      const detailServicePeriodEnds = chargeRows
+        .map((detailRow) => detailRow.detail_service_period_end)
+        .filter((value): value is string | Date => value !== null && value !== undefined)
+        .map(toIsoString)
+        .filter((value): value is string => value !== null)
+        .sort();
+      const recurringDetailPeriodsByKey = new Map<
+        string,
+        {
+          service_period_start: string | null;
+          service_period_end: string | null;
+          billing_timing: 'arrears' | 'advance' | null;
+        }
+      >();
+      for (const detailRow of chargeRows) {
+        const start = toIsoString(detailRow.detail_service_period_start);
+        const end = toIsoString(detailRow.detail_service_period_end);
+        const billingTiming =
+          detailRow.detail_billing_timing === 'advance' || detailRow.detail_billing_timing === 'arrears'
+            ? detailRow.detail_billing_timing
+            : null;
+        if (!start && !end) {
+          continue;
+        }
+        recurringDetailPeriodsByKey.set(`${start ?? ''}|${end ?? ''}|${billingTiming ?? ''}`, {
+          service_period_start: start,
+          service_period_end: end,
+          billing_timing: billingTiming,
+        });
+      }
+      const recurringDetailPeriods = Array.from(recurringDetailPeriodsByKey.values()).sort((left, right) => {
+        if (left.service_period_start !== right.service_period_start) {
+          return String(left.service_period_start ?? '').localeCompare(String(right.service_period_start ?? ''));
+        }
+        return String(left.service_period_end ?? '').localeCompare(String(right.service_period_end ?? ''));
+      });
+      const hasCanonicalDetailPeriods = recurringDetailPeriods.length > 0;
+      const servicePeriodStart = hasCanonicalDetailPeriods
+        ? recurringDetailPeriods[0]?.service_period_start ?? detailServicePeriodStarts[0] ?? null
+        : null;
+      const servicePeriodEnd = hasCanonicalDetailPeriods
+        ? recurringDetailPeriods[recurringDetailPeriods.length - 1]?.service_period_end ??
+          detailServicePeriodEnds[detailServicePeriodEnds.length - 1] ??
+          null
+        : null;
+      const servicePeriodSource = resolveServicePeriodSource({
+        hasCanonicalDetailPeriods,
+        servicePeriodStart,
+        servicePeriodEnd
+      });
+      const distinctDetailPeriods = new Set(
+        recurringDetailPeriods.map((period) => `${period.service_period_start ?? ''}|${period.service_period_end ?? ''}`)
+      );
+      const isMultiPeriod =
+        distinctDetailPeriods.size > 1 ||
+        Boolean(servicePeriodStart && servicePeriodEnd && servicePeriodStart !== servicePeriodEnd);
 
       return {
         invoiceId: row.invoice_id,
@@ -177,6 +277,8 @@ export class AccountingExportInvoiceSelector {
         currencyCode: row.currency_code ?? 'USD',
         servicePeriodStart,
         servicePeriodEnd,
+        recurringDetailPeriods: recurringDetailPeriods.length > 0 ? recurringDetailPeriods : undefined,
+        servicePeriodSource,
         isManualInvoice: Boolean(row.invoice_is_manual),
         isManualCharge: Boolean(row.charge_is_manual),
         isMultiPeriod,
@@ -203,7 +305,7 @@ export class AccountingExportInvoiceSelector {
       );
     }
 
-    const exportService = await AccountingExportService.create();
+    const exportService = await AccountingExportService.createForTenant(this.tenantId);
     const batch = await exportService.createBatch({
       adapter_type: options.adapterType,
       export_type: 'invoice',
@@ -226,6 +328,8 @@ export class AccountingExportInvoiceSelector {
         invoice_number: line.invoiceNumber,
         invoice_status: line.invoiceStatus,
         client_name: line.clientName,
+        service_period_source: line.servicePeriodSource,
+        recurring_detail_periods: line.recurringDetailPeriods ?? null,
         metadata: {
           manual_invoice: line.isManualInvoice,
           manual_charge: line.isManualCharge,
@@ -313,6 +417,53 @@ function toInteger(value: unknown): number {
   return 0;
 }
 
+function toIsoString(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    const isLocalMidnight =
+      value.getHours() === 0 &&
+      value.getMinutes() === 0 &&
+      value.getSeconds() === 0 &&
+      value.getMilliseconds() === 0;
+    const isUtcMidnight =
+      value.getUTCHours() === 0 &&
+      value.getUTCMinutes() === 0 &&
+      value.getUTCSeconds() === 0 &&
+      value.getUTCMilliseconds() === 0;
+
+    const year = isLocalMidnight ? value.getFullYear() : value.getUTCFullYear();
+    const month = isLocalMidnight ? value.getMonth() + 1 : value.getUTCMonth() + 1;
+    const day = isLocalMidnight ? value.getDate() : value.getUTCDate();
+
+    if (isLocalMidnight || isUtcMidnight) {
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00.000Z`;
+    }
+
+    return value.toISOString();
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return `${trimmed}T00:00:00.000Z`;
+    }
+  }
+
+  const date = new Date(value as string);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
 function expandInvoiceStatuses(input?: string[]): string[] | undefined {
   if (!input || input.length === 0) {
     return undefined;
@@ -368,4 +519,16 @@ function normalizeFilters(filters: InvoiceSelectionFilters): Record<string, unkn
   }
 
   return Object.keys(normalized).length > 0 ? normalized : null;
+}
+
+function resolveServicePeriodSource(params: {
+  hasCanonicalDetailPeriods: boolean;
+  servicePeriodStart: string | null;
+  servicePeriodEnd: string | null;
+}): AccountingExportServicePeriodSource {
+  if (params.hasCanonicalDetailPeriods) {
+    return 'canonical_detail_periods';
+  }
+
+  return 'financial_document_fallback';
 }

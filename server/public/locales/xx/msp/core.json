@@ -30,6 +30,7 @@
       "invoicing": "11111",
       "invoiceTemplates": "11111",
       "billingCycles": "11111",
+      "servicePeriods": "11111",
       "serviceCatalog": "11111",
       "products": "11111",
       "taxRates": "11111",

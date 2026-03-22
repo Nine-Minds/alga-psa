@@ -8,6 +8,7 @@ import { AlertCircle, Package, Clock, Activity } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import Spinner from '@alga-psa/ui/components/Spinner';
@@ -17,12 +18,12 @@ import {
   updateContractLine,
   updateContractLineFixedConfig,
   getContractLineFixedConfig,
-  upsertContractLineTerms,
 } from '@alga-psa/billing/actions/contractLineAction';
 import { IService, IContractLine } from '@alga-psa/types';
 import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import the actual component
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
+import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 
 interface FixedPlanConfigurationProps {
   contractLineId: string;
@@ -42,6 +43,19 @@ const BILLING_TIMING_OPTIONS = [
   },
 ] as const;
 
+const CADENCE_OWNER_OPTIONS = [
+  {
+    value: 'client',
+    label: 'Invoice on client billing schedule',
+    description: 'Use the client billing calendar so this recurring line stays aligned with the client’s normal invoice cadence.',
+  },
+  {
+    value: 'contract',
+    label: 'Invoice on contract anniversary',
+    description: 'Use this contract line’s own anniversary dates. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing.',
+  },
+];
+
 export function FixedPlanConfiguration({
   contractLineId,
   className = '',
@@ -58,6 +72,7 @@ export function FixedPlanConfiguration({
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [isCustom, setIsCustom] = useState(false);
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
+  const [cadenceOwner, setCadenceOwner] = useState<'client' | 'contract'>('client');
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [baseRateInput, setBaseRateInput] = useState<string>('');
   const [enableProration, setEnableProration] = useState<boolean>(false);
@@ -84,6 +99,7 @@ export function FixedPlanConfiguration({
         setPlanType(fetchedPlan.contract_line_type as PlanType);
         setIsCustom(fetchedPlan.is_custom ?? false);
         setBillingTiming((fetchedPlan.billing_timing ?? 'arrears') as 'arrears' | 'advance');
+        setCadenceOwner((fetchedPlan.cadence_owner ?? 'client') as 'client' | 'contract');
 
         // Fetch fixed config
         if (fetchedPlan.contract_line_id) {
@@ -94,7 +110,12 @@ export function FixedPlanConfiguration({
               setBaseRateInput((cfg.base_rate / 100).toFixed(2));
             }
             setEnableProration(!!cfg.enable_proration);
-            setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
+            setBillingCycleAlignment(
+              resolveBillingCycleAlignmentForCompatibility({
+                billingCycleAlignment: cfg.billing_cycle_alignment,
+                enableProration: cfg.enable_proration,
+              }) as any,
+            );
           }
         }
         setIsDirty(false);
@@ -139,8 +160,10 @@ export function FixedPlanConfiguration({
       const planData: Partial<IContractLine> = {
         contract_line_name: planName,
         billing_frequency: billingFrequency,
+        billing_timing: planType === 'Fixed' ? billingTiming : 'arrears',
         is_custom: isCustom,
         contract_line_type: planType!,
+        cadence_owner: cadenceOwner,
         tenant,
       };
 
@@ -151,14 +174,12 @@ export function FixedPlanConfiguration({
           await updateContractLineFixedConfig(plan.contract_line_id, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
-            billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start',
+            billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+              billingCycleAlignment: billingCycleAlignment,
+              enableProration: enableProration,
+            }),
           });
         }
-
-        await upsertContractLineTerms(
-          plan.contract_line_id,
-          planType === 'Fixed' ? billingTiming : 'arrears'
-        );
       }
 
       await fetchPlanData();
@@ -268,6 +289,24 @@ export function FixedPlanConfiguration({
                   Advance billing invoices the upcoming period at the start of each cycle.
                 </p>
               </div>
+              <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
+                <div>
+                  <Label className="text-sm font-medium text-[rgb(var(--color-text-900))]">Cadence Owner</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Choose which schedule defines this recurring line&apos;s service periods.
+                  </p>
+                </div>
+                <RadioGroup
+                  id="cadence-owner"
+                  name="cadence-owner"
+                  value={cadenceOwner}
+                  onChange={(value) => {
+                    setCadenceOwner(value as 'client' | 'contract');
+                    markDirty();
+                  }}
+                  options={CADENCE_OWNER_OPTIONS}
+                />
+              </div>
             </div>
           </section>
 
@@ -275,7 +314,7 @@ export function FixedPlanConfiguration({
             <div>
               <h3 className="text-lg font-semibold">Fixed Fee Settings</h3>
               <p className="text-sm text-muted-foreground">
-                Define the recurring base rate and optional proration behavior. Service allocations can be tuned once the line is active.
+                Define the recurring base rate and whether partial-period coverage should adjust the charge. Service allocations can be tuned once the line is active.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -318,7 +357,7 @@ export function FixedPlanConfiguration({
               <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
-                    Enable Proration
+                    Adjust for Partial Periods
                   </Label>
                   <Switch
                     id="enable-proration"
@@ -330,7 +369,7 @@ export function FixedPlanConfiguration({
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Toggle this on if you want the base rate to be prorated when the contract starts mid-cycle.
+                  Enable this when the recurring fee should scale to the covered portion of a service period if the contract starts or ends inside that period.
                 </p>
                 {enableProration && (
                   <div>
@@ -345,7 +384,7 @@ export function FixedPlanConfiguration({
                       options={[
                         { value: 'start', label: 'Start of Billing Cycle' },
                         { value: 'end', label: 'End of Billing Cycle' },
-                        { value: 'prorated', label: 'Prorated' },
+                        { value: 'prorated', label: 'Proportional Coverage' },
                       ]}
                       placeholder="Select alignment"
                     />

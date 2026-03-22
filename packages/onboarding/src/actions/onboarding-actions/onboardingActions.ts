@@ -54,6 +54,7 @@ export interface BillingData {
   servicePrice: string;
   contractLineName: string;
   serviceTypeId?: string;
+  serviceBillingMode?: 'fixed' | 'hourly' | 'usage';
   currencyCode?: string;
 }
 
@@ -655,16 +656,18 @@ export const setupBilling = withAuth(async (
         throw new Error('Invalid service type selected');
       }
 
-      // Create service catalog entry
+      // Create service catalog entry.
+      // Billing behavior is contract/service configuration context, not service-type identity.
       const currencyCode = data.currencyCode || 'USD';
       const rateInCents = Math.round((parseFloat(data.servicePrice) || 0) * 100);
+      // Billing behavior is contract/service configuration context, not service-type identity.
       serviceId = require('crypto').randomUUID();
       await trx('service_catalog').insert({
         service_id: serviceId,
         tenant,
         service_name: data.serviceName,
         description: data.serviceDescription,
-        billing_method: serviceType.billing_method || 'usage',
+        billing_method: data.serviceBillingMode || 'usage',
         custom_service_type_id: serviceType.id,
         default_rate: rateInCents,
         unit_of_measure: 'hour',
@@ -691,6 +694,7 @@ export const setupBilling = withAuth(async (
         serviceName: data.serviceName,
         serviceDescription: data.serviceDescription,
         servicePrice: data.servicePrice,
+        serviceBillingMode: data.serviceBillingMode || 'usage',
         contractLineName: data.contractLineName
       });
     });

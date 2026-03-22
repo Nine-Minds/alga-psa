@@ -12,12 +12,13 @@ describe('renewalsQueueActions create-renewal-draft wiring', () => {
     expect(source).toContain('export type RenewalDraftCreationResult = {');
     expect(source).toContain('export const createRenewalDraftForQueueItem = withAuth(async (');
     expect(source).toContain("throw new Error('Client contract id is required');");
-    expect(source).toContain("schema?.hasColumn?.('client_contracts', 'created_draft_contract_id') ?? false");
+    expect(source).toContain("schema?.hasColumn?.('client_contracts', 'template_contract_id') ?? false");
     expect(source).toContain('if (currentStatus !== \'pending\' && currentStatus !== \'renewing\') {');
     expect(source).toContain('Renewal draft can only be created for pending or renewing work items');
     expect(source).toContain('const draftContractId = randomUUID();');
     expect(source).toContain('status: \'draft\',');
-    expect(source).toContain('if (hasCreatedDraftColumn) {');
+    expect(source).toContain('owner_client_id: (source as any).client_id,');
+    expect(source).toContain('sourceWorkItemUpdate.created_draft_contract_id = draftContractId;');
     expect(source).toContain('created_draft_contract_id: draftContractId,');
     expect(source).toContain('created_draft_contract_id: draftContractId');
     expect(source).toContain('draft_client_contract_id: draftClientContractId');

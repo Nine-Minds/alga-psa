@@ -200,7 +200,11 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       } else {
         // Fetch and filter plans only if service and client are known
         try {
-          const plans = await getEligibleContractLinesForUI(clientId, entry.service_id) as EligiblePlanUI[];
+          const plans = await getEligibleContractLinesForUI(
+            clientId,
+            entry.service_id,
+            entry.start_time ?? selectedDate.toISOString()
+          ) as EligiblePlanUI[];
           const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
 
           const filteredPlans = plans.filter(plan => {

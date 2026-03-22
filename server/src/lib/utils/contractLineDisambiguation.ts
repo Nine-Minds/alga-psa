@@ -119,6 +119,10 @@ export async function getEligibleContractLines(
       'contract_line_services.service_id': serviceId
     })
     .where(function(this: Knex.QueryBuilder) {
+      this.whereNull('contracts.is_system_managed_default')
+        .orWhere('contracts.is_system_managed_default', false);
+    })
+    .where(function(this: Knex.QueryBuilder) {
       this.whereNull('client_contracts.end_date')
         .orWhere('client_contracts.end_date', '>', new Date().toISOString());
     });

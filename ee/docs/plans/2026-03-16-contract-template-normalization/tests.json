@@ -1,0 +1,308 @@
+[
+  {
+    "id": "T001",
+    "description": "Preflight inventory lists every runtime use of `template_contract_id`, `contracts.is_template`, and `contract_lines.is_template` called out in the plan scope",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed verification confirms every legacy template row in `contracts` has a canonical row in `contract_templates` before cleanup proceeds",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed verification confirms every legacy template-line artifact needed by runtime has a canonical `contract_template_line*` equivalent before cleanup proceeds",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "The plan explicitly resolves whether `client_contracts.template_contract_id` is provenance-only or removed, with no remaining ambiguous runtime use",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Billing engine contract-line resolution no longer joins `contracts` via `coalesce(cc.template_contract_id, cc.contract_id)`",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T006",
+    "description": "Billing engine contract-line resolution still returns the expected instantiated contract lines for a client-assigned contract created from a template",
+    "implemented": false,
+    "featureIds": ["F005", "F007"]
+  },
+  {
+    "id": "T007",
+    "description": "Billing discount resolution no longer joins `client_contracts` using `template_contract_id OR contract_id` fallback logic",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed invoice generation for a contract instantiated from a template succeeds after the source template is modified, proving runtime billing uses cloned contract data only",
+    "implemented": false,
+    "featureIds": ["F006", "F007", "F030"]
+  },
+  {
+    "id": "T009",
+    "description": "Template instantiation clones all required line/service/config/rate data so a newly instantiated contract remains self-contained",
+    "implemented": false,
+    "featureIds": ["F007", "F008"]
+  },
+  {
+    "id": "T010",
+    "description": "Changing template-side pricing or service configuration after instantiation does not alter billing for the existing instantiated contract",
+    "implemented": false,
+    "featureIds": ["F007", "F008"]
+  },
+  {
+    "id": "T011",
+    "description": "Contract list endpoints return only instantiated contracts and exclude template rows/resources",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T012",
+    "description": "Template list endpoints return only template resources and do not depend on `IContract` compatibility projection",
+    "implemented": false,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T013",
+    "description": "A contract lookup by ID no longer falls back to a template lookup when the contract does not exist",
+    "implemented": false,
+    "featureIds": ["F009", "F011"]
+  },
+  {
+    "id": "T014",
+    "description": "UI detail routing distinguishes template detail from contract detail without a mixed fallback-by-ID path",
+    "implemented": false,
+    "featureIds": ["F011", "F015"]
+  },
+  {
+    "id": "T015",
+    "description": "Template DTOs are no longer flattened into `IContract`-shaped responses in billing action loaders",
+    "implemented": false,
+    "featureIds": ["F010", "F029"]
+  },
+  {
+    "id": "T016",
+    "description": "Template line CRUD uses template-specific repositories/actions and no longer passes through mixed contract-line abstractions",
+    "implemented": false,
+    "featureIds": ["F012", "F013"]
+  },
+  {
+    "id": "T017",
+    "description": "Contract line CRUD uses instantiated-contract repositories/actions and no longer needs to detect whether the parent ID is a template",
+    "implemented": false,
+    "featureIds": ["F012", "F013"]
+  },
+  {
+    "id": "T018",
+    "description": "Repository tests prove no mixed helper accepts a single ID space for both templates and instantiated contracts after refactor",
+    "implemented": false,
+    "featureIds": ["F012", "F013"]
+  },
+  {
+    "id": "T019",
+    "description": "Deleting a template no longer deletes or mutates any `contract_lines` rows belonging to instantiated contracts",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T020",
+    "description": "Deleting a template no longer deletes or mutates any `contract_line_service_*` rows belonging to instantiated contracts",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T021",
+    "description": "Billing dashboard template views and contract views use explicit loaders/types rather than branching on a shared `is_template` contract shape",
+    "implemented": false,
+    "featureIds": ["F015", "F029"]
+  },
+  {
+    "id": "T022",
+    "description": "Client contract actions/models no longer backfill `template_contract_id` from `contract_id` as live state",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T023",
+    "description": "Renewal flows no longer depend on hybrid template/contract runtime fallback semantics",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T024",
+    "description": "API services no longer backfill or require `template_contract_id` as a runtime lookup fallback",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T025",
+    "description": "The legacy verification script is either retired or rewritten so it validates the normalized end state instead of duplicated storage",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T026",
+    "description": "The legacy contract-template decoupling script is either retired or rewritten so it no longer preserves hybrid runtime behavior",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T027",
+    "description": "Cleanup migrations are ordered so runtime cutover lands before any destructive schema removal",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T028",
+    "description": "Cleanup migration for `contracts.is_template` is gated by a precondition proving no live runtime code path still requires legacy template rows",
+    "implemented": false,
+    "featureIds": ["F021", "F022", "F031"]
+  },
+  {
+    "id": "T029",
+    "description": "Cleanup migration for `contract_lines.is_template` is gated by a precondition proving template-line separation is complete",
+    "implemented": false,
+    "featureIds": ["F021", "F023", "F031"]
+  },
+  {
+    "id": "T030",
+    "description": "If `template_contract_id` is removed, the migration preserves the chosen provenance semantics without breaking contract assignment reads",
+    "implemented": false,
+    "featureIds": ["F004", "F024"]
+  },
+  {
+    "id": "T031",
+    "description": "DB-backed post-cutover validation proves legacy template rows in `contracts` can be quarantined or removed without changing invoice-generation behavior",
+    "implemented": false,
+    "featureIds": ["F025", "F031", "F032"]
+  },
+  {
+    "id": "T032",
+    "description": "DB-backed post-cutover validation proves legacy template-line rows in `contract_lines` can be quarantined or removed without changing invoice-generation behavior",
+    "implemented": false,
+    "featureIds": ["F026", "F031", "F032"]
+  },
+  {
+    "id": "T033",
+    "description": "Operator runbook covers preflight inventory, cutover order, blocking conditions, and post-cutover validation commands",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T034",
+    "description": "Documentation clearly distinguishes template authoring tables from runtime contract tables after normalization",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T035",
+    "description": "Types/tests prove template DTOs and instantiated contract DTOs are no longer interchangeable at the action/API boundary",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T036",
+    "description": "QuickBooks/export/accounting adapter paths continue to use invoice and instantiated contract data only after template fallback removal",
+    "implemented": false,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T037",
+    "description": "Revenue/discount/invoice behavior for a contract instantiated from a template is unchanged after removing template fallback from runtime reads",
+    "implemented": false,
+    "featureIds": ["F005", "F006", "F030"]
+  },
+  {
+    "id": "T038",
+    "description": "No billing-engine code path joins `contract_templates` or legacy template-marked `contracts` rows as part of live billing execution after cutover",
+    "implemented": false,
+    "featureIds": ["F005", "F006", "F031", "F032"]
+  },
+  {
+    "id": "T039",
+    "description": "No contract API route returns template-backed data through contract-shaped compatibility adapters after cutover",
+    "implemented": false,
+    "featureIds": ["F009", "F010", "F011", "F031"]
+  },
+  {
+    "id": "T040",
+    "description": "No template CRUD path mutates instantiated contract tables after cutover",
+    "implemented": false,
+    "featureIds": ["F014", "F031"]
+  },
+  {
+    "id": "T041",
+    "description": "DB-backed sanity: canonical `contract_templates` rows exist while legacy template rows are absent or unreachable in the final normalized state",
+    "implemented": false,
+    "featureIds": ["F019", "F025", "F032"]
+  },
+  {
+    "id": "T042",
+    "description": "DB-backed sanity: canonical `contract_template_lines` and related child rows exist while legacy template-marked `contract_lines` are absent or unreachable in the final normalized state",
+    "implemented": false,
+    "featureIds": ["F019", "F026", "F032"]
+  },
+  {
+    "id": "T043",
+    "description": "Regression guard: contract detail screens still show correct instantiated contract lines and assignments after API/type separation",
+    "implemented": false,
+    "featureIds": ["F011", "F015", "F029"]
+  },
+  {
+    "id": "T044",
+    "description": "Regression guard: template detail screens still show correct template lines and services after API/type separation",
+    "implemented": false,
+    "featureIds": ["F010", "F015", "F029"]
+  },
+  {
+    "id": "T045",
+    "description": "Regression guard: renewal draft creation from a template-origin contract still retains intended provenance while billing uses only instantiated data",
+    "implemented": false,
+    "featureIds": ["F004", "F017", "F030"]
+  },
+  {
+    "id": "T046",
+    "description": "Regression guard: contract line repository callers no longer require `isTemplateContract()` or equivalent mixed-type probes after separation",
+    "implemented": false,
+    "featureIds": ["F012", "F013"]
+  },
+  {
+    "id": "T047",
+    "description": "Migration gate fails closed when any tenant still has runtime-only legacy template artifacts that are not represented canonically in `contract_template*` tables",
+    "implemented": false,
+    "featureIds": ["F003", "F021", "F031"]
+  },
+  {
+    "id": "T048",
+    "description": "Post-cutover validation proves no remaining source grep hits for the documented forbidden fallback patterns (`coalesce(template_contract_id, contract_id)`, mixed OR joins, template-to-contract adapters) in live paths",
+    "implemented": false,
+    "featureIds": ["F002", "F005", "F006", "F010", "F031"]
+  },
+  {
+    "id": "T049",
+    "description": "The plan and runtime design describe template instantiation as a one-way authoring-to-runtime transfer boundary with no reverse-sync semantics",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T050",
+    "description": "Editing a template after a contract has been instantiated does not change invoice generation or runtime contract configuration for the existing contract",
+    "implemented": false,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T051",
+    "description": "Deleting a template after one or more contracts have been instantiated does not change billing behavior or mutate runtime contract data for those contracts",
+    "implemented": false,
+    "featureIds": ["F035"]
+  }
+]

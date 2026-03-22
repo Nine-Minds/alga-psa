@@ -30,6 +30,7 @@
       "invoicing": "Rechnungsstellung",
       "invoiceTemplates": "Rechnungsvorlagen",
       "billingCycles": "Abrechnungszyklen",
+      "servicePeriods": "Leistungszeiträume",
       "serviceCatalog": "Servicekatalog",
       "products": "Produkte",
       "taxRates": "Steuersätze",

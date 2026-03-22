@@ -1,5 +1,6 @@
 import { TenantEntity } from './index';
 import { ISO8601String } from '@alga-psa/types';
+import type { CadenceOwner } from '@alga-psa/types';
 
 /**
  * Contract status types
@@ -9,12 +10,14 @@ export type RenewalWorkItemStatus = 'pending' | 'renewing' | 'non_renewing' | 's
 
 /**
  * Interface for a Contract
- * Represents a collection of contract lines (formerly contract lines) assignable to clients.
+ * Represents a client-owned instantiated contract header that owns contract lines.
+ * Reusable contract-definition behavior lives in contract templates, not non-template contracts.
  */
 export interface IContract extends TenantEntity {
   contract_id: string;
   contract_name: string;
   contract_description?: string | null;
+  owner_client_id?: string | null;
   billing_frequency: string;
   currency_code: string;
   is_active: boolean;
@@ -31,7 +34,10 @@ export interface IContract extends TenantEntity {
 export interface IContractWithClient extends IContract {
   client_id?: string;
   client_name?: string;
+  owner_client_name?: string | null;
   client_contract_id?: string;
+  assignment_status?: ContractStatus;
+  contract_header_status?: ContractStatus;
   start_date?: ISO8601String;
   end_date?: ISO8601String | null;
   template_contract_id?: string | null;
@@ -48,6 +54,7 @@ export interface IContractLineMapping extends TenantEntity {
   display_order?: number;
   custom_rate?: number | null;
   billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: CadenceOwner;
   created_at?: ISO8601String;
 }
 
@@ -116,6 +123,7 @@ export interface IContractAssignmentSummary extends TenantEntity {
   client_contract_id: string;
   client_id: string;
   client_name?: string | null;
+  assignment_status?: ContractStatus;
   start_date: ISO8601String | null;
   end_date: ISO8601String | null;
   is_active: boolean;

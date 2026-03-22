@@ -29,7 +29,7 @@ const LICENSE_TERM_OPTIONS = [
 ];
 
 const BILLING_METHOD_OPTIONS = [
-  { value: 'per_unit', label: 'Per Unit' },
+  { value: 'usage', label: 'Usage' },
 ];
 
 type PriceDraft = { currency_code: string; rate: number };
@@ -53,13 +53,13 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   const [allServiceTypes, setAllServiceTypes] = useState<
-    { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]
+    { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]
   >([]);
 
   const getInitialProductState = (): Partial<IService> => ({
     item_kind: 'product',
     is_active: true,
-    billing_method: 'per_unit',
+    billing_method: 'usage',
     unit_of_measure: '',
     cost_currency: 'USD',
     is_license: false,
@@ -92,15 +92,15 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
   }, [isOpen, product]);
 
   const productServiceTypes = useMemo(() => {
-    const perUnitTypes = allServiceTypes.filter((t) => t.billing_method === 'per_unit');
+    const usageTypes = allServiceTypes.filter((t) => t.billing_method === 'usage');
     const selectedTypeId = formProduct.custom_service_type_id || null;
 
-    if (selectedTypeId && !perUnitTypes.some((t) => t.id === selectedTypeId)) {
+    if (selectedTypeId && !usageTypes.some((t) => t.id === selectedTypeId)) {
       const selected = allServiceTypes.find((t) => t.id === selectedTypeId);
-      if (selected) return [...perUnitTypes, selected];
+      if (selected) return [...usageTypes, selected];
     }
 
-    return perUnitTypes;
+    return usageTypes;
   }, [allServiceTypes, formProduct.custom_service_type_id]);
 
   const fetchServiceTypes = async () => {
@@ -212,7 +212,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
         const created = await createService({
           service_name: formProduct.service_name!.trim(),
           custom_service_type_id: formProduct.custom_service_type_id!,
-          billing_method: (formProduct.billing_method || 'per_unit') as any,
+          billing_method: (formProduct.billing_method || 'usage') as any,
           default_rate: primary.rate,
           unit_of_measure: formProduct.unit_of_measure!.trim(),
           description: formProduct.description ?? null,
@@ -386,7 +386,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               onChange={(value) => setFormProduct({ ...formProduct, custom_service_type_id: value })}
               serviceTypes={productServiceTypes}
               onCreateType={async (name) => {
-                await createServiceTypeInline(name, 'per_unit');
+                await createServiceTypeInline(name, 'usage');
                 await fetchServiceTypes();
               }}
               onUpdateType={async (id, name) => {
@@ -501,7 +501,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Billing Method</label>
               <CustomSelect
                 options={BILLING_METHOD_OPTIONS}
-                value={(formProduct.billing_method as string) || 'per_unit'}
+                value={(formProduct.billing_method as string) || 'usage'}
                 onValueChange={(v) => setFormProduct({ ...formProduct, billing_method: v as any })}
               />
             </div>

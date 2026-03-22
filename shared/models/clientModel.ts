@@ -14,6 +14,7 @@ import {
   ClientCreationOptions 
 } from '../interfaces/client.interfaces';
 import { ValidationResult } from '../interfaces/validation.interfaces';
+import { ensureDefaultContractForClientIfBillingConfigured } from '../billingClients/defaultContract';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -286,6 +287,11 @@ export class ClientModel {
     const [client] = await trx('clients')
       .insert(insertData)
       .returning('*');
+
+    await ensureDefaultContractForClientIfBillingConfigured(trx, {
+      tenant,
+      clientId: client.client_id,
+    });
     
     // Create default tax settings if not skipped
     if (!options.skipTaxSettings) {

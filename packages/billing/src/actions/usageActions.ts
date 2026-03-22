@@ -21,7 +21,8 @@ export const createUsageRecord = withAuth(async (_user, { tenant }, data: ICreat
         // Use trx for consistency if determineDefaultContractLine needs DB access within transaction
         const defaultPlanId = await determineDefaultContractLine(
           data.client_id,
-          data.service_id
+          data.service_id,
+          data.usage_date
           // trx // Removed transaction argument
         );
 
@@ -123,7 +124,8 @@ export const updateUsageRecord = withAuth(async (_user, { tenant }, data: IUpdat
         try {
           const defaultPlanId = await determineDefaultContractLine(
             clientIdForPlan,
-            serviceIdForPlan
+            serviceIdForPlan,
+            data.usage_date || originalRecord.usage_date
             // trx // Removed transaction argument
           );
           finalContractLineId = defaultPlanId || undefined; // Use default or undefined if none found

@@ -361,6 +361,56 @@ describe('DesignerVisualWorkspace', () => {
     await waitFor(() => expect(mapDbInvoiceToWasmViewModelMock).toHaveBeenCalled());
   });
 
+  it('T208: existing-invoice preview refresh forwards canonical recurring detail periods into the preview mapper after persistence', async () => {
+    getInvoiceForRenderingMock.mockResolvedValue({
+      invoice_id: 'inv-1',
+      invoice_number: 'INV-001',
+      client: { name: 'Acme Co.' },
+      invoice_charges: [
+        {
+          item_id: 'charge-1',
+          description: 'Managed Services',
+          service_period_start: '2026-01-01T00:00:00.000Z',
+          service_period_end: '2026-03-01T00:00:00.000Z',
+          recurring_detail_periods: [
+            {
+              service_period_start: '2026-01-01T00:00:00.000Z',
+              service_period_end: '2026-02-01T00:00:00.000Z',
+              billing_timing: 'advance',
+            },
+            {
+              service_period_start: '2026-02-01T00:00:00.000Z',
+              service_period_end: '2026-03-01T00:00:00.000Z',
+              billing_timing: 'advance',
+            },
+          ],
+        },
+      ],
+    });
+
+    renderWorkspace('preview');
+    fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
+    fireEvent.click(await screen.findByRole('combobox'));
+    fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
+
+    await waitFor(() =>
+      expect(mapDbInvoiceToWasmViewModelMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          invoice_charges: expect.arrayContaining([
+            expect.objectContaining({
+              recurring_detail_periods: expect.arrayContaining([
+                expect.objectContaining({
+                  service_period_start: '2026-01-01T00:00:00.000Z',
+                  service_period_end: '2026-02-01T00:00:00.000Z',
+                }),
+              ]),
+            }),
+          ]),
+        })
+      )
+    );
+  });
+
   it('guards against stale detail responses when selected invoice changes quickly', async () => {
     let resolveFirst: (value: unknown) => void = () => undefined;
     let resolveSecond: (value: unknown) => void = () => undefined;

@@ -6,11 +6,11 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { checkClientHasActiveContract, fetchClientIdsWithActiveContracts } from '@alga-psa/billing/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -55,6 +55,21 @@ const parseLocalYMD = (ymd?: string): Date | undefined => {
   return isNaN(d.getTime()) ? undefined : d;
 };
 
+const CADENCE_OWNER_OPTIONS = [
+  {
+    value: 'client',
+    label: 'Invoice on client billing schedule',
+    description:
+      'Use the client billing calendar so recurring lines stay aligned with the client’s normal invoice cadence.',
+  },
+  {
+    value: 'contract',
+    label: 'Invoice on contract anniversary',
+    description:
+      'Use contract-anniversary service periods for recurring lines that should follow the contract timeline.',
+  },
+];
+
 export function ContractBasicsStep({
   data,
   updateData,
@@ -69,11 +84,8 @@ export function ContractBasicsStep({
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [poAmountInput, setPoAmountInput] = useState<string>('');
-  const [clientHasActiveContract, setClientHasActiveContract] = useState(false);
-  const [checkingActiveContract, setCheckingActiveContract] = useState(false);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-  const [disabledClientIds, setDisabledClientIds] = useState<Set<string>>(new Set());
   const [startDate, setStartDate] = useState<Date | undefined>(parseLocalYMD(data.start_date));
   const [endDate, setEndDate] = useState<Date | undefined>(parseLocalYMD(data.end_date));
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
@@ -89,12 +101,8 @@ export function ContractBasicsStep({
   useEffect(() => {
     const loadClients = async () => {
       try {
-        const [fetchedClients, activeContractClientIds] = await Promise.all([
-          getAllClientsForBilling(),
-          fetchClientIdsWithActiveContracts(data.contract_id),
-        ]);
+        const fetchedClients = await getAllClientsForBilling();
         setClients(fetchedClients);
-        setDisabledClientIds(new Set(activeContractClientIds));
       } catch (error) {
         console.error('Error loading clients:', error);
       } finally {
@@ -115,28 +123,6 @@ export function ContractBasicsStep({
     setStartDate(parseLocalYMD(data.start_date));
     setEndDate(parseLocalYMD(data.end_date));
   }, [data.start_date, data.end_date]);
-
-  useEffect(() => {
-    const checkActiveContract = async () => {
-      if (!data.client_id || data.is_draft) {
-        setClientHasActiveContract(false);
-        return;
-      }
-
-      setCheckingActiveContract(true);
-      try {
-        const hasActive = await checkClientHasActiveContract(data.client_id, data.contract_id);
-        setClientHasActiveContract(hasActive);
-      } catch (error) {
-        console.error('Error checking for active contract:', error);
-        setClientHasActiveContract(false);
-      } finally {
-        setCheckingActiveContract(false);
-      }
-    };
-
-    void checkActiveContract();
-  }, [data.client_id, data.is_draft, data.contract_id]);
 
   const templateOptions = templates.map((template) => ({
     value: template.contract_id,
@@ -230,7 +216,6 @@ export function ContractBasicsStep({
           onFilterStateChange={setFilterState}
           clientTypeFilter={clientTypeFilter}
           onClientTypeFilterChange={setClientTypeFilter}
-          disabledClientIds={disabledClientIds}
           placeholder={isLoadingClients ? 'Loading clients…' : 'Select a client'}
           className="w-full"
           onAddNew={() => setIsQuickAddClientOpen(true)}
@@ -246,15 +231,6 @@ export function ContractBasicsStep({
         })}
         {!data.client_id && (
           <p className="text-xs text-[rgb(var(--color-text-400))]">Choose the client this contract is for.</p>
-        )}
-        {clientHasActiveContract && !data.is_draft && (
-          <p className="text-sm text-red-600">
-            This client already has an active contract. To create a new active contract, terminate
-            their current contract or save this contract as a draft.
-          </p>
-        )}
-        {checkingActiveContract && (
-          <p className="text-xs text-[rgb(var(--color-text-400))]">Checking current contract status…</p>
         )}
       </div>
 
@@ -288,6 +264,24 @@ export function ContractBasicsStep({
           className="w-full"
         />
         <p className="text-xs text-[rgb(var(--color-text-400))]">How often should this contract be billed?</p>
+      </div>
+
+      <div className="space-y-3 border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-[rgb(var(--color-surface-50))]">
+        <div>
+          <Label className="text-sm font-medium">Recurring Cadence Default</Label>
+          <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">
+            Sets the default cadence owner applied to recurring lines created in this wizard.
+          </p>
+        </div>
+        <RadioGroup
+          id="contract-basics-cadence-owner"
+          name="contract-basics-cadence-owner"
+          options={CADENCE_OWNER_OPTIONS}
+          value={data.cadence_owner ?? 'client'}
+          onChange={(value) =>
+            updateData({ cadence_owner: value as ContractWizardData['cadence_owner'] })
+          }
+        />
       </div>
 
       <div className="space-y-2">
