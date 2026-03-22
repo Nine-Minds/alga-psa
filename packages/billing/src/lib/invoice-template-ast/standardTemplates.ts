@@ -48,6 +48,10 @@ const buildStandardDefaultAst = (templateName: string): InvoiceTemplateAst => ({
   version: INVOICE_TEMPLATE_AST_VERSION,
   metadata: {
     templateName,
+    printSettings: {
+      paperPreset: 'Letter',
+      marginMm: 10.58,
+    },
   },
   bindings: buildSharedBindings(),
   layout: {
@@ -136,6 +140,10 @@ const buildStandardDetailedAst = (): InvoiceTemplateAst => ({
   version: INVOICE_TEMPLATE_AST_VERSION,
   metadata: {
     templateName: 'Detailed Template',
+    printSettings: {
+      paperPreset: 'Letter',
+      marginMm: 10.58,
+    },
   },
   bindings: buildSharedBindings(),
   layout: {

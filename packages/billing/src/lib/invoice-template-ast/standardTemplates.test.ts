@@ -10,6 +10,10 @@ describe('standard invoice template AST definitions', () => {
     const standardDefaultAst = getStandardInvoiceTemplateAstByCode('standard-default');
     expect(standardDefaultAst?.kind).toBe('invoice-template-ast');
     expect(standardDefaultAst?.layout.type).toBe('document');
+    expect(standardDefaultAst?.metadata?.printSettings).toEqual({
+      paperPreset: 'Letter',
+      marginMm: 10.58,
+    });
   });
 
   it('returns cloned AST payloads to avoid mutation leaks', () => {
