@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal invoice preview intentionally reuses billing feature presentation components for customer invoice views. */
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { TemplateRenderer, PaperInvoice } from '@alga-psa/billing/components';

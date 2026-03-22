@@ -104,12 +104,6 @@
       "@alga-psa/email/*": [
         "../packages/email/src/*"
       ],
-      "@shared/workflow": [
-        "../shared/workflow"
-      ],
-      "@shared/workflow/*": [
-        "../shared/workflow/*"
-      ],
       "@alga-psa/core": [
         "../packages/core/src"
       ],
@@ -183,6 +177,12 @@
       "@alga-psa/ee-stubs/*": [
         "../packages/ee/src/*"
       ],
+      "@alga-psa/workflow-streams": [
+        "../packages/workflow-streams/src/streams"
+      ],
+      "@alga-psa/workflow-streams/*": [
+        "../packages/workflow-streams/src/streams/*"
+      ],
       "@alga-psa/workflows": [
         "../ee/packages/workflows/src"
       ],
@@ -194,6 +194,12 @@
       ],
       "@alga-psa/documents/*": [
         "../packages/documents/src/*"
+      ],
+      "@alga-psa/block-content": [
+        "../packages/block-content/src"
+      ],
+      "@alga-psa/block-content/*": [
+        "../packages/block-content/src/*"
       ],
       "@alga-psa/storage": [
         "../packages/storage/src"
@@ -224,6 +230,12 @@
       ],
       "@alga-psa/client-portal/*": [
         "../packages/client-portal/src/*"
+      ],
+      "@alga-psa/client-portal-composition": [
+        "../packages/client-portal-composition/src"
+      ],
+      "@alga-psa/client-portal-composition/*": [
+        "../packages/client-portal-composition/src/*"
       ],
       "@alga-psa/portal-shared": [
         "../packages/portal-shared/src"

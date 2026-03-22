@@ -69,6 +69,12 @@ const routes: Route[] = [
   { pattern: /^\/feature-flags$/, handler: handleFeatureFlags },
   { pattern: /^\/feature-flags\/(\d+)$/, handler: handleFeatureFlagById },
   { pattern: /^\/feature-flags\/(\d+)\/tenants$/, handler: handleFeatureFlagTenants },
+  // Notifications
+  { pattern: /^\/notifications\/resolve-recipients$/, handler: handleResolveRecipients },
+  { pattern: /^\/notifications\/([0-9a-f-]+)\/stats$/, handler: handleNotificationStats },
+  { pattern: /^\/notifications\/([0-9a-f-]+)\/reads$/, handler: handleNotificationReads },
+  { pattern: /^\/notifications\/([0-9a-f-]+)$/, handler: handleNotificationById },
+  { pattern: /^\/notifications$/, handler: handleNotifications },
   // Health check
   { pattern: /^\/health$/, handler: handleHealth },
   // Tenant Management API - pass through to host
@@ -117,12 +123,14 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
 
 async function processRequest(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   const method = request.http.method || 'POST';
-  const url = request.http.url || '/';
+  const fullUrl = request.http.url || '/';
+  const queryIdx = fullUrl.indexOf('?');
+  const url = queryIdx >= 0 ? fullUrl.substring(0, queryIdx) : fullUrl;
   const requestId = request.context.requestId ?? 'n/a';
   const tenantId = request.context.tenantId;
   const extensionId = request.context.extensionId;
 
-  await safeLog(host, 'info', `[nineminds-control-panel] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${url} build=${BUILD_STAMP}`);
+  await safeLog(host, 'info', `[nineminds-control-panel] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${fullUrl} build=${BUILD_STAMP}`);
 
   for (const route of routes) {
     const match = url.match(route.pattern);
@@ -151,6 +159,13 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
       'PUT /feature-flags/:id - Update a feature flag',
       'DELETE /feature-flags/:id - Delete a feature flag',
       'POST /feature-flags/:id/tenants - Add/remove tenant from flag',
+      'GET /notifications - List all notifications',
+      'POST /notifications - Create a notification',
+      'GET /notifications/:id - Get notification by ID',
+      'PUT /notifications/:id - Update a notification',
+      'DELETE /notifications/:id - Delete a notification',
+      'GET /notifications/:id/stats - Get notification stats',
+      'POST /notifications/resolve-recipients - Resolve matching users',
       'GET /audit - List audit logs',
       'GET /health - Health check',
     ],
@@ -388,6 +403,112 @@ async function handleFeatureFlagTenants(request: ExecuteRequest, host: HostBindi
   }
 
   const result = await callPlatformApi(host, `/api/v1/platform-feature-flags/${flagId}/tenants`, body);
+  return jsonResponse(result.data, { status: result.status });
+}
+
+// ── Notification handlers ──
+
+// Dispatcher for /notifications endpoint
+async function handleNotifications(request: ExecuteRequest, host: HostBindings, _params: Record<string, string>): Promise<ExecuteResponse> {
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      const body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+      if (body.__action === 'create' || body.title) {
+        return handleCreateNotification(request, host, _params);
+      }
+    } catch { /* treat as list */ }
+  }
+  return handleListNotifications(request, host, _params);
+}
+
+async function handleListNotifications(_request: ExecuteRequest, host: HostBindings, _params: Record<string, string>): Promise<ExecuteResponse> {
+  await safeLog(host, 'info', '[nineminds-control-panel] listing notifications via uiProxy');
+  const result = await callPlatformApi(host, '/api/v1/platform-notifications');
+  return jsonResponse(result.data, { status: result.status });
+}
+
+async function handleCreateNotification(request: ExecuteRequest, host: HostBindings, _params: Record<string, string>): Promise<ExecuteResponse> {
+  await safeLog(host, 'info', '[nineminds-control-panel] creating notification via uiProxy');
+
+  let body: unknown = {};
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+    } catch { /* ignore */ }
+  }
+
+  const result = await callPlatformApi(host, '/api/v1/platform-notifications', { ...body as object, __method: 'POST' });
+  return jsonResponse(result.data, { status: result.status });
+}
+
+// Dispatcher for /notifications/:id endpoint
+async function handleNotificationById(request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      const body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+      if (body.__action === 'delete') return handleDeleteNotification(request, host, params);
+      if (body.__action === 'update' || body.title || body.banner_content || body.detail_content) {
+        return handleUpdateNotification(request, host, params);
+      }
+    } catch { /* treat as get */ }
+  }
+  return handleGetNotification(request, host, params);
+}
+
+async function handleGetNotification(_request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const id = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] fetching notification id=${id} via uiProxy`);
+  const result = await callPlatformApi(host, `/api/v1/platform-notifications/${id}`);
+  return jsonResponse(result.data, { status: result.status });
+}
+
+async function handleUpdateNotification(request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const id = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] updating notification id=${id} via uiProxy`);
+
+  let body: unknown = {};
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+    } catch { /* ignore */ }
+  }
+
+  const result = await callPlatformApi(host, `/api/v1/platform-notifications/${id}`, { ...body as object, __method: 'PUT' });
+  return jsonResponse(result.data, { status: result.status });
+}
+
+async function handleDeleteNotification(_request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const id = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] deleting notification id=${id} via uiProxy`);
+  const result = await callPlatformApi(host, `/api/v1/platform-notifications/${id}`, { __method: 'DELETE' });
+  return jsonResponse(result.data, { status: result.status });
+}
+
+async function handleNotificationStats(_request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const id = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] fetching notification stats id=${id} via uiProxy`);
+  const result = await callPlatformApi(host, `/api/v1/platform-notifications/${id}/stats`);
+  return jsonResponse(result.data, { status: result.status });
+}
+
+async function handleNotificationReads(_request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  const id = params.param0;
+  await safeLog(host, 'info', `[nineminds-control-panel] fetching notification reads id=${id} via uiProxy`);
+  const result = await callPlatformApi(host, `/api/v1/platform-notifications/${id}/reads`);
+  return jsonResponse(result.data, { status: result.status });
+}
+
+async function handleResolveRecipients(request: ExecuteRequest, host: HostBindings, _params: Record<string, string>): Promise<ExecuteResponse> {
+  await safeLog(host, 'info', '[nineminds-control-panel] resolving notification recipients via uiProxy');
+
+  let body: unknown = {};
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+    } catch { /* ignore */ }
+  }
+
+  const result = await callPlatformApi(host, '/api/v1/platform-notifications/resolve-recipients', { ...body as object, __method: 'POST' });
   return jsonResponse(result.data, { status: result.status });
 }
 

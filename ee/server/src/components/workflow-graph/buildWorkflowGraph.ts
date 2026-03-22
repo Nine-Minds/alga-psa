@@ -1,5 +1,5 @@
 import ELK from 'elkjs/lib/elk.bundled';
-import type { Step, IfBlock, ForEachBlock, TryCatchBlock } from '@shared/workflow/runtime/client';
+import type { Step, IfBlock, ForEachBlock, TryCatchBlock } from '@alga-psa/workflows/runtime';
 import type { Edge, Node } from 'reactflow';
 
 export type WorkflowGraphNodeKind = 'start' | 'step' | 'join' | 'insert';

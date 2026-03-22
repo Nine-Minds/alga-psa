@@ -1,8 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import type { WorkflowBundleV1 } from '@shared/workflow/bundle/workflowBundleV1';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
+import type { WorkflowBundleV1 } from '@alga-psa/workflows/bundle';
+import {
+  WorkflowDefinitionModelV2,
+  WorkflowDefinitionVersionModelV2,
+} from '@alga-psa/workflows/persistence';
 import { validateWorkflowBundleHeaderV1 } from './validateWorkflowBundleHeaderV1';
 import { validateWorkflowBundleSchemaV1 } from './validateWorkflowBundleSchemaV1';
 import { validateWorkflowBundleDependenciesV1 } from './validateWorkflowBundleDependenciesV1';

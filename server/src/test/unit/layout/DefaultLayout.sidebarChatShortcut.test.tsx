@@ -2,9 +2,9 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import DefaultLayout from '../../../components/layout/DefaultLayout';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
@@ -12,6 +12,9 @@ import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 vi.mock('next/navigation', () => ({
   usePathname: () => '/msp/dashboard',
   useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
 }));
 
 vi.mock('../../../components/layout/SidebarWithFeatureFlags', () => ({ default: () => null }));
@@ -34,6 +37,29 @@ vi.mock('@alga-psa/workflows/components', () => ({
   ActivityDrawerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@alga-psa/msp-composition/scheduling', () => ({
+  MspSchedulingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/msp-composition/projects', () => ({
+  MspTicketIntegrationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  MspClientIntegrationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/msp-composition/clients', () => ({
+  MspClientDrawerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  MspQuickAddClientProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  MspClientCrossFeatureProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/msp-composition/assets', () => ({
+  MspAssetCrossFeatureProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/msp-composition/documents', () => ({
+  MspDocumentsCrossFeatureProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('@alga-psa/ui', () => ({
   DrawerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   DrawerOutlet: () => null,
@@ -52,6 +78,11 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
 }));
 
 describe('DefaultLayout sidebar chat shortcut gating', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
   it('ignores the Sidebar Chat shortcut (⌘L/Ctrl+L) when aiAssistant is disabled', async () => {
     vi.mocked(isExperimentalFeatureEnabled).mockResolvedValueOnce(false);
     vi.stubGlobal(

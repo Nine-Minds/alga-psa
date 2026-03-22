@@ -6,9 +6,8 @@ import { addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '@alg
 import { registerCalendarSyncSubscriber } from '../../../lib/eventBus/subscribers/calendarSyncSubscriber';
 
 const modulePaths = vi.hoisted(() => {
-  const calendarActionsModuleUrl = new URL('../../../lib/actions/calendarActions.ts', import.meta.url);
-  const libDbModulePath = new URL('../../lib/db/index.tsx', calendarActionsModuleUrl).pathname;
-  const rootDbModulePath = new URL('../../db.ts', calendarActionsModuleUrl).pathname;
+  const libDbModulePath = new URL('../../../lib/db/index.tsx', import.meta.url).pathname;
+  const rootDbModulePath = new URL('../../../db.ts', import.meta.url).pathname;
   const eventBusIndexModulePath = new URL('../../../lib/eventBus/index.ts', import.meta.url).pathname;
 
   return {

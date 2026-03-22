@@ -1,5 +1,7 @@
 'use server';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing actions intentionally compose billing feature APIs for end-user self-service flows. */
+
 import { getConnection } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';

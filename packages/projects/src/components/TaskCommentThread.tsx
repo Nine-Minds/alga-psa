@@ -16,11 +16,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 interface TaskCommentThreadProps {
   taskId: string;
   projectId: string;
+  onCommentCountChange?: (taskId: string, count: number) => void;
 }
 
 export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   taskId,
-  projectId
+  projectId,
+  onCommentCountChange
 }) => {
   const [comments, setComments] = useState<IProjectTaskCommentWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +37,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       setIsLoading(true);
       const fetchedComments = await getTaskComments(taskId);
       setComments(fetchedComments);
+      onCommentCountChange?.(taskId, fetchedComments.length);
       // Load reactions for fetched comments
       const commentIds = fetchedComments.map(c => c.taskCommentId).filter(Boolean);
       if (commentIds.length > 0) {
@@ -75,17 +78,17 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     loadCurrentUser();
   }, [taskId]);
 
-  const handleCommentAdded = () => {
-    loadComments();
+  const handleCommentAdded = async () => {
+    await loadComments();
     setShowEditor(false);
   };
 
-  const handleCommentUpdated = () => {
-    loadComments();
+  const handleCommentUpdated = async () => {
+    await loadComments();
   };
 
-  const handleCommentDeleted = () => {
-    loadComments();
+  const handleCommentDeleted = async () => {
+    await loadComments();
   };
 
   const toggleCommentOrder = () => {

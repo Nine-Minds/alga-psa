@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket creation intentionally composes ticket feature actions for customer-submitted requests. */
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';

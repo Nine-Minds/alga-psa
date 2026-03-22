@@ -1,0 +1,280 @@
+[
+  {
+    "id": "F001",
+    "description": "Workflow Designer exposes an AI grouped palette tile backed by the shared designer action catalog",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "The shared Workflow V2 action registry exposes a first-class AI inference action such as `ai.infer`",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "AI inference steps remain modeled as `action.call` rather than introducing a new workflow node type",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Goals",
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Workflow authors can provide the AI prompt through the existing action input mapping authoring flow",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "AI step config persists an inline output schema and schema-authoring mode per step",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "The AI step properties panel includes a dedicated output schema authoring section in addition to the normal grouped action and save-as controls",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Simple schema mode lets authors add and remove top-level object fields for AI output",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Simple schema mode supports primitive field types, required flags, and field descriptions",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Simple schema mode supports nested object fields inside the root output object",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Simple schema mode supports arrays of primitives and arrays of objects inside the root output object",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "The designer generates canonical inline JSON Schema from the simple schema builder and stores it on the AI step",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Advanced mode lets authors edit raw inline JSON Schema for the AI step output",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "The designer can rehydrate simple mode from saved inline AI schemas that fit the supported simple-builder subset",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "The designer falls back to advanced mode without data loss when a saved inline AI schema is outside the supported simple-builder subset",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "The properties panel shows the resolved AI output schema preview rather than only the static registry schema for the AI action",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Workflow designer data-context construction resolves an AI step's output schema from step config rather than from the action registry's static output schema",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Downstream reference browsing, mapping, and expression autocomplete expose AI output fields through normal `vars.<saveAs>` behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Publish validation accepts AI step config only when the inline output schema is valid and within the supported subset",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Security / Permissions",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Publish-time type inference uses the resolved per-step AI output schema for downstream `vars` typing and compatibility checks",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Workflow save/load and edit flows preserve AI prompt, schema mode, and inline output schema configuration",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Workflow bundle export, import, and definition persistence preserve inline AI schema config without introducing schema-ref dependencies",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "A reusable server-side workflow inference service is built on top of the current OpenAI-compatible provider resolver",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "The workflow inference service submits structured-output requests using the step's inline JSON Schema as the declared output contract",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "The workflow inference service validates model output against the inline AI schema before returning it to workflow runtime",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "The workflow inference service normalizes transient provider, provider-configuration, and schema-validation failures into actionable workflow errors",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "The `ai.infer` action handler invokes the workflow inference service and returns structured results through the normal `action.call` runtime path",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "AI action outputs are stored via existing `saveAs` semantics and become available to later steps exactly like other saved action outputs",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "V1 uses the current app-level provider and model resolution with no per-step provider or model selector",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Existing non-AI workflows and existing grouped action flows continue to load, publish, and execute unchanged after AI support is added",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]

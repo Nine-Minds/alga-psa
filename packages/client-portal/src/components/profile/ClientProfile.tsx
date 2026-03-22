@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal profile screens intentionally compose user feature forms/actions for self-service profile management. */
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';

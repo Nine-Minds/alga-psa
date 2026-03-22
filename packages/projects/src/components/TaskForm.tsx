@@ -54,7 +54,7 @@ import TaskTicketLinks, { TaskTicketLinksRef } from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
 import TaskCommentThread from './TaskCommentThread';
-import { createDocumentAssociations, deleteDocument, removeDocumentAssociations } from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
@@ -90,6 +90,7 @@ interface TaskFormProps {
   inDrawer?: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
   prefillData?: TaskFormPrefillData;
+  onCommentCountChange?: (taskId: string, count: number) => void;
 }
 
 export default function TaskForm({
@@ -105,8 +106,10 @@ export default function TaskForm({
   onPhaseChange,
   inDrawer = false,
   projectTreeData = [],
-  prefillData
+  prefillData,
+  onCommentCountChange
 }: TaskFormProps): React.JSX.Element {
+  const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
@@ -1775,6 +1778,7 @@ export default function TaskForm({
               <TaskCommentThread
                 taskId={task.task_id}
                 projectId={phase.project_id}
+                onCommentCountChange={onCommentCountChange}
               />
             </div>
           )}

@@ -55,12 +55,12 @@ import {
   Asset,
   CreateAssetRequest,
 } from '@/interfaces/asset.interfaces';
-import { getRedisStreamClient } from '@shared/workflow/streams';
+import { getRedisStreamClient } from '@alga-psa/workflow-streams';
 import {
   buildIntegrationSyncCompletedPayload,
   buildIntegrationSyncFailedPayload,
   buildIntegrationSyncStartedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/integrationSyncEventBuilders';
+} from '@alga-psa/workflow-streams';
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 

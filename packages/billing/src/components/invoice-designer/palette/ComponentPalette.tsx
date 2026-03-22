@@ -3,7 +3,7 @@ import { useDraggable } from '@dnd-kit/core';
 import {
   buildInvoiceExpressionPathOptions,
   type SharedExpressionPathOption,
-} from '@shared/workflow/expression-authoring';
+} from '@alga-psa/workflows/expression-authoring';
 import { COMPONENT_CATALOG, ComponentDefinition } from '../constants/componentCatalog';
 import { LAYOUT_PRESETS } from '../constants/presets';
 import { OutlineView } from './OutlineView';

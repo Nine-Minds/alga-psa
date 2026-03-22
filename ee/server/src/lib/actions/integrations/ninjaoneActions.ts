@@ -34,7 +34,7 @@ import {
   NinjaOneRegion,
   NinjaOneOAuthCredentials,
 } from '../../../interfaces/ninjaone.interfaces';
-import { buildIntegrationDisconnectedPayload } from '@shared/workflow/streams/domainEventBuilders/integrationConnectionEventBuilders';
+import { buildIntegrationDisconnectedPayload } from '@alga-psa/workflow-streams';
 
 // Secret names for NinjaOne credentials
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';

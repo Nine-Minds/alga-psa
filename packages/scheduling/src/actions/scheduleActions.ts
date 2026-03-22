@@ -23,12 +23,12 @@ import {
   isAppointmentNoShowStatus,
   isAppointmentRescheduled,
   shouldEmitAppointmentEvents,
-} from '@shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
+} from '@alga-psa/workflow-streams';
 import {
   buildScheduleBlockCreatedPayload,
   buildScheduleBlockDeletedPayload,
   isScheduleBlockEntry,
-} from '@shared/workflow/streams/domainEventBuilders/scheduleBlockEventBuilders';
+} from '@alga-psa/workflow-streams';
 import {
   buildTechnicianArrivedPayload,
   buildTechnicianCheckedOutPayload,
@@ -39,7 +39,7 @@ import {
   isTechnicianCheckedOutStatus,
   isTechnicianEnRouteStatus,
   shouldEmitTechnicianDispatchEvents,
-} from '@shared/workflow/streams/domainEventBuilders/technicianDispatchEventBuilders';
+} from '@alga-psa/workflow-streams';
 import { maybePublishCapacityThresholdReached } from '../lib/capacityThresholdWorkflowEvents';
 
 export type ScheduleActionResult<T> =

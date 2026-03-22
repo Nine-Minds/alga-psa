@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { Fragment } from 'react';
 import type { IProjectPhase } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
@@ -9,6 +9,7 @@ import styles from './ProjectDetail.module.css';
 
 interface ProjectPhasesProps {
   phases: IProjectPhase[];
+  projectId: string;
   selectedPhase: IProjectPhase | null;
   isAddingTask: boolean;
   editingPhaseId: string | null;
@@ -34,16 +35,18 @@ interface ProjectPhasesProps {
   onSavePhase: (phase: IProjectPhase) => void;
   onCancelEdit: () => void;
   onDeletePhase: (phase: IProjectPhase) => void;
-  onDragOver: (e: React.DragEvent, phaseId: string, dropPosition: 'before' | 'after' | '', isOverPhaseItemBody?: boolean) => void; // Ensure "" is allowed for dropPosition
+  onDragOver: (e: React.DragEvent, phaseId: string, dropPosition: 'before' | 'after' | '', isOverPhaseItemBody?: boolean) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent, phase: IProjectPhase, beforePhaseId: string | null, afterPhaseId: string | null) => void;
   onDragStart: (e: React.DragEvent, phaseId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
+  onStatusesChanged?: () => void;
   onImport?: () => void;
 }
 
 export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   phases,
+  projectId,
   selectedPhase,
   isAddingTask,
   editingPhaseId,
@@ -53,7 +56,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   editingEndDate,
   phaseTaskCounts = {},
   phaseDropTarget,
-  taskDraggingOverPhaseId, // Destructure new prop
+  taskDraggingOverPhaseId,
   animatingPhases,
   onPhaseSelect,
   onAddTask,
@@ -71,6 +74,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onDrop,
   onDragStart,
   onDragEnd,
+  onStatusesChanged,
   onImport,
 }) => {
   const handleContainerDragOver = (e: React.DragEvent) => {
@@ -135,7 +139,8 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
     };
 
     return (
-      <div 
+      <li
+        aria-hidden="true"
         className={`${styles.phaseDropPlaceholder} ${visible ? styles.visible : ''}`}
         onDrop={handlePlaceholderDrop}
         onDragOver={handlePlaceholderDragOver}
@@ -178,9 +183,14 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
         </div>
       </div>
       {/* Scrollable phases list */}
-      <ul className={styles.phasesScrollArea} onDragOver={handleContainerDragOver} onDrop={handleContainerDrop}>
+      <ul
+        data-phase-scroll-area="true"
+        className={styles.phasesScrollArea}
+        onDragOver={handleContainerDragOver}
+        onDrop={handleContainerDrop}
+      >
         {(() => {
-          const sortedPhases = phases
+          const sortedPhases = [...phases]
             .sort((a, b) => {
               // Sort by order_key if available, otherwise fall back to end_date
               if (a.order_key || b.order_key) {
@@ -209,7 +219,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
                 />
               )}
               {sortedPhases.map((phase: IProjectPhase, index: number): React.JSX.Element => (
-          <div key={phase.phase_id}>
+          <Fragment key={phase.phase_id}>
             {/* Drop placeholder before phase - but not for first phase as it's handled above */}
             {phaseDropTarget?.phaseId === phase.phase_id && phaseDropTarget.position === 'before' && index > 0 && (
               <DropPlaceholder
@@ -221,6 +231,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
             )}
             <PhaseListItem
               phase={phase}
+              projectId={projectId}
               phases={phases}
               isSelected={selectedPhase?.phase_id === phase.phase_id}
               isEditing={editingPhaseId === phase.phase_id}
@@ -230,7 +241,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               editingStartDate={editingStartDate}
               editingEndDate={editingEndDate}
               taskCount={phaseTaskCounts[phase.phase_id]}
-              taskDraggingOverPhaseId={taskDraggingOverPhaseId} // Pass prop to PhaseListItem
+              taskDraggingOverPhaseId={taskDraggingOverPhaseId}
               onSelect={onPhaseSelect}
               onEdit={onEditPhase}
               onSave={onSavePhase}
@@ -245,6 +256,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               onDrop={onDrop}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
+              onStatusesChanged={onStatusesChanged}
             />
             {/* Drop placeholder after phase */}
             {phaseDropTarget?.phaseId === phase.phase_id && phaseDropTarget.position === 'after' && (
@@ -255,7 +267,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
                 visible={true}
               />
             )}
-          </div>
+          </Fragment>
         ))}
             </>
           );

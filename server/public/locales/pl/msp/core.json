@@ -10,19 +10,46 @@
     "clients": "Klienci",
     "contacts": "Kontakty",
     "documents": "Dokumenty",
+    "documentsAll": "Wszystkie dokumenty",
+    "knowledgeBase": "Baza wiedzy",
     "assets": "Zasoby",
     "timeManagement": "Zarządzanie czasem",
     "timeEntry": "Ewidencja czasu",
     "approvals": "Zatwierdzenia",
-    "billing": "Rozliczenia",
+    "billing": {
+      "label": "Rozliczenia",
+      "sections": {
+        "contracts": "Umowy",
+        "invoicing": "Fakturowanie",
+        "pricing": "Cennik",
+        "trackingReports": "Śledzenie i raporty"
+      },
+      "contractTemplates": "Szablony umów",
+      "clientContracts": "Umowy klientów",
+      "contractLinePresets": "Predefiniowane pozycje umów",
+      "invoicing": "Fakturowanie",
+      "invoiceTemplates": "Szablony faktur",
+      "billingCycles": "Cykle rozliczeń",
+      "servicePeriods": "Okresy świadczenia usług",
+      "serviceCatalog": "Katalog usług",
+      "products": "Produkty",
+      "taxRates": "Stawki podatkowe",
+      "usageTracking": "Śledzenie użycia",
+      "reports": "Raporty",
+      "accountingExports": "Eksporty księgowe"
+    },
     "schedule": "Harmonogram",
     "technicianDispatch": "Dyspozycja techników",
     "automationHub": "Centrum automatyzacji",
     "workflows": "Przepływy pracy",
+    "controlPanel": "Panel sterowania",
+    "workflowEditor": "Edytor przepływów pracy",
     "runs": "Uruchomienia",
     "events": "Zdarzenia",
     "deadLetter": "Dead Letter",
     "systemMonitor": "Monitor systemu",
+    "systemMonitoring": "Monitorowanie systemu",
+    "jobMonitoring": "Monitorowanie zadań",
     "jobs": "Zadania",
     "emailLogs": "Logi e-mail",
     "extensions": "Rozszerzenia"
@@ -31,7 +58,11 @@
     "backToMain": "Powrót do głównego",
     "searchPlaceholder": "Szukaj",
     "settings": "Ustawienia",
-    "support": "Wsparcie"
+    "support": "Wsparcie",
+    "goToDashboard": "Przejdź do pulpitu",
+    "logoAlt": "Logo AlgaPSA",
+    "expandSidebar": "Rozwiń pasek boczny",
+    "collapseSidebar": "Zwiń pasek boczny"
   },
   "settings": {
     "sections": {
@@ -46,8 +77,10 @@
       "general": "Ogólne",
       "users": "Użytkownicy",
       "teams": "Zespoły",
+      "language": "Język",
       "clientPortal": "Portal klienta",
       "ticketing": "Obsługa zgłoszeń",
+      "sla": "SLA",
       "projects": "Projekty",
       "interactions": "Interakcje",
       "notifications": "Powiadomienia",
@@ -63,11 +96,129 @@
       "security": "Bezpieczeństwo"
     }
   },
+  "dashboard": {
+    "onboardingWizard": "Kreator konfiguracji"
+  },
   "header": {
     "userFallback": "Użytkownik",
     "quickAccess": "Szybki dostęp do profilu i konta.",
     "profile": "Profil",
     "account": "Konto",
-    "signOut": "Wyloguj się"
+    "signOut": "Wyloguj się",
+    "quickCreate": {
+      "ariaLabel": "Otwórz szybkie tworzenie",
+      "title": "Szybkie tworzenie",
+      "heading": "Utwórz",
+      "options": {
+        "ticket": {
+          "label": "Zgłoszenie",
+          "description": "Utwórz nowe zgłoszenie wsparcia"
+        },
+        "client": {
+          "label": "Klient",
+          "description": "Dodaj nowego klienta do systemu"
+        },
+        "contact": {
+          "label": "Kontakt",
+          "description": "Dodaj nową osobę kontaktową"
+        },
+        "project": {
+          "label": "Projekt",
+          "description": "Rozpocznij nowy projekt"
+        },
+        "asset": {
+          "label": "Zasób",
+          "description": "Dodaj nowe urządzenie do obszaru roboczego"
+        },
+        "service": {
+          "label": "Usługa",
+          "description": "Dodaj nową usługę rozliczaną"
+        },
+        "product": {
+          "label": "Produkt",
+          "description": "Dodaj nowy produkt do katalogu"
+        }
+      }
+    },
+    "jobs": {
+      "ariaLabel": "Wyświetl aktywność zadań w tle",
+      "title": "Zadania w tle",
+      "description": "Śledź importy, uruchomienia automatyzacji i zaplanowaną pracę.",
+      "active": "Aktywne zadania",
+      "queued": "Zadania w kolejce",
+      "failedLast24h": "Błędy z ostatnich 24 h",
+      "openJobCenter": "Otwórz centrum zadań"
+    },
+    "breadcrumb": {
+      "home": "Strona główna",
+      "dashboard": "Pulpit"
+    },
+    "tenantBadge": {
+      "ariaLabel": "Aktywny tenant {{tenant}}"
+    },
+    "themeToggle": {
+      "ariaLabel": "Przelacz motyw",
+      "light": "Jasny",
+      "dark": "Ciemny",
+      "system": "System",
+      "selected": "Wybrany"
+    }
+  },
+  "dialogs": {
+    "aiInterrupt": {
+      "navigate": {
+        "title": "Opuścić stronę i anulować odpowiedź AI?",
+        "message": "Odpowiedź AI lub działanie narzędzia nadal trwa. Jeśli opuścisz tę stronę teraz, zostanie anulowane.",
+        "confirm": "Opuść stronę",
+        "cancel": "Pozostań na stronie"
+      },
+      "closeChat": {
+        "title": "Zamknąć czat i anulować odpowiedź AI?",
+        "message": "Odpowiedź AI lub działanie narzędzia nadal trwa. Jeśli zamkniesz czat teraz, zostanie anulowane.",
+        "confirm": "Zamknij czat",
+        "cancel": "Pozostaw czat otwarty"
+      }
+    }
+  },
+  "banners": {
+    "trial": {
+      "premiumConfirmed": "Premium potwierdzony — start w następnym cyklu rozliczeniowym",
+      "dayLeft": "Pozostał 1 dzień",
+      "daysLeft": "Pozostało {{count}} dni",
+      "premiumTrial": "Okres próbny Premium: {{daysLabel}} — potwierdź, aby zachować",
+      "stripeTrial": "Okres próbny {{tier}}: {{daysLabel}}"
+    },
+    "paymentFailed": {
+      "message": "Płatność nie powiodła się — zaktualizuj metodę płatności",
+      "portalError": "Nie udało się otworzyć portalu rozliczeń"
+    },
+    "platformNotification": {
+      "learnMore": "Dowiedz się więcej",
+      "dismiss": "Odrzuć powiadomienie"
+    }
+  },
+  "quickCreate": {
+    "success": {
+      "asset": "Zasób utworzony pomyślnie",
+      "ticket": "Zgłoszenie nr {{number}} utworzone pomyślnie",
+      "client": "Klient \"{{name}}\" utworzony pomyślnie",
+      "contact": "{{name}} dodano pomyślnie",
+      "project": "Projekt \"{{name}}\" utworzony pomyślnie",
+      "service": "Usługa utworzona pomyślnie",
+      "product": "Produkt utworzony pomyślnie"
+    },
+    "errors": {
+      "loadClients": "Nie udało się wczytać klientów",
+      "loadServiceTypes": "Nie udało się wczytać typów usług"
+    },
+    "dialogTitles": {
+      "contact": "Dodaj nowy kontakt",
+      "project": "Dodaj nowy projekt",
+      "service": "Dodaj nową usługę"
+    }
+  },
+  "rightSidebar": {
+    "title": "Czat",
+    "enterpriseOnly": "Funkcja czatu jest dostępna tylko w edycji Enterprise."
   }
 }

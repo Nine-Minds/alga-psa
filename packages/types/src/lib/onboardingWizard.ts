@@ -32,6 +32,7 @@ export interface WizardData {
   contractLineName: string;
   serviceTypeId?: string; // Selected service type
   serviceId?: string; // Track created service
+  currencyCode: string; // Default currency for pricing (e.g. 'USD')
 
   // Ticketing
   boardName: string;

@@ -204,6 +204,9 @@ type ChatProps = {
   autoSendPrompt?: string | null;
   onChatIdChange?: (chatId: string | null) => void;
   autoApprovedHttpMethods?: string[];
+  onHasMessagesChange?: (hasMessages: boolean) => void;
+  onInterruptibleStateChange?: (isInterruptible: boolean) => void;
+  onRegisterCancelHandler?: (cancelHandler: (() => void) | null) => void;
 };
 
 const AUTO_APPROVED_METHODS_STORAGE_KEY = 'chat:autoApprovedHttpMethods';
@@ -262,6 +265,9 @@ export const Chat: React.FC<ChatProps> = ({
   autoSendPrompt,
   onChatIdChange,
   autoApprovedHttpMethods,
+  onHasMessagesChange,
+  onInterruptibleStateChange,
+  onRegisterCancelHandler,
 }) => {
   const textareaId = useId();
   const [messageText, setMessageText] = useState('');
@@ -561,7 +567,7 @@ export const Chat: React.FC<ChatProps> = ({
     sendMessage();
   };
 
-  const handleStop = () => {
+  const handleStop = useCallback(() => {
     generationIdRef.current += 1;
     streamAbortControllerRef.current?.abort();
     streamAbortControllerRef.current = null;
@@ -580,7 +586,7 @@ export const Chat: React.FC<ChatProps> = ({
     setPendingFunctionStatus(pendingFunction ? 'awaiting' : 'idle');
     setPendingFunctionAction('none');
     setIsExecutingFunction(false);
-  };
+  }, [pendingFunction]);
 
   const handleSend = useCallback(async (
     trimmedMessage: string,
@@ -1026,6 +1032,14 @@ export const Chat: React.FC<ChatProps> = ({
   const displayMessages = [...activePersistedMessages, ...newChatMessages].filter(
     (message) => resolveDisplayMessageRole(message as DisplayChatMessage) !== 'function',
   );
+  const hasVisibleMessages =
+    displayMessages.length > 0 ||
+    incomingMessage.trim().length > 0 ||
+    fullMessage.trim().length > 0;
+
+  useEffect(() => {
+    onHasMessagesChange?.(hasVisibleMessages);
+  }, [hasVisibleMessages, onHasMessagesChange]);
 
   const handleRetryFromMessage = useCallback(
     (messageIndex: number) => {
@@ -1229,6 +1243,17 @@ export const Chat: React.FC<ChatProps> = ({
   const canModifyHistory =
     !generatingResponse && !isFunction && !isExecutingFunction && !pendingFunction;
   const canStop = generatingResponse || isExecutingFunction;
+
+  useEffect(() => {
+    onInterruptibleStateChange?.(canStop);
+  }, [canStop, onInterruptibleStateChange]);
+
+  useEffect(() => {
+    onRegisterCancelHandler?.(handleStop);
+    return () => {
+      onRegisterCancelHandler?.(null);
+    };
+  }, [handleStop, onRegisterCancelHandler]);
 
   const { method, normalizedMethod, isHttpMethod, endpointLabel } = determineHttpDetails(pendingFunction);
   const autoApprovalEnabledForMethod =

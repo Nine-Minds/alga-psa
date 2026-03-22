@@ -33,9 +33,10 @@ const KB_BASE_PATH = '/msp/knowledge-base';
 
 interface KnowledgeBasePageProps {
   activeTab?: TabValue;
+  aiAssistantEnabled?: boolean;
 }
 
-export default function KnowledgeBasePage({ activeTab = 'articles' }: KnowledgeBasePageProps) {
+export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantEnabled = false }: KnowledgeBasePageProps) {
   const { t } = useTranslation('features/documents');
   const tRef = useRef(t);
   tRef.current = t;
@@ -192,6 +193,7 @@ export default function KnowledgeBasePage({ activeTab = 'articles' }: KnowledgeB
           userId={userId}
           userName={userName}
           tenantId={tenantId}
+          aiAssistantEnabled={aiAssistantEnabled}
           onBack={handleBack}
           onSave={handleBack}
         />

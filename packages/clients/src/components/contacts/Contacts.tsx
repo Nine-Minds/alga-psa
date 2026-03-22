@@ -30,7 +30,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
-import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -50,6 +50,7 @@ interface ContactsProps {
 const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelectedClientId }) => {
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['contact']);
+  const { getDocumentsByEntity } = useDocumentsCrossFeature();
 
   // Use user preference for page size
   const {

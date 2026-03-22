@@ -23,6 +23,18 @@ export default defineConfig({
         replacement: `${path.resolve(__dirname, '../../shared')}/$1`,
       },
       {
+        find: /^@alga-psa\/workflow-streams$/,
+        replacement: `${path.resolve(__dirname, '../workflow-streams/src/streams/index.ts')}`,
+      },
+      {
+        find: /^@alga-psa\/workflow-streams\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../workflow-streams/src/streams/$1')}`,
+      },
+      {
+        find: /^@alga-psa\/core\/logger$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
+      },
+      {
         find: /^@alga-psa\/([^/]+)\/(.*)$/,
         replacement: `${path.resolve(__dirname, '..')}/$1/src/$2`,
       },

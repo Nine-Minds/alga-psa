@@ -19,22 +19,40 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
-vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({
-  default: ({ options, value, onChange, placeholder }: any) => (
-    <select
-      data-testid="searchable-select"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-    >
-      <option value="">{placeholder}</option>
-      {options.map((option: any) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-  ),
-}));
+vi.mock('@alga-psa/ui/components/AsyncSearchableSelect', () => {
+  // Minimal mock: renders a select that calls loadOptions on mount and on search,
+  // then exposes the options for selection.
+  const React = require('react');
+  function MockAsyncSearchableSelect({ value, onChange, loadOptions, placeholder, selectedLabel, limit }: any) {
+    const [options, setOptions] = React.useState<any[]>([]);
+    React.useEffect(() => {
+      loadOptions({ search: '', page: 1, limit: limit ?? 10 }).then((result: any) => {
+        setOptions(result.options);
+      });
+    }, [loadOptions, limit]);
+    return (
+      <select
+        data-testid="async-searchable-select"
+        value={value}
+        onChange={(event: any) => {
+          const opt = options.find((o: any) => o.value === event.target.value);
+          onChange(event.target.value, opt);
+        }}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option: any) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  return {
+    default: MockAsyncSearchableSelect,
+    __esModule: true,
+  };
+});
 
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({ options, value, onValueChange, placeholder, id }: any) => (
@@ -62,7 +80,7 @@ vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
 
 vi.mock('../src/actions/materialCatalogActions', () => ({
   listProjectMaterials: vi.fn(async () => mockMaterials),
-  searchServiceCatalogForPicker: vi.fn(async () => ({ items: mockProducts })),
+  searchServiceCatalogForPicker: vi.fn(async () => ({ items: mockProducts, totalCount: mockProducts.length })),
   getServicePrices: vi.fn(async () => mockPrices),
   addProjectMaterial: vi.fn(async () => undefined),
   deleteProjectMaterial: vi.fn(async () => undefined),
@@ -79,7 +97,7 @@ describe('ProjectMaterialsDrawer', () => {
     vi.mocked(actions.listProjectMaterials).mockClear();
     vi.mocked(actions.listProjectMaterials).mockImplementation(async () => mockMaterials);
     vi.mocked(actions.searchServiceCatalogForPicker).mockClear();
-    vi.mocked(actions.searchServiceCatalogForPicker).mockImplementation(async () => ({ items: mockProducts }));
+    vi.mocked(actions.searchServiceCatalogForPicker).mockImplementation(async () => ({ items: mockProducts, totalCount: mockProducts.length }));
     vi.mocked(actions.getServicePrices).mockClear();
     vi.mocked(actions.getServicePrices).mockImplementation(async () => mockPrices);
     vi.mocked(actions.addProjectMaterial).mockClear();
@@ -281,9 +299,11 @@ describe('ProjectMaterialsDrawer', () => {
     expect(await screen.findByText('Widget (W-1)')).toBeInTheDocument();
     expect(screen.getByText('Gadget')).toBeInTheDocument();
     expect(actions.searchServiceCatalogForPicker).toHaveBeenCalledWith({
+      search: '',
+      page: 1,
+      limit: 10,
       item_kinds: ['product'],
       is_active: true,
-      limit: 100,
     });
   });
 
@@ -302,7 +322,7 @@ describe('ProjectMaterialsDrawer', () => {
     const addButton = await screen.findByRole('button', { name: 'Add' });
     addButton.click();
 
-    const productSelect = await screen.findByTestId('searchable-select');
+    const productSelect = await screen.findByTestId('async-searchable-select');
     fireEvent.change(productSelect, { target: { value: 'service-1' } });
 
     const usdLabel = `USD - ${formatCurrencyFromMinorUnits(1000, 'en-US', 'USD')}`;
@@ -340,7 +360,7 @@ describe('ProjectMaterialsDrawer', () => {
     const addButton = await screen.findByRole('button', { name: 'Add' });
     addButton.click();
 
-    const productSelect = await screen.findByTestId('searchable-select');
+    const productSelect = await screen.findByTestId('async-searchable-select');
     fireEvent.change(productSelect, { target: { value: 'service-1' } });
 
     const initialTotal = formatCurrencyFromMinorUnits(1000, 'en-US', 'USD');
@@ -374,7 +394,7 @@ describe('ProjectMaterialsDrawer', () => {
     const addButton = await screen.findByRole('button', { name: 'Add' });
     addButton.click();
 
-    const productSelect = await screen.findByTestId('searchable-select');
+    const productSelect = await screen.findByTestId('async-searchable-select');
     fireEvent.change(productSelect, { target: { value: 'service-1' } });
 
     const quantityInput = await screen.findByRole('spinbutton');
@@ -421,7 +441,7 @@ describe('ProjectMaterialsDrawer', () => {
 
     expect(toast.toast.error).toHaveBeenCalledWith('Please select a product');
 
-    const productSelect = await screen.findByTestId('searchable-select');
+    const productSelect = await screen.findByTestId('async-searchable-select');
     fireEvent.change(productSelect, { target: { value: 'service-1' } });
 
     submitButton.click();

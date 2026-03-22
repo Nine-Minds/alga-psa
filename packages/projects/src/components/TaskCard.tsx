@@ -6,7 +6,7 @@ import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDep
 import { IUserWithRoles } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
-import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2, Tag } from 'lucide-react';
+import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2, Tag, MessageSquare } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -35,6 +35,7 @@ interface TaskCardProps {
   taskDependencies?: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] };
   taskTags?: ITag[];
   documentCount?: number;
+  commentCount?: number;
   priority?: IPriority | IStandardPriority;
   isAnimating?: boolean;
   searchQuery?: string;
@@ -75,6 +76,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   taskDependencies,
   taskTags: providedTaskTags = [],
   documentCount: providedDocumentCount,
+  commentCount = 0,
   priority,
   isAnimating = false,
   searchQuery = '',
@@ -466,6 +468,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
               <Paperclip className="w-3 h-3" />
               <span>{documentCount}</span>
+            </div>
+          )}
+          {commentCount > 0 && (
+            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
+              <MessageSquare className="w-3 h-3" />
+              <span>{commentCount}</span>
             </div>
           )}
           {/* Dependencies indicator */}

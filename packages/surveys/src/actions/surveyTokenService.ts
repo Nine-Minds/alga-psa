@@ -5,7 +5,7 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildSurveyExpiredPayload } from '@shared/workflow/streams/domainEventBuilders/surveyEventBuilders';
+import { buildSurveyExpiredPayload } from '@alga-psa/workflow-streams';
 
 type InvitationLookupRow = {
   tenant: string;

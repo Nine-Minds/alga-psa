@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
-import { ticketTimeEntryAddedEventPayloadSchema } from '@shared/workflow/runtime/schemas/ticketEventSchemas';
+import { buildWorkflowPayload } from '@alga-psa/workflow-streams/workflowEventPublishHelpers';
+import { ticketTimeEntryAddedEventPayloadSchema } from '@alga-psa/workflows/runtime/schemas/ticketEventSchemas';
 import { buildTicketTimeEntryAddedWorkflowEvent } from '../../lib/api/services/timeEntryWorkflowEvents';
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000000';

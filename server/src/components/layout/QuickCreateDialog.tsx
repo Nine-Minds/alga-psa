@@ -17,6 +17,7 @@ import { getAllClients } from '@alga-psa/clients/actions';
 import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'service' | 'product' | null;
 
@@ -26,6 +27,7 @@ interface QuickCreateDialogProps {
 }
 
 export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
+  const { t } = useTranslation('msp/core');
   const router = useRouter();
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
@@ -39,11 +41,14 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
       getAllClients(false)
         .then(setClients)
         .catch((error) => {
-          handleError(error, 'Failed to load clients');
+          handleError(
+            error,
+            t('quickCreate.errors.loadClients', { defaultValue: 'Failed to load clients' })
+          );
         })
         .finally(() => setIsLoadingClients(false));
     }
-  }, [type, clients.length]);
+  }, [type, clients.length, t]);
 
   // Load service types when needed for services
   useEffect(() => {
@@ -52,28 +57,45 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
       getServiceTypesForSelection()
         .then(setServiceTypes)
         .catch((error) => {
-          handleError(error, 'Failed to load service types');
+          handleError(
+            error,
+            t('quickCreate.errors.loadServiceTypes', {
+              defaultValue: 'Failed to load service types',
+            })
+          );
         })
         .finally(() => setIsLoadingServiceTypes(false));
     }
-  }, [type]);
+  }, [type, t]);
 
   const handleAssetAdded = () => {
-    toast.success('Asset created successfully');
+    toast.success(
+      t('quickCreate.success.asset', { defaultValue: 'Asset created successfully' })
+    );
     onClose();
     // Refresh the page to update any list that might be showing assets
     router.refresh();
   };
 
   const handleTicketAdded = (ticket: ITicket) => {
-    toast.success(`Ticket #${ticket.ticket_number} created successfully`);
+    toast.success(
+      t('quickCreate.success.ticket', {
+        defaultValue: 'Ticket #{{number}} created successfully',
+        number: ticket.ticket_number,
+      })
+    );
     onClose();
     // Refresh the page to update any list that might be showing tickets
     router.refresh();
   };
 
   const handleClientAdded = (client: IClient) => {
-    toast.success(`Client "${client.client_name}" created successfully`);
+    toast.success(
+      t('quickCreate.success.client', {
+        defaultValue: 'Client "{{name}}" created successfully',
+        name: client.client_name,
+      })
+    );
     onClose();
     // Refresh the page to update any list that might be showing clients
     router.refresh();
@@ -81,28 +103,42 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
 
   const handleContactAdded = (contact: IContact) => {
     const contactName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Contact';
-    toast.success(`${contactName} added successfully`);
+    toast.success(
+      t('quickCreate.success.contact', {
+        defaultValue: '{{name}} added successfully',
+        name: contactName,
+      })
+    );
     onClose();
     // Refresh the page to update any list that might be showing contacts
     router.refresh();
   };
 
   const handleProjectAdded = (project: IProject) => {
-    toast.success(`Project "${project.project_name}" created successfully`);
+    toast.success(
+      t('quickCreate.success.project', {
+        defaultValue: 'Project "{{name}}" created successfully',
+        name: project.project_name,
+      })
+    );
     onClose();
     // Refresh the page to update any list that might be showing projects
     router.refresh();
   };
 
   const handleServiceAdded = () => {
-    toast.success('Service created successfully');
+    toast.success(
+      t('quickCreate.success.service', { defaultValue: 'Service created successfully' })
+    );
     onClose();
     // Refresh the page to update any list that might be showing services
     router.refresh();
   };
 
   const handleProductAdded = () => {
-    toast.success('Product created successfully');
+    toast.success(
+      t('quickCreate.success.product', { defaultValue: 'Product created successfully' })
+    );
     onClose();
     // Refresh the page to update any list that might be showing products
     router.refresh();
@@ -158,7 +194,7 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   if (type === 'contact') {
     if (isLoadingClients) {
       return (
-        <Dialog isOpen={true} onClose={onClose} title="Add New Contact">
+        <Dialog isOpen={true} onClose={onClose} title={t('quickCreate.dialogTitles.contact', { defaultValue: 'Add New Contact' })}>
           <DialogContent className="max-w-2xl">
             <div className="flex justify-center items-center p-8">
               <LoadingIndicator />
@@ -182,7 +218,7 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   if (type === 'project') {
     if (isLoadingClients) {
       return (
-        <Dialog isOpen={true} onClose={onClose} title="Add New Project">
+        <Dialog isOpen={true} onClose={onClose} title={t('quickCreate.dialogTitles.project', { defaultValue: 'Add New Project' })}>
           <DialogContent className="max-w-2xl">
             <div className="flex justify-center items-center p-8">
               <LoadingIndicator />
@@ -205,7 +241,7 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   if (type === 'service') {
     if (isLoadingServiceTypes) {
       return (
-        <Dialog isOpen={true} onClose={onClose} title="Add New Service">
+        <Dialog isOpen={true} onClose={onClose} title={t('quickCreate.dialogTitles.service', { defaultValue: 'Add New Service' })}>
           <DialogContent className="max-w-2xl">
             <div className="flex justify-center items-center p-8">
               <LoadingIndicator />

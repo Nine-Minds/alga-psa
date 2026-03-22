@@ -1,9 +1,14 @@
 import logger from '@shared/core/logger.js';
-import { RedisStreamClient, WorkflowEventBaseSchema } from '@shared/workflow/streams/index.js';
-import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
+import {
+  RedisStreamClient,
+  WorkflowEventBaseSchema,
+} from '@alga-psa/workflow-streams';
+import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
+import {
+  WorkflowDefinitionModelV2,
+  WorkflowDefinitionVersionModelV2,
+  WorkflowRuntimeEventModelV2,
+} from '@alga-psa/workflows/persistence';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
 import { getAdminConnection } from '@shared/db/admin.js';
 import type { Knex } from 'knex';

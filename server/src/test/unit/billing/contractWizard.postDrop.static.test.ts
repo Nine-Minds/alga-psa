@@ -10,7 +10,7 @@ const contractWizardSource = fs.readFileSync(
 
 describe('contract wizard post-drop source guards', () => {
   it('does not write dropped client-contract line tables during client contract creation', () => {
-    expect(contractWizardSource).toContain("await trx('client_contracts').insert(clientContractInsertData);");
+    expect(contractWizardSource).toContain('await createClientContractAssignment(trx, tenant, {');
     expect(contractWizardSource).not.toContain("trx('client_contract_lines').insert");
     expect(contractWizardSource).not.toContain("trx('client_contract_services').insert");
     expect(contractWizardSource).not.toContain('replicateContractLinesToClient');

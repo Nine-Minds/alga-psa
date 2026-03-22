@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Documents from '@alga-psa/documents/components/Documents';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import type { IDocument } from '@alga-psa/types';
 
 interface AssetDocumentsProps {
@@ -19,6 +19,7 @@ const AssetDocuments: React.FC<AssetDocumentsProps> = ({
     onDocumentCreated
 }) => {
     const router = useRouter();
+    const { renderDocuments } = useDocumentsCrossFeature();
     const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -36,16 +37,18 @@ const AssetDocuments: React.FC<AssetDocumentsProps> = ({
     }, [onDocumentCreated, router]);
 
     return (
-        <Documents
-            id='documents'
-            documents={documents}
-            gridColumns={3}
-            userId={tenant} // Using tenant as userId since we're in tenant context
-            entityId={assetId}
-            entityType="asset"
-            isLoading={isLoading}
-            onDocumentCreated={handleDocumentCreated}
-        />
+        <>
+            {renderDocuments({
+                id: 'documents',
+                documents,
+                gridColumns: 3,
+                userId: tenant,
+                entityId: assetId,
+                entityType: 'asset',
+                isLoading,
+                onDocumentCreated: handleDocumentCreated,
+            })}
+        </>
     );
 };
 

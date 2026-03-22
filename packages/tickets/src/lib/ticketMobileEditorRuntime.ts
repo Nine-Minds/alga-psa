@@ -1,4 +1,4 @@
-import { Editor, type Content } from '@tiptap/core';
+import { Editor, type AnyExtension, type Content } from '@tiptap/core';
 import Image from '@tiptap/extension-image';
 import StarterKit from '@tiptap/starter-kit';
 import { convertBlockContentToHTML } from '../../../formatting/src/blocknoteUtils';
@@ -57,6 +57,14 @@ export class TicketMobileEditorRuntime {
 
   private currentFormat: TicketMobileRichTextFormat = 'blocknote';
 
+  private imageAuth: { baseUrl: string; apiKey: string } | null = null;
+
+  private imageObserver: MutationObserver | null = null;
+
+  private resizeObserver: ResizeObserver | null = null;
+
+  private pendingImageRewrites = new Set<string>();
+
   constructor(options: TicketMobileEditorRuntimeOptions) {
     const timerHost = globalThis as typeof globalThis & {
       setTimeout: typeof setTimeout;
@@ -86,6 +94,9 @@ export class TicketMobileEditorRuntime {
       case 'request':
         this.handleRequest(message.payload.requestId, message.payload.request);
         break;
+      case 'image-data':
+        this.applyImageData(message.payload.src, message.payload.dataUri);
+        break;
     }
 
     return message;
@@ -93,6 +104,8 @@ export class TicketMobileEditorRuntime {
 
   destroy(): void {
     this.clearContentChangeTimer();
+    this.stopImageObserver();
+    this.stopResizeObserver();
     this.ready = false;
     this.editor?.destroy();
     this.editor = null;
@@ -127,7 +140,7 @@ export class TicketMobileEditorRuntime {
           Image.configure({
             inline: false,
             allowBase64: false,
-          }),
+          }) as AnyExtension,
         ],
         content: initialContent,
         editorProps: {
@@ -177,6 +190,11 @@ export class TicketMobileEditorRuntime {
     }
 
     this.ready = true;
+
+    if (payload.imageAuth) {
+      this.imageAuth = payload.imageAuth;
+    }
+
     this.emitMessage({
       type: 'editor-ready',
       payload: {
@@ -185,6 +203,10 @@ export class TicketMobileEditorRuntime {
       },
     });
     this.emitStateChange();
+    this.emitContentHeight();
+    this.rewriteImageUrls();
+    this.startImageObserver();
+    this.startResizeObserver();
   }
 
   private executeCommand(command: TicketMobileEditorCommand, value?: unknown): boolean {
@@ -290,6 +312,7 @@ export class TicketMobileEditorRuntime {
     const nextContent = this.toEditorContent(nextDocument);
     editor.commands.setContent(nextContent, { emitUpdate: true });
     this.emitStateChange();
+    this.rewriteImageUrls();
     return true;
   }
 
@@ -363,6 +386,7 @@ export class TicketMobileEditorRuntime {
         json: this.getNormalizedJsonValue(),
       },
     });
+    this.emitContentHeight();
   }
 
   private clearContentChangeTimer(): void {
@@ -372,6 +396,14 @@ export class TicketMobileEditorRuntime {
 
     this.clearTimeoutFn(this.contentChangeTimer);
     this.contentChangeTimer = null;
+  }
+
+  private emitContentHeight(): void {
+    const height = this.element.scrollHeight;
+    this.emitMessage({
+      type: 'content-height',
+      payload: { height },
+    });
   }
 
   private emitError(code: string, message: string): void {
@@ -385,6 +417,10 @@ export class TicketMobileEditorRuntime {
   }
 
   private toEditorContent(document: TicketMobileRichTextDocument): Content {
+    if (document.sourceFormat === 'empty') {
+      return null;
+    }
+
     if (document.format === 'prosemirror') {
       return document.content as Content;
     }
@@ -450,5 +486,114 @@ export class TicketMobileEditorRuntime {
 
     const candidate = value as { type?: unknown; content?: unknown };
     return candidate.type === 'doc' && Array.isArray(candidate.content);
+  }
+
+  // --- Authenticated image URL rewriting ---
+
+  private rewriteImageUrls(): void {
+    if (!this.imageAuth) {
+      return;
+    }
+
+    const images = this.element.querySelectorAll('img[src]');
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i] as HTMLImageElement;
+      this.rewriteSingleImage(img);
+    }
+  }
+
+  private rewriteSingleImage(img: HTMLImageElement): void {
+    const src = img.getAttribute('src');
+    if (!src || !this.imageAuth) {
+      return;
+    }
+
+    // Only rewrite relative /api/documents/ URLs — skip already-rewritten data: URLs and external URLs
+    if (!src.startsWith('/api/documents/')) {
+      return;
+    }
+
+    // Avoid duplicate requests for the same src
+    if (this.pendingImageRewrites.has(src)) {
+      return;
+    }
+
+    this.pendingImageRewrites.add(src);
+
+    // Ask React Native to fetch the image (bypasses CORS)
+    this.emitMessage({
+      type: 'image-request',
+      payload: { src },
+    });
+  }
+
+  private applyImageData(src: string, dataUri: string): void {
+    this.pendingImageRewrites.delete(src);
+
+    const allImages = this.element.querySelectorAll('img[src]');
+    for (let i = 0; i < allImages.length; i++) {
+      const img = allImages[i] as HTMLImageElement;
+      if (img.getAttribute('src') === src) {
+        img.src = dataUri;
+        // Wait for image decode + layout before re-measuring height
+        img.addEventListener('load', () => {
+          requestAnimationFrame(() => {
+            this.emitContentHeight();
+          });
+        }, { once: true });
+      }
+    }
+  }
+
+  private startImageObserver(): void {
+    this.stopImageObserver();
+    if (!this.imageAuth) {
+      return;
+    }
+
+    this.imageObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (let i = 0; i < mutation.addedNodes.length; i++) {
+          const node = mutation.addedNodes[i];
+          if (node instanceof HTMLImageElement) {
+            this.rewriteSingleImage(node);
+          } else if (node instanceof HTMLElement) {
+            const images = node.querySelectorAll('img[src]');
+            for (let j = 0; j < images.length; j++) {
+              this.rewriteSingleImage(images[j] as HTMLImageElement);
+            }
+          }
+        }
+      }
+    });
+
+    this.imageObserver.observe(this.element, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  private stopImageObserver(): void {
+    this.imageObserver?.disconnect();
+    this.imageObserver = null;
+  }
+
+  private startResizeObserver(): void {
+    this.stopResizeObserver();
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    this.resizeObserver = new ResizeObserver(() => {
+      if (this.ready) {
+        this.emitContentHeight();
+      }
+    });
+    this.resizeObserver.observe(this.element);
+  }
+
+  private stopResizeObserver(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
   }
 }

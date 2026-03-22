@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
@@ -44,6 +44,7 @@ export default function TaskQuickAdd({
   prefillData,
   inDrawer
 }: TaskQuickAddProps): React.JSX.Element {
+
   const handleSubmit = async (resultTask: IProjectTask | null) => {
     // Ensure assigned_to is null if empty string or undefined
     if (resultTask) {

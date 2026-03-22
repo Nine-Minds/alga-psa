@@ -25,6 +25,7 @@ interface KanbanBoardProps {
   taskDependencies?: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
   taskTags?: Record<string, ITag[]>;
   taskDocumentCounts?: Map<string, number>;
+  taskCommentCounts?: Record<string, number>;
   allTaskTags?: ITag[];
   priorities?: (IPriority | IStandardPriority)[];
   projectTreeData?: any[];
@@ -36,6 +37,7 @@ interface KanbanBoardProps {
   searchCaseSensitive?: boolean;
   searchWholeWord?: boolean;
   zoomLevel?: number;
+  hideHeader?: boolean;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -102,6 +104,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   taskDependencies = {},
   taskTags = {},
   taskDocumentCounts = {},
+  taskCommentCounts = {},
   allTaskTags = [],
   priorities = [],
   projectTreeData,
@@ -113,6 +116,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   searchCaseSensitive = false,
   searchWholeWord = false,
   zoomLevel = 50,
+  hideHeader = false,
   onDrop,
   onDragOver,
   onAddCard,
@@ -167,7 +171,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   });
   
   return (
-    <div className={styles.kanbanBoard}>
+    <div className={styles.kanbanBoard} data-kanban-board="true">
       {statuses.filter(status => status.is_visible).map((status, index): React.JSX.Element => {
         // Use configured color or fallback to cycling colors
         const configuredColor = status.color;
@@ -192,6 +196,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             taskDependencies={taskDependencies}
             taskTags={taskTags}
             taskDocumentCounts={taskDocumentCounts instanceof Map ? Object.fromEntries(taskDocumentCounts.entries()) : {}}
+            taskCommentCounts={taskCommentCounts}
             priorities={priorities}
             statusIcon={statusIcon}
             backgroundColor={backgroundColor}
@@ -206,6 +211,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             columnWidth={columnWidth}
             cardGap={cardGap}
             zoomLevel={zoomLevel}
+            hideHeader={hideHeader}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onAddCard={onAddCard}

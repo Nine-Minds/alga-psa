@@ -3,6 +3,7 @@
 import React from 'react';
 import { FileText, Layers, CheckSquare, Circle } from 'lucide-react';
 import type { TemplateWizardData } from '../../../types/templateWizard';
+import { getEffectiveTemplateStatusMappings } from '../../../lib/templateStatusMappingUtils';
 
 interface TemplateReviewStepProps {
   data: TemplateWizardData;
@@ -17,12 +18,6 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
     (sum, task) => sum + (task.estimated_hours ? Number(task.estimated_hours) / 60 : 0),
     0
   );
-
-  // Debug logging
-  React.useEffect(() => {
-    console.log('[TemplateReviewStep] Status mappings:', data.status_mappings);
-    console.log('[TemplateReviewStep] Available statuses:', availableStatuses);
-  }, [data.status_mappings, availableStatuses]);
 
   // Helper to add transparency to hex color
   const addTransparency = (hex: string, alpha: number) => {
@@ -91,7 +86,6 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
                 if (mapping.status_id) {
                   const systemStatus = availableStatuses.find(s => s.status_id === mapping.status_id);
                   statusColor = systemStatus?.color || '#6B7280';
-                  console.log(`[TemplateReviewStep] Status chips - Looking up color for status_id ${mapping.status_id}:`, systemStatus?.color);
                 } else if (mapping.custom_status_color && mapping.custom_status_color !== '#6B7280') {
                   statusColor = mapping.custom_status_color;
                 }
@@ -153,6 +147,10 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
                 const phaseTasks = data.tasks.filter(
                   (t) => t.phase_temp_id === phase.temp_id
                 );
+                const effectiveStatusMappings = getEffectiveTemplateStatusMappings(
+                  data.status_mappings,
+                  phase.temp_id
+                );
                 if (phaseTasks.length === 0) return null;
 
                 return (
@@ -161,7 +159,7 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
                       {phase.phase_name}
                     </h5>
 
-                    {data.status_mappings.length === 0 ? (
+                    {effectiveStatusMappings.length === 0 ? (
                       // Fallback: show tasks as a simple list if no status columns
                       <ul className="space-y-1 pl-4">
                         {phaseTasks
@@ -192,9 +190,8 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
                       </ul>
                     ) : (
                       // Show tasks organized by status columns
-                      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${data.status_mappings.length}, minmax(0, 1fr))` }}>
-                        {data.status_mappings
-                          .sort((a, b) => a.display_order - b.display_order)
+                      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${effectiveStatusMappings.length}, minmax(0, 1fr))` }}>
+                        {effectiveStatusMappings
                           .map((statusMapping, statusIndex) => {
                             // Filter tasks for this status column
                             // Tasks without a status mapping go to the first column

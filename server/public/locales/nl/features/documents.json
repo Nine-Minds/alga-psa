@@ -211,5 +211,12 @@
     "feedbackThanks": "Bedankt voor uw feedback!",
     "feedbackError": "Feedback verzenden mislukt",
     "filterByTags": "Filteren op tags..."
+  },
+  "visibility": {
+    "cascadeTitle": "Documentzichtbaarheid bijwerken",
+    "cascadeMakeVisible": "Wilt u ook alle {{count}} document(en) in \"{{name}}\" zichtbaar maken in het klantenportaal?",
+    "cascadeMakeHidden": "Wilt u ook alle {{count}} document(en) in \"{{name}}\" verbergen in het klantenportaal?",
+    "cascadeYes": "Ja, documenten bijwerken",
+    "cascadeNo": "Nee, alleen map"
   }
 }

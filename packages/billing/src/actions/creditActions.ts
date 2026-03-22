@@ -18,7 +18,7 @@ import Invoice from '../models/invoice';
 import {
     buildCreditNoteAppliedPayload,
     buildCreditNoteCreatedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 type CreditInvoicePeriodSummary = {
     service_period_start: string | null;

@@ -144,6 +144,13 @@ spec:
           {{- end }}
           {{- end }}
 
+          # ----------- AI Document Assist ----------------
+          - name: AI_DOCUMENT_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: AI_DOCUMENT_API_KEY
+
           # ----------- TEMPORAL ----------------
           - name: TEMPORAL_ADDRESS
             value: "{{ .Values.temporal.address }}"

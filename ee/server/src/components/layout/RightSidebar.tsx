@@ -8,6 +8,7 @@ const RightSidebarContent = lazy(() => import('./RightSidebarContent'));
 interface RightSidebarProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onRequestClose?: () => void;
   clientUrl: string;
   accountId: string;
   messages: any[];
@@ -20,6 +21,8 @@ interface RightSidebarProps {
   isTitleLocked: boolean;
   handoffChatId?: string | null;
   handoffNonce?: number;
+  onInterruptibleStateChange?: (isInterruptible: boolean) => void;
+  onRegisterCancelHandler?: (cancelHandler: (() => void) | null) => void;
 }
 
 const RightSidebar: React.FC<RightSidebarProps> = (props) => {
@@ -29,7 +32,7 @@ const RightSidebar: React.FC<RightSidebarProps> = (props) => {
 
   return (
     <Suspense fallback={
-      <div className="fixed top-0 right-0 h-full bg-gray-50 w-96 shadow-xl">
+      <div className="fixed top-0 right-0 z-[45] h-full bg-gray-50 w-96 shadow-xl">
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         </div>

@@ -9,7 +9,7 @@ type JsonSchema = {
   definitions?: Record<string, JsonSchema>;
 };
 
-export type WorkflowDesignerCatalogKind = 'core-object' | 'transform' | 'app';
+export type WorkflowDesignerCatalogKind = 'core-object' | 'transform' | 'app' | 'ai';
 
 export type WorkflowDesignerCatalogAction = {
   id: string;
@@ -48,7 +48,7 @@ type BuiltInCatalogSeed = {
   groupKey: string;
   label: string;
   iconToken: string;
-  tileKind: Extract<WorkflowDesignerCatalogKind, 'core-object' | 'transform'>;
+  tileKind: Extract<WorkflowDesignerCatalogKind, 'core-object' | 'transform' | 'ai'>;
   description: string;
   defaultActionId?: string;
   modules?: string[];
@@ -135,6 +135,15 @@ const BUILT_IN_CATALOG_SEEDS: BuiltInCatalogSeed[] = [
     tileKind: 'transform',
     description: 'Shape and normalize workflow data without raw expressions.',
     modules: ['transform']
+  },
+  {
+    groupKey: 'ai',
+    label: 'AI',
+    iconToken: 'ai',
+    tileKind: 'ai',
+    description: 'Infer structured workflow data with the configured AI provider.',
+    defaultActionId: 'ai.infer',
+    actionIds: ['ai.infer']
   }
 ];
 

@@ -15,12 +15,12 @@ import { BillingEngine } from '../lib/billing/billingEngine';
 import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/invoiceService'; // Import persistManualInvoiceCharges
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
-// import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
+// import { getRedisStreamClient } from '@alga-psa/workflow-streams'; // No longer directly used here
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildCreditNoteCreatedPayload,
   buildCreditNoteVoidedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 import { validateInvoiceFinalization } from './taxSourceActions';
 import { withAuth } from '@alga-psa/auth';

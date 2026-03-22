@@ -1,11 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
-import type { WorkflowDefinition, WorkflowTimeTrigger } from '@shared/workflow/runtime';
-import WorkflowScheduleStateModel, {
+import type { WorkflowDefinition, WorkflowTimeTrigger } from '@alga-psa/workflows/runtime';
+import {
+  WorkflowScheduleStateModel,
   type WorkflowScheduleStateRecord,
   type WorkflowScheduleStateStatus
-} from '@shared/workflow/persistence/workflowScheduleStateModel';
+} from '@alga-psa/workflows/persistence';
 import {
   getWorkflowScheduleJobRunner,
   type WorkflowScheduleJobResult as ScheduleJobResult

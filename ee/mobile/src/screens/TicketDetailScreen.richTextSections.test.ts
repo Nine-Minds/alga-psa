@@ -248,6 +248,7 @@ describe("TicketDetailScreen rich text sections", () => {
         onLinkPress: (url: string) => {
           void Linking.openURL(url);
         },
+        ticketId: "test-ticket-1",
       }),
     );
 
@@ -275,6 +276,7 @@ describe("TicketDetailScreen rich text sections", () => {
         onJumpToTop: () => undefined,
         error: null,
         onLinkPress,
+        ticketId: "test-ticket-1",
       }),
     );
 
@@ -303,6 +305,7 @@ describe("TicketDetailScreen rich text sections", () => {
         onJumpToLatest: () => undefined,
         onJumpToTop: () => undefined,
         error: null,
+        ticketId: "test-ticket-1",
       }),
     );
 
@@ -328,6 +331,7 @@ describe("TicketDetailScreen rich text sections", () => {
         onJumpToLatest: () => undefined,
         onJumpToTop: () => undefined,
         error: null,
+        ticketId: "test-ticket-1",
       }),
     );
 
@@ -380,6 +384,7 @@ describe("TicketDetailScreen rich text sections", () => {
         onJumpToLatest: () => undefined,
         onJumpToTop: () => undefined,
         error: null,
+        ticketId: "test-ticket-1",
       }),
     );
 

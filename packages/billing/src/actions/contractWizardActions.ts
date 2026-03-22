@@ -14,7 +14,7 @@ import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,
   computeContractRenewalUpcoming,
-} from '@shared/workflow/streams/domainEventBuilders/contractEventBuilders';
+} from '@alga-psa/workflow-streams';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,

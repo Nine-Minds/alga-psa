@@ -29,7 +29,7 @@ import {
   buildRecurringBillingRunFailedPayload,
   buildRecurringBillingRunStartedPayload,
   type RecurringBillingRunWindowIdentity,
-} from '@shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 function normalizeRecurringBillingRunTargets(params: {
   targets?: RecurringBillingRunTarget[];

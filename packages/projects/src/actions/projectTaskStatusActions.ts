@@ -5,7 +5,32 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IProjectStatusMapping, IStatus } from '@alga-psa/types';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+
+import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
+
+function resolveReplacementStatusMapping(
+  sourceMapping: ProjectStatusMappingDetails,
+  targetMappings: ProjectStatusMappingDetails[]
+): ProjectStatusMappingDetails | null {
+  const sourceName = sourceMapping.name ?? sourceMapping.status_name ?? null;
+
+  if (sourceName) {
+    const sameNameTarget = targetMappings.find((mapping) => {
+      const targetName = mapping.name ?? mapping.status_name ?? null;
+      return targetName === sourceName;
+    });
+
+    if (sameNameTarget) {
+      return sameNameTarget;
+    }
+  }
+
+  const sameClosedStateTarget = targetMappings.find(
+    (mapping) => Boolean(mapping.is_closed) === Boolean(sourceMapping.is_closed)
+  );
+
+  return sameClosedStateTarget ?? targetMappings[0] ?? null;
+}
 
 /**
  * Add a status to a project
@@ -19,7 +44,8 @@ export const addStatusToProject = withAuth(async (
     standard_status_id?: string;  // Standard status
     custom_name?: string;  // Override name
     is_visible?: boolean;
-  }
+  },
+  phaseId?: string | null
 ): Promise<IProjectStatusMapping> => {
   // RBAC check
   if (!await hasPermission(user, 'project', 'update')) {
@@ -30,8 +56,16 @@ export const addStatusToProject = withAuth(async (
 
   return await withTransaction(knex, async (trx) => {
     // Get next display_order
-    const maxOrder = await trx('project_status_mappings')
-      .where({ project_id: projectId, tenant })
+    const maxOrderQuery = trx('project_status_mappings')
+      .where({ project_id: projectId, tenant });
+
+    if (phaseId) {
+      maxOrderQuery.andWhere('phase_id', phaseId);
+    } else {
+      maxOrderQuery.whereNull('phase_id');
+    }
+
+    const maxOrder = await maxOrderQuery
       .max('display_order as max')
       .first();
 
@@ -41,6 +75,7 @@ export const addStatusToProject = withAuth(async (
       .insert({
         tenant,
         project_id: projectId,
+        phase_id: phaseId ?? null,
         status_id: statusData.status_id,
         standard_status_id: statusData.standard_status_id,
         is_standard: !!statusData.standard_status_id,
@@ -49,16 +84,6 @@ export const addStatusToProject = withAuth(async (
         is_visible: statusData.is_visible ?? true
       })
       .returning('*');
-
-    // Publish event
-    await publishEvent({
-      eventType: 'PROJECT_STATUS_ADDED',
-      payload: {
-        tenantId: tenant,
-        projectId,
-        mappingId: mapping.project_status_mapping_id
-      }
-    });
 
     return mapping;
   });
@@ -70,28 +95,154 @@ export const addStatusToProject = withAuth(async (
 export const getProjectStatusMappings = withAuth(async (
   _user,
   { tenant },
-  projectId: string
+  projectId: string,
+  phaseId?: string | null
 ): Promise<IProjectStatusMapping[]> => {
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    return await trx('project_status_mappings as psm')
-      .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
-      .leftJoin('statuses as s', function(this: Knex.JoinClause) {
-        this.on('psm.status_id', 's.status_id')
-          .andOn('psm.tenant', 's.tenant');
-      })
-      .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
-        this.on('psm.standard_status_id', 'ss.standard_status_id')
-          .andOn('psm.tenant', 'ss.tenant');
-      })
-      .select(
-        'psm.*',
-        trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
-        trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
-        trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
-      )
-      .orderBy('psm.display_order');
+    return await getScopedProjectStatusMappings(trx, tenant, projectId, phaseId);
+  });
+});
+
+/**
+ * Copy project default statuses into a phase as custom mappings.
+ */
+export const copyProjectStatusesToPhase = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+  phaseId: string
+): Promise<IProjectStatusMapping[]> => {
+  if (!await hasPermission(user, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx) => {
+    const phase = await trx('project_phases')
+      .where({ tenant, project_id: projectId, phase_id: phaseId })
+      .first();
+
+    if (!phase) {
+      throw new Error('Project phase not found');
+    }
+
+    const existingPhaseMappings = await trx('project_status_mappings')
+      .where({ tenant, project_id: projectId, phase_id: phaseId })
+      .orderBy('display_order');
+
+    if (existingPhaseMappings.length > 0) {
+      return existingPhaseMappings;
+    }
+
+    const defaultMappings = await trx('project_status_mappings')
+      .where({ tenant, project_id: projectId })
+      .whereNull('phase_id')
+      .orderBy('display_order');
+
+    if (defaultMappings.length === 0) {
+      return [];
+    }
+
+    const inserts = defaultMappings.map((mapping) => ({
+      tenant,
+      project_id: projectId,
+      phase_id: phaseId,
+      status_id: mapping.status_id,
+      standard_status_id: mapping.standard_status_id,
+      is_standard: mapping.is_standard,
+      custom_name: mapping.custom_name,
+      display_order: mapping.display_order,
+      is_visible: mapping.is_visible
+    }));
+
+    const newMappings: IProjectStatusMapping[] = await trx('project_status_mappings')
+      .insert(inserts)
+      .returning('*');
+
+    // Reassign existing tasks from project-default mappings to the new phase-specific ones
+    // Group by new phase mapping so we can batch with whereIn, matching removePhaseStatuses style
+    const updatesByReplacement = new Map<string, string[]>();
+    for (const defaultMapping of defaultMappings) {
+      const phaseMapping = newMappings.find((m) => m.status_id === defaultMapping.status_id);
+      if (phaseMapping) {
+        const existing = updatesByReplacement.get(phaseMapping.project_status_mapping_id) || [];
+        existing.push(defaultMapping.project_status_mapping_id);
+        updatesByReplacement.set(phaseMapping.project_status_mapping_id, existing);
+      }
+    }
+
+    for (const [newId, oldIds] of updatesByReplacement) {
+      await trx('project_tasks')
+        .where({ tenant, phase_id: phaseId })
+        .whereIn('project_status_mapping_id', oldIds)
+        .update({ project_status_mapping_id: newId });
+    }
+
+    return newMappings;
+  });
+});
+
+/**
+ * Remove all custom statuses for a phase and revert it to project defaults.
+ */
+export const removePhaseStatuses = withAuth(async (
+  user,
+  { tenant },
+  phaseId: string
+): Promise<void> => {
+  if (!await hasPermission(user, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx) => {
+    const phase = await trx('project_phases')
+      .where({ tenant, phase_id: phaseId })
+      .first();
+
+    if (!phase) {
+      throw new Error('Project phase not found');
+    }
+
+    const phaseMappings = await getScopedProjectStatusMappings(trx, tenant, phase.project_id, phaseId);
+    if (phaseMappings.length === 0) {
+      return;
+    }
+
+    const defaultMappings = await getScopedProjectStatusMappings(trx, tenant, phase.project_id);
+    if (defaultMappings.length === 0) {
+      throw new Error('Cannot remove phase statuses without project default statuses');
+    }
+
+    // Group phase mappings by their replacement target to batch updates
+    const updatesByReplacement = new Map<string, string[]>();
+    for (const phaseMapping of phaseMappings) {
+      const replacementMapping = resolveReplacementStatusMapping(phaseMapping, defaultMappings);
+
+      if (!replacementMapping) {
+        throw new Error('Unable to resolve replacement status mapping for phase task');
+      }
+
+      const existing = updatesByReplacement.get(replacementMapping.project_status_mapping_id) || [];
+      existing.push(phaseMapping.project_status_mapping_id);
+      updatesByReplacement.set(replacementMapping.project_status_mapping_id, existing);
+    }
+
+    // Batch update: one UPDATE per replacement target
+    for (const [replacementId, oldIds] of updatesByReplacement) {
+      await trx('project_tasks')
+        .where({ tenant, phase_id: phaseId })
+        .whereIn('project_status_mapping_id', oldIds)
+        .update({ project_status_mapping_id: replacementId });
+    }
+
+    await trx('project_status_mappings')
+      .where({ tenant, phase_id: phaseId })
+      .del();
   });
 });
 
@@ -115,30 +266,45 @@ export const updateProjectStatusMapping = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
+  const existingMapping = await knex('project_status_mappings')
+    .where({ project_status_mapping_id: mappingId, tenant })
+    .first();
+
+  if (!existingMapping) {
+    throw new Error('Status mapping not found');
+  }
+
   await knex('project_status_mappings')
     .where({ project_status_mapping_id: mappingId, tenant })
     .update(updates);
 
-  // Publish event
-  await publishEvent({
-    eventType: 'PROJECT_STATUS_UPDATED',
-    payload: {
-      tenantId: tenant,
-      mappingId,
-      updates
-    }
-  });
 });
 
 /**
- * Delete a project status mapping
+ * Get the number of tasks assigned to a status mapping.
+ */
+export const getStatusMappingTaskCount = withAuth(async (
+  _user,
+  { tenant },
+  mappingId: string
+): Promise<number> => {
+  const { knex } = await createTenantKnex();
+  const result = await knex('project_tasks')
+    .where({ project_status_mapping_id: mappingId, tenant })
+    .count('* as count')
+    .first();
+  return parseInt(result?.count as string) || 0;
+});
+
+/**
+ * Delete a project status mapping, optionally moving tasks to another status first.
  */
 export const deleteProjectStatusMapping = withAuth(async (
   user,
   { tenant },
-  mappingId: string
+  mappingId: string,
+  moveTasksToMappingId?: string
 ): Promise<void> => {
-  // RBAC check
   if (!await hasPermission(user, 'project', 'update')) {
     throw new Error('Permission denied: Cannot update project');
   }
@@ -146,7 +312,6 @@ export const deleteProjectStatusMapping = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    // Get mapping info
     const mapping = await trx('project_status_mappings')
       .where({ project_status_mapping_id: mappingId, tenant })
       .first();
@@ -155,43 +320,46 @@ export const deleteProjectStatusMapping = withAuth(async (
       throw new Error('Status mapping not found');
     }
 
-    // Validate: Check if any tasks assigned to this status
-    const taskCount = await trx('project_tasks')
-      .where({ project_status_mapping_id: mappingId, tenant })
-      .count('* as count')
-      .first();
+    // Move tasks if a target mapping is provided
+    if (moveTasksToMappingId) {
+      await trx('project_tasks')
+        .where({ project_status_mapping_id: mappingId, tenant })
+        .update({ project_status_mapping_id: moveTasksToMappingId });
+    } else {
+      // Check for orphaned tasks
+      const taskCount = await trx('project_tasks')
+        .where({ project_status_mapping_id: mappingId, tenant })
+        .count('* as count')
+        .first();
 
-    if (parseInt(taskCount?.count as string) > 0) {
-      throw new Error(
-        `Cannot delete status with ${taskCount?.count} assigned tasks. ` +
-        `Please move tasks to another status first.`
-      );
+      if (parseInt(taskCount?.count as string) > 0) {
+        throw new Error(
+          `Cannot delete status with ${taskCount?.count} assigned tasks. ` +
+          `Please move tasks to another status first.`
+        );
+      }
     }
 
-    // Validate: Must have at least 1 status remaining
-    const remainingCount = await trx('project_status_mappings')
+    // Validate: Must have at least 1 status remaining in the same scope
+    const remainingQuery = trx('project_status_mappings')
       .where({ project_id: mapping.project_id, tenant })
-      .count('* as count')
-      .first();
+      .whereNot({ project_status_mapping_id: mappingId });
 
-    if (parseInt(remainingCount?.count as string) <= 1) {
+    if (mapping.phase_id) {
+      remainingQuery.where({ phase_id: mapping.phase_id });
+    } else {
+      remainingQuery.whereNull('phase_id');
+    }
+
+    const remainingCount = await remainingQuery.count('* as count').first();
+
+    if (parseInt(remainingCount?.count as string) < 1) {
       throw new Error('Cannot delete the last status in a project');
     }
 
-    // Delete
     await trx('project_status_mappings')
       .where({ project_status_mapping_id: mappingId, tenant })
       .del();
-
-    // Publish event
-    await publishEvent({
-      eventType: 'PROJECT_STATUS_DELETED',
-      payload: {
-        tenantId: tenant,
-        projectId: mapping.project_id,
-        mappingId
-      }
-    });
   });
 });
 
@@ -202,7 +370,8 @@ export const reorderProjectStatuses = withAuth(async (
   user,
   { tenant },
   projectId: string,
-  statusOrder: Array<{ mapping_id: string; display_order: number }>
+  statusOrder: Array<{ mapping_id: string; display_order: number }>,
+  phaseId?: string | null
 ): Promise<void> => {
   // RBAC check
   if (!await hasPermission(user, 'project', 'update')) {
@@ -213,24 +382,22 @@ export const reorderProjectStatuses = withAuth(async (
 
   return await withTransaction(knex, async (trx) => {
     for (const { mapping_id, display_order } of statusOrder) {
-      await trx('project_status_mappings')
+      const query = trx('project_status_mappings')
         .where({
           project_status_mapping_id: mapping_id,
           project_id: projectId,
           tenant
-        })
-        .update({ display_order });
+        });
+
+      if (phaseId) {
+        query.andWhere('phase_id', phaseId);
+      } else {
+        query.whereNull('phase_id');
+      }
+
+      await query.update({ display_order });
     }
 
-    // Publish event
-    await publishEvent({
-      eventType: 'PROJECT_STATUSES_REORDERED',
-      payload: {
-        tenantId: tenant,
-        projectId,
-        statusOrder
-      }
-    });
   });
 });
 

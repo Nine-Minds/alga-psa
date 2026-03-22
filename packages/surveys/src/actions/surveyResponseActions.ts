@@ -14,7 +14,7 @@ import logger from '@alga-psa/core/logger';
 import {
   buildCsatAlertTriggeredPayload,
   buildSurveyResponseReceivedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/surveyEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 const SURVEY_INVITATIONS_TABLE = 'survey_invitations';
 const SURVEY_RESPONSES_TABLE = 'survey_responses';
