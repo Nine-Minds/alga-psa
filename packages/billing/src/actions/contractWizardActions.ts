@@ -259,7 +259,7 @@ const resolveBillingMode = (mode: ContractLineMode): BillingMode =>
   mode === 'Hourly' ? 'hourly' : mode === 'Usage' ? 'usage' : 'fixed';
 
 const fetchModeDefaultRatesByServiceId = async (
-  trx: Knex.Transaction,
+  trx: Knex | Knex.Transaction,
   tenant: string,
   serviceIds: string[],
   mode: ContractLineMode,

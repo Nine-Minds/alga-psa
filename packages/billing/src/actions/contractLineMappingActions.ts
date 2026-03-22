@@ -55,6 +55,12 @@ function normalizeDetailedContractLine<
   return normalizeLiveRecurringStorage(line);
 }
 
+type DetailedContractLineResultRow =
+  Record<string, unknown> & {
+    cadence_owner?: IContractLineMapping['cadence_owner'] | null;
+    billing_timing?: IContractLineMapping['billing_timing'] | null;
+  };
+
 export async function ensureTemplateLineSnapshot(
   knex: Knex,
   tenant: string,
@@ -406,12 +412,12 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.round_up_to_nearest',
             'tfc.base_rate as default_rate',
           ])
-          .orderBy('lines.display_order', 'asc');
+          .orderBy('lines.display_order', 'asc') as unknown as DetailedContractLineResultRow[];
 
         return rows.map((row) => normalizeDetailedContractLine(row));
       }
 
-      const rows = await ContractLineMapping.getDetailedContractLines(contractId);
+      const rows = await ContractLineMapping.getDetailedContractLines(contractId) as unknown as DetailedContractLineResultRow[];
       return rows.map((row) => normalizeDetailedContractLine(row));
     });
   } catch (error) {

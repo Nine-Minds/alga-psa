@@ -47,16 +47,18 @@ export function mapClientCadenceInvoiceCandidatesToRecurringRunTargets(
       (candidate) =>
         candidate.canGenerate &&
         candidate.cadenceOwners.length === 1 &&
-        candidate.cadenceOwners[0] === 'client',
+        candidate.cadenceOwners[0] === 'client' &&
+        Boolean(candidate.members[0]?.executionWindow?.identityKey) &&
+        Boolean(candidate.members[0]?.selectorInput),
     )
     .map((candidate) => ({
-      executionWindow: candidate.executionWindow,
-      selectorInput: candidate.selectorInput,
+      executionWindow: candidate.members[0]!.executionWindow,
+      selectorInput: candidate.members[0]!.selectorInput,
       clientId: candidate.clientId,
       clientName: candidate.clientName ?? 'Unknown client',
       periodStart: candidate.windowStart,
       periodEnd: candidate.windowEnd,
-      isEarly: candidate.isEarly,
+      isEarly: candidate.members.some((member) => member.isEarly),
     }))
     .sort((left, right) => {
       if (left.periodStart !== right.periodStart) {

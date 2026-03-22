@@ -289,7 +289,7 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): string[] => {
   const reasons: string[] = [];
   const uniqueWindows = new Set(
     members.map((member) =>
-      `${normalizeScopeValue(member.windowStart)}:${normalizeScopeValue(member.windowEnd)}`,
+      `${normalizeScopeValue(member.invoiceWindowStart)}:${normalizeScopeValue(member.invoiceWindowEnd)}`,
     ),
   );
   const uniqueClients = new Set(members.map((member) => normalizeScopeValue(member.clientId)));

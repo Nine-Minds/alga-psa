@@ -1185,7 +1185,7 @@ export const getCreditDetails = withAuth(async (
         );
 
         // Get invoice details if available
-        let invoice = null;
+        let invoice: IInvoice | null = null;
         let invoiceSummary: CreditInvoicePeriodSummary | null = null;
         let sourceCreditId: string | null = null;
         let sourceInvoiceId: string | null = null;

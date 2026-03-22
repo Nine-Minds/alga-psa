@@ -319,14 +319,6 @@ const recurringDueSelectionInputSchema = z.object({
   billingCycleId: uuidSchema.nullable().optional(),
   executionWindow: recurringExecutionWindowIdentitySchema,
 }).superRefine((value, ctx) => {
-  if (value.executionWindow.kind === 'billing_cycle_window') {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'selector_input.executionWindow.kind must use canonical recurring execution windows.',
-      path: ['executionWindow', 'kind'],
-    });
-  }
-
   if (value.billingCycleId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

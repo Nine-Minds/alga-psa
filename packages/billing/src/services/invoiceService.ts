@@ -137,8 +137,18 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     .where({ tenant, charge_family: chargeFamily, due_position: billingTiming })
     .where(function recurringObligationMatch() {
       for (const [index, candidate] of obligationCandidates.entries()) {
-        const clause = index === 0 ? this.where : this.orWhere;
-        clause.call(this, candidate);
+        if (index === 0) {
+          this.where(function matchObligationCandidate() {
+            this.where('obligation_type', candidate.obligation_type)
+              .andWhere('obligation_id', candidate.obligation_id);
+          });
+          continue;
+        }
+
+        this.orWhere(function matchObligationCandidate() {
+          this.where('obligation_type', candidate.obligation_type)
+            .andWhere('obligation_id', candidate.obligation_id);
+        });
       }
     })
     .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])

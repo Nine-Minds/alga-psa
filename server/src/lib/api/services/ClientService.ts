@@ -445,7 +445,7 @@ export class ClientService extends BaseService<IClient> {
     });
 
     if (!result.deleted) {
-      throw new ValidationError(result.message);
+      throw new ValidationError(result.message ?? 'Unable to delete client.');
     }
   }
 

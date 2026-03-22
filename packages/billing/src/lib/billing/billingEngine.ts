@@ -36,7 +36,7 @@ import {
 } from "@alga-psa/types";
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from "@js-temporal/polyfill";
-import type { ISO8601String, IClient } from "@alga-psa/types";
+import type { ISO8601String, IClient, IRecurringObligationRef } from "@alga-psa/types";
 import { toPlainDate, toISODate, toISOTimestamp, getCurrencySymbol } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
 import {
@@ -2751,12 +2751,7 @@ export class BillingEngine {
     billingPeriod: IBillingPeriod;
     clientContractLine: IClientContractLine;
     duePosition: "arrears" | "advance";
-    sourceObligation: {
-      obligationId: string;
-      obligationType: typeof CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE;
-      chargeFamily: "fixed";
-      tenant?: string;
-    };
+    sourceObligation: IRecurringObligationRef;
     activityWindow: {
       start?: ISO8601String;
       end?: ISO8601String;

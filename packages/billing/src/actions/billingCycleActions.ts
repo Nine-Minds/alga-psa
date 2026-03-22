@@ -20,7 +20,7 @@ export const getBillingCycle = withAuth(async (
 ): Promise<BillingCycleType> => {
   const { knex: conn } = await createTenantKnex();
 
-  const result = await withTransaction(conn, async (trx: Knex.Transaction) => {
+  const result: { billing_cycle?: BillingCycleType | null } | undefined = await withTransaction(conn, async (trx: Knex.Transaction) => {
     return await trx('clients')
       .where({
         client_id: clientId,
@@ -677,7 +677,7 @@ async function fetchRecurringInvoiceHistoryPage(
 
     if (total === 0) {
       return {
-        cycles: [],
+        rows: [],
         total: 0,
         page,
         pageSize,

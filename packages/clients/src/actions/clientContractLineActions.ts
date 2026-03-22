@@ -230,7 +230,7 @@ export const getClientContractLine = withAuth(async (
 ): Promise<IClientContractLine[]> => {
   try {
     const { knex: db } = await createTenantKnex();
-    const clientContractLine = await withTransaction(db, async (trx: Knex.Transaction) => {
+    const clientContractLine: IClientContractLine[] = await withTransaction(db, async (trx: Knex.Transaction) => {
       const query = trx('contract_lines as cl')
         .join('client_contracts as cc', function () {
           this.on('cc.contract_id', '=', 'cl.contract_id')
@@ -266,7 +266,7 @@ export const getClientContractLine = withAuth(async (
         query.andWhere('cc.client_contract_id', clientContractId);
       }
 
-      return await query;
+      return await query as unknown as IClientContractLine[];
     });
 
     return clientContractLine.map((billing: IClientContractLine): IClientContractLine => {
