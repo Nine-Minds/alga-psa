@@ -10364,7 +10364,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       {
         "name": "Read one ticket in detail",
         "request": {
-          "path": {
+          "params": {
             "id": "11111111-1111-1111-1111-111111111111"
           }
         },
@@ -10548,7 +10548,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       {
         "name": "Read recent comments with ranged comment text",
         "request": {
-          "path": {
+          "params": {
             "id": "11111111-1111-1111-1111-111111111111"
           },
           "query": {

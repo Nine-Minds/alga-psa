@@ -284,11 +284,37 @@ function applyOverrides(entry, overrides) {
       entry.approvalRequired = metadata.approvalRequired;
     }
     if (Array.isArray(metadata.playbooks)) entry.playbooks = metadata.playbooks;
-    if (Array.isArray(metadata.examples)) entry.examples = metadata.examples;
+    if (Array.isArray(metadata.examples)) {
+      entry.examples = metadata.examples.map((example) => normalizeExample(example));
+    }
     if (Array.isArray(metadata.parameters)) entry.parameters = metadata.parameters;
     if (metadata.requestBodySchema !== undefined) entry.requestBodySchema = metadata.requestBodySchema;
     if (metadata.responseBodySchema !== undefined) entry.responseBodySchema = metadata.responseBodySchema;
   }
+}
+
+function normalizeExample(example) {
+  if (!example || typeof example !== 'object') {
+    return example;
+  }
+
+  const normalized = { ...example };
+  const request = normalized.request;
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    return normalized;
+  }
+
+  if ('path' in request && !('params' in request)) {
+    const { path, ...rest } = request;
+    normalized.request = {
+      ...rest,
+      params: path,
+    };
+    return normalized;
+  }
+
+  normalized.request = { ...request };
+  return normalized;
 }
 
 function createEntryId(method, pathName, operationId) {
