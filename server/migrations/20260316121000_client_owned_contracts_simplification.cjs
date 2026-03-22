@@ -66,7 +66,6 @@ const ensureOwnerClientColumn = async (knex) => {
       ADD CONSTRAINT ${CONTRACT_OWNER_FK}
       FOREIGN KEY (tenant, owner_client_id)
       REFERENCES clients (tenant, client_id)
-      ON DELETE SET NULL
     `);
   }
 };
@@ -400,7 +399,7 @@ exports.up = async function up(knex) {
           tenant: row.tenant,
           contract_id: row.contract_id,
         })
-        .andWhereNull('owner_client_id')
+        .whereNull('owner_client_id')
         .update({
           owner_client_id: row.owner_client_id,
           updated_at: knex.fn.now(),

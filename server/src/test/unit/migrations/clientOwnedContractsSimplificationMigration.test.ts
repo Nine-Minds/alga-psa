@@ -180,6 +180,8 @@ function buildKnownSharedContractPlans() {
 describe('client-owned contracts simplification migration', () => {
   it('T001: adds contracts.owner_client_id while only planning shared non-template contract splits', () => {
     expect(migrationSource).toContain("table.uuid('owner_client_id').nullable()");
+    expect(migrationSource).toContain('FOREIGN KEY (tenant, owner_client_id)');
+    expect(migrationSource).not.toContain('ON DELETE SET NULL');
   });
 
   it('T003: identifies shared non-template contracts while leaving template reuse untouched', () => {
