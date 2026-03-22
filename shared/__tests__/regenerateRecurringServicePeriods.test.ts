@@ -9,7 +9,7 @@ function makeRecord(input: {
   revision: number;
   duePosition: 'advance' | 'arrears';
   lifecycleState?: IRecurringServicePeriodRecord['lifecycleState'];
-  provenanceKind?: IRecurringServicePeriodRecord['provenance']['kind'];
+  provenance?: IRecurringServicePeriodRecord['provenance'];
 }): IRecurringServicePeriodRecord {
   return {
     kind: 'persisted_service_period_record',
@@ -37,8 +37,8 @@ function makeRecord(input: {
       semantics: 'half_open',
     },
     activityWindow: null,
-    provenance: {
-      kind: input.provenanceKind ?? 'generated',
+    provenance: input.provenance ?? {
+      kind: 'generated',
       reasonCode: 'initial_materialization',
       sourceRuleVersion: 'rule-v1',
       sourceRunKey: 'run-v1',

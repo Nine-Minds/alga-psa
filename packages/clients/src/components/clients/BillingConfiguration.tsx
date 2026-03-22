@@ -5,6 +5,7 @@ import PlanPickerDialog from './PlanPickerDialog';
 import type {
   IClient,
   IContact,
+  IClientContract,
   IClientContractLine,
   IContractLine,
   IServiceCategory,
@@ -89,7 +90,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const [editingContractLine, setEditingContractLine] = useState<ClientContractLineWithStringDates | null>(null);
     const [contractLineToDelete, setContractLineToDelete] = useState<string | null>(null);
     const [services, setServices] = useState<IService[]>([]);
-    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard: boolean }[]>([]);
+    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
     const [isSavingBillingConfig, setIsSavingBillingConfig] = useState(false);
     const [newService, setNewService] = useState<Partial<IService>>({
         unit_of_measure: 'hour',

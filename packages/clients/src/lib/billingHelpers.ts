@@ -169,8 +169,9 @@ export const previewBillingPeriodsForScheduleAsync = withAuthCheck(async (
   return previewBillingPeriodsForSchedule(billingCycle, anchor, options);
 });
 
-export const previewBillingHistoryBootstrapAsync = withAuthCheck(async (
+export const previewBillingHistoryBootstrapAsync = withAuth(async (
   _user,
+  { tenant },
   input: {
     clientId: string;
     billingCycle: BillingCycleType;
@@ -178,7 +179,7 @@ export const previewBillingHistoryBootstrapAsync = withAuthCheck(async (
     billingHistoryStartDate: ISO8601String;
   },
 ): Promise<BillingHistoryBootstrapPreview> => {
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return previewBillingHistoryBootstrap(trx, tenant, input);
   });
@@ -353,7 +354,7 @@ export const getServiceTypesForSelectionAsync = withAuth(async (
   _user,
   { tenant }
 ): Promise<
-  Array<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }>
+  Array<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }>
 > => {
   const { knex } = await createTenantKnex();
 

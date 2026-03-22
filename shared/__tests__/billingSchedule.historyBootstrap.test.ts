@@ -194,9 +194,9 @@ class FakeQuery {
   }
 
   private resolveRows(options: { mutable?: boolean } = {}): Row[] {
-    const base = this.state[this.table].map((row, idx) => ({ ...row, __row_id: row.__row_id ?? `${this.table}-${idx}` }));
+    const base: Row[] = this.state[this.table].map((row, idx) => ({ ...row, __row_id: row.__row_id ?? `${this.table}-${idx}` }));
 
-    let filtered = base.filter((row) => this.predicates.every((predicate) => predicate(row)));
+    let filtered: Row[] = base.filter((row) => this.predicates.every((predicate) => predicate(row)));
 
     if (this.requireInvoicedJoin) {
       filtered = filtered.filter((row) => this.state.invoices.some((invoice) =>

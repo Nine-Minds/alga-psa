@@ -42,6 +42,7 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
     contractName?: string;
     contractLineName?: string;
     contractLineType?: string;
+    multipleLines?: boolean;
     requiresSelection?: boolean;
     noContract?: boolean;
     loading?: boolean;
