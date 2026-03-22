@@ -82,6 +82,7 @@ interface PersistedRecurringDueWorkDbRow {
     period_key: string;
     lifecycle_state: string;
     cadence_owner: 'client' | 'contract';
+    due_position: DuePosition;
     service_period_start: ISO8601String;
     service_period_end: ISO8601String;
     invoice_window_start: ISO8601String;
@@ -359,6 +360,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'rsp.period_key',
             'rsp.lifecycle_state',
             'rsp.cadence_owner',
+            'rsp.due_position',
             'rsp.service_period_start',
             'rsp.service_period_end',
             'rsp.invoice_window_start',
@@ -426,6 +428,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
             'rsp.period_key',
             'rsp.lifecycle_state',
             'rsp.cadence_owner',
+            'rsp.due_position',
             'rsp.service_period_start',
             'rsp.service_period_end',
             'rsp.invoice_window_start',
@@ -576,6 +579,7 @@ async function fetchClientCadenceMaterializationGaps(
             const dueWorkRow = buildRecurringDueWorkRow({
                 selectorInput,
                 cadenceSource: 'client_schedule',
+                duePosition,
                 billingCycleId: invoiceWindowForGap.billing_cycle_id ?? null,
                 servicePeriodStart: servicePeriodForGap.period_start_date,
                 servicePeriodEnd: servicePeriodForGap.period_end_date,
@@ -642,6 +646,7 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
         const dueWorkRow = buildRecurringDueWorkRow({
             selectorInput,
             cadenceSource: row.cadence_owner === 'contract' ? 'contract_anniversary' : 'client_schedule',
+            duePosition: row.due_position,
             billingCycleId: row.billing_cycle_id ?? null,
             servicePeriodStart,
             servicePeriodEnd,
@@ -755,6 +760,7 @@ async function fetchUnresolvedNonContractDueWorkRows(
             const dueWorkRow = buildRecurringDueWorkRow({
                 selectorInput,
                 cadenceSource: 'client_schedule',
+                duePosition: 'advance',
                 billingCycleId: period.billing_cycle_id ?? null,
                 servicePeriodStart: charge.servicePeriodStart ?? period.period_start_date,
                 servicePeriodEnd: charge.servicePeriodEnd ?? period.period_end_date,
@@ -803,12 +809,7 @@ function buildRecurringDueWorkInvoiceCandidates(
             servicePeriod: {
                 kind: 'service_period',
                 cadenceOwner: row.cadenceOwner,
-                duePosition:
-                    row.scheduleKey?.includes(':arrears')
-                        ? 'arrears'
-                        : row.cadenceOwner === 'contract'
-                            ? 'arrears'
-                            : 'advance',
+                duePosition: row.duePosition,
                 sourceObligation: {
                     obligationId: row.executionIdentityKey,
                     obligationType: row.contractLineId ? 'contract_line' : 'client_contract_line',
@@ -821,12 +822,7 @@ function buildRecurringDueWorkInvoiceCandidates(
             invoiceWindow: {
                 kind: 'invoice_window',
                 cadenceOwner: row.cadenceOwner,
-                duePosition:
-                    row.scheduleKey?.includes(':arrears')
-                        ? 'arrears'
-                        : row.cadenceOwner === 'contract'
-                            ? 'arrears'
-                            : 'advance',
+                duePosition: row.duePosition,
                 start: row.invoiceWindowStart,
                 end: row.invoiceWindowEnd,
                 semantics: RECURRING_RANGE_SEMANTICS,

@@ -337,4 +337,34 @@ describe('billing history bootstrap cycle regeneration', () => {
 
     expect(JSON.stringify(trx.__state.client_billing_cycles)).toBe(before);
   });
+
+  it('preserves staged future uninvoiced cycles while backfilling history', async () => {
+    const trx = makeFakeTrx({
+      clients: [{ tenant: 'tenant-1', client_id: 'client-1', billing_cycle: 'monthly' }],
+      client_billing_settings: [{ tenant: 'tenant-1', client_id: 'client-1' }],
+      client_billing_cycles: [
+        { tenant: 'tenant-1', client_id: 'client-1', billing_cycle_id: 'c2', period_start_date: '2026-02-01T00:00:00Z', period_end_date: '2026-03-01T00:00:00Z' },
+        { tenant: 'tenant-1', client_id: 'client-1', billing_cycle_id: 'c3', period_start_date: '2026-03-01T00:00:00Z', period_end_date: '2026-04-01T00:00:00Z' },
+        { tenant: 'tenant-1', client_id: 'client-1', billing_cycle_id: 'c4', period_start_date: '2026-04-01T00:00:00Z', period_end_date: '2026-05-01T00:00:00Z' },
+        { tenant: 'tenant-1', client_id: 'client-1', billing_cycle_id: 'c5', period_start_date: '2026-05-01T00:00:00Z', period_end_date: '2026-06-01T00:00:00Z' },
+      ],
+      invoices: [],
+    });
+
+    await updateClientBillingSchedule(trx, 'tenant-1', {
+      clientId: 'client-1',
+      billingCycle: 'monthly',
+      anchor: { dayOfMonth: 1 },
+      billingHistoryStartDate: '2025-12-15T00:00:00Z' as ISO8601String,
+    });
+
+    expect(cycleStarts(trx.__state)).toEqual([
+      '2025-12-01',
+      '2026-01-01',
+      '2026-02-01',
+      '2026-03-01',
+      '2026-04-01',
+      '2026-05-01',
+    ]);
+  });
 });

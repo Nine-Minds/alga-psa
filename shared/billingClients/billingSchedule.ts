@@ -287,6 +287,22 @@ async function regenerateHistoricalClientBillingCyclesFromBootstrap(
     throw new Error(preview.blockedReason ?? 'Billing history bootstrap is blocked by invoiced history.');
   }
 
+  const nonInvoicedCyclesFromBoundary = await trx('client_billing_cycles')
+    .where({ tenant: input.tenant, client_id: input.clientId })
+    .andWhere('period_start_date', '>=', preview.normalizedHistoryStartBoundary)
+    .whereNotExists(function () {
+      this.select(1)
+        .from('invoices')
+        .whereRaw('invoices.tenant = client_billing_cycles.tenant')
+        .andWhereRaw('invoices.billing_cycle_id = client_billing_cycles.billing_cycle_id');
+    })
+    .select('period_end_date');
+
+  const furthestExistingNonInvoicedBoundary = nonInvoicedCyclesFromBoundary
+    .map((row) => normalizeDbIsoUtcMidnight(row.period_end_date))
+    .sort()
+    .slice(-1)[0] ?? null;
+
   await trx('client_billing_cycles')
     .where({ tenant: input.tenant, client_id: input.clientId })
     .andWhere('period_start_date', '>=', preview.normalizedHistoryStartBoundary)
@@ -299,9 +315,16 @@ async function regenerateHistoricalClientBillingCyclesFromBootstrap(
     .del();
 
   const today = getTodayUtcMidnightIso();
+  const currentCoverageExclusive = normalizeIsoDateOnly(
+    getBillingPeriodForDate(today, input.billingCycle, input.anchor).periodEndDate,
+  );
+  const rebuildThroughExclusive = [currentCoverageExclusive, furthestExistingNonInvoicedBoundary]
+    .filter((value): value is ISO8601String => value != null)
+    .sort()
+    .slice(-1)[0] ?? currentCoverageExclusive;
   let cursor = preview.normalizedHistoryStartBoundary;
 
-  while (cursor <= today) {
+  while (cursor < rebuildThroughExclusive) {
     const nextBoundary = normalizeIsoDateOnly(
       getNextBillingBoundaryAfter(cursor, input.billingCycle, input.anchor),
     );

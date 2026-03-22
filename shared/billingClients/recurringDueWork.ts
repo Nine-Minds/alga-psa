@@ -23,6 +23,7 @@ export interface RecurringDueWorkIdentity {
 interface BuildRecurringDueWorkRowInput {
   selectorInput: IRecurringDueSelectionInput;
   cadenceSource: RecurringDueWorkCadenceSource;
+  duePosition: IRecurringDueWorkRow['duePosition'];
   servicePeriodStart: ISO8601String;
   servicePeriodEnd: ISO8601String;
   clientName?: string | null;
@@ -123,6 +124,7 @@ function buildBaseRecurringDueWorkRow(input: BuildRecurringDueWorkRowInput): IRe
     executionWindowKind: executionWindow.kind,
     cadenceOwner: executionWindow.cadenceOwner,
     cadenceSource: input.cadenceSource,
+    duePosition: input.duePosition,
     dueState: isEarly ? 'early' : 'due',
     isEarly,
     canGenerate,
@@ -197,6 +199,7 @@ export function buildClientScheduleDueWorkRow(
   return buildBaseRecurringDueWorkRow({
     selectorInput,
     cadenceSource: 'client_schedule',
+    duePosition: input.scheduleKey.includes(':arrears') ? 'arrears' : 'advance',
     servicePeriodStart,
     servicePeriodEnd,
     clientName: input.clientName,
@@ -235,6 +238,7 @@ export function buildServicePeriodRecurringDueWorkRow(
     cadenceSource: record.cadenceOwner === 'contract'
       ? 'contract_anniversary'
       : 'client_schedule',
+    duePosition: record.duePosition,
     billingCycleId: input.billingCycleId ?? null,
     servicePeriodStart: normalizeDueWorkDate(record.servicePeriod.start),
     servicePeriodEnd: normalizeDueWorkDate(record.servicePeriod.end),

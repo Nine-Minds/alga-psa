@@ -38,6 +38,22 @@ const billingClientsActionsSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/actions/billingClientsActions.ts'),
   'utf8',
 );
+const billingContractLineDisambiguationSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/billing/src/lib/contractLineDisambiguation.ts'),
+  'utf8',
+);
+const schedulingContractLineDisambiguationSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/scheduling/src/lib/contractLineDisambiguation.ts'),
+  'utf8',
+);
+const usageActionsSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/billing/src/actions/usageActions.ts'),
+  'utf8',
+);
+const timeEntryCrudActionsSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/scheduling/src/actions/timeEntryCrudActions.ts'),
+  'utf8',
+);
 const contractLinesUiSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/components/billing-dashboard/contracts/ContractLines.tsx'),
   'utf8',
@@ -67,6 +83,15 @@ describe('system-managed default attribution-shell cutover wiring', () => {
     expect(contractLineServiceConfigurationActionsSource).toContain('contract-line service configuration authoring is disabled');
     expect(billingClientsActionsSource).toContain('assignment lifecycle and date edits are disabled');
     expect(billingClientsActionsSource).toContain('manual assignment authoring is disabled');
+  });
+
+  it('routes time and usage auto-assignment only through authored contracts, never system-managed default lines', () => {
+    expect(billingContractLineDisambiguationSource).toContain("whereNull('contracts.is_system_managed_default')");
+    expect(billingContractLineDisambiguationSource).toContain(".orWhere('contracts.is_system_managed_default', false)");
+    expect(schedulingContractLineDisambiguationSource).toContain("whereNull('contracts.is_system_managed_default')");
+    expect(schedulingContractLineDisambiguationSource).toContain(".orWhere('contracts.is_system_managed_default', false)");
+    expect(usageActionsSource).toContain('determineDefaultContractLine');
+    expect(timeEntryCrudActionsSource).toContain('determineDefaultContractLine');
   });
 
   it('F073/F074: contract line and pricing schedule UI surfaces become read-only with attribution-only guidance', () => {

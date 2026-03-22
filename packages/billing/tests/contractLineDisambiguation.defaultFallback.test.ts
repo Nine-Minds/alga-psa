@@ -4,7 +4,7 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
 }));
 
-describe('contract line disambiguation default fallback precedence (billing)', () => {
+describe('contract line disambiguation deterministic overlay precedence (billing)', () => {
   it('F064: returns explicit decision when a single eligible line exists', async () => {
     const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation.shared');
     const resolution = resolveDeterministicContractLineSelection([
@@ -20,20 +20,20 @@ describe('contract line disambiguation default fallback precedence (billing)', (
     });
   });
 
-  it('uses system-managed default only as fallback when exactly one overlay line exists among multiple eligibles', async () => {
+  it('uses the single overlay line as the deterministic selection when multiple authored lines are otherwise eligible', async () => {
     const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation.shared');
     const resolution = resolveDeterministicContractLineSelection([
       {
         client_contract_line_id: 'line-explicit',
       } as any,
       {
-        client_contract_line_id: 'line-default',
+        client_contract_line_id: 'line-overlay',
         bucket_overlay: { config_id: 'overlay-1' },
       } as any,
     ]);
 
     expect(resolution).toEqual({
-      selectedContractLineId: 'line-default',
+      selectedContractLineId: 'line-overlay',
       decision: 'default',
       overlayCount: 1,
     });

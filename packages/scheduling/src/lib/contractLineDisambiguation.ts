@@ -154,6 +154,10 @@ export async function getEligibleContractLines(
     })
     .where(function (this: Knex.QueryBuilder) {
       this.whereNull('client_contracts.end_date').orWhere('client_contracts.end_date', '>=', rangeStart);
+    })
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('contracts.is_system_managed_default')
+        .orWhere('contracts.is_system_managed_default', false);
     });
 
   const rows = await query.select(

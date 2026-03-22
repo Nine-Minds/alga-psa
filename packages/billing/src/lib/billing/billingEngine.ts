@@ -3557,7 +3557,7 @@ export class BillingEngine {
       .select(
         "cls.service_id",
         this.knex.raw("COUNT(DISTINCT cl.contract_line_id) as line_count"),
-        this.knex.raw("MIN(cl.contract_line_id) as only_line_id"),
+        this.knex.raw("MIN(cl.contract_line_id::text) as only_line_id"),
       );
 
     return rows

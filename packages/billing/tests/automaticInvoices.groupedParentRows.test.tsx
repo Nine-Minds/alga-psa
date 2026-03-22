@@ -171,8 +171,8 @@ describe('AutomaticInvoices grouped parent rows', () => {
               taxSource: 'exclusive',
               exportShapeKey: 'shape-a',
               cadenceSource: 'contract_anniversary',
+              duePosition: 'advance',
               servicePeriodLabel: '2026-03-01 to 2026-04-01',
-              executionWindow: { duePosition: 'advance' },
               amountCents: 12500,
               selectorInput: {
                 clientId: 'client-1',
@@ -197,8 +197,8 @@ describe('AutomaticInvoices grouped parent rows', () => {
               taxSource: 'exclusive',
               exportShapeKey: 'shape-a',
               cadenceSource: 'contract_anniversary',
+              duePosition: 'advance',
               servicePeriodLabel: '2026-03-01 to 2026-04-01',
-              executionWindow: { duePosition: 'advance' },
               amountCents: 17500,
               selectorInput: {
                 clientId: 'client-1',
@@ -265,6 +265,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Execution exec-1')).toBeInTheDocument();
     expect(screen.getAllByText('Cadence: Contract anniversary').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Billing timing: Advance').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Service period: 2026-03-01 to 2026-04-01').length).toBeGreaterThan(0);
     expect(screen.getByText('$125.00')).toBeInTheDocument();
   });
@@ -571,8 +572,8 @@ describe('AutomaticInvoices grouped parent rows', () => {
       taxSource: 'exclusive',
       exportShapeKey: 'shape-a',
       cadenceSource: 'contract_anniversary',
+      duePosition: 'advance',
       servicePeriodLabel: '2026-03-01 to 2026-04-01',
-      executionWindow: { duePosition: 'advance' },
       amountCents: 5000,
       selectorInput: {
         clientId: 'client-1',

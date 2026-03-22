@@ -502,6 +502,7 @@ export interface IRecurringDueWorkRow {
   executionWindowKind: RecurringRunExecutionWindowKind;
   cadenceOwner: CadenceOwner;
   cadenceSource: RecurringDueWorkCadenceSource;
+  duePosition: DuePosition;
   dueState: RecurringDueWorkState;
   isEarly: boolean;
   canGenerate: boolean;

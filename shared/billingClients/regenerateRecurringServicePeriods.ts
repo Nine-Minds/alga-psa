@@ -193,12 +193,12 @@ export function regenerateRecurringServicePeriods(
     const regeneratedRecord: IRecurringServicePeriodRecord = {
       ...candidate,
       recordId: recordIdFactory({
-        scheduleKey: existing.scheduleKey,
-        periodKey: existing.periodKey,
+        scheduleKey: candidate.scheduleKey,
+        periodKey: candidate.periodKey,
         revision,
       }),
-      scheduleKey: existing.scheduleKey,
-      periodKey: existing.periodKey,
+      scheduleKey: candidate.scheduleKey,
+      periodKey: candidate.periodKey,
       revision,
       lifecycleState: 'generated',
       provenance: {

@@ -1439,13 +1439,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
 	                  return (
 	                    <div className="min-w-[20rem] space-y-2">
-                      {record.childExecutionRows.map((member) => {
-	                        const assignmentContext = getRecurringAssignmentContext(member);
-                          const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
-	                        const cadenceSource = formatCadenceSourceBadge(member.cadenceSource).label;
-	                        const duePosition = (member.selectorInput.executionWindow as { duePosition?: string }).duePosition;
-	                        const billingTiming = duePosition === 'advance' ? 'Advance' : 'Arrears';
-	                        const amountCents = (member as { amountCents?: number | null }).amountCents;
+	                      {record.childExecutionRows.map((member) => {
+		                        const assignmentContext = getRecurringAssignmentContext(member);
+	                          const nonContractSelection = parseNonContractSelectionFromScheduleKey(member.scheduleKey ?? null);
+		                        const cadenceSource = formatCadenceSourceBadge(member.cadenceSource).label;
+		                        const billingTiming = member.duePosition === 'advance' ? 'Advance' : 'Arrears';
+		                        const amountCents = (member as { amountCents?: number | null }).amountCents;
 	                        const isChildSelected = selectedTargets.has(childSelectionKeyForMember(member));
                           const childTitle =
                             member.contractName?.trim()
