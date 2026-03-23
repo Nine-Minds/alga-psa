@@ -55,7 +55,7 @@
   {"id": "F076", "description": "Italian accent audit on updated it/msp/extensions.json after EE runtime-state expansion", "implemented": true, "prdRefs": ["2b-20"]},
 
   {"id": "F090", "description": "Update ROUTE_NAMESPACES for /msp/surveys, /msp/schedule, /msp/knowledge-base, /msp/jobs, /msp/settings (email-providers), /msp/profile, /msp/security-settings, /msp/platform-updates, plus follow-up /msp/settings/extensions, /msp/extensions, and /msp/licenses prefixes", "implemented": true},
-  {"id": "F091", "description": "validate-translations.cjs passes for all newly-added MSP namespaces across all 9 locales", "implemented": false},
+  {"id": "F091", "description": "validate-translations.cjs passes for all newly-added MSP namespaces across all 9 locales", "implemented": true},
   {"id": "F092", "description": "Regenerate pseudo-locales (xx, yy) for all newly-added MSP namespaces", "implemented": false},
   {"id": "F093", "description": "npm run build succeeds with no TypeScript errors", "implemented": false}
 ]
