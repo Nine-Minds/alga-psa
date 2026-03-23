@@ -207,7 +207,7 @@
   {
     "id": "T073",
     "description": "Cross-batch: npm run build succeeds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F093"]
   },
   {

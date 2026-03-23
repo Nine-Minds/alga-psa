@@ -282,6 +282,8 @@ done
 - (2026-03-23) Validation for `T071`: the final `node scripts/validate-translations.cjs` run under `F091` completed with `Errors: 0` and `Warnings: 0` across every newly-added MSP namespace and locale file.
 - (2026-03-23) Completed `T072`: closed the final cross-batch pseudo-locale regeneration checkpoint.
 - (2026-03-23) Validation for `T072`: the explicit `F092` pseudo refresh regenerated `xx` and `yy` for every newly-added MSP namespace, and the recorded leaf-count check confirmed each pseudo file still matches its English source structure.
+- (2026-03-23) Completed `T073`: closed the final cross-batch production-build checkpoint.
+- (2026-03-23) Validation for `T073`: the full `npm run build` run recorded under `F093` completed with exit code `0`, including TypeScript, static generation, build traces, and final page optimization.
 
 ## Open Questions
 
