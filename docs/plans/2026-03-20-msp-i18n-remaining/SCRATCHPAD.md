@@ -228,6 +228,8 @@ done
 - (2026-03-23) Validation for `T010`: the earlier schedule locale generation under `F013` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/schedule` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
 - (2026-03-23) Completed `T011`: confirmed the full schedule component batch still compiles with the `msp/schedule` namespace wiring.
 - (2026-03-23) Validation for `T011`: the targeted `npx tsc -p packages/scheduling/tsconfig.json --noEmit` runs logged under `F011` and `F012` both passed after the schedule rewrites, covering the 11 in-scope schedule files with no TypeScript errors.
+- (2026-03-23) Completed `T012`: closed the schedule Italian accent audit checkpoint.
+- (2026-03-23) Validation for `T012`: the `F014` audit on [server/public/locales/it/msp/schedule.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/schedule.json) found no accentless `puo`/`gia`/`verra`/`funzionalita`/`perche` regressions, so the Italian schedule locale passed unchanged.
 
 ## Open Questions
 

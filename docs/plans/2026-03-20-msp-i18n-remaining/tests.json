@@ -39,7 +39,7 @@
   {
     "id": "T012",
     "description": "2b-14: Italian accent audit passes for it/msp/schedule.json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
