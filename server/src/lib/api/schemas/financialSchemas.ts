@@ -14,6 +14,9 @@
  */
 
 import { z } from 'zod';
+import {
+  CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
+} from '@shared/billingClients/cadenceOwnerRollout';
 import { 
   uuidSchema, 
   dateSchema, 
@@ -98,7 +101,7 @@ export const taxTypeSchema = z.enum(['VAT', 'GST', 'Sales Tax']);
 
 export const planTypeSchema = z.enum(['Fixed', 'Hourly', 'Usage']);
 
-export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage', 'per_unit']);
+export const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
 
 export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
 
@@ -373,7 +376,7 @@ export const billingResultSchema = z.object({
 // INVOICE SCHEMAS
 // ============================================================================
 
-export const invoiceBaseSchema = z.object({
+const invoiceWriteSchema = z.object({
   invoice_id: uuidSchema.optional(),
   client_id: uuidSchema,
   invoice_date: isoDateSchema,
@@ -385,17 +388,18 @@ export const invoiceBaseSchema = z.object({
   invoice_number: z.string(),
   finalized_at: isoDateSchema.optional(),
   credit_applied: z.number().default(0),
-  billing_cycle_id: uuidSchema.optional(),
   is_manual: z.boolean().default(false)
 });
 
-export const createInvoiceSchema = invoiceBaseSchema.extend({
+export const createInvoiceSchema = invoiceWriteSchema.extend({
   tenant: uuidSchema
 });
 
-export const updateInvoiceSchema = invoiceBaseSchema.partial();
+export const updateInvoiceSchema = invoiceWriteSchema.partial();
 
-export const invoiceResponseSchema = invoiceBaseSchema.merge(baseEntitySchema);
+export const invoiceResponseSchema = invoiceWriteSchema.merge(baseEntitySchema).extend({
+  billing_cycle_id: uuidSchema.optional(),
+});
 
 export const invoiceListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
   client_id: uuidSchema.optional(),
@@ -439,13 +443,39 @@ export const invoiceItemBaseSchema = z.object({
   updated_by: uuidSchema.optional()
 });
 
+export const recurringBillingTimingSchema = z.enum(['arrears', 'advance']);
+
+export const recurringDetailPeriodResponseSchema = z.object({
+  service_period_start: z.string().datetime().nullable().optional(),
+  service_period_end: z.string().datetime().nullable().optional(),
+  billing_timing: recurringBillingTimingSchema.nullable().optional(),
+});
+
 export const createInvoiceItemSchema = invoiceItemBaseSchema.extend({
   tenant: uuidSchema
 });
 
 export const updateInvoiceItemSchema = invoiceItemBaseSchema.partial();
 
-export const invoiceItemResponseSchema = invoiceItemBaseSchema.merge(baseEntitySchema);
+export const invoiceItemResponseSchema = invoiceItemBaseSchema
+  .merge(baseEntitySchema)
+  .extend({
+    service_period_start: z.string().datetime().nullable().optional(),
+    service_period_end: z.string().datetime().nullable().optional(),
+    billing_timing: recurringBillingTimingSchema.nullable().optional(),
+    recurring_detail_periods: z.array(recurringDetailPeriodResponseSchema).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const detailPeriods = value.recurring_detail_periods;
+
+    if (detailPeriods && detailPeriods.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Canonical recurring invoice charges must omit recurring_detail_periods when no detail rows exist.',
+        path: ['recurring_detail_periods'],
+      });
+    }
+  });
 
 export const addManualItemsSchema = z.object({
   invoice_id: uuidSchema,
@@ -534,6 +564,7 @@ export const contractLineBaseSchema = z.object({
   is_custom: z.boolean().default(false),
   service_category: z.string().optional(),
   contract_line_type: planTypeSchema,
+  cadence_owner: z.enum(['client', 'contract']).optional(),
   hourly_rate: z.number().nullable().optional(),
   minimum_billable_time: z.number().nullable().optional(),
   round_up_to_nearest: z.number().nullable().optional(),
@@ -564,6 +595,7 @@ export const clientContractLineBaseSchema = z.object({
   client_contract_line_id: uuidSchema.optional(),
   client_id: uuidSchema,
   contract_line_id: uuidSchema,
+  cadence_owner: z.enum(['client', 'contract']).optional(),
   service_category: z.string().optional(),
   service_category_name: z.string().optional(),
   start_date: dateSchema,
@@ -604,10 +636,6 @@ export const createClientContractLineCycleSchema = clientContractLineCycleBaseSc
 export const updateClientContractLineCycleSchema = clientContractLineCycleBaseSchema.partial();
 
 export const clientContractLineCycleResponseSchema = clientContractLineCycleBaseSchema.merge(baseEntitySchema);
-
-export const billingCycleInvoiceRequestSchema = z.object({
-  billing_cycle_id: uuidSchema
-});
 
 // ============================================================================
 // FINANCIAL RECONCILIATION SCHEMAS
@@ -654,7 +682,10 @@ export const defaultBillingSettingsSchema = z.object({
   suppress_zero_dollar_invoices: z.boolean(),
   enable_credit_expiration: z.boolean(),
   credit_expiration_days: z.number().int().min(1),
-  credit_expiration_notification_days: z.array(z.number().int().min(1))
+  credit_expiration_notification_days: z.array(z.number().int().min(1)),
+  default_recurring_cadence_owner: z.enum(['client', 'contract']).default('client'),
+  recurring_cadence_rollout_state: z.literal('mixed_enabled').default('mixed_enabled'),
+  recurring_cadence_rollout_message: z.string().default(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE)
 }).merge(baseEntitySchema);
 
 export const clientContractLineSettingsSchema = z.object({
@@ -663,7 +694,10 @@ export const clientContractLineSettingsSchema = z.object({
   suppress_zero_dollar_invoices: z.boolean(),
   enable_credit_expiration: z.boolean().optional(),
   credit_expiration_days: z.number().int().min(1).optional(),
-  credit_expiration_notification_days: z.array(z.number().int().min(1)).optional()
+  credit_expiration_notification_days: z.array(z.number().int().min(1)).optional(),
+  default_recurring_cadence_owner: z.enum(['client', 'contract']).optional(),
+  recurring_cadence_rollout_state: z.literal('mixed_enabled').optional(),
+  recurring_cadence_rollout_message: z.string().optional()
 }).merge(baseEntitySchema);
 
 export const updateBillingSettingsSchema = z.object({
@@ -671,7 +705,8 @@ export const updateBillingSettingsSchema = z.object({
   suppress_zero_dollar_invoices: z.boolean().optional(),
   enable_credit_expiration: z.boolean().optional(),
   credit_expiration_days: z.number().int().min(1).optional(),
-  credit_expiration_notification_days: z.array(z.number().int().min(1)).optional()
+  credit_expiration_notification_days: z.array(z.number().int().min(1)).optional(),
+  default_recurring_cadence_owner: z.enum(['client', 'contract']).optional()
 });
 
 // ============================================================================
@@ -940,8 +975,7 @@ export const calculateBillingSchema = z.object({
   client_id: uuidSchema,
   period_start: dateSchema,
   period_end: dateSchema,
-  billing_cycle_id: uuidSchema.optional()
-});
+}).strict('Billing calculation requests require canonical execution-window dates and do not accept billing_cycle_id.');
 
 export const billingCalculationResultSchema = z.object({
   charges: z.array(billingChargeBaseSchema),

@@ -611,6 +611,7 @@ export const createRenewalDraftForQueueItem = withAuth(async (
       contract_id: draftContractId,
       contract_name: `${(source as any).contract_name ?? (source as any).contract_id} (Renewal Draft)`,
       contract_description: (source as any).contract_description ?? null,
+      owner_client_id: (source as any).client_id,
       billing_frequency: (source as any).billing_frequency ?? 'monthly',
       currency_code: (source as any).currency_code ?? 'USD',
       is_active: false,

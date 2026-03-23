@@ -28,6 +28,19 @@ exports.up = async function(knex) {
   await knex('service_types')
     .where('billing_method', 'per_unit')
     .update({ billing_method: 'usage' });
+
+  const [{ count: serviceCatalogResidualCount }] = await knex('service_catalog')
+    .where('billing_method', 'per_unit')
+    .count('* as count');
+  const [{ count: serviceTypesResidualCount }] = await knex('service_types')
+    .where('billing_method', 'per_unit')
+    .count('* as count');
+
+  if (Number(serviceCatalogResidualCount) > 0 || Number(serviceTypesResidualCount) > 0) {
+    throw new Error(
+      `Billing method normalization failed; residual per_unit rows remain (service_catalog=${serviceCatalogResidualCount}, service_types=${serviceTypesResidualCount})`
+    );
+  }
 };
 
 exports.down = async function(knex) {

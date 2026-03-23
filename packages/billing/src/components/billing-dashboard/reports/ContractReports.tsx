@@ -278,8 +278,8 @@ const ContractReports: React.FC = () => {
           <Skeleton className="h-4 w-72" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, index) => (
             <Card key={`summary-skeleton-${index}`} className="p-4">
               <div className="space-y-2">
                 <Skeleton className="h-4 w-32" />
@@ -347,7 +347,7 @@ const ContractReports: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <Coins className="h-5 w-5 text-green-600" />
@@ -363,7 +363,7 @@ const ContractReports: React.FC = () => {
             <h3 className="font-semibold">YTD Revenue</h3>
           </div>
           <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.totalYTD ?? 0)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Year to Date</p>
+          <p className="text-xs text-muted-foreground mt-1">Year to Date by billed service period</p>
         </Card>
 
         <Card className="p-4">
@@ -372,7 +372,16 @@ const ContractReports: React.FC = () => {
             <h3 className="font-semibold">Active Contracts</h3>
           </div>
           <p className="text-2xl font-bold text-purple-600">{summary?.activeContractCount ?? 0}</p>
-          <p className="text-xs text-muted-foreground mt-1">Billable clients</p>
+          <p className="text-xs text-muted-foreground mt-1">Active assignments</p>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="h-5 w-5 text-amber-600" />
+            <h3 className="font-semibold">Renewal Decisions Due</h3>
+          </div>
+          <p className="text-2xl font-bold text-amber-600">{summary?.atRiskDecisionCount ?? 0}</p>
+          <p className="text-xs text-muted-foreground mt-1">Decision due dates in the next 90 days</p>
         </Card>
       </div>
 
@@ -392,7 +401,7 @@ const ContractReports: React.FC = () => {
               <h3 className="text-lg font-semibold">Contract Revenue Report</h3>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Overview of monthly recurring revenue and year-to-date billing by contract
+              Overview of monthly recurring revenue and year-to-date billed service periods by contract.
             </p>
             {revenueData.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">No contract revenue data available</p>

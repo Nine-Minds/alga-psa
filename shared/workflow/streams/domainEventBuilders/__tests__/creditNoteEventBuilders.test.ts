@@ -31,6 +31,13 @@ describe('creditNoteEventBuilders', () => {
         amount: 2500,
         currency: 'USD',
         status: 'issued',
+        sourceDocumentKind: 'negative_invoice',
+        sourceInvoiceId: '643a1b92-0c24-4a2c-8b35-61de20efb196',
+        sourceInvoiceNumber: 'INV-1001',
+        sourceInvoiceStatus: 'sent',
+        sourceInvoiceDateBasis: 'canonical_recurring_service_period',
+        sourceServicePeriodStart: '2026-01-01T00:00:00.000Z',
+        sourceServicePeriodEnd: '2026-02-01T00:00:00.000Z',
       }),
       ctx
     );
@@ -47,6 +54,11 @@ describe('creditNoteEventBuilders', () => {
         appliedAt: occurredAt,
         amountApplied: 1200,
         currency: 'USD',
+        appliedInvoiceNumber: 'INV-3001',
+        appliedInvoiceStatus: 'sent',
+        appliedInvoiceDateBasis: 'canonical_recurring_service_period',
+        appliedServicePeriodStart: '2026-01-01T00:00:00.000Z',
+        appliedServicePeriodEnd: '2026-02-01T00:00:00.000Z',
       }),
       ctx
     );
@@ -68,4 +80,3 @@ describe('creditNoteEventBuilders', () => {
     expect(creditNoteVoidedEventPayloadSchema.safeParse(payload).success).toBe(true);
   });
 });
-

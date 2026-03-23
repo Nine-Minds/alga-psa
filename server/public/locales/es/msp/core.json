@@ -30,6 +30,7 @@
       "invoicing": "Facturación",
       "invoiceTemplates": "Plantillas de factura",
       "billingCycles": "Ciclos de facturación",
+      "servicePeriods": "Períodos de servicio",
       "serviceCatalog": "Catálogo de servicios",
       "products": "Productos",
       "taxRates": "Tasas de impuestos",
@@ -94,6 +95,9 @@
       "profile": "Perfil",
       "security": "Seguridad"
     }
+  },
+  "dashboard": {
+    "onboardingWizard": "Asistente de configuración"
   },
   "header": {
     "userFallback": "Usuario",

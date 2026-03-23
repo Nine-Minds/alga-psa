@@ -13,6 +13,120 @@ const OUTPUT_PATH = path.resolve(repoRoot, 'ee/server/src/chat/registry/apiRegis
 const OVERRIDES_DIR = path.resolve(repoRoot, 'ee/docs/api-registry');
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
+const PLACEHOLDER_DESCRIPTION =
+  'This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.';
+
+function singularize(segment) {
+  if (segment.endsWith('ies')) {
+    return `${segment.slice(0, -3)}y`;
+  }
+  if (segment.endsWith('ses')) {
+    return segment.slice(0, -2);
+  }
+  if (segment.endsWith('s') && !segment.endsWith('ss')) {
+    return segment.slice(0, -1);
+  }
+  return segment;
+}
+
+function humanizeSegment(segment) {
+  return segment
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function deriveResourceSegments(pathName) {
+  const rawSegments = pathName.split('/').filter(Boolean);
+  const apiIndex = rawSegments.findIndex((segment) => segment === 'api');
+  const segments = apiIndex === -1 ? rawSegments : rawSegments.slice(apiIndex + 1);
+  if (segments[0] && /^v\d+$/i.test(segments[0])) {
+    segments.shift();
+  }
+  return segments;
+}
+
+function deriveFallbackNames(method, pathName) {
+  const segments = deriveResourceSegments(pathName);
+  const nonParamSegments = segments.filter((segment) => !segment.startsWith('{'));
+  const pathParams = segments.filter((segment) => segment.startsWith('{') && segment.endsWith('}'));
+  const primary = nonParamSegments[0] ?? 'resource';
+  const primaryLabel = humanizeSegment(singularize(primary));
+  const trailing = nonParamSegments.slice(1).map((segment) => humanizeSegment(singularize(segment)));
+  const tailLabel = trailing.join(' ');
+
+  if (method === 'get' && pathParams.length === 1 && nonParamSegments.length === 1) {
+    return {
+      displayName: `Get ${primaryLabel}`,
+      summary: `Get ${primaryLabel.toLowerCase()} by ID`,
+    };
+  }
+
+  if (method === 'put' && pathParams.length === 1 && nonParamSegments.length === 1) {
+    return {
+      displayName: `Update ${primaryLabel}`,
+      summary: `Update ${primaryLabel.toLowerCase()} by ID`,
+    };
+  }
+
+  if (method === 'patch' && pathParams.length === 1 && nonParamSegments.length === 1) {
+    return {
+      displayName: `Update ${primaryLabel}`,
+      summary: `Update ${primaryLabel.toLowerCase()} fields by ID`,
+    };
+  }
+
+  if (method === 'delete' && pathParams.length === 1 && nonParamSegments.length === 1) {
+    return {
+      displayName: `Delete ${primaryLabel}`,
+      summary: `Delete ${primaryLabel.toLowerCase()} by ID`,
+    };
+  }
+
+  if (method === 'get' && pathParams.length > 0 && tailLabel) {
+    return {
+      displayName: `List ${primaryLabel} ${tailLabel}`,
+      summary: `List ${tailLabel.toLowerCase()} for a ${primaryLabel.toLowerCase()}`,
+    };
+  }
+
+  return null;
+}
+
+function inferPathParameters(pathName, existingParameters) {
+  const existingPathParamNames = new Set(
+    (existingParameters ?? [])
+      .filter((param) => param.in === 'path')
+      .map((param) => param.name),
+  );
+
+  const inferred = [];
+  for (const match of pathName.matchAll(/\{([^}]+)\}/g)) {
+    const name = match[1];
+    if (!name || existingPathParamNames.has(name)) {
+      continue;
+    }
+
+    inferred.push({
+      name,
+      in: 'path',
+      required: true,
+      description:
+        name === 'id'
+          ? 'Resource identifier.'
+          : `${humanizeSegment(name)} path parameter.`,
+      schema: {
+        type: 'string',
+        ...(name === 'id' ? { format: 'uuid' } : {}),
+      },
+    });
+  }
+
+  return inferred;
+}
 
 function loadSpec(specPath) {
   if (!fs.existsSync(specPath)) {
@@ -170,11 +284,37 @@ function applyOverrides(entry, overrides) {
       entry.approvalRequired = metadata.approvalRequired;
     }
     if (Array.isArray(metadata.playbooks)) entry.playbooks = metadata.playbooks;
-    if (Array.isArray(metadata.examples)) entry.examples = metadata.examples;
+    if (Array.isArray(metadata.examples)) {
+      entry.examples = metadata.examples.map((example) => normalizeExample(example));
+    }
     if (Array.isArray(metadata.parameters)) entry.parameters = metadata.parameters;
     if (metadata.requestBodySchema !== undefined) entry.requestBodySchema = metadata.requestBodySchema;
     if (metadata.responseBodySchema !== undefined) entry.responseBodySchema = metadata.responseBodySchema;
   }
+}
+
+function normalizeExample(example) {
+  if (!example || typeof example !== 'object') {
+    return example;
+  }
+
+  const normalized = { ...example };
+  const request = normalized.request;
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    return normalized;
+  }
+
+  if ('path' in request && !('params' in request)) {
+    const { path, ...rest } = request;
+    normalized.request = {
+      ...rest,
+      params: path,
+    };
+    return normalized;
+  }
+
+  normalized.request = { ...request };
+  return normalized;
 }
 
 function createEntryId(method, pathName, operationId) {
@@ -195,20 +335,31 @@ function collectOperations(spec) {
 
       const id = createEntryId(method, pathName, operation.operationId);
       const parameters = collectParameters(spec, pathItem, operation);
+      const fallback = deriveFallbackNames(method, pathName);
       const { schema: requestBodySchema, example: requestExample } = extractRequestBody(spec, operation);
       const responseBodySchema = extractResponseBody(spec, operation);
+      const displayName = operation['x-chat-display-name']
+        ?? operation.summary
+        ?? fallback?.displayName
+        ?? `${method.toUpperCase()} ${pathName}`;
+      const summary = operation.summary
+        ?? fallback?.summary
+        ?? `${method.toUpperCase()} ${pathName}`;
+      const description = operation.description;
+      const normalizedDescription =
+        description === PLACEHOLDER_DESCRIPTION && fallback ? undefined : description;
 
       const entry = {
         id,
         method,
         path: pathName,
-        displayName: operation['x-chat-display-name'] ?? operation.summary ?? `${method.toUpperCase()} ${pathName}`,
-        summary: operation.summary,
-        description: operation.description,
+        displayName,
+        summary,
+        description: normalizedDescription,
         tags: Array.isArray(operation.tags) ? operation.tags : [],
         rbacResource: operation['x-chat-rbac-resource'] ?? operation['x-rbac-resource'],
         approvalRequired: Boolean(operation['x-chat-approval-required']),
-        parameters,
+        parameters: [...parameters, ...inferPathParameters(pathName, parameters)],
         requestBodySchema,
         requestExample,
         responseBodySchema,

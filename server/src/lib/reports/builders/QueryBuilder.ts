@@ -168,8 +168,8 @@ export class QueryBuilder {
     filter: FilterDefinition,
     parameters: ReportParameters
   ): Knex.QueryBuilder {
-
     const value = this.resolveFilterValue(filter.value, parameters);
+    const rawField = filter.field.startsWith('raw:') ? filter.field.slice(4) : null;
 
     // Skip filters with empty/null/undefined values (except for is_null/is_not_null operators)
     if (filter.operator !== 'is_null' && filter.operator !== 'is_not_null') {
@@ -184,29 +184,41 @@ export class QueryBuilder {
 
     switch (filter.operator) {
       case 'eq':
-        return query.where(filter.field, value);
+        return rawField ? query.whereRaw(`${rawField} = ?`, [value]) : query.where(filter.field, value);
       case 'neq':
-        return query.whereNot(filter.field, value);
+        return rawField ? query.whereRaw(`${rawField} <> ?`, [value]) : query.whereNot(filter.field, value);
       case 'gt':
-        return query.where(filter.field, '>', value);
+        return rawField ? query.whereRaw(`${rawField} > ?`, [value]) : query.where(filter.field, '>', value);
       case 'gte':
-        return query.where(filter.field, '>=', value);
+        return rawField ? query.whereRaw(`${rawField} >= ?`, [value]) : query.where(filter.field, '>=', value);
       case 'lt':
-        return query.where(filter.field, '<', value);
+        return rawField ? query.whereRaw(`${rawField} < ?`, [value]) : query.where(filter.field, '<', value);
       case 'lte':
-        return query.where(filter.field, '<=', value);
+        return rawField ? query.whereRaw(`${rawField} <= ?`, [value]) : query.where(filter.field, '<=', value);
       case 'in':
         const inValues = Array.isArray(value) ? value : [value];
+        if (rawField) {
+          return query.whereRaw(
+            `${rawField} in (${inValues.map(() => '?').join(', ')})`,
+            inValues
+          );
+        }
         return query.whereIn(filter.field, inValues);
       case 'not_in':
         const notInValues = Array.isArray(value) ? value : [value];
+        if (rawField) {
+          return query.whereRaw(
+            `${rawField} not in (${notInValues.map(() => '?').join(', ')})`,
+            notInValues
+          );
+        }
         return query.whereNotIn(filter.field, notInValues);
       case 'like':
-        return query.where(filter.field, 'like', value);
+        return rawField ? query.whereRaw(`${rawField} like ?`, [value]) : query.where(filter.field, 'like', value);
       case 'is_null':
-        return query.whereNull(filter.field);
+        return rawField ? query.whereRaw(`${rawField} is null`) : query.whereNull(filter.field);
       case 'is_not_null':
-        return query.whereNotNull(filter.field);
+        return rawField ? query.whereRaw(`${rawField} is not null`) : query.whereNotNull(filter.field);
       default:
         throw new ReportExecutionError(
           `Unsupported filter operator: ${filter.operator}`

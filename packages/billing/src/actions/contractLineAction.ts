@@ -12,9 +12,35 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
+import {
+    DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+    resolveRecurringAuthoringPolicy,
+} from '@shared/billingClients/recurringAuthoringPolicy';
+import {
+    normalizeLiveRecurringStorage,
+    normalizeTemplateRecurringStorage,
+} from '@shared/billingClients/recurrenceStorageModel';
+import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
+async function assertContractLineIsAuthorable(
+    trx: Knex.Transaction,
+    tenant: string,
+    contractLineId: string,
+): Promise<void> {
+    const contract = await trx('contract_lines as cl')
+        .join('contracts as c', function joinContracts() {
+            this.on('cl.contract_id', '=', 'c.contract_id')
+                .andOn('cl.tenant', '=', 'c.tenant');
+        })
+        .where('cl.tenant', tenant)
+        .andWhere('cl.contract_line_id', contractLineId)
+        .first('c.is_system_managed_default');
 
-
+    if (contract?.is_system_managed_default === true) {
+        throw new Error('System-managed default contracts are attribution-only; contract-line authoring is disabled.');
+    }
+}
 
 export const getContractLines = withAuth(async (
     user,
@@ -34,12 +60,7 @@ export const getContractLines = withAuth(async (
             }
 
             const plans = await ContractLine.getAll(trx);
-            // billing_timing is stored directly on contract_lines (added in migration 20251025120000)
-            // No need to query a separate terms table
-            const enrichedPlans = plans.map((plan) => ({
-                ...plan,
-                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-            }));
+            const enrichedPlans = plans.map((plan) => normalizeLiveRecurringStorage(plan));
 
             return enrichedPlans;
         });
@@ -78,10 +99,6 @@ export const getContractLineById = withAuth(async (
                 .first();
 
             if (templateLine) {
-                const templateTerms = await trx('contract_template_line_terms')
-                    .where({ tenant, template_line_id: planId })
-                    .first();
-
                 return {
                     contract_line_id: templateLine.template_line_id,
                     contract_line_name: templateLine.template_line_name,
@@ -91,7 +108,10 @@ export const getContractLineById = withAuth(async (
                     tenant,
                     display_order: templateLine.display_order ?? 0,
                     custom_rate: templateLine.custom_rate != null ? Number(templateLine.custom_rate) : null,
-                    billing_timing: (templateLine.billing_timing ?? templateTerms?.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+                    ...normalizeTemplateRecurringStorage({
+                        billing_timing: templateLine.billing_timing,
+                        cadence_owner: templateLine.cadence_owner,
+                    }),
                     contract_line_type: templateLine.line_type ?? 'Fixed',
                     service_category: templateLine.service_category ?? null,
                     is_active: templateLine.is_active ?? true,
@@ -109,10 +129,7 @@ export const getContractLineById = withAuth(async (
             }
 
             // billing_timing is stored directly on contract_lines
-            return {
-                ...plan,
-                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-            };
+            return normalizeLiveRecurringStorage(plan);
         });
     } catch (error) {
         console.error(`Error fetching contract line with ID ${planId}:`, error);
@@ -145,12 +162,23 @@ export const createContractLine = withAuth(async (
 
             // Remove tenant field if present in planData to prevent override
             const { tenant: _, ...safePlanData } = planData;
-            delete safePlanData.billing_timing;
+            const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                cadenceOwner: safePlanData.cadence_owner,
+                defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+                billingTiming: safePlanData.billing_timing,
+            });
+            safePlanData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+            safePlanData.billing_timing = recurringAuthoringPolicy.billingTiming;
             const plan = await ContractLine.create(trx, safePlanData);
-            const enrichedPlan: IContractLine = {
-                ...plan,
-                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-            };
+            const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
+
+            if (enrichedPlan.contract_line_id) {
+                await syncRecurringServicePeriodsForContractLine(trx, {
+                    tenant,
+                    contractLineId: enrichedPlan.contract_line_id,
+                    sourceRunPrefix: 'contract_line_create',
+                });
+            }
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -194,26 +222,35 @@ export const updateContractLine = withAuth(async (
                 // Handle case where plan is not found before update attempt
                 throw new Error(`Contract Line with ID ${planId} not found.`);
             }
+            await assertContractLineIsAuthorable(trx, tenant, planId);
 
             // Remove tenant field if present in updateData to prevent override
             const { tenant: _, ...safeUpdateData } = updateData;
+            const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                cadenceOwner: safeUpdateData.cadence_owner,
+                fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+                billingTiming: safeUpdateData.billing_timing,
+                fallbackBillingTiming: existingPlan.billing_timing,
+            });
+            safeUpdateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+            safeUpdateData.billing_timing = recurringAuthoringPolicy.billingTiming;
 
             // If the plan is hourly, remove only the per-service hourly_rate field
             // minimum_billable_time and round_up_to_nearest are now contract-line-level
             if (existingPlan.contract_line_type === 'Hourly') {
                 delete safeUpdateData.hourly_rate;
             }
-            delete safeUpdateData.billing_timing;
 
             // Proceed with the update using the potentially modified data
             // Ensure ContractLine.update handles empty updateData gracefully if all fields were removed
             const plan = await ContractLine.update(trx, planId, safeUpdateData);
+            const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
-            // billing_timing is stored directly on contract_lines
-            const enrichedPlan: IContractLine = {
-                ...plan,
-                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-            };
+            await syncRecurringServicePeriodsForContractLine(trx, {
+                tenant,
+                contractLineId: planId,
+                sourceRunPrefix: 'contract_line_update',
+            });
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -259,6 +296,7 @@ export const upsertContractLineTerms = withAuth(async (
         if (!contractLine) {
             throw new Error(`Contract line ${contractLineId} not found.`);
         }
+        await assertContractLineIsAuthorable(trx, tenant, contractLineId);
 
         if (billingTiming === 'advance' && contractLine.contract_line_type !== 'Fixed') {
             throw new Error('Advance billing is only supported for fixed contract lines.');
@@ -273,13 +311,12 @@ export const upsertContractLineTerms = withAuth(async (
                 updated_at: trx.fn.now(),
             });
 
-        // Also update contract_template_line_terms if this is a template line
-        await trx('contract_template_line_terms')
-            .where({ tenant, template_line_id: contractLineId })
-            .update({
-                billing_timing: billingTiming,
-                updated_at: trx.fn.now(),
-            });
+        await syncRecurringServicePeriodsForContractLine(trx, {
+            tenant,
+            contractLineId,
+            sourceRunPrefix: 'contract_line_terms_update',
+        });
+
     });
 });
 
@@ -360,7 +397,8 @@ export const deleteContractLine = withAuth(async (
 
 /**
  * Gets the combined fixed plan configuration (plan-level and service-level)
- * Fetches proration/alignment from contract_line_fixed_config and base_rate from contract_line_service_fixed_config.
+ * Fetches legacy partial-period compatibility settings from contract_line_fixed_config
+ * and base_rate from contract_line_service_fixed_config.
  */
 export const getCombinedFixedPlanConfiguration = withAuth(async (
     user,
@@ -384,14 +422,17 @@ export const getCombinedFixedPlanConfiguration = withAuth(async (
                 throw new Error('Permission denied: Cannot read contract line configurations');
             }
 
-            // --- Fetch Plan-Level Config (Base Rate, Proration, Alignment) ---
+            // --- Fetch Plan-Level Config (Base Rate, Partial-Period Compatibility) ---
             // Use the existing getContractLineFixedConfig action which should now return base_rate
             const planConfig = await getContractLineFixedConfig(planId);
 
             // Default values if plan-level config doesn't exist
             const contract_line_base_rate = planConfig?.base_rate ?? null; // Get base_rate from plan config
             const enable_proration = planConfig?.enable_proration ?? false;
-            const billing_cycle_alignment = planConfig?.billing_cycle_alignment ?? 'start';
+            const billing_cycle_alignment = resolveBillingCycleAlignmentForCompatibility({
+                billingCycleAlignment: planConfig?.billing_cycle_alignment,
+                enableProration: planConfig?.enable_proration,
+            });
 
             // --- Fetch Service-Level Config ID (Optional, if needed elsewhere) ---
             // We no longer need service-level config to get the base rate for the combined view.
@@ -429,7 +470,7 @@ export const getCombinedFixedPlanConfiguration = withAuth(async (
 });
 
 /**
- * Gets only the plan-level fixed configuration (proration, alignment)
+ * Gets only the plan-level fixed configuration (partial-period compatibility)
  */
 export const getContractLineFixedConfig = withAuth(async (
     user,
@@ -450,8 +491,7 @@ export const getContractLineFixedConfig = withAuth(async (
             }
 
             const model = new ContractLineFixedConfig(trx, tenant);
-            const config = await model.getByPlanId(planId);
-            return config;
+            return await model.getByPlanId(planId);
         });
     } catch (error) {
         console.error(`Error fetching contract_line_fixed_config for plan ${planId}:`, error);
@@ -463,7 +503,8 @@ export const getContractLineFixedConfig = withAuth(async (
 });
 
 /**
- * Updates the plan-level fixed configuration (proration, alignment) in contract_line_fixed_config.
+ * Updates the plan-level fixed configuration (partial-period compatibility) in
+ * contract_line_fixed_config.
  * Uses upsert logic: creates if not exists, updates if exists.
  */
 export const updateContractLineFixedConfig = withAuth(async (
@@ -488,11 +529,13 @@ export const updateContractLineFixedConfig = withAuth(async (
             if (!existingPlan) {
                 throw new Error(`Contract Line with ID ${planId} not found.`);
             }
+            await assertContractLineIsAuthorable(trx, tenant, planId);
             if (existingPlan.contract_line_type !== 'Fixed') {
                 throw new Error(`Cannot update fixed plan configuration for non-fixed plan type: ${existingPlan.contract_line_type}`);
             }
 
             const model = new ContractLineFixedConfig(trx, tenant);
+            const existingConfig = await model.getByPlanId(planId);
 
             // Prepare data for upsert, ensuring contract_line_id and tenant are included
             // Prepare data for upsert, ensuring contract_line_id, tenant, and base_rate are included
@@ -500,7 +543,11 @@ export const updateContractLineFixedConfig = withAuth(async (
                 contract_line_id: planId,
                 base_rate: configData.base_rate, // Include base_rate from input
                 enable_proration: configData.enable_proration ?? false, // Provide default if undefined
-                billing_cycle_alignment: configData.billing_cycle_alignment ?? 'start', // Provide default if undefined
+                billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+                    billingCycleAlignment: configData.billing_cycle_alignment,
+                    enableProration: configData.enable_proration,
+                    fallbackAlignment: existingConfig?.billing_cycle_alignment,
+                }),
                 tenant: tenant,
             };
 
@@ -545,6 +592,7 @@ export const updatePlanServiceFixedConfigRate = withAuth(async (
             if (!existingPlan) {
                 throw new Error(`Contract Line with ID ${planId} not found.`);
             }
+            await assertContractLineIsAuthorable(trx, tenant, planId);
             if (existingPlan.contract_line_type !== 'Fixed') {
                 throw new Error(`Cannot update fixed service config rate for non-fixed plan type: ${existingPlan.contract_line_type}`);
             }
@@ -569,7 +617,7 @@ export const updatePlanServiceFixedConfigRate = withAuth(async (
                     { // Type config data (only base_rate now)
                         base_rate: baseRate
                     }
-                    // No proration/alignment data passed here anymore
+                    // No legacy partial-period compatibility data is passed here anymore
                 );
 
                 return !!configId;

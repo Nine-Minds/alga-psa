@@ -31,6 +31,9 @@
       "@alga-psa/shared/*": [
         "shared/*"
       ],
+      "@alga-psa/block-content/actions": [
+        "packages/block-content/src/actions.ts"
+      ],
       "@main-test-utils": [
         "server/test-utils"
       ],

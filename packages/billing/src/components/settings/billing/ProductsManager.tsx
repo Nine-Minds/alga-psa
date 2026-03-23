@@ -54,7 +54,7 @@ const ProductsManager: React.FC = () => {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   const [allServiceTypes, setAllServiceTypes] = useState<
-    { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]
+    { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]
   >([]);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -80,16 +80,16 @@ const ProductsManager: React.FC = () => {
   }, [categories]);
 
   const productServiceTypes = useMemo(() => {
-    const perUnitTypes = allServiceTypes.filter((t) => t.billing_method === 'per_unit');
+    const usageTypes = allServiceTypes.filter((t) => t.billing_method === 'usage');
 
     const selectedTypeId = editingProduct?.custom_service_type_id || null;
 
-    if (selectedTypeId && !perUnitTypes.some((t) => t.id === selectedTypeId)) {
+    if (selectedTypeId && !usageTypes.some((t) => t.id === selectedTypeId)) {
       const selected = allServiceTypes.find((t) => t.id === selectedTypeId);
-      if (selected) return [...perUnitTypes, selected];
+      if (selected) return [...usageTypes, selected];
     }
 
-    return perUnitTypes;
+    return usageTypes;
   }, [allServiceTypes, editingProduct?.custom_service_type_id]);
 
   const fetchServiceTypes = async () => {

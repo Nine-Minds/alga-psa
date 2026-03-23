@@ -1,6 +1,17 @@
 // server/src/lib/models/contractLineMapping.ts
 import type { IContractLineMapping } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
+import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+
+function normalizeContractLineMapping<T extends Partial<IContractLineMapping>>(
+  line: T,
+): T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'> {
+  return normalizeLiveRecurringStorage(line);
+}
 
 const ContractLineMapping = {
   /**
@@ -29,14 +40,16 @@ const ContractLineMapping = {
             'template_line_id as contract_line_id',
             'display_order',
             'custom_rate',
+            'billing_timing',
+            'cadence_owner',
             'created_at'
           );
 
-        return templateLines as IContractLineMapping[];
+        return templateLines.map((line) => normalizeContractLineMapping(line as IContractLineMapping));
       }
 
       // Query contract_lines directly (mapping data now inlined via contract_id column)
-      return await db('contract_lines')
+      const contractLines = await db('contract_lines')
         .where({ contract_id: contractId, tenant })
         .select(
           'tenant',
@@ -44,8 +57,12 @@ const ContractLineMapping = {
           'contract_line_id',
           'display_order',
           'custom_rate',
+          'billing_timing',
+          'cadence_owner',
           'created_at'
         ) as IContractLineMapping[];
+
+      return contractLines.map((line) => normalizeContractLineMapping(line));
     } catch (error) {
       console.error(`Error fetching contract line mappings for contract ${contractId}:`, error);
       throw error;
@@ -132,6 +149,12 @@ const ContractLineMapping = {
         throw new Error(`Contract line ${contractLineId} is already linked to contract ${contractId}`);
       }
 
+      if (!contractLine.cadence_owner) {
+        throw new Error(
+          `Contract line ${contractLineId} is missing cadence_owner and must be normalized before linking.`,
+        );
+      }
+
       // Update contract_lines directly to link it to the contract
       const [updatedLine] = await db('contract_lines')
         .where({
@@ -141,6 +164,7 @@ const ContractLineMapping = {
         .update({
           contract_id: contractId,
           custom_rate: customRate,
+          cadence_owner: contractLine.cadence_owner,
           display_order: 0,
           updated_at: db.fn.now()
         })
@@ -150,10 +174,12 @@ const ContractLineMapping = {
           'contract_line_id',
           'display_order',
           'custom_rate',
+          'billing_timing',
+          'cadence_owner',
           'created_at'
         ]);
 
-      return updatedLine as IContractLineMapping;
+      return normalizeContractLineMapping(updatedLine as IContractLineMapping);
     } catch (error) {
       console.error(`Error adding contract line ${contractLineId} to contract ${contractId}:`, error);
       throw error;
@@ -248,6 +274,20 @@ const ContractLineMapping = {
         ...dataToUpdate
       } = updateData;
 
+      const existingLine = await db('contract_lines')
+        .where({
+          contract_id: contractId,
+          contract_line_id: contractLineId,
+          tenant
+        })
+        .first(['cadence_owner', 'billing_timing']);
+      const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+        cadenceOwner: dataToUpdate.cadence_owner,
+        fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+        billingTiming: dataToUpdate.billing_timing,
+        fallbackBillingTiming: existingLine?.billing_timing,
+      });
+
       // Try updating contract_lines directly
       const [updatedLine] = await db('contract_lines')
         .where({
@@ -257,6 +297,8 @@ const ContractLineMapping = {
         })
         .update({
           ...dataToUpdate,
+          billing_timing: recurringAuthoringPolicy.billingTiming,
+          cadence_owner: recurringAuthoringPolicy.cadenceOwner,
           updated_at: db.fn.now()
         })
         .returning([
@@ -265,11 +307,13 @@ const ContractLineMapping = {
           'contract_line_id',
           'display_order',
           'custom_rate',
+          'billing_timing',
+          'cadence_owner',
           'created_at'
         ]);
 
       if (updatedLine) {
-        return updatedLine as IContractLineMapping;
+        return normalizeContractLineMapping(updatedLine as IContractLineMapping);
       }
 
       // Fall back to contract_template_lines
@@ -281,6 +325,12 @@ const ContractLineMapping = {
       }
       if (dataToUpdate.display_order !== undefined) {
         templateUpdatePayload.display_order = dataToUpdate.display_order;
+      }
+      if (dataToUpdate.cadence_owner !== undefined) {
+        templateUpdatePayload.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
+      }
+      if (dataToUpdate.billing_timing !== undefined) {
+        templateUpdatePayload.billing_timing = recurringAuthoringPolicy.billingTiming;
       }
 
       const [updatedTemplateLine] = await db('contract_template_lines')
@@ -296,6 +346,8 @@ const ContractLineMapping = {
           'template_line_id as contract_line_id',
           'display_order',
           'custom_rate',
+          'billing_timing',
+          'cadence_owner',
           'created_at',
         ]);
 
@@ -303,7 +355,7 @@ const ContractLineMapping = {
         throw new Error(`Failed to update contract line ${contractLineId} for contract ${contractId}`);
       }
 
-      return updatedTemplateLine as IContractLineMapping;
+      return normalizeContractLineMapping(updatedTemplateLine as IContractLineMapping);
     } catch (error) {
       console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);
       throw error;
@@ -343,6 +395,7 @@ const ContractLineMapping = {
             'lines.template_line_id as contract_line_id',
             'lines.display_order',
             'lines.custom_rate',
+            'lines.cadence_owner',
             'lines.created_at',
             'lines.template_line_name as contract_line_name',
             'lines.billing_frequency',
@@ -369,6 +422,7 @@ const ContractLineMapping = {
           'cl.contract_line_id',
           'cl.display_order',
           'cl.custom_rate',
+          'cl.cadence_owner',
           'cl.created_at',
           'cl.contract_line_name',
           'cl.billing_frequency',

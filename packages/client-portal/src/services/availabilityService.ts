@@ -695,13 +695,19 @@ export async function getAvailableServicesForClient(
         this.on('cls.service_id', 'sc.service_id')
             .andOn('cls.tenant', 'sc.tenant');
       })
+      .leftJoin('service_types as st', function() {
+        this.on('sc.custom_service_type_id', '=', 'st.id')
+            .andOn('sc.tenant', '=', 'st.tenant');
+      })
       .where('cl.tenant', tenantId)
       .whereIn('cl.contract_id', contractIds)
       .select(
         'sc.service_id',
         'sc.service_name',
         'sc.description as service_description',
-        'sc.billing_method as service_type',
+        'st.name as service_type',
+        'sc.billing_method as billing_mode',
+        'sc.item_kind',
         'sc.default_rate'
       )
       .distinct();
@@ -726,6 +732,10 @@ export async function getServicesForPublicBooking(
         this.on('avs.service_id', 'sc.service_id')
             .andOn('avs.tenant', 'sc.tenant');
       })
+      .leftJoin('service_types as st', function() {
+        this.on('sc.custom_service_type_id', '=', 'st.id')
+            .andOn('sc.tenant', '=', 'st.tenant');
+      })
       .where({
         'avs.tenant': tenantId,
         'avs.setting_type': 'service_rules',
@@ -735,7 +745,9 @@ export async function getServicesForPublicBooking(
         'sc.service_id',
         'sc.service_name',
         'sc.description as service_description',
-        'sc.billing_method as service_type',
+        'st.name as service_type',
+        'sc.billing_method as billing_mode',
+        'sc.item_kind',
         'sc.default_rate',
         'avs.config_json'
       )

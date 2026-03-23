@@ -1,0 +1,273 @@
+# Scratchpad — Multi-Active Contracts Per Client
+
+- Plan slug: `multi-active-contracts-per-client`
+- Created: `2026-03-20`
+
+## Decisions
+
+- 2026-03-20: This plan assumes true concurrent active assignments are allowed, including overlapping active windows for the same client.
+- 2026-03-20: This plan preserves single-assignment invoices. Removing the single-active-contract rule does **not** imply mixed-contract invoices.
+- 2026-03-20: PO scope remains invoice-level and therefore remains assignment-scoped because invoices remain assignment-scoped.
+- 2026-03-20: `client_contract_id`, not `contract_id`, is the canonical identity for assignment-scoped UI and execution.
+- 2026-03-20: Ambiguous legacy surfaces must stop guessing. Prefer explicit assignment identity or an explicit ambiguity failure.
+- 2026-03-20: Mixed-currency behavior is explicitly preserved as a separate policy; multi-active assignment support does not imply mixed-currency active assignments for the same client.
+- 2026-03-20: Invoice tables already snapshot `client_contract_id`, so removing singleton active-contract assumptions does not require invoice schema redesign to preserve single-assignment invoices.
+
+## Discoveries / Constraints
+
+- 2026-03-20: There is no DB-level uniqueness or exclusion constraint enforcing one active contract per client. The rule is app-layer only.
+- 2026-03-20: The billing wizard path is asymmetric today. It only preflights mixed-currency active contracts and can already create same-client same-currency active contracts through a different path than `packages/clients`.
+- 2026-03-20: `packages/clients` has the most dangerous identity bugs for this change. Several reads and UI flows still key by `contract_id`, which is not unique once a client can hold multiple active assignments to the same header/base contract.
+- 2026-03-20: Recurring due-work grouping is already closer to the desired behavior than preview/generation. Candidate grouping already splits by `client_contract_id`; the execution path is the risky part.
+- 2026-03-20: Invoice generation, PO consumption, invoice queries, and exports all still assume one invoice belongs to one `client_contract_id`. That assumption is workable and should be preserved in this plan.
+- 2026-03-20: Fixed recurring charge attribution can still collapse sibling concurrent assignments if they share the same base line/template identity.
+- 2026-03-20: Bucket usage currently picks the latest active matching assignment. That behavior becomes actively wrong when concurrent active contracts are allowed.
+- 2026-03-20: BillingCycles still collapses multiple active assignments for a client to the first active row returned, ordered by latest start date.
+- 2026-03-20: `calculateBillingForSelectionInput(...)` previously fetched persisted recurring timing selections at `client + invoice window` scope and passed them through unchanged, which could re-expand selected-candidate preview/generation into sibling assignment work.
+- 2026-03-20: Client-cadence selector `scheduleKey` encodes assignment line identity (`client_contract_line:<id>`), which can be used to enforce assignment-scoped recurring selection filtering before billing calculation.
+- 2026-03-20: Singleton active-contract UI/action blockers were still live in `ContractBasicsStep`, `ContractDialog`, `ClientContractsTab`, `Contracts.tsx`, `contractActions`, and shared/model helper layers.
+- 2026-03-20: Wizard assignment writes inserted directly into `client_contracts`, so shared assignment validation was bypassed and mixed-currency policy could diverge from clients flows.
+
+## Agent Audit Summary
+
+- UI enforcement audit:
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`
+  - `packages/billing/src/components/billing-dashboard/contracts/ContractDialog.tsx`
+  - `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
+  - `packages/billing/src/components/billing-dashboard/contracts/Contracts.tsx`
+- Shared/server invariant audit:
+  - `shared/billingClients/contracts.ts`
+  - `shared/billingClients/clientContracts.ts`
+  - `packages/billing/src/actions/contractActions.ts`
+  - `packages/billing/src/models/contract.ts`
+- Clients identity/scoping audit:
+  - `packages/clients/src/components/clients/ClientContractAssignment.tsx`
+  - `packages/clients/src/components/clients/BillingConfiguration.tsx`
+  - `packages/clients/src/components/clients/ContractLines.tsx`
+  - `packages/clients/src/actions/clientContractLineActions.ts`
+  - `packages/clients/src/models/clientContractLine.ts`
+- Recurring/invoice/PO audit:
+  - `packages/billing/src/actions/invoiceGeneration.ts`
+  - `packages/billing/src/lib/billing/billingEngine.ts`
+  - `packages/billing/src/services/invoiceService.ts`
+  - `packages/billing/src/services/purchaseOrderService.ts`
+  - `packages/billing/src/actions/billingAndTax.ts`
+- Secondary-surface audit:
+  - `packages/billing/src/components/billing-dashboard/BillingCycles.tsx`
+  - `packages/billing/src/services/bucketUsageService.ts`
+  - `packages/billing/src/actions/contractReportActions.ts`
+- Fixture/schema/docs audit:
+  - `server/test-utils/billingTestHelpers.ts`
+  - `server/test-utils/testContext.ts`
+  - `docs/billing/billing.md`
+  - `ee/docs/plans/2026-01-05-contract-purchase-order-support/*`
+
+## Key File Pointers
+
+- Singleton helpers:
+  - `shared/billingClients/contracts.ts`
+  - `shared/billingClients/clientContracts.ts`
+- Billing UI blockers:
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`
+  - `packages/billing/src/components/billing-dashboard/contracts/ContractDialog.tsx`
+  - `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
+- Clients UI identity/scoping:
+  - `packages/clients/src/components/clients/ClientContractAssignment.tsx`
+  - `packages/clients/src/actions/clientContractLineActions.ts`
+  - `packages/clients/src/models/clientContractLine.ts`
+- Invoice/PO boundary:
+  - `packages/billing/src/actions/invoiceGeneration.ts`
+  - `packages/billing/src/services/purchaseOrderService.ts`
+  - `packages/billing/src/actions/invoiceQueries.ts`
+- Secondary ambiguity surfaces:
+  - `packages/billing/src/services/bucketUsageService.ts`
+  - `packages/billing/src/components/billing-dashboard/BillingCycles.tsx`
+
+## Commands / Runbooks
+
+- 2026-03-20: Singleton-rule repo scan
+  - `rg -n "hasActiveContractForClient|getClientIdsWithActiveContracts|already has an active contract|active contract overlapping|disabledClientIds" shared packages/billing packages/clients server/src/test ee/docs/plans docs/billing`
+- 2026-03-20: Commit provenance for the UI client-disable behavior
+  - `git show --stat --summary 3aa57cd62f62ba70b2d05e657d6d1bc9d67b7b05`
+- 2026-03-20: Plan scaffold
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Multi-Active Contracts Per Client" --slug multi-active-contracts-per-client`
+- 2026-03-20: Singleton-blocker removal audit
+  - `rg -n "disabledClientIds|already has an active contract|terminate their current contract|save as draft|checkClientHasActiveContract|fetchClientIdsWithActiveContracts|getClientIdsWithActiveContracts|hasActiveContractForClient" packages/billing/src/components/billing-dashboard/contracts packages/billing/src/actions shared/billingClients packages/clients/src`
+- 2026-03-20: Post-change verification scan
+  - `rg -n "checkClientHasActiveContract|fetchClientIdsWithActiveContracts|hasActiveContractForClient|getClientIdsWithActiveContracts" packages/billing/src packages/billing/tests shared/billingClients packages/billing/src/models`
+- 2026-03-20: Shared overlap/mixed-currency follow-up scan
+  - `rg -n "join\\('client_contracts as cc'|already has an active contract overlapping the specified range|where\\(function overlap\\(" packages/billing/src/actions/contractWizardActions.ts shared/billingClients/clientContracts.ts packages/clients/src/actions/clientContractActions.ts packages/clients/src/models/clientContract.ts`
+- 2026-03-20: Targeted billing test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/contract.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts`
+- 2026-03-20: Clients identity wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
+- 2026-03-20: Client contract-line assignment read wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
+- 2026-03-20: Client contract-line mutation-scope wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.singletonGuardRemoval.wiring.test.ts tests/multiActiveContracts.assignmentWritePath.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/multiActiveContracts.clientContractLineMutationScope.wiring.test.ts tests/ClientContractsTab.assignmentLifecycle.test.ts tests/contract.test.ts`
+- 2026-03-20: Assignment detail scope wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.assignmentDetails.wiring.test.ts tests/multiActiveContracts.clientsAssignmentIdentity.wiring.test.ts tests/multiActiveContracts.clientContractLineReads.wiring.test.ts tests/multiActiveContracts.clientContractLineMutationScope.wiring.test.ts`
+- 2026-03-20: Disambiguation-copy fallback removal wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.disambiguationCopy.wiring.test.ts tests/multiActiveContracts.assignmentDetails.wiring.test.ts`
+- 2026-03-20: Clients UI identity audit wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.clientsUiIdentityAudit.wiring.test.ts tests/multiActiveContracts.disambiguationCopy.wiring.test.ts tests/multiActiveContracts.assignmentDetails.wiring.test.ts`
+- 2026-03-20: Recurring due-work assignment-split integration test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts`
+- 2026-03-20: Recurring selector-scope preview/generation regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts`
+- 2026-03-20: Fixed recurring persistence assignment-separation regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
+- 2026-03-20: Client-cadence assignment-scoped materialization-gap regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/recurringDueWorkReader.integration.test.ts`
+- 2026-03-20: Mixed-assignment single-invoice invariant regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts`
+- 2026-03-20: Recurring preview identity-context wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.recurringPreviewIdentity.wiring.test.ts`
+- 2026-03-20: Invoice assignment-scoping wiring regression test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.invoiceAssignmentScoping.wiring.test.ts tests/ContractDetail.clientOwnedSemantics.wiring.test.ts tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts`
+- 2026-03-20: Invoice PO assignment-scope unit regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/invoiceQueries.purchaseOrderSummary.test.ts`
+- 2026-03-20: BillingCycles multi-assignment summary wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.billingCyclesSummary.wiring.test.ts`
+- 2026-03-20: Recurring PO-scope grouping wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.recurringPurchaseOrderScope.wiring.test.ts`
+- 2026-03-20: Bucket usage ambiguity regression test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/bucketUsageService.periods.test.ts`
+- 2026-03-20: Contract reports wording wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/ContractReports.summaryCopy.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/contractReportActions.expiration.wiring.test.ts`
+- 2026-03-20: Reporting/export/accounting assignment-safety audit wiring test run
+  - `cd packages/billing && npx vitest run --config vitest.config.ts tests/multiActiveContracts.reportingExportAudit.wiring.test.ts`
+- 2026-03-20: Billing test helper concurrent-assignment fixture wiring test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts`
+- 2026-03-20: Direct concurrent-assignment seeding helper wiring test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts`
+- 2026-03-20: Legacy test assignment-identity regression wiring test run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/multiActiveContracts.legacyAssignmentTestAssumptions.wiring.test.ts src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts`
+- 2026-03-20: Multi-active docs + singleton-regression static guard run
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/docs/multiActiveContracts.docsAndGuards.test.ts`
+- 2026-03-20: T055 DB-backed integration attempt (environment blocked)
+  - `cd server && npx vitest run --config vitest.config.ts src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts --testNamePattern "T055"`
+  - Local run blocked by `ECONNREFUSED` to PostgreSQL on `localhost:5438`.
+- 2026-03-20: Remaining checklist static/wiring coverage run (`T055/T056/T057/T058/T059/T060/T061/T065/T066/T067/T068/T069/T070/T072`)
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/billing/multiActiveContracts.remainingChecklist.wiring.test.ts`
+
+## Implementation Log
+
+- 2026-03-20: Removed billing wizard/client-dialog active-contract singleton gating (client disable lists, active-contract warning copy, and submit-disable behavior tied to sibling active contracts).
+- 2026-03-20: Removed restore/set-active prechecks in both contract shells (`ClientContractsTab` and legacy `Contracts.tsx`) so activation no longer blocks on “another active contract exists”.
+- 2026-03-20: Removed action/model/shared singleton helper path:
+  - deleted `checkClientHasActiveContract(...)` and `fetchClientIdsWithActiveContracts(...)` action exports
+  - removed `updateContract(... status: 'active')` active-contract singleton rejection
+  - removed shared/model `hasActiveContractForClient(...)` and `getClientIdsWithActiveContracts(...)` wrappers
+  - removed expired-contract reactivation singleton precheck in shared contract reactivation helper
+- 2026-03-20: Updated contract-related billing tests/mocks to align with removed singleton helper exports and revised activation callback signatures.
+- 2026-03-20: Routed wizard assignment persistence through shared `createClientContractAssignment(...)` and removed wizard-local mixed-currency preflight query so create semantics come from shared assignment writes.
+- 2026-03-20: Removed shared assignment overlap-window create/update blockers while preserving the clients action-layer invoiced-period guard.
+- 2026-03-20: Centralized packages/clients assignment create/update persistence through shared helpers (`createClientContractAssignment` / `updateClientContractAssignment`) and removed duplicate overlap enforcement in clients actions/models.
+- 2026-03-20: Updated `ClientContractAssignment` to keep assignment flows keyed by `client_contract_id`:
+  - add/apply now uses the returned assignment id from `assignContractToClient(...)`
+  - removed contract-header de-dup filtering that blocked creating a second active assignment for the same `contract_id`
+- 2026-03-20: Refactored clients contract-line reads to emit assignment-scoped synthetic identity (`contract-<client_contract_id>-<contract_line_id>`) instead of aliasing raw `contract_line_id` as `client_contract_line_id`.
+- 2026-03-20: Added synthetic identity parsing in clients contract-line action/model paths so historical invoice guards and mutations can resolve back to underlying contract-line IDs without reintroducing contract-header-only read identity.
+- 2026-03-20: Made contract-line mutation scope explicit by requiring assignment-scoped synthetic line identity and failing with an explicit ambiguity error when multiple active assignments share the same contract header.
+- 2026-03-20: Added explicit assignment selection context to the clients Contract Lines UI and plumbed selected `client_contract_id` into add-line payloads.
+- 2026-03-20: Wired `ClientContractAssignment` mutation callbacks into `BillingConfiguration` (`onAssignmentsChanged`) so assignment create/edit/deactivate refreshes line/overlap data immediately instead of leaving stale assignment-scoped views.
+- 2026-03-20: Scoped client assignment detail metadata to the selected assignment in `ClientContract.getDetailedClientContract(...)`:
+  - contract line names/count now come from active `client_contract_lines` rows filtered by `client_contract_id`
+  - removed contract-header-wide `contract_lines` lookup that collapsed sibling active assignments sharing a `contract_id`
+- 2026-03-20: Added `T030` static wiring coverage (`multiActiveContracts.assignmentDetails.wiring.test.ts`) asserting assignment-detail data is sourced by `client_contract_id` and edit dialog consumes selected-assignment line names.
+- 2026-03-20: Removed disambiguation guide wording that implied hidden fallback selection (for example “most recently created contract line” and implicit system default picks) and replaced with explicit ambiguity-error/user-choice guidance.
+- 2026-03-20: Added `T031` static wiring coverage (`multiActiveContracts.disambiguationCopy.wiring.test.ts`) to prevent fallback copy regressions.
+- 2026-03-20: Audited targeted `packages/clients` UI identity surfaces and removed remaining ambiguous assignment picker labeling in `ContractLines` by including explicit assignment identity (`client_contract_id` prefix) in option labels.
+- 2026-03-20: Added `T032` focused wiring coverage (`multiActiveContracts.clientsUiIdentityAudit.wiring.test.ts`) asserting assignment picker/state/overlap matrix flows remain keyed to assignment-scoped identities instead of `contract_id` uniqueness assumptions.
+- 2026-03-20: Added `T033` regression coverage in `server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts` proving same-client/same-window recurring rows with different `client_contract_id` values remain split into separate invoice candidates (with split reasons reflecting single-contract and PO-scope boundaries).
+- 2026-03-20: Scoped recurring preview/generation billing selection execution to the selected selector identity in `calculateBillingForSelectionInput(...)`:
+  - client-cadence selection now filters persisted recurring timing selections to the selected `client_contract_line` parsed from selector `scheduleKey`
+  - contract-cadence selection now filters persisted recurring timing selections to the selected `contractLineId`
+  - both paths now fail explicitly when selector-scoped rows are missing instead of silently re-expanding to sibling due work
+- 2026-03-20: Added selector-scope regression coverage:
+  - `T034/T036` in `server/src/test/unit/billing/invoiceGeneration.preview.test.ts`
+  - `T035/T037` in `server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts`
+  - Expanded both test harness query builders to support `whereIn` and overloaded `where(...)` signatures used by selector normalization paths.
+- 2026-03-20: Fixed fixed-recurring consolidated parent grouping in `persistFixedInvoiceCharges(...)` so grouping identity is `client_contract_id + client_contract_line_id` (assignment-scoped), not line-id-only.
+- 2026-03-20: Updated consolidated-plan metadata lookup to query by source line identity while retaining assignment-scoped grouping keys.
+- 2026-03-20: Added `T038` regression in `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` proving sibling assignments sharing one base contract line persist as separate parent invoice charges with distinct `client_contract_id` attribution.
+- 2026-03-20: Refined client-cadence materialization-gap candidate blocking to match assignment-scoped recurring identities instead of broad `client + invoice window` keys.
+- 2026-03-20: Added `T039` regression in `server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts` proving a materialization gap on one assignment does not block sibling assignment candidates in the same client invoice window.
+- 2026-03-20: Preserved explicit single-assignment invoice failure behavior by attaching recurring execution-window context when selector-input generation encounters mixed `client_contract_id` charge sets.
+- 2026-03-20: Added `T040` regression in `server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts` proving selector-input generation fails explicitly (with user-readable single-assignment invariant message) when billing charges span multiple assignments.
+- 2026-03-20: Enhanced recurring ready-to-invoice contract rendering with explicit assignment-context labels (assignment line/schedule identity fallback) so same-named concurrent contract candidates remain visually distinct.
+- 2026-03-20: Added `T041` wiring coverage in `packages/billing/tests/multiActiveContracts.recurringPreviewIdentity.wiring.test.ts` asserting assignment-context rendering tokens are present in `AutomaticInvoices`.
+- 2026-03-20: Corrected `fetchInvoicesByContract(...)` assignment scoping by filtering invoice reads with `invoices.client_contract_id` instead of `client_contracts.contract_id` (header identity), preventing sibling-assignment invoice leakage when one contract header has multiple active assignments.
+- 2026-03-20: Updated `ContractDetail` invoice-tab loading to scope invoice reads by selected `clientContractId` (fallback first assignment) and clarified assignment-scoped error copy.
+- 2026-03-20: Added `T042` wiring coverage in `packages/billing/tests/multiActiveContracts.invoiceAssignmentScoping.wiring.test.ts` asserting invoice query and contract-detail invoice tab use assignment (`client_contract_id`) identity.
+- 2026-03-20: Added `T043` unit coverage in `server/src/test/unit/billing/invoiceQueries.purchaseOrderSummary.test.ts` proving PO context/consumption lookups are keyed by `invoice.client_contract_id` and do not drift to sibling active assignments.
+- 2026-03-20: Updated `BillingCycles` assignment summary mapping to retain and render all active `client_contract_id` rows per client (with assignment identity labels) instead of collapsing to the first contract row.
+- 2026-03-20: Added `T045` wiring coverage in `packages/billing/tests/multiActiveContracts.billingCyclesSummary.wiring.test.ts` asserting multi-assignment summary rendering path remains active.
+- 2026-03-20: Added `T044` wiring coverage in `packages/billing/tests/multiActiveContracts.recurringPurchaseOrderScope.wiring.test.ts` asserting recurring candidate grouping retains `purchaseOrderScopeKey = client_contract_id`.
+- 2026-03-20: Replaced implicit bucket assignment fallback in `calculatePeriod(...)` by detecting conflicting active assignment matches and throwing an explicit ambiguity error instead of silently choosing one.
+- 2026-03-20: Added `T046` regression in `server/src/test/unit/billing/bucketUsageService.periods.test.ts` proving overlapping eligible assignments fail explicitly with actionable assignment context.
+- 2026-03-20: Updated Contract Reports summary wording so assignment-based counts are labeled as `Active assignments` instead of `Billable clients`.
+- 2026-03-20: Added `T047` wiring coverage in `packages/billing/tests/ContractReports.summaryCopy.wiring.test.ts` to prevent report-label regressions that conflate assignment counts with client counts.
+- 2026-03-20: Completed reporting/export/accounting audit with focused assignment-safety checks:
+  - `contractReportActions.ts` summary keeps assignment-grain counting (`countDistinct client_contract_id`) for renewal-decision totals.
+  - `invoiceQueries.ts` PO summary reads invoice header assignment (`invoice.client_contract_id`) and resolves PO context/consumption by that assignment only.
+  - `purchaseOrderService.ts` consumed/authorized PO lookups are scoped to `client_contract_id` (not client-level active-contract selection).
+  - `accountingExportService.ts` contains no active-contract singleton selector/helper usage; export execution remains invoice-line authoritative.
+- 2026-03-20: Added `T048` audit wiring coverage in `packages/billing/tests/multiActiveContracts.reportingExportAudit.wiring.test.ts` to lock audited assignment-safe semantics and fail if singleton selector helpers reappear in targeted files.
+- 2026-03-20: Expanded `createFixedPlanAssignment(...)` fixture controls for multi-active scenarios with explicit lifecycle knobs:
+  - contract header lifecycle (`contractHeaderIsActive`, `contractHeaderStatus`)
+  - assignment lifecycle (`assignmentIsActive`, `assignmentStatus`)
+  - assignment PO fields (`assignmentPoRequired`, `assignmentPoNumber`, `assignmentPoAmount`)
+  - assignment-line active toggle (`clientContractLineIsActive`)
+- 2026-03-20: Added `createConcurrentFixedPlanAssignments(...)` helper to seed two or more intentionally concurrent assignment fixtures via one call.
+- 2026-03-20: Added `T049` wiring coverage in `server/src/test/unit/billing/billingTestHelpers.concurrentAssignments.wiring.test.ts` asserting lifecycle knobs and concurrent-assignment helper are present and wired.
+- 2026-03-20: Added `seedConcurrentClientContractAssignmentsDirect(...)` helper for explicit direct DB fixture seeding through `TestContext.createEntity(...)`:
+  - requires `contracts` + `client_contracts` tables
+  - supports per-assignment header/assignment lifecycle overrides
+  - intentionally bypasses production write paths for tests that need concurrent states directly
+- 2026-03-20: Added `T050` wiring coverage in `server/src/test/unit/billing/billingTestHelpers.directConcurrentSeed.wiring.test.ts` asserting direct concurrent seeding uses `createEntity(...)` on `contracts` and `client_contracts`.
+- 2026-03-20: Updated legacy integration assertions that previously depended on `client_id + first()` / latest-row behavior:
+  - `contractWizard.integration.test.ts` now reads client assignment using explicit `contract_id: result.contract_id`
+  - `contractPurchaseOrderSupport.integration.test.ts` now captures wizard result and reads assignment by explicit `contract_id: wizardResult.contract_id` (removed `orderBy(created_at desc)` fallback)
+- 2026-03-20: Added `T051` wiring coverage in `server/src/test/unit/billing/multiActiveContracts.legacyAssignmentTestAssumptions.wiring.test.ts` to prevent reintroduction of latest-assignment test assumptions in targeted integration suites.
+- 2026-03-20: Updated product docs/runbooks to remove singleton-active assumptions and preserve explicit invoice boundary:
+  - `docs/billing/billing.md` assignment lifecycle section now states concurrent active assignments are allowed (with mixed-currency still blocked as a separate rule)
+  - `ee/docs/plans/2026-01-05-contract-purchase-order-support/PRD.md` now describes `invoices.client_contract_id` as single-assignment invoice scope (not single-active prerequisite)
+  - `ee/docs/plans/2026-01-05-contract-purchase-order-support/SCRATCHPAD.md` now states one PO per invoice without assuming one active contract per client
+- 2026-03-20: Added consolidated static/docs guard coverage in `server/src/test/unit/docs/multiActiveContracts.docsAndGuards.test.ts`:
+  - `T052`: singleton UI/action guard patterns stay removed
+  - `T053`: billing docs no longer claim active-assignment overlap blocking
+  - `T054`: contract PO plan docs no longer depend on single-active-client prerequisite
+  - `T062`: mixed-currency guard remains explicit and separate from removed singleton helpers
+  - `T063/T064`: repo-wide static guard for removed singleton helper usage
+  - `T071`: runbook notes explicitly record `invoice.client_contract_id` snapshot boundary and no schema redesign requirement
+- 2026-03-20: Added `T055` DB-backed integration scenario in `contractPurchaseOrderSupport.integration.test.ts`:
+  - first active assignment via wizard (`createClientContractFromWizard`)
+  - second active assignment via quick-add/action path (`createContract` + `assignContractToClient`)
+  - asserts same-client active assignments include both contract paths
+- 2026-03-20: Added consolidated remaining-checklist guard coverage in `server/src/test/unit/billing/multiActiveContracts.remainingChecklist.wiring.test.ts`:
+  - `T056/T057/T058/T059`: clients assignment rendering, line add/edit/remove scope, and overlap identity remain assignment-scoped
+  - `T060/T061`: recurring due-work selection and invoice/history reads remain assignment-scoped (`client_contract_id`)
+  - `T065`: BillingCycles continues rendering multiple active assignments per client
+  - `T066`: bucket ambiguity errors include conflicting assignment context
+  - `T067`: recurring preview displays explicit assignment context for same-named contracts
+  - `T068`: wizard and clients flows both route through shared assignment-create semantics
+  - `T069`: header activation/reactivation paths remain free of sibling-active singleton blockers
+  - `T070`: mixed-currency behavior remains explicitly covered and separate from singleton removal
+  - `T072`: reporting/export/accounting assignment-safe wording and audit coverage remain in place
+
+## Links / References
+
+- Related plans:
+  - `ee/docs/plans/2026-03-18-service-driven-invoicing-cutover/`
+  - `ee/docs/plans/2026-03-20-template-runtime-normalization-completion/`
+  - `ee/docs/plans/2026-01-05-contract-purchase-order-support/`
+- Product docs:
+  - `docs/billing/billing.md`
+
+## Open Questions
+
+- Should the mixed-currency rule remain a separate restriction, or should this plan remove it too?
+- For bucket usage ambiguity, should product UX require explicit assignment identity upstream or accept a hard failure at billing time?
+- Are there any remaining client-facing surfaces where “contract” is actually intended to mean assignment and should be renamed in this plan?

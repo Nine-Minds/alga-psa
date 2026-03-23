@@ -125,6 +125,12 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
     return allInvoiceTypeOptions.filter(option => option.value !== 'prepayment');
   }, [billingEnabled]);
 
+  const invoiceTypeDescription = {
+    automatic: 'Use invoice windows to review due recurring service periods before generating a recurring batch.',
+    manual: 'Use manual invoices for one-off or adjustment lines. They do not redefine recurring service periods.',
+    prepayment: 'Use prepayment and credit flows for financial value that should stay separate from recurring service-period coverage.',
+  } satisfies Record<InvoiceType, string>;
+
   const renderContent = () => {
     switch (invoiceType) {
       case 'automatic':
@@ -172,6 +178,9 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
                 options={invoiceTypeOptions}
                 className="w-full md:w-80"
               />
+              <p className="mt-2 text-sm text-muted-foreground">
+                {invoiceTypeDescription[invoiceType]}
+              </p>
             </div>
 
             {error && (

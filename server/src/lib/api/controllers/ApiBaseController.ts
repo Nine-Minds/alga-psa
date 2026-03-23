@@ -234,7 +234,8 @@ export abstract class ApiBaseController {
             result.total,
             page,
             limit,
-            { sort, order, filters }
+            { sort, order, filters },
+            apiRequest,
           );
         });
       } catch (error) {
@@ -264,7 +265,7 @@ export abstract class ApiBaseController {
             throw new NotFoundError(`${this.options.resource} not found`);
           }
           
-          return createSuccessResponse(resource);
+          return createSuccessResponse(resource, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

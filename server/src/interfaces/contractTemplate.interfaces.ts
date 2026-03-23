@@ -1,5 +1,6 @@
 import { TenantEntity } from './index';
 import { ISO8601String } from '@alga-psa/types';
+import type { CadenceOwner } from '@alga-psa/types';
 
 export type TemplateStatus = 'draft' | 'published' | 'archived';
 
@@ -33,6 +34,7 @@ export interface IContractTemplateLine extends TenantEntity {
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
   billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: CadenceOwner;
   custom_rate?: number | null;
   display_order?: number;
   created_at?: ISO8601String;
@@ -50,6 +52,7 @@ export interface IContractTemplateWithLines extends IContractTemplate {
       | 'is_active'
       | 'description'
       | 'billing_timing'
+      | 'cadence_owner'
     > & {
       display_order: number;
       custom_rate?: number | null;

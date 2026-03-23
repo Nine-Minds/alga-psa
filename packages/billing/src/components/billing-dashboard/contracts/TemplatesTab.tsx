@@ -23,6 +23,7 @@ import {
   getContractTemplates,
 } from '@alga-psa/billing/actions/contractActions';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
+import { toast } from 'react-hot-toast';
 
 interface TemplatesTabProps {
   onRefreshNeeded?: () => void;
@@ -62,7 +63,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
       onRefreshNeeded?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete contract';
-      alert(message);
+      toast.error(message);
     }
   };
 

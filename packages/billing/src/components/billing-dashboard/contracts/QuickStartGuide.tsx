@@ -169,7 +169,7 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
           </h4>
           <ul className="space-y-1 ml-6 text-sm text-muted-foreground">
             <li className="list-disc">Use clear, descriptive contract names (e.g., "Acme Corp - MSP Services Q4 2024")</li>
-            <li className="list-disc">Enable proration for contracts that start/end mid-month</li>
+            <li className="list-disc">Use partial-period adjustment when contract dates cover only part of a service period</li>
             <li className="list-disc">Set end dates for fixed-term contracts to track renewal dates</li>
             <li className="list-disc">Add PO numbers when required by client procurement policies</li>
           </ul>

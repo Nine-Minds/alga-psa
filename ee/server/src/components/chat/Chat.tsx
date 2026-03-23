@@ -309,6 +309,7 @@ export const Chat: React.FC<ChatProps> = ({
   const [functionError, setFunctionError] = useState<string | null>(null);
   const [autoApprovedMethods, setAutoApprovedMethods] = useState<string[]>([]);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
   const autoSendRef = useRef(false);
@@ -319,11 +320,32 @@ export const Chat: React.FC<ChatProps> = ({
   const streamingTextRef = useRef<string | null>(null);
   const generationIdRef = useRef<number>(0);
   const pendingAssistantMessageIdRef = useRef<string | null>(null);
+  const shouldAutoScrollRef = useRef(true);
+
+  const SCROLL_BOTTOM_THRESHOLD_PX = 40;
 
   const resolveMessageId = (candidate?: string | null) =>
     candidate ?? (typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
       : `msg-${Date.now()}-${Math.random()}`);
+
+  const isNearBottom = useCallback((container: HTMLDivElement) => {
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    return distanceFromBottom <= SCROLL_BOTTOM_THRESHOLD_PX;
+  }, []);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const container = chatScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior,
+    });
+  }, []);
 
   const appendFunctionCallMarker = (
     fn: PendingFunctionState | null,
@@ -448,6 +470,15 @@ export const Chat: React.FC<ChatProps> = ({
       setPendingFunctionAction('none');
     }
   }, [pendingFunction]);
+
+  useEffect(() => {
+    const container = chatScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    shouldAutoScrollRef.current = isNearBottom(container);
+  }, [isNearBottom]);
 
   const closeValidationDialog = useCallback(() => {
     setShowValidationDialog(false);
@@ -1038,6 +1069,27 @@ export const Chat: React.FC<ChatProps> = ({
     fullMessage.trim().length > 0;
 
   useEffect(() => {
+    if (!shouldAutoScrollRef.current) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      if (!shouldAutoScrollRef.current) {
+        return;
+      }
+      scrollToBottom();
+    });
+  }, [
+    displayMessages.length,
+    incomingMessage,
+    pendingFunction,
+    functionError,
+    fullMessage,
+    fullReasoning,
+    scrollToBottom,
+  ]);
+
+  useEffect(() => {
     onHasMessagesChange?.(hasVisibleMessages);
   }, [hasVisibleMessages, onHasMessagesChange]);
 
@@ -1244,6 +1296,15 @@ export const Chat: React.FC<ChatProps> = ({
     !generatingResponse && !isFunction && !isExecutingFunction && !pendingFunction;
   const canStop = generatingResponse || isExecutingFunction;
 
+  const handleChatScroll = useCallback(() => {
+    const container = chatScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    shouldAutoScrollRef.current = isNearBottom(container);
+  }, [isNearBottom]);
+
   useEffect(() => {
     onInterruptibleStateChange?.(canStop);
   }, [canStop, onInterruptibleStateChange]);
@@ -1405,7 +1466,11 @@ export const Chat: React.FC<ChatProps> = ({
 
   return (
     <div className="chat-container">
-      <div className="chats">
+      <div
+        ref={chatScrollRef}
+        className="chats"
+        onScroll={handleChatScroll}
+      >
         <div className="mb-auto w-full">
           {!displayMessages.length && !incomingMessage ? (
             <div className="m-auto justify-center flex items-center text-center" style={{ minHeight: '300px' }}>
@@ -1458,123 +1523,122 @@ export const Chat: React.FC<ChatProps> = ({
                   showStreamingCursor={generatingResponse && !isFunction}
                 />
               )}
+              {pendingFunction && (
+                <div className="function-approval-wrapper">
+                  <Image
+                    className="chat-img"
+                    src="/avatar-purple-no-shadow.svg"
+                    alt="Alga"
+                    width={18}
+                    height={18}
+                  />
+                  <div className="function-approval-bubble">
+                    <div className="function-approval-header">
+                      <span className="function-approval-badge">{method}</span>
+                      <span className="function-approval-endpoint">{endpointLabel}</span>
+                    </div>
+                    <h3 className="function-approval-title">
+                      {pendingFunction.metadata.displayName}
+                    </h3>
+                    {pendingFunction.metadata.description && (
+                      <p className="function-approval-description">
+                        {pendingFunction.metadata.description}
+                      </p>
+                    )}
+                    {previewText && (
+                      <p className="function-approval-preview">{previewText}</p>
+                    )}
+                    {assistantPlanText ? (
+                      <details className="function-approval-reasoning">
+                        <summary>View assistant plan</summary>
+                        {assistantPlanItems.length ? (
+                          <ol className="function-approval-plan">
+                            {assistantPlanItems.map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ol>
+                        ) : (
+                          <p>{assistantPlanText}</p>
+                        )}
+                      </details>
+                    ) : null}
+                    {pendingFunction.metadata.playbooks?.length ? (
+                      <div className="function-approval-playbooks">
+                        <span className="function-arg-key">Playbooks</span>
+                        <span className="function-arg-value">
+                          {pendingFunction.metadata.playbooks.join(', ')}
+                        </span>
+                      </div>
+                    ) : null}
+                    {pendingArgumentEntries.length > 0 && (
+                      <div className="function-approval-arguments">
+                        <h4>Parameters</h4>
+                        <ul className="function-arg-list">
+                          {pendingArgumentEntries.map(([key, value]) => (
+                            <li key={key} className="function-arg-item">
+                              <span className="function-arg-key">{formatArgumentKey(key)}</span>
+                              <span className="function-arg-value">{renderArgumentValue(value)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {functionError && (
+                      <div className="function-approval-error">{functionError}</div>
+                    )}
+                    {isHttpMethod && normalizedMethod && autoApprovalCheckboxId ? (
+                      <div className="function-approval-preferences">
+                        <div className="function-approval-preference-toggle">
+                          <Switch
+                            id={autoApprovalCheckboxId}
+                            checked={autoApprovalEnabledForMethod}
+                            onCheckedChange={(checked) =>
+                              handleAutoApprovePreferenceChange(normalizedMethod, checked)
+                            }
+                            label={`Auto-approve future ${normalizedMethod} requests`}
+                          />
+                        </div>
+                        <p className="function-approval-preferences-help">
+                          {autoApprovalEnabledForMethod
+                            ? 'Future requests with this method will run automatically.'
+                            : 'Enable to approve this HTTP method without prompts.'}
+                        </p>
+                      </div>
+                    ) : null}
+                    <div className="function-approval-status">{statusText}</div>
+                    <div className="function-approval-actions">
+                      <Button
+                        id="chat-approve-function"
+                        label="Approve function call"
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleFunctionAction('approve')}
+                        disabled={isExecutingFunction}
+                      >
+                        {isExecutingFunction && pendingFunctionAction === 'approve'
+                          ? 'Approving…'
+                          : 'Approve'}
+                      </Button>
+                      <Button
+                        id="chat-decline-function"
+                        label="Decline function call"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleFunctionAction('decline')}
+                        disabled={isExecutingFunction}
+                      >
+                        {isExecutingFunction && pendingFunctionAction === 'decline'
+                          ? 'Processing…'
+                          : 'Deny'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
-
-      {pendingFunction && (
-        <div className="function-approval-wrapper">
-          <Image
-            className="chat-img"
-            src="/avatar-purple-no-shadow.svg"
-            alt="Alga"
-            width={18}
-            height={18}
-          />
-          <div className="function-approval-bubble">
-            <div className="function-approval-header">
-              <span className="function-approval-badge">{method}</span>
-              <span className="function-approval-endpoint">{endpointLabel}</span>
-            </div>
-            <h3 className="function-approval-title">
-              {pendingFunction.metadata.displayName}
-            </h3>
-            {pendingFunction.metadata.description && (
-              <p className="function-approval-description">
-                {pendingFunction.metadata.description}
-              </p>
-            )}
-            {previewText && (
-              <p className="function-approval-preview">{previewText}</p>
-            )}
-            {assistantPlanText ? (
-              <details className="function-approval-reasoning">
-                <summary>View assistant plan</summary>
-                {assistantPlanItems.length ? (
-                  <ol className="function-approval-plan">
-                    {assistantPlanItems.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ol>
-                ) : (
-                  <p>{assistantPlanText}</p>
-                )}
-              </details>
-            ) : null}
-            {pendingFunction.metadata.playbooks?.length ? (
-              <div className="function-approval-playbooks">
-                <span className="function-arg-key">Playbooks</span>
-                <span className="function-arg-value">
-                  {pendingFunction.metadata.playbooks.join(', ')}
-                </span>
-              </div>
-            ) : null}
-            {pendingArgumentEntries.length > 0 && (
-              <div className="function-approval-arguments">
-                <h4>Parameters</h4>
-                <ul className="function-arg-list">
-                  {pendingArgumentEntries.map(([key, value]) => (
-                    <li key={key} className="function-arg-item">
-                      <span className="function-arg-key">{formatArgumentKey(key)}</span>
-                      <span className="function-arg-value">{renderArgumentValue(value)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {functionError && (
-              <div className="function-approval-error">{functionError}</div>
-            )}
-            {isHttpMethod && normalizedMethod && autoApprovalCheckboxId ? (
-              <div className="function-approval-preferences">
-                <div className="function-approval-preference-toggle">
-                  <Switch
-                    id={autoApprovalCheckboxId}
-                    checked={autoApprovalEnabledForMethod}
-                    onCheckedChange={(checked) =>
-                      handleAutoApprovePreferenceChange(normalizedMethod, checked)
-                    }
-                    label={`Auto-approve future ${normalizedMethod} requests`}
-                  />
-                </div>
-                <p className="function-approval-preferences-help">
-                  {autoApprovalEnabledForMethod
-                    ? 'Future requests with this method will run automatically.'
-                    : 'Enable to approve this HTTP method without prompts.'}
-                </p>
-              </div>
-            ) : null}
-            <div className="function-approval-status">{statusText}</div>
-            <div className="function-approval-actions">
-              <Button
-                id="chat-approve-function"
-                label="Approve function call"
-                size="sm"
-                variant="default"
-                onClick={() => handleFunctionAction('approve')}
-                disabled={isExecutingFunction}
-              >
-                {isExecutingFunction && pendingFunctionAction === 'approve'
-                  ? 'Approving…'
-                  : 'Approve'}
-              </Button>
-              <Button
-                id="chat-decline-function"
-                label="Decline function call"
-                size="sm"
-                variant="outline"
-                onClick={() => handleFunctionAction('decline')}
-                disabled={isExecutingFunction}
-              >
-                {isExecutingFunction && pendingFunctionAction === 'decline'
-                  ? 'Processing…'
-                  : 'Deny'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <footer className="chat-footer">
         <div className="chat-footer__inner">

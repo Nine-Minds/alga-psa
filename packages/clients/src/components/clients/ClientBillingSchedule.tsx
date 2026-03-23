@@ -10,9 +10,11 @@ import { Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import type { BillingCycleType } from '@alga-psa/types';
+import { CLIENT_CADENCE_SCHEDULE_CONTEXT } from '@alga-psa/shared/billingClients';
 import {
   createNextBillingCycleAsync,
   getClientBillingCycleAnchorAsync,
+  previewBillingHistoryBootstrapAsync,
   previewBillingPeriodsForScheduleAsync,
   updateClientBillingScheduleAsync
 } from '../../lib/billingHelpers';
@@ -23,6 +25,8 @@ interface BillingCyclePeriodPreview {
   periodEndDate: string;
 }
 import type { ISO8601String } from '@alga-psa/types';
+import type { ClientCadenceScheduleContext } from '@alga-psa/shared/billingClients';
+import type { BillingHistoryBootstrapPreview } from '@alga-psa/shared/billingClients';
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
@@ -106,7 +110,12 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
   const [preview, setPreview] = useState<BillingCyclePeriodPreview[] | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewReferenceDate, setPreviewReferenceDate] = useState<ISO8601String | null>(null);
+  const [billingHistoryStartDate, setBillingHistoryStartDate] = useState<string | null>(null);
+  const [bootstrapPreview, setBootstrapPreview] = useState<BillingHistoryBootstrapPreview | null>(null);
+  const [bootstrapPreviewLoading, setBootstrapPreviewLoading] = useState(false);
   const previewRequestIdRef = useRef(0);
+  const bootstrapPreviewRequestIdRef = useRef(0);
+  const [cadenceContext, setCadenceContext] = useState<ClientCadenceScheduleContext>(CLIENT_CADENCE_SCHEDULE_CONTEXT);
 
   const [billingCycle, setBillingCycle] = useState<BillingCycleType>('monthly');
   const [anchorDraft, setAnchorDraft] = useState<AnchorDraft>(defaultAnchorDraftForCycle('monthly'));
@@ -119,6 +128,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       const config = await getClientBillingCycleAnchorAsync(clientId);
 
       setBillingCycle(config.billingCycle);
+      setCadenceContext(config.cadenceContext);
       const defaults = defaultAnchorDraftForCycle(config.billingCycle);
       setAnchorDraft({
         dayOfMonth: config.anchor.dayOfMonth ?? defaults.dayOfMonth,
@@ -156,9 +166,10 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         },
         { count: 3, referenceDate: previewReferenceDate }
       )
-        .then((periods) => {
+        .then((result) => {
           if (previewRequestIdRef.current !== requestId) return;
-          setPreview(periods);
+          setCadenceContext(result.cadenceContext);
+          setPreview(result.periods);
         })
         .catch((e) => {
           if (previewRequestIdRef.current !== requestId) return;
@@ -181,8 +192,57 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
     previewReferenceDate,
   ]);
 
+  useEffect(() => {
+    if (!dialogOpen) return;
+    if (!billingHistoryStartDate) {
+      setBootstrapPreview(null);
+      return;
+    }
+
+    const requestId = ++bootstrapPreviewRequestIdRef.current;
+    const timeoutId = window.setTimeout(() => {
+      setBootstrapPreviewLoading(true);
+      void previewBillingHistoryBootstrapAsync({
+        clientId,
+        billingCycle,
+        anchor: {
+          dayOfMonth: anchorDraft.dayOfMonth,
+          monthOfYear: anchorDraft.monthOfYear,
+          dayOfWeek: anchorDraft.dayOfWeek,
+          referenceDate: anchorDraft.referenceDate ? `${anchorDraft.referenceDate}T00:00:00Z` : null
+        },
+        billingHistoryStartDate: `${billingHistoryStartDate}T00:00:00Z` as ISO8601String,
+      })
+        .then((result) => {
+          if (bootstrapPreviewRequestIdRef.current !== requestId) return;
+          setBootstrapPreview(result);
+        })
+        .catch((e) => {
+          if (bootstrapPreviewRequestIdRef.current !== requestId) return;
+          handleError(e, 'Failed to preview billing history bootstrap');
+        })
+        .finally(() => {
+          if (bootstrapPreviewRequestIdRef.current !== requestId) return;
+          setBootstrapPreviewLoading(false);
+        });
+    }, 150);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    anchorDraft.dayOfMonth,
+    anchorDraft.dayOfWeek,
+    anchorDraft.monthOfYear,
+    anchorDraft.referenceDate,
+    billingCycle,
+    billingHistoryStartDate,
+    clientId,
+    dialogOpen,
+  ]);
+
   const openDialog = async (): Promise<void> => {
     setPreviewReferenceDate((new Date().toISOString().split('T')[0] + 'T00:00:00Z') as ISO8601String);
+    setBillingHistoryStartDate(null);
+    setBootstrapPreview(null);
     setDialogOpen(true);
     if (loading) {
       await loadFromServer();
@@ -206,7 +266,8 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           monthOfYear: anchorDraft.monthOfYear,
           dayOfWeek: anchorDraft.dayOfWeek,
           referenceDate: anchorDraft.referenceDate ? `${anchorDraft.referenceDate}T00:00:00Z` : null
-        }
+        },
+        billingHistoryStartDate: billingHistoryStartDate ? `${billingHistoryStartDate}T00:00:00Z` : null,
       });
 
       await loadFromServer();
@@ -239,7 +300,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold">Billing Schedule</h3>
-          <Tooltip content="Configure billing cycle type + anchor. Changes only affect future non-invoiced billing cycles.">
+          <Tooltip content={cadenceContext.changeScopeDescription}>
             <Info className="h-4 w-4 text-gray-500" />
           </Tooltip>
         </div>
@@ -270,6 +331,9 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       <div className="mt-2 text-sm text-gray-600">
         {loading ? 'Loading current schedule…' : scheduleSummary}
       </div>
+      <div className="mt-1 text-sm text-gray-500">
+        {cadenceContext.scheduleDescription}
+      </div>
 
       <Dialog
         isOpen={dialogOpen}
@@ -281,6 +345,9 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         <div className="space-y-4 p-1">
           <div className="text-sm text-gray-600">
             Billing periods use <span className="font-mono">[start, end)</span> semantics. The end date is the start of the next period.
+          </div>
+          <div className="text-sm text-gray-600">
+            {cadenceContext.previewDescription}
           </div>
 
           <div className="space-y-2">
@@ -358,6 +425,40 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
             </div>
           )}
 
+          <div className="space-y-2 border-t pt-3">
+            <div className="text-sm font-medium">Billing History Start Date (optional)</div>
+            <Input
+              id="client-billing-history-start-date"
+              type="date"
+              value={billingHistoryStartDate ?? ''}
+              onChange={(e) => setBillingHistoryStartDate(e.target.value || null)}
+            />
+            <div className="text-xs text-gray-500">
+              If set, historical client billing cycles are generated from the containing billing-cycle boundary through today.
+            </div>
+            {bootstrapPreview ? (
+              <div className="space-y-1 text-xs">
+                <div className="text-gray-700">
+                  Normalized history boundary: <span className="font-mono">{bootstrapPreview.normalizedHistoryStartBoundary.slice(0, 10)}</span>
+                </div>
+                {bootstrapPreview.earliestInvoicedCycleStartBoundary ? (
+                  <div className="text-gray-700">
+                    Earliest invoiced boundary: <span className="font-mono">{bootstrapPreview.earliestInvoicedCycleStartBoundary.slice(0, 10)}</span>
+                  </div>
+                ) : null}
+                <div className="text-gray-700">
+                  Uninvoiced cycles to regenerate: <span className="font-semibold">{bootstrapPreview.affectedUninvoicedCycleCount}</span>
+                </div>
+                {bootstrapPreview.status === 'blocked_invoiced_history' ? (
+                  <div className="text-red-600">{bootstrapPreview.blockedReason}</div>
+                ) : null}
+              </div>
+            ) : null}
+            {bootstrapPreviewLoading ? (
+              <div className="text-xs text-gray-500">Updating billing history bootstrap preview…</div>
+            ) : null}
+          </div>
+
 	          <div className="flex items-center justify-end gap-2 pt-2">
 	            <Button
 	              id="client-billing-schedule-close"
@@ -372,7 +473,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
 	              id="client-billing-save-schedule"
 	              type="button"
 	              onClick={saveSchedule}
-	              disabled={saving}
+	              disabled={saving || bootstrapPreview?.status === 'blocked_invoiced_history'}
 	              data-automation-id="client-billing-save-schedule"
             >
               {saving ? 'Saving...' : 'Save Schedule'}
@@ -380,7 +481,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           </div>
 
           <div className="pt-2 border-t">
-            <div className="text-sm font-medium mb-2">Upcoming periods (preview)</div>
+            <div className="text-sm font-medium mb-2">{cadenceContext.previewHeading}</div>
             {preview ? (
               <div className="space-y-1 text-sm text-gray-700">
                 {preview.map((p, idx) => (
@@ -389,11 +490,11 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
                   </div>
                 ))}
                 {previewLoading && (
-                  <div className="text-xs text-gray-500">Updating preview…</div>
+                  <div className="text-xs text-gray-500">Updating client-cadence preview…</div>
                 )}
               </div>
             ) : (
-              <div className="text-sm text-gray-500">Loading preview…</div>
+              <div className="text-sm text-gray-500">Loading client-cadence preview…</div>
             )}
           </div>
         </div>

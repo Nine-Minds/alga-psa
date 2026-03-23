@@ -36,6 +36,38 @@ export type AccountingExportLineStatus =
   | 'posted'
   | 'failed';
 
+export type AccountingExportServicePeriodSource =
+  | 'canonical_detail_periods'
+  | 'invoice_header_fallback'
+  | 'financial_document_fallback';
+
+export interface AccountingExportRecurringDetailPeriod {
+  service_period_start?: ISO8601String | null;
+  service_period_end?: ISO8601String | null;
+  billing_timing?: 'arrears' | 'advance' | null;
+}
+
+export interface AccountingExportLinePayload {
+  invoice_number?: string;
+  invoice_status?: string;
+  client_name?: string | null;
+  /**
+   * Authoritative explanation of how the top-level summary service-period fields were derived.
+   * When `canonical_detail_periods`, `recurring_detail_periods` is authoritative and
+   * `AccountingExportLine.service_period_start` / `service_period_end` is the compatibility summary range.
+   */
+  service_period_source?: AccountingExportServicePeriodSource | null;
+  recurring_detail_periods?: AccountingExportRecurringDetailPeriod[] | null;
+  metadata?: {
+    manual_invoice?: boolean;
+    manual_charge?: boolean;
+    multi_period?: boolean;
+    credit_memo?: boolean;
+    zero_amount?: boolean;
+  } | null;
+  transaction_ids?: string[];
+}
+
 export interface AccountingExportLine extends TenantEntity {
   line_id: string;
   batch_id: string;
@@ -45,10 +77,12 @@ export interface AccountingExportLine extends TenantEntity {
   amount_cents: number;
   currency_code: string;
   exchange_rate_basis_points?: number | null;
+  /** Compatibility summary range for export consumers that cannot represent detail rows one-to-one. */
   service_period_start?: ISO8601String | null;
+  /** Compatibility summary range for export consumers that cannot represent detail rows one-to-one. */
   service_period_end?: ISO8601String | null;
   mapping_resolution?: Record<string, any> | null;
-  payload?: Record<string, any> | null;
+  payload?: AccountingExportLinePayload | null;
   status: AccountingExportLineStatus;
   external_document_ref?: string | null;
   notes?: string | null;

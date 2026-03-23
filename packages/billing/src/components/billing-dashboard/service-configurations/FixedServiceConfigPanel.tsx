@@ -49,7 +49,7 @@ export function FixedServiceConfigPanel({
   const alignmentOptions = [
     { value: 'start', label: 'Start of Billing Cycle' },
     { value: 'end', label: 'End of Billing Cycle' },
-    { value: 'prorated', label: 'Prorated' }
+    { value: 'prorated', label: 'Proportional Coverage' }
   ];
 
   return (
@@ -65,7 +65,7 @@ export function FixedServiceConfigPanel({
             disabled={disabled}
           />
           <Label htmlFor="fixed-service-enable-proration" className="cursor-pointer">
-            Enable Proration
+            Adjust for Partial Periods
           </Label>
         </div>
         
@@ -82,7 +82,7 @@ export function FixedServiceConfigPanel({
               disabled={disabled}
             />
             <p className="text-sm text-muted-foreground mt-1">
-              Determines how partial periods are calculated
+              Controls how partial-period coverage is calculated when the recurring fee needs to scale to less than a full service period.
             </p>
           </div>
         )}

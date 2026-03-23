@@ -11,6 +11,10 @@
  * - Transaction history and auditing
  * - Financial reconciliation processes
  * - Bulk financial operations
+ *
+ * Financial analytics intentionally stay on invoice / transaction document
+ * dates for financial-operational questions; coverage-based metrics belong in recurring readers
+ * that are explicitly service-period aware.
  */
 
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
@@ -1012,7 +1016,6 @@ export class FinancialService extends BaseService<ITransaction> {
     clientId: string,
     periodStart: string,
     periodEnd: string,
-    billingCycleId?: string,
     context?: ServiceContext
   ): Promise<FinancialResponse<BillingCalculationResult>> {
     if (context) {
@@ -1020,11 +1023,10 @@ export class FinancialService extends BaseService<ITransaction> {
     }
     
     const billingEngine = new BillingEngineClass();
-    const result = await billingEngine.calculateBilling(
+    const result = await billingEngine.calculateBillingForExecutionWindow(
       clientId,
       periodStart,
       periodEnd,
-      billingCycleId!
     );
 
     // Calculate tax amounts
@@ -1373,6 +1375,10 @@ export class FinancialService extends BaseService<ITransaction> {
     const { knex } = await this.getKnex();
     const { client_id, date_from, date_to, group_by = 'month' } = query;
 
+    // Financial analytics intentionally stay on invoice / transaction document
+    // dates (`created_at`, `due_date`, `finalized_at`) rather than recurring
+    // service-period dates. Coverage-based metrics belong in recurring readers
+    // and reports, not in these collections-style aggregates.
     // Build date grouping based on group_by parameter
     let dateGrouping: string;
     switch (group_by) {

@@ -1,5 +1,6 @@
 import { createTenantKnex } from '@alga-psa/db';
 import type { IContractTemplate, IContractTemplateWithLines } from '@alga-psa/types';
+import { normalizeTemplateRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
 
 const ContractTemplateModel = {
   async getAll(tenantId: string): Promise<IContractTemplate[]> {
@@ -28,10 +29,6 @@ const ContractTemplateModel = {
     }
 
     const lines = await knex('contract_template_lines as lines')
-      .leftJoin('contract_template_line_terms as terms', function joinTerms() {
-        this.on('terms.template_line_id', '=', 'lines.template_line_id')
-          .andOn('terms.tenant', '=', 'lines.tenant');
-      })
       .where({
         'lines.tenant': tenant,
         'lines.template_id': templateId,
@@ -47,15 +44,17 @@ const ContractTemplateModel = {
         'lines.display_order',
         'lines.custom_rate',
         'lines.billing_timing',
-        'terms.billing_timing as terms_billing_timing',
+        'lines.cadence_owner',
       ]);
 
-    const normalizedLines = lines.map((line) => ({
-      ...line,
-      custom_rate: line.custom_rate != null ? Number(line.custom_rate) : null,
-      display_order: line.display_order ?? 0,
-      billing_timing: line.billing_timing ?? line.terms_billing_timing ?? 'arrears',
-    }));
+    const normalizedLines = lines.map((line) => {
+      const recurringStorage = normalizeTemplateRecurringStorage(line);
+      return {
+        ...recurringStorage,
+        custom_rate: line.custom_rate != null ? Number(line.custom_rate) : null,
+        display_order: line.display_order ?? 0,
+      };
+    });
 
     return { ...template, lines: normalizedLines };
   },

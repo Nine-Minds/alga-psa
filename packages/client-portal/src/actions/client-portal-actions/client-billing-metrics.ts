@@ -8,7 +8,7 @@ import { ITimeEntry } from '@alga-psa/types';
 import {
   IService,
   IServiceType,
-  IClientContractLine,
+  IClientContract,
   IContractLine,
   IBucketUsage,
   IContractLineService
@@ -461,10 +461,10 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
       const currentDate = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
       console.log(`Fetching bucket usage for client client ${clientId} in tenant ${tenant} as of ${currentDate}`);
 
-      const query = trx<IClientContractLine>('client_contract_lines as ccl')
+      const query = trx<IClientContract>('client_contracts as cc')
       .join<IContractLine>('contract_lines as cl', function() {
-        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
-            .andOn('ccl.tenant', '=', 'cl.tenant');
+        this.on('cc.contract_id', '=', 'cl.contract_id')
+            .andOn('cc.tenant', '=', 'cl.tenant');
       })
       .join<IContractLineService>('contract_line_services as ps', function() {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
@@ -485,18 +485,18 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
       })
       .leftJoin<IBucketUsage>('bucket_usage as bu', function() {
         this.on('cl.contract_line_id', '=', 'bu.contract_line_id')
-            .andOn('ccl.client_id', '=', 'bu.client_id')
-            .andOn('ccl.tenant', '=', 'bu.tenant')
+            .andOn('cc.client_id', '=', 'bu.client_id')
+            .andOn('cc.tenant', '=', 'bu.tenant')
             .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
             .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
       })
-      .where('ccl.client_id', clientId)
-      .andWhere('ccl.tenant', tenant)
-      .andWhere('ccl.is_active', true)
-        .andWhere('ccl.start_date', '<=', trx.raw('?', [currentDate]))
+      .where('cc.client_id', clientId)
+      .andWhere('cc.tenant', tenant)
+      .andWhere('cc.is_active', true)
+        .andWhere('cc.start_date', '<=', trx.raw('?', [currentDate]))
         .andWhere(function() {
-          this.whereNull('ccl.end_date')
-              .orWhere('ccl.end_date', '>', trx.raw('?', [currentDate]));
+          this.whereNull('cc.end_date')
+              .orWhere('cc.end_date', '>', trx.raw('?', [currentDate]));
         })
         .select(
           'cl.contract_line_id',

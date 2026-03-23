@@ -43,6 +43,7 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
     contractLineName?: string;
     contractLineType?: string;
     multipleLines?: boolean;
+    requiresSelection?: boolean;
     noContract?: boolean;
     loading?: boolean;
   }>({ loading: true });
@@ -82,42 +83,38 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
       }
 
       try {
-        const plans = await getEligibleContractLinesForUI(clientId, serviceId) as EligiblePlanUI[];
         const date = entryDate || new Date();
+        const plans = await getEligibleContractLinesForUI(
+          clientId,
+          serviceId,
+          date.toISOString()
+        ) as EligiblePlanUI[];
 
-        // Filter by date (compare date parts only, ignoring time/timezone)
-        const eligiblePlans = plans.filter(plan => {
-          const start = new Date(plan.start_date as string);
-          const end = plan.end_date ? new Date(plan.end_date as string) : null;
-
-          // Compare only the date parts (year, month, day) to avoid timezone issues
-          const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-          const startOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-          const endOnly = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : null;
-
-          return startOnly <= dateOnly && (!endOnly || endOnly >= dateOnly);
-        });
-
-        if (eligiblePlans.length === 0) {
+        if (plans.length === 0) {
           setContractInfo({ noContract: true, loading: false });
-        } else if (eligiblePlans.length === 1) {
+        } else if (plans.length === 1) {
           setContractInfo({
-            contractName: eligiblePlans[0].contract_name,
-            contractLineName: eligiblePlans[0].contract_line_name,
-            contractLineType: eligiblePlans[0].contract_line_type,
+            contractName: plans[0].contract_name,
+            contractLineName: plans[0].contract_line_name,
+            contractLineType: plans[0].contract_line_type,
             loading: false
           });
         } else {
-          // Multiple eligible lines - find the default (bucket overlay or first)
-          const overlayPlans = eligiblePlans.filter(p => p.has_bucket_overlay);
-          const defaultPlan = overlayPlans.length === 1 ? overlayPlans[0] : eligiblePlans[0];
-          setContractInfo({
-            contractName: defaultPlan.contract_name,
-            contractLineName: defaultPlan.contract_line_name,
-            contractLineType: defaultPlan.contract_line_type,
-            multipleLines: true,
-            loading: false
-          });
+          const overlayPlans = plans.filter((p) => p.has_bucket_overlay);
+          if (overlayPlans.length === 1) {
+            setContractInfo({
+              contractName: overlayPlans[0].contract_name,
+              contractLineName: overlayPlans[0].contract_line_name,
+              contractLineType: overlayPlans[0].contract_line_type,
+              loading: false,
+            });
+          } else {
+            setContractInfo({
+              multipleLines: true,
+              requiresSelection: true,
+              loading: false,
+            });
+          }
         }
         setLastFetchedServiceId(serviceId);
       } catch (error) {
@@ -146,10 +143,21 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
         <div className="flex items-center">
           <Info className="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" />
           <p className="text-sm text-gray-600">
-            No contract line found for this service. Time will be billed at default rates.
+            No contract line found for this service. Time will be routed to the system-managed default contract.
           </p>
         </div>
       </div>
+    );
+  }
+
+  if (contractInfo.requiresSelection) {
+    return (
+      <Alert variant="warning">
+        <Info className="h-5 w-5" />
+        <AlertDescription>
+          Multiple contract lines are eligible for this date. Select a contract line to persist assignment.
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -158,16 +166,11 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
       <FileText className="h-5 w-5" />
       <AlertDescription>
         <p className="font-medium">
-          Contract: {contractInfo.contractName || 'Default Contract'}
+          Contract: {contractInfo.contractName || 'System-managed default contract'}
         </p>
         <p className="text-xs mt-0.5">
           {contractInfo.contractLineName} ({contractInfo.contractLineType})
         </p>
-        {contractInfo.multipleLines && (
-          <p className="text-xs mt-1 italic">
-            Multiple contract lines available - using default selection
-          </p>
-        )}
       </AlertDescription>
     </Alert>
   );

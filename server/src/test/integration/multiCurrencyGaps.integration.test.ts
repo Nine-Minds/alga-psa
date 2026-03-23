@@ -422,16 +422,16 @@ describe('Multi-Currency Gap Tests', () => {
       }
 
       // Verify: Query the way billing engine does
-      const lines = await db('client_contract_lines as ccl')
-        .leftJoin('client_contracts as cc', function() {
-          this.on('ccl.client_contract_id', '=', 'cc.client_contract_id')
-            .andOn('cc.tenant', '=', 'ccl.tenant');
-        })
-        .leftJoin('contracts as c', function() {
-          this.on('c.contract_id', '=', db.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
+      const lines = await db('client_contracts as cc')
+        .join('contracts as c', function() {
+          this.on('c.contract_id', '=', 'cc.contract_id')
             .andOn('c.tenant', '=', 'cc.tenant');
         })
-        .where({ 'ccl.client_id': clientId, 'ccl.tenant': tenantId })
+        .join('contract_lines as cl', function() {
+          this.on('cl.contract_id', '=', 'c.contract_id')
+            .andOn('cl.tenant', '=', 'c.tenant');
+        })
+        .where({ 'cc.client_id': clientId, 'cc.tenant': tenantId, 'cc.is_active': true })
         .select('c.currency_code');
 
       expect(lines.length).toBeGreaterThan(0);
@@ -555,7 +555,6 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
   await safeDeleteIn('contract_line_service_fixed_config', 'contract_line_id', ids.contractLineIds);
   await safeDeleteIn('contract_line_service_configuration', 'contract_line_id', ids.contractLineIds);
   await safeDeleteIn('contract_line_services', 'contract_line_id', ids.contractLineIds);
-  await safeDeleteIn('client_contract_lines', 'contract_line_id', ids.contractLineIds);
   await safeDeleteIn('contract_lines', 'contract_line_id', ids.contractLineIds);
 
   for (const contractId of ids.contractIds) {

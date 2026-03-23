@@ -112,7 +112,8 @@ export const validateInvoiceFinalization = withAuth(async (
     return { canFinalize: false, error: 'Invoice is already finalized' };
   }
 
-  // Check if invoice has pending external tax
+  // Finalization gating is import-state driven; canonical recurring service periods do not
+  // create a separate tax-finalization path here.
   if (getTaxImportState(invoice.tax_source as TaxSource) === 'pending') {
     return {
       canFinalize: false,
