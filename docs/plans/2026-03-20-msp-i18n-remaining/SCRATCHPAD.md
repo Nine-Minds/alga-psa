@@ -220,6 +220,8 @@ done
 - (2026-03-23) Validation for `T001`: the earlier survey locale generation under `F005` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/surveys` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
 - (2026-03-23) Completed `T002`: confirmed the full survey component batch still compiles with the `msp/surveys` namespace wiring.
 - (2026-03-23) Validation for `T002`: the targeted `npx tsc -p packages/surveys/tsconfig.json --noEmit` runs logged under `F002`, `F003`, and `F004` all passed after the survey rewrites, covering the 26 in-scope survey components with no TypeScript errors.
+- (2026-03-23) Completed `T003`: closed the survey Italian accent audit checkpoint.
+- (2026-03-23) Validation for `T003`: the `F006` audit on [server/public/locales/it/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/surveys.json) found no accentless `puo`/`gia`/`verra`/`funzionalita`/`necessario` regressions, so the Italian survey locale passed unchanged.
 
 ## Open Questions
 
