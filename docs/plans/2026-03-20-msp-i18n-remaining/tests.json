@@ -114,7 +114,7 @@
   {
     "id": "T043",
     "description": "2b-18: remaining email-provider setup/list/helper files compile with msp/email-providers and have no visible hardcoded setup copy left behind",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F045"]
   },
 
