@@ -188,7 +188,7 @@
 
   {
     "id": "T070",
-    "description": "Cross-batch: ROUTE_NAMESPACES updated for all 8 routes",
+    "description": "Cross-batch: ROUTE_NAMESPACES updated for all planned MSP routes plus follow-up extension/licensing prefixes",
     "implemented": false,
     "featureIds": ["F090"]
   },

@@ -1,3 +1,5 @@
+/* global process */
+
 /**
  * Central configuration for internationalization (i18n) support
  * This config drives all language-related functionality in the application
@@ -131,7 +133,10 @@ export const ROUTE_NAMESPACES = {
   '/client-portal/appointments': ['common', 'client-portal', 'features/appointments'],
   '/msp': ['common', 'msp/core', 'msp/dashboard'],
   '/msp/dashboard': ['common', 'msp/core', 'msp/dashboard'],
-  '/msp/knowledge-base': ['common', 'msp/core', 'features/documents'],
+  '/msp/surveys': ['common', 'msp/core', 'msp/surveys'],
+  '/msp/schedule': ['common', 'msp/core', 'msp/schedule'],
+  '/msp/knowledge-base': ['common', 'msp/core', 'features/documents', 'msp/knowledge-base'],
+  '/msp/jobs': ['common', 'msp/core', 'msp/jobs'],
   '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
   '/msp/projects': ['common', 'msp/core', 'features/projects'],
   '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/reports'],
@@ -143,9 +148,13 @@ export const ROUTE_NAMESPACES = {
   '/msp/time-entry': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-sheet-approvals': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
-  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'features/projects'],
-  '/msp/profile': ['common', 'msp/core', 'msp/settings'],
-  '/msp/security-settings': ['common', 'msp/core', 'msp/settings'],
+  '/msp/settings/extensions': ['common', 'msp/core', 'msp/settings', 'msp/extensions'],
+  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects'],
+  '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
+  '/msp/security-settings': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
+  '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
+  '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],
+  '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
 } as const;
 
 /**
