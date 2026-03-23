@@ -266,6 +266,8 @@ done
 - (2026-03-23) Validation for `T061`: the `F062` validation already covered the extension follow-up with `npx tsc -p packages/ui/tsconfig.json --noEmit` and `npx tsc -p server/tsconfig.json --noEmit`, while the recorded rewrite inventory moved the CE loader stubs, settings-shell copy, and OSS placeholder text onto `msp/extensions`.
 - (2026-03-23) Completed `T062`: confirmed the CE licensing stubs compile and no longer leave visible stub copy hardcoded outside `msp/licensing`.
 - (2026-03-23) Validation for `T062`: the `F066` validation already covered the CE licensing stubs with `npx tsc -p server/tsconfig.json --noEmit`, and the recorded `rg` sweep confirmed the stub strings now remain only as `defaultValue` fallbacks in the CE licensing components.
+- (2026-03-23) Completed `T063`: re-verified the initial extension/licensing follow-up locale sets against the final translation validation pass.
+- (2026-03-23) Validation for `T063`: the locale generation passes under `F063` and `F067`, plus the final `node scripts/validate-translations.cjs` run under `F091`, confirmed `msp/extensions` and `msp/licensing` are structurally aligned across all 9 locales with `Errors: 0` and `Warnings: 0`.
 
 ## Open Questions
 

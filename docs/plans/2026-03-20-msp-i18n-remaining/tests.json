@@ -158,7 +158,7 @@
   {
     "id": "T063",
     "description": "2b-20 follow-up: validate-translations.cjs passes for msp/extensions and msp/licensing across all 9 locales",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F063", "F067"]
   },
   {
