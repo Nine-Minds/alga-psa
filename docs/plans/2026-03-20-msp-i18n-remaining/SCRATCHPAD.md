@@ -270,6 +270,8 @@ done
 - (2026-03-23) Validation for `T063`: the locale generation passes under `F063` and `F067`, plus the final `node scripts/validate-translations.cjs` run under `F091`, confirmed `msp/extensions` and `msp/licensing` are structurally aligned across all 9 locales with `Errors: 0` and `Warnings: 0`.
 - (2026-03-23) Completed `T064`: confirmed the enterprise licensing purchase/reduction/success flow compiles and no longer leaves visible purchase-flow copy hardcoded outside `msp/licensing`.
 - (2026-03-23) Validation for `T064`: the `F070` validation already covered the enterprise licensing flow with `npx eslint` and `npx tsc -p server/tsconfig.json --noEmit`, while the recorded rewrite inventory moved the purchase page, success page, subscription form, and reduction modal copy onto `msp/licensing`.
+- (2026-03-23) Completed `T065`: re-verified the expanded enterprise licensing locale set against the final translation validation pass.
+- (2026-03-23) Validation for `T065`: the expanded licensing locale generation under `F071` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming the 108-leaf `msp/licensing` namespace matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
 
 ## Open Questions
 
