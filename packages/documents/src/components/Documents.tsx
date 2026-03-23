@@ -450,12 +450,28 @@ const Documents = ({
         setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
       }
     } else {
-      // Entity mode: trigger parent to refresh via router.refresh()
+      // Entity mode: directly fetch updated documents
+      if (entityId && entityType) {
+        try {
+          const response = await getDocumentsByEntity(entityId, entityType, filters, currentPage, pageSize);
+          if (isActionPermissionError(response)) {
+            handleError(response.permissionError);
+            return;
+          }
+          setDocumentsToDisplay(response.documents);
+          setTotalDocuments(response.totalCount);
+          setTotalPages(response.totalPages);
+        } catch (err) {
+          console.error('Error refreshing entity documents:', err);
+          setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+        }
+      }
+      // Also notify parent in case it needs to update other state
       if (onDocumentCreated) {
         onDocumentCreated();
       }
     }
-  }, [inFolderMode, filters, currentFolder, currentPage, pageSize, onDocumentCreated, t]);
+  }, [inFolderMode, entityId, entityType, filters, currentFolder, currentPage, pageSize, onDocumentCreated, tDoc]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
