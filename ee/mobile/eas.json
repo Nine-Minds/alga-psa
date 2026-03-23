@@ -33,7 +33,7 @@
     "playInternal": {
       "android": {
         "track": "internal",
-        "releaseStatus": "draft",
+        "releaseStatus": "completed",
         "serviceAccountKeyPath": "./google-service-account.json"
       }
     }
