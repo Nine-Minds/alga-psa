@@ -284,6 +284,8 @@ done
 - (2026-03-23) Validation for `T072`: the explicit `F092` pseudo refresh regenerated `xx` and `yy` for every newly-added MSP namespace, and the recorded leaf-count check confirmed each pseudo file still matches its English source structure.
 - (2026-03-23) Completed `T073`: closed the final cross-batch production-build checkpoint.
 - (2026-03-23) Validation for `T073`: the full `npm run build` run recorded under `F093` completed with exit code `0`, including TypeScript, static generation, build traces, and final page optimization.
+- (2026-03-23) Completed `T074`: re-verified the feature-flag-off English fallback path for MSP i18n.
+- (2026-03-23) Validation for `T074`: a direct source assertion confirmed `packages/core/src/lib/featureFlagRuntime.ts` still defaults `'msp-i18n-enabled'` to `false`, the CE and EE MSP layouts still gate locale resolution behind `isMspI18nEnabled ? await getHierarchicalLocaleAction() : null`, and the CE MSP layout client still forces `initialLocale='en'` with pseudo-locales disabled when the flag is off.
 
 ## Open Questions
 

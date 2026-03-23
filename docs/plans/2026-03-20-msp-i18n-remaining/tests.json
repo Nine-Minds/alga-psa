@@ -213,7 +213,7 @@
   {
     "id": "T074",
     "description": "Cross-batch: msp-i18n-enabled OFF — all pages show English, no regressions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F093"]
   },
   {
