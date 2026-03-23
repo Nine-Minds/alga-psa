@@ -146,7 +146,7 @@
   {
     "id": "T061",
     "description": "2b-20 follow-up: extension surfaces compile with msp/extensions and no visible hardcoded extension placeholder copy remains",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F061", "F062"]
   },
   {

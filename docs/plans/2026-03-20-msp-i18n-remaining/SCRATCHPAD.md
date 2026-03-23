@@ -262,6 +262,8 @@ done
 - (2026-03-23) Validation for `T052`: a focused Node assertion against [server/public/locales/xx/msp/profile.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/profile.json) confirmed 8 representative keys spanning the profile page, password-change form, security-settings views, session management, and platform-update detail all resolve to `11111`.
 - (2026-03-23) Completed `T060`: closed the `2b-20` re-inventory checkpoint.
 - (2026-03-23) Validation for `T060`: the `F060` re-inventory recorded the stale “no work needed” assumption and added the concrete `F061`-`F076` / `T061`-`T067` follow-up items for the newly-discovered extension and licensing UI strings, so the batch is no longer treated as empty.
+- (2026-03-23) Completed `T061`: confirmed the extension follow-up surfaces compile and no longer leave visible placeholder copy hardcoded outside `msp/extensions`.
+- (2026-03-23) Validation for `T061`: the `F062` validation already covered the extension follow-up with `npx tsc -p packages/ui/tsconfig.json --noEmit` and `npx tsc -p server/tsconfig.json --noEmit`, while the recorded rewrite inventory moved the CE loader stubs, settings-shell copy, and OSS placeholder text onto `msp/extensions`.
 
 ## Open Questions
 
