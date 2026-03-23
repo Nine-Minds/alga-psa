@@ -195,7 +195,7 @@
   {
     "id": "T071",
     "description": "Cross-batch: validate-translations.cjs passes for all newly-added MSP namespaces (0 errors, 0 warnings)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F091"]
   },
   {

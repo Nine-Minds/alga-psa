@@ -278,6 +278,8 @@ done
 - (2026-03-23) Validation for `T067`: the expanded extensions locale generation under `F075` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming the 44-leaf `msp/extensions` namespace matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
 - (2026-03-23) Completed `T070`: closed the route-namespace registration checkpoint for the final MSP batches.
 - (2026-03-23) Validation for `T070`: the `F090` route-registry pass updated `ROUTE_NAMESPACES`, and the logged `getNamespacesForRoute()` spot checks confirmed the expected namespace arrays for the original batch routes plus the follow-up `/msp/settings/extensions`, `/msp/extensions`, and `/msp/licenses/purchase` prefixes.
+- (2026-03-23) Completed `T071`: closed the final cross-batch translation validator checkpoint.
+- (2026-03-23) Validation for `T071`: the final `node scripts/validate-translations.cjs` run under `F091` completed with `Errors: 0` and `Warnings: 0` across every newly-added MSP namespace and locale file.
 
 ## Open Questions
 
