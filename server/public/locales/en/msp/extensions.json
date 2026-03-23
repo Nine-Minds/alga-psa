@@ -50,6 +50,17 @@
     "metadataTitle": "Extensions - Enterprise Feature",
     "extensionId": "Extension ID: {{id}}"
   },
+  "runtime": {
+    "metadataTitle": "Extension",
+    "loadError": "Failed to load extension runtime info",
+    "notFoundTitle": "Extension not found.",
+    "goToExtensions": "Go to extensions",
+    "bundleUnavailableTitle": "Extension bundle not available.",
+    "bundleUnavailableDescription": "The extension bundle is missing or has not been uploaded.",
+    "goToDetails": "Go to extension details",
+    "runtimeDomainUnavailableTitle": "Extension runtime domain not available.",
+    "runtimeDomainUnavailableDescription": "Reprovision the extension from Settings -> Extensions -> select extension -> Provision."
+  },
   "detailsPage": {
     "metadata": {
       "title": "Extension Details",
