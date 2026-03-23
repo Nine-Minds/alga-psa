@@ -57,7 +57,7 @@
         "error": "11111",
         "entityFallback": "11111"
       },
-      "actionsMenuAria": "11111 {{name}} 11111"
+      "actionsMenuAria": "11111"
     },
     "templateForm": {
       "titleCreate": "11111",
@@ -137,7 +137,7 @@
         "load": "11111"
       },
       "deleteConfirm": "11111",
-      "actionsMenuAria": "11111 {{target}} 11111"
+      "actionsMenuAria": "11111"
     },
     "triggerForm": {
       "titleCreate": "11111",
@@ -184,12 +184,12 @@
     "invalidTitle": "11111",
     "invalidMessage": "11111",
     "ratingPrompt": "11111",
-    "ratingAssistive": "11111 {{scale}} 11111",
+    "ratingAssistive": "11111",
     "commentLabel": "11111",
     "submitButton": "11111",
     "submitting": "11111",
     "submittedTitle": "11111",
-    "submittedMessage": "11111 {{thankYouText}} 11111",
+    "submittedMessage": "11111",
     "ratingSubmitted": "11111",
     "retryButton": "11111",
     "selectRatingError": "11111",
@@ -197,8 +197,8 @@
     "supportMessage": "11111"
   },
   "rating": {
-    "buttonAriaWithLabel": "11111 {{rating}} 11111 {{label}} 11111",
-    "buttonAria": "11111 {{rating}} 11111 {{scale}} 11111",
+    "buttonAriaWithLabel": "11111",
+    "buttonAria": "11111",
     "defaults": {
       "3": {
         "1": "11111",
@@ -298,7 +298,7 @@
       "tooltip": {
         "averageRating": "11111",
         "responses": "11111",
-        "date": "11111 {{label}} 11111"
+        "date": "11111"
       }
     },
     "responsesList": {
@@ -330,7 +330,7 @@
       "tooltip": {
         "percent": "11111",
         "responses": "11111",
-        "rating": "11111 {{label}} 11111"
+        "rating": "11111"
       }
     },
     "topIssues": {
@@ -339,9 +339,9 @@
       "emptyDescription": "11111",
       "fallbacks": {
         "unknownClient": "11111",
-        "ticket": "11111 {{ticket}} 11111",
+        "ticket": "11111",
         "noComment": "11111",
-        "assignedTo": "11111 {{name}} 11111"
+        "assignedTo": "11111"
       }
     }
   },

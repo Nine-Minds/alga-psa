@@ -56,6 +56,6 @@
 
   {"id": "F090", "description": "Update ROUTE_NAMESPACES for /msp/surveys, /msp/schedule, /msp/knowledge-base, /msp/jobs, /msp/settings (email-providers), /msp/profile, /msp/security-settings, /msp/platform-updates, plus follow-up /msp/settings/extensions, /msp/extensions, and /msp/licenses prefixes", "implemented": true},
   {"id": "F091", "description": "validate-translations.cjs passes for all newly-added MSP namespaces across all 9 locales", "implemented": true},
-  {"id": "F092", "description": "Regenerate pseudo-locales (xx, yy) for all newly-added MSP namespaces", "implemented": false},
+  {"id": "F092", "description": "Regenerate pseudo-locales (xx, yy) for all newly-added MSP namespaces", "implemented": true},
   {"id": "F093", "description": "npm run build succeeds with no TypeScript errors", "implemented": false}
 ]
