@@ -286,24 +286,35 @@ async function fetchAvailableBillingPeriodsUnpaginated(
         .orderBy('cbc.billing_cycle_id', 'asc');
 
     return periods.map((period: any): BillingPeriodWithMeta => {
-        if (!period.period_start_date || !period.period_end_date) {
+        const normalizedPeriodStartDate = normalizeDateOnly(period.period_start_date) ?? '' as ISO8601String;
+        const normalizedPeriodEndDate = normalizeDateOnly(period.period_end_date) ?? '' as ISO8601String;
+        const normalizedEffectiveDate = normalizeDateOnly(period.effective_date)
+            ?? normalizedPeriodStartDate;
+        const normalizedPeriod = {
+            ...period,
+            period_start_date: normalizedPeriodStartDate,
+            period_end_date: normalizedPeriodEndDate,
+            effective_date: normalizedEffectiveDate,
+        };
+
+        if (!normalizedPeriodStartDate || !normalizedPeriodEndDate) {
             return {
-                ...period,
+                ...normalizedPeriod,
                 can_generate: false,
                 is_early: false
             };
         }
 
         try {
-            const periodEndDate = toPlainDate(period.period_end_date);
+            const periodEndDate = toPlainDate(normalizedPeriodEndDate);
             return {
-                ...period,
+                ...normalizedPeriod,
                 can_generate: true,
                 is_early: Temporal.PlainDate.compare(periodEndDate, currentPlainDate) > 0
             };
         } catch (error) {
             return {
-                ...period,
+                ...normalizedPeriod,
                 can_generate: false,
                 is_early: false
             };

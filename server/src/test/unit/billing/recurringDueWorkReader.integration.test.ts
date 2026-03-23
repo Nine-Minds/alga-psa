@@ -46,6 +46,24 @@ function applyOperator(rowValue: any, operator: string, expected: any) {
   }
 }
 
+function buildPredicate(
+  columnOrCriteria: string | Record<string, any>,
+  operatorOrValue?: any,
+  maybeValue?: any,
+) {
+  if (typeof columnOrCriteria === 'object') {
+    return (row: Row) =>
+      Object.entries(columnOrCriteria).every(([column, expected]) =>
+        row[normalizeColumn(column)] === expected,
+      );
+  }
+
+  const column = normalizeColumn(columnOrCriteria);
+  const operator = maybeValue === undefined ? '=' : operatorOrValue;
+  const expected = maybeValue === undefined ? operatorOrValue : maybeValue;
+  return (row: Row) => applyOperator(row[column], operator, expected);
+}
+
 function createQueryBuilder(rows: Row[]) {
   let resultRows = [...rows];
 
@@ -53,20 +71,84 @@ function createQueryBuilder(rows: Row[]) {
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
     select: vi.fn(() => builder),
-    where: vi.fn((columnOrCriteria: string | Record<string, any>, operatorOrValue?: any, maybeValue?: any) => {
-      if (typeof columnOrCriteria === 'object') {
-        resultRows = resultRows.filter((row) =>
-          Object.entries(columnOrCriteria).every(([column, expected]) =>
-            row[normalizeColumn(column)] === expected,
-          ),
-        );
+    where: vi.fn((columnOrCriteria: string | Record<string, any> | ((nestedBuilder: any) => void), operatorOrValue?: any, maybeValue?: any) => {
+      if (typeof columnOrCriteria === 'function') {
+        const clauses: Array<{ type: 'and' | 'or'; predicate: (row: Row) => boolean }> = [];
+        const nestedBuilder = {
+          where: (nestedColumnOrCriteria: string | Record<string, any>, nestedOperatorOrValue?: any, nestedMaybeValue?: any) => {
+            clauses.push({
+              type: 'and',
+              predicate: buildPredicate(nestedColumnOrCriteria, nestedOperatorOrValue, nestedMaybeValue),
+            });
+            return nestedBuilder;
+          },
+          orWhere: (nestedColumnOrCriteria: string | Record<string, any>, nestedOperatorOrValue?: any, nestedMaybeValue?: any) => {
+            clauses.push({
+              type: 'or',
+              predicate: buildPredicate(nestedColumnOrCriteria, nestedOperatorOrValue, nestedMaybeValue),
+            });
+            return nestedBuilder;
+          },
+          whereNull: (column: string) => {
+            const normalized = normalizeColumn(column);
+            clauses.push({
+              type: 'and',
+              predicate: (row: Row) => row[normalized] == null,
+            });
+            return nestedBuilder;
+          },
+          whereNotNull: (column: string) => {
+            const normalized = normalizeColumn(column);
+            clauses.push({
+              type: 'and',
+              predicate: (row: Row) => row[normalized] != null,
+            });
+            return nestedBuilder;
+          },
+          orWhereNull: (column: string) => {
+            const normalized = normalizeColumn(column);
+            clauses.push({
+              type: 'or',
+              predicate: (row: Row) => row[normalized] == null,
+            });
+            return nestedBuilder;
+          },
+          orWhereNotNull: (column: string) => {
+            const normalized = normalizeColumn(column);
+            clauses.push({
+              type: 'or',
+              predicate: (row: Row) => row[normalized] != null,
+            });
+            return nestedBuilder;
+          },
+        };
+
+        columnOrCriteria(nestedBuilder);
+        resultRows = resultRows.filter((row) => {
+          if (clauses.length === 0) {
+            return true;
+          }
+
+          return clauses.reduce((matches, clause, index) => {
+            const clauseResult = clause.predicate(row);
+            if (index === 0) {
+              return clauseResult;
+            }
+            return clause.type === 'or' ? matches || clauseResult : matches && clauseResult;
+          }, false);
+        });
         return builder;
       }
 
-      const column = normalizeColumn(columnOrCriteria);
-      const operator = maybeValue === undefined ? '=' : operatorOrValue;
-      const expected = maybeValue === undefined ? operatorOrValue : maybeValue;
-      resultRows = resultRows.filter((row) => applyOperator(row[column], operator, expected));
+      const predicate = buildPredicate(columnOrCriteria, operatorOrValue, maybeValue);
+      resultRows = resultRows.filter((row) => predicate(row));
+      return builder;
+    }),
+    orWhere: vi.fn((columnOrCriteria: string | Record<string, any>, operatorOrValue?: any, maybeValue?: any) => {
+      const predicate = buildPredicate(columnOrCriteria, operatorOrValue, maybeValue);
+      const matchingRows = rows.filter((row) => predicate(row));
+      const seen = new Set(resultRows);
+      resultRows = [...resultRows, ...matchingRows.filter((row) => !seen.has(row))];
       return builder;
     }),
     whereIn: vi.fn((column: string, values: any[]) => {
@@ -842,6 +924,76 @@ describe('recurring due-work reader', () => {
     });
     expect(result.invoiceCandidates[0]?.members[0]?.scheduleKey).toBe(
       'schedule:tenant-1:client_contract_line:assignment-line-ready:client:advance',
+    );
+  });
+
+  it('T040: Date-valued billing cycle rows are normalized before client-cadence materialization gap sorting', async () => {
+    mocks.rowsByTable.client_billing_cycles = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: 'cycle-2025-03',
+        billing_cycle: 'monthly',
+        period_start_date: new Date('2025-03-01T00:00:00.000Z'),
+        period_end_date: new Date('2025-04-01T00:00:00.000Z'),
+        effective_date: new Date('2025-03-01T00:00:00.000Z'),
+        invoice_id: null,
+      },
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_name: 'Acme Co',
+        billing_cycle_id: 'cycle-2025-02',
+        billing_cycle: 'monthly',
+        period_start_date: new Date('2025-02-01T00:00:00.000Z'),
+        period_end_date: new Date('2025-03-01T00:00:00.000Z'),
+        effective_date: new Date('2025-02-01T00:00:00.000Z'),
+        invoice_id: null,
+      },
+    ];
+
+    mocks.rowsByTable.client_contracts = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+        client_contract_line_id: 'assignment-line-gap',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        start_date: '2025-02-01',
+        end_date: null,
+        is_active: true,
+      },
+    ];
+
+    mocks.rowsByTable.recurring_service_periods = [];
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      searchTerm: 'Acme',
+    });
+
+    expect(result.materializationGaps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          clientId: 'client-1',
+          billingCycleId: 'cycle-2025-03',
+          servicePeriodStart: '2025-03-01',
+          servicePeriodEnd: '2025-04-01',
+          invoiceWindowStart: '2025-03-01',
+          invoiceWindowEnd: '2025-04-01',
+        }),
+        expect.objectContaining({
+          clientId: 'client-1',
+          billingCycleId: 'cycle-2025-02',
+          servicePeriodStart: '2025-02-01',
+          servicePeriodEnd: '2025-03-01',
+          invoiceWindowStart: '2025-02-01',
+          invoiceWindowEnd: '2025-03-01',
+        }),
+      ]),
     );
   });
 });
