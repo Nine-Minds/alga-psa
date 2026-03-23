@@ -260,6 +260,8 @@ done
 - (2026-03-23) Validation for `T051`: the targeted `npx tsc -p packages/users/tsconfig.json --noEmit` run and the `npx tsc -p server/tsconfig.json --noEmit` runs logged under `F051` and `F052` both passed after the profile/security rewrites, covering the 8 in-scope files with no TypeScript errors.
 - (2026-03-23) Completed `T052`: verified representative profile/security/platform-update keys resolve to the pseudo-locale fill token in `xx`.
 - (2026-03-23) Validation for `T052`: a focused Node assertion against [server/public/locales/xx/msp/profile.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/profile.json) confirmed 8 representative keys spanning the profile page, password-change form, security-settings views, session management, and platform-update detail all resolve to `11111`.
+- (2026-03-23) Completed `T060`: closed the `2b-20` re-inventory checkpoint.
+- (2026-03-23) Validation for `T060`: the `F060` re-inventory recorded the stale “no work needed” assumption and added the concrete `F061`-`F076` / `T061`-`T067` follow-up items for the newly-discovered extension and licensing UI strings, so the batch is no longer treated as empty.
 
 ## Open Questions
 

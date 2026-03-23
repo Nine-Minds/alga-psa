@@ -140,7 +140,7 @@
   {
     "id": "T060",
     "description": "2b-20: re-inventory recorded the stale 'no work needed' assumption and added concrete extension/licensing follow-up items for discovered visible strings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F060"]
   },
   {
