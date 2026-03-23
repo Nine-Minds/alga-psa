@@ -422,38 +422,61 @@ export function QuickAddTicket({
   }, [clientId, isPrefilledClient]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchStatusesForBoard = async () => {
       if (!boardId) {
-        setStatuses([]);
-        setStatusId('');
-        setIsLoadingStatuses(false);
+        if (isMounted) {
+          setStatuses([]);
+          setStatusId('');
+          setIsLoadingStatuses(false);
+        }
         return;
       }
 
-      setIsLoadingStatuses(true);
+      if (isMounted) {
+        setIsLoadingStatuses(true);
+      }
       try {
         const boardStatuses = await getTicketStatuses(boardId);
-        setStatuses(boardStatuses);
-
-        const defaultStatus = getDefaultStatus(boardStatuses);
-        const currentStatusIsValid = boardStatuses.some((status) => status.status_id === statusId);
-
-        if (defaultStatus?.status_id && !currentStatusIsValid) {
-          setStatusId(defaultStatus.status_id);
-        } else if (!currentStatusIsValid) {
-          setStatusId('');
+        if (isMounted) {
+          setStatuses(boardStatuses);
         }
       } catch (error) {
         console.error('Error fetching board statuses:', error);
-        setStatuses([]);
-        setStatusId('');
+        if (isMounted) {
+          setStatuses([]);
+          setStatusId('');
+        }
       } finally {
-        setIsLoadingStatuses(false);
+        if (isMounted) {
+          setIsLoadingStatuses(false);
+        }
       }
     };
 
     fetchStatusesForBoard();
+
+    return () => {
+      isMounted = false;
+    };
   }, [boardId]);
+
+  useEffect(() => {
+    if (!boardId || isLoadingStatuses) {
+      return;
+    }
+
+    const currentStatusIsValid = statuses.some((status) => status.status_id === statusId);
+    if (currentStatusIsValid) {
+      return;
+    }
+
+    const nextStatusId = getDefaultStatus(statuses)?.status_id || '';
+    if (nextStatusId !== statusId) {
+      setStatusId(nextStatusId);
+    }
+  }, [boardId, statuses, statusId, isLoadingStatuses]);
 
   useEffect(() => {
     const fetchCategories = async () => {
