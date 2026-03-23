@@ -133,7 +133,7 @@
   {
     "id": "T052",
     "description": "2b-19: Visual QA (xx) — /msp/profile, /msp/security-settings show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F053"]
   },
 

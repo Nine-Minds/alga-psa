@@ -258,6 +258,8 @@ done
 - (2026-03-23) Validation for `T050`: the earlier profile locale generation under `F053` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/profile` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
 - (2026-03-23) Completed `T051`: confirmed the profile/security/platform-update batch still compiles with the `msp/profile` namespace wiring.
 - (2026-03-23) Validation for `T051`: the targeted `npx tsc -p packages/users/tsconfig.json --noEmit` run and the `npx tsc -p server/tsconfig.json --noEmit` runs logged under `F051` and `F052` both passed after the profile/security rewrites, covering the 8 in-scope files with no TypeScript errors.
+- (2026-03-23) Completed `T052`: verified representative profile/security/platform-update keys resolve to the pseudo-locale fill token in `xx`.
+- (2026-03-23) Validation for `T052`: a focused Node assertion against [server/public/locales/xx/msp/profile.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/profile.json) confirmed 8 representative keys spanning the profile page, password-change form, security-settings views, session management, and platform-update detail all resolve to `11111`.
 
 ## Open Questions
 
