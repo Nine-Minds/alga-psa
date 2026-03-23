@@ -48,7 +48,7 @@
   {"id": "F069", "description": "Expand en/msp/licensing.json for enterprise license purchase/reduction/success flow copy discovered after the CE stub pass", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F070", "description": "Wire useTranslation('msp/licensing') in enterprise licensing pages/components (purchase page, purchase success page, LicensePurchaseForm, ReduceLicensesModal) plus shared CE/EE wrappers", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F071", "description": "Regenerate msp/licensing translations for 6 non-English locales + 2 pseudo-locales after enterprise purchase-flow expansion", "implemented": true, "prdRefs": ["2b-20"]},
-  {"id": "F072", "description": "Italian accent audit on updated it/msp/licensing.json after enterprise purchase-flow expansion", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F072", "description": "Italian accent audit on updated it/msp/licensing.json after enterprise purchase-flow expansion", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F073", "description": "Expand en/msp/extensions.json for EE extension runtime/error-state copy discovered after the CE/OSS follow-up pass", "implemented": false, "prdRefs": ["2b-20"]},
   {"id": "F074", "description": "Wire useTranslation('msp/extensions') in packages/product-extensions/ee/entry.tsx runtime/error states", "implemented": false, "prdRefs": ["2b-20"]},
   {"id": "F075", "description": "Regenerate msp/extensions translations for 6 non-English locales + 2 pseudo-locales after EE runtime-state expansion", "implemented": false, "prdRefs": ["2b-20"]},
