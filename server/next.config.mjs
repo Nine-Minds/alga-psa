@@ -1016,6 +1016,7 @@ const nextConfig = {
     '@opentelemetry/resources',
     '@opentelemetry/semantic-conventions',
     '@opentelemetry/api',
+    'expo-server-sdk',
   ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
