@@ -2,7 +2,7 @@ const resolveBillingMethod = (typeName, fallbackMethod) => {
     if (typeName === 'Hourly Time') return 'hourly';
     if (typeName === 'Usage Based') return 'usage';
     if (typeName === 'Fixed Price') return 'fixed';
-    return fallbackMethod || 'per_unit';
+    return fallbackMethod || 'usage';
 };
 
 exports.seed = async function (knex) { // Changed to async function
