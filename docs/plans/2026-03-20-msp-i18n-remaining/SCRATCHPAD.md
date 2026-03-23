@@ -246,6 +246,8 @@ done
 - (2026-03-23) Validation for `T031`: the targeted `npx tsc -p packages/jobs/tsconfig.json --noEmit` run logged under `F031` passed after the jobs rewrite, covering the 7 in-scope jobs files with no TypeScript errors.
 - (2026-03-23) Completed `T032`: verified representative jobs table/metrics/drawer keys resolve to the pseudo-locale fill token in `xx`.
 - (2026-03-23) Validation for `T032`: a focused Node assertion against [server/public/locales/xx/msp/jobs.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/jobs.json) confirmed 7 representative keys spanning the recent-jobs table, metrics cards, history/progress panels, drawer, and step history all resolve to `11111`.
+- (2026-03-23) Completed `T040`: re-verified the email-provider locale set against the final translation validation pass.
+- (2026-03-23) Validation for `T040`: the earlier email-provider locale generation under `F043` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/email-providers` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
 
 ## Open Questions
 

@@ -96,7 +96,7 @@
   {
     "id": "T040",
     "description": "validate-translations.cjs passes after 2b-18 (msp/email-providers keys consistent across all 9 locales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040", "F043"]
   },
   {
