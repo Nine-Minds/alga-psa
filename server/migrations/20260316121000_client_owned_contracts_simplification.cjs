@@ -404,7 +404,7 @@ exports.up = async function up(knex) {
           tenant: row.tenant,
           contract_id: row.contract_id,
         })
-        .andWhereNull('owner_client_id')
+        .whereNull('owner_client_id')
         .update({
           owner_client_id: row.owner_client_id,
           updated_at: knex.fn.now(),
