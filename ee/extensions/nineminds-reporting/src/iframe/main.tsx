@@ -6299,6 +6299,8 @@ interface PlatformNotification {
       roles?: string[];
       tenant_ids?: string[];
       user_types?: string[];
+      subscription_statuses?: string[];
+      product_names?: string[];
     };
     excluded_user_ids?: string[];
     resolved_user_count?: number;
@@ -6341,6 +6343,8 @@ interface ResolvedRecipient {
   last_name: string | null;
   roles: string[];
   user_type: string;
+  subscription_status: string | null;
+  product_name: string | null;
 }
 
 // ── Expandable per-notification stats row ──
@@ -6619,8 +6623,11 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
   const [filterRoles, setFilterRoles] = useState<string[]>(notification?.target_audience?.filters?.roles || []);
   const [filterTenantIds, setFilterTenantIds] = useState<string[]>(notification?.target_audience?.filters?.tenant_ids || []);
   const [filterUserTypes, setFilterUserTypes] = useState<string[]>(notification?.target_audience?.filters?.user_types || []);
+  const [filterSubStatuses, setFilterSubStatuses] = useState<string[]>(notification?.target_audience?.filters?.subscription_statuses || []);
+  const [filterProductNames, setFilterProductNames] = useState<string[]>(notification?.target_audience?.filters?.product_names || []);
   const [emailSearch, setEmailSearch] = useState('');
   const [roleInput, setRoleInput] = useState('');
+  const [productNameInput, setProductNameInput] = useState('');
 
   // Recipient resolution
   const [recipients, setRecipients] = useState<ResolvedRecipient[]>([]);
@@ -6670,6 +6677,8 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
     if (filterRoles.length > 0) filters.roles = filterRoles;
     if (filterTenantIds.length > 0) filters.tenant_ids = filterTenantIds;
     if (filterUserTypes.length > 0) filters.user_types = filterUserTypes;
+    if (filterSubStatuses.length > 0) filters.subscription_statuses = filterSubStatuses;
+    if (filterProductNames.length > 0) filters.product_names = filterProductNames;
 
     const result = await callNotificationApi<ResolvedRecipient[]>('/resolve-recipients', {
       method: 'POST',
@@ -6704,6 +6713,8 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
         ...(filterRoles.length > 0 && { roles: filterRoles }),
         ...(filterTenantIds.length > 0 && { tenant_ids: filterTenantIds }),
         ...(filterUserTypes.length > 0 && { user_types: filterUserTypes }),
+        ...(filterSubStatuses.length > 0 && { subscription_statuses: filterSubStatuses }),
+        ...(filterProductNames.length > 0 && { product_names: filterProductNames }),
         ...(emailSearch.trim() && { email_search: emailSearch.trim() }),
       },
       excluded_user_ids: Array.from(excludedUserIds),
@@ -6955,6 +6966,71 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
           </div>
         </div>
 
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          {/* Subscription Status */}
+          <div>
+            <Label>Subscription Status (leave empty for all)</Label>
+            <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.25rem', flexWrap: 'wrap' }}>
+              {[
+                { value: 'active', label: 'Active' },
+                { value: 'trialing', label: 'Trialing' },
+                { value: 'past_due', label: 'Past Due' },
+                { value: 'canceled', label: 'Canceled' },
+              ].map(opt => (
+                <Checkbox
+                  key={opt.value}
+                  id={`notif-filter-sub-status-${opt.value}`}
+                  label={opt.label}
+                  checked={filterSubStatuses.includes(opt.value)}
+                  onChange={(e) => {
+                    if (e.target.checked) setFilterSubStatuses([...filterSubStatuses, opt.value]);
+                    else setFilterSubStatuses(filterSubStatuses.filter(s => s !== opt.value));
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Product/Plan Name */}
+          <div>
+            <Label>Plan / Product Name (leave empty for all)</Label>
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <Input
+                id="notif-filter-product-name-input"
+                value={productNameInput}
+                onChange={(e) => setProductNameInput(e.target.value)}
+                placeholder="e.g. Pro, Enterprise"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = productNameInput.trim();
+                    if (val && !filterProductNames.includes(val)) {
+                      setFilterProductNames([...filterProductNames, val]);
+                    }
+                    setProductNameInput('');
+                  }
+                }}
+              />
+              <Button id="notif-filter-product-name-add" size="sm" variant="outline" onClick={() => {
+                const val = productNameInput.trim();
+                if (val && !filterProductNames.includes(val)) {
+                  setFilterProductNames([...filterProductNames, val]);
+                }
+                setProductNameInput('');
+              }}>Add</Button>
+            </div>
+            {filterProductNames.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+                {filterProductNames.map(name => (
+                  <Badge key={name} tone="info">
+                    {name} <span style={{ cursor: 'pointer', marginLeft: '0.25rem' }} onClick={() => setFilterProductNames(filterProductNames.filter(x => x !== name))}>✕</span>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Email search */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
           <Input value={emailSearch} onChange={(e) => setEmailSearch(e.target.value)} placeholder="Search by email..." style={{ flex: 1 }} />
@@ -6995,6 +7071,8 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
                     <th style={{ padding: '0.5rem', textAlign: 'left' }}>Name</th>
                     <th style={{ padding: '0.5rem', textAlign: 'left' }}>Email</th>
                     <th style={{ padding: '0.5rem', textAlign: 'left' }}>Tenant</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Plan</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Subscription</th>
                     <th style={{ padding: '0.5rem', textAlign: 'left' }}>Roles</th>
                   </tr>
                 </thead>
@@ -7015,11 +7093,19 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
                       <td style={{ padding: '0.4rem 0.5rem' }}>{r.first_name} {r.last_name}</td>
                       <td style={{ padding: '0.4rem 0.5rem' }}>{r.email}</td>
                       <td style={{ padding: '0.4rem 0.5rem' }}>{r.tenant_name || r.tenant.slice(0, 8)}</td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{r.product_name || '—'}</td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>
+                        {r.subscription_status
+                          ? <Badge tone={r.subscription_status === 'active' ? 'success' : r.subscription_status === 'trialing' ? 'info' : r.subscription_status === 'past_due' ? 'warning' : 'muted'}>
+                              {r.subscription_status}
+                            </Badge>
+                          : '—'}
+                      </td>
                       <td style={{ padding: '0.4rem 0.5rem' }}>{r.roles.join(', ') || '—'}</td>
                     </tr>
                   ))}
                   {filteredRecipients.length === 0 && (
-                    <tr><td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>No matching recipients</td></tr>
+                    <tr><td colSpan={7} style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>No matching recipients</td></tr>
                   )}
                 </tbody>
               </table>
