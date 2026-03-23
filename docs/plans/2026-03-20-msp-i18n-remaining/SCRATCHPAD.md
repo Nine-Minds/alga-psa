@@ -218,6 +218,8 @@ done
 - (2026-03-23) Validation for `F093`: `npm run build` completed successfully end-to-end with exit code 0. The run emitted existing webpack warnings only (scheduling conflicting star exports, `handlebars` `require.extensions`, `fluent-ffmpeg`/`knex`/Temporal dynamic dependency warnings, and the Next.js middleware deprecation notice); TypeScript, static generation, build traces, and final page optimization all finished successfully.
 - (2026-03-23) Completed `T001`: re-verified the survey locale set against the final translation validation pass.
 - (2026-03-23) Validation for `T001`: the earlier survey locale generation under `F005` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/surveys` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
+- (2026-03-23) Completed `T002`: confirmed the full survey component batch still compiles with the `msp/surveys` namespace wiring.
+- (2026-03-23) Validation for `T002`: the targeted `npx tsc -p packages/surveys/tsconfig.json --noEmit` runs logged under `F002`, `F003`, and `F004` all passed after the survey rewrites, covering the 26 in-scope survey components with no TypeScript errors.
 
 ## Open Questions
 
