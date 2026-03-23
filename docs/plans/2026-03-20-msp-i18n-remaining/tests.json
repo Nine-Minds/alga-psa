@@ -176,7 +176,7 @@
   {
     "id": "T066",
     "description": "2b-20 follow-up: EE extension runtime/error states compile with msp/extensions and no visible hardcoded runtime-state copy remains",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F073", "F074"]
   },
   {

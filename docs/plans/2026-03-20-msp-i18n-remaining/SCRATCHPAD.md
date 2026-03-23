@@ -272,6 +272,8 @@ done
 - (2026-03-23) Validation for `T064`: the `F070` validation already covered the enterprise licensing flow with `npx eslint` and `npx tsc -p server/tsconfig.json --noEmit`, while the recorded rewrite inventory moved the purchase page, success page, subscription form, and reduction modal copy onto `msp/licensing`.
 - (2026-03-23) Completed `T065`: re-verified the expanded enterprise licensing locale set against the final translation validation pass.
 - (2026-03-23) Validation for `T065`: the expanded licensing locale generation under `F071` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming the 108-leaf `msp/licensing` namespace matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
+- (2026-03-23) Completed `T066`: confirmed the EE extension runtime/error states compile and no longer leave visible runtime-state copy hardcoded outside `msp/extensions`.
+- (2026-03-23) Validation for `T066`: the `F074` validation already covered the EE entry rewrite with `npx eslint packages/product-extensions/ee/entry.tsx`, and the recorded `rg` sweep confirmed the old runtime/error strings now remain only as `defaultValue` fallbacks in the EE extension entry file.
 
 ## Open Questions
 
