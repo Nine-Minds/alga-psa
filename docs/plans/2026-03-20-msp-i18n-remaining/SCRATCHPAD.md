@@ -264,6 +264,8 @@ done
 - (2026-03-23) Validation for `T060`: the `F060` re-inventory recorded the stale “no work needed” assumption and added the concrete `F061`-`F076` / `T061`-`T067` follow-up items for the newly-discovered extension and licensing UI strings, so the batch is no longer treated as empty.
 - (2026-03-23) Completed `T061`: confirmed the extension follow-up surfaces compile and no longer leave visible placeholder copy hardcoded outside `msp/extensions`.
 - (2026-03-23) Validation for `T061`: the `F062` validation already covered the extension follow-up with `npx tsc -p packages/ui/tsconfig.json --noEmit` and `npx tsc -p server/tsconfig.json --noEmit`, while the recorded rewrite inventory moved the CE loader stubs, settings-shell copy, and OSS placeholder text onto `msp/extensions`.
+- (2026-03-23) Completed `T062`: confirmed the CE licensing stubs compile and no longer leave visible stub copy hardcoded outside `msp/licensing`.
+- (2026-03-23) Validation for `T062`: the `F066` validation already covered the CE licensing stubs with `npx tsc -p server/tsconfig.json --noEmit`, and the recorded `rg` sweep confirmed the stub strings now remain only as `defaultValue` fallbacks in the CE licensing components.
 
 ## Open Questions
 

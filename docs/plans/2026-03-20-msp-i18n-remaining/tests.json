@@ -152,7 +152,7 @@
   {
     "id": "T062",
     "description": "2b-20 follow-up: licensing CE stubs compile with msp/licensing and no visible hardcoded stub copy remains",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F065", "F066"]
   },
   {
