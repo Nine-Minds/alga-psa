@@ -395,11 +395,11 @@ body {
 
     /* STATUS COLORS — muted for dark backgrounds */
     --color-status-success: 74 190 120; /* muted green */
-    --color-status-success-foreground: 15 23 42;
+    --color-status-success-foreground: var(--color-status-success);
     --color-status-warning: 235 180 50; /* bright amber */
-    --color-status-warning-foreground: 15 23 42;
+    --color-status-warning-foreground: var(--color-status-warning);
     --color-status-error: 210 100 100; /* muted red */
-    --color-status-error-foreground: 15 23 42;
+    --color-status-error-foreground: var(--color-status-error);
 
     /* BORDER COLOR */
     --color-border-base: 100 116 139;
@@ -472,10 +472,10 @@ body {
     --color-destructive-foreground: 254 202 202; /* red-200 */
 
     /* ALERT BACKGROUND COLORS — clean opaque tints for dark surfaces */
-    --color-alert-destructive-bg: 50 20 20;   /* deep dark red */
-    --color-alert-warning-bg: 50 40 8;         /* golden amber, not brown */
-    --color-alert-success-bg: 15 40 25;       /* deep dark green */
-    --color-alert-info-bg: 20 30 60;          /* deep dark blue */
+    --color-alert-destructive-bg: color-mix(in srgb, rgb(var(--color-status-error)) 10%, rgb(var(--color-background)));
+    --color-alert-warning-bg: color-mix(in srgb, rgb(var(--color-status-warning)) 10%, rgb(var(--color-background)));
+    --color-alert-success-bg: color-mix(in srgb, rgb(var(--color-status-success)) 10%, rgb(var(--color-background)));
+    --color-alert-info-bg: var(--alga-primary-soft);
 
     /* SCHEDULE EVENT COLORS — tuned per-theme for calendar backgrounds */
     --color-event-non-billable: 160 90 30;    /* warm amber, visible on dark bg */
@@ -547,11 +547,11 @@ body {
 
     /* STATUS COLORS */
     --color-status-success: 34 197 94; /* green-500 */
-    --color-status-success-foreground: 255 255 255;
+    --color-status-success-foreground: var(--color-status-success);
     --color-status-warning: 245 158 11; /* amber-500 */
-    --color-status-warning-foreground: 255 255 255;
+    --color-status-warning-foreground: var(--color-status-warning);
     --color-status-error: 239 68 68; /* red-500 */
-    --color-status-error-foreground: 255 255 255;
+    --color-status-error-foreground: var(--color-status-error);
 
     /* BORDER COLOR */
     --color-border-base: 148 163 184;
@@ -639,10 +639,10 @@ body {
     --color-destructive-foreground: 153 27 27; /* red-800 */
 
     /* ALERT BACKGROUND COLORS — light tints for light surfaces */
-    --color-alert-destructive-bg: 254 242 242;  /* red-50 */
-    --color-alert-warning-bg: 255 251 235;      /* amber-50 */
-    --color-alert-success-bg: 240 253 244;      /* green-50 */
-    --color-alert-info-bg: 239 246 255;         /* blue-50 */
+    --color-alert-destructive-bg: color-mix(in srgb, rgb(var(--color-status-error)) 10%, rgb(var(--color-background)));
+    --color-alert-warning-bg: color-mix(in srgb, rgb(var(--color-status-warning)) 10%, rgb(var(--color-background)));
+    --color-alert-success-bg: color-mix(in srgb, rgb(var(--color-status-success)) 10%, rgb(var(--color-background)));
+    --color-alert-info-bg: var(--alga-primary-soft);
 
     /* Sidebar Colors  */
     --color-sidebar-bg: #0C111D;
