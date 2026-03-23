@@ -17,6 +17,7 @@ import {
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import {
   createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
   getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
@@ -214,19 +215,11 @@ const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSch
   return errors;
 };
 
-const toDatetimeLocalValue = (iso: string | null | undefined): string => {
-  if (!iso) return '';
+const parseDate = (iso: string | null | undefined): Date | undefined => {
+  if (!iso) return undefined;
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
-
-const toIsoString = (value: string): string | undefined => {
-  if (!value) return undefined;
-  const date = new Date(value);
   if (Number.isNaN(date.getTime())) return undefined;
-  return date.toISOString();
+  return date;
 };
 
 const buildWorkflowEligibilityMessage = (
@@ -266,7 +259,7 @@ export default function WorkflowScheduleDialog({
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(initialWorkflowId ?? '');
   const [scheduleName, setScheduleName] = useState('');
   const [triggerType, setTriggerType] = useState<'schedule' | 'recurring'>('schedule');
-  const [runAt, setRunAt] = useState('');
+  const [runAt, setRunAt] = useState<Date | undefined>(undefined);
   const [cron, setCron] = useState('');
   const [recurringMode, setRecurringMode] = useState<RecurringEditorMode>('builder');
   const [recurringBuilder, setRecurringBuilder] = useState<RecurringBuilderState>(DEFAULT_RECURRING_BUILDER_STATE);
@@ -346,7 +339,7 @@ export default function WorkflowScheduleDialog({
           setSelectedWorkflowId(schedule.workflow_id);
           setScheduleName(schedule.name ?? '');
           setTriggerType(schedule.trigger_type);
-          setRunAt(toDatetimeLocalValue(schedule.run_at));
+          setRunAt(parseDate(schedule.run_at));
           setCron(schedule.cron ?? '');
           if (schedule.trigger_type === 'recurring') {
             const parsedRecurringBuilder = parseRecurringBuilderFromCron(schedule.cron ?? '');
@@ -383,7 +376,7 @@ export default function WorkflowScheduleDialog({
     setSelectedWorkflowId(initialWorkflowId ?? '');
     setScheduleName('');
     setTriggerType('schedule');
-    setRunAt('');
+    setRunAt(undefined);
     setCron('');
     setRecurringMode('builder');
     setRecurringBuilder(DEFAULT_RECURRING_BUILDER_STATE);
@@ -791,13 +784,13 @@ export default function WorkflowScheduleDialog({
         ? await scheduleActions.updateWorkflowScheduleAction({
           scheduleId,
           ...common,
-          runAt: triggerType === 'schedule' ? toIsoString(runAt) : undefined,
+          runAt: triggerType === 'schedule' ? runAt?.toISOString() : undefined,
           cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
           timezone: triggerType === 'recurring' ? timezone.trim() : undefined
         })
         : await scheduleActions.createWorkflowScheduleAction({
           ...common,
-          runAt: triggerType === 'schedule' ? toIsoString(runAt) : undefined,
+          runAt: triggerType === 'schedule' ? runAt?.toISOString() : undefined,
           cron: triggerType === 'recurring' ? effectiveRecurringCron : undefined,
           timezone: triggerType === 'recurring' ? timezone.trim() : undefined
         });
@@ -890,13 +883,15 @@ export default function WorkflowScheduleDialog({
             </div>
 
             {triggerType === 'schedule' ? (
-              <Input
-                id="schedule-dialog-run-at"
-                label="Run at"
-                type="datetime-local"
-                value={runAt}
-                onChange={(event) => setRunAt(event.target.value)}
-              />
+              <div>
+                <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">Run at</label>
+                <DateTimePicker
+                  id="schedule-dialog-run-at"
+                  label="Run at"
+                  value={runAt}
+                  onChange={setRunAt}
+                />
+              </div>
             ) : (
               <div className="space-y-4 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
