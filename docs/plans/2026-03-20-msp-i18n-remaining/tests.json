@@ -121,7 +121,7 @@
   {
     "id": "T050",
     "description": "validate-translations.cjs passes after 2b-19 (msp/profile keys consistent across all 9 locales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F050", "F053"]
   },
   {

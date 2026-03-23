@@ -254,6 +254,8 @@ done
 - (2026-03-23) Validation for `T042`: a direct leaf-key comparison between [server/public/locales/en/msp/email-providers.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/email-providers.json) and [server/public/locales/en/msp/settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/settings.json) found `285` email-provider leaves, `769` settings leaves, and `0` overlapping key paths, so the provider namespace does not collide with the existing MSP settings/admin copy.
 - (2026-03-23) Completed `T043`: confirmed the remaining email-provider setup/list/helper surfaces compile and no longer leave provider-setup copy hardcoded outside the namespace.
 - (2026-03-23) Validation for `T043`: the `F045` validation run already covered the remaining helper surfaces with `npx tsc -p packages/integrations/tsconfig.json --noEmit`, and the `rg` sweep recorded there confirmed the former setup/wizard/OAuth fallback strings now remain only as `defaultValue` fallbacks rather than hardcoded UI text.
+- (2026-03-23) Completed `T050`: re-verified the profile locale set against the final translation validation pass.
+- (2026-03-23) Validation for `T050`: the earlier profile locale generation under `F053` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/profile` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
 
 ## Open Questions
 
