@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -1041,9 +1042,11 @@ export default function WorkflowScheduleDialog({
                 ) : (
                   <div className="space-y-3">
                     {unsupportedRecurringCron && (
-                      <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
-                        This schedule uses a custom cron expression. Keep editing it here, or switch back to the builder to replace it with a common pattern.
-                      </div>
+                      <Alert variant="warning">
+                        <AlertDescription>
+                          This schedule uses a custom cron expression. Keep editing it here, or switch back to the builder to replace it with a common pattern.
+                        </AlertDescription>
+                      </Alert>
                     )}
                     <Input
                       id="schedule-dialog-cron"
@@ -1065,12 +1068,9 @@ export default function WorkflowScheduleDialog({
             )}
 
             {workflowEligibilityMessage && selectedWorkflowId && (
-              <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{workflowEligibilityMessage}</span>
-                </div>
-              </div>
+              <Alert variant="warning">
+                <AlertDescription>{workflowEligibilityMessage}</AlertDescription>
+              </Alert>
             )}
 
             <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))] p-4">
@@ -1137,31 +1137,37 @@ export default function WorkflowScheduleDialog({
               )}
 
               {schemaErrors.length > 0 && (
-                <div className="mt-3 rounded border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-                  <div className="font-semibold">Payload validation errors</div>
-                  {schemaErrors.slice(0, 6).map((error, index) => (
-                    <div key={`${error.path}-${index}`}>{error.path || 'payload'}: {error.message}</div>
-                  ))}
-                  {schemaErrors.length > 6 && (
-                    <div>+{schemaErrors.length - 6} more…</div>
-                  )}
-                </div>
+                <Alert variant="destructive" className="mt-3">
+                  <AlertTitle>Payload validation errors</AlertTitle>
+                  <AlertDescription>
+                    <div className="space-y-1 text-xs">
+                      {schemaErrors.slice(0, 6).map((error, index) => (
+                        <div key={`${error.path}-${index}`}>{error.path || 'payload'}: {error.message}</div>
+                      ))}
+                      {schemaErrors.length > 6 && (
+                        <div>+{schemaErrors.length - 6} more…</div>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
 
             {submitError && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                <div className="font-medium">{submitError}</div>
+              <Alert variant="destructive">
+                <AlertTitle>{submitError}</AlertTitle>
                 {serverIssues.length > 0 && (
-                  <div className="mt-2 space-y-1 text-xs">
-                    {serverIssues.map((issue, index) => (
-                      <div key={`${issue.path ?? 'payload'}-${index}`}>
-                        {(issue.path ?? 'payload')}: {issue.message ?? 'Invalid value'}
-                      </div>
-                    ))}
-                  </div>
+                  <AlertDescription>
+                    <div className="space-y-1 text-xs">
+                      {serverIssues.map((issue, index) => (
+                        <div key={`${issue.path ?? 'payload'}-${index}`}>
+                          {(issue.path ?? 'payload')}: {issue.message ?? 'Invalid value'}
+                        </div>
+                      ))}
+                    </div>
+                  </AlertDescription>
                 )}
-              </div>
+              </Alert>
             )}
           </div>
         )}
