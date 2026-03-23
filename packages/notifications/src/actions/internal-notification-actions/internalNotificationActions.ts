@@ -24,6 +24,7 @@ import {
   broadcastUnreadCount
 } from "../../realtime/internalNotificationBroadcaster";
 import logger from '@alga-psa/core/logger';
+import { runPostCreationHooks } from './notificationHooks';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationReadPayload,
@@ -234,6 +235,9 @@ export async function createNotificationFromTemplateInternal(
     broadcastNotification(notification).catch(err => {
       console.error('Failed to broadcast notification:', err);
     });
+
+    // Fire post-creation hooks (e.g., push notifications)
+    runPostCreationHooks(notification);
 
     return notification;
   });

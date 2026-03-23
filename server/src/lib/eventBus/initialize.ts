@@ -1,10 +1,19 @@
 import { registerAllSubscribers } from './subscribers';
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from './index';
+import { registerInternalNotificationHook } from '@alga-psa/notifications/actions';
+import { triggerPushForNotification } from '../pushNotifications/pushNotificationDispatcher';
 
 export async function initializeEventBus(): Promise<void> {
   try {
     logger.info('Initializing event bus and subscribers');
+
+    // Register push notification hook for internal notifications
+    registerInternalNotificationHook((notification) => {
+      triggerPushForNotification(notification).catch((err) =>
+        logger.error('[Push] Failed to send push notification', { err, template: notification.template_name }),
+      );
+    });
 
     // Register all subscribers
     await registerAllSubscribers();

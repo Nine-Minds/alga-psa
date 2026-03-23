@@ -116,6 +116,10 @@ export async function rollbackUserInDB(userId: string, tenantId: string): Promis
 
     await knex.transaction(async (trx: Knex.Transaction) => {
       // Delete user associations in reverse order
+      await trx('mobile_push_tokens')
+        .where({ user_id: userId, tenant: tenantId })
+        .delete();
+
       // Delete from user_roles first (references users)
       await trx('user_roles')
         .where({ user_id: userId, tenant: tenantId })
