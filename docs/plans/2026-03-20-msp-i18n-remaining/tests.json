@@ -33,7 +33,7 @@
   {
     "id": "T011",
     "description": "2b-14: all 11 schedule files compile with useTranslation — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F012"]
   },
   {

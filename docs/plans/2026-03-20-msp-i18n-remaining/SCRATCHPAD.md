@@ -226,6 +226,8 @@ done
 - (2026-03-23) Validation for `T004`: a focused Node assertion against [server/public/locales/xx/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/surveys.json) confirmed 9 representative keys spanning the dashboard, triggers, templates, analytics, and responses surfaces all resolve to `11111`.
 - (2026-03-23) Completed `T010`: re-verified the schedule locale set against the final translation validation pass.
 - (2026-03-23) Validation for `T010`: the earlier schedule locale generation under `F013` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/schedule` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
+- (2026-03-23) Completed `T011`: confirmed the full schedule component batch still compiles with the `msp/schedule` namespace wiring.
+- (2026-03-23) Validation for `T011`: the targeted `npx tsc -p packages/scheduling/tsconfig.json --noEmit` runs logged under `F011` and `F012` both passed after the schedule rewrites, covering the 11 in-scope schedule files with no TypeScript errors.
 
 ## Open Questions
 
