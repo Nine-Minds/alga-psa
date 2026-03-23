@@ -127,7 +127,7 @@
   {
     "id": "T051",
     "description": "2b-19: all 8 profile/security files compile with useTranslation — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F051", "F052"]
   },
   {

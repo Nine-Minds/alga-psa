@@ -256,6 +256,8 @@ done
 - (2026-03-23) Validation for `T043`: the `F045` validation run already covered the remaining helper surfaces with `npx tsc -p packages/integrations/tsconfig.json --noEmit`, and the `rg` sweep recorded there confirmed the former setup/wizard/OAuth fallback strings now remain only as `defaultValue` fallbacks rather than hardcoded UI text.
 - (2026-03-23) Completed `T050`: re-verified the profile locale set against the final translation validation pass.
 - (2026-03-23) Validation for `T050`: the earlier profile locale generation under `F053` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/profile` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
+- (2026-03-23) Completed `T051`: confirmed the profile/security/platform-update batch still compiles with the `msp/profile` namespace wiring.
+- (2026-03-23) Validation for `T051`: the targeted `npx tsc -p packages/users/tsconfig.json --noEmit` run and the `npx tsc -p server/tsconfig.json --noEmit` runs logged under `F051` and `F052` both passed after the profile/security rewrites, covering the 8 in-scope files with no TypeScript errors.
 
 ## Open Questions
 
