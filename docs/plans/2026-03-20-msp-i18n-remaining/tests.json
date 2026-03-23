@@ -70,7 +70,7 @@
   {
     "id": "T023",
     "description": "2b-15: Visual QA (xx) — KB page, article editor, import dialog, review dashboard show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
 
