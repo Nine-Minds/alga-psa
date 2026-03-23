@@ -334,9 +334,9 @@
     "adHocNoWorkItem": "Wpis ad-hoc (brak elementu roboczego)"
   },
   "contractInfo": {
-    "noContract": "Nie znaleziono pozycji umowy dla tej usługi. Czas będzie naliczany według stawek domyślnych.",
+    "noContract": "Nie znaleziono pozycji umowy dla tej usługi. Czas zostanie przekierowany do domyślnej umowy zarządzanej przez system.",
     "contract": "Kontrakt: {{name}}",
-    "defaultContract": "Umowa domyślna",
+    "defaultContract": "Domyślna umowa zarządzana przez system",
     "multipleLines": "Dostępnych jest wiele linii kontraktu - przy użyciu wyboru domyślnego"
   },
   "billableLegend": {

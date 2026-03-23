@@ -334,9 +334,9 @@
     "adHocNoWorkItem": "Ad-hoc-Eintrag (kein Workitem)"
   },
   "contractInfo": {
-    "noContract": "Für diesen Service wurde keine Vertragszeile gefunden. Die Zeit wird zu den Standardsätzen abgerechnet.",
+    "noContract": "Für diesen Service wurde keine Vertragszeile gefunden. Die Zeit wird an den systemverwalteten Standardvertrag weitergeleitet.",
     "contract": "Vertrag: {{name}}",
-    "defaultContract": "Standardvertrag",
+    "defaultContract": "Systemverwalteter Standardvertrag",
     "multipleLines": "Mehrere Vertragszeilen verfügbar – Standardauswahl verwenden"
   },
   "billableLegend": {

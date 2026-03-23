@@ -48,11 +48,15 @@
       },
       "ytdRevenue": {
         "title": "Chiffre d'affaires cumulé",
-        "subtitle": "Depuis le début de l'année"
+        "subtitle": "Cumul annuel par périodes de service facturées"
       },
       "activeContracts": {
         "title": "Contrats actifs",
-        "subtitle": "Clients facturables"
+        "subtitle": "Affectations actives"
+      },
+      "renewalDecisions": {
+        "title": "Décisions de renouvellement à prendre",
+        "subtitle": "Échéances de décision dans les 90 prochains jours"
       }
     },
     "tabs": {
@@ -64,7 +68,7 @@
     "sections": {
       "revenue": {
         "title": "Rapport de chiffre d'affaires des contrats",
-        "description": "Vue d'ensemble du revenu récurrent mensuel et de la facturation depuis le début de l'année par contrat",
+        "description": "Vue d'ensemble du revenu récurrent mensuel et des périodes de service facturées depuis le début de l'année par contrat.",
         "empty": "Aucune donnée de chiffre d'affaires des contrats disponible"
       },
       "expiration": {

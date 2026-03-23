@@ -48,11 +48,15 @@
       },
       "ytdRevenue": {
         "title": "Umsatz bis heute",
-        "subtitle": "Seit Jahresbeginn"
+        "subtitle": "Seit Jahresbeginn nach abgerechneten Leistungszeiträumen"
       },
       "activeContracts": {
         "title": "Aktive Verträge",
-        "subtitle": "Abrechenbare Kunden"
+        "subtitle": "Aktive Zuweisungen"
+      },
+      "renewalDecisions": {
+        "title": "Fällige Verlängerungsentscheidungen",
+        "subtitle": "Entscheidungsfristen in den nächsten 90 Tagen"
       }
     },
     "tabs": {
@@ -64,7 +68,7 @@
     "sections": {
       "revenue": {
         "title": "Vertragsumsatzbericht",
-        "description": "Überblick über monatlich wiederkehrenden Umsatz und Abrechnungen seit Jahresbeginn nach Vertrag",
+        "description": "Überblick über monatlich wiederkehrenden Umsatz und abgerechnete Leistungszeiträume seit Jahresbeginn nach Vertrag.",
         "empty": "Keine Vertragsumsatzdaten verfügbar"
       },
       "expiration": {

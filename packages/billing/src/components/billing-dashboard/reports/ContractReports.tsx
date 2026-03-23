@@ -393,7 +393,7 @@ const ContractReports: React.FC = () => {
               {t('contractReports.summary.ytdRevenue.title', { defaultValue: 'YTD Revenue' })}
             </h3>
           </div>
-          <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.totalYTD ?? 0)}</p>
+          <p className="text-2xl font-bold text-blue-600">{formatCents(summary?.totalYTD ?? 0)}</p>
           <p className="text-xs text-muted-foreground mt-1">
             {t('contractReports.summary.ytdRevenue.subtitle', { defaultValue: 'Year to Date by billed service period' })}
           </p>

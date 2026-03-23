@@ -334,9 +334,9 @@
     "adHocNoWorkItem": "Entrada ad hoc (sin elemento de trabajo)"
   },
   "contractInfo": {
-    "noContract": "No se encontró ninguna línea de contrato para este servicio. El tiempo se facturará según las tarifas predeterminadas.",
+    "noContract": "No se encontró ninguna línea de contrato para este servicio. El tiempo se asignará al contrato predeterminado gestionado por el sistema.",
     "contract": "Contrato: {{name}}",
-    "defaultContract": "Contrato predeterminado",
+    "defaultContract": "Contrato predeterminado gestionado por el sistema",
     "multipleLines": "Múltiples líneas de contrato disponibles: usando la selección predeterminada"
   },
   "billableLegend": {

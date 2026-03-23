@@ -48,11 +48,15 @@
       },
       "ytdRevenue": {
         "title": "Omzet t/m heden",
-        "subtitle": "Sinds begin van het jaar"
+        "subtitle": "Jaar tot op heden per gefactureerde serviceperioden"
       },
       "activeContracts": {
         "title": "Actieve contracten",
-        "subtitle": "Factureerbare klanten"
+        "subtitle": "Actieve toewijzingen"
+      },
+      "renewalDecisions": {
+        "title": "Openstaande verlengingsbeslissingen",
+        "subtitle": "Beslissingsdeadlines in de komende 90 dagen"
       }
     },
     "tabs": {
@@ -64,7 +68,7 @@
     "sections": {
       "revenue": {
         "title": "Contractomzetrapport",
-        "description": "Overzicht van maandelijks terugkerende omzet en facturering t/m heden per contract",
+        "description": "Overzicht van maandelijks terugkerende omzet en gefactureerde serviceperioden t/m heden per contract.",
         "empty": "Geen contractomzetgegevens beschikbaar"
       },
       "expiration": {

@@ -48,11 +48,15 @@
       },
       "ytdRevenue": {
         "title": "Przychód od początku roku",
-        "subtitle": "Od początku roku"
+        "subtitle": "Od początku roku wg rozliczonych okresów usług"
       },
       "activeContracts": {
         "title": "Aktywne kontrakty",
-        "subtitle": "Rozliczani klienci"
+        "subtitle": "Aktywne przypisania"
+      },
+      "renewalDecisions": {
+        "title": "Oczekujące decyzje o odnowieniu",
+        "subtitle": "Terminy decyzji w ciągu najbliższych 90 dni"
       }
     },
     "tabs": {
@@ -64,7 +68,7 @@
     "sections": {
       "revenue": {
         "title": "Raport przychodu z kontraktów",
-        "description": "Przegląd miesięcznego przychodu cyklicznego i rozliczeń od początku roku według kontraktu",
+        "description": "Przegląd miesięcznego przychodu cyklicznego i rozliczonych okresów usług od początku roku według kontraktu.",
         "empty": "Brak danych o przychodach z kontraktów"
       },
       "expiration": {

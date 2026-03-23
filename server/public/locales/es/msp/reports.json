@@ -48,11 +48,15 @@
       },
       "ytdRevenue": {
         "title": "Ingresos acumulados",
-        "subtitle": "En lo que va del año"
+        "subtitle": "Acumulado del año por períodos de servicio facturados"
       },
       "activeContracts": {
         "title": "Contratos activos",
-        "subtitle": "Clientes facturables"
+        "subtitle": "Asignaciones activas"
+      },
+      "renewalDecisions": {
+        "title": "Decisiones de renovación pendientes",
+        "subtitle": "Fechas de decisión en los próximos 90 días"
       }
     },
     "tabs": {
@@ -64,7 +68,7 @@
     "sections": {
       "revenue": {
         "title": "Informe de ingresos por contrato",
-        "description": "Resumen de los ingresos recurrentes mensuales y la facturación acumulada por contrato",
+        "description": "Resumen de los ingresos recurrentes mensuales y períodos de servicio facturados acumulados por contrato.",
         "empty": "No hay datos de ingresos por contrato disponibles"
       },
       "expiration": {

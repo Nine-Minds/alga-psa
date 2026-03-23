@@ -48,11 +48,15 @@
       },
       "ytdRevenue": {
         "title": "Ricavi accumulati",
-        "subtitle": "Da inizio anno"
+        "subtitle": "Da inizio anno per periodi di servizio fatturati"
       },
       "activeContracts": {
         "title": "Contratti attivi",
-        "subtitle": "Clienti fatturabili"
+        "subtitle": "Assegnazioni attive"
+      },
+      "renewalDecisions": {
+        "title": "Decisioni di rinnovo in scadenza",
+        "subtitle": "Scadenze decisionali nei prossimi 90 giorni"
       }
     },
     "tabs": {
@@ -64,7 +68,7 @@
     "sections": {
       "revenue": {
         "title": "Report ricavi contratti",
-        "description": "Panoramica dei ricavi ricorrenti mensili, oltre alla fatturazione da inizio anno per contratto",
+        "description": "Panoramica dei ricavi ricorrenti mensili e dei periodi di servizio fatturati da inizio anno per contratto.",
         "empty": "Nessun dato sui ricavi dei contratti disponibile"
       },
       "expiration": {

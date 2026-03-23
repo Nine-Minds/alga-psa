@@ -334,9 +334,9 @@
     "adHocNoWorkItem": "Ad-hocinvoer (geen werkitem)"
   },
   "contractInfo": {
-    "noContract": "Er is geen contractregel gevonden voor deze service. De tijd wordt tegen het standaardtarief gefactureerd.",
+    "noContract": "Er is geen contractregel gevonden voor deze service. De tijd wordt doorgestuurd naar het systeembeheerde standaardcontract.",
     "contract": "Contract: {{name}}",
-    "defaultContract": "Standaardcontract",
+    "defaultContract": "Systeembeheerd standaardcontract",
     "multipleLines": "Meerdere contractregels beschikbaar - met standaardselectie"
   },
   "billableLegend": {
