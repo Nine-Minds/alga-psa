@@ -97,7 +97,7 @@ function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 
     return 'Hourly';
   }
 
-  if (item.billing_method === 'usage' || item.billing_method === 'per_unit') {
+  if (item.billing_method === 'usage') {
     return 'Usage';
   }
 
@@ -105,7 +105,7 @@ function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 
 }
 
 function getContractLineBillingTiming(item: IQuoteItem): 'arrears' | 'advance' {
-  return item.billing_method === 'hourly' || item.billing_method === 'usage' || item.billing_method === 'per_unit'
+  return item.billing_method === 'hourly' || item.billing_method === 'usage'
     ? 'arrears'
     : 'advance';
 }
@@ -259,6 +259,10 @@ export async function convertQuoteToDraftContract(
 
   const billingFrequency = recurringItems[0]?.billing_frequency || 'monthly';
 
+  if (!quote.client_id) {
+    throw new Error('Quotes must be linked to a client before they can be converted to a contract');
+  }
+
   const contract = await Contract.create(knexOrTrx, tenant, {
     contract_name: quote.title,
     contract_description: quote.description ?? null,
@@ -267,6 +271,7 @@ export async function convertQuoteToDraftContract(
     is_active: false,
     status: 'draft',
     is_template: false,
+    owner_client_id: quote.client_id,
     template_metadata: {
       source_quote_id: quote.quote_id,
       source_quote_number: quote.quote_number ?? null,
@@ -404,10 +409,6 @@ export async function convertQuoteToDraftContract(
         updated_at: nowIso,
       }))
     );
-  }
-
-  if (!quote.client_id) {
-    throw new Error('Quotes must be linked to a client before they can be converted to a contract');
   }
 
   const clientContractId = uuidv4();

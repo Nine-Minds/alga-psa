@@ -285,9 +285,9 @@ describe('quoteActions', () => {
     });
   });
 
-  it('T047: addQuoteItem accepts all four billing methods', async () => {
+  it('T047: addQuoteItem accepts all billing methods', async () => {
     const { addQuoteItem } = await import('../../src/actions/quoteActions');
-    const billingMethods = ['fixed', 'hourly', 'usage', 'per_unit'] as const;
+    const billingMethods = ['fixed', 'hourly', 'usage'] as const;
 
     for (const billingMethod of billingMethods) {
       const result = await addQuoteItem({

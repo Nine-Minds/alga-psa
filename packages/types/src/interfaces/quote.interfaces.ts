@@ -128,7 +128,7 @@ export interface QuoteConversionPreviewItem {
   is_selected: boolean;
   is_recurring: boolean;
   is_discount?: boolean;
-  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
+  billing_method?: 'fixed' | 'hourly' | 'usage' | null;
   target: QuoteConversionTarget;
   reason?: string | null;
 }
@@ -154,7 +154,7 @@ export interface QuoteViewModelLineItem {
   service_id?: string | null;
   service_name?: string | null;
   service_sku?: string | null;
-  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
+  billing_method?: 'fixed' | 'hourly' | 'usage' | null;
   description: string;
   quantity: number;
   unit_price: number;
