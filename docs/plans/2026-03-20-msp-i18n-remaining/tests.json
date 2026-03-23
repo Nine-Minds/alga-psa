@@ -164,7 +164,7 @@
   {
     "id": "T064",
     "description": "2b-20 follow-up: enterprise licensing purchase/reduction/success flow compiles with msp/licensing and no visible hardcoded licensing purchase-flow copy remains",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F069", "F070"]
   },
   {

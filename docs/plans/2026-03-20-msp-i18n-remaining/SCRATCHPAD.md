@@ -268,6 +268,8 @@ done
 - (2026-03-23) Validation for `T062`: the `F066` validation already covered the CE licensing stubs with `npx tsc -p server/tsconfig.json --noEmit`, and the recorded `rg` sweep confirmed the stub strings now remain only as `defaultValue` fallbacks in the CE licensing components.
 - (2026-03-23) Completed `T063`: re-verified the initial extension/licensing follow-up locale sets against the final translation validation pass.
 - (2026-03-23) Validation for `T063`: the locale generation passes under `F063` and `F067`, plus the final `node scripts/validate-translations.cjs` run under `F091`, confirmed `msp/extensions` and `msp/licensing` are structurally aligned across all 9 locales with `Errors: 0` and `Warnings: 0`.
+- (2026-03-23) Completed `T064`: confirmed the enterprise licensing purchase/reduction/success flow compiles and no longer leaves visible purchase-flow copy hardcoded outside `msp/licensing`.
+- (2026-03-23) Validation for `T064`: the `F070` validation already covered the enterprise licensing flow with `npx eslint` and `npx tsc -p server/tsconfig.json --noEmit`, while the recorded rewrite inventory moved the purchase page, success page, subscription form, and reduction modal copy onto `msp/licensing`.
 
 ## Open Questions
 
