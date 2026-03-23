@@ -6979,6 +6979,7 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
               ].map(opt => (
                 <Checkbox
                   key={opt.value}
+                  id={`notif-filter-sub-status-${opt.value}`}
                   label={opt.label}
                   checked={filterSubStatuses.includes(opt.value)}
                   onChange={(e) => {
@@ -6995,6 +6996,7 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
             <Label>Plan / Product Name (leave empty for all)</Label>
             <div style={{ display: 'flex', gap: '0.25rem' }}>
               <Input
+                id="notif-filter-product-name-input"
                 value={productNameInput}
                 onChange={(e) => setProductNameInput(e.target.value)}
                 placeholder="e.g. Pro, Enterprise"
@@ -7009,7 +7011,7 @@ function NotificationEditor({ notification, onBack }: { notification?: PlatformN
                   }
                 }}
               />
-              <Button size="sm" variant="outline" onClick={() => {
+              <Button id="notif-filter-product-name-add" size="sm" variant="outline" onClick={() => {
                 const val = productNameInput.trim();
                 if (val && !filterProductNames.includes(val)) {
                   setFilterProductNames([...filterProductNames, val]);
