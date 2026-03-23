@@ -83,7 +83,7 @@
   {
     "id": "T031",
     "description": "2b-17: all 7 job files compile with useTranslation — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031"]
   },
   {

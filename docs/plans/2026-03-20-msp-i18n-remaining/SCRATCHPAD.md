@@ -242,6 +242,8 @@ done
 - (2026-03-23) Validation for `T023`: a focused Node assertion against [server/public/locales/xx/msp/knowledge-base.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/knowledge-base.json) confirmed 8 representative keys spanning the main page, article editor, article list, import dialog, and review dashboard all resolve to `11111`.
 - (2026-03-23) Completed `T030`: re-verified the jobs locale set against the final translation validation pass.
 - (2026-03-23) Validation for `T030`: the earlier jobs locale generation under `F032` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/jobs` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
+- (2026-03-23) Completed `T031`: confirmed the full jobs monitoring batch still compiles with the `msp/jobs` namespace wiring.
+- (2026-03-23) Validation for `T031`: the targeted `npx tsc -p packages/jobs/tsconfig.json --noEmit` run logged under `F031` passed after the jobs rewrite, covering the 7 in-scope jobs files with no TypeScript errors.
 
 ## Open Questions
 
