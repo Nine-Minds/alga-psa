@@ -182,7 +182,7 @@
   {
     "id": "T067",
     "description": "2b-20 follow-up: validate-translations.cjs passes for the expanded msp/extensions namespace across all 9 locales",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F075"]
   },
 
