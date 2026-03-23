@@ -1970,6 +1970,9 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
     return 'success';
     } catch (error) {
       console.error(error);
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Failed to update ticket');
     }
   });

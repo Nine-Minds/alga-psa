@@ -47,6 +47,7 @@ import { withAuth } from '@alga-psa/auth';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
+import { updateTicketWithCache } from './optimizedTicketActions';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
@@ -1422,34 +1423,27 @@ export const moveTicketsToBoard = withAuth(async (
 
   for (const ticketId of uniqueIds) {
     try {
-      await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
-        if (!await hasPermission(user, 'ticket', 'update', trx)) {
-          throw new Error('Permission denied: Cannot update ticket');
-        }
-
-        const currentTicket = await trx('tickets')
+      const currentTicket = await withTransaction(ticketKnex, async (trx: Knex.Transaction) => (
+        trx('tickets')
           .where({ ticket_id: ticketId, tenant: tenantAlias })
-          .first();
+          .first()
+      ));
 
-        if (!currentTicket) {
-          throw new Error('Ticket not found');
-        }
+      if (!currentTicket) {
+        throw new Error('Ticket not found');
+      }
 
-        const isBoardChange = currentTicket.board_id !== destinationBoardId;
-        const updateData: Record<string, any> = {
-          board_id: destinationBoardId,
-          status_id: resolvedStatusId,
-        };
+      const updateData: Partial<ITicket> = {
+        board_id: destinationBoardId,
+        status_id: resolvedStatusId,
+      };
 
-        if (isBoardChange) {
-          updateData.category_id = null;
-          updateData.subcategory_id = null;
-        }
+      if (currentTicket.board_id !== destinationBoardId) {
+        updateData.category_id = null;
+        updateData.subcategory_id = null;
+      }
 
-        await trx('tickets')
-          .where({ ticket_id: ticketId, tenant: tenantAlias })
-          .update(updateData);
-      });
+      await updateTicketWithCache(ticketId, updateData);
 
       movedIds.push(ticketId);
     } catch (error: unknown) {
@@ -1458,10 +1452,6 @@ export const moveTicketsToBoard = withAuth(async (
         message: error instanceof Error ? error.message : 'Failed to move ticket',
       });
     }
-  }
-
-  if (movedIds.length > 0) {
-    revalidatePath('/msp/tickets');
   }
 
   return { movedIds, failed };

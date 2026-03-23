@@ -1,9 +1,11 @@
+// @vitest-environment node
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const revalidatePathMock = vi.fn();
+const updateTicketWithCacheMock = vi.fn();
 
 const getDefaultStatusIdMock = vi.fn();
 const validateStatusBelongsToBoardMock = vi.fn();
@@ -13,8 +15,8 @@ vi.mock('@alga-psa/auth', () => ({
     action({ user_id: 'internal-user-1', user_type: 'internal', tenant: 'tenant-1' }, { tenant: 'tenant-1' }, ...args),
 }));
 
-vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: (...args: any[]) => hasPermissionMock(...args),
+vi.mock('@alga-psa/auth/actions', () => ({
+  getTicketAttributes: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -31,6 +33,73 @@ vi.mock('@alga-psa/shared/models/ticketModel', () => ({
 
 vi.mock('next/cache', () => ({
   revalidatePath: (...args: any[]) => revalidatePathMock(...args),
+}));
+
+vi.mock('./optimizedTicketActions', () => ({
+  updateTicketWithCache: (...args: any[]) => updateTicketWithCacheMock(...args),
+}));
+
+vi.mock('../models/ticket', () => ({
+  default: {},
+}));
+
+vi.mock('@alga-psa/core', () => ({
+  deleteEntityWithValidation: vi.fn(),
+}));
+
+vi.mock('@alga-psa/tags/lib/tagCleanup', () => ({
+  deleteEntityTags: vi.fn(),
+}));
+
+vi.mock('@alga-psa/validation', () => ({
+  validateData: vi.fn((_schema: unknown, data: unknown) => data),
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(),
+  publishWorkflowEvent: vi.fn(),
+}));
+
+vi.mock('@alga-psa/event-bus', () => ({
+  getEventBus: vi.fn(() => ({
+    publish: vi.fn(),
+  })),
+}));
+
+vi.mock('@alga-psa/event-bus/events', () => ({
+  TicketCreatedEvent: class {},
+  TicketUpdatedEvent: class {},
+  TicketClosedEvent: class {},
+  TicketResponseStateChangedEvent: class {},
+}));
+
+vi.mock('../lib/adapters/TicketModelEventPublisher', () => ({
+  TicketModelEventPublisher: class {},
+}));
+
+vi.mock('../lib/adapters/TicketModelAnalyticsTracker', () => ({
+  TicketModelAnalyticsTracker: class {},
+}));
+
+vi.mock('../lib/workflowTicketTransitionEvents', () => ({
+  buildTicketTransitionWorkflowEvents: vi.fn(() => []),
+}));
+
+vi.mock('../lib/workflowTicketCommunicationEvents', () => ({
+  buildTicketCommunicationWorkflowEvents: vi.fn(() => []),
+}));
+
+vi.mock('../lib/ticketOrigin', () => ({
+  getTicketOrigin: vi.fn(),
+}));
+
+vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
+  buildTicketResolutionSlaStageCompletionEvent: vi.fn(),
+  buildTicketResolutionSlaStageEnteredEvent: vi.fn(),
+}));
+
+vi.mock('@alga-psa/sla/services', () => ({
+  SlaBackendFactory: {},
 }));
 
 function createMockTrx(tickets: Map<string, Record<string, any>>) {
@@ -74,9 +143,10 @@ describe('ticketActions moveTicketsToBoard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createTenantKnexMock.mockResolvedValue({ knex: {} });
-    hasPermissionMock.mockResolvedValue(true);
     getDefaultStatusIdMock.mockReset();
     validateStatusBelongsToBoardMock.mockReset();
+    updateTicketWithCacheMock.mockReset();
+    updateTicketWithCacheMock.mockResolvedValue('success');
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
       const tickets = new Map();
       return callback(createMockTrx(tickets));
@@ -101,7 +171,7 @@ describe('ticketActions moveTicketsToBoard', () => {
 
     expect(getDefaultStatusIdMock).toHaveBeenCalledWith('tenant-1', expect.anything(), 'board-dest');
     expect(result).toEqual({ movedIds: ['ticket-1'], failed: [] });
-    expect(tickets.get('ticket-1')).toEqual(expect.objectContaining({
+    expect(updateTicketWithCacheMock).toHaveBeenCalledWith('ticket-1', expect.objectContaining({
       board_id: 'board-dest',
       status_id: 'status-default',
       category_id: null,
@@ -114,7 +184,9 @@ describe('ticketActions moveTicketsToBoard', () => {
       ['ticket-2', {
         ticket_id: 'ticket-2',
         tenant: 'tenant-1',
-        board_id: 'board-source',
+        board_id: 'board-dest',
+        category_id: 'cat-keep',
+        subcategory_id: 'subcat-keep',
       }]
     ]);
     validateStatusBelongsToBoardMock.mockResolvedValue({ valid: true });
@@ -126,7 +198,10 @@ describe('ticketActions moveTicketsToBoard', () => {
     expect(getDefaultStatusIdMock).not.toHaveBeenCalled();
     expect(validateStatusBelongsToBoardMock).toHaveBeenCalledWith('status-override', 'board-dest', 'tenant-1', expect.anything());
     expect(result).toEqual({ movedIds: ['ticket-2'], failed: [] });
-    expect(tickets.get('ticket-2')?.status_id).toBe('status-override');
+    expect(updateTicketWithCacheMock).toHaveBeenCalledWith('ticket-2', {
+      board_id: 'board-dest',
+      status_id: 'status-override',
+    });
   });
 
   it('T012: invalid destination status fails for all selected tickets', async () => {
@@ -155,19 +230,21 @@ describe('ticketActions moveTicketsToBoard', () => {
       ['ticket-6', { ticket_id: 'ticket-6', tenant: 'tenant-1', board_id: 'board-source' }],
     ]);
     getDefaultStatusIdMock.mockResolvedValue('status-default');
-    hasPermissionMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(false);
+    updateTicketWithCacheMock
+      .mockResolvedValueOnce('success')
+      .mockRejectedValueOnce(new Error('This ticket is bundled; workflow fields are locked (status_id). Update the master ticket instead.'));
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(createMockTrx(tickets)));
 
     const { moveTicketsToBoard } = await import('./ticketActions');
     const result = await moveTicketsToBoard(['ticket-5', 'ticket-6'], 'board-dest', '');
 
     expect(result.movedIds).toEqual(['ticket-5']);
-    expect(result.failed).toHaveLength(1);
-    expect(result.failed[0].ticketId).toBe('ticket-6');
-    expect(tickets.get('ticket-5')?.board_id).toBe('board-dest');
-    expect(tickets.get('ticket-6')?.board_id).toBe('board-source');
+    expect(result.failed).toEqual([
+      {
+        ticketId: 'ticket-6',
+        message: 'This ticket is bundled; workflow fields are locked (status_id). Update the master ticket instead.',
+      },
+    ]);
   });
 
   it('T014: permission failures are returned per-ticket and do not move ticket rows', async () => {
@@ -175,21 +252,19 @@ describe('ticketActions moveTicketsToBoard', () => {
       ['ticket-7', { ticket_id: 'ticket-7', tenant: 'tenant-1', board_id: 'board-source' }],
       ['ticket-8', { ticket_id: 'ticket-8', tenant: 'tenant-1', board_id: 'board-source' }],
     ]);
-    getDefaultStatusIdMock.mockResolvedValue('status-default');
-    hasPermissionMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(false);
+    validateStatusBelongsToBoardMock.mockResolvedValue({ valid: true });
+    updateTicketWithCacheMock
+      .mockResolvedValueOnce('success')
+      .mockRejectedValueOnce(new Error('Permission denied: Cannot update ticket'));
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(createMockTrx(tickets)));
 
     const { moveTicketsToBoard } = await import('./ticketActions');
     const result = await moveTicketsToBoard(['ticket-7', 'ticket-8'], 'board-dest', 'status-selected');
 
-    expect(validateStatusBelongsToBoardMock).not.toHaveBeenCalled();
+    expect(validateStatusBelongsToBoardMock).toHaveBeenCalledWith('status-selected', 'board-dest', 'tenant-1', expect.anything());
     expect(result.failed).toEqual([
       { ticketId: 'ticket-8', message: 'Permission denied: Cannot update ticket' },
     ]);
     expect(result.movedIds).toEqual(['ticket-7']);
-    expect(tickets.get('ticket-7')?.board_id).toBe('board-dest');
-    expect(tickets.get('ticket-8')?.board_id).toBe('board-source');
   });
 });
