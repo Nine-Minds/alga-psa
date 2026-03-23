@@ -89,7 +89,7 @@
   {
     "id": "T032",
     "description": "2b-17: Visual QA (xx) — /msp/jobs shows '11111' for metrics, table, details",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
 
