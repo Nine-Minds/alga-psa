@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
@@ -52,6 +53,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   isSaving = false,
   disableSave = false
 }: TimeEntryFormProps) {
+  const { t } = useTranslation('msp/time-entry');
   // Use work item times for ad-hoc entries - only update if values actually changed
   useEffect(() => {
     if (entry?.work_item_type === 'ad_hoc' && entry.start_time && entry.end_time) {
@@ -119,19 +121,27 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     const newErrors: typeof validationErrors = {};
 
     if (startTime >= endTime) {
-      newErrors.startTime = 'Start time must be earlier than end time';
-      newErrors.endTime = 'End time must be later than start time';
+      newErrors.startTime = t('timeEntryForm.validation.startBeforeEnd', {
+        defaultValue: 'Start time must be earlier than end time'
+      });
+      newErrors.endTime = t('timeEntryForm.validation.endAfterStart', {
+        defaultValue: 'End time must be later than start time'
+      });
     }
 
     if (duration <= 0) {
-      newErrors.duration = 'Duration must be at least 1 minute';
+      newErrors.duration = t('timeEntryForm.validation.durationMinimum', {
+        defaultValue: 'Duration must be at least 1 minute'
+      });
     } else if (duration < 1) {
-      newErrors.duration = 'Minimum duration is 1 minute';
+      newErrors.duration = t('timeEntryForm.validation.minimumDuration', {
+        defaultValue: 'Minimum duration is 1 minute'
+      });
     }
 
     setValidationErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [entry?.start_time, entry?.end_time]);
+  }, [entry?.start_time, entry?.end_time, t]);
 
   // Get client ID from entry or work item
   useEffect(() => {
@@ -290,7 +300,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     if (!entry?.service_id?.trim()) {
       setValidationErrors(prev => ({
         ...prev,
-        service: 'Service is required for time entries'
+        service: t('timeEntryForm.validation.serviceRequired', {
+          defaultValue: 'Service is required for time entries'
+        })
       }));
       return;
     }
@@ -302,7 +314,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     // Call parent's onSave with the current entry
     onSave(index);
-  }, [onSave, validateTimes, entry?.service_id, entry?.work_item_type, showContractLineSelector, eligibleContractLines.length, entry?.contract_line_id, index, setShowErrors]);
+  }, [onSave, validateTimes, entry?.service_id, entry?.work_item_type, showContractLineSelector, eligibleContractLines.length, entry?.contract_line_id, index, setShowErrors, t]);
 
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     if (!isEditable || !entry) return;
@@ -382,7 +394,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
           <div className="flex items-center">
             {entry?.isDirty && (
-              <span className="text-yellow-500 text-sm mr-2">Unsaved changes</span>
+              <span className="text-yellow-500 text-sm mr-2">
+                {t('timeEntryForm.labels.unsavedChanges', { defaultValue: 'Unsaved changes' })}
+              </span>
             )}
           </div>
           <div className="flex space-x-2">
@@ -392,7 +406,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               variant="destructive"
               disabled={!isEditable}
             >
-              Delete Time Entry
+              {t('timeEntryForm.labels.deleteTimeEntry', { defaultValue: 'Delete Time Entry' })}
             </Button>
           </div>
         </div>
@@ -400,7 +414,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-gray-700">
-          Service <span className="text-red-500">*</span>
+          {t('timeEntryForm.labels.service', { defaultValue: 'Service' })} <span className="text-red-500">*</span>
         </label>
         <CustomSelect
           value={entry?.service_id || ''}
@@ -422,7 +436,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           disabled={!isEditable}
           className="w-full"
           options={serviceOptions}
-          placeholder="Select a service"
+          placeholder={t('timeEntryForm.placeholders.selectService', { defaultValue: 'Select a service' })}
         />
         {showErrors && validationErrors.service && (
           <span className="text-sm text-red-500">{validationErrors.service}</span>
@@ -443,7 +457,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       {isNewEntry && (
         <div className="space-y-1.5">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Date <span className="text-red-500">*</span>
+            {t('timeEntryForm.labels.date', { defaultValue: 'Date' })} <span className="text-red-500">*</span>
           </label>
           <DatePicker
             value={selectedDate}
@@ -478,7 +492,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
                 end_time: formatISO(newEndTime)
               });
             }}
-            placeholder="Select date"
+            placeholder={t('timeEntryForm.placeholders.selectDate', { defaultValue: 'Select date' })}
             disabled={!isEditable}
             clearable={false}
           />
@@ -487,7 +501,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
-          <label className="block text-sm font-medium text-gray-700">Start Time</label>
+          <label className="block text-sm font-medium text-gray-700">
+            {t('timeEntryForm.labels.startTime', { defaultValue: 'Start Time' })}
+          </label>
           <TimePicker
             id={`${id}-start-time-${index}`}
             value={timeInputs[`start-${index}`] || (entry?.start_time ? formatTimeForInput(parseISO(entry.start_time)) : '')}
@@ -501,7 +517,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           )}
         </div>
         <div className="space-y-1.5">
-          <label className="block text-sm font-medium text-gray-700">End Time</label>
+          <label className="block text-sm font-medium text-gray-700">
+            {t('timeEntryForm.labels.endTime', { defaultValue: 'End Time' })}
+          </label>
           <TimePicker
             id={`${id}-end-time-${index}`}
             value={timeInputs[`end-${index}`] || (entry?.end_time ? formatTimeForInput(parseISO(entry.end_time)) : '')}
@@ -517,7 +535,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       </div>
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">Duration</label>
+        <label className="block text-sm font-medium text-gray-700">
+          {t('timeEntryForm.labels.duration', { defaultValue: 'Duration' })}
+        </label>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Input
@@ -530,7 +550,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               containerClassName="w-[5.5rem]"
               className="text-center"
             />
-            <span className="text-sm font-medium text-gray-500">h</span>
+            <span className="text-sm font-medium text-gray-500">
+              {t('common.units.hoursShort', { defaultValue: 'h' })}
+            </span>
             <Input
               id='duration-minutes'
               type="number"
@@ -542,7 +564,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               containerClassName="w-[4.5rem]"
               className="text-center"
             />
-            <span className="text-sm font-medium text-gray-500">m</span>
+            <span className="text-sm font-medium text-gray-500">
+              {t('common.units.minutesShort', { defaultValue: 'm' })}
+            </span>
           </div>
           <div className="inline-flex h-10 items-center gap-3 rounded-md border border-gray-200 bg-gray-50 px-3">
             <Switch
@@ -569,7 +593,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               className="data-[state=checked]:bg-primary-500"
             />
             <span className="text-sm font-medium text-gray-700">
-              Billable
+              {t('timeEntryForm.labels.billable', { defaultValue: 'Billable' })}
             </span>
           </div>
         </div>
@@ -581,7 +605,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-gray-700">Notes</label>
+        <label className="block text-sm font-medium text-gray-700">
+          {t('timeEntryForm.labels.notes', { defaultValue: 'Notes' })}
+        </label>
         <TextArea
           id='notes'
           value={entry?.notes || ''}
@@ -591,7 +617,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               onUpdateEntry(index, updatedEntry);
             }
           }}
-          placeholder="Add notes"
+          placeholder={t('timeEntryForm.placeholders.addNotes', { defaultValue: 'Add notes' })}
           disabled={!isEditable}
           ref={lastNoteInputRef}
           wrapperClassName="mb-0 px-0"
@@ -611,7 +637,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               className="w-32"
               disabled={disableSave}
             >
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving
+                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                : t('common.actions.saveGeneric', { defaultValue: 'Save' })}
             </Button>
           </div>
         </div>

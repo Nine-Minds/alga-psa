@@ -12,6 +12,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useIsCompactEvent } from '@alga-psa/ui/hooks';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ScheduleEventProps {
   event: Omit<IScheduleEntry, 'tenant'>;
@@ -40,6 +41,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   isResizing,
   onClick,
 }) => {
+  const { t } = useTranslation('msp/dispatch');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
@@ -112,7 +114,9 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
         setDeleteValidation({
           canDelete: false,
           code: 'VALIDATION_FAILED',
-          message: 'Failed to validate deletion. Please try again.',
+          message: t('events.errors.validateDeletion', {
+            defaultValue: 'Failed to validate deletion. Please try again.',
+          }),
           dependencies: [],
           alternatives: []
         });
@@ -122,7 +126,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
     };
 
     void runValidation();
-  }, [event.entry_id, isDeleteDialogOpen]);
+  }, [event.entry_id, isDeleteDialogOpen, t]);
 
   const handleConfirmDelete = async () => {
     setIsDeleteProcessing(true);
@@ -203,7 +207,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
                     }
                   }
                 }}
-                title="View Details"
+                title={t('events.actions.viewDetails', { defaultValue: 'View Details' })}
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <ExternalLink className={`${compactClasses.button} pointer-events-none`} />
@@ -215,7 +219,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
                 size="icon"
                 className={`${compactClasses.button} delete-button`}
                 onClick={handleDeleteClick}
-                title="Delete schedule entry"
+                title={t('events.actions.deleteScheduleEntry', { defaultValue: 'Delete schedule entry' })}
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <Trash className={`${compactClasses.button} pointer-events-none`} />
@@ -278,7 +282,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
                     }}
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    View Details
+                    {t('events.actions.viewDetails', { defaultValue: 'View Details' })}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={(e) => {
@@ -288,7 +292,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
                     }}
                   >
                     <Trash className="w-4 h-4 mr-2" />
-                    Delete
+                    {t('events.actions.delete', { defaultValue: 'Delete' })}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -341,7 +345,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
         isOpen={isDeleteDialogOpen}
         onClose={handleDeleteDialogClose}
         onConfirmDelete={handleConfirmDelete}
-        entityName={event.title || 'this schedule entry'}
+        entityName={event.title || t('events.fallbacks.thisScheduleEntry', { defaultValue: 'this schedule entry' })}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}

@@ -1,0 +1,152 @@
+{
+  "page": {
+    "title": "Despacho de t\u00e9cnicos",
+    "filteredWorkItems": "Mostrando elementos de trabajo filtrados"
+  },
+  "workItems": {
+    "title": "Elementos de trabajo",
+    "searchPlaceholder": "Buscar elementos de trabajo...",
+    "filterPlaceholder": "Filtrar por estado...",
+    "status": {
+      "unscheduled": "Sin programar",
+      "scheduled": "Programado"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "pageInfo": "P\u00e1gina {{current}} de {{total}}",
+      "showing": "Mostrando {{count}} de {{total}} elementos"
+    }
+  },
+  "schedule": {
+    "showInactive": "Mostrar usuarios inactivos",
+    "prev": "< Anterior",
+    "next": "Siguiente >",
+    "today": "Hoy",
+    "viewDay": "D\u00eda",
+    "viewWeek": "Semana",
+    "prevAria": "Anterior {{mode}}",
+    "nextAria": "Siguiente {{mode}}",
+    "viewWeekTooltip": "Ver semana",
+    "viewWeekAria": "Ver la semana de {{name}}",
+    "viewWeekAriaInactive": "Ver la semana de {{name}} (inactivo)",
+    "compareAll": "Comparar todo",
+    "clearAll": "Borrar todo",
+    "compare": "Comparar",
+    "stopComparing": "Dejar de comparar",
+    "compareAria": "Comparar {{name}}",
+    "compareAriaInactive": "Comparar {{name}} (inactivo)"
+  },
+  "details": {
+    "appointmentRequest": {
+      "title": "Detalles de la solicitud de cita"
+    },
+    "sections": {
+      "approvalInformation": "Informaci\u00f3n de aprobaci\u00f3n"
+    },
+    "fields": {
+      "service": "Servicio",
+      "status": "Estado",
+      "client": "Cliente",
+      "contact": "Contacto",
+      "company": "Empresa",
+      "requester": "Solicitante",
+      "email": "Correo electr\u00f3nico",
+      "phone": "Tel\u00e9fono",
+      "requestedDate": "Fecha solicitada",
+      "requestedTime": "Hora solicitada",
+      "duration": "Duraci\u00f3n",
+      "preferredTechnician": "T\u00e9cnico preferido",
+      "description": "Descripci\u00f3n",
+      "declineReason": "Motivo del rechazo",
+      "approvedBy": "Aprobado por:",
+      "approvedAt": "Aprobado el:"
+    },
+    "messages": {
+      "notAvailable": "N/D",
+      "unsupportedWorkItemType": "Tipo de elemento de trabajo no compatible"
+    },
+    "toasts": {
+      "noUsersAvailable": "No hay usuarios disponibles en el sistema",
+      "noUserSession": "No se encontr\u00f3 una sesi\u00f3n de usuario",
+      "failedToLoadTicketData": "No se pudieron cargar los datos del ticket",
+      "failedToLoadProjectTaskData": "No se pudieron cargar los datos de la tarea del proyecto",
+      "failedToLoadAdHocEntryData": "No se pudieron cargar los datos de la entrada ad hoc",
+      "failedToLoadInteractionData": "No se pudieron cargar los datos de la interacci\u00f3n",
+      "failedToLoadAppointmentRequestData": "No se pudieron cargar los datos de la solicitud de cita"
+    },
+    "errors": {
+      "loadUsers": "No se pudieron cargar los usuarios. Intenta refrescar la p\u00e1gina.",
+      "loadingContent": "Error al cargar el contenido",
+      "tryAgain": "Int\u00e9ntalo de nuevo"
+    },
+    "units": {
+      "minutes": "minutos"
+    }
+  },
+  "dashboard": {
+    "filters": {
+      "allOpen": "Todos abiertos",
+      "allClosed": "Todos cerrados"
+    },
+    "messages": {
+      "accessDenied": "Acceso denegado: no tienes permiso para ver el panel de despacho de t\u00e9cnicos.",
+      "unknownError": "Se produjo un error desconocido.",
+      "permissionDeniedSchedule": "No tienes permiso para programar para este t\u00e9cnico.",
+      "couldNotLoadWorkItemDetails": "No se pudieron cargar los detalles del elemento de trabajo."
+    },
+    "errors": {
+      "searchWorkItems": "No se pudieron buscar los elementos de trabajo",
+      "loadStatusFilterOptions": "No se pudieron cargar las opciones de filtro de estado.",
+      "refreshScheduleEntries": "No se pudieron actualizar las entradas del calendario",
+      "refreshData": "No se pudieron actualizar los datos",
+      "loadPermissions": "No se pudieron cargar los permisos.",
+      "fetchScheduleEntries": "No se pudieron obtener las entradas del calendario.",
+      "fetchData": "No se pudieron obtener los datos.",
+      "updateSchedule": "No se pudo actualizar el calendario",
+      "createScheduleEntry": "No se pudo crear la entrada del calendario",
+      "deleteScheduleEntry": "No se pudo eliminar la entrada del calendario",
+      "updateTask": "No se pudo actualizar la tarea",
+      "updateScheduleEntry": "No se pudo actualizar la entrada del calendario",
+      "saveScheduleEntry": "No se pudo guardar la entrada del calendario",
+      "openWorkItemDetails": "No se pudieron abrir los detalles del elemento de trabajo."
+    },
+    "success": {
+      "taskUpdated": "Tarea actualizada correctamente",
+      "scheduleEntryUpdated": "Entrada del calendario actualizada correctamente",
+      "scheduleEntryCreated": "Entrada del calendario creada correctamente"
+    }
+  },
+  "events": {
+    "actions": {
+      "viewDetails": "Ver detalles",
+      "delete": "Eliminar",
+      "deleteScheduleEntry": "Eliminar entrada del calendario"
+    },
+    "fallbacks": {
+      "busy": "Ocupado",
+      "unknown": "Desconocido",
+      "unassigned": "Sin asignar",
+      "unknownAgent": "Agente desconocido",
+      "untitled": "Sin t\u00edtulo",
+      "thisScheduleEntry": "esta entrada del calendario"
+    },
+    "tooltip": {
+      "privateEvent": "Ocupado\nInicio: {{start}}\nFin: {{end}}",
+      "eventDetails": "{{title}}\nAsignado a: {{assigned}}\nInicio: {{start}}\nFin: {{end}}"
+    },
+    "errors": {
+      "validateDeletion": "No se pudo validar la eliminaci\u00f3n. Int\u00e9ntalo de nuevo."
+    }
+  },
+  "badges": {
+    "needsDispatch": "Necesita asignaci\u00f3n",
+    "needsDispatchFor": "Necesita asignaci\u00f3n para: {{agents}}"
+  },
+  "time": {
+    "suffixes": {
+      "am": " a. m.",
+      "pm": " p. m."
+    }
+  }
+}

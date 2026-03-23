@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useMemo } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { parseISO } from 'date-fns';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Eye, Pencil, Trash2 } from 'lucide-react';
@@ -18,6 +19,7 @@ const TimeEntryReadOnly = memo(function TimeEntryReadOnly({
   onEdit,
   onDelete
 }: TimeEntryReadOnlyProps) {
+  const { t } = useTranslation('msp/time-entry');
   const selectedService = useMemo(() => 
     getServiceById(services, entry?.service_id),
     [services, entry?.service_id]
@@ -55,7 +57,7 @@ const TimeEntryReadOnly = memo(function TimeEntryReadOnly({
 
         <div className="min-w-0 text-sm text-gray-900 md:min-w-[8.5rem]">
           <span className="line-clamp-2 md:line-clamp-1">
-            {selectedService?.name || 'No service selected'}
+            {selectedService?.name || t('common.fallbacks.noServiceSelected', { defaultValue: 'No service selected' })}
           </span>
         </div>
 
@@ -63,7 +65,7 @@ const TimeEntryReadOnly = memo(function TimeEntryReadOnly({
           {entry?.notes ? (
             <span className="block truncate">{entry.notes}</span>
           ) : (
-            <span className="text-gray-400">No notes</span>
+            <span className="text-gray-400">{t('common.fallbacks.noNotes', { defaultValue: 'No notes' })}</span>
           )}
         </div>
 
@@ -73,12 +75,12 @@ const TimeEntryReadOnly = memo(function TimeEntryReadOnly({
               id={`${id}-view-entry-${index}-btn`}
               onClick={(event) => {
                 event.stopPropagation();
-                onEdit(index);
-              }}
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              title="View entry details"
+              onEdit(index);
+            }}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+              title={t('timeEntryReadOnly.viewEntryDetails', { defaultValue: 'View entry details' })}
             >
               <Eye className="h-4 w-4" />
             </Button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useReducer, useEffect } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { TaxRegion } from '@alga-psa/types';
@@ -115,6 +116,7 @@ interface TimeEntryContextType extends TimeEntryState {
 const TimeEntryContext = createContext<TimeEntryContextType | undefined>(undefined);
 
 export function TimeEntryProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const { t } = useTranslation('msp/time-entry');
   const [state, dispatch] = useReducer(timeEntryReducer, initialState);
 
   const initializeEntries = async ({
@@ -267,7 +269,10 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       dispatch({ type: 'UPDATE_DURATIONS', payload: durations });
     } catch (error) {
       console.error('Error initializing entries:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Failed to initialize time entries' });
+      dispatch({
+        type: 'SET_ERROR',
+        payload: t('timeEntryProvider.errors.initialize', { defaultValue: 'Failed to initialize time entries' })
+      });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }

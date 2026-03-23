@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TimeSheetStatus } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -30,11 +31,6 @@ interface TimeSheetHeaderProps {
     onViewModeChange?: (mode: TimeSheetViewMode) => void;
 }
 
-const viewOptions: ViewSwitcherOption<TimeSheetViewMode>[] = [
-    { value: 'grid', label: 'Grid', icon: LayoutGrid },
-    { value: 'list', label: 'List', icon: List },
-];
-
 export function TimeSheetHeader({
     status,
     isEditable,
@@ -52,15 +48,21 @@ export function TimeSheetHeader({
     viewMode = 'grid',
     onViewModeChange
 }: TimeSheetHeaderProps): React.JSX.Element {
+    const { t } = useTranslation('msp/time-entry');
     // Badge variants align with TimeSheetApproval.tsx statusConfig and ManagerApprovalDashboard.tsx badgeMap
     const statusBadgeConfig: Record<string, { variant: 'outline' | 'secondary' | 'success' | 'warning'; label: string }> = {
-        DRAFT: { variant: 'outline', label: 'In Progress' },
-        SUBMITTED: { variant: 'secondary', label: 'Submitted' },
-        APPROVED: { variant: 'success', label: 'Approved' },
-        CHANGES_REQUESTED: { variant: 'warning', label: 'Changes Requested' },
+        DRAFT: { variant: 'outline', label: t('common.states.inProgress', { defaultValue: 'In Progress' }) },
+        SUBMITTED: { variant: 'secondary', label: t('common.states.submitted', { defaultValue: 'Submitted' }) },
+        APPROVED: { variant: 'success', label: t('common.states.approved', { defaultValue: 'Approved' }) },
+        CHANGES_REQUESTED: { variant: 'warning', label: t('common.states.changesRequested', { defaultValue: 'Changes Requested' }) },
     };
     const getStatusBadgeConfig = (s: string) =>
-        statusBadgeConfig[s] ?? { variant: 'outline' as const, label: 'Unknown' };
+        statusBadgeConfig[s] ?? { variant: 'outline' as const, label: t('common.states.unknown', { defaultValue: 'Unknown' }) };
+
+    const viewOptions: ViewSwitcherOption<TimeSheetViewMode>[] = [
+        { value: 'grid', label: t('timeSheetHeader.labels.grid', { defaultValue: 'Grid' }), icon: LayoutGrid },
+        { value: 'list', label: t('timeSheetHeader.labels.list', { defaultValue: 'List' }), icon: List },
+    ];
 
     const statusDisplay = getStatusBadgeConfig(status);
     const showDelegationInfo = isDelegated && allowDelegatedEditing;
@@ -75,14 +77,24 @@ export function TimeSheetHeader({
                         variant="soft"
                         className="shrink-0"
                     >
-                        <ArrowLeft className="h-4 w-4 mr-1" /> Back
+                        <ArrowLeft className="h-4 w-4 mr-1" /> {t('common.actions.back', { defaultValue: 'Back' })}
                     </Button>
                     <div className="min-w-0">
                         <h2 className="text-2xl font-bold truncate">
-                            {showDelegationInfo && subjectName ? `Time Sheet for ${subjectName}` : 'Time Sheet'}
+                            {showDelegationInfo && subjectName
+                                ? t('timeSheetHeader.titleFor', {
+                                    defaultValue: 'Time Sheet for {{name}}',
+                                    name: subjectName
+                                })
+                                : t('timeSheetHeader.title', { defaultValue: 'Time Sheet' })}
                         </h2>
                         {showDelegationInfo && actorName && (
-                            <div className="text-xs text-gray-500 truncate">Edited by {actorName}</div>
+                            <div className="text-xs text-gray-500 truncate">
+                                {t('timeSheetHeader.editedBy', {
+                                    defaultValue: 'Edited by {{name}}',
+                                    name: actorName
+                                })}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -101,7 +113,7 @@ export function TimeSheetHeader({
                                                 ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
                                                 : 'text-gray-300 cursor-not-allowed'
                                         }`}
-                                        aria-label="Previous week"
+                                        aria-label={t('timeSheetHeader.aria.previousWeek', { defaultValue: 'Previous week' })}
                                     >
                                         <ChevronLeft className="w-5 h-5" />
                                     </button>
@@ -124,7 +136,7 @@ export function TimeSheetHeader({
                                                 ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
                                                 : 'text-gray-300 cursor-not-allowed'
                                         }`}
-                                        aria-label="Next week"
+                                        aria-label={t('timeSheetHeader.aria.nextWeek', { defaultValue: 'Next week' })}
                                     >
                                         <ChevronRight className="w-5 h-5" />
                                     </button>
@@ -134,7 +146,11 @@ export function TimeSheetHeader({
                             {/* Only show page indicator in grid view */}
                             {viewMode === 'grid' && dateNavigator.hasMultiplePages && (
                                 <div className="ml-3 text-xs text-gray-500 whitespace-nowrap">
-                                    Page {dateNavigator.currentPage + 1} of {dateNavigator.totalPages}
+                                    {t('timeSheetHeader.pagination.pageInfo', {
+                                        defaultValue: 'Page {{current}} of {{total}}',
+                                        current: dateNavigator.currentPage + 1,
+                                        total: dateNavigator.totalPages
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -143,7 +159,7 @@ export function TimeSheetHeader({
 
                 <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-2 w-full lg:w-auto lg:ml-auto">
                     <span className="text-sm font-medium flex items-center gap-2 whitespace-nowrap">
-                        Status:
+                        {t('timeSheetHeader.labels.status', { defaultValue: 'Status:' })}
                         <Badge variant={statusDisplay.variant} className="py-1">{statusDisplay.label}</Badge>
                     </span>
 
@@ -158,7 +174,7 @@ export function TimeSheetHeader({
                             />
                             <Label htmlFor="show-intervals-toggle" className="flex items-center">
                                 <Clock className="h-4 w-4 mr-1" />
-                                Show intervals
+                                {t('timeSheetHeader.labels.showIntervals', { defaultValue: 'Show intervals' })}
                             </Label>
                         </div>
                     )}
@@ -178,7 +194,7 @@ export function TimeSheetHeader({
                             variant="default"
                             className="bg-primary-500 hover:bg-primary-600 text-white"
                         >
-                            Submit Time Sheet
+                            {t('common.actions.submitTimeSheet', { defaultValue: 'Submit Time Sheet' })}
                         </Button>
                     )}
 
@@ -188,7 +204,7 @@ export function TimeSheetHeader({
                             onClick={onReopenForEdits}
                             variant="soft"
                         >
-                            Reopen for edits
+                            {t('common.actions.reopenForEdits', { defaultValue: 'Reopen for edits' })}
                         </Button>
                     )}
                 </div>

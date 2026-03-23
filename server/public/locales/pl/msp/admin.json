@@ -1,0 +1,259 @@
+{
+  "common": {
+    "actions": {
+      "save": "Zapisz ustawienia",
+      "saving": "Zapisywanie...",
+      "reset": "Resetuj",
+      "refresh": "Odśwież",
+      "close": "Zamknij",
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "deleting": "Usuwanie…",
+      "verify": "Zweryfikuj"
+    },
+    "states": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "loading": "Ładowanie..."
+    }
+  },
+  "telemetry": {
+    "loading": {
+      "title": "Ustawienia telemetrii organizacji",
+      "description": "Ładowanie..."
+    },
+    "empty": {
+      "title": "Ustawienia telemetrii organizacji",
+      "description": "Błąd podczas ładowania ustawień",
+      "body": "Nie udało się załadować ustawień telemetrii"
+    },
+    "page": {
+      "title": "Telemetria i analityka organizacji",
+      "description": "Skonfiguruj ustawienia telemetrii dla całej organizacji. Telemetria jest domyślnie włączona, aby ulepszać platformę, ale użytkownicy mogą indywidualnie zrezygnować, chyba że wyłączysz tę opcję."
+    },
+    "toggles": {
+      "enableTelemetry": {
+        "title": "Włącz telemetrię",
+        "description": "Pozwól na zbieranie anonimowych danych o użyciu w celu ulepszania platformy (domyślnie włączone)"
+      },
+      "allowUserOptOut": {
+        "title": "Zezwól użytkownikowi na rezygnację",
+        "description": "Pozwól poszczególnym użytkownikom zrezygnować ze zbierania telemetrii"
+      }
+    },
+    "alerts": {
+      "enabled": "✓ Telemetria włączona. Wszystkie kategorie są domyślnie włączone dla nowych użytkowników, ale mogą oni indywidualnie zrezygnować, jeśli chcą.",
+      "centralizedControl": "Scentralizowana kontrola: użytkownicy nie mogą indywidualnie zrezygnować. Upewnij się, że spełniasz lokalne przepisy dotyczące prywatności."
+    },
+    "anonymization": {
+      "title": "Poziom anonimizacji danych",
+      "description": "Wybierz, jak bardzo dane mają zostać zanonimizowane przed zebraniem",
+      "options": {
+        "none": {
+          "title": "Brak anonimizacji",
+          "description": "Zbieraj dane w niezmienionej postaci (niezalecane)"
+        },
+        "partial": {
+          "title": "Częściowa anonimizacja",
+          "description": "Usuń dane osobowe, zachowaj identyfikatory korelacji"
+        },
+        "full": {
+          "title": "Pełna anonimizacja",
+          "description": "Maksymalna prywatność, minimalna korelacja"
+        }
+      }
+    },
+    "compliance": {
+      "title": "Uwagi dotyczące zgodności"
+    },
+    "privacy": {
+      "collectTitle": "Co zbieramy",
+      "collectItems": {
+        "errors": "• Informacje o błędach (bez danych wrażliwych)",
+        "performance": "• Metryki wydajności (czas ładowania strony, czas odpowiedzi API)",
+        "usage": "• Wzorce użycia funkcji (które funkcje są używane)",
+        "system": "• Metryki systemowe (na potrzeby optymalizacji infrastruktury)"
+      },
+      "excludeTitle": "Czego NIE zbieramy",
+      "excludeItems": {
+        "personalInfo": "• Dane osobowe (imiona, adresy e-mail, adresy)",
+        "clientData": "• Dane klientów lub informacje biznesowe",
+        "passwords": "• Hasła lub tokeny uwierzytelniające",
+        "files": "• Zawartość plików lub dokumentów"
+      }
+    },
+    "footer": {
+      "lastUpdated": "Ostatnia aktualizacja: {{value}}",
+      "updatedBy": " przez {{user}}"
+    },
+    "errors": {
+      "loadTenantTelemetrySettings": "Nie udało się załadować ustawień telemetrii organizacji",
+      "loadSettings": "Nie udało się załadować ustawień",
+      "saveTelemetrySettings": "Nie udało się zapisać ustawień telemetrii",
+      "saveSettings": "Nie udało się zapisać ustawień"
+    }
+  },
+  "email": {
+    "loading": "Ładowanie ustawień poczty...",
+    "error": "Błąd: {{error}}",
+    "tabs": {
+      "inbound": "Poczta przychodząca",
+      "outbound": "Poczta wychodząca"
+    },
+    "descriptions": {
+      "outbound": "Skonfiguruj ustawienia SMTP lub API do wysyłania wiadomości e-mail z aplikacji",
+      "inbound": "Skonfiguruj dostawców poczty, aby odbierać i przetwarzać wiadomości e-mail jako zgłoszenia"
+    },
+    "providerConfig": {
+      "title": "Konfiguracja dostawcy poczty",
+      "providerLabel": "Dostawca poczty",
+      "options": {
+        "smtp": "SMTP (tradycyjny serwer pocztowy)",
+        "resend": "Resend (nowoczesna usługa API)"
+      },
+      "placeholder": "Wybierz dostawcę poczty",
+      "descriptions": {
+        "smtp": "Skonfiguruj tradycyjne ustawienia serwera pocztowego SMTP",
+        "resend": "Skonfiguruj API Resend do nowoczesnego dostarczania poczty"
+      },
+      "status": {
+        "provider": "Dostawca {{provider}}"
+      }
+    },
+    "smtp": {
+      "host": {
+        "label": "Host SMTP",
+        "placeholder": "smtp.example.com"
+      },
+      "port": {
+        "label": "Port",
+        "placeholder": "587"
+      },
+      "username": {
+        "label": "Nazwa użytkownika",
+        "placeholder": "twoj-email@example.com"
+      },
+      "password": {
+        "label": "Hasło",
+        "placeholder": "Wprowadź hasło"
+      },
+      "fromAddress": {
+        "label": "Adres nadawcy",
+        "placeholder": "noreply@example.com"
+      }
+    },
+    "resend": {
+      "apiKey": {
+        "label": "Klucz API Resend",
+        "placeholder": "re_xxxxxxxxxxxxxxxxxx",
+        "helpPrefix": "Pobierz swój klucz API z"
+      },
+      "fromAddress": {
+        "label": "Adres nadawcy",
+        "placeholder": "noreply@yourdomain.com",
+        "help": "Musi pochodzić ze zweryfikowanej domeny. Użyj zakładki Domeny, aby dodać domeny niestandardowe."
+      }
+    },
+    "domains": {
+      "verified": "Zweryfikowano",
+      "failed": "Niepowodzenie",
+      "pending": "Oczekujące",
+      "requiredDnsRecords": "Wymagane rekordy DNS:"
+    },
+    "general": {
+      "title": "Ustawienia ogólne",
+      "trackingEnabled": "Włącz śledzenie poczty",
+      "dailyLimit": "Dzienny limit wiadomości"
+    },
+    "errors": {
+      "loadEmailSettings": "Nie udało się załadować ustawień poczty",
+      "saveSettings": "Nie udało się zapisać ustawień",
+      "addDomain": "Nie udało się dodać domeny",
+      "verifyDomain": "Nie udało się zweryfikować domeny"
+    }
+  },
+  "microsoft365": {
+    "title": {
+      "microsoft": "Diagnostyka Microsoft 365",
+      "default": "Diagnostyka"
+    },
+    "description": "Uruchamia kontrolę Graph na żywo (w tym utworzenie i usunięcie subskrypcji), aby diagnozować problemy ze skrzynką pocztową, folderem i uprawnieniami.",
+    "note": {
+      "label": "Uwaga:",
+      "body": "Diagnostyka utworzy tymczasową subskrypcję Microsoft Graph, a następnie ją usunie. Jeśli usunięcie się nie powiedzie, może być konieczne ręczne usunięcie subskrypcji w Microsoft 365."
+    },
+    "labels": {
+      "provider": "Dostawca:",
+      "mailbox": "Skrzynka pocztowa:",
+      "overall": "Ogólnie:",
+      "resource": "Zasób: {{resource}}",
+      "recommendations": "Zalecenia",
+      "error": "Błąd"
+    },
+    "actions": {
+      "copySupportBundle": "Kopiuj pakiet wsparcia",
+      "copied": "Skopiowano"
+    },
+    "states": {
+      "running": "Uruchamianie diagnostyki...",
+      "diagnosticsFailed": "Diagnostyka nie powiodła się"
+    },
+    "statuses": {
+      "pass": "Zaliczono",
+      "warn": "Ostrzeżenie",
+      "fail": "Niepowodzenie",
+      "skip": "Pominięto"
+    }
+  },
+  "inboundDefaults": {
+    "loading": "Ładowanie domyślnych wartości zgłoszeń...",
+    "header": {
+      "title": "Domyślne wartości zgłoszeń przychodzących",
+      "description": "Skonfiguruj domyślne wartości dla zgłoszeń tworzonych z przetwarzania wiadomości e-mail"
+    },
+    "actions": {
+      "addDefaults": "Dodaj domyślne wartości"
+    },
+    "form": {
+      "editTitle": "Edytuj domyślne wartości zgłoszenia",
+      "createTitle": "Utwórz domyślne wartości zgłoszenia",
+      "description": "Skonfiguruj domyślne wartości, które będą stosowane do zgłoszeń tworzonych z przetwarzania wiadomości e-mail"
+    },
+    "empty": {
+      "title": "Nie skonfigurowano domyślnych wartości zgłoszeń",
+      "description": "Utwórz pierwszą konfigurację, aby zdefiniować domyślne wartości dla zgłoszeń generowanych z wiadomości e-mail"
+    },
+    "badges": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "fields": {
+      "board": "Tablica:",
+      "status": "Status:",
+      "priority": "Priorytet:",
+      "enteredBy": "Wprowadzone przez:"
+    },
+    "fallbacks": {
+      "notSet": "Nie ustawiono",
+      "system": "System"
+    },
+    "menu": {
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "deleting": "Usuwanie…"
+    },
+    "help": {
+      "title": "Jak to działa",
+      "items": {
+        "providerReference": "• Każdy dostawca poczty może odwoływać się do jednej konfiguracji domyślnych wartości zgłoszeń",
+        "requiredValues": "• Gdy wiadomość e-mail tworzy zgłoszenie, te domyślne wartości dostarczają wymagane pola",
+        "systemCreator": "• Zgłoszenia generowane przez system pokażą \"System\" jako twórcę, gdy entered_by ma wartość null",
+        "scenarios": "• Możesz tworzyć różne domyślne wartości dla różnych scenariuszy poczty (wsparcie, rozliczenia itd.)"
+      }
+    },
+    "errors": {
+      "load": "Nie udało się załadować domyślnych wartości zgłoszeń",
+      "delete": "Nie udało się usunąć domyślnych wartości zgłoszeń"
+    }
+  }
+}

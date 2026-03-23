@@ -1,6 +1,7 @@
 'use client';
 
 import { Profiler } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import TimeTracking from './TimeTracking';
 import type { IUserWithRoles } from '@alga-psa/types';
 
@@ -10,8 +11,9 @@ interface Props {
 }
 
 export default function TimeTrackingClient({ initialUser, initialIsManager }: Props) {
+  const { t } = useTranslation('msp/time-entry');
   if (!initialUser) {
-    return <div>No user found</div>;
+    return <div>{t('common.fallbacks.noUserFound', { defaultValue: 'No user found' })}</div>;
   }
 
   const onRender = (
@@ -38,4 +40,3 @@ export default function TimeTrackingClient({ initialUser, initialIsManager }: Pr
     </Profiler>
   );
 }
-
