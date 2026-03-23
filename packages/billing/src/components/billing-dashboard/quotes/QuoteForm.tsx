@@ -58,6 +58,7 @@ const toDateInputValue = (value?: string | null): string => value ? value.slice(
 const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => {
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
+  const [isTemplate, setIsTemplate] = useState(false);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [templates, setTemplates] = useState<IQuoteListItem[]>([]);
@@ -91,6 +92,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
           throw new Error(!quote ? 'Quote not found' : quote.permissionError);
         }
 
+        setIsTemplate(quote.is_template === true);
         setForm({
           client_id: quote.client_id || '',
           contact_id: quote.contact_id || '',
@@ -149,7 +151,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
       setIsSaving(true);
       setError(null);
 
-      if (!form.client_id) {
+      if (!isTemplate && !form.client_id) {
         throw new Error('Client is required');
       }
 
@@ -158,12 +160,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
       }
 
       const payload = {
-        client_id: form.client_id,
+        client_id: form.client_id || null,
         contact_id: form.contact_id || null,
         title: form.title,
         description: form.description || null,
-        quote_date: form.quote_date,
-        valid_until: form.valid_until,
+        quote_date: form.quote_date || null,
+        valid_until: form.valid_until || null,
         po_number: form.po_number || null,
         opportunity_id: form.opportunity_id || null,
         client_notes: form.client_notes || null,
@@ -173,7 +175,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
         tax: 0,
         total_amount: 0,
         currency_code: form.currency_code,
-        is_template: false,
+        is_template: isTemplate,
       };
 
       let result: IQuote | { permissionError: string } | null;
@@ -321,15 +323,19 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
       <Box p="4" className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold">{isEditMode ? 'Edit Quote' : 'New Quote'}</h2>
+            <h2 className="text-xl font-semibold">
+              {isTemplate ? (isEditMode ? 'Edit Quote Template' : 'New Quote Template') : (isEditMode ? 'Edit Quote' : 'New Quote')}
+            </h2>
             <p className="text-sm text-muted-foreground">
-              Capture quote details, line items, and notes before saving the draft.
+              {isTemplate
+                ? 'Define reusable line items and terms. Client and dates are optional for templates.'
+                : 'Capture quote details, line items, and notes before saving the draft.'}
             </p>
           </div>
           <div className="flex gap-2">
             <Button id="quote-form-cancel" variant="outline" onClick={onCancel}>Cancel</Button>
             <Button id="quote-form-save" onClick={() => void handleSubmit()} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Draft'}
+              {isSaving ? 'Saving...' : isTemplate ? 'Save Template' : 'Save Draft'}
             </Button>
           </div>
         </div>

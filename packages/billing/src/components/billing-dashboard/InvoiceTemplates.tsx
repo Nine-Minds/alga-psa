@@ -49,11 +49,30 @@ const InvoiceTemplates: React.FC = () => {
       };
       const savedTemplate = await saveInvoiceTemplate(clonedTemplate);
       await fetchTemplates();
-      // Removed setSelectedTemplate(savedTemplate); as the state is no longer used
       setError(null);
     } catch (error) {
       console.error('Error cloning template:', error);
       setError('Failed to clone template');
+    }
+  };
+
+  const handleCloneAndEdit = async (template: IInvoiceTemplate) => {
+    try {
+      const clonedTemplate = {
+        ...template,
+        name: `Copy of ${template.name}`,
+        isClone: true,
+        isStandard: false
+      };
+      const savedResult = await saveInvoiceTemplate(clonedTemplate);
+      if (savedResult.success && savedResult.template?.template_id) {
+        handleNavigateToEditor(savedResult.template.template_id);
+      } else {
+        setError(savedResult.error || 'Failed to create editable copy');
+      }
+    } catch (error) {
+      console.error('Error creating editable copy:', error);
+      setError('Failed to create editable copy');
     }
   };
 
@@ -160,14 +179,17 @@ const InvoiceTemplates: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                id="edit-invoice-template-menu-item" // Per standard: edit-{object}-menu-item
-                disabled={record.isStandard}
+                id="edit-invoice-template-menu-item"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleNavigateToEditor(record.template_id);
+                  if (record.isStandard) {
+                    void handleCloneAndEdit(record);
+                  } else {
+                    handleNavigateToEditor(record.template_id);
+                  }
                 }}
               >
-                Edit
+                {record.isStandard ? 'Edit as Copy' : 'Edit'}
               </DropdownMenuItem>
               <DropdownMenuItem
                 id="clone-invoice-template-menu-item" // Per standard: clone-{object}-menu-item
@@ -294,7 +316,9 @@ return (
               columns={templateColumns}
               pagination={false}
               onRowClick={(record) => {
-                if (!record.isStandard) {
+                if (record.isStandard) {
+                  void handleCloneAndEdit(record);
+                } else {
                   handleNavigateToEditor(record.template_id);
                 }
               }}

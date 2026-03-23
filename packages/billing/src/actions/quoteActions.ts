@@ -16,7 +16,7 @@ import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate } from '..
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, createQuotePDFGenerationService } from '../services';
-import { getDocumentModelAsync, getDocumentAssociationModelAsync } from '../lib/documentsHelpers';
+import { Document as DocumentModel, DocumentAssociation } from '@alga-psa/documents/models';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -185,9 +185,6 @@ const storeQuotePdf = async (
 
   const documentId = randomUUID();
   const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
-
-  const DocumentModel = await getDocumentModelAsync();
-  const DocumentAssociation = await getDocumentAssociationModelAsync();
 
   await DocumentModel.insert(knex, {
     document_id: documentId,
@@ -861,62 +858,77 @@ export const sendQuote = withAuth(async (
     throw new Error('Only draft or approved quotes can be sent');
   }
 
-  const [recipients, tenantRecord] = await Promise.all([
-    getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-    knex('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
-  ]);
-
-  if (recipients.length === 0) {
-    throw new Error('At least one recipient email address is required to send a quote');
-  }
-
-  const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
-  const portalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
-  const renderedEmail = buildQuoteSentEmailTemplate({
-    quote,
-    companyName,
-    portalLink,
-    customMessage: input.message,
-  });
-  const subject = input.subject?.trim() || renderedEmail.subject;
-
-  const emailResult = await sendQuoteEmailWithAttachment({
-    tenant,
-    quote,
-    user,
-    recipients,
-    subject,
-    html: renderedEmail.html,
-    text: renderedEmail.text,
-  });
-
-  if (!emailResult.success) {
-    throw new Error(emailResult.error || 'Failed to send quote email');
-  }
-
-  // Store the generated PDF as a document associated with the quote
+  // Transition to "sent" first — this publishes the quote in the client portal
   const actorUserId = getActorUserId(user);
-  try {
-    await storeQuotePdf(knex, tenant, quote, actorUserId ?? quote.created_by ?? 'system');
-  } catch (pdfStoreError) {
-    console.error('Failed to store quote PDF (email was sent successfully):', pdfStoreError);
-  }
-
   await Quote.update(knex, tenant, quoteId, {
     status: 'sent',
     sent_at: new Date().toISOString(),
     updated_by: actorUserId,
   });
 
+  // Store the generated PDF as a document associated with the quote (best-effort)
+  try {
+    await storeQuotePdf(knex, tenant, quote, actorUserId ?? quote.created_by ?? 'system');
+  } catch (pdfStoreError) {
+    console.error('Failed to store quote PDF:', pdfStoreError);
+  }
+
+  // Attempt email notification (best-effort — quote is already visible in client portal)
+  let emailSent = false;
+  let emailRecipients: string[] = [];
+  let emailMessageId: string | null = null;
+  try {
+    const [recipients, tenantRecord] = await Promise.all([
+      getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
+      knex('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
+    ]);
+
+    if (recipients.length > 0) {
+      emailRecipients = recipients;
+      const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
+      const portalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const renderedEmail = buildQuoteSentEmailTemplate({
+        quote,
+        companyName,
+        portalLink,
+        customMessage: input.message,
+      });
+      const subject = input.subject?.trim() || renderedEmail.subject;
+
+      const emailResult = await sendQuoteEmailWithAttachment({
+        tenant,
+        quote,
+        user,
+        recipients,
+        subject,
+        html: renderedEmail.html,
+        text: renderedEmail.text,
+      });
+
+      emailSent = emailResult.success;
+      emailMessageId = emailResult.messageId ?? null;
+      if (!emailResult.success) {
+        console.warn('Quote email failed (quote is still published in client portal):', emailResult.error);
+      }
+    }
+  } catch (emailError) {
+    console.warn('Quote email failed (quote is still published in client portal):', emailError);
+  }
+
+  const activityDescription = emailSent && emailRecipients.length > 0
+    ? `Quote sent to ${emailRecipients.join(', ')} and published in client portal`
+    : 'Quote published in client portal';
+
   await QuoteActivity.create(knex, tenant, {
     quote_id: quoteId,
     activity_type: 'sent',
-    description: `Quote sent to ${recipients.join(', ')}`,
+    description: activityDescription,
     performed_by: actorUserId,
     metadata: {
-      recipients,
-      message_id: emailResult.messageId ?? null,
+      recipients: emailRecipients,
+      email_sent: emailSent,
+      message_id: emailMessageId,
     },
   });
 
@@ -949,48 +961,57 @@ export const resendQuote = withAuth(async (
     throw new Error('Only sent quotes can be resent');
   }
 
-  const [recipients, tenantRecord] = await Promise.all([
-    getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-    knex('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
-  ]);
+  let emailSent = false;
+  let emailRecipients: string[] = [];
+  let emailMessageId: string | null = null;
+  try {
+    const [recipients, tenantRecord] = await Promise.all([
+      getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
+      knex('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
+    ]);
 
-  if (recipients.length === 0) {
-    throw new Error('At least one recipient email address is required to resend a quote');
-  }
+    if (recipients.length > 0) {
+      emailRecipients = recipients;
+      const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
+      const portalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const renderedEmail = buildQuoteSentEmailTemplate({
+        quote,
+        companyName,
+        portalLink,
+        customMessage: input.message,
+      });
+      const subject = input.subject?.trim() || `Reminder: ${renderedEmail.subject}`;
 
-  const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
-  const portalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
-  const renderedEmail = buildQuoteSentEmailTemplate({
-    quote,
-    companyName,
-    portalLink,
-    customMessage: input.message,
-  });
-  const subject = input.subject?.trim() || `Reminder: ${renderedEmail.subject}`;
+      const emailResult = await sendQuoteEmailWithAttachment({
+        tenant,
+        quote,
+        user,
+        recipients,
+        subject,
+        html: renderedEmail.html,
+        text: renderedEmail.text,
+      });
 
-  const emailResult = await sendQuoteEmailWithAttachment({
-    tenant,
-    quote,
-    user,
-    recipients,
-    subject,
-    html: renderedEmail.html,
-    text: renderedEmail.text,
-  });
-
-  if (!emailResult.success) {
-    throw new Error(emailResult.error || 'Failed to resend quote email');
+      emailSent = emailResult.success;
+      emailMessageId = emailResult.messageId ?? null;
+      if (!emailResult.success) {
+        console.warn('Quote resend email failed:', emailResult.error);
+      }
+    }
+  } catch (emailError) {
+    console.warn('Quote resend email failed:', emailError);
   }
 
   await QuoteActivity.create(knex, tenant, {
     quote_id: quoteId,
     activity_type: 'resent',
-    description: `Quote resent to ${recipients.join(', ')}`,
+    description: emailSent ? `Quote resent to ${emailRecipients.join(', ')}` : 'Quote resend attempted (email not configured)',
     performed_by: getActorUserId(user),
     metadata: {
-      recipients,
-      message_id: emailResult.messageId ?? null,
+      recipients: emailRecipients,
+      email_sent: emailSent,
+      message_id: emailMessageId,
     },
   });
 
@@ -1023,48 +1044,57 @@ export const sendQuoteReminder = withAuth(async (
     throw new Error('Only sent quotes can receive reminders');
   }
 
-  const [recipients, tenantRecord] = await Promise.all([
-    getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-    knex('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
-  ]);
+  let emailSent = false;
+  let emailRecipients: string[] = [];
+  let emailMessageId: string | null = null;
+  try {
+    const [recipients, tenantRecord] = await Promise.all([
+      getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
+      knex('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
+    ]);
 
-  if (recipients.length === 0) {
-    throw new Error('At least one recipient email address is required to send a reminder');
-  }
+    if (recipients.length > 0) {
+      emailRecipients = recipients;
+      const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
+      const portalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const renderedEmail = buildQuoteReminderEmailTemplate({
+        quote,
+        companyName,
+        portalLink,
+        customMessage: input.message,
+      });
+      const subject = input.subject?.trim() || renderedEmail.subject;
 
-  const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
-  const portalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
-  const renderedEmail = buildQuoteReminderEmailTemplate({
-    quote,
-    companyName,
-    portalLink,
-    customMessage: input.message,
-  });
-  const subject = input.subject?.trim() || renderedEmail.subject;
+      const emailResult = await sendQuoteEmailWithAttachment({
+        tenant,
+        quote,
+        user,
+        recipients,
+        subject,
+        html: renderedEmail.html,
+        text: renderedEmail.text,
+      });
 
-  const emailResult = await sendQuoteEmailWithAttachment({
-    tenant,
-    quote,
-    user,
-    recipients,
-    subject,
-    html: renderedEmail.html,
-    text: renderedEmail.text,
-  });
-
-  if (!emailResult.success) {
-    throw new Error(emailResult.error || 'Failed to send quote reminder email');
+      emailSent = emailResult.success;
+      emailMessageId = emailResult.messageId ?? null;
+      if (!emailResult.success) {
+        console.warn('Quote reminder email failed:', emailResult.error);
+      }
+    }
+  } catch (emailError) {
+    console.warn('Quote reminder email failed:', emailError);
   }
 
   await QuoteActivity.create(knex, tenant, {
     quote_id: quoteId,
     activity_type: 'reminder_sent',
-    description: `Quote reminder sent to ${recipients.join(', ')}`,
+    description: emailSent ? `Quote reminder sent to ${emailRecipients.join(', ')}` : 'Quote reminder attempted (email not configured)',
     performed_by: getActorUserId(user),
     metadata: {
-      recipients,
-      message_id: emailResult.messageId ?? null,
+      recipients: emailRecipients,
+      email_sent: emailSent,
+      message_id: emailMessageId,
     },
   });
 
@@ -1249,6 +1279,32 @@ export const regenerateQuotePdf = withAuth(async (
   return fileId;
 });
 
+export const downloadQuotePdf = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+): Promise<{ pdfData: number[]; quoteNumber: string } | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const quote = await Quote.getById(knex, tenant, quoteId);
+
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found`);
+  }
+
+  const pdfService = createQuotePDFGenerationService(tenant);
+  const pdfBuffer = await pdfService.generatePDF({ quoteId });
+
+  return {
+    pdfData: Array.from(pdfBuffer),
+    quoteNumber: quote.quote_number ?? quote.quote_id,
+  };
+});
+
 export const renderQuotePreview = withAuth(async (
   user,
   { tenant },
@@ -1259,8 +1315,7 @@ export const renderQuotePreview = withAuth(async (
     return denied;
   }
 
-  const { QuotePDFGenerationService } = await import('../services/quotePdfGenerationService');
-  const service = new QuotePDFGenerationService(tenant);
+  const service = createQuotePDFGenerationService(tenant);
   const preview = await service.renderPreview({ quoteId });
   return { html: preview.html, css: preview.css };
 });

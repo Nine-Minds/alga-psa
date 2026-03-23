@@ -125,6 +125,7 @@ const _middleware = auth((request) => {
       '/api/webhooks/stripe',
       '/api/webhooks/ninjaone',
       '/api/webhooks/tacticalrmm',
+      '/api/files/',   // File download routes use session auth
       '/api/share/',  // Public share link routes handle their own auth
       '/api/ext/',  // Extension API routes handle their own auth
       '/api/ext-proxy/',

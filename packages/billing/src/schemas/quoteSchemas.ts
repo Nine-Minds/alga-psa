@@ -15,7 +15,7 @@ export const quoteStatusSchema = z.enum([
   'archived'
 ]);
 
-export const quoteItemBillingMethodSchema = z.enum(['fixed', 'hourly', 'usage', 'per_unit']);
+export const quoteItemBillingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
 export const quoteDiscountTypeSchema = z.enum(['percentage', 'fixed']);
 
 const createQuoteBaseSchema = z.object({
@@ -56,6 +56,7 @@ export const createQuoteSchema = createQuoteBaseSchema.superRefine((value, ctx) 
 
 export const updateQuoteSchema = createQuoteBaseSchema.partial().extend({
   status: quoteStatusSchema.optional().nullable(),
+  template_id: z.string().uuid().optional().nullable(),
   updated_by: z.string().uuid().optional().nullable(),
   archived_at: z.coerce.date().optional().nullable(),
   sent_at: z.coerce.date().optional().nullable(),

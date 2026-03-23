@@ -27,6 +27,7 @@ import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
 import AccountingExportsTab from './accounting/AccountingExportsTab';
 import QuotesTab from './quotes/QuotesTab';
+import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -151,6 +152,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="quotes">
           <QuotesTab />
+        </Tabs.Content>
+
+        <Tabs.Content value="quote-templates">
+          <QuoteDocumentTemplatesPage />
         </Tabs.Content>
 
         <Tabs.Content value="reports">

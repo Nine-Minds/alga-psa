@@ -10,7 +10,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, createQuoteRevision, deleteQuote, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, getQuotePdfFileId, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import type { IQuoteDocumentTemplate } from '@alga-psa/types';
+import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
+import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
@@ -81,6 +84,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
   const [isPreviewLoading2, setIsPreviewLoading2] = useState(false);
+  const [documentTemplates, setDocumentTemplates] = useState<IQuoteDocumentTemplate[]>([]);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
     void loadQuote();
@@ -89,11 +94,12 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const loadQuote = async () => {
     try {
       setIsLoading(true);
-      const [loadedQuote, loadedClients, loadedContacts, approvalSettings] = await Promise.all([
+      const [loadedQuote, loadedClients, loadedContacts, approvalSettings, loadedTemplates] = await Promise.all([
         getQuote(quoteId),
         getAllClientsForBilling(false),
         getAllContacts('active'),
         getQuoteApprovalSettings(),
+        getQuoteDocumentTemplates(),
       ]);
 
       if (!loadedQuote || 'permissionError' in loadedQuote) {
@@ -104,6 +110,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setClients(loadedClients);
       setContacts(loadedContacts);
       setApprovalRequired(!('permissionError' in approvalSettings) && approvalSettings.approvalRequired === true);
+      setDocumentTemplates(Array.isArray(loadedTemplates) ? loadedTemplates : []);
 
       const loadedVersions = await listQuoteVersions(quoteId);
       setVersions(Array.isArray(loadedVersions) ? loadedVersions : []);
@@ -397,7 +404,38 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
-  const handleViewPdf = async () => {
+  const handleDownloadPdf = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsGeneratingPdf(true);
+      setError(null);
+
+      const result = await downloadQuotePdf(quote.quote_id);
+      if (result && typeof result === 'object' && 'permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      const { pdfData, quoteNumber } = result as { pdfData: number[]; quoteNumber: string };
+      const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', `${quoteNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to generate quote PDF');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleAssignTemplate = async (templateId: string | null) => {
     if (!quote) {
       return;
     }
@@ -405,20 +443,17 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     try {
       setIsWorking(true);
       setError(null);
-      const fileId = await getQuotePdfFileId(quote.quote_id);
+      setNotice(null);
+      const result = await updateQuote(quote.quote_id, { template_id: templateId } as any);
 
-      if (fileId && typeof fileId === 'object' && 'permissionError' in fileId) {
-        throw new Error(fileId.permissionError);
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
       }
 
-      if (!fileId) {
-        setError('No PDF has been generated for this quote yet. Send the quote first to generate a PDF.');
-        return;
-      }
-
-      window.open(`/api/files/${fileId}`, '_blank');
+      setQuote(result);
+      setNotice(templateId ? 'Document template assigned.' : 'Document template cleared (using default).');
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Failed to load quote PDF');
+      setError(actionError instanceof Error ? actionError.message : 'Failed to assign template');
     } finally {
       setIsWorking(false);
     }
@@ -619,7 +654,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             <Button id="quote-detail-preview-pdf" variant="outline" onClick={() => void handlePreviewPdf()} disabled={isWorking || isPreviewLoading2}>
               {isPreviewLoading2 ? 'Loading...' : 'Preview'}
             </Button>
-            <Button id="quote-detail-view-pdf" variant="outline" onClick={() => void handleViewPdf()} disabled={isWorking}>Download PDF</Button>
+            <Button id="quote-detail-view-pdf" variant="outline" onClick={() => void handleDownloadPdf()} disabled={isWorking || isGeneratingPdf}>
+              {isGeneratingPdf ? 'Generating...' : 'Download PDF'}
+            </Button>
           </div>
         </div>
 
@@ -696,6 +733,30 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Total</div>
             <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.total_amount, quote.currency_code || 'USD')}</div>
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-border p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h3 className="text-base font-semibold">Document Template</h3>
+              <p className="text-sm text-muted-foreground">
+                Choose which template to use for this quote&apos;s PDF. Leave empty to use the tenant default.
+              </p>
+            </div>
+            <div className="w-full md:w-72">
+              <CustomSelect
+                id="quote-detail-template-select"
+                value={quote.template_id || undefined}
+                onValueChange={(value) => void handleAssignTemplate(value || null)}
+                placeholder="Use default template"
+                allowClear
+                options={documentTemplates.map((t) => ({
+                  value: t.template_id,
+                  label: `${t.name}${t.isStandard ? ' (Standard)' : ''}`,
+                }))}
+              />
+            </div>
           </div>
         </section>
 
@@ -922,7 +983,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       <Dialog id="quote-preview-dialog" isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} title="Quote Preview" className="max-w-4xl">
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           {previewHtml ? (
-            <div className="bg-white rounded border border-border p-4">
+            <div className="rounded border border-border p-4 bg-white text-black" style={{ colorScheme: 'light' }}>
               <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
               <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />
             </div>

@@ -41,6 +41,7 @@ import {
 interface QuoteDocumentTemplateEditorProps {
   templateId: string | null;
   standardCode?: string | null;
+  onBack?: () => void;
 }
 
 type EditorTab = 'visual' | 'code';
@@ -55,8 +56,9 @@ const useDebouncedValue = <T,>(value: T, delayMs: number) => {
   return debounced;
 };
 
-const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = ({ templateId, standardCode }) => {
+const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = ({ templateId, standardCode, onBack }) => {
   const router = useRouter();
+  const handleBack = () => onBack ? onBack() : router.push('/msp/billing?tab=quote-templates');
   const isNewTemplate = !templateId;
   const [template, setTemplate] = useState<Partial<IQuoteDocumentTemplate> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -197,8 +199,11 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
         const initialAst = getStandardQuoteTemplateAstByCode(standardCode || 'standard-quote-default')
           ?? getStandardQuoteTemplateAstByCode('standard-quote-default')
           ?? { kind: 'invoice-template-ast', version: INVOICE_TEMPLATE_AST_VERSION, layout: { id: 'root', type: 'document', children: [] } };
+        const standardName = standardCode
+          ? standardCode.replace(/^standard-quote-/, '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+          : 'Standard Template';
         setTemplate({
-          name: '',
+          name: standardCode ? `Copy of ${standardName}` : '',
           version: 1,
           is_default: false,
           templateAst: initialAst,
@@ -331,7 +336,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
       }
 
       setTemplate(saveResult.template);
-      router.push(`/msp/quote-document-templates?templateId=${saveResult.template.template_id}`);
+      router.push(`/msp/billing?tab=quote-templates&templateId=${saveResult.template.template_id}`);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to save quote template');
     } finally {
@@ -347,7 +352,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
           <p className="text-sm text-muted-foreground">Design the quote document layout using the visual editor, then preview with sample data.</p>
         </div>
         <div className="flex gap-2">
-          <Button id="quote-template-editor-back" variant="outline" onClick={() => router.push('/msp/quote-document-templates')}>
+          <Button id="quote-template-editor-back" variant="outline" onClick={() => handleBack()}>
             Back to Templates
           </Button>
           <Button id="quote-template-editor-save" onClick={() => void handleSave()} disabled={isSaving || isLoading}>

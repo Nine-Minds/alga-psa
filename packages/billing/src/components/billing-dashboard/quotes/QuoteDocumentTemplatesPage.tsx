@@ -52,25 +52,36 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
     },
   ]), []);
 
+  const handleNavigateToEditor = (templateId: string | 'new', code?: string) => {
+    const params = new URLSearchParams();
+    params.set('tab', 'quote-templates');
+    params.set('templateId', templateId);
+    if (code) {
+      params.set('standardCode', code);
+    }
+    router.push(`/msp/billing?${params.toString()}`);
+  };
+
   if (selectedTemplateId || standardCode) {
-    return <QuoteDocumentTemplateEditor templateId={selectedTemplateId === 'new' ? null : selectedTemplateId} standardCode={standardCode} />;
+    return (
+      <QuoteDocumentTemplateEditor
+        templateId={selectedTemplateId === 'new' ? null : selectedTemplateId}
+        standardCode={standardCode}
+        onBack={() => router.push('/msp/billing?tab=quote-templates')}
+      />
+    );
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Quote Document Templates</h1>
-          <p className="text-sm text-muted-foreground">Manage the AST-driven templates used to render quote PDFs and previews.</p>
+          <h2 className="text-xl font-semibold text-foreground">Quote Document Templates</h2>
+          <p className="text-sm text-muted-foreground">Design the templates used to render quote PDFs and previews.</p>
         </div>
-        <div className="flex gap-2">
-          <Button id="quote-document-templates-back" variant="outline" onClick={() => router.push('/msp/billing?tab=quotes')}>
-            Back to Quotes
-          </Button>
-          <Button id="quote-document-templates-new" onClick={() => router.push('/msp/quote-document-templates?templateId=new')}>
-            New Template
-          </Button>
-        </div>
+        <Button id="quote-document-templates-new" onClick={() => handleNavigateToEditor('new')}>
+          New Template
+        </Button>
       </div>
 
       {error ? (
@@ -91,11 +102,10 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
             pagination
             onRowClick={(record) => {
               if (record.isStandard) {
-                router.push(`/msp/quote-document-templates?templateId=new&standardCode=${record.standard_quote_document_template_code || 'standard-quote-default'}`);
-                return;
+                handleNavigateToEditor('new', record.standard_quote_document_template_code || 'standard-quote-default');
+              } else {
+                handleNavigateToEditor(record.template_id);
               }
-
-              router.push(`/msp/quote-document-templates?templateId=${record.template_id}`);
             }}
             rowClassName={() => 'cursor-pointer'}
           />

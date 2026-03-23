@@ -1,11 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { InvoiceTemplateAst } from '@alga-psa/types';
 import type { Page } from 'puppeteer';
-import type { FileStore } from '@alga-psa/storage/types/storage';
+import { StorageProviderFactory, generateStoragePath, FileStoreModel, type FileStore } from '@alga-psa/storage';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
-
-import { getFileStoreModelAsync, getStorageProviderFactoryAsync } from '../lib/documentsHelpers';
 import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { evaluateInvoiceTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { resolveInvoicePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
@@ -53,8 +51,6 @@ export class QuotePDFGenerationService {
 
     return runWithTenant(this.tenant, async () => {
       const fileId = uuidv4();
-      const { StorageProviderFactory, generateStoragePath } = await getStorageProviderFactoryAsync();
-      const FileStoreModel = await getFileStoreModelAsync();
       const { knex } = await createTenantKnex();
 
       const quoteRecord = await Quote.getById(knex, this.tenant, options.quoteId);
