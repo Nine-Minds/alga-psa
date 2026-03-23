@@ -65,5 +65,16 @@
     },
     "title": "Extensie-instellingen",
     "description": "Extensie-instellingen zijn beschikbaar in de Enterprise-editie."
+  },
+  "runtime": {
+    "metadataTitle": "Extensie",
+    "loadError": "Runtime-informatie van de extensie kon niet worden geladen",
+    "notFoundTitle": "Extensie niet gevonden.",
+    "goToExtensions": "Ga naar extensies",
+    "bundleUnavailableTitle": "Extensiebundel niet beschikbaar.",
+    "bundleUnavailableDescription": "De extensiebundel ontbreekt of is niet geüpload.",
+    "goToDetails": "Ga naar extensiedetails",
+    "runtimeDomainUnavailableTitle": "Runtime-domein van de extensie niet beschikbaar.",
+    "runtimeDomainUnavailableDescription": "Voorzie de extensie opnieuw via Instellingen -> Extensies -> selecteer extensie -> Provision."
   }
 }

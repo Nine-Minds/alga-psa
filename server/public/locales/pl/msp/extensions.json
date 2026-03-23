@@ -65,5 +65,16 @@
     },
     "title": "Ustawienia rozszerzeń",
     "description": "Ustawienia rozszerzeń są dostępne w wersji Enterprise."
+  },
+  "runtime": {
+    "metadataTitle": "Rozszerzenie",
+    "loadError": "Nie udało się załadować informacji o środowisku uruchomieniowym rozszerzenia",
+    "notFoundTitle": "Nie znaleziono rozszerzenia.",
+    "goToExtensions": "Przejdź do rozszerzeń",
+    "bundleUnavailableTitle": "Pakiet rozszerzenia jest niedostępny.",
+    "bundleUnavailableDescription": "Brakuje pakietu rozszerzenia albo nie został przesłany.",
+    "goToDetails": "Przejdź do szczegółów rozszerzenia",
+    "runtimeDomainUnavailableTitle": "Domena środowiska uruchomieniowego rozszerzenia jest niedostępna.",
+    "runtimeDomainUnavailableDescription": "Ponownie przygotuj rozszerzenie z poziomu Ustawienia -> Rozszerzenia -> wybierz rozszerzenie -> Udostępnij."
   }
 }

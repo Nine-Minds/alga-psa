@@ -65,5 +65,16 @@
     },
     "title": "Configuración de extensiones",
     "description": "La configuración de extensiones está disponible en la edición Enterprise."
+  },
+  "runtime": {
+    "metadataTitle": "Extensión",
+    "loadError": "No se pudo cargar la información de ejecución de la extensión",
+    "notFoundTitle": "Extensión no encontrada.",
+    "goToExtensions": "Ir a extensiones",
+    "bundleUnavailableTitle": "El paquete de la extensión no está disponible.",
+    "bundleUnavailableDescription": "El paquete de la extensión falta o no se ha cargado.",
+    "goToDetails": "Ir a los detalles de la extensión",
+    "runtimeDomainUnavailableTitle": "El dominio de ejecución de la extensión no está disponible.",
+    "runtimeDomainUnavailableDescription": "Vuelva a aprovisionar la extensión desde Configuración -> Extensiones -> seleccione la extensión -> Aprovisionar."
   }
 }

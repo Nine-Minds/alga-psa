@@ -51,7 +51,7 @@
   {"id": "F072", "description": "Italian accent audit on updated it/msp/licensing.json after enterprise purchase-flow expansion", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F073", "description": "Expand en/msp/extensions.json for EE extension runtime/error-state copy discovered after the CE/OSS follow-up pass", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F074", "description": "Wire useTranslation('msp/extensions') in packages/product-extensions/ee/entry.tsx runtime/error states", "implemented": true, "prdRefs": ["2b-20"]},
-  {"id": "F075", "description": "Regenerate msp/extensions translations for 6 non-English locales + 2 pseudo-locales after EE runtime-state expansion", "implemented": false, "prdRefs": ["2b-20"]},
+  {"id": "F075", "description": "Regenerate msp/extensions translations for 6 non-English locales + 2 pseudo-locales after EE runtime-state expansion", "implemented": true, "prdRefs": ["2b-20"]},
   {"id": "F076", "description": "Italian accent audit on updated it/msp/extensions.json after EE runtime-state expansion", "implemented": false, "prdRefs": ["2b-20"]},
 
   {"id": "F090", "description": "Update ROUTE_NAMESPACES for /msp/surveys, /msp/schedule, /msp/knowledge-base, /msp/jobs, /msp/settings (email-providers), /msp/profile, /msp/security-settings, /msp/platform-updates", "implemented": false},

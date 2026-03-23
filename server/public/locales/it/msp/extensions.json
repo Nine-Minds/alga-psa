@@ -65,5 +65,16 @@
     },
     "title": "Impostazioni estensioni",
     "description": "Le impostazioni delle estensioni sono disponibili nell'edizione Enterprise."
+  },
+  "runtime": {
+    "metadataTitle": "Estensione",
+    "loadError": "Impossibile caricare le informazioni di runtime dell'estensione",
+    "notFoundTitle": "Estensione non trovata.",
+    "goToExtensions": "Vai alle estensioni",
+    "bundleUnavailableTitle": "Pacchetto estensione non disponibile.",
+    "bundleUnavailableDescription": "Il pacchetto dell'estensione manca o non è stato caricato.",
+    "goToDetails": "Vai ai dettagli dell'estensione",
+    "runtimeDomainUnavailableTitle": "Dominio di runtime dell'estensione non disponibile.",
+    "runtimeDomainUnavailableDescription": "Esegui di nuovo il provisioning dell'estensione da Impostazioni -> Estensioni -> seleziona estensione -> Provisioning."
   }
 }

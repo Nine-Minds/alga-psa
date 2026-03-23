@@ -65,5 +65,16 @@
     },
     "title": "Erweiterungseinstellungen",
     "description": "Erweiterungseinstellungen sind in der Enterprise-Edition verfügbar."
+  },
+  "runtime": {
+    "metadataTitle": "Erweiterung",
+    "loadError": "Laufzeitinformationen der Erweiterung konnten nicht geladen werden",
+    "notFoundTitle": "Erweiterung nicht gefunden.",
+    "goToExtensions": "Zu den Erweiterungen",
+    "bundleUnavailableTitle": "Erweiterungspaket nicht verfügbar.",
+    "bundleUnavailableDescription": "Das Erweiterungspaket fehlt oder wurde nicht hochgeladen.",
+    "goToDetails": "Zu den Erweiterungsdetails",
+    "runtimeDomainUnavailableTitle": "Laufzeitdomain der Erweiterung nicht verfügbar.",
+    "runtimeDomainUnavailableDescription": "Stellen Sie die Erweiterung erneut bereit unter Einstellungen -> Erweiterungen -> Erweiterung auswählen -> Bereitstellen."
   }
 }

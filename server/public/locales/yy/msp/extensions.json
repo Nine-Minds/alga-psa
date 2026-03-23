@@ -50,6 +50,17 @@
     "metadataTitle": "11111",
     "extensionId": "11111"
   },
+  "runtime": {
+    "metadataTitle": "11111",
+    "loadError": "11111",
+    "notFoundTitle": "11111",
+    "goToExtensions": "11111",
+    "bundleUnavailableTitle": "11111",
+    "bundleUnavailableDescription": "11111",
+    "goToDetails": "11111",
+    "runtimeDomainUnavailableTitle": "11111",
+    "runtimeDomainUnavailableDescription": "11111"
+  },
   "detailsPage": {
     "metadata": {
       "title": "11111",

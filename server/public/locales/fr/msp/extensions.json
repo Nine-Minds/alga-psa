@@ -65,5 +65,16 @@
     },
     "title": "Paramètres des extensions",
     "description": "Les paramètres des extensions sont disponibles dans l'édition Enterprise."
+  },
+  "runtime": {
+    "metadataTitle": "Extension",
+    "loadError": "Impossible de charger les informations d'exécution de l'extension",
+    "notFoundTitle": "Extension introuvable.",
+    "goToExtensions": "Aller aux extensions",
+    "bundleUnavailableTitle": "Package d'extension indisponible.",
+    "bundleUnavailableDescription": "Le package de l'extension est manquant ou n'a pas été téléversé.",
+    "goToDetails": "Aller aux détails de l'extension",
+    "runtimeDomainUnavailableTitle": "Le domaine d'exécution de l'extension est indisponible.",
+    "runtimeDomainUnavailableDescription": "Reprovisionnez l'extension depuis Paramètres -> Extensions -> sélectionnez l'extension -> Provisionner."
   }
 }
