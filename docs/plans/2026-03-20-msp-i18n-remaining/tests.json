@@ -58,7 +58,7 @@
   {
     "id": "T021",
     "description": "2b-15: all 10 KB files compile with useTranslation — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021", "F022"]
   },
   {
