@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "validate-translations.cjs passes after 2b-13 (msp/surveys keys consistent across all 9 locales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F005"]
   },
   {
