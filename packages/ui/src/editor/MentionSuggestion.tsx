@@ -65,15 +65,23 @@ function createMentionSuggestionPlugin(onStateChange: OnStateChange) {
 
 // ── Mention Node (inline, read-only badge) ───────────────────────
 function MentionNodeView(props: any) {
-  const { userId, username, displayName } = props.node.attrs;
-  const displayText = username ? `@${username}` : `@${displayName}`;
+  const { userId, username, displayName, status } = props.node.attrs;
+  const isAi = userId === '@ai-assistant' || userId === '@ai-assistant-done';
+  const isDone = status === 'done' || userId === '@ai-assistant-done';
+  const displayText = isAi ? '@Alga AI' : (username ? `@${username}` : `@${displayName}`);
+
+  const baseClass = isAi
+    ? isDone
+      ? 'inline-flex items-center px-1 py-0.5 rounded bg-purple-100 text-purple-400 font-medium cursor-default opacity-60'
+      : 'inline-flex items-center px-1 py-0.5 rounded bg-purple-100 text-purple-700 font-medium cursor-pointer hover:opacity-80'
+    : 'inline-flex items-center px-1 py-0.5 rounded bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))] font-medium cursor-pointer hover:opacity-80';
 
   return (
     <NodeViewWrapper as="span" className="mention-inline">
       <span
-        className="inline-flex items-center px-1 py-0.5 rounded bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))] font-medium cursor-pointer hover:opacity-80"
+        className={baseClass}
         data-user-id={userId}
-        title={`${displayName} (${username || 'no username'})`}
+        title={isAi ? 'Alga AI Assistant' : `${displayName} (${username || 'no username'})`}
       >
         {displayText}
       </span>
@@ -93,6 +101,7 @@ export const MentionNode = Node.create({
       userId: { default: '' },
       username: { default: '' },
       displayName: { default: 'Unknown' },
+      status: { default: '' },
     };
   },
 
@@ -101,15 +110,21 @@ export const MentionNode = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    const { userId, username, displayName } = HTMLAttributes;
-    const displayText = username ? `@${username}` : `@${displayName}`;
+    const { userId, username, displayName, status } = HTMLAttributes;
+    const isAi = userId === '@ai-assistant' || userId === '@ai-assistant-done';
+    const isDone = status === 'done' || userId === '@ai-assistant-done';
+    const displayText = isAi ? '@Alga AI' : (username ? `@${username}` : `@${displayName}`);
+    const className = isAi
+      ? isDone
+        ? 'inline-flex items-center px-1 py-0.5 rounded bg-purple-100 text-purple-400 font-medium opacity-60'
+        : 'inline-flex items-center px-1 py-0.5 rounded bg-purple-100 text-purple-700 font-medium'
+      : 'inline-flex items-center px-1 py-0.5 rounded bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))] font-medium';
     return [
       'span',
       mergeAttributes(HTMLAttributes, {
         'data-mention': '',
         'data-user-id': userId,
-        class:
-          'inline-flex items-center px-1 py-0.5 rounded bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))] font-medium',
+        class: className,
       }),
       displayText,
     ];
@@ -137,17 +152,22 @@ export const MentionSuggestionExtension = Extension.create<MentionSuggestionOpti
   },
 });
 
+// ── AI mention trigger keywords ─────────────────────────────────
+const AI_TRIGGERS = ['ai', 'alga', 'aialga', 'algaai', 'assistant', 'alga ai', 'ai alga'];
+
 // ── React popup component ────────────────────────────────────────
 interface MentionSuggestionPopupProps {
   editor: Editor;
   suggestionState: MentionSuggestionState;
   searchMentions: SearchMentionsFn;
+  aiAssistantEnabled?: boolean;
 }
 
 export function MentionSuggestionPopup({
   editor,
   suggestionState,
   searchMentions,
+  aiAssistantEnabled = false,
 }: MentionSuggestionPopupProps) {
   const [items, setItems] = useState<MentionUser[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -185,6 +205,19 @@ export function MentionSuggestionPopup({
           });
         }
 
+        // Add Alga AI if enabled and query matches
+        if (aiAssistantEnabled) {
+          const queryLower = query.toLowerCase();
+          if (query === '' || AI_TRIGGERS.some((t) => t.includes(queryLower))) {
+            results.push({
+              user_id: '@ai-assistant',
+              display_name: 'Alga AI',
+              username: 'alga',
+              email: '',
+            });
+          }
+        }
+
         results.push(...users);
         setItems(results);
         setSelectedIndex(0);
@@ -199,7 +232,7 @@ export function MentionSuggestionPopup({
     };
 
     void fetchResults();
-  }, [suggestionState?.query, suggestionState?.active, searchMentions]);
+  }, [suggestionState?.query, suggestionState?.active, searchMentions, aiAssistantEnabled]);
 
   // Insert mention helper
   const insertMention = useCallback(

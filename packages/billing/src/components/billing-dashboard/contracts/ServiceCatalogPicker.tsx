@@ -4,7 +4,7 @@ import React, { useCallback, useRef } from 'react';
 import AsyncSearchableSelect, { SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { getServiceById, searchServiceCatalogForPicker, CatalogPickerItem } from '@alga-psa/billing/actions';
 
-type BillingMethod = 'fixed' | 'hourly' | 'usage' | 'per_unit';
+type BillingMethod = 'fixed' | 'hourly' | 'usage';
 type ItemKind = 'service' | 'product';
 
 export type ServiceCatalogPickerItem = CatalogPickerItem;

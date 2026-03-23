@@ -1,5 +1,10 @@
-import { getActionRegistryV2, getNodeTypeRegistry, getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
-import type { WorkflowBundleV1 } from '@shared/workflow/bundle/workflowBundleV1';
+import {
+  getActionRegistryV2,
+  getNodeTypeRegistry,
+  getSchemaRegistry,
+  initializeWorkflowRuntimeV2,
+} from '@alga-psa/workflows/runtime';
+import type { WorkflowBundleV1 } from '@alga-psa/workflows/bundle';
 import { WorkflowBundleImportError } from './workflowBundleImportErrors';
 
 export type WorkflowBundleMissingDependencies = {

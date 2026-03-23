@@ -1,3 +1,5 @@
+import type { InvoiceTemplatePrintSettings } from './invoice-print-settings';
+
 export const INVOICE_TEMPLATE_AST_VERSION = 1 as const;
 
 export type InvoiceTemplateAstVersion = typeof INVOICE_TEMPLATE_AST_VERSION;
@@ -17,6 +19,7 @@ export interface InvoiceTemplateAstMetadata {
   description?: string;
   locale?: string;
   currencyCode?: string;
+  printSettings?: InvoiceTemplatePrintSettings;
 }
 
 export type InvoiceTemplateValueFormat = 'text' | 'number' | 'currency' | 'date';

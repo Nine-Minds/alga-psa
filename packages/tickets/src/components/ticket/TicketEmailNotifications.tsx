@@ -12,6 +12,7 @@ import { Mail } from 'lucide-react';
 interface TicketEmailNotificationsProps {
   id?: string;
   ticketId: string;
+  variant?: 'card' | 'flat';
 }
 
 const INITIAL_LIMIT = 20;
@@ -52,6 +53,7 @@ function formatSentAt(value: unknown): string {
 const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
   id = 'ticket-email-notifications',
   ticketId,
+  variant = 'card',
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<EmailSendingLogRecord[]>([]);
@@ -127,35 +129,44 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
     ];
   }, []);
 
+  const content = (
+    <>
+      {isLoading ? (
+        <div className="text-sm text-[rgb(var(--color-text-500))]">Loading…</div>
+      ) : logs.length === 0 ? (
+        <div className="text-sm text-[rgb(var(--color-text-500))]">No email notifications found.</div>
+      ) : (
+        <DataTable id={`${id}-table`} data={logs} columns={columns} pagination={false} />
+      )}
+
+      {hasMore && !isLoading && (
+        <div className="mt-4 flex justify-center">
+          <Button id={`${id}-load-more`} variant="outline" onClick={() => setLimit((prev) => prev + LOAD_MORE_STEP)}>
+            Load more
+          </Button>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <ReflectionContainer id={id} label="Ticket Email Notifications">
-      <ContentCard
-        id={id}
-        collapsible
-        defaultExpanded={false}
-        title="Email Notifications"
-        headerIcon={<Mail className="w-5 h-5" />}
-        count={logs.length}
-      >
-        {isLoading ? (
-          <div className="text-sm text-[rgb(var(--color-text-500))]">Loading…</div>
-        ) : logs.length === 0 ? (
-          <div className="text-sm text-[rgb(var(--color-text-500))]">No email notifications found.</div>
-        ) : (
-          <DataTable id={`${id}-table`} data={logs} columns={columns} pagination={false} />
-        )}
-
-        {hasMore && !isLoading && (
-          <div className="mt-4 flex justify-center">
-            <Button id={`${id}-load-more`} variant="outline" onClick={() => setLimit((prev) => prev + LOAD_MORE_STEP)}>
-              Load more
-            </Button>
-          </div>
-        )}
-      </ContentCard>
+      {variant === 'flat' ? (
+        <div className="space-y-4">{content}</div>
+      ) : (
+        <ContentCard
+          id={id}
+          collapsible
+          defaultExpanded={false}
+          title="Email Notifications"
+          headerIcon={<Mail className="w-5 h-5" />}
+          count={logs.length}
+        >
+          {content}
+        </ContentCard>
+      )}
     </ReflectionContainer>
   );
 };
 
 export default TicketEmailNotifications;
-

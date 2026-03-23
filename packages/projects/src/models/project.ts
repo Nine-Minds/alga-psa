@@ -13,6 +13,9 @@ import type { Knex } from 'knex';
 import type { IProject, IProjectPhase, IProjectStatusMapping, IProjectTask, IStatus, IStandardStatus, ItemType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
+/** Status enriched with mapping metadata as returned by getProjectTaskStatuses. */
+export type ProjectTaskStatus = (IStatus | IStandardStatus) & Pick<IProjectStatusMapping, 'project_status_mapping_id' | 'phase_id' | 'custom_name' | 'display_order' | 'is_visible'> & { is_standard: boolean };
+
 /**
  * Project model with tenant-explicit methods.
  * All methods require an explicit tenant parameter for multi-tenant safety.
@@ -286,6 +289,18 @@ const ProjectModel = {
           .del();
       }
 
+      // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
+      if (phaseIds.length > 0) {
+        const commentIdsSubquery = trx('project_task_comments')
+          .select('task_comment_id')
+          .whereIn('task_id', taskIdsSubquery)
+          .andWhere('tenant', tenant);
+        await trx('project_task_comment_reactions')
+          .whereIn('task_comment_id', commentIdsSubquery)
+          .andWhere('tenant', tenant)
+          .del();
+      }
+
       // Delete task comments
       if (phaseIds.length > 0) {
         await trx('project_task_comments')
@@ -514,6 +529,16 @@ const ProjectModel = {
         .andWhere('tenant', tenant)
         .del();
 
+      // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
+      const commentIdsSubquery = trx('project_task_comments')
+        .select('task_comment_id')
+        .whereIn('task_id', taskIdsSubquery)
+        .andWhere('tenant', tenant);
+      await trx('project_task_comment_reactions')
+        .whereIn('task_comment_id', commentIdsSubquery)
+        .andWhere('tenant', tenant)
+        .del();
+
       // Delete task comments
       await trx('project_task_comments')
         .whereIn('task_id', taskIdsSubquery)
@@ -566,22 +591,52 @@ const ProjectModel = {
   getProjectStatusMappings: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    projectId: string
+    projectId: string,
+    phaseId?: string | null
   ): Promise<IProjectStatusMapping[]> => {
     if (!tenant) {
       throw new Error('Tenant context is required for getting project status mappings');
     }
 
     try {
-      const mappings = await knexOrTrx<IProjectStatusMapping>('project_status_mappings')
+      const query = knexOrTrx<IProjectStatusMapping>('project_status_mappings')
         .where('project_id', projectId)
-        .andWhere('tenant', tenant)
-        .orderBy('display_order');
+        .andWhere('tenant', tenant);
+
+      if (phaseId) {
+        query.andWhere('phase_id', phaseId);
+      } else {
+        query.whereNull('phase_id');
+      }
+
+      const mappings = await query.orderBy('display_order');
       return mappings;
     } catch (error) {
       console.error('Error getting project status mappings:', error);
       throw error;
     }
+  },
+
+  /**
+   * Get the effective project status mappings for a phase.
+   * Returns phase-specific mappings when present, otherwise project defaults.
+   */
+  getEffectiveStatusMappings: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    phaseId?: string | null
+  ): Promise<IProjectStatusMapping[]> => {
+    if (!phaseId) {
+      return ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);
+    }
+
+    const phaseMappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId, phaseId);
+    if (phaseMappings.length > 0) {
+      return phaseMappings;
+    }
+
+    return ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);
   },
 
   /**
@@ -707,10 +762,11 @@ const ProjectModel = {
   getProjectTaskStatuses: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    projectId: string
-  ): Promise<(IStatus | IStandardStatus)[]> => {
+    projectId: string,
+    phaseId?: string | null
+  ): Promise<ProjectTaskStatus[]> => {
     try {
-      const mappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);
+      const mappings = await ProjectModel.getEffectiveStatusMappings(knexOrTrx, tenant, projectId, phaseId);
       if (!mappings || mappings.length === 0) return [];
 
       // Batch-fetch all standard and custom statuses in 2 queries instead of 1 per mapping
@@ -733,18 +789,19 @@ const ProjectModel = {
       const standardMap = new Map((standardStatusRows as IStandardStatus[]).map(s => [s.standard_status_id, s]));
       const customMap = new Map((customStatusRows as IStatus[]).map(s => [s.status_id, s]));
 
-      const statuses = mappings.map((mapping: IProjectStatusMapping): IStatus | IStandardStatus | null => {
+      const statuses = mappings.map((mapping: IProjectStatusMapping): ProjectTaskStatus | null => {
         if (mapping.is_standard && mapping.standard_status_id) {
           const standardStatus = standardMap.get(mapping.standard_status_id);
           return standardStatus
             ? ({
                 ...standardStatus,
                 project_status_mapping_id: mapping.project_status_mapping_id,
+                phase_id: mapping.phase_id,
                 custom_name: mapping.custom_name,
                 display_order: mapping.display_order,
                 is_visible: mapping.is_visible,
                 is_standard: true,
-              } as IStandardStatus)
+              } as ProjectTaskStatus)
             : null;
         } else if (mapping.status_id) {
           const customStatus = customMap.get(mapping.status_id);
@@ -752,18 +809,19 @@ const ProjectModel = {
             ? ({
                 ...customStatus,
                 project_status_mapping_id: mapping.project_status_mapping_id,
+                phase_id: mapping.phase_id,
                 custom_name: mapping.custom_name,
                 display_order: mapping.display_order,
                 is_visible: mapping.is_visible,
                 is_standard: false,
-              } as IStatus)
+              } as ProjectTaskStatus)
             : null;
         } else {
           console.error('Invalid project status mapping: missing both standard_status_id and status_id');
           return null;
         }
       });
-      return statuses.filter((status): status is IStatus | IStandardStatus => status !== null);
+      return statuses.filter((status): status is ProjectTaskStatus => status !== null);
     } catch (error) {
       console.error('Error getting project statuses:', error);
       throw error;

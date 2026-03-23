@@ -10,8 +10,8 @@ import dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 
-import { initializeWorkflowRuntimeV2, registerWorkflowEmailProvider } from '@shared/workflow/runtime';
-import { WorkflowRuntimeV2Worker } from '@shared/workflow/workers';
+import { initializeWorkflowRuntimeV2, registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
+import { WorkflowRuntimeV2Worker } from '@alga-psa/workflows/workers';
 import { WorkflowRuntimeV2EventStreamWorker } from './v2/WorkflowRuntimeV2EventStreamWorker.js';
 import logger from '@alga-psa/core/logger';
 import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';

@@ -33,7 +33,60 @@
   "phases": {
     "title": "55555",
     "completion": "55555",
-    "noPhases": "55555"
+    "noPhases": "55555",
+    "statusColumns": "55555",
+    "statusColumnsProjectDefaults": "55555",
+    "statusColumnsCustom": "55555 {{count}} 55555",
+    "configureStatuses": "55555"
+  },
+  "settings": {
+    "statuses": {
+      "project": {
+        "title": "55555",
+        "description": "55555",
+        "add_from_library": "55555"
+      },
+      "closed": "55555",
+      "confirm_delete_title": "55555",
+      "confirm_delete": "55555 {{statusName}} 55555",
+      "delete_error": "55555",
+      "scope_label": "55555",
+      "scope_placeholder": "55555",
+      "scope_project_defaults": "55555",
+      "use_project_defaults": "55555",
+      "custom_statuses": "55555",
+      "phase_uses_defaults": "55555",
+      "copy_from_defaults": "55555",
+      "add_custom_status": "55555",
+      "revert_title": "55555",
+      "revert_message": "55555",
+      "revert_confirm": "55555",
+      "copy_failed": "55555",
+      "revert_failed": "55555",
+      "delete_has_tasks": "55555 {{statusName}} 55555 {{count}} 55555",
+      "delete_and_move": "55555"
+    }
+  },
+  "templates": {
+    "statuses": {
+      "manage_title": "55555",
+      "manage_description": "55555",
+      "template_defaults": "55555",
+      "added": "55555",
+      "removed": "55555",
+      "copied_to_phase": "55555",
+      "reverted": "55555",
+      "revert_message": "55555",
+      "remove_title": "55555",
+      "remove_message": "55555",
+      "remove_confirm": "55555",
+      "empty": "55555",
+      "empty_hint": "55555",
+      "add_title": "55555",
+      "select_placeholder": "55555",
+      "all_in_use": "55555",
+      "create_new": "55555"
+    }
   },
   "documents": {
     "title": "55555",

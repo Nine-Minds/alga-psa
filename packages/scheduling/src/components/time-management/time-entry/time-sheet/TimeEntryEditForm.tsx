@@ -18,6 +18,7 @@ import { TimeEntryFormProps } from './types';
 import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
 import { ISO8601String } from '@alga-psa/types';
 import ContractInfoBanner from './ContractInfoBanner';
+import { TimeEntryChangeRequestPanel } from './TimeEntryChangeRequestFeedback';
 
 // Define the expected structure returned by getEligibleContractLinesForUI,
 // including the date fields needed for filtering.
@@ -199,7 +200,11 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       } else {
         // Fetch and filter plans only if service and client are known
         try {
-          const plans = await getEligibleContractLinesForUI(clientId, entry.service_id) as EligiblePlanUI[];
+          const plans = await getEligibleContractLinesForUI(
+            clientId,
+            entry.service_id,
+            entry.start_time ?? selectedDate.toISOString()
+          ) as EligiblePlanUI[];
           const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
 
           const filteredPlans = plans.filter(plan => {
@@ -282,14 +287,10 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       return;
     }
 
-    const isAdHoc = entry?.work_item_type === 'ad_hoc';
-
-    // Ensure we have required fields (skip for ad_hoc and non-billable entries)
-    const isBillable = entry?.billable_duration > 0;
-    if (!isAdHoc && isBillable && !entry?.service_id) {
+    if (!entry?.service_id?.trim()) {
       setValidationErrors(prev => ({
         ...prev,
-        service: 'Service is required for billable entries'
+        service: 'Service is required for time entries'
       }));
       return;
     }
@@ -374,6 +375,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
   return (
     <div className="space-y-5">
+      <TimeEntryChangeRequestPanel changeRequests={entry?.change_requests} />
+
       {/* Only show delete button and status for existing entries that have been saved */}
       {(entry?.entry_id && !isNewEntry && isEditable) && (
         <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
@@ -397,7 +400,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-gray-700">
-          Service {entry?.billable_duration > 0 && <span className="text-red-500">*</span>}
+          Service <span className="text-red-500">*</span>
         </label>
         <CustomSelect
           value={entry?.service_id || ''}
@@ -410,6 +413,10 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
                 _serviceOverridden: isServiceOverridden
               };
               onUpdateEntry(index, updatedEntry);
+              setValidationErrors(prev => ({
+                ...prev,
+                service: undefined
+              }));
             }
           }}
           disabled={!isEditable}

@@ -14,6 +14,7 @@ import {
   LoadingIndicator,
   Tabs,
   Switch,
+  Checkbox,
   DropdownMenu,
   Drawer,
   TextArea,
@@ -132,7 +133,7 @@ class IframeBridge {
    * Call the extension's WASM handler via the proxy.
    * The route is relative to the extension's handler (e.g., '/reports', '/schema').
    */
-  async callProxy<T>(route: string, payload?: Uint8Array | null): Promise<T> {
+  async callProxy<T>(route: string, payload?: Uint8Array | null, options?: { method?: string }): Promise<T> {
     return new Promise((resolve, reject) => {
       const requestId = crypto.randomUUID();
 
@@ -181,7 +182,13 @@ class IframeBridge {
           version: ENVELOPE_VERSION,
           type: 'apiproxy',
           request_id: requestId,
-          payload: { route, body: bodyBase64 },
+          payload: {
+            route,
+            body: bodyBase64,
+            // Only include method when non-POST to preserve backward compatibility
+            // with deployed iframeBridge versions
+            ...(options?.method && options.method !== 'POST' ? { method: options.method } : {}),
+          },
         },
         this.parentOrigin
       );
@@ -228,6 +235,16 @@ function mapApiPathToHandlerRoute(path: string): string {
     return `/feature-flags${suffix}`;
   }
 
+  // Handle platform notifications prefix
+  const notifPrefix = '/api/v1/platform-notifications';
+  if (path.startsWith(notifPrefix)) {
+    const suffix = path.slice(notifPrefix.length);
+    if (suffix === '' || suffix === '/') {
+      return '/notifications';
+    }
+    return `/notifications${suffix}`;
+  }
+
   // Return as-is if it doesn't match the expected prefix
   return path;
 }
@@ -236,9 +253,11 @@ function mapApiPathToHandlerRoute(path: string): string {
  * Call the WASM handler via the extension proxy.
  * This is the proper pattern: UI -> postMessage -> iframeBridge -> ext-proxy -> Runner -> WASM handler
  *
- * Since the iframeBridge always uses POST, we encode the intended action in the body.
- * The handler uses the __action field to determine the operation for paths that support
- * multiple operations (like /reports/:id which can be GET, PUT, or DELETE).
+ * The deployed iframeBridge always sends POST regardless of the method field in postMessage.
+ * We use two mechanisms to convey the intended HTTP method:
+ * 1. __method query param: The ext-proxy reads this and overrides the POST method before
+ *    forwarding to the runner. This ensures the WASM handler sees the correct HTTP method.
+ * 2. __action body field: Legacy disambiguation for operations on the same path.
  */
 async function proxyApiCall<T>(
   route: string,
@@ -247,6 +266,15 @@ async function proxyApiCall<T>(
   // Map the internal API path to the WASM handler route
   const handlerRoute = mapApiPathToHandlerRoute(route);
   const method = options?.method?.toUpperCase() || 'GET';
+
+  // For GET requests, append __method=GET to the query string so the ext-proxy
+  // converts the POST (forced by iframeBridge) into GET.
+  // DELETE/PUT continue to use the __action body field for disambiguation.
+  let finalRoute = handlerRoute;
+  if (method === 'GET') {
+    const separator = handlerRoute.includes('?') ? '&' : '?';
+    finalRoute = `${handlerRoute}${separator}__method=${method}`;
+  }
 
   // Build the body with __action field for non-GET methods
   let bodyData: Record<string, unknown> | undefined;
@@ -268,6 +296,9 @@ async function proxyApiCall<T>(
   } else if (method === 'POST' && handlerRoute === '/feature-flags') {
     bodyData = bodyData || {};
     bodyData.__action = 'create';
+  } else if (method === 'POST' && handlerRoute === '/notifications') {
+    bodyData = bodyData || {};
+    bodyData.__action = 'create';
   }
 
   // Encode body if present
@@ -277,10 +308,10 @@ async function proxyApiCall<T>(
     payload = new TextEncoder().encode(bodyJson);
   }
 
-  console.log('[Extension] Calling proxy:', { route, handlerRoute, method, hasBody: !!payload });
+  console.log('[Extension] Calling proxy:', { route, handlerRoute: finalRoute, method, hasBody: !!payload });
 
   try {
-    const result = await bridge.callProxy<T>(handlerRoute, payload);
+    const result = await bridge.callProxy<T>(finalRoute, payload, { method });
     console.log('[Extension] Proxy response:', result);
     return result;
   } catch (error) {
@@ -382,7 +413,7 @@ interface AuditLogEntry {
   event_type: string;
   user_id: string | null;
   user_email: string | null;
-  resource_type: 'report' | 'tenant' | 'user' | 'subscription' | null;
+  resource_type: 'report' | 'tenant' | 'user' | 'subscription' | 'notification' | null;
   resource_id: string | null;
   resource_name: string | null;
   workflow_id: string | null;
@@ -490,6 +521,44 @@ async function callFeatureFlagApi<T>(
     return { success: true, data: result as T };
   } catch (error) {
     console.error('Feature Flag API call failed:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+// API client for platform notification endpoints
+async function callNotificationApi<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<ApiResponse<T>> {
+  const route = `/api/v1/platform-notifications${path}`;
+
+  try {
+    let body: any = undefined;
+    if (options.body && typeof options.body === 'string') {
+      try {
+        body = JSON.parse(options.body);
+      } catch {
+        body = options.body;
+      }
+    }
+
+    const result = await proxyApiCall<any>(route, {
+      method: options.method as string || 'GET',
+      body,
+    });
+
+    if (result && typeof result === 'object') {
+      if ('success' in result) {
+        return result as ApiResponse<T>;
+      }
+      if ('data' in result) {
+        return { success: true, data: result.data as T };
+      }
+      return { success: true, data: result as T };
+    }
+    return { success: true, data: result as T };
+  } catch (error) {
+    console.error('Notification API call failed:', error);
     return { success: false, error: String(error) };
   }
 }
@@ -6216,7 +6285,884 @@ function FeatureFlagDetail({
 }
 
 // Main App
-type View = 'execute' | 'reports' | 'tenants' | 'feature-flags' | 'audit';
+// ============================================================================
+// Notifications View - Platform-wide announcements/alerts management
+// ============================================================================
+
+interface PlatformNotification {
+  notification_id: string;
+  title: string;
+  banner_content: string;
+  detail_content: string;
+  target_audience: {
+    filters: {
+      roles?: string[];
+      tenant_ids?: string[];
+      user_types?: string[];
+      subscription_statuses?: string[];
+      product_names?: string[];
+    };
+    excluded_user_ids?: string[];
+    resolved_user_count?: number;
+  };
+  variant: 'info' | 'warning' | 'destructive' | 'success' | 'default';
+  starts_at: string;
+  expires_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
+interface NotificationStats {
+  notification_id: string;
+  total_recipients: number;
+  total_dismissed: number;
+  total_detail_viewed: number;
+  reads_by_tenant: Array<{ tenant: string; tenant_name: string | null; total: number; dismissed: number; detail_viewed: number }>;
+}
+
+interface NotificationRecipientRead {
+  user_id: string;
+  tenant: string;
+  tenant_name: string | null;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  matched_at: string | null;
+  dismissed_at: string | null;
+  detail_viewed_at: string | null;
+}
+
+interface ResolvedRecipient {
+  user_id: string;
+  tenant: string;
+  tenant_name: string | null;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  roles: string[];
+  user_type: string;
+  subscription_status: string | null;
+  product_name: string | null;
+}
+
+// ── Expandable per-notification stats row ──
+function NotificationStatsExpander({ notificationId }: { notificationId: string }) {
+  const [stats, setStats] = useState<NotificationStats | null>(null);
+  const [reads, setReads] = useState<NotificationRecipientRead[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'summary' | 'users'>('summary');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const [statsRes, readsRes] = await Promise.all([
+        callNotificationApi<NotificationStats>(`/${notificationId}/stats`),
+        callNotificationApi<NotificationRecipientRead[]>(`/${notificationId}/reads`),
+      ]);
+      if (statsRes.success && statsRes.data) setStats(statsRes.data);
+      if (readsRes.success && readsRes.data) setReads(readsRes.data);
+      setLoading(false);
+    };
+    fetchData();
+  }, [notificationId]);
+
+  if (loading) return <LoadingIndicator size="sm" text="Loading stats..." />;
+  if (!stats) return <Text tone="muted">No stats available</Text>;
+
+  const filteredReads = reads?.filter(r =>
+    !search || `${r.first_name} ${r.last_name} ${r.email} ${r.tenant_name}`.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  const noAction = filteredReads.filter(r => !r.dismissed_at && !r.detail_viewed_at).length;
+  const dismissed = filteredReads.filter(r => r.dismissed_at && !r.detail_viewed_at).length;
+  const viewed = filteredReads.filter(r => r.detail_viewed_at).length;
+
+  return (
+    <div style={{ padding: '0.75rem 1rem', background: 'var(--alga-muted, #f8fafc)', borderRadius: '0.375rem' }}>
+      {/* Summary cards */}
+      <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.75rem' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{stats.total_recipients}</div>
+          <Text tone="muted" style={{ fontSize: '0.75rem' }}>Recipients</Text>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--alga-primary, #9855ee)' }}>{stats.total_detail_viewed}</div>
+          <Text tone="muted" style={{ fontSize: '0.75rem' }}>Viewed Details</Text>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{stats.total_dismissed}</div>
+          <Text tone="muted" style={{ fontSize: '0.75rem' }}>Dismissed</Text>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--alga-muted-fg, #666)' }}>{noAction}</div>
+          <Text tone="muted" style={{ fontSize: '0.75rem' }}>No Action</Text>
+        </div>
+      </div>
+
+      {/* Tab toggle */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+        <Button size="sm" variant={tab === 'summary' ? 'default' : 'outline'} onClick={() => setTab('summary')}>By Tenant</Button>
+        <Button size="sm" variant={tab === 'users' ? 'default' : 'outline'} onClick={() => setTab('users')}>Per User</Button>
+        {tab === 'users' && (
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filter by name, email, tenant..."
+            style={{ marginLeft: 'auto', width: '250px' }}
+          />
+        )}
+      </div>
+
+      {tab === 'summary' && stats.reads_by_tenant.length > 0 && (
+        <div style={{ maxHeight: '250px', overflow: 'auto' }}>
+          <DataTable
+            columns={[
+              { key: 'tenant_name', header: 'Tenant', render: (row) => row.tenant_name || row.tenant.slice(0, 8) },
+              { key: 'total', header: 'Recipients' },
+              { key: 'detail_viewed', header: 'Viewed Details' },
+              { key: 'dismissed', header: 'Dismissed' },
+            ] as Column<(typeof stats.reads_by_tenant)[0]>[]}
+            data={stats.reads_by_tenant}
+          />
+        </div>
+      )}
+
+      {tab === 'users' && (
+        <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid var(--alga-muted, #e2e8f0)', borderRadius: '0.375rem', background: 'var(--alga-card-bg, white)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--alga-muted, #e2e8f0)', position: 'sticky', top: 0, background: 'var(--alga-card-bg, white)' }}>
+                <th style={{ padding: '0.5rem', textAlign: 'left' }}>User</th>
+                <th style={{ padding: '0.5rem', textAlign: 'left' }}>Tenant</th>
+                <th style={{ padding: '0.5rem', textAlign: 'left' }}>Status</th>
+                <th style={{ padding: '0.5rem', textAlign: 'left' }}>Dismissed</th>
+                <th style={{ padding: '0.5rem', textAlign: 'left' }}>Viewed Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredReads.map(r => {
+                const hasViewed = !!r.detail_viewed_at;
+                const hasDismissed = !!r.dismissed_at;
+                return (
+                  <tr key={r.user_id} style={{ borderBottom: '1px solid var(--alga-muted, #e2e8f0)' }}>
+                    <td style={{ padding: '0.4rem 0.5rem' }}>
+                      <div style={{ fontWeight: 500 }}>{r.first_name} {r.last_name}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--alga-muted-fg, #666)' }}>{r.email}</div>
+                    </td>
+                    <td style={{ padding: '0.4rem 0.5rem' }}>{r.tenant_name || r.tenant.slice(0, 8)}</td>
+                    <td style={{ padding: '0.4rem 0.5rem' }}>
+                      {hasViewed ? <Badge tone="success">Viewed</Badge>
+                        : hasDismissed ? <Badge tone="warning">Dismissed</Badge>
+                        : <Badge tone="muted">Pending</Badge>}
+                    </td>
+                    <td style={{ padding: '0.4rem 0.5rem', color: hasDismissed ? 'inherit' : 'var(--alga-muted-fg, #999)' }}>
+                      {hasDismissed ? new Date(r.dismissed_at!).toLocaleString() : '—'}
+                    </td>
+                    <td style={{ padding: '0.4rem 0.5rem', color: hasViewed ? 'inherit' : 'var(--alga-muted-fg, #999)' }}>
+                      {hasViewed ? new Date(r.detail_viewed_at!).toLocaleString() : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredReads.length === 0 && (
+                <tr><td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>No recipients found</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NotificationsView() {
+  const [view, setView] = useState<'list' | 'create' | 'edit'>('list');
+  const [notifications, setNotifications] = useState<PlatformNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editingNotification, setEditingNotification] = useState<PlatformNotification | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const result = await callNotificationApi<PlatformNotification[]>('?activeOnly=false');
+    if (result.success && result.data) {
+      setNotifications(result.data);
+    } else {
+      setError(result.error || 'Failed to load notifications');
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+
+  if (view === 'create') {
+    return <NotificationEditor onBack={() => { setView('list'); fetchNotifications(); }} />;
+  }
+
+  if (view === 'edit' && editingNotification) {
+    return <NotificationEditor notification={editingNotification} onBack={() => { setView('list'); setEditingNotification(null); fetchNotifications(); }} />;
+  }
+
+  return (
+    <div style={{ padding: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Platform Notifications</h3>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button size="sm" variant="outline" onClick={fetchNotifications}>Refresh</Button>
+          <Button size="sm" onClick={() => setView('create')}>Create Notification</Button>
+        </div>
+      </div>
+
+      {error && <Alert tone="danger">{error}</Alert>}
+
+      {loading ? (
+        <LoadingIndicator size="sm" text="Loading notifications..." />
+      ) : (
+        <div>
+          {notifications.map(n => {
+            const isExpanded = expandedId === n.notification_id;
+            const now = new Date();
+            const started = new Date(n.starts_at) <= now;
+            const expired = n.expires_at && new Date(n.expires_at) <= now;
+            const statusBadge = !n.is_active
+              ? <Badge tone="danger">Inactive</Badge>
+              : expired ? <Badge tone="warning">Expired</Badge>
+              : !started ? <Badge tone="info">Scheduled</Badge>
+              : <Badge tone="success">Active</Badge>;
+            const toneMap: Record<string, string> = { destructive: 'danger', warning: 'warning', info: 'info', success: 'success', default: 'muted' };
+            const f = n.target_audience?.filters || {};
+            const audienceParts: string[] = [];
+            if (f.roles?.length) audienceParts.push(`Roles: ${f.roles.join(', ')}`);
+            if (f.tenant_ids?.length) audienceParts.push(`${f.tenant_ids.length} tenant(s)`);
+            if (f.user_types?.length) audienceParts.push(`Types: ${f.user_types.join(', ')}`);
+            const count = n.target_audience?.resolved_user_count;
+
+            return (
+              <div key={n.notification_id} style={{
+                border: '1px solid var(--alga-muted, #e2e8f0)',
+                borderRadius: '0.5rem',
+                marginBottom: '0.5rem',
+                overflow: 'hidden',
+              }}>
+                {/* Row */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto auto auto auto auto',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    cursor: 'pointer',
+                    background: isExpanded ? 'var(--alga-muted, #f8fafc)' : 'var(--alga-card-bg, white)',
+                  }}
+                  onClick={() => setExpandedId(isExpanded ? null : n.notification_id)}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{n.title}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg, #666)' }}>
+                      {n.banner_content.length > 80 ? n.banner_content.slice(0, 80) + '...' : n.banner_content}
+                    </div>
+                  </div>
+                  <Badge tone={(toneMap[n.variant] || 'info') as any}>{n.variant}</Badge>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--alga-muted-fg, #666)' }}>
+                    {audienceParts.length > 0 ? audienceParts.join(' · ') : 'All'}
+                    {count != null && <span> ({count})</span>}
+                  </div>
+                  {statusBadge}
+                  <Text tone="muted" style={{ fontSize: '0.8rem' }}>{new Date(n.created_at).toLocaleDateString()}</Text>
+                  <div style={{ display: 'flex', gap: '0.25rem' }}>
+                    <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setEditingNotification(n); setView('edit'); }}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : n.notification_id); }}>
+                      {isExpanded ? '▲' : '▼'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Expanded stats */}
+                {isExpanded && (
+                  <div style={{ borderTop: '1px solid var(--alga-muted, #e2e8f0)', padding: '0.75rem 1rem' }}>
+                    <NotificationStatsExpander notificationId={n.notification_id} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {notifications.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--alga-muted-fg, #666)' }}>
+              No notifications yet. Click "Create Notification" to get started.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Notification Editor (Create / Edit) ──
+
+function NotificationEditor({ notification, onBack }: { notification?: PlatformNotification; onBack: () => void }) {
+  const isEdit = !!notification;
+
+  // Form state
+  const [title, setTitle] = useState(notification?.title || '');
+  const [bannerContent, setBannerContent] = useState(notification?.banner_content || '');
+  const [detailContent, setDetailContent] = useState(notification?.detail_content || '');
+  const [variant, setVariant] = useState(notification?.variant || 'info');
+  const [startsAt, setStartsAt] = useState(notification?.starts_at ? notification.starts_at.slice(0, 16) : '');
+  const [expiresAt, setExpiresAt] = useState(notification?.expires_at ? notification.expires_at.slice(0, 16) : '');
+  const [isActive, setIsActive] = useState(notification?.is_active ?? true);
+
+  // Audience targeting
+  const [filterRoles, setFilterRoles] = useState<string[]>(notification?.target_audience?.filters?.roles || []);
+  const [filterTenantIds, setFilterTenantIds] = useState<string[]>(notification?.target_audience?.filters?.tenant_ids || []);
+  const [filterUserTypes, setFilterUserTypes] = useState<string[]>(notification?.target_audience?.filters?.user_types || []);
+  const [filterSubStatuses, setFilterSubStatuses] = useState<string[]>(notification?.target_audience?.filters?.subscription_statuses || []);
+  const [filterProductNames, setFilterProductNames] = useState<string[]>(notification?.target_audience?.filters?.product_names || []);
+  const [emailSearch, setEmailSearch] = useState('');
+  const [roleInput, setRoleInput] = useState('');
+  const [productNameInput, setProductNameInput] = useState('');
+
+  // Recipient resolution
+  const [recipients, setRecipients] = useState<ResolvedRecipient[]>([]);
+  const [excludedUserIds, setExcludedUserIds] = useState<Set<string>>(new Set(notification?.target_audience?.excluded_user_ids || []));
+  const [recipientsResolved, setRecipientsResolved] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [recipientSearch, setRecipientSearch] = useState('');
+
+  // Stats (edit mode)
+  const [stats, setStats] = useState<NotificationStats | null>(null);
+
+  // Tenants list for multi-select
+  const [tenants, setTenants] = useState<Array<{ tenant: string; company_name: string }>>([]);
+
+  // UI state
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Fetch tenants on mount
+  useEffect(() => {
+    const fetchTenants = async () => {
+      try {
+        const result = await proxyApiCall<any>('/api/v1/tenant-management/tenants');
+        const data = result?.data || result;
+        if (Array.isArray(data)) {
+          setTenants(data.map((t: any) => ({ tenant: t.tenant, company_name: t.company_name || t.tenant })));
+        }
+      } catch { /* ignore */ }
+    };
+    fetchTenants();
+  }, []);
+
+  // Fetch stats in edit mode
+  useEffect(() => {
+    if (!isEdit || !notification) return;
+    const fetchStats = async () => {
+      const result = await callNotificationApi<NotificationStats>(`/${notification.notification_id}/stats`);
+      if (result.success && result.data) setStats(result.data);
+    };
+    fetchStats();
+  }, [isEdit, notification]);
+
+  const handleResolveRecipients = async () => {
+    setResolving(true);
+    const filters: Record<string, unknown> = {};
+    if (filterRoles.length > 0) filters.roles = filterRoles;
+    if (filterTenantIds.length > 0) filters.tenant_ids = filterTenantIds;
+    if (filterUserTypes.length > 0) filters.user_types = filterUserTypes;
+    if (filterSubStatuses.length > 0) filters.subscription_statuses = filterSubStatuses;
+    if (filterProductNames.length > 0) filters.product_names = filterProductNames;
+
+    const result = await callNotificationApi<ResolvedRecipient[]>('/resolve-recipients', {
+      method: 'POST',
+      body: JSON.stringify({ filters, email_search: emailSearch || undefined }),
+    });
+
+    if (result.success && result.data) {
+      setRecipients(result.data);
+      setRecipientsResolved(true);
+      // Preserve existing exclusions, remove any that are no longer in the resolved list
+      const resolvedIds = new Set(result.data.map(r => r.user_id));
+      setExcludedUserIds(prev => {
+        const next = new Set<string>();
+        prev.forEach(id => { if (resolvedIds.has(id)) next.add(id); });
+        return next;
+      });
+    }
+    setResolving(false);
+  };
+
+  const handleSave = async () => {
+    if (!recipientsResolved) {
+      setSaveError('Please resolve recipients before saving.');
+      return;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+
+    const targetAudience = {
+      filters: {
+        ...(filterRoles.length > 0 && { roles: filterRoles }),
+        ...(filterTenantIds.length > 0 && { tenant_ids: filterTenantIds }),
+        ...(filterUserTypes.length > 0 && { user_types: filterUserTypes }),
+        ...(filterSubStatuses.length > 0 && { subscription_statuses: filterSubStatuses }),
+        ...(filterProductNames.length > 0 && { product_names: filterProductNames }),
+        ...(emailSearch.trim() && { email_search: emailSearch.trim() }),
+      },
+      excluded_user_ids: Array.from(excludedUserIds),
+      resolved_user_count: recipients.length - excludedUserIds.size,
+    };
+
+    // Send the full materialized recipient list with exclusion flags
+    const recipientList = recipients.map(r => ({
+      user_id: r.user_id,
+      tenant: r.tenant,
+      excluded: excludedUserIds.has(r.user_id),
+    }));
+
+    const body: Record<string, unknown> = {
+      title,
+      banner_content: bannerContent,
+      detail_content: detailContent,
+      target_audience: targetAudience,
+      variant,
+      recipients: recipientList,
+      ...(startsAt && { starts_at: new Date(startsAt).toISOString() }),
+      ...(expiresAt && { expires_at: new Date(expiresAt).toISOString() }),
+    };
+
+    if (isEdit) {
+      body.is_active = isActive;
+    }
+
+    const result = isEdit
+      ? await callNotificationApi(`/${notification!.notification_id}`, { method: 'PUT', body: JSON.stringify(body) })
+      : await callNotificationApi('', { method: 'POST', body: JSON.stringify(body) });
+
+    if (result.success) {
+      onBack();
+    } else {
+      setSaveError(result.error || 'Failed to save notification');
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async () => {
+    const result = await callNotificationApi(`/${notification!.notification_id}`, { method: 'DELETE' });
+    if (result.success) {
+      onBack();
+    } else {
+      setSaveError(result.error || 'Failed to delete notification');
+    }
+    setShowDeleteConfirm(false);
+  };
+
+  const addRole = () => {
+    const r = roleInput.trim();
+    if (r && !filterRoles.includes(r)) {
+      setFilterRoles([...filterRoles, r]);
+    }
+    setRoleInput('');
+  };
+
+  const selectedCount = recipientsResolved ? recipients.length - excludedUserIds.size : null;
+  const allSelected = recipientsResolved && excludedUserIds.size === 0;
+
+  const filteredRecipients = recipientSearch
+    ? recipients.filter(r =>
+        `${r.first_name} ${r.last_name} ${r.email} ${r.tenant_name}`.toLowerCase().includes(recipientSearch.toLowerCase())
+      )
+    : recipients;
+
+  const variantOptions: SelectOption[] = [
+    { value: 'info', label: 'Info (blue)' },
+    { value: 'warning', label: 'Warning (amber)' },
+    { value: 'destructive', label: 'Destructive (red)' },
+    { value: 'success', label: 'Success (green)' },
+  ];
+
+  const userTypeOptions: SelectOption[] = [
+    { value: 'internal', label: 'Internal users' },
+    { value: 'client', label: 'Client portal users' },
+  ];
+
+  const tenantOptions: SelectOption[] = tenants.map(t => ({ value: t.tenant, label: t.company_name }));
+
+  // Map DB variant to ui-kit Alert tone
+  const variantToTone: Record<string, 'info' | 'success' | 'warning' | 'danger'> = {
+    info: 'info',
+    warning: 'warning',
+    destructive: 'danger',
+    success: 'success',
+    default: 'info',
+  };
+
+  return (
+    <div style={{ padding: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+        <Button size="sm" variant="outline" onClick={onBack}>← Back</Button>
+        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>{isEdit ? 'Edit Notification' : 'Create Notification'}</h3>
+        {isEdit && (
+          <Button size="sm" variant="destructive" onClick={() => setShowDeleteConfirm(true)} style={{ marginLeft: 'auto' }}>
+            Delete
+          </Button>
+        )}
+      </div>
+
+      {saveError && <Alert tone="danger" style={{ marginBottom: '1rem' }}>{saveError}</Alert>}
+
+      {/* ── Section 1: Content Editor (split pane) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+        {/* Left: Editor */}
+        <Card style={{ padding: '1rem' }}>
+          <h4 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>Content</h4>
+
+          <div style={{ marginBottom: '0.75rem' }}>
+            <Label>Title *</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Notification title" />
+          </div>
+
+          <div style={{ marginBottom: '0.75rem' }}>
+            <Label>Banner Content * (short HTML for the alert banner)</Label>
+            <TextArea value={bannerContent} onChange={(e) => setBannerContent(e.target.value)} rows={3} placeholder="<p>Short announcement text shown in the banner...</p>" />
+          </div>
+
+          <div style={{ marginBottom: '0.75rem' }}>
+            <Label>Detail Content * (full HTML for the learn-more page)</Label>
+            <TextArea value={detailContent} onChange={(e) => setDetailContent(e.target.value)} rows={10} placeholder="<h2>Full announcement details...</h2><p>Detailed information here.</p>" style={{ fontFamily: 'monospace', fontSize: '0.85rem' }} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <div>
+              <Label>Variant</Label>
+              <CustomSelect options={variantOptions} value={variant} onValueChange={setVariant} />
+            </div>
+            {isEdit && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '1.5rem' }}>
+                <Switch checked={isActive} onCheckedChange={setIsActive} />
+                <Label>Active</Label>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <Label>Starts At</Label>
+              <Input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+            </div>
+            <div>
+              <Label>Expires At (optional)</Label>
+              <Input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+            </div>
+          </div>
+        </Card>
+
+        {/* Right: Live Preview */}
+        <Card style={{ padding: '1rem' }}>
+          <h4 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>Live Preview</h4>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <Label style={{ marginBottom: '0.5rem', display: 'block' }}>Banner Preview</Label>
+            <Alert tone={variantToTone[variant] || 'info'}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ flex: 1, fontSize: '0.875rem' }} dangerouslySetInnerHTML={{ __html: bannerContent || '<em>Banner content preview...</em>' }} />
+                <button style={{ padding: '0.25rem 0.75rem', borderRadius: '0.25rem', border: '1px solid #ccc', background: 'white', fontSize: '0.75rem', cursor: 'pointer' }}>Learn More</button>
+                <button style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', border: 'none', background: 'transparent', fontSize: '0.75rem', cursor: 'pointer', color: '#666' }}>✕</button>
+              </div>
+            </Alert>
+          </div>
+
+          <Separator />
+
+          <div style={{ marginTop: '1rem' }}>
+            <Label style={{ marginBottom: '0.5rem', display: 'block' }}>Detail Page Preview</Label>
+            <div style={{
+              padding: '1rem',
+              borderRadius: '0.5rem',
+              border: '1px solid var(--alga-muted, #e2e8f0)',
+              backgroundColor: 'var(--alga-card-bg, white)',
+              maxHeight: '400px',
+              overflow: 'auto',
+              fontSize: '0.875rem',
+              lineHeight: 1.6,
+            }}>
+              {title && <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.25rem' }}>{title}</h2>}
+              <div dangerouslySetInnerHTML={{ __html: detailContent || '<em>Detail content preview...</em>' }} />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* ── Section 2: Audience Targeting ── */}
+      <Card style={{ padding: '1rem', marginBottom: '1.5rem' }}>
+        <h4 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>Audience Targeting</h4>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          {/* Roles */}
+          <div>
+            <Label>Roles (leave empty for all)</Label>
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <Input value={roleInput} onChange={(e) => setRoleInput(e.target.value)} placeholder="e.g. admin" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addRole(); } }} />
+              <Button size="sm" variant="outline" onClick={addRole}>Add</Button>
+            </div>
+            {filterRoles.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+                {filterRoles.map(r => (
+                  <Badge key={r} tone="info">
+                    {r} <span style={{ cursor: 'pointer', marginLeft: '0.25rem' }} onClick={() => setFilterRoles(filterRoles.filter(x => x !== r))}>✕</span>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tenants */}
+          <div>
+            <Label>Tenants (leave empty for all)</Label>
+            <CustomSelect
+              options={tenantOptions}
+              value=""
+              onValueChange={(v) => { if (v && !filterTenantIds.includes(v)) setFilterTenantIds([...filterTenantIds, v]); }}
+              placeholder="Select tenant..."
+            />
+            {filterTenantIds.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+                {filterTenantIds.map(id => {
+                  const name = tenants.find(t => t.tenant === id)?.company_name || id.slice(0, 8);
+                  return (
+                    <Badge key={id} tone="info">
+                      {name} <span style={{ cursor: 'pointer', marginLeft: '0.25rem' }} onClick={() => setFilterTenantIds(filterTenantIds.filter(x => x !== id))}>✕</span>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* User Types */}
+          <div>
+            <Label>User Types</Label>
+            <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.25rem' }}>
+              {userTypeOptions.map(opt => (
+                <Checkbox
+                  key={opt.value}
+                  label={opt.label}
+                  checked={filterUserTypes.includes(opt.value)}
+                  onChange={(e) => {
+                    if (e.target.checked) setFilterUserTypes([...filterUserTypes, opt.value]);
+                    else setFilterUserTypes(filterUserTypes.filter(t => t !== opt.value));
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          {/* Subscription Status */}
+          <div>
+            <Label>Subscription Status (leave empty for all)</Label>
+            <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.25rem', flexWrap: 'wrap' }}>
+              {[
+                { value: 'active', label: 'Active' },
+                { value: 'trialing', label: 'Trialing' },
+                { value: 'past_due', label: 'Past Due' },
+                { value: 'canceled', label: 'Canceled' },
+              ].map(opt => (
+                <Checkbox
+                  key={opt.value}
+                  id={`notif-filter-sub-status-${opt.value}`}
+                  label={opt.label}
+                  checked={filterSubStatuses.includes(opt.value)}
+                  onChange={(e) => {
+                    if (e.target.checked) setFilterSubStatuses([...filterSubStatuses, opt.value]);
+                    else setFilterSubStatuses(filterSubStatuses.filter(s => s !== opt.value));
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Product/Plan Name */}
+          <div>
+            <Label>Plan / Product Name (leave empty for all)</Label>
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <Input
+                id="notif-filter-product-name-input"
+                value={productNameInput}
+                onChange={(e) => setProductNameInput(e.target.value)}
+                placeholder="e.g. Pro, Enterprise"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = productNameInput.trim();
+                    if (val && !filterProductNames.includes(val)) {
+                      setFilterProductNames([...filterProductNames, val]);
+                    }
+                    setProductNameInput('');
+                  }
+                }}
+              />
+              <Button id="notif-filter-product-name-add" size="sm" variant="outline" onClick={() => {
+                const val = productNameInput.trim();
+                if (val && !filterProductNames.includes(val)) {
+                  setFilterProductNames([...filterProductNames, val]);
+                }
+                setProductNameInput('');
+              }}>Add</Button>
+            </div>
+            {filterProductNames.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+                {filterProductNames.map(name => (
+                  <Badge key={name} tone="info">
+                    {name} <span style={{ cursor: 'pointer', marginLeft: '0.25rem' }} onClick={() => setFilterProductNames(filterProductNames.filter(x => x !== name))}>✕</span>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Email search */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          <Input value={emailSearch} onChange={(e) => setEmailSearch(e.target.value)} placeholder="Search by email..." style={{ flex: 1 }} />
+          <Button size="sm" onClick={handleResolveRecipients} disabled={resolving}>
+            {resolving ? 'Resolving...' : 'Resolve Recipients'}
+          </Button>
+        </div>
+
+        {/* Recipient list */}
+        {recipientsResolved && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Checkbox
+                  label="Select All"
+                  checked={allSelected}
+                  onChange={(e) => {
+                    if (e.target.checked) setExcludedUserIds(new Set());
+                    else setExcludedUserIds(new Set(recipients.map(r => r.user_id)));
+                  }}
+                  style={{ fontWeight: 600 }}
+                />
+                <Text tone="muted">{selectedCount} of {recipients.length} users selected</Text>
+              </div>
+              <Input
+                value={recipientSearch}
+                onChange={(e) => setRecipientSearch(e.target.value)}
+                placeholder="Filter recipients..."
+                style={{ width: '250px' }}
+              />
+            </div>
+
+            <div style={{ maxHeight: '300px', overflow: 'auto', border: '1px solid var(--alga-muted, #e2e8f0)', borderRadius: '0.375rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--alga-muted, #e2e8f0)', background: 'var(--alga-muted, #f8fafc)' }}>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', width: '40px' }}></th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Name</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Email</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Tenant</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Plan</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Subscription</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Roles</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRecipients.map(r => (
+                    <tr key={r.user_id} style={{ borderBottom: '1px solid var(--alga-muted, #e2e8f0)' }}>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>
+                        <Checkbox
+                          checked={!excludedUserIds.has(r.user_id)}
+                          onChange={(e) => {
+                            const next = new Set(excludedUserIds);
+                            if (e.target.checked) next.delete(r.user_id);
+                            else next.add(r.user_id);
+                            setExcludedUserIds(next);
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{r.first_name} {r.last_name}</td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{r.email}</td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{r.tenant_name || r.tenant.slice(0, 8)}</td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{r.product_name || '—'}</td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>
+                        {r.subscription_status
+                          ? <Badge tone={r.subscription_status === 'active' ? 'success' : r.subscription_status === 'trialing' ? 'info' : r.subscription_status === 'past_due' ? 'warning' : 'muted'}>
+                              {r.subscription_status}
+                            </Badge>
+                          : '—'}
+                      </td>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{r.roles.join(', ') || '—'}</td>
+                    </tr>
+                  ))}
+                  {filteredRecipients.length === 0 && (
+                    <tr><td colSpan={7} style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>No matching recipients</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* ── Section 3: Stats (edit mode) ── */}
+      {isEdit && stats && (
+        <Card style={{ padding: '1rem', marginBottom: '1.5rem' }}>
+          <h4 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>Read Statistics</h4>
+          <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
+            <div>
+              <Text tone="muted">Dismissed (banner)</Text>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{stats.total_dismissed}</div>
+            </div>
+            <div>
+              <Text tone="muted">Viewed details</Text>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{stats.total_detail_viewed}</div>
+            </div>
+          </div>
+          {stats.reads_by_tenant.length > 0 && (
+            <DataTable
+              columns={[
+                { key: 'tenant_name', header: 'Tenant', render: (row) => row.tenant_name || row.tenant.slice(0, 8) },
+                { key: 'dismissed', header: 'Dismissed' },
+                { key: 'detail_viewed', header: 'Detail Viewed' },
+              ] as Column<(typeof stats.reads_by_tenant)[0]>[]}
+              data={stats.reads_by_tenant}
+            />
+          )}
+        </Card>
+      )}
+
+      {/* ── Save button ── */}
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <Button onClick={handleSave} disabled={saving || !title || !bannerContent || !detailContent || !recipientsResolved}>
+          {saving ? 'Saving...' : (isEdit ? 'Update Notification' : 'Create Notification')}
+        </Button>
+        <Button variant="outline" onClick={onBack}>Cancel</Button>
+      </div>
+
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          isOpen={true}
+          title="Delete Notification"
+          message="This will deactivate the notification. It will no longer be shown to any users."
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+type View = 'execute' | 'reports' | 'tenants' | 'feature-flags' | 'notifications' | 'audit';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('execute');
@@ -6247,6 +7193,7 @@ function App() {
     { key: 'reports', label: 'Reports', content: <ReportsList /> },
     { key: 'tenants', label: 'Tenant Management', content: <TenantManagementView /> },
     { key: 'feature-flags', label: 'Feature Flags', content: <FeatureFlagsView /> },
+    { key: 'notifications', label: 'Notifications', content: <NotificationsView /> },
     { key: 'audit', label: 'Audit Logs', content: <AuditLogs /> },
   ];
 

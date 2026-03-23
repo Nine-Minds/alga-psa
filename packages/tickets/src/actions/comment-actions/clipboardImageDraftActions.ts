@@ -2,7 +2,6 @@
 
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { deleteDocument } from '@alga-psa/documents/actions/documentActions';
 import type { Knex } from 'knex';
 
 type DraftClipboardImageDeleteFailureReason =
@@ -20,9 +19,15 @@ interface DraftClipboardImageDeleteFailure {
   detail?: string;
 }
 
+type DeleteDocumentFn = (
+  documentId: string,
+  userId: string
+) => Promise<{ success: boolean; deleted?: boolean; message?: string }>;
+
 interface DeleteDraftClipboardImagesInput {
   ticketId: string;
   documentIds: string[];
+  deleteDocumentFn: DeleteDocumentFn;
 }
 
 interface DeleteDraftClipboardImagesResult {
@@ -195,7 +200,7 @@ export const deleteDraftClipboardImages = withAuth(
     const failures = [...evaluation.failures];
 
     for (const candidate of evaluation.deletable) {
-      const deleteResult = await deleteDocument(candidate.document_id, user.user_id);
+      const deleteResult = await input.deleteDocumentFn(candidate.document_id, user.user_id);
       if (deleteResult.success && deleteResult.deleted) {
         deletedDocumentIds.push(candidate.document_id);
         continue;

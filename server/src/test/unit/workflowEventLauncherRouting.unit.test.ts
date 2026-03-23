@@ -6,7 +6,7 @@ import {
   stateSetStep,
   TEST_SCHEMA_REF
 } from '../helpers/workflowRuntimeV2TestHelpers';
-import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
+import { initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
 
 const {
   launchPublishedWorkflowRun,
@@ -57,7 +57,7 @@ vi.mock('@alga-psa/db', () => ({
   auditLog: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('@shared/workflow/persistence/workflowDefinitionModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowDefinitionModelV2', () => ({
   default: {
     list: vi.fn(async () => [
       {
@@ -74,7 +74,7 @@ vi.mock('@shared/workflow/persistence/workflowDefinitionModelV2', () => ({
   }
 }));
 
-vi.mock('@shared/workflow/persistence/workflowDefinitionVersionModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2', () => ({
   default: {
     listByWorkflow: vi.fn(async () => [
       {
@@ -94,11 +94,11 @@ vi.mock('@shared/workflow/persistence/workflowDefinitionVersionModelV2', () => (
   }
 }));
 
-vi.mock('@shared/workflow/persistence/workflowRuntimeEventModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowRuntimeEventModelV2', () => ({
   default: workflowEvents
 }));
 
-vi.mock('@shared/workflow/persistence/workflowRunWaitModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowRunWaitModelV2', () => ({
   default: workflowWaits
 }));
 
@@ -118,7 +118,7 @@ vi.mock('@alga-psa/workflows/lib/workflowScheduleLifecycle', () => ({
   syncWorkflowScheduleState: vi.fn()
 }));
 
-import { submitWorkflowEventAction } from '@alga-psa/workflows/actions/workflow-runtime-v2-actions';
+import { submitWorkflowEventAction } from '@alga-psa/workflows/actions-psa/workflows-runtime-v2-actions';
 
 describe('Workflow event launcher routing', () => {
   beforeEach(() => {

@@ -1,0 +1,20 @@
+{
+  "name": "@alga-psa/block-content",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/block-content/src",
+  "projectType": "library",
+  "tags": ["scope:block-content", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop",
+      "dependsOn": []
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/block-content/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

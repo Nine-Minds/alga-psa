@@ -23,12 +23,10 @@ import { IContract, IContractWithClient } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
-  checkClientHasActiveContract,
   deleteContract,
   getDraftContracts,
   getContractTemplates,
   getContractsWithClients,
-  updateContract,
 } from '@alga-psa/billing/actions/contractActions';
 import {
   getDraftContractForResume,
@@ -37,6 +35,7 @@ import {
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { ContractDialog } from './ContractDialog';
+import { updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import {
   getDraftTabBadgeCount,
   normalizeContractSubtab,
@@ -59,6 +58,13 @@ const Contracts: React.FC = () => {
     clientName: string;
   } | null>(null);
   const [isDiscardingDraft, setIsDiscardingDraft] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<{
+    contractId: string;
+    contractName: string;
+    kind: 'template' | 'client';
+    clientName?: string;
+  } | null>(null);
+  const [isDeletingContract, setIsDeletingContract] = useState(false);
   const [showTemplateWizard, setShowTemplateWizard] = useState(false);
   const [showClientWizard, setShowClientWizard] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,17 +138,23 @@ const Contracts: React.FC = () => {
     router.replace(`/msp/billing?${params.toString()}`);
   };
 
-  const handleDeleteContract = async (contractId: string) => {
+  const confirmDeleteContract = async () => {
+    if (!contractToDelete) return;
+    setIsDeletingContract(true);
     try {
-      const result = await deleteContract(contractId);
+      const result = await deleteContract(contractToDelete.contractId);
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
+        setContractToDelete(null);
         return;
       }
       await fetchContracts();
+      setContractToDelete(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete contract';
-      alert(message);
+      toast.error(message);
+    } finally {
+      setIsDeletingContract(false);
     }
   };
 
@@ -158,7 +170,7 @@ const Contracts: React.FC = () => {
       setShowClientWizard(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to resume draft';
-      alert(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -183,47 +195,42 @@ const Contracts: React.FC = () => {
     }
   };
 
-  const handleTerminateContract = async (contractId: string) => {
+  const handleTerminateContract = async (clientContractId?: string) => {
     try {
-      await updateContract(contractId, { status: 'terminated' });
+      if (!clientContractId) {
+        throw new Error('Missing client contract identifier');
+      }
+      await updateClientContractForBilling(clientContractId, { is_active: false });
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to terminate contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
-  const handleRestoreContract = async (contractId: string, clientId?: string) => {
+  const handleRestoreContract = async (clientContractId?: string) => {
     try {
-      if (clientId) {
-        const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
-        if (hasActiveContract) {
-          alert('Cannot restore this contract to active status because the client already has an active contract. Please terminate their current active contract first, or restore this contract as a draft.');
-          return;
-        }
+      if (!clientContractId) {
+        throw new Error('Missing client contract identifier');
       }
-      await updateContract(contractId, { status: 'active' });
+      await updateClientContractForBilling(clientContractId, { is_active: true });
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to restore contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
-  const handleSetToActive = async (contractId: string, clientId?: string) => {
+  const handleSetToActive = async (clientContractId?: string) => {
     try {
-      if (clientId) {
-        const hasActiveContract = await checkClientHasActiveContract(clientId, contractId);
-        if (hasActiveContract) {
-          alert('Cannot set this contract to active because the client already has an active contract. Please terminate their current active contract first.');
-          return;
-        }
+      if (!clientContractId) {
+        throw new Error('Missing client contract identifier');
       }
-      await updateContract(contractId, { status: 'active' });
+      await updateClientContractForBilling(clientContractId, { is_active: true });
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to activate contract';
-      alert(message);
+      toast.error(message);
     }
   };
 
@@ -271,8 +278,8 @@ const renderStatusBadge = (status: string) => {
     },
     {
       title: 'Status',
-      dataIndex: 'status',
-      render: renderStatusBadge,
+      dataIndex: 'assignment_status',
+      render: (value: string | null, record) => renderStatusBadge(value ?? record.status),
     },
     {
       title: 'Actions',
@@ -303,12 +310,16 @@ const renderStatusBadge = (status: string) => {
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
-              id="delete-contract-menu-item"
+              id="delete-template-contract-menu-item"
               className="text-red-600 focus:text-red-600"
               onClick={(event) => {
                 event.stopPropagation();
                 if (record.contract_id) {
-                  void handleDeleteContract(record.contract_id);
+                  setContractToDelete({
+                    contractId: record.contract_id,
+                    contractName: (record.contract_name?.trim() || 'Untitled template'),
+                    kind: 'template',
+                  });
                 }
               }}
             >
@@ -328,7 +339,7 @@ const renderStatusBadge = (status: string) => {
         typeof value === 'string' && value.trim().length > 0 ? value : '—',
     },
     {
-      title: 'Contract Template',
+      title: 'Source Template',
       dataIndex: 'template_contract_name',
       render: (value: string | null) =>
         value && value.trim().length > 0 ? value : '—',
@@ -374,7 +385,8 @@ const renderStatusBadge = (status: string) => {
       title: 'Actions',
       dataIndex: 'contract_id',
       render: (value, record) => {
-        const isDraft = record.status === 'draft';
+        const liveStatus = record.assignment_status ?? record.status;
+        const isDraft = liveStatus === 'draft';
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -403,55 +415,54 @@ const renderStatusBadge = (status: string) => {
               >
                 {isDraft ? 'Resume' : 'Edit'}
               </DropdownMenuItem>
-            {record.status === 'active' && (
+            {liveStatus === 'active' && (
               <DropdownMenuItem
                 id="terminate-contract-menu-item"
                 className="text-orange-600 focus:text-orange-600"
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (record.contract_id) {
-                    void handleTerminateContract(record.contract_id);
-                  }
+                  void handleTerminateContract(record.client_contract_id);
                 }}
               >
                 Terminate
               </DropdownMenuItem>
             )}
-            {record.status === 'terminated' && (
+            {liveStatus === 'terminated' && (
               <DropdownMenuItem
                 id="restore-contract-menu-item"
                 className="text-green-600 focus:text-green-600"
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (record.contract_id) {
-                    void handleRestoreContract(record.contract_id, record.client_id);
-                  }
+                  void handleRestoreContract(record.client_contract_id);
                 }}
               >
                 Restore
               </DropdownMenuItem>
             )}
-            {record.status === 'draft' && (
+            {liveStatus === 'draft' && (
               <DropdownMenuItem
                 id="set-to-active-menu-item"
                 className="text-green-600 focus:text-green-600"
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (record.contract_id) {
-                    void handleSetToActive(record.contract_id, record.client_id);
-                  }
+                  void handleSetToActive(record.client_contract_id);
                 }}
               >
                 Set to Active
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
-              id="delete-contract-menu-item"
+              id="delete-client-contract-menu-item"
               className="text-red-600 focus:text-red-600"
               onClick={(event) => {
                 event.stopPropagation();
                 if (record.contract_id) {
-                  void handleDeleteContract(record.contract_id);
+                  setContractToDelete({
+                    contractId: record.contract_id,
+                    contractName: (record.contract_name?.trim() || 'Untitled contract'),
+                    kind: 'client',
+                    clientName: record.client_name?.trim() || undefined,
+                  });
                 }
               }}
             >
@@ -742,9 +753,14 @@ const renderStatusBadge = (status: string) => {
       <Card size="2">
         <Box p="4">
           <div className="flex justify-between items-center mb-4">
-            <Heading as="h3" size="4">
-              Contracts
-            </Heading>
+            <div className="space-y-1">
+              <Heading as="h3" size="4">
+                Contracts
+              </Heading>
+              <p className="text-sm text-muted-foreground">
+                Templates are reusable definitions. Client contracts are client-owned instances.
+              </p>
+            </div>
           </div>
 
           {error && (
@@ -811,6 +827,33 @@ const renderStatusBadge = (status: string) => {
         cancelLabel="Cancel"
         confirmLabel="Discard"
         isConfirming={isDiscardingDraft}
+      />
+      <ConfirmationDialog
+        id="delete-contract-confirmation"
+        isOpen={!!contractToDelete}
+        onClose={() => {
+          if (!isDeletingContract) {
+            setContractToDelete(null);
+          }
+        }}
+        onConfirm={confirmDeleteContract}
+        title={
+          contractToDelete?.kind === 'client'
+            ? 'Delete client contract?'
+            : 'Delete contract template?'
+        }
+        message={
+          contractToDelete
+            ? contractToDelete.kind === 'client'
+              ? `Are you sure you want to permanently delete the client contract "${contractToDelete.contractName}"${
+                  contractToDelete.clientName ? ` for ${contractToDelete.clientName}` : ''
+                }? This action cannot be undone.`
+              : `Are you sure you want to permanently delete the template "${contractToDelete.contractName}"? This action cannot be undone.`
+            : ''
+        }
+        cancelLabel="Cancel"
+        confirmLabel={isDeletingContract ? 'Deleting…' : 'Delete'}
+        isConfirming={isDeletingContract}
       />
     </>
   );

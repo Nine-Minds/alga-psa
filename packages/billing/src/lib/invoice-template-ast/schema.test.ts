@@ -1,26 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import {
+  DEFAULT_INVOICE_PRINT_SETTINGS,
+  INVOICE_PRINT_MARGIN_MM_RANGE,
+  INVOICE_TEMPLATE_AST_VERSION,
+} from '@alga-psa/types';
 import { validateInvoiceTemplateAst } from './schema';
 
 describe('invoiceTemplateAstSchema', () => {
+  const createMinimalAst = (metadata?: Record<string, unknown>) => ({
+    kind: 'invoice-template-ast',
+    version: INVOICE_TEMPLATE_AST_VERSION,
+    ...(metadata ? { metadata } : {}),
+    layout: {
+      id: 'root',
+      type: 'document',
+      children: [],
+    },
+  });
+
   it('validates a minimal AST document', () => {
-    const result = validateInvoiceTemplateAst({
-      kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
-      layout: {
-        id: 'root',
-        type: 'document',
-        children: [],
-      },
-    });
+    const result = validateInvoiceTemplateAst(createMinimalAst());
 
     expect(result.success).toBe(true);
   });
 
   it('returns structured validation errors for invalid AST payloads', () => {
     const result = validateInvoiceTemplateAst({
-      kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      ...createMinimalAst(),
       layout: {
         id: 'root',
         type: 'unknown-node-type',
@@ -201,8 +207,7 @@ describe('invoiceTemplateAstSchema', () => {
 
   it('accepts optional strategyId on transform operations', () => {
     const result = validateInvoiceTemplateAst({
-      kind: 'invoice-template-ast',
-      version: INVOICE_TEMPLATE_AST_VERSION,
+      ...createMinimalAst(),
       transforms: {
         sourceBindingId: 'invoice.items',
         outputBindingId: 'invoice.items.grouped',
@@ -235,6 +240,55 @@ describe('invoiceTemplateAstSchema', () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it('accepts valid explicit print metadata with a supported paper preset and positive uniform margin', () => {
+    const result = validateInvoiceTemplateAst(
+      createMinimalAst({
+        printSettings: {
+          paperPreset: DEFAULT_INVOICE_PRINT_SETTINGS.paperPreset,
+          marginMm: DEFAULT_INVOICE_PRINT_SETTINGS.marginMm,
+        },
+      })
+    );
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects unknown paper preset values', () => {
+    const result = validateInvoiceTemplateAst(
+      createMinimalAst({
+        printSettings: {
+          paperPreset: 'Tabloid',
+          marginMm: DEFAULT_INVOICE_PRINT_SETTINGS.marginMm,
+        },
+      })
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) {
+      return;
+    }
+
+    expect(result.errors.some((error) => error.path === 'metadata.printSettings.paperPreset')).toBe(true);
+  });
+
+  it('rejects uniform margin values outside the supported range', () => {
+    const result = validateInvoiceTemplateAst(
+      createMinimalAst({
+        printSettings: {
+          paperPreset: 'Letter',
+          marginMm: INVOICE_PRINT_MARGIN_MM_RANGE.max + 1,
+        },
+      })
+    );
+
+    expect(result.success).toBe(false);
+    if (result.success) {
+      return;
+    }
+
+    expect(result.errors.some((error) => error.path === 'metadata.printSettings.marginMm')).toBe(true);
   });
 
   it('rejects invalid CSS identifiers in styles.classes keys', () => {

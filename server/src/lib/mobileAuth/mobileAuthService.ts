@@ -1,10 +1,10 @@
 import crypto from 'crypto';
 import { z } from 'zod';
 import { getConnection } from '../db/db';
-import { ApiKeyService } from '../services/apiKeyService';
+import { ApiKeyService } from '@alga-psa/auth';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
-import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+
 import { UnauthorizedError } from '../api/middleware/apiMiddleware';
 import { auditLog } from '../logging/auditLog';
 import { enforceMobileOttExchangeLimit, enforceMobileRefreshLimit } from '../security/mobileAuthRateLimiting';
@@ -304,20 +304,12 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
         ? [user.first_name, user.last_name].filter(Boolean).join(' ')
         : undefined;
 
-    let avatarUrl: string | undefined;
-    try {
-      const url = await getUserAvatarUrl(userId, tenantId);
-      if (url) avatarUrl = url;
-    } catch {
-      // Non-critical; proceed without avatar
-    }
-
     return {
       accessToken: apiKeyRecord.api_key,
       refreshToken,
       expiresInSec: config.accessTtlSec,
       tenantId,
-      user: user ? { id: userId, email: user.email ?? undefined, name, avatarUrl } : { id: userId },
+      user: user ? { id: userId, email: user.email ?? undefined, name, avatarUrl: user.avatarUrl ?? undefined } : { id: userId },
     };
   } catch (e) {
     // Best-effort cleanup: don't leave an active API key if refresh token creation fails.

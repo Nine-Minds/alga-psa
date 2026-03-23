@@ -3,13 +3,14 @@
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { IContract } from '@alga-psa/types';
+import { ContractStatus, IContract } from '@alga-psa/types';
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
 import { Calendar, CalendarClock, FileCheck, Layers3, Coins } from 'lucide-react';
 
 interface ContractHeaderProps {
   contract: IContract;
   summary?: IContractSummary | null;
+  liveStatus?: ContractStatus;
 }
 
 type SummaryStat = {
@@ -51,7 +52,8 @@ const formatNumber = (value?: number): string => {
   return value.toLocaleString();
 };
 
-const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) => {
+const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary, liveStatus }) => {
+  const status = liveStatus ?? contract.status;
   const stats: SummaryStat[] = [
     {
       label: 'Billing Frequency',
@@ -99,19 +101,24 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) =>
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-bold text-foreground">{contract.contract_name}</h1>
           <Badge variant={
-            contract.status === 'active' ? 'success' :
-            contract.status === 'terminated' ? 'warning' :
-            contract.status === 'expired' ? 'error' :
+            status === 'active' ? 'success' :
+            status === 'terminated' ? 'warning' :
+            status === 'expired' ? 'error' :
             'default-muted'
           }>
-            {contract.status === 'active' ? 'Active' :
-             contract.status === 'terminated' ? 'Terminated' :
-             contract.status === 'expired' ? 'Expired' :
+            {status === 'active' ? 'Active' :
+             status === 'terminated' ? 'Terminated' :
+             status === 'expired' ? 'Expired' :
              'Draft'}
           </Badge>
           {contract.is_template !== false && (
             <Badge variant="info">
               Template
+            </Badge>
+          )}
+          {contract.is_template === false && contract.owner_client_id && (
+            <Badge variant="default-muted">
+              Client-owned
             </Badge>
           )}
         </div>

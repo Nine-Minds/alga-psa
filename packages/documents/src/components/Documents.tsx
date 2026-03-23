@@ -35,6 +35,7 @@ import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { getCurrentUser, searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
 import {
   getDocumentsByEntity,
   getDocumentsByFolder,
@@ -158,6 +159,7 @@ const Documents = ({
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [visibilityUpdatingIds, setVisibilityUpdatingIds] = useState<Set<string>>(new Set());
   const [isClientUserContext, setIsClientUserContext] = useState(false);
+  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
   const [shareDialogDocument, setShareDialogDocument] = useState<IDocument | null>(null);
   const { enabled: documentFeaturesEnabled } = useFeatureFlag('document-folder-templates', { defaultValue: false });
 
@@ -276,7 +278,18 @@ const Documents = ({
       }
     };
 
+    const loadAiFeatureFlag = async () => {
+      try {
+        const features = await getExperimentalFeatures();
+        if (!mounted) return;
+        setAiAssistantEnabled(features.aiAssistant ?? false);
+      } catch {
+        // Feature flag not available — leave disabled
+      }
+    };
+
     void loadCurrentUser();
+    void loadAiFeatureFlag();
 
     return () => {
       mounted = false;
@@ -437,12 +450,28 @@ const Documents = ({
         setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
       }
     } else {
-      // Entity mode: trigger parent to refresh via router.refresh()
+      // Entity mode: directly fetch updated documents
+      if (entityId && entityType) {
+        try {
+          const response = await getDocumentsByEntity(entityId, entityType, filters, currentPage, pageSize);
+          if (isActionPermissionError(response)) {
+            handleError(response.permissionError);
+            return;
+          }
+          setDocumentsToDisplay(response.documents);
+          setTotalDocuments(response.totalCount);
+          setTotalPages(response.totalPages);
+        } catch (err) {
+          console.error('Error refreshing entity documents:', err);
+          setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+        }
+      }
+      // Also notify parent in case it needs to update other state
       if (onDocumentCreated) {
         onDocumentCreated();
       }
     }
-  }, [inFolderMode, filters, currentFolder, currentPage, pageSize, onDocumentCreated, t]);
+  }, [inFolderMode, entityId, entityType, filters, currentFolder, currentPage, pageSize, onDocumentCreated, tDoc]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -1310,6 +1339,7 @@ const Documents = ({
                   userName={currentUserName || userId}
                   editorRef={collabEditorRef}
                   searchMentions={searchUsersForMentions}
+                  aiAssistantEnabled={aiAssistantEnabled}
                   onConnectionStatusChange={handleCollabConnectionStatusChange}
                 />
               )
@@ -1890,6 +1920,19 @@ const Documents = ({
           {renderDrawerBody()}
           </Drawer>
         </div>
+
+        {/* Folder Selector Modal for New Documents (entity mode) */}
+        <FolderSelectorModal
+          isOpen={showDocumentFolderModal}
+          onClose={() => setShowDocumentFolderModal(false)}
+          onSelectFolder={handleDocumentFolderSelected}
+          title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
+          description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
+          namespace={namespace}
+          entityId={entityId}
+          entityType={entityType}
+          getFoldersFn={getFoldersFn}
+        />
 
         {/* Unsaved Changes Confirmation Dialog */}
         <ConfirmationDialog

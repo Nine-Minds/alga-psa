@@ -105,6 +105,9 @@ export const fetchReconciliationStats = withAuth(async (_user, { tenant }) => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      // Reconciliation reporting remains discrepancy-status and financial-date
+      // based. Canonical recurring service periods may be attached elsewhere as
+      // explanatory lineage, but they do not drive these report totals.
       // Get total counts by status
       const openCount = await CreditReconciliationReport.countByStatus('open');
       const inReviewCount = await CreditReconciliationReport.countByStatus('in_review');

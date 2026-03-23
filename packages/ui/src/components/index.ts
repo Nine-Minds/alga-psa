@@ -48,6 +48,8 @@ export { default as Drawer } from './Drawer';
 export * from './DropdownMenu';
 export * from './EditableField';
 export { default as EditableField } from './EditableField';
+export * from './EmojiPickerPopover';
+
 export * from './EditableServiceTypeSelect';
 export * from './EditableText';
 export { default as EditableText } from './EditableText';
@@ -78,6 +80,8 @@ export * from './QuickAddStatus';
 export { default as QuickAddStatus } from './QuickAddStatus';
 export * from './RadioGroup';
 export { default as RadioGroup } from './RadioGroup';
+export * from './ReactionDisplay';
+
 export * from './ReflectedDropdownMenu';
 export * from './SearchInput';
 export type { SelectOption as SearchableSelectOption } from './SearchableSelect';

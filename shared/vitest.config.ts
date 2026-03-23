@@ -17,6 +17,12 @@ export default defineConfig({
       { find: /^@alga-psa\/auth\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/$1') },
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
       { find: /^@alga-psa\/validation\/(.*)$/, replacement: path.resolve(__dirname, '../packages/validation/src/$1') },
+      { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/index.ts') },
+      { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/$1') },
+      { find: /^@alga-psa\/email$/, replacement: path.resolve(__dirname, '../packages/email/src/index.ts') },
+      { find: /^@alga-psa\/email\/(.*)$/, replacement: path.resolve(__dirname, '../packages/email/src/$1') },
+      { find: /^@alga-psa\/workflows$/, replacement: path.resolve(__dirname, '../ee/packages/workflows/src/index.ts') },
+      { find: /^@alga-psa\/workflows\/(.*)$/, replacement: path.resolve(__dirname, '../ee/packages/workflows/src/$1') },
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, './index.ts') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, './$1') },
       {

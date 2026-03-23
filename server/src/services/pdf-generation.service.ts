@@ -1,6 +1,7 @@
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { Browser } from 'puppeteer';
 import { FileStore } from 'server/src/types/storage';
+import { resolveInvoicePdfPrintOptionsFromAst } from '@alga-psa/billing/services';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
@@ -17,7 +18,7 @@ import { StorageProviderFactory, generateStoragePath } from '@alga-psa/storage';
 import { FileStoreModel } from 'server/src/models/storage';
 import logger from '@alga-psa/core/logger';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { buildDocumentGeneratedPayload } from '@shared/workflow/streams/domainEventBuilders/documentGeneratedEventBuilders';
+import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 
 interface PDFGenerationOptions {
   invoiceId?: string;
@@ -27,6 +28,17 @@ interface PDFGenerationOptions {
   cacheKey?: string;
   userId: string;
 }
+
+const DEFAULT_DOCUMENT_PDF_OPTIONS = {
+  format: 'A4',
+  printBackground: true,
+  margin: {
+    top: '10mm',
+    right: '10mm',
+    bottom: '10mm',
+    left: '10mm',
+  },
+} as const;
 
 export class PDFGenerationService {
   private readonly pdfCacheDir: string;
@@ -49,16 +61,19 @@ export class PDFGenerationService {
 
   async generatePDF(options: { invoiceId?: string; documentId?: string; userId: string }): Promise<Buffer> {
     let htmlContent: string;
+    let templateAst: InvoiceTemplateAst | null = null;
 
     if (options.invoiceId) {
-      htmlContent = await this.getInvoiceHtml(options.invoiceId);
+      const invoiceHtml = await this.getInvoiceHtml(options.invoiceId);
+      htmlContent = invoiceHtml.htmlContent;
+      templateAst = invoiceHtml.templateAst;
     } else if (options.documentId) {
       htmlContent = await this.getDocumentHtml(options.documentId);
     } else {
       throw new Error('Either invoiceId or documentId must be provided');
     }
 
-    const pdfBuffer = await this.generatePDFBuffer(htmlContent);
+    const pdfBuffer = await this.generatePDFBuffer(htmlContent, templateAst);
     return Buffer.from(pdfBuffer);
   }
 
@@ -67,9 +82,12 @@ export class PDFGenerationService {
     let entityId: string;
     let fileName: string;
     let sourceType: string;
+    let templateAst: InvoiceTemplateAst | null = null;
 
     if (options.invoiceId) {
-      htmlContent = await this.getInvoiceHtml(options.invoiceId);
+      const invoiceHtml = await this.getInvoiceHtml(options.invoiceId);
+      htmlContent = invoiceHtml.htmlContent;
+      templateAst = invoiceHtml.templateAst;
       entityId = options.invoiceId;
       if (!options.invoiceNumber) {
         throw new Error('Invoice number is required for invoice PDF generation');
@@ -90,7 +108,7 @@ export class PDFGenerationService {
       throw new Error('Either invoiceId or documentId must be provided');
     }
 
-    const pdfBuffer = await this.generatePDFBuffer(htmlContent);
+    const pdfBuffer = await this.generatePDFBuffer(htmlContent, templateAst);
 
     // Use the static method to store the PDF
     const fileId = uuidv4();
@@ -239,7 +257,9 @@ export class PDFGenerationService {
     };
   }
 
-  private async getInvoiceHtml(invoiceId: string): Promise<string> {
+  private async getInvoiceHtml(
+    invoiceId: string
+  ): Promise<{ htmlContent: string; templateAst: InvoiceTemplateAst | null }> {
     return runWithTenant(this.tenant, async () => {
       const [dbInvoiceData, templates] = await Promise.all([
         getInvoiceForRendering(invoiceId),
@@ -283,9 +303,12 @@ export class PDFGenerationService {
         invoiceViewModel as unknown as Record<string, unknown>
       );
 
-      return await renderInvoiceTemplateAstHtmlDocument(templateAst, evaluation, {
-        title: 'Invoice',
-      });
+      return {
+        htmlContent: await renderInvoiceTemplateAstHtmlDocument(templateAst, evaluation, {
+          title: 'Invoice',
+        }),
+        templateAst,
+      };
     });
   }
 
@@ -361,7 +384,7 @@ export class PDFGenerationService {
     });
   }
 
-  private async generatePDFBuffer(content: string): Promise<Uint8Array> {
+  private async generatePDFBuffer(content: string, templateAst?: InvoiceTemplateAst | null): Promise<Uint8Array> {
     let browser: Browser | null = null;
     try {
       browser = await this.browserPool.getBrowser();
@@ -370,16 +393,9 @@ export class PDFGenerationService {
         waitUntil: 'networkidle0'
       });
 
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: {
-          top: '10mm',
-          right: '10mm',
-          bottom: '10mm',
-          left: '10mm'
-        }
-      });
+      const pdfBuffer = await page.pdf(
+        templateAst ? resolveInvoicePdfPrintOptionsFromAst(templateAst) : DEFAULT_DOCUMENT_PDF_OPTIONS
+      );
       await page.close();
       return pdfBuffer;
     } finally {

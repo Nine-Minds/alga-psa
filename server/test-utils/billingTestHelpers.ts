@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import type { CadenceOwner } from '@alga-psa/types';
 import type { TestContext } from './testContext';
 
 interface SetupTaxOptions {
@@ -264,6 +265,8 @@ interface CreateServiceOptions {
 interface CreateFixedPlanOptions {
   planId?: string;
   clientBillingPlanId?: string;
+  contractId?: string;
+  clientContractId?: string;
   planName?: string;
   billingFrequency?: 'monthly' | 'annual';
   baseRateCents?: number;
@@ -272,9 +275,19 @@ interface CreateFixedPlanOptions {
   startDate?: string;
   endDate?: string | null;
   billingTiming?: 'arrears' | 'advance';
+  cadenceOwner?: CadenceOwner;
   enableProration?: boolean;
   billingCycleAlignment?: 'start' | 'end' | 'prorated';
   clientId?: string;
+  customRateCents?: number | null;
+  contractHeaderIsActive?: boolean;
+  contractHeaderStatus?: string;
+  assignmentIsActive?: boolean;
+  assignmentStatus?: string;
+  assignmentPoRequired?: boolean;
+  assignmentPoNumber?: string | null;
+  assignmentPoAmount?: number | null;
+  clientContractLineIsActive?: boolean;
 }
 
 interface AddServiceToPlanOptions {
@@ -303,6 +316,19 @@ interface CreateBucketUsageOptions {
   minutesUsed: number;
   overageMinutes?: number;
   rolledOverMinutes?: number;
+}
+
+interface DirectConcurrentAssignmentSeedOptions {
+  contractId?: string;
+  clientContractId?: string;
+  clientId?: string;
+  contractName?: string;
+  contractHeaderIsActive?: boolean;
+  contractHeaderStatus?: string;
+  assignmentIsActive?: boolean;
+  assignmentStatus?: string;
+  startDate?: string;
+  endDate?: string | null;
 }
 
 async function ensureServiceType(
@@ -474,11 +500,13 @@ export async function createFixedPlanAssignment(
   context: TestContext,
   serviceId: string,
   options: CreateFixedPlanOptions = {}
-): Promise<{ planId: string; clientBillingPlanId: string; contractLineId: string; clientContractLineId: string }> {
+): Promise<{ planId: string; clientBillingPlanId: string; contractLineId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
   const contractLineId = options.planId ?? uuidv4();
   const clientContractLineId = options.clientBillingPlanId ?? uuidv4();
   const legacyPlanId = contractLineId;
   const legacyClientPlanId = clientContractLineId;
+  const contractId = options.contractId ?? uuidv4();
+  const clientContractId = options.clientContractId ?? uuidv4();
   const configId = uuidv4();
   const baseRateCents = options.baseRateCents ?? 1000;
   const baseRateDollars = baseRateCents / 100;
@@ -491,21 +519,111 @@ export async function createFixedPlanAssignment(
   const billingFrequency = options.billingFrequency ?? 'monthly';
   const targetClientId = options.clientId ?? context.clientId;
   const billingTiming: 'arrears' | 'advance' = options.billingTiming ?? 'arrears';
+  const cadenceOwner: CadenceOwner = options.cadenceOwner ?? 'client';
+  const contractHeaderIsActive = options.contractHeaderIsActive ?? true;
+  const contractHeaderStatus = options.contractHeaderStatus ?? 'Active';
+  const assignmentIsActive = options.assignmentIsActive ?? true;
+  const assignmentStatus = options.assignmentStatus ?? 'pending';
+  const assignmentPoRequired = options.assignmentPoRequired ?? false;
+  const assignmentPoNumber = options.assignmentPoNumber ?? null;
+  const assignmentPoAmount = options.assignmentPoAmount ?? null;
+  const clientContractLineIsActive = options.clientContractLineIsActive ?? true;
+
+  if (await context.db.schema.hasTable('contracts')) {
+    const contractColumns = await context.db('contracts').columnInfo();
+    const contractData: Record<string, unknown> = {
+      tenant: context.tenantId,
+      contract_id: contractId,
+      contract_name: planName,
+      contract_description: `${planName} fixture`,
+      billing_frequency: billingFrequency,
+      is_active: contractHeaderIsActive,
+      status: contractHeaderStatus,
+      is_template: false,
+      currency_code: 'USD',
+      created_at: context.db.fn.now(),
+      updated_at: context.db.fn.now()
+    };
+
+    if ('owner_client_id' in contractColumns) {
+      contractData.owner_client_id = targetClientId;
+    }
+
+    await context.db('contracts')
+      .insert(contractData)
+      .onConflict(['tenant', 'contract_id'])
+      .merge({
+        contract_name: contractData.contract_name,
+        contract_description: contractData.contract_description,
+        billing_frequency: contractData.billing_frequency,
+        is_active: contractHeaderIsActive,
+        status: contractHeaderStatus,
+        is_template: contractData.is_template,
+        currency_code: contractData.currency_code,
+        updated_at: context.db.fn.now(),
+        ...(contractData.owner_client_id ? { owner_client_id: contractData.owner_client_id } : {})
+      });
+  }
+
+  if (await context.db.schema.hasTable('client_contracts')) {
+    await context.db('client_contracts')
+      .insert({
+        tenant: context.tenantId,
+        client_contract_id: clientContractId,
+        client_id: targetClientId,
+        contract_id: contractId,
+        start_date: options.startDate ?? '2025-02-01',
+        end_date: options.endDate ?? null,
+        is_active: assignmentIsActive,
+        status: assignmentStatus,
+        po_number: assignmentPoNumber,
+        po_amount: assignmentPoAmount,
+        po_required: assignmentPoRequired,
+        template_contract_id: null,
+        created_at: context.db.fn.now(),
+        updated_at: context.db.fn.now()
+      })
+      .onConflict(['tenant', 'client_contract_id'])
+      .merge({
+        client_id: targetClientId,
+        contract_id: contractId,
+        start_date: options.startDate ?? '2025-02-01',
+        end_date: options.endDate ?? null,
+        is_active: assignmentIsActive,
+        status: assignmentStatus,
+        po_number: assignmentPoNumber,
+        po_amount: assignmentPoAmount,
+        po_required: assignmentPoRequired,
+        template_contract_id: null,
+        updated_at: context.db.fn.now()
+      });
+  }
+
+  const contractLineColumns = await context.db('contract_lines').columnInfo();
+  const contractLineData: Record<string, unknown> = {
+    contract_line_id: contractLineId,
+    tenant: context.tenantId,
+    contract_line_name: planName,
+    billing_frequency: billingFrequency,
+    is_custom: false,
+    contract_line_type: 'Fixed',
+    custom_rate: baseRateDollars,
+    enable_proration: enableProration,
+    billing_cycle_alignment: billingCycleAlignment,
+    billing_timing: billingTiming,
+  };
+
+  if ('contract_id' in contractLineColumns) {
+    contractLineData.contract_id = contractId;
+  }
+
+  if ('cadence_owner' in contractLineColumns) {
+    contractLineData.cadence_owner = cadenceOwner;
+  }
 
   // Primary contract line tables
   await context.db('contract_lines')
-    .insert({
-      contract_line_id: contractLineId,
-      tenant: context.tenantId,
-      contract_line_name: planName,
-      billing_frequency: billingFrequency,
-      is_custom: false,
-      contract_line_type: 'Fixed',
-      custom_rate: baseRateDollars,
-      enable_proration: enableProration,
-      billing_cycle_alignment: billingCycleAlignment,
-      billing_timing: billingTiming
-    })
+    .insert(contractLineData)
     .onConflict(['tenant', 'contract_line_id'])
     .merge({
       contract_line_name: planName,
@@ -514,7 +632,9 @@ export async function createFixedPlanAssignment(
       custom_rate: baseRateDollars,
       enable_proration: enableProration,
       billing_cycle_alignment: billingCycleAlignment,
-      billing_timing: billingTiming
+      billing_timing: billingTiming,
+      ...(contractLineData.contract_id ? { contract_id: contractId } : {}),
+      ...(contractLineData.cadence_owner ? { cadence_owner: cadenceOwner } : {}),
     });
 
   await context.db('contract_line_service_configuration')
@@ -556,24 +676,26 @@ export async function createFixedPlanAssignment(
     .onConflict(['tenant', 'service_id', 'contract_line_id'])
     .merge({ quantity, custom_rate: null });
 
-  await context.db('client_contract_lines')
-    .insert({
-      tenant: context.tenantId,
-      client_contract_line_id: clientContractLineId,
-      client_id: targetClientId,
-      contract_line_id: contractLineId,
-      start_date: options.startDate ?? '2025-02-01',
-      end_date: options.endDate ?? null,
-      is_active: true
-    })
-    .onConflict(['tenant', 'client_contract_line_id'])
-    .merge({
-      client_id: targetClientId,
-      contract_line_id: contractLineId,
-      start_date: options.startDate ?? '2025-02-01',
-      end_date: options.endDate ?? null,
-      is_active: true
-    });
+  if (await context.db.schema.hasTable('client_contract_lines')) {
+    await context.db('client_contract_lines')
+      .insert({
+        tenant: context.tenantId,
+        client_contract_line_id: clientContractLineId,
+        client_id: targetClientId,
+        contract_line_id: contractLineId,
+        start_date: options.startDate ?? '2025-02-01',
+        end_date: options.endDate ?? null,
+        is_active: clientContractLineIsActive
+      })
+      .onConflict(['tenant', 'client_contract_line_id'])
+      .merge({
+        client_id: targetClientId,
+        contract_line_id: contractLineId,
+        start_date: options.startDate ?? '2025-02-01',
+        end_date: options.endDate ?? null,
+        is_active: clientContractLineIsActive
+      });
+  }
 
   const legacyPlanTablesExist = await context.db.schema.hasTable('billing_plans');
 
@@ -655,7 +777,7 @@ export async function createFixedPlanAssignment(
         client_id: targetClientId,
         plan_id: legacyPlanId,
         service_category: null,
-        is_active: true,
+        is_active: assignmentIsActive,
         start_date: options.startDate ?? '2025-02-01',
         end_date: options.endDate ?? null,
         client_bundle_id: null
@@ -664,7 +786,7 @@ export async function createFixedPlanAssignment(
       .merge({
         client_id: targetClientId,
         plan_id: legacyPlanId,
-        is_active: true,
+        is_active: assignmentIsActive,
         start_date: options.startDate ?? '2025-02-01',
         end_date: options.endDate ?? null
       });
@@ -676,99 +798,209 @@ export async function createFixedPlanAssignment(
     ? options.customRateCents / 100
     : null;
 
-  let existingClientService = await context.db('client_contract_services')
-    .where({
-      tenant: context.tenantId,
-      client_contract_line_id: clientContractLineId,
-      service_id: serviceId
-    })
-    .first<{ client_contract_service_id: string }>('client_contract_service_id');
+  const hasLegacyClientServiceTables =
+    (await context.db.schema.hasTable('client_contract_services')) &&
+    (await context.db.schema.hasTable('client_contract_service_configuration')) &&
+    (await context.db.schema.hasTable('client_contract_service_fixed_config'));
 
-  const clientContractServiceId = existingClientService?.client_contract_service_id ?? uuidv4();
+  if (hasLegacyClientServiceTables) {
+    let existingClientService = await context.db('client_contract_services')
+      .where({
+        tenant: context.tenantId,
+        client_contract_line_id: clientContractLineId,
+        service_id: serviceId
+      })
+      .first<{ client_contract_service_id: string }>('client_contract_service_id');
 
-  if (existingClientService) {
-    await context.db('client_contract_services')
+    const clientContractServiceId = existingClientService?.client_contract_service_id ?? uuidv4();
+
+    if (existingClientService) {
+      await context.db('client_contract_services')
+        .where({
+          tenant: context.tenantId,
+          client_contract_service_id: clientContractServiceId
+        })
+        .update({
+          quantity,
+          custom_rate: customRateDollars,
+          updated_at: now
+        });
+    } else {
+      await context.db('client_contract_services').insert({
+        tenant: context.tenantId,
+        client_contract_service_id: clientContractServiceId,
+        client_contract_line_id: clientContractLineId,
+        service_id: serviceId,
+        quantity,
+        custom_rate: customRateDollars,
+        effective_date: effectiveDate,
+        created_at: now,
+        updated_at: now
+      });
+    }
+
+    let existingClientConfig = await context.db('client_contract_service_configuration')
       .where({
         tenant: context.tenantId,
         client_contract_service_id: clientContractServiceId
       })
-      .update({
-        quantity,
-        custom_rate: customRateDollars,
-        updated_at: now
-      });
-  } else {
-    await context.db('client_contract_services').insert({
-      tenant: context.tenantId,
-      client_contract_service_id: clientContractServiceId,
-      client_contract_line_id: clientContractLineId,
-      service_id: serviceId,
-      quantity,
-      custom_rate: customRateDollars,
-      effective_date: effectiveDate,
-      created_at: now,
-      updated_at: now
-    });
-  }
+      .first<{ config_id: string }>('config_id');
 
-  let existingClientConfig = await context.db('client_contract_service_configuration')
-    .where({
-      tenant: context.tenantId,
-      client_contract_service_id: clientContractServiceId
-    })
-    .first<{ config_id: string }>('config_id');
+    const clientConfigId = existingClientConfig?.config_id ?? uuidv4();
 
-  const clientConfigId = existingClientConfig?.config_id ?? uuidv4();
-
-  if (existingClientConfig) {
-    await context.db('client_contract_service_configuration')
-      .where({
+    if (existingClientConfig) {
+      await context.db('client_contract_service_configuration')
+        .where({
+          tenant: context.tenantId,
+          config_id: clientConfigId
+        })
+        .update({
+          configuration_type: 'Fixed',
+          custom_rate: customRateDollars,
+          quantity,
+          updated_at: now
+        });
+    } else {
+      await context.db('client_contract_service_configuration').insert({
         tenant: context.tenantId,
-        config_id: clientConfigId
-      })
-      .update({
+        config_id: clientConfigId,
+        client_contract_service_id: clientContractServiceId,
         configuration_type: 'Fixed',
         custom_rate: customRateDollars,
         quantity,
+        created_at: now,
         updated_at: now
       });
-  } else {
-    await context.db('client_contract_service_configuration').insert({
-      tenant: context.tenantId,
-      config_id: clientConfigId,
-      client_contract_service_id: clientContractServiceId,
-      configuration_type: 'Fixed',
-      custom_rate: customRateDollars,
-      quantity,
-      created_at: now,
-      updated_at: now
-    });
-  }
+    }
 
-  await context.db('client_contract_service_fixed_config')
-    .insert({
-      tenant: context.tenantId,
-      config_id: clientConfigId,
-      base_rate: baseRateDollars,
-      enable_proration: enableProration,
-      billing_cycle_alignment: billingCycleAlignment,
-      created_at: now,
-      updated_at: now
-    })
-    .onConflict(['tenant', 'config_id'])
-    .merge({
-      base_rate: baseRateDollars,
-      enable_proration: enableProration,
-      billing_cycle_alignment: billingCycleAlignment,
-      updated_at: now
-    });
+    await context.db('client_contract_service_fixed_config')
+      .insert({
+        tenant: context.tenantId,
+        config_id: clientConfigId,
+        base_rate: baseRateDollars,
+        enable_proration: enableProration,
+        billing_cycle_alignment: billingCycleAlignment,
+        created_at: now,
+        updated_at: now
+      })
+      .onConflict(['tenant', 'config_id'])
+      .merge({
+        base_rate: baseRateDollars,
+        enable_proration: enableProration,
+        billing_cycle_alignment: billingCycleAlignment,
+        updated_at: now
+      });
+  }
 
   return {
     planId: legacyPlanId,
     clientBillingPlanId: legacyClientPlanId,
     contractLineId,
-    clientContractLineId
+    clientContractLineId,
+    contractId,
+    clientContractId
   };
+}
+
+export async function createConcurrentFixedPlanAssignments(
+  context: TestContext,
+  serviceId: string,
+  assignments: CreateFixedPlanOptions[]
+): Promise<Array<{
+  planId: string;
+  clientBillingPlanId: string;
+  contractLineId: string;
+  clientContractLineId: string;
+  contractId: string;
+  clientContractId: string;
+}>> {
+  if (assignments.length < 2) {
+    throw new Error('createConcurrentFixedPlanAssignments requires at least two assignments');
+  }
+
+  const seededAssignments: Array<{
+    planId: string;
+    clientBillingPlanId: string;
+    contractLineId: string;
+    clientContractLineId: string;
+    contractId: string;
+    clientContractId: string;
+  }> = [];
+
+  for (const assignmentOptions of assignments) {
+    seededAssignments.push(await createFixedPlanAssignment(context, serviceId, {
+      startDate: '2025-02-01',
+      endDate: null,
+      assignmentIsActive: true,
+      ...assignmentOptions,
+    }));
+  }
+
+  return seededAssignments;
+}
+
+export async function seedConcurrentClientContractAssignmentsDirect(
+  context: TestContext,
+  assignments: DirectConcurrentAssignmentSeedOptions[]
+): Promise<Array<{ contractId: string; clientContractId: string }>> {
+  if (assignments.length < 2) {
+    throw new Error('seedConcurrentClientContractAssignmentsDirect requires at least two assignments');
+  }
+
+  const hasContractsTable = await context.db.schema.hasTable('contracts');
+  const hasClientContractsTable = await context.db.schema.hasTable('client_contracts');
+  if (!hasContractsTable || !hasClientContractsTable) {
+    throw new Error('contracts and client_contracts tables are required for direct concurrent assignment seeding');
+  }
+
+  const seeded: Array<{ contractId: string; clientContractId: string }> = [];
+
+  for (const assignment of assignments) {
+    const contractId = assignment.contractId ?? uuidv4();
+    const clientContractId = assignment.clientContractId ?? uuidv4();
+    const targetClientId = assignment.clientId ?? context.clientId;
+    const contractName = assignment.contractName ?? `Direct Assignment ${seeded.length + 1}`;
+    const contractHeaderIsActive = assignment.contractHeaderIsActive ?? true;
+    const contractHeaderStatus = assignment.contractHeaderStatus ?? 'Active';
+    const assignmentIsActive = assignment.assignmentIsActive ?? true;
+    const assignmentStatus = assignment.assignmentStatus ?? 'active';
+    const startDate = assignment.startDate ?? '2025-02-01';
+    const endDate = assignment.endDate ?? null;
+
+    await context.createEntity('contracts', {
+      contract_id: contractId,
+      contract_name: contractName,
+      contract_description: `${contractName} direct-seeded fixture`,
+      billing_frequency: 'monthly',
+      is_active: contractHeaderIsActive,
+      status: contractHeaderStatus,
+      is_template: false,
+      currency_code: 'USD',
+      owner_client_id: targetClientId,
+      created_at: context.db.fn.now(),
+      updated_at: context.db.fn.now(),
+    }, 'contract_id');
+
+    await context.createEntity('client_contracts', {
+      client_contract_id: clientContractId,
+      client_id: targetClientId,
+      contract_id: contractId,
+      start_date: startDate,
+      end_date: endDate,
+      is_active: assignmentIsActive,
+      status: assignmentStatus,
+      po_required: false,
+      po_number: null,
+      po_amount: null,
+      template_contract_id: null,
+      created_at: context.db.fn.now(),
+      updated_at: context.db.fn.now(),
+    }, 'client_contract_id');
+
+    seeded.push({ contractId, clientContractId });
+  }
+
+  return seeded;
 }
 
 export async function ensureClientPlanBundlesTable(context: TestContext): Promise<void> {

@@ -45,6 +45,48 @@ const looksLikeLegacyMajorUnitPayload = (params: {
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+type RendererRecurringDetailPeriod = {
+  servicePeriodStart?: string | null;
+  servicePeriodEnd?: string | null;
+  billingTiming?: 'arrears' | 'advance' | null;
+};
+
+const normalizeRecurringDetailPeriods = (item: Record<string, unknown>): RendererRecurringDetailPeriod[] | undefined => {
+  const candidate = item.recurringDetailPeriods ?? item.recurring_detail_periods;
+  if (!Array.isArray(candidate) || candidate.length === 0) {
+    return undefined;
+  }
+
+  return candidate
+    .filter((detail): detail is Record<string, unknown> => !!detail && typeof detail === 'object')
+    .map((detail) => ({
+      servicePeriodStart:
+        typeof detail.servicePeriodStart === 'string'
+          ? detail.servicePeriodStart
+          : typeof detail.service_period_start === 'string'
+            ? detail.service_period_start
+            : null,
+      servicePeriodEnd:
+        typeof detail.servicePeriodEnd === 'string'
+          ? detail.servicePeriodEnd
+          : typeof detail.service_period_end === 'string'
+            ? detail.service_period_end
+            : null,
+      billingTiming:
+        detail.billingTiming === 'advance' || detail.billingTiming === 'arrears'
+          ? detail.billingTiming
+          : detail.billing_timing === 'advance' || detail.billing_timing === 'arrears'
+            ? detail.billing_timing
+            : null,
+    }) satisfies RendererRecurringDetailPeriod)
+    .sort((left, right) => {
+      if (left.servicePeriodStart !== right.servicePeriodStart) {
+        return String(left.servicePeriodStart ?? '').localeCompare(String(right.servicePeriodStart ?? ''));
+      }
+      return String(left.servicePeriodEnd ?? '').localeCompare(String(right.servicePeriodEnd ?? ''));
+    });
+};
+
 const resolveTenantClientSnapshot = (source: Record<string, unknown>): WasmInvoiceViewModel['tenantClient'] => {
   const candidate =
     source.tenantClient ??
@@ -119,13 +161,45 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         return Math.round(numeric * 100);
       };
 
-      const normalizedItems = (dbData.invoice_charges ?? []).map((item: IInvoiceCharge) => ({
-        id: String(item.item_id ?? ''),
-        description: String(item.description ?? ''),
-        quantity: toFiniteNumber(item.quantity),
-        unitPrice: toMinorUnits(item.unit_price),
-        total: toMinorUnits(item.total_price),
-      }));
+      // Rendering keeps the canonical recurring detail list when it exists, but it still
+      // provides one compatibility summary range for templates that can only show one row.
+      // Mixed timing stays explicit on the detail rows and is flattened to `null` at the
+      // summary level rather than inventing one winning timing value.
+      const normalizedItems = (dbData.invoice_charges ?? []).map((item: IInvoiceCharge) => {
+        const normalizedDetailPeriods = normalizeRecurringDetailPeriods(item as unknown as Record<string, unknown>);
+        const summaryStart =
+          typeof (item as any).servicePeriodStart === 'string'
+            ? (item as any).servicePeriodStart
+            : (item as any).service_period_start ?? normalizedDetailPeriods?.[0]?.servicePeriodStart ?? null;
+        const summaryEnd =
+          typeof (item as any).servicePeriodEnd === 'string'
+            ? (item as any).servicePeriodEnd
+            : (item as any).service_period_end ??
+              normalizedDetailPeriods?.[normalizedDetailPeriods.length - 1]?.servicePeriodEnd ??
+              null;
+        const summaryBillingTiming =
+          (item as any).billingTiming ??
+          (item as any).billing_timing ??
+          (() => {
+            if (!normalizedDetailPeriods || normalizedDetailPeriods.length === 0) {
+              return null;
+            }
+            const timings = [...new Set(normalizedDetailPeriods.map((detail) => detail.billingTiming).filter(Boolean))];
+            return timings.length === 1 ? timings[0] ?? null : null;
+          })();
+
+        return {
+          id: String(item.item_id ?? ''),
+          description: String(item.description ?? ''),
+          quantity: toFiniteNumber(item.quantity),
+          unitPrice: toMinorUnits(item.unit_price),
+          total: toMinorUnits(item.total_price),
+          servicePeriodStart: summaryStart,
+          servicePeriodEnd: summaryEnd,
+          billingTiming: summaryBillingTiming,
+          recurringDetailPeriods: normalizedDetailPeriods,
+        };
+      });
       const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.total, 0);
       const subtotal = toMinorUnits(rawSubtotal);
       const tax = toMinorUnits(rawTax);

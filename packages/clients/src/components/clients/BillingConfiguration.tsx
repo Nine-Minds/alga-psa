@@ -5,6 +5,7 @@ import PlanPickerDialog from './PlanPickerDialog';
 import type {
   IClient,
   IContact,
+  IClientContract,
   IClientContractLine,
   IContractLine,
   IServiceCategory,
@@ -18,6 +19,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
   getClientContractLine,
+  getClientContracts,
   updateClientContractLine,
   addClientContractLine,
   removeClientContractLine,
@@ -83,10 +85,13 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const [serviceCategories, setServiceCategories] = useState<IServiceCategory[]>([]);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [clientContractLines, setClientContractLines] = useState<ClientContractLineWithStringDates[]>([]);
+    const [clientContracts, setClientContracts] = useState<IClientContract[]>([]);
+    const [selectedClientContractId, setSelectedClientContractId] = useState<string | null>(null);
     const [editingContractLine, setEditingContractLine] = useState<ClientContractLineWithStringDates | null>(null);
     const [contractLineToDelete, setContractLineToDelete] = useState<string | null>(null);
     const [services, setServices] = useState<IService[]>([]);
-    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard: boolean }[]>([]);
+    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
+    const [isSavingBillingConfig, setIsSavingBillingConfig] = useState(false);
     const [newService, setNewService] = useState<Partial<IService>>({
         unit_of_measure: 'hour',
         custom_service_type_id: '', // Will be set after fetching service types
@@ -99,6 +104,14 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
     const [clientTaxRates, setClientTaxRates] = useState<IClientTaxRate[]>([]);
     // Removed selectedTaxRate state as it's no longer needed for the simplified ClientTaxRates component
+
+    const selectedAssignmentContractLines = React.useMemo(() => {
+        if (!selectedClientContractId) {
+            return [];
+        }
+
+        return clientContractLines.filter((line) => line.client_contract_id === selectedClientContractId);
+    }, [clientContractLines, selectedClientContractId]);
 
     // Formats a Date object or string into 'YYYY-MM-DD' string, handling potential UTC interpretation
     const formatStartDate = (date: Date | string | null): string => {
@@ -136,15 +149,29 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         return `${year}-${month}-${day}`;
     };
 
+    const hydrateAssignmentScopedViews = async () => {
+        const contractLines = await getClientContractLine(client.client_id);
+        const contractLinesWithStringDates: ClientContractLineWithStringDates[] = contractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
+            ...plan,
+            start_date: formatStartDate(plan.start_date),
+            end_date: plan.end_date ? formatStartDate(plan.end_date) : null
+        }));
+        setClientContractLines(contractLinesWithStringDates);
+
+        const assignments = await getClientContracts(client.client_id);
+        const activeAssignments = assignments.filter((assignment) => assignment.is_active);
+        setClientContracts(activeAssignments);
+        setSelectedClientContractId((prevSelected) => {
+            if (prevSelected && activeAssignments.some((assignment) => assignment.client_contract_id === prevSelected)) {
+                return prevSelected;
+            }
+            return activeAssignments[0]?.client_contract_id ?? null;
+        });
+    };
+
     useEffect(() => {
         const fetchData = async () => {
-            const contractLines = await getClientContractLine(client.client_id);
-            const contractLinesWithStringDates: ClientContractLineWithStringDates[] = contractLines.map((plan: IClientContractLine): ClientContractLineWithStringDates => ({
-                ...plan,
-                start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
-            }));
-            setClientContractLines(contractLinesWithStringDates);
+            await hydrateAssignmentScopedViews();
 
             const plans = await getContractLinesAsync();
             setContractLines(plans);
@@ -191,6 +218,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSavingBillingConfig) {
+            return;
+        }
+        setIsSavingBillingConfig(true);
         try {
             // Extract all billing-related fields
             const {
@@ -220,13 +251,15 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
             // Save template selection separately using the dedicated function
             if (invoice_template_id !== client.invoice_template_id) {
-                await setClientTemplateAsync(client.client_id, invoice_template_id ?? null);
+                await setClientTemplateAsync(client.client_id, invoice_template_id?.trim() ? invoice_template_id : null);
             }
 
             toast.success('Billing configuration saved successfully');
         } catch (error) {
             setErrorMessage('Failed to save billing configuration');
             handleError(error, 'Failed to save billing configuration');
+        } finally {
+            setIsSavingBillingConfig(false);
         }
     };
 
@@ -564,20 +597,27 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                             id="save-billing-config-btn"
                             type="submit"
                             variant="default"
+                            disabled={isSavingBillingConfig}
                         >
-                            Save Billing Configuration
+                            {isSavingBillingConfig ? 'Saving...' : 'Save Billing Configuration'}
                         </Button>
                     </div>
                 </TabsContent>
 
                 <TabsContent value="plans" className="space-y-6"> {/* Added space-y for layout */}
                     {/* Added ClientContractAssignment component */}
-                    <ClientContractAssignment clientId={client.client_id} />
+                    <ClientContractAssignment
+                        clientId={client.client_id}
+                        onAssignmentsChanged={hydrateAssignmentScopedViews}
+                    />
 
                     {/* Existing ContractLines component */}
                     <ContractLines
-                        clientContractLines={clientContractLines}
+                        clientContractLines={selectedAssignmentContractLines}
                         contractLines={contractLines}
+                        assignments={clientContracts}
+                        selectedClientContractId={selectedClientContractId}
+                        onSelectedClientContractChange={setSelectedClientContractId}
                         serviceCategories={serviceCategories}
                         clientId={client.client_id}
                         onEdit={handleEditContractLine}

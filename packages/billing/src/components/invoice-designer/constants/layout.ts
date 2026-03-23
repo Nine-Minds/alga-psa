@@ -1,5 +1,11 @@
-export const DESIGNER_CANVAS_WIDTH = 816;
-export const DESIGNER_CANVAS_HEIGHT = 1056;
+import { DEFAULT_INVOICE_PRINT_SETTINGS, resolveInvoiceTemplatePrintSettings } from '@alga-psa/types';
+
+const DEFAULT_RESOLVED_PRINT_SETTINGS = resolveInvoiceTemplatePrintSettings({
+  printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
+});
+
+export const DESIGNER_CANVAS_WIDTH = DEFAULT_RESOLVED_PRINT_SETTINGS.pageWidthPx;
+export const DESIGNER_CANVAS_HEIGHT = DEFAULT_RESOLVED_PRINT_SETTINGS.pageHeightPx;
 
 export const DESIGNER_CANVAS_BOUNDS = {
   width: DESIGNER_CANVAS_WIDTH,

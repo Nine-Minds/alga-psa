@@ -475,7 +475,7 @@ export class ApiContractLineController {
   }
 
   /**
-   * GET /api/v2/contracts - List contracts
+   * GET /api/v2/contracts - List client-owned contract headers
    */
   listContracts() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -496,9 +496,7 @@ export class ApiContractLineController {
         order: order as 'asc' | 'desc' | undefined,
         filters
       };
-      
-      // TODO: Implement listContracts in ContractLineService
-      const result = { data: [], total: 0 };
+      const result = await this.contractLineService.listContracts(listOptions, context);
       
       const response = createApiResponse({
         data: result.data,
@@ -519,7 +517,7 @@ export class ApiContractLineController {
   }
 
   /**
-   * POST /api/v2/contracts - Create contract
+   * POST /api/v2/contracts - Create a client-owned contract header
    */
   createContract() {
     return async (req: NextRequest): Promise<NextResponse> => {

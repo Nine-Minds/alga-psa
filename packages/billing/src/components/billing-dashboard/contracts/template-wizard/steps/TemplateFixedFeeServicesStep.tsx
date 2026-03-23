@@ -4,21 +4,58 @@ import React from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../../ServiceCatalogPicker';
 import { Plus, X, Package } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { TemplateWizardData } from '../TemplateWizard';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
+import { getRecurringAuthoringPreview } from '../../recurringAuthoringPreview';
 
 interface TemplateFixedFeeServicesStepProps {
   data: TemplateWizardData;
   updateData: (data: Partial<TemplateWizardData>) => void;
 }
 
+const CADENCE_OWNER_OPTIONS = [
+  {
+    value: 'client',
+    label: 'Invoice on client billing schedule',
+    description:
+      'Use the client billing calendar so contracts created from this template stay aligned with the client’s normal invoice cadence.',
+  },
+  {
+    value: 'contract',
+    label: 'Invoice on contract anniversary',
+    description:
+      'Use this contract line’s own anniversary dates. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing.',
+  },
+];
+
+const BILLING_TIMING_OPTIONS = [
+  {
+    value: 'arrears',
+    label: 'Arrears – invoice after the period closes',
+  },
+  {
+    value: 'advance',
+    label: 'Advance – invoice at the start of the period',
+  },
+] as const;
+
 export function TemplateFixedFeeServicesStep({
   data,
   updateData,
 }: TemplateFixedFeeServicesStepProps) {
+  const recurringPreview = getRecurringAuthoringPreview({
+    cadenceOwner: data.cadence_owner,
+    billingTiming: data.billing_timing,
+    billingFrequency: data.billing_frequency,
+    enableProration: data.enable_proration,
+  });
+
   const handleAddService = () => {
     updateData({
       fixed_services: [
@@ -110,6 +147,81 @@ export function TemplateFixedFeeServicesStep({
           </p>
         </div>
 
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm font-medium">Cadence Owner</Label>
+            <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">
+              Choose which schedule should define recurring service periods for contracts created from this template.
+            </p>
+          </div>
+          <RadioGroup
+            id="template-wizard-cadence-owner"
+            name="template-wizard-cadence-owner"
+            options={CADENCE_OWNER_OPTIONS}
+            value={data.cadence_owner ?? 'client'}
+            onChange={(value) =>
+              updateData({ cadence_owner: value as TemplateWizardData['cadence_owner'] })
+            }
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="template-fixed-billing-timing" className="text-sm font-medium">
+              Billing Timing
+            </Label>
+            <CustomSelect
+              id="template-fixed-billing-timing"
+              value={data.billing_timing ?? 'arrears'}
+              onValueChange={(value) =>
+                updateData({ billing_timing: value as TemplateWizardData['billing_timing'] })
+              }
+              options={BILLING_TIMING_OPTIONS.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+              placeholder="Select billing timing"
+            />
+            <p className="text-xs text-[rgb(var(--color-text-400))]">
+              {recurringPreview.firstInvoiceSummary}
+            </p>
+          </div>
+
+          <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-[rgb(var(--color-border-50))] space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="template-fixed-enable-proration" className="text-sm font-medium">
+                Adjust for Partial Periods
+              </Label>
+              <Switch
+                id="template-fixed-enable-proration"
+                checked={Boolean(data.enable_proration)}
+                onCheckedChange={(checked) => updateData({ enable_proration: checked })}
+              />
+            </div>
+            <p className="text-xs text-[rgb(var(--color-text-400))]">
+              Use this when contracts created from the template should scale the recurring fee if service starts or ends inside a period.
+            </p>
+          </div>
+        </div>
+
+        <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-[rgb(var(--color-border-50))] space-y-2 text-sm">
+          <p><strong>Cadence Owner:</strong> {recurringPreview.cadenceOwnerLabel}</p>
+          <p>{recurringPreview.cadenceOwnerSummary}</p>
+          <p><strong>Billing Timing:</strong> {recurringPreview.billingTimingLabel}</p>
+          <p>{recurringPreview.billingTimingSummary}</p>
+          <p>{recurringPreview.partialPeriodSummary}</p>
+          <p><strong>{recurringPreview.materializedPeriodsHeading}:</strong></p>
+          <p>{recurringPreview.materializedPeriodsSummary}</p>
+          <ul className="list-disc pl-5 space-y-1">
+            {recurringPreview.materializedPeriods.map((period) => (
+              <li key={`${period.servicePeriodLabel}:${period.invoiceWindowLabel}`}>
+                <span><strong>Service:</strong> {period.servicePeriodLabel}</span>
+                <span className="block"><strong>Invoice window:</strong> {period.invoiceWindowLabel}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         <TemplateServicePreviewSection
           services={previewServices}
           serviceType="fixed"
@@ -138,7 +250,6 @@ export function TemplateFixedFeeServicesStep({
                     value={service.service_id}
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
-                    billingMethods={['fixed']}
                     itemKinds={['service']}
                     placeholder="Select a service"
                   />

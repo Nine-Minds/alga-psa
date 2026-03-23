@@ -1,0 +1,1943 @@
+# Scratchpad — Service-Period-First Billing and Explicit Cadence Ownership
+
+- Plan slug: `service-period-first-billing-and-cadence-ownership`
+- Created: `2026-03-16`
+- Replanned: `2026-03-17`
+
+## What This Is
+
+Keep a lightweight, continuously-updated log of discoveries, sequencing decisions, and subsystem impact notes for the service-period-first billing work.
+
+This scratchpad was expanded on `2026-03-17` after concluding that the first draft plan was materially under-specified for the risk level of the change.
+
+## Decisions
+
+- (2026-03-18) Treat `F231` as the logical record-contract checkpoint for materialized recurring periods, not the physical schema checkpoint.
+  - Rationale: `F232` still needs freedom to choose concrete table/index layout, but the repo needs one shared record vocabulary now so docs, APIs, fixtures, and future migrations do not drift.
+- (2026-03-16) Sequence this plan so service periods become canonical under existing client-cadence behavior before exposing contract-owned cadence. Parity first, new option second, cleanup last.
+- (2026-03-16) Scope the first cut to recurring contract-backed charges. Time and usage remain on their current event-driven model unless a compatibility blocker appears.
+- (2026-03-16) Treat invoice windows as the grouping layer and service periods as the recurring-billing truth for this plan.
+- (2026-03-17) Replan this effort at system breadth rather than billing-engine breadth. The plan must explicitly cover invoice generation, invoice detail consumers, credits/prepayment/negative invoice behavior, APIs/models/repos, templates/wizards/forms, portal/report/export surfaces, migrations/defaulting, and post-cutover cleanup.
+- (2026-03-17) Materialized service periods are now in-scope for v1. The main reason is product editability: if users need to change a future recurring period explicitly, a derived-only model pushes the system toward hidden overrides instead of a first-class editable billing object.
+- (2026-03-17) Use recursive top-down decomposition for the feature/test lists:
+  - architecture + parity
+  - shared domain
+  - client cadence
+  - due-position and partial-period rules
+  - fixed recurring
+  - dependent recurring behaviors
+  - invoice generation + billing flows
+  - data model/API/UI
+  - contract cadence
+  - migration/cleanup
+- (2026-03-17) Second-pass agent critique showed the plan still needed dedicated categories for:
+  - recurring execution identity and scheduler payloads
+  - invoice grouping and split legality
+  - parent-charge versus detail-row read-model contracts
+  - manual/prepayment/credit service-period policy
+  - export adapter flattening rules
+  - authoring-path propagation through templates, presets, and custom lines
+  - stale dropped-table and repository normalization cleanup
+
+## Discoveries / Constraints
+
+- (2026-03-18) Mixed-cadence coexistence now has one DB-backed export-plus-portal sanity seam, which closes `T278`, and the remaining conditional split/merge checklist item is now resolved explicitly:
+  - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` now seeds one historical flat invoice plus one canonical mixed-cadence invoice, then proves `AccountingExportInvoiceSelector.createBatchFromFilters(...)` stores stable historical-vs-canonical export lines while `Invoice.getFullInvoiceById(...)` rereads the same canonical recurring detail rows without collapsing the historical invoice into fake recurring metadata
+  - the portal-side assertion intentionally uses date-only equality for parent `service_period_*` summary bounds because DB-backed `Date` hydration can surface offset-normalized ISO timestamps while the authoritative `recurring_detail_periods[]` contract remains unchanged; this keeps the test locked to the stable business period semantics instead of one driver-specific timestamp shape
+  - `T297` is now treated as satisfied by the already-implemented v1 non-support decision in `T347`: split and merge remain explicitly unsupported edit operations, so the conditional “if supported in v1” behavior never becomes active in this rollout and does not require a contradictory execution path
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts -t "T278" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) Additional DB-backed persisted-ledger lifecycle coverage now closes `T323`, `T324`, `T325`, `T326`, and `T327`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now lets the existing staged-rollout lifecycle seam explicitly claim the regeneration/change-management contract as `T316/T323/T324/T327`: regenerated future rows supersede only the eligible untouched future slot, edited rows stay preserved, billed rows fail future edit attempts with `immutable_record`, and the linked `invoice_charge_details.item_detail_id` row remains traceable from the persisted billed record
+  - the same file now adds a dedicated `T325` contract-cadence operational-view case, proving future 8th-anchored contract-owned periods can be listed and boundary-edited before invoice generation with the same explicit provenance and exception-state semantics as client cadence
+  - the new `T326` integration keeps mixed materialization honest at the physical ledger seam instead of only the shared-domain seam: client-owned and contract-owned recurring obligations on the same client persist distinct `schedule_key` ledgers, retain their own cadence-owner metadata, and keep their own invoice-window anchors (`1st` vs `8th`) without row collisions
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T316|T323|T324|T327|T325|T326" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) DB-backed persisted-ledger inspection/edit/runtime coverage now closes `T301`, `T320`, `T321`, `T322`, and `T328`, and exposed a real zero-dollar suppression bug on the live invoice path:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now proves billing staff can list future client-cadence persisted periods, edit a future row with explicit edited provenance, move due selection to a new invoice window without rewriting billed history, and skip the current due row while later persisted work remains selectable
+  - the integration fixtures had to align with two live contracts the earlier domain tests did not exercise directly:
+    - DB-backed `recurring_service_periods` date columns hydrate as `Date` objects, so the integration loader now normalizes service/invoice/activity ranges back to plain `YYYY-MM-DD` strings before feeding listing/edit/due-selection helpers
+    - live runtime selection keys persisted recurring obligations by the effective `contract_line_id` value exposed as `client_contract_line_id` in `BillingEngine`, so the runtime-facing DB tests now materialize obligation ids against `fixedLine.contractLineId` instead of the helper’s separate client-line alias
+  - `shared/billingClients/recurringServicePeriodEditRequests.ts` now accepts an optional `recordIdFactory`, which closes the remaining wrapper seam between the domain-level edit contract and the physical `recurring_service_periods.record_id uuid` schema
+  - `packages/billing/src/actions/invoiceGeneration.ts` now honors the real `suppress_zero_dollar_invoices` boolean instead of checking for an impossible `zero_dollar_invoice_handling === 'suppress'` enum value; `server/src/test/unit/billing/invoiceGeneration.emptyResult.test.ts` now locks the real schema contract instead of the impossible enum
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/unit/billing/invoiceGeneration.emptyResult.test.ts src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts src/test/integration/billingInvoiceTiming.integration.test.ts -t "T320|T301|T321|T322|T328|T295" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) DB-backed contract-cadence execution now explicitly covers both monthly and annual selector-window hydration, which closes `T276` and `T277`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now adds a dedicated monthly `T276` case that goes beyond the earlier selector-input sanity check: an 8th-anchored contract-cadence line now proves one contract-owned execution window yields one persisted invoice window and rereads through `Invoice.getFullInvoiceById(...)` with canonical recurring detail hydration intact
+  - the same integration file now adds `T277` for annual contract cadence, proving the same selector-input execution identity and detail-backed invoice hydration work when the contract-owned window spans `2025-03-08` through `2026-03-08` instead of a monthly boundary
+  - while landing those tests, the only correction needed was in the assertions, not runtime code: `Invoice.getFullInvoiceById(...)` does not expose invoice-header billing-window fields directly, so the test now checks header persistence via the existing DB reader and reserves the hydrated invoice view assertions for canonical recurring detail projection
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T276|T277" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) Report-output parity now explicitly covers the client-cadence no-drift case, which closes `T269`:
+  - `server/src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts` now runs `getContractRevenueReport()` against two equivalent client-cadence revenue fact shapes: one legacy invoice-date-only row and one canonical detail-backed row with the same within-year commercial outcome
+  - the new `T269` assertion matters because the existing report tests mostly covered intended semantic pivots at year boundaries; this one locks the parity requirement that detail-aware readers must not change report output when invoice-date fallback and canonical service-period interpretation are equivalent for the same client-cadence billing result
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts --coverage.enabled false`
+
+- (2026-03-18) Explicit edit-request save/validation responses now cover the missing persisted-period edit wrapper seam, which close `T295` and `T296`:
+  - `server/src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts` now exercises `applyRecurringServicePeriodEditRequest(...)` directly instead of only the lower-level edit helpers, which is the first test seam that looks like the later UI/API edit surface in `F251`
+  - the new `T295` case proves a boundary-adjustment request can succeed with an explicit edited revision and can also fail with structured `continuity_overlap_before` validation output when sibling context would make the edit invalid
+  - the new `T296` case proves skip requests return explicit superseding state while billed, invoice-linked rows fail fast through the wrapper with `immutable_record` instead of pretending defer/repair flows may mutate linked history in place
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts --coverage.enabled false`
+
+- (2026-03-18) Mixed-cadence export-adapter service-period behavior is now explicit, which closes `T274`:
+  - `server/src/test/unit/accounting/quickBooksOnlineAdapter.spec.ts` now adds a focused mixed-cadence invoice case proving QuickBooks preserves each exported line’s own service date even when the same invoice contains both client- and contract-cadence canonical recurring rows
+  - `server/src/test/unit/accounting/xeroAdapter.spec.ts` now adds the corresponding Xero case, proving line-level `servicePeriodStart` / `servicePeriodEnd` values remain distinct per recurring line instead of flattening mixed cadence work into one shared range
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/accounting/quickBooksOnlineAdapter.spec.ts src/test/unit/accounting/xeroAdapter.spec.ts --coverage.enabled false`
+
+- (2026-03-18) Portal invoice-detail omission/rendering policy and invoice adapter stability now have explicit checklist coverage, which close `T267` and `T268`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` now adds a dedicated `T267` assertion that the portal dialog intentionally renders canonical detail periods for recurring lines while omitting service-period UI for financial-only/manual rows and showing the explicit fallback copy instead
+  - `packages/billing/src/lib/adapters/invoiceAdapters.test.ts` now tags the existing canonical-detail preservation case as `T268`, locking the renderer-adapter contract that detail-backed invoice charges still map to one compatibility summary range plus the preserved detail list for downstream preview/rendering consumers
+  - focused validation for this checkpoint used:
+    - `cd packages/client-portal && npx vitest run src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx --coverage.enabled false`
+    - `cd server && npx vitest run ../packages/billing/src/lib/adapters/invoiceAdapters.test.ts --coverage.enabled false`
+
+- (2026-03-18) Invoice round-trip and adjacent reader/action seams now explicitly preserve canonical recurring detail periods, which close `T264`, `T265`, and `T266`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now proves the full round-trip the earlier DB suites implied but did not lock directly: `generateInvoice(...)` persists canonical `invoice_charge_details`, returns an invoice view with `recurring_detail_periods`, and `Invoice.getFullInvoiceById(...)` rereads the same canonical detail projection without degrading back to header-only timing
+  - `server/src/test/unit/billing/invoiceQueries.recurringDetailRead.test.ts` now locks the dashboard/query action seam directly by asserting `getInvoiceLineItems(...)` passes through detail-backed charge rows unchanged, including `recurring_projection` and `recurring_detail_periods`
+  - `server/src/test/unit/billing/manualInvoiceActions.viewing.test.ts` now makes the mixed-manual/recurring coexistence surface explicit: manual invoice updates can reread an invoice that still contains canonical recurring detail-backed charges, and those recurring detail rows survive while the manual row stays periodless
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/invoiceQueries.recurringDetailRead.test.ts src/test/unit/billing/manualInvoiceActions.viewing.test.ts --coverage.enabled false`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t \"T264\" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) Mixed-cadence grouping now explicitly defends the single-contract split invariant, which closes `T261`:
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now adds the missing mixed-cadence grouping assertion directly at the shared domain seam: a client-cadence selection and a contract-cadence selection may share the same invoice-window identity, but they still split into separate invoice candidates when `clientContractId` differs
+  - the new test intentionally locks the policy boundary already implied by `T141` and `T188`: cadence owner remains explainability metadata inside each grouped candidate, while `single_contract` remains the actual split reason when coincident due work spans different contracts
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+
+- (2026-03-18) Purchase-order and financial grouping constraints now have their remaining explicit unit guards, which close `T262` and `T263`:
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now adds the narrow policy-specific cases that the earlier generic grouping tests did not spell out: a PO-required line and a non-PO line split inside the same invoice window under `purchase_order_scope`, and same-contract due work with only currency or tax-source differences splits under `financial_constraint` without needing export-shape drift
+  - this keeps the grouping contract readable at the domain seam before any broader runtime or DB-backed grouping work lands: PO scope and financial scope remain independent split axes layered on top of the same invoice-window identity
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+
+- (2026-03-18) DB-backed invoice API coexistence now closes `T260` and fixes a live recurring-detail hydration bug:
+  - `server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts` now seeds one historical flat invoice plus one canonical detail-backed invoice in the live schema, then proves `InvoiceService.getById(...)` can read both through the same staged-rollout API seam without forcing the historical invoice to synthesize recurring detail metadata
+  - while landing that test, `packages/billing/src/models/invoice.ts` needed a production fix: DB-backed `invoice_charge_details.service_period_*` values may arrive as `Date` objects, and the old summary projection only handled strings, which left parent `service_period_start|service_period_end` null for canonical rows in real integrations even though the detail periods existed
+  - the model now normalizes recurring detail dates before building both `recurring_detail_periods[]` and the parent summary range, so DB-backed readers match the unit-test contract instead of depending on driver-specific value shapes
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/api/invoiceService.recurringDetailProjection.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) Hydrated/manual invoice coexistence coverage now closes `T200` and `T212`:
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now seeds a recurring parent charge with intentionally stale header-like `service_period_*` / `billing_timing` values plus two canonical detail rows, then proves `Invoice.getById(...)` replaces the parent values with the detail-backed summary range and mixed-timing projection
+  - the assertion that matters for downstream consumers is now explicit: `recurring_projection.source = canonical_detail_rows` and `recurring_detail_periods[]` remain authoritative, while parent `service_period_start|service_period_end|billing_timing` are only the compatibility summary surface after hydration
+  - `server/src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts` now proves manual adjustments and targeted manual discounts can be added alongside an existing recurring charge without mutating that recurring charge’s canonical period fields or stamping period fields onto the manual rows
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts --coverage.enabled false`
+
+- (2026-03-18) DB-backed credit reconciliation coverage now closes `T177` without relying on the older negative-invoice infrastructure harness:
+  - `server/src/test/integration/billing/creditReconciliation.integration.test.ts` now seeds a negative-invoice credit issuance plus a later credit application against a positive invoice in the live DB schema, then runs `validateCreditTrackingRemainingAmounts(...)` against those persisted rows
+  - the test deliberately uses canonical recurring timing at the reader seam instead of the old header-only assumption: it seeds `invoice_charge_details.service_period_start|service_period_end|billing_timing`, and its mocked `Invoice.getById(...)` projects those detail periods back onto parent charge rows before reconciliation metadata is summarized
+  - this replaced an abandoned attempt to reuse `server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts`; that infrastructure path kept dragging in unrelated invoice-finalization, UI, and module-resolution dependencies before the credit-reconciliation assertion became trustworthy
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billing/creditReconciliation.integration.test.ts --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) Additional materialized-ledger and export-reader coverage now closes `T178`, `T273`, `T275`, `T281`, `T329`, and `T330`:
+  - `server/src/test/integration/accounting/exportDashboard.integration.test.ts` now explicitly claims the DB-backed stored-reader seam for export lines: mixed historical fallback rows and canonical recurring-detail-backed rows reread through `getBatchWithDetails(...)` without collapsing their persisted service-period semantics
+  - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` now explicitly claims the export-preview persistence seam: `createBatchFromFilters(...)` preserves canonical recurring detail periods, summary bounds, and source metadata when preview lines become stored export lines for downstream inspection
+  - `server/src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts` now tags the zero-dollar recurring finalization seam directly as `T210/T273`, making the previously documented zero-dollar checkpoint executable against the live persistence/finalization branch rather than leaving it only in scratchpad prose
+  - `packages/types/src/recurringServicePeriodRecord.typecheck.test.ts` now explicitly claims `T281` alongside `T341`, which keeps the shared persisted-record vocabulary anchored to one executable contract for obligation linkage, cadence owner, boundaries, provenance, and lifecycle state
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks that materialized service periods are in-scope v1 behavior rather than a deferred follow-on, and that the expanded plan still preserves implementation-grade breadth after adding editable future billing objects
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/accounting/exportDashboard.integration.test.ts src/test/integration/accounting/invoiceSelection.integration.test.ts src/test/integration/accounting/servicePeriodProjectionValidation.integration.test.ts -t "T178|T275|T270" --hookTimeout 600000 --coverage.enabled false`
+      - first pass proved `T178` and `T275` while exposing a real schema-harness issue in the new `T270` seed data: `invoice_charge_details.config_id` is non-null in the live schema, so the validation fixture had to stop inserting nulls there
+
+- (2026-03-18) Plan-integrity coverage now closes `T179`, `T180`, `T279`, and `T280`:
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now reads `SCRATCHPAD.md`, `features.json`, and `tests.json` directly so the docs contract suite can assert both the qualitative replan posture and the quantitative checklist breadth instead of relying on memory or manual review
+  - the new assertions lock the system-wide PRD blast radius, the scratchpad’s explicit recursive decomposition and second-pass critique, and the current implementation-grade checklist size/tail contract (`270` features through `F270`, `349` tests through `T332`)
+  - this keeps the plan itself executable as a rollout artifact: if a later edit accidentally collapses the scope back toward billing-engine-only thinking or silently truncates the checklist, the docs suite now fails immediately
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+
+- (2026-03-18) DB-backed contract-cadence and mixed-cadence billing sanity now closes `T140`, `T175`, and `T176`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now lets the existing selector-input contract-cadence integration explicitly claim the contract-owned detail-persistence and mid-month monthly execution checks under one DB-backed seam: `T140/T175/T252`
+  - that same file now adds a dedicated mixed-cadence grouping integration which inserts one client-cadence persisted row plus one contract-cadence persisted row on the same `[2025-01-01, 2025-02-01)` window, runs `generateInvoice(cycleId)`, and proves both detail rows land on a single invoice candidate when the documented grouping rules allow it
+  - the mixed-cadence fixture needed an explicit horizon pairing of `targetHorizonDays: 32` with `replenishmentThresholdDays: 15`; the materializers reject a low-water threshold equal to or above the horizon target
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T140/T175/T252" --hookTimeout 600000 --coverage.enabled false`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T176" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) The final open plan-surface follow-ons are now explicit, which closes `F268`, `F269`, `F270`, `T317`, `T318`, and `T319`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_TROUBLESHOOTING.md` now gives operators one troubleshooting seam for generation failures, override conflicts, regeneration triage, and invoice-linkage repair without pretending those problems should be solved by ad hoc row mutation
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RICHER_SERVICE_PERIOD_EDITING_FOLLOW_ON.md` now fences richer editing out of recurring v1 explicitly: split/merge, bulk schedule transforms, and mass editing remain deferred until the narrow `boundary_adjustment|skip|defer` surface proves insufficient in production
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/CROSS_DOMAIN_SERVICE_PERIOD_LEDGER_FOLLOW_ON.md` now makes the cross-domain boundary explicit for the materialized ledger itself: time, usage, materials, manual invoices, credits, and prepayment artifacts do not quietly join the recurring ledger just because recurring v1 now has one
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks those three artifacts directly so the remaining out-of-scope boundaries stay deliberate instead of drifting back into implicit future work
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+
+- (2026-03-18) The first DB-backed persisted-ledger lifecycle validation now exists, which closes `F267` and `T316`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now carries `T316`, which persists real `recurring_service_periods` rows under the live schema, supersedes a generated row through an explicit boundary edit, regenerates a later future slot while preserving the edited row, and then links the billed edited revision to a real `invoice_charge_details` row
+  - the integration checkpoint intentionally validates the staged-rollout ledger seam instead of claiming full edited-period invoice-generation cutover: the test proves database selection eligibility, supersession state, regenerated future continuity, and billed linkage persistence without depending on later runtime/UI passes that own edited-period invoice explanations
+  - the DB-backed test also exposed one concrete implementation gotcha that the earlier domain-only helpers could not: persisted-record helpers need UUID `recordIdFactory` inputs when they are used against the physical `recurring_service_periods` table because the live schema stores `record_id` as `uuid`
+  - focused validation for this checkpoint used:
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T316" --hookTimeout 600000 --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+      - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not by the new persisted-ledger integration test
+
+- (2026-03-18) Downstream persisted-period contracts are now explicit across charge-family behavior, bucket semantics, post-materialization lifecycle, authoring predictability, grouping after edits, and client/support explanations, which closes `F261`, `F262`, `F263`, `F264`, `F265`, `F266`, `T311`, `T312`, `T313`, `T314`, and `T315`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_CHARGE_FAMILIES.md` now documents that fixed, product, and license recurring lines share one persisted service-period lifecycle contract even if rating logic still differs by family, keeping `F261` aligned with the later runtime cutover rather than inviting family-specific ledger semantics
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_BUCKET_SEMANTICS.md` now classifies bucket/allowance behavior explicitly under edited, skipped, deferred, and regenerated periods so v1 does not silently imply unsupported automatic rollover repair when operators change future schedules
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_POST_MATERIALIZATION_LIFECYCLE.md` now defines how billed-through enforcement, renewal/replacement, and mutation guards consume persisted rows after materialization, keeping the post-persist lifecycle understandable before the broader DB validation pass
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_AUTHORING_PREDICTABILITY.md` now explains the cut line between authored recurrence rules and future editable schedules across templates, presets, and new-line creation so downstream materialization work remains predictable after creation
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_GROUPING.md` now documents how due selection and invoice grouping react when future edits move work across invoice windows, including when regrouping is allowed versus when separate invoice candidates must remain split
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EXPLANATIONS.md` now defines the support/client explanation policy for generated versus edited periods, skipped/deferred rows, and invoice detail provenance so later UI work can reuse one narrative contract instead of inventing screen-local copy
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+
+- (2026-03-18) Administrative repair and coexistence posture are now explicit, which closes `F259`, `F260`, `T309`, and `T310`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_ADMIN_REPAIR.md` now defines the first narrow operator repair modes for missing future rows, drifted untouched generated rows, and incorrect billed-history linkage, while preserving the earlier immutability and conflict rules
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_COEXISTENCE.md` now makes the historical-versus-future boundary explicit: future schedules can materialize persisted rows while historical invoices still rely on the dual-shape invoice reader contract, and no synthetic historical backfill is implied
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks both artifacts directly so later repair or migration work cannot silently reopen historical rewrite assumptions or blur schedule drift with invoice-linkage correction
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+
+- (2026-03-18) Pre-save authoring previews now show illustrative future materialized periods, which closes `F258` and `T308`:
+  - `packages/billing/src/components/billing-dashboard/contracts/recurringAuthoringPreview.ts` now generates `materializedPeriods[]` alongside the existing cadence-owner, first-invoice, and partial-period explainer copy; the preview rows are illustrative, but they come from the same client-cadence and contract-cadence materialization helpers used elsewhere instead of ad hoc sample text
+  - the fixed-fee contract wizard step, contract review step, template fixed-fee step, and template review step now all thread billing frequency into that helper and render the illustrative future service periods plus invoice windows, so staff can see the service-period-first model before the recurring line is saved
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_AUTHORING_PREVIEW.md` now documents the explicit rule: unsaved work gets explanatory future-period examples generated from materialization logic, not fake persisted rows
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run ../packages/billing/tests/recurringAuthoringPreview.test.ts ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Billing-staff operational inspection now has an explicit shared view contract, which closes `F257` and `T300`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodOperationalView`, `IRecurringServicePeriodOperationalViewSummary`, and `IRecurringServicePeriodOperationalViewRow`, so upcoming-period inspection has one typed read model instead of every later dashboard surface inventing its own row contract
+  - `shared/billingClients/recurringServicePeriodOperationalView.ts` now projects the existing future-listing query and display-state contract into one operational view: deterministic upcoming rows, lifecycle-aware display badges, and summary counts for generated versus exception rows (`edited|skipped|locked`) before invoice generation
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_OPERATIONAL_VIEWS.md` now documents the intended upcoming-period inspection seam and `RECURRING_SERVICE_PERIOD_LISTING.md` was tightened so the earlier listing pass no longer falsely implies this operational-view layer is still deferred
+  - `server/src/test/unit/billing/recurringServicePeriodOperationalView.domain.test.ts` now proves the shared view excludes billed history by default while still surfacing generated and skipped future rows with summary counts, and `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks the new artifact directly
+  - `pass-0-source-inventory.json` was refreshed in the same checkpoint because the runtime-persisted selection test added another persisted-period reader reference and the docs contract suite intentionally keeps that inventory source-backed
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodOperationalView.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Live recurring runtime now consumes persisted service-period selections before falling back to legacy derivation, which closes `F256`, `T292`, and `T307`:
+  - `packages/billing/src/actions/invoiceGeneration.ts` now marks due recurring selections as `recurringTimingSelectionSource: 'persisted'` for both billing-cycle-backed invoice windows and selector-input execution windows, so invoice generation stops treating due-period lookup as advisory metadata and instead passes it as the authoritative runtime schedule input
+  - `packages/billing/src/lib/billing/billingEngine.ts` now attempts to load due rows directly from `recurring_service_periods` when selecting recurring timing for a billing window, converts those rows into runtime selections for fixed, product, and license charge paths, and only falls back to legacy derived timing when the persisted ledger has not been materialized yet or the relation is absent during staged rollout
+  - persisted-mode timing resolution is now intentionally strict at the charge-family seam: once a caller says the selections are persisted, missing per-line selections no longer trigger ad hoc service-period derivation inside `resolveRecurringChargeTiming(...)`, which keeps fixed, product, and license runtime behavior aligned on one authoritative schedule source
+  - `server/src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts` now locks the selection handoff for billing-cycle and selector-input billing, while `server/src/test/unit/billing/billingEngine.persistedRecurringSelections.test.ts` proves fixed, product, and license selections all hydrate from persisted records with the expected service-period coverage behavior
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts src/test/unit/billing/invoiceGeneration.emptyResult.test.ts src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/billingEngine.persistedRecurringSelections.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Regeneration-trigger classification is now explicit, which closes `F254`, `T304`, and `T305`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodRegenerationTriggerInput`, `IRecurringServicePeriodRegenerationDecision`, explicit trigger sources/kinds, and regeneration scopes so later jobs and repositories do not need to infer whether a source edit should rebuild future persisted rows
+  - `shared/billingClients/recurringServicePeriodRegenerationTriggers.ts` now classifies the first v1 trigger families directly: recurrence-shaping contract-line edits use `source_rule_changed`, assignment activity-window edits use `activity_window_changed`, cadence-owner changes use `cadence_owner_changed` plus `replace_schedule_identity`, and client billing-schedule edits use `billing_schedule_changed` scoped to `client_cadence_dependents`
+  - the same helper now makes the non-trigger boundary explicit: pricing-only edits do not regenerate persisted periods because they affect future billing amounts rather than future service-period or invoice-window identity
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_REGENERATION_TRIGGERS.md` now documents those trigger families, the preserve-edits/preserve-billed-history safety invariants, and the deliberate boundary with later live repository/job wiring
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodRegenerationTriggers.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) The source-rule versus override cut line is now queryable, which closes `F255` and `T306`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodAuthorityBoundary` plus explicit authority layers, change channels, future effects, and authority subjects so later UI/API/runtime work can answer whether a concern belongs to source cadence rules, a materialized override, or corrective ledger state
+  - `shared/billingClients/recurringServicePeriodAuthorityBoundary.ts` now centralizes that answer: cadence owner, billing frequency, due position, and activity windows remain `source_rule`; service-period/invoice-window edits plus skip/defer remain `materialized_override`; lifecycle state, invoice linkage, and provenance remain `ledger_state`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_SOURCE_OVERRIDE_BOUNDARY.md` now documents the practical product rule explicitly: future movement should be explainable as either a source-rule change, an explicit future-row override, or a corrective history flow
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodAuthorityBoundary.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Persisted-period governance now has one shared permission and audit-policy contract, which closes `F253` and `T303`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines governance actions, permission keys, audit events, and `IRecurringServicePeriodGovernanceRequirement`, so future controllers and dashboard actions do not need to invent their own authorization/audit vocabulary for viewing, editing, skipping, regenerating, or correcting service periods
+  - `shared/billingClients/recurringServicePeriodGovernance.ts` now combines lifecycle-aware mutation legality with explicit governance metadata: `view` remains separately permissioned and non-audited by default, while edit/skip/defer/regenerate/correction flows all carry explicit audit-event names even when a lifecycle state still blocks the mutation
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_GOVERNANCE.md` now documents that boundary explicitly and keeps real role assignment, audit payload schemas, and controller/database wiring deferred to later passes
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodGovernance.domain.test.ts src/test/unit/billing/recurringServicePeriodDisplayState.domain.test.ts src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Persisted-period lifecycle states now have one shared UI-affordance contract, which closes `F252` and `T302`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodDisplayState` and shared display tones so future dashboard rows and badges can consume one stable presentation contract instead of inventing local label semantics
+  - `shared/billingClients/recurringServicePeriodDisplayState.ts` now maps lifecycle plus provenance into explicit UI state metadata: `Generated`, `Edited`, `Skipped`, `Locked`, `Billed`, `Superseded`, and `Archived`, with operational detail copy and additive provenance-driven `reasonLabel` strings such as `Deferred to a later invoice window`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_UI_STATES.md` now documents the badge/detail contract and its deliberate boundary with later permissions, audit identity, and concrete dashboard-layout work
+  - `RECURRING_SERVICE_PERIOD_EDIT_SURFACES.md` was tightened in the same checkpoint so `F251` no longer claims state badges are still deferred behind `F252`
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodDisplayState.domain.test.ts src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Future persisted-period edits now have an explicit UI/API transport contract, which closes `F251` and adds/closes `T349` while intentionally leaving `T295` and `T301` for later persisted-editing screens and broader state affordances:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodEditRequest`, `IRecurringServicePeriodEditRequestContext`, `IRecurringServicePeriodEditResponse`, and structured validation issue codes/fields so future controllers and dashboard forms have one typed request/response seam for `boundary_adjustment`, `skip`, and `defer`
+  - `shared/billingClients/recurringServicePeriodEditRequests.ts` now dispatches those transport requests onto the existing edit primitives and returns explicit success payloads with `supersededRecord`, `editedRecord`, and `provenance`, while mapping lower-level validation failures into structured issues such as `missing_deferred_invoice_window`, `continuity_gap_before`, and `record_mismatch`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_SURFACES.md` now documents that boundary explicitly: request contract, success response, validation issue surface, and the deliberate deferral of repository/controller wiring, dashboard state badges, and permission/audit policy to `F252-F259`
+  - `tests.json` now adds `T349` because the original `T301` also depends on the later billing-staff editing surfaces and state affordances in `F252`; the new test locks the shared transport contract itself without pretending the dashboard or controllers already exist
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodEditRequests.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Future persisted-period listing now has an explicit query contract, which closes `F250` and adds/closes `T348` while intentionally leaving `T300` for later UI/dashboard surfaces:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodListingQuery` plus the default listing lifecycle-state set `generated|edited|skipped|locked`, making future-ledger inspection a first-class read contract instead of a side effect of due selection
+  - `shared/billingClients/recurringServicePeriodListing.ts` now defines the first future-listing helper: it filters by tenant, `asOf`, optional schedule/cadence/due-position/charge-family scope, excludes billed/superseded/archived rows by default, and keeps deterministic chronological ordering
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_LISTING.md` now documents that listing is intentionally independent from invoice generation and due selection, so later API and dashboard work can build on one shared read seam
+  - `tests.json` now adds `T348` because the original `T300` also depends on later billing-staff UI surfaces in `F257`; the new test locks the listing contract itself without pretending the dashboard already exists
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodListing.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-18) Regeneration conflicts against preserved user edits are now explicit, which closes `F249` and `T299`:
+  - `shared/billingClients/regenerateRecurringServicePeriods.ts` now returns additive `conflicts` metadata instead of silently discarding disagreements when preserved override rows no longer match regenerated source candidates
+  - the first v1 conflict kinds are `missing_candidate`, `service_period_mismatch`, `invoice_window_mismatch`, and `activity_window_mismatch`, which keeps preserved edits active while making the disagreement queryable for later operator tooling
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_CONFLICTS.md` now documents that conservative handling rule explicitly: preserve the edited row, surface the conflict, and leave repair/merge tooling for later passes
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodRegenerationConflict.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-18) Neighbor-aware edit validation is now explicit, which closes `F248` and `T298`:
+  - `shared/billingClients/recurringServicePeriodEditValidation.ts` now defines the first continuity guard for edited future rows: when sibling rows on the same `scheduleKey` are supplied, edits are rejected for `gap before`, `overlap before`, `gap after`, and `overlap after` states instead of silently corrupting the schedule
+  - `shared/billingClients/editRecurringServicePeriodBoundaries.ts` and `shared/billingClients/skipOrDeferRecurringServicePeriod.ts` now call the same validator when caller-side sibling context is present, which keeps the boundary-adjustment and disposition helpers aligned on one continuity rule instead of each inventing their own local checks
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_VALIDATION.md` now documents the same-schedule adjacency rule and its explicit boundary with the later regeneration-conflict and UI transport passes
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodEditValidation.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-18) Split and merge are now explicitly fenced out of v1, which closes `F247` and adds/closes `T347` while intentionally leaving `T297` for any later advanced-edit pass:
+  - `shared/billingClients/recurringServicePeriodEditCapabilities.ts` now makes the v1 edit surface executable instead of leaving it as docs only: supported operations are `boundary_adjustment`, `skip`, and `defer`, while `split` and `merge` fail fast as unsupported v1 operations
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md` now carries an explicit `Unsupported In V1` section so later UI/API work cannot quietly assume split/merge support before a deliberate follow-on pass exists
+  - `tests.json` now adds `T347` because the original `T297` also depends on the later continuity semantics in `F248`; the new test locks the v1 non-support decision directly
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodEditCapabilities.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-18) Skip and defer are now explicit persisted-period edit operations, which closes `F246` and adds/closes `T346` while intentionally leaving `T296` for the later continuity pass:
+  - `shared/billingClients/skipOrDeferRecurringServicePeriod.ts` now defines the first explicit disposition edits for future persisted rows: skip creates a superseding `skipped` revision with `reasonCode = skip`, while defer creates a superseding `edited` revision with `reasonCode = defer` and an explicitly moved invoice window
+  - the helper deliberately stays narrower than the later neighbor-aware validation work: it reuses the existing mutation guard, requires a new deferred invoice window instead of silently reusing the prior one, and keeps service-period continuity / invoice-linkage interplay for `F248`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md` now documents `boundary_adjustment`, `skip`, and `defer` together as the minimal v1 edit surface, while split/merge and UI/API editing remain sequenced later
+  - `tests.json` now adds `T346` because the original `T296` also depends on the later overlap/gap validation pass in `F248`; the new test locks the explicit skip/defer revision semantics without claiming broader continuity validation already exists
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodDisposition.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-18) The minimal v1 boundary-adjustment edit operation is now explicit, which closes `F245` and adds/closes `T345` while intentionally leaving `T295` for the later continuity + UI passes:
+  - `shared/billingClients/editRecurringServicePeriodBoundaries.ts` now defines the first explicit edit primitive for persisted service periods: mutable future rows can be superseded by a new `edited` revision, `provenance.kind = user_edited`, and the helper infers `boundary_adjustment`, `invoice_window_adjustment`, or `activity_window_adjustment` reason codes instead of hiding edits behind source-rule changes
+  - the helper stays intentionally narrow at this pass: it reuses the existing immutability guard, validates only local half-open boundary integrity plus in-period activity clipping, rejects no-op edits, and does not yet attempt neighbor continuity or transport-surface validation that belongs to `F248` and `F251`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_EDIT_OPERATIONS.md` now documents that `boundary_adjustment` is the only supported v1 edit operation at this checkpoint, while skip/defer, split/merge, and UI/API editing remain sequenced later
+  - `tests.json` now adds `T345` because the original `T295` also depends on the later continuity-validation and editing-surface work in `F248` and `F251`; the new test locks the edit primitive itself without pretending the broader pass already exists
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodBoundaryEdit.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-18) The first billed-history-safe backfill planner now exists, which closes `F244`, `T286`, and `T294`:
+  - `shared/billingClients/backfillRecurringServicePeriods.ts` now defines the v1 initialization rule for legacy recurring lines before runtime cutover: future candidate rows are normalized onto `provenance.reasonCode = backfill_materialization`, billed-history boundaries come from legacy billed-through data plus any already-linked persisted rows, and candidates overlapping that boundary are rejected instead of being silently clipped
+  - the same helper now makes partial-rollout backfill explicit instead of accidental: already-billed rows are retained unchanged, equivalent future rows are retained unchanged, and untouched generated future rows that drift from the current candidate schedule are regenerated with `reasonCode = backfill_realignment` while preserving the earlier row as `superseded`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_BACKFILL.md` now documents the historical-boundary rule, backfill provenance, and the deliberate boundary that historical invoices are not rehydrated into synthetic persisted rows during v1 initialization
+  - `server/src/test/unit/billing/recurringServicePeriodBackfill.domain.test.ts` now locks both halves directly: billed client-cadence history fences off future inserts without mutation, and stale future generated rows realign under explicit backfill provenance while billed history remains unchanged
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodBackfill.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-18) Persisted-schedule parity comparison is now explicit, which closes `F243` and `T293`:
+  - `shared/billingClients/recurringServicePeriodKeys.ts` now centralizes canonical `scheduleKey` and `periodKey` generation, and both materializers now use that helper so persisted schedule identity cannot drift from later comparison logic
+  - `shared/billingClients/recurringServicePeriodParity.ts` now defines the staged-cutover parity seam for materialized schedules: legacy derived selections normalize onto `scheduleKey + periodKey`, active persisted rows normalize onto the same key, and schedule parity reports only the rollout-significant drift kinds `missing_persisted_period`, `unexpected_persisted_period`, and `invoice_window_mismatch`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_PARITY_COMPARISON.md` now documents that this is schedule parity rather than invoice parity, and that `F256` still owns the later runtime cutover from derived timing to persisted-row selection
+  - `pass-0-source-inventory.json` was refreshed in the same checkpoint because the new parity helper became a live service-period reader; the docs contract suite now expects that helper in the persisted-reader inventory instead of silently drifting
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodParity.domain.test.ts src/test/unit/billing/materializeClientCadenceServicePeriods.domain.test.ts src/test/unit/billing/materializeContractCadenceServicePeriods.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) The persisted due-selection query contract is now explicit, which closes `F242` and adds/closes `T344` while intentionally leaving `T292` for `F256` runtime adoption:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringServicePeriodDueSelectionQuery` plus the default eligible lifecycle-state set `generated|edited|locked`, making the persisted-row selector contract explicit instead of leaving it as an implied future repository query
+  - `shared/billingClients/recurringServicePeriodDueSelection.ts` now defines the v1 selector seam: callers must resolve `scheduleKeys[]` first, exact `[windowStart, windowEnd)` invoice-window matching is required, billed/linkage-bearing rows are excluded, and deterministic sort order is service-period start/end then obligation id then revision
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_DUE_SELECTION.md` now documents the contract boundary clearly: `F242` defines the selector inputs and filters, while `F256` remains the later pass that switches live invoice generation off the derived billing-engine schedule and onto persisted rows
+  - `tests.json` now adds `T344` because the original `T292` also covers the later runtime cutover in `F256`; the new test locks the selector contract itself without pretending invoice generation already consumes persisted rows end to end
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Persisted service-period invoice linkage is now explicit, which closes `F241` and `T291`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now adds optional `invoiceLinkage` metadata on `IRecurringServicePeriodRecord`, with one additive linkage object carrying `invoiceId`, `invoiceChargeId`, `invoiceChargeDetailId`, and `linkedAt`
+  - `shared/billingClients/recurringServicePeriodInvoiceLinkage.ts` now defines the v1 linkage helper boundary: linking a record to an `invoice_charge_details` row stamps the record as `billed`, preserves idempotent same-row relinks, and rejects conflicting relinks until a later `invoice_linkage_repair` flow handles them explicitly
+  - `server/migrations/20260318143000_add_invoice_linkage_to_recurring_service_periods.cjs` now adds additive linkage columns on `recurring_service_periods` plus the first integrity rules for billed-history traceability: linkage columns are all-null or all-present together, `invoice_charge_detail_id` is tenant-unique, and linked rows must already be in `billed` state
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md` now documents the billed-history linkage contract and its explicit boundary with the later due-selection/runtime adoption work in `F242-F244`
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodInvoiceLinkage.domain.test.ts src/test/unit/migrations/recurringServicePeriodInvoiceLinkageMigration.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Locked/billed immutability is now explicit, which closes `F240` and `T290`:
+  - `shared/billingClients/recurringServicePeriodMutations.ts` now defines the v1 mutation guard for persisted service-period rows: unlocked future rows may still follow normal edit/regeneration flows, while `locked` and `billed` rows reject ordinary edits and allow only the narrow corrective operations `invoice_linkage_repair` and `archive`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_IMMUTABILITY.md` now documents that billed coverage remains audit history instead of mutable schedule draft state, while also keeping the invoice-linkage repair boundary explicit for the later linkage pass
+  - `server/src/test/unit/billing/recurringServicePeriodMutations.domain.test.ts` now locks the allowed/disallowed operations directly for generated, locked, and billed rows, and `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks the immutability artifact
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodMutations.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) The first regeneration and override-preservation algorithm now exists, which closes `F238`, `F239`, `T288`, and `T289`:
+  - `shared/billingClients/regenerateRecurringServicePeriods.ts` now defines the v1 regeneration rule for future active rows: untouched generated slots can be refreshed into `regenerated` revisions, replaced rows become `superseded`, and leftover candidate slots stay new generated rows
+  - the same helper now makes override preservation explicit instead of accidental: `user_edited`, `repair`, `edited`, `locked`, and `billed` future rows are preserved as-is, and the candidate slot that would have overwritten them is intentionally discarded until a later explicit conflict-resolution flow exists
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_REGENERATION.md` now documents the slot-order regeneration policy, period-key/revision continuity, and the deliberate v1 boundary that preserved overrides are not merged automatically
+  - `server/src/test/unit/billing/recurringServicePeriodRegeneration.domain.test.ts` now locks both halves directly: changed untouched rows regenerate into a new revision while user-edited rows remain preserved and unmodified
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodRegeneration.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) The first contract-cadence materialization helper now exists, which closes `F237` and `T287`:
+  - `shared/billingClients/materializeContractCadenceServicePeriods.ts` now wraps the existing contract-anniversary generators and `resolveContractCadenceInvoiceWindowForServicePeriod(...)`, producing persisted future record candidates for contract-owned recurring obligations without waiting for later invoice-selection cutover work
+  - the helper keeps contract-owned timing explicit at the persisted-record seam: schedule keys are `contract` owned, timing metadata preserves the anniversary anchor, `advance` invoice windows match the contract-owned service period, and `arrears` invoice windows land on the next contract-owned window after the covered period ends
+  - `server/src/test/unit/billing/materializeContractCadenceServicePeriods.domain.test.ts` now locks the monthly contract-owned materialization path directly for both advance and arrears, proving the additive record shape instead of only re-testing raw boundary generation
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/materializeContractCadenceServicePeriods.domain.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) The first client-cadence materialization helper now exists, which closes `F236` and adds/closes `T343` while intentionally leaving `T286` for `F244` backfill/no-billed-history rules:
+  - `shared/billingClients/materializeClientCadenceServicePeriods.ts` now composes the existing client-cadence boundary generator with the new horizon policy and the persisted-record contract, producing additive future record candidates for client-owned recurring obligations instead of only ephemeral runtime periods
+  - the helper preserves parity semantics instead of inventing new date math: service-period boundaries still come from `generateClientCadenceServicePeriods(...)`, `advance` invoice windows stay aligned to the same period, `arrears` invoice windows resolve to the next client-cadence window, and generated rows use the explicit `generated` provenance plus the shared persisted-record identity vocabulary
+  - `server/src/test/unit/billing/materializeClientCadenceServicePeriods.domain.test.ts` now locks both advance and arrears mapping behavior directly, including schedule keys, canonical invoice-window mapping, generated provenance, and horizon coverage
+  - `tests.json` now adds `T343` because the original `T286` also covers the later `F244` backfill rule about not mutating billed history; that acceptance surface is still intentionally open until the dedicated backfill semantics land
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/materializeClientCadenceServicePeriods.domain.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) The v1 generation-horizon policy is now explicit, which closes `F235` and `T285`:
+  - `shared/billingClients/recurringServicePeriodGenerationHorizon.ts` now defines the first operational horizon contract for persisted recurring periods: initial materialization/backfill targets `180` days of future coverage, steady-state replenishment triggers at the `45`-day low-water mark, and continuity issues are surfaced explicitly instead of being silently treated as ordinary replenishment
+  - the same helper now makes the continuity invariant executable before ledger-writing code lands: `findRecurringServicePeriodContinuityIssues(...)` detects `gap` and `overlap` states under the canonical half-open model, while `assessRecurringServicePeriodGenerationCoverage(...)` reports whether the current future ledger both meets the target horizon and has fallen low enough to require replenishment
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_GENERATION_HORIZON.md` now documents the target horizon, low-water threshold, whole-period overshoot rule, and the explicit boundary that continuity repair is separate from ordinary replenishment
+  - `server/src/test/unit/billing/recurringServicePeriodGenerationHorizon.domain.test.ts` now locks the helper behavior directly, while `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks the new horizon artifact so the executable helper and the plan policy stay aligned
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodGenerationHorizon.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) The persisted-service-period provenance model is now explicit, which closes `F234` and `T284`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now turns `IRecurringServicePeriodRecordProvenance` into a discriminated union with explicit reason-code catalogs for `generated`, `user_edited`, `regenerated`, and `repair`, so later materialization/edit/regeneration work no longer depends on a loose optional-string bag for provenance semantics
+  - `shared/billingClients/recurringServicePeriodProvenance.ts` now provides the reusable v1 helper layer: `isRecurringServicePeriodProvenanceReasonCode(...)`, `isRecurringServicePeriodProvenanceDivergent(...)`, and `validateRecurringServicePeriodProvenance(...)` make the required-versus-optional field rules executable before repositories and UI flows start writing these records for real
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_PROVENANCE.md` now documents the provenance kinds, required-field matrix, reason-code catalog, and the operational meaning of divergence from untouched cadence rules; `PERSISTED_SERVICE_PERIOD_RECORD.md` now points at that artifact instead of leaving provenance requirements as future tense
+  - `server/src/test/unit/billing/recurringServicePeriodProvenance.domain.test.ts` now locks the shared helper/domain behavior directly, while `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` locks the new provenance artifact so the typed helper and the plan language cannot drift apart quietly
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodProvenance.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) The persisted-period lifecycle model is now explicit, which closes `F233` and `T283`:
+  - `shared/billingClients/recurringServicePeriodLifecycle.ts` now defines the authoritative v1 state machine for persisted service-period records, including the allowed transition map, terminal-state set, and reusable `canTransitionRecurringServicePeriodState(...)` / `isRecurringServicePeriodStateTerminal(...)` helpers
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_LIFECYCLE.md` now documents the state meanings, conservative allowed transitions, terminal-state policy, and v1 invariants so later edit/regeneration/billing-linkage work has one lifecycle baseline instead of ad hoc state semantics
+  - `packages/billing/src/index.ts` now re-exports the lifecycle helpers/constants from the billing package surface so downstream consumers can adopt the same transition contract without reaching into shared internals directly
+  - `server/src/test/unit/billing/recurringServicePeriodLifecycle.domain.test.ts` now locks the transition map directly, while `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks the lifecycle artifact so the documented state model and the executable helper cannot drift apart quietly
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodLifecycle.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) The physical persisted-ledger table now exists, which closes `F232`, closes `T282`, and adds/closes `T342`:
+  - `server/migrations/20260318120000_create_recurring_service_periods.cjs` now creates `recurring_service_periods` as the first physical ledger table for materialized recurring periods, flattening the `F231` record contract into row columns for identity, obligation linkage, cadence ownership, service/invoice boundaries, activity clipping, provenance, and audit timestamps
+  - the migration now enforces the first integrity boundary directly in the database: check constraints cover cadence owner, due position, lifecycle state, obligation type, charge family, provenance kind, positive revision numbers, valid `[start, end)` service/invoice windows, valid optional activity-window clipping, and `supersedes_record_id <> record_id`
+  - the migration also adds the first lookup posture for later materialization/runtime work: a unique revision key on `(tenant, schedule_key, period_key, revision)` plus tenant-scoped indexes for schedule lookup, obligation-state scans, and due selection by invoice window
+  - `server/src/test/unit/migrations/recurringServicePeriodsMigration.test.ts` now executes the migration against a fake schema contract so the table shape, constraints, and index names are locked directly instead of being left as migration prose
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PERSISTED_SERVICE_PERIOD_RECORD.md` now documents the physical `recurring_service_periods` landing and `pass-0-source-inventory.json` was refreshed because the docs contract inventory intentionally tracks all live `service_period_*` references, including the new migration and migration test
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/migrations/recurringServicePeriodsMigration.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+      - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not by the recurring-service-period migration
+
+- (2026-03-18) The first materialized-ledger checkpoint now has one authoritative logical record contract, which closes `F231` and adds/closes `T341`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IPersistedRecurringObligationRef`, `IRecurringServicePeriodRecordProvenance`, `IRecurringServicePeriodRecord`, `RecurringServicePeriodLifecycleState`, and `RecurringServicePeriodProvenanceKind`, so future schema/runtime work can target one shared persisted-record vocabulary instead of inventing ad hoc shapes
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PERSISTED_SERVICE_PERIOD_RECORD.md` now defines the logical record shape explicitly: `recordId`, `scheduleKey`, `periodKey`, `revision`, obligation linkage, cadence ownership, `[start, end)` service/invoice boundaries, provenance, and lifecycle state, while also naming the follow-on boundaries for `F232`, `F233`, and later invoice-linkage/runtime adoption work
+  - `server/src/test/test-utils/recurringTimingFixtures.ts` now includes persisted-record fixture builders so the later materialized-ledger passes can reuse one contract-aware test seam instead of recreating record shapes inline
+  - executable coverage for this checkpoint now lives in `packages/types/src/recurringServicePeriodRecord.typecheck.test.ts`, while `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now also locks the presence and core sections of the new persisted-record artifact
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
+    - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-17) The staged cutover, rollback, and follow-on boundary posture is now explicit in the plan artifacts, which closes `F224`, `F225`, `F226`, `F227`, `F228`, `F229`, `F230`, `T253`, `T254`, `T255`, `T256`, `T257`, `T258`, and `T259`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/CUTOVER_SEQUENCE.md` now defines the ordered cutover bands for reader-first invoice hydration, writer propagation, scheduler identity, grouping, downstream reporting/portal/export adoption, and rollback/coexistence expectations while historical flat invoices and canonical detail-backed invoices both remain queryable
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RUNBOOK.md` now includes dedicated `Projection Mismatch Investigation` and `Authoring-Default Drift Investigation` sections, with explicit SQL/source-check guidance for header-versus-detail disagreements and for recurring-default drift across templates, presets, wizard flows, and custom recurring lines
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PRD.md` and `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PASS0_RECURRING_TIMING_APPENDIX.md` now both carry explicit follow-on boundaries for persisted recurring execution records and invoice-schema versioning, keeping those concerns out of recurring v1 unless rollout pressure or long-lived coexistence justifies reopening them deliberately
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks all seven documentation contracts directly, and `pass-0-source-inventory.json` was refreshed in the same checkpoint so the docs suite stays aligned with current grep-backed source references instead of stale inventory entries
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+
+- (2026-03-17) Cleanup-proof source/DB validation now covers the remaining dropped-table, authoritative-reader, and selector-input scheduler seams, which closes `F221`, `F222`, `F223`, `T251`, `T252`, `T271`, `T272`, and adds `T340` for the missing DB half of `F221`:
+  - `shared/billingClients/templateClone.ts` no longer reads `contract_template_line_mappings.custom_rate`; template-clone custom-rate lookup now reads the authoritative `contract_template_lines.custom_rate`, which removes the last live shared-package dependency on a dropped recurrence mapping table
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now scans `shared/billingClients` alongside `packages/billing/src` and `server/src/lib`, so the dropped-table source contract covers shared runtime helpers instead of only package/server code
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now carries `F221` DB validation proving recurring invoice generation still succeeds while `contract_line_terms`, `contract_line_mappings`, and `contract_template_line_mappings` are absent from the live schema; `tests.json` gained `T340` because the existing `T247` checklist item only covered source absence
+  - `packages/billing/src/actions/invoiceGeneration.ts` and `packages/billing/src/lib/billing/billingEngine.ts` now distinguish real billing-cycle UUID bridges from selector-input-only execution windows: selector windows no longer get forced into `invoices.billing_cycle_id` or reloaded through `client_billing_cycles`
+  - `packages/billing/src/lib/billing/billingEngine.ts` now exposes `calculateBillingForExecutionWindow(...)`, which reuses the canonical prepared-period path without assuming the execution window can be looked up by billing-cycle UUID
+  - comparison-mode drift logging now skips execution windows that have no real billing-cycle bridge instead of trying to replay legacy billing against a typed contract-cadence identity
+  - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` passes `T251`, proving preview selection prefers canonical detail periods over invoice header periods when both exist
+  - `packages/billing/tests/authoritativeRecurringReaders.servicePeriods.wiring.test.ts` passes `T272`, locking the source-side preference for canonical detail periods over header fallbacks
+  - `server/src/test/unit/jobs/generateInvoiceHandler.recurringExecutionIdentity.test.ts` passes `T271`, and `server/src/test/integration/billingInvoiceTiming.integration.test.ts` passes `T252`, proving selector-input contract-cadence execution can run and persist invoices with `billing_cycle_id = null` instead of being blocked on a billing-cycle-only scheduler assumption
+  - focused validation for this checkpoint used:
+    - `cd server && npx tsc --pretty false --noEmit -p ../packages/billing/tsconfig.json`
+    - `cd server && npx vitest run ../packages/billing/tests/authoritativeRecurringReaders.servicePeriods.wiring.test.ts src/test/unit/jobs/generateInvoiceHandler.recurringExecutionIdentity.test.ts src/test/unit/billing/recurrenceStorageModel.contract.test.ts --coverage.enabled false`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T252" --hookTimeout 600000 --coverage.enabled false`
+    - `PGPASSWORD=postpass123 psql -h 127.0.0.1 -p 57433 -U postgres -d postgres -c 'DROP DATABASE IF EXISTS test_database;'`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts -t "T251" --hookTimeout 600000 --coverage.enabled false`
+  - notable harness gotchas:
+    - DB-backed suites still require overriding the stale `.env.localtest` database port from `5438` to `57433`
+    - re-running `invoiceSelection.integration.test.ts` back-to-back can leave a stale `test_database`; dropping it before the isolated rerun avoids the duplicate-DB bootstrap failure
+
+- (2026-03-17) Partially migrated live recurrence rows now normalize at the remaining client-facing read/write edges, which closes `F219` and `T249`:
+  - `packages/clients/src/models/clientContract.ts` now normalizes `contract_lines` rereads with `normalizeLiveRecurringStorage(...)`, so client-contract authoring flows stop returning raw legacy-null `billing_timing` / `cadence_owner` values
+  - `packages/clients/src/actions/clientContractLineActions.ts` now normalizes partially migrated recurring fields on both sides of the client-line seam: `getClientContractLine(...)` returns normalized defaults before date serialization, and `addClientContractLine(...)` now clones from `templateRecurringStorage` instead of hand-written `?? 'arrears' / 'client'` fallbacks
+  - `packages/client-portal/src/actions/client-portal-actions/client-billing.ts` now normalizes the client-portal contract-line read-model before returning it, which keeps portal contract-line details on the same shared compatibility contract as the billing and clients packages
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now claims `T249` for this plan and locks those source seams explicitly; `packages/clients/src/actions/clientContractLineActions.recurringCompatibility.test.ts` adds behavior coverage for normalized reads plus clone writes; `packages/client-portal/src/actions/client-portal-actions/client-billing.recurringCompatibility.test.ts` adds a focused source wiring guard for the portal seam because importing that action directly still trips the unrelated local `@alga-psa/jobs` package-resolution issue
+  - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts` had unrelated `T249/T250/T251/T254/T255` labels from another effort; those were renamed to `RQ249`-style labels so this plan’s checklist IDs stay one-to-one with the billing work
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts ../packages/clients/src/actions/clientContractLineActions.recurringCompatibility.test.ts ../packages/client-portal/src/actions/client-portal-actions/client-billing.recurringCompatibility.test.ts ../packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`, and `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+
+- (2026-03-17) Stale term-storage references are now described as compatibility only instead of authoritative recurrence storage, which closes `F218` and `T248`:
+  - `packages/billing/src/actions/contractLineAction.ts` now says directly that `contract_template_lines.billing_timing` is authoritative and `contract_template_line_terms` survives only as a legacy shadow read/write during staged rollout
+  - `packages/billing/src/models/contractTemplate.ts`, `packages/billing/src/repositories/contractLineRepository.ts`, and `server/src/lib/repositories/contractLineRepository.ts` now describe `contract_template_line_terms` joins as compatibility fallbacks, which removes the remaining model/repository comments that could be read as treating the terms table as the live source of truth
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now includes `T248`, locking the authoritative-versus-fallback wording against `RECURRENCE_STORAGE_MATRIX.md` and those source comments
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`, and `npx tsc --pretty false --noEmit -p server/tsconfig.json`; the server compile remains blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error
+
+- (2026-03-17) Stale dropped recurrence-table reads are now explicitly fenced off instead of being left implicit, which closes `F217` and `T247`:
+  - a fresh source inventory across `packages/billing/src` and `server/src/lib` shows no live reads or joins against the removed recurrence tables `contract_line_terms`, `contract_line_mappings`, or `contract_template_line_mappings`
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now includes `T247`, which locks that absence directly while also documenting that `contract_template_line_terms.billing_timing` remains the one intentional template compatibility fallback listed in `AUTHORITATIVE_RECURRENCE_STORAGE_MODEL`
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`, and `npx tsc --pretty false --noEmit -p server/tsconfig.json`; the server compile remains blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error
+
+- (2026-03-17) Mapping and repository write paths no longer silently drop recurring cadence fields, which closes `F216` and `T246`:
+  - `packages/billing/src/actions/contractLineMappingActions.ts` now normalizes template snapshots with `normalizeLiveRecurringStorage(...)` and carries both `billing_timing` and `cadence_owner` through template-line updates, so mapping writes stop preserving only cadence owner while dropping timing
+  - `packages/billing/src/models/contractLineMapping.ts` now treats billing timing as part of the mapping contract on both live and template rows: reads select `billing_timing`, live updates resolve cadence owner plus timing through `resolveRecurringAuthoringPolicy(...)`, and template fallbacks return the updated timing field instead of silently omitting it
+  - `packages/billing/src/repositories/contractLineRepository.ts` and `server/src/lib/repositories/contractLineRepository.ts` now normalize single-line rereads with `normalizeLiveRecurringStorage(...)` and preserve existing `billing_timing` when `updateContractLineRate(...)` changes only rate data, removing another pair of repository write seams that previously depended on raw `undefined` handling
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now includes `T246`, while `packages/billing/tests/contractLineCadenceOwnerCompatibility.wiring.test.ts` and `packages/billing/tests/contractLineMappingRecurringTiming.wiring.test.ts` were refreshed to lock the new helper-based cadence/timing propagation contract directly at the mapping seams
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts ../packages/billing/tests/contractLineCadenceOwnerCompatibility.wiring.test.ts ../packages/billing/tests/contractLineMappingRecurringTiming.wiring.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`, and `npx tsc --pretty false --noEmit -p server/tsconfig.json`; the server compile remains blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error
+
+- (2026-03-17) Legacy `billing_cycle_alignment` compatibility defaults now run through one shared resolver across the remaining fixed recurring write and reread seams, which closes `F215` and `T245`:
+  - `packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx`, `packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLinePresetConfiguration.tsx`, and `packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration.tsx` now use `resolveBillingCycleAlignmentForCompatibility(...)` when rehydrating fixed config state and when emitting fixed-config writes, so legacy rows with `enable_proration = true` but no stored alignment no longer snap back to `'start'` in the UI
+  - `packages/billing/src/actions/contractLineAction.ts`, `packages/billing/src/actions/contractWizardActions.ts`, and `packages/billing/src/actions/contractLineMappingActions.ts` now use the same helper before writing plan fixed config, client-contract fixed config copies, and template-line fixed snapshots, which removes the last hard-coded `'start'` fallbacks from live fixed recurring propagation seams
+  - `packages/billing/src/repositories/contractLineRepository.ts` and `server/src/lib/repositories/contractLineRepository.ts` now normalize alignment on contract-line and template-line rereads using both stored alignment and `enable_proration`, keeping readback compatibility consistent with the shared write contract
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now includes `T245`, locking the helper-based normalization across action, wizard, mapping, UI, and repository seams, and `packages/billing/tests/contractLinePresetRecurringAuthoring.wiring.test.ts` now expects the resolver instead of the older inline `'start'` fallback
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/api/contractLineService.billingCycleAlignmentCompatibility.wiring.test.ts ../packages/billing/tests/billingCycleAlignmentCompatibility.model.test.ts ../packages/billing/tests/contractLinePresetRecurringAuthoring.wiring.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`, and `npx tsc --pretty false --noEmit -p server/tsconfig.json`; the server compile remains blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error
+
+- (2026-03-17) Billing-timing default normalization now runs through one shared policy across the remaining recurring write seams, which closes `F214` and `T244`:
+  - `packages/billing/src/actions/contractLineAction.ts` now uses `normalizeLiveRecurringStorage(...)` and `normalizeTemplateRecurringStorage(...)` for contract-line readback and template-line lookups, eliminating another pocket of hand-written `billing_timing ?? 'arrears'` logic at the action seam
+  - `packages/billing/src/repositories/contractLineRepository.ts` and `server/src/lib/repositories/contractLineRepository.ts` now normalize billing timing before template snapshot writes and before template-to-contract clone writes, so those repository-level propagation seams no longer bypass the shared recurring timing default
+  - `server/src/lib/api/services/ContractLineService.ts` now normalizes template-derived recurring cadence fields before writing a fresh live contract line during replacement/renewal assignment flows, which removes the last live service-layer template clone fallback that still hard-coded `arrears`
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now includes `T244`, locking the shared billing-timing default constant plus the fact that wizard, preset, contract-line action, repository, and server assignment write paths all reference the shared normalization helpers instead of inventing local defaults
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`, and `npx tsc --pretty false --noEmit -p server/tsconfig.json`; the server compile remains blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error
+
+- (2026-03-17) The recurrence storage contract is now explicit across live lines, template lines, presets, and shared readers, which closes `F211`, `F212`, `F213`, `F220`, `T241`, `T242`, `T243`, and `T250`:
+  - `shared/billingClients/recurrenceStorageModel.ts` now defines one authoritative storage model for recurring cadence fields and one set of normalization helpers for live lines, template lines, and presets
+  - `packages/billing/src/models/contractTemplate.ts`, `packages/billing/src/models/contractLinePreset.ts`, `packages/billing/src/repositories/contractLineRepository.ts`, `server/src/lib/repositories/contractLineRepository.ts`, and `shared/billingClients/contractLines.ts` now reuse that shared storage model instead of open-coding separate recurring defaults at each read seam
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRENCE_STORAGE_MATRIX.md` now names the authoritative table for each recurrence field, the fixed-config compatibility split for partial-period fields, and the shared interface shapes that project those fields
+  - `server/src/test/unit/billing/recurrenceStorageModel.contract.test.ts` now locks the new shared model plus template/preset cadence-owner migration backfills, while `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now enforces the new storage matrix artifact and `pass-0-source-inventory.json` was refreshed so the docs contract stays aligned with live source references
+  - focused validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`, `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`, and `npx tsc --pretty false --noEmit -p server/tsconfig.json`; the server compile remains blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error
+
+- (2026-03-17) Template fixed-line authoring now captures recurring timing and first-invoice semantics explicitly instead of silently defaulting everything to arrears/no-adjustment, which closes `F206` and `T235`:
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx` now carries `billing_timing` and `enable_proration` in template wizard state, defaults them to `arrears` / `false`, and includes both fields in `ContractTemplateWizardSubmission`
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.tsx` now lets authors choose fixed-line `Billing Timing`, toggle `Adjust for Partial Periods`, and see first-invoice explainer copy directly in the template authoring step alongside the existing cadence-owner chooser
+  - `packages/billing/src/actions/contractWizardActions.ts` now passes `submission.billing_timing` into `resolveRecurringAuthoringPolicy(...)` when creating template-backed fixed, product, hourly, and usage lines, so template-created recurring defaults stop relying on the action-layer arrears fallback when the wizard meant `advance`
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.tsx` now echoes cadence owner, billing timing, and partial-period adjustment in the review summary so template authors can verify first-invoice semantics before publishing
+  - focused coverage now lives in `packages/billing/tests/templateWizardBucketOverlay.test.ts` and `packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts`; the runtime wizard test now proves submission carries `billing_timing: 'advance'` plus `enable_proration: true`, while the wiring test locks the new template fixed-step and action-layer seams
+
+- (2026-03-17) Preset authoring/editing now persists the same recurring timing defaults that preset reuse was already replaying, which closes `F205` and `T234`:
+  - `packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx` now persists explicit preset recurrence defaults instead of dropping them at the modal save seam: fixed presets write `billing_timing`, preset creates/updates write `cadence_owner: 'client'` during the current rollout, and fixed preset config writes now preserve the active partial-period alignment instead of hard-coding `start`
+  - the preset create/edit modal now promotes the hidden fixed-config compatibility alignment from `start` to `prorated` when `Adjust for Partial Periods` is enabled on a preset that did not already carry a more specific stored alignment, matching the partial-period policy used elsewhere
+  - `packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLinePresetConfiguration.tsx` now exposes `Billing Timing` on the main fixed preset edit surface, rehydrates stored `billing_timing`, and persists that value plus explicit client cadence metadata when preset basics are saved
+  - focused coverage now lives in `packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts` and `packages/billing/tests/contractLinePresetRecurringAuthoring.wiring.test.ts`; the action test now proves preset reuse replays stored advance timing plus partial-period defaults onto the created contract line, while the wiring test locks the create/edit UI payload seams where timing fields had previously been omitted
+
+- (2026-03-17) Recurring authoring defaults now have one shared policy source instead of per-path fallbacks, which closes `F201`, `F202`, `F203`, `F204`, `T231`, `T232`, and `T233`:
+  - `shared/billingClients/recurringAuthoringPolicy.ts` now defines the authoritative v1 authoring defaults: cadence owner defaults to `client`, recurring billing timing defaults to `arrears`, touched writes preserve stored cadence/timing when omitted, and fixed-line legacy alignment derives through the existing compatibility helper instead of ad hoc inline branches
+  - `packages/billing/src/models/contractLine.ts` no longer silently drops `billing_timing` on create/update, so contract-wizard-created and custom recurring lines now persist the same timing semantics they author instead of relying on reader-side arrears fallbacks
+  - `packages/billing/src/actions/contractWizardActions.ts` now resolves one shared recurring authoring policy per submission and uses it across fixed, product, hourly, and usage line creation plus fixed-config alignment writes
+  - `packages/billing/src/actions/contractLinePresetActions.ts` now uses the same shared policy for preset-to-contract copies and custom recurring-line creation, which fixes the old custom-line mismatch where missing `billing_timing` defaulted to `advance` and fixed `enable_proration` still wrote `billing_cycle_alignment: start`
+  - `packages/billing/src/repositories/contractLineRepository.ts`, `server/src/lib/repositories/contractLineRepository.ts`, `packages/billing/src/actions/contractLineAction.ts`, and `server/src/lib/api/services/ContractLineService.ts` now preserve or normalize cadence/timing fields through the same helper on touched writes, reducing live authoring-path drift before the later template/preset cleanup features land
+  - `packages/billing/tests/fixedContractLineConfiguration.recurringAuthoring.wiring.test.ts` now locks the live fixed-line edit seam directly: the inline editor must keep cadence owner on `updateContractLine(...)`, keep billing timing on `upsertContractLineTerms(...)`, and depend on the updated action-layer normalization instead of silently dropping touched timing fields
+  - `packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx` now defaults new custom recurring lines to `arrears`, matching the rest of the recurring authoring surfaces instead of preselecting a divergent timing mode in the UI
+
+- (2026-03-17) External tax import and reconciliation consumers now have explicit service-period-first guardrails, which closes `F200` and `T229`:
+  - `packages/billing/src/services/externalTaxImportService.ts` now states the intended policy inline at both import and reconciliation seams: external tax behavior remains invoice- and charge-tax-driven, while canonical recurring service periods stay explanatory context rather than tax allocation or reconciliation inputs
+  - `packages/billing/src/services/accountingExportService.ts` now states the complementary post-export rule inline: automatic external-tax import deduplicates by invoice id and must not fan out one invoice into multiple import attempts just because export lines carry multiple canonical recurring periods
+  - `server/src/test/unit/accounting/externalTaxConsumers.servicePeriods.test.ts` now proves both behaviors directly:
+    - `reconcileTaxDifferences(...)` reads only invoice and `invoice_charges` tax fields and would fail if it tried to query `invoice_charge_details`
+    - `importExternalTaxAfterDelivery(...)` imports once per unique invoice even when the export context contains multiple canonical recurring detail-backed lines for the same invoice
+  - validation for this checkpoint used `cd server && npx vitest run src/test/unit/accounting/externalTaxConsumers.servicePeriods.test.ts --coverage.enabled false` plus `npx tsc --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-17) QuickBooks and Xero export adapters now have explicit recurring-period projection policies, which closes `F198`, `F199`, `T227`, and `T228`:
+  - `packages/billing/src/adapters/accounting/quickBooksOnlineAdapter.ts` now routes line-date selection through an explicit helper: QuickBooks can export only one service date, so canonical recurring ranges pin to the first covered day, end-only fallback lines use the surviving boundary, and `financial_document_fallback` lines intentionally omit `SalesItemLineDetail.ServiceDate`
+  - `server/src/test/unit/accounting/quickBooksOnlineAdapter.spec.ts` now proves both sides of that QuickBooks contract: canonical recurring ranges export `2025-01-01` as the service date, while financial-only fallback rows omit it entirely
+  - `packages/billing/src/adapters/accounting/xeroAdapter.ts` now routes service-period shaping through an explicit helper: canonical/header-backed lines keep both compatibility summary bounds, while `financial_document_fallback` lines stay periodless
+  - `packages/integrations/src/lib/xero/xeroClientService.ts` now flattens Xero line descriptions with explicit date-basis copy instead of raw ISO timestamps: multi-day ranges become `Service period: YYYY-MM-DD to YYYY-MM-DD`, same-day coverage becomes `Service date: YYYY-MM-DD`, and null-period lines leave the base description untouched
+  - focused coverage now lives in `server/src/test/unit/accounting/xeroClientService.spec.ts`, `server/src/test/unit/accounting/xeroAdapter.spec.ts`, and `packages/billing/tests/accountingExportAdapters.servicePeriods.wiring.test.ts`
+  - validation for this checkpoint used focused adapter/unit runs plus `npx tsc --noEmit` on `packages/billing` and `packages/integrations`; the older `server/src/test/unit/accounting/xeroAdapter.spec.ts` delivery case still expects a live DB-backed mapping write path during `deliver()`, so the checkpoint relied on the focused transform test rather than claiming the full historical file passes in this local environment
+
+- (2026-03-17) Reporting and analytics date-basis policy is now explicit across portal, billing, reporting, and finance service seams, which closes `F191`, `F192`, `F193`, `F194`, `T221`, `T222`, `T223`, and `T230`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/REPORTING_DATE_BASIS.md` now defines one policy matrix for billing overview, contract revenue, expiration, reconciliation, financial analytics, and service-metric families, including the mixed-cadence rule that financial-operational readers keep invoice / transaction dates while coverage readers keep canonical recurring service periods
+  - `packages/client-portal/src/actions/client-portal-actions/dashboard.ts` now makes the metric split explicit in-source: recent invoice activity may carry recurring coverage summaries, but pending-invoice counts remain invoice-state metrics and must not be silently reinterpreted as service-period totals
+  - `packages/billing/src/actions/contractReportActions.ts` now states the intended reporting split directly where revenue and renewal summaries are assembled: revenue pivots to canonical recurring coverage when detail periods exist, while expiration and decision-due summaries stay assignment-date based
+  - `packages/reporting/src/actions/reconciliationReportActions.ts` and `server/src/lib/api/services/FinancialService.ts` now document the complementary control rule that reconciliation and financial analytics remain financial-date readers; recurring service periods remain additive explanatory lineage rather than the basis for aging, collections, or discrepancy totals
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks the policy artifact plus those source comments as executable plan contracts, and `pass-0-source-inventory.json` was refreshed in the same checkpoint so the docs contract continues to match the live persisted-reader inventory
+
+- (2026-03-17) Financial-artifact fallback handling is now explicit instead of collapsing all missing recurring metadata into the same `financial_document_date` shape, which closes `F190` and `T220`:
+  - `packages/billing/src/actions/creditActions.ts` now distinguishes three additive invoice-context states for credit readers and transaction history: `canonical_recurring`, `financial_document_fallback`, and `missing_source_context`
+  - the intended staged-coexistence rule is now explicit at the reader seam: historical/manual financial artifacts with no canonical recurring detail stay `financial_document_fallback`, while broken lineage references (for example a transferred credit whose source invoice can no longer be loaded) surface `missing_source_context` without inventing recurring periods
+  - `packages/types/src/interfaces/billing.interfaces.ts` and `server/src/interfaces/billing.interfaces.ts` now expose that additive `invoice_context_status` field on credit-tracking and transaction payloads so dashboard consumers can distinguish legitimate financial-only fallbacks from repair-needed lineage failures
+  - `packages/billing/src/components/billing-dashboard/CreditManagement.tsx` now renders a dedicated `Lineage Missing` state with repair guidance instead of silently flattening missing-source cases into the same copy used for intentional financial-only artifacts
+  - focused executable coverage now lives in `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` and `packages/billing/tests/creditManagement.financialArtifactContext.wiring.test.ts`
+
+- (2026-03-17) Accounting export readers and stored export lines now make recurring-period provenance explicit, which closes `F195` and `T224`:
+  - `packages/types/src/interfaces/accountingExport.interfaces.ts` now defines additive `service_period_source` metadata with the three supported export-reader states: `canonical_detail_periods`, `invoice_header_fallback`, and `financial_document_fallback`
+  - `packages/billing/src/services/accountingExportInvoiceSelector.ts` now derives that source on preview and batch-selection rows, persists it into `accounting_export_lines.payload`, and normalizes date-only service-period values so preview and stored export lines agree even when the DB driver returns different `Date` shapes for `DATE` columns
+  - `packages/billing/src/repositories/accountingExportRepository.ts` now normalizes reread `service_period_start` / `service_period_end` values back onto the shared `ISO8601String` contract instead of leaking raw connection-specific `Date` objects to downstream export readers
+  - `packages/billing/src/services/accountingExportValidation.ts`, `packages/billing/src/actions/accountingExportActions.ts`, `server/src/lib/api/controllers/ApiAccountingExportController.ts`, and `server/src/lib/api/controllers/ApiCSVAccountingController.ts` now treat `service_period_source` as the authoritative projection contract for canonical-detail versus header-fallback versus financial-only export lines
+  - focused coverage now lives in `server/src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts`, `server/src/test/integration/accounting/invoiceSelection.integration.test.ts`, and `packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts`; the integration seam now explicitly spies `AccountingExportService.createForTenant(...)` so selector-created batches share the transaction-scoped repository used by the test harness
+
+- (2026-03-17) Stored export batches now have an explicit mixed-shape reread contract, which closes `F196` and `T225`:
+  - `packages/billing/src/services/accountingExportService.ts` now documents the intended storage rule directly at `getBatchWithDetails(...)`: a stored batch may contain historical/header-fallback lines and canonical-detail-backed recurring lines together, and rereads must preserve each line’s stored `service_period_source` plus summary/detail-period payload instead of collapsing the batch to one inferred timing basis
+  - `server/src/test/integration/accounting/exportDashboard.integration.test.ts` now proves that contract against the real dashboard/service reread seam with one canonical line and one historical fallback line in the same stored batch; both period summaries and per-line payload provenance survive `getBatchWithDetails(...)`
+  - the same integration file now aligns its selector re-export path with the live tenant-aware batch creation seam by spying `AccountingExportService.createForTenant(...)`, keeping the dashboard test harness on the same code path now used by `createBatchFromFilters(...)`
+
+- (2026-03-17) Export execution now has an explicit replay/reread immutability rule for recurring-period provenance, which closes `F197` and `T226`:
+  - `packages/billing/src/services/accountingExportService.ts` now states the delivery rule inline at the line-update seam: execute/retry may change transport state such as `status` and `external_document_ref`, but they must not rewrite stored `service_period_source` or recurring-detail payloads
+  - `server/src/test/unit/accounting/accountingExportService.replay.servicePeriods.test.ts` now proves that contract on the focused execution path: validation promotes the batch to `ready`, delivery moves the line to `delivered`, a second execute attempt is rejected as invalid state, and the canonical recurring-detail payload survives both the delivery transition and the rejected replay attempt unchanged
+  - an attempted DB-backed version of the same assertion in `batchLifecycle.integration.test.ts` ran into an unrelated `@alga-psa/jobs` package-entry resolution failure before the suite could load, so this checkpoint uses the focused service-level unit seam instead of broadening unrelated harness repair work
+
+- (2026-03-17) `T100` is still blocked after a fresh recheck against the active local Postgres listener, so it remains open:
+  - `server/src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts` still spends most of its setup budget replaying older migration-heavy infrastructure bootstrap and then falls over on missing workflow-generator files (`scripts/generate-system-email-workflow.cjs` and `services/workflow-worker/src/workflows/system-email-processing-workflow.ts`) before the targeted recurring assertion becomes trustworthy
+  - `server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts` still fails during migration bootstrap on `202409071803_initial_schema.cjs` with `ROLLBACK - Connection terminated unexpectedly`, so the negative-invoice half of the integration guard is still a harness problem rather than an application-behavior regression
+  - keep defending this area with the focused unit suites already added under `creditActions.servicePeriods.test.ts`, `creditReconciliation.servicePeriods.test.ts`, and `prepaymentInvoice.periodPolicy.test.ts` until the older infrastructure harness is repaired enough to run the real `T100` integration seam
+
+- (2026-03-17) Dashboard and portal invoice views now label financial-only artifacts explicitly instead of silently omitting recurring context, which closes `F189` and `T339`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now renders `Financial-only line. No recurring service period.` for manual or adjustment rows that intentionally lack canonical recurring timing metadata
+  - `packages/client-portal/src/components/billing/BillingOverviewTab.tsx` now surfaces `Financial-only invoice...` guidance on the next-invoice card when the invoice is manual or credit-affected and no recurring service-period summary is available
+  - `packages/billing/src/components/billing-dashboard/CreditManagement.tsx` now shows a `Context` column and descriptive copy that distinguish recurring-source credits, transferred recurring credits, and financial-only credits, so dashboard readers can interpret non-service financial artifacts alongside preserved recurring lineage
+  - focused coverage now lives in `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx`, `packages/client-portal/src/components/billing/BillingOverviewTab.servicePeriods.test.tsx`, and `packages/billing/tests/creditManagement.financialArtifactContext.wiring.test.ts`
+
+- (2026-03-17) Credit transfer readers and audit metadata now preserve recurring lineage instead of dropping it on the target credit, which closes `F188` and `T219`:
+  - `packages/billing/src/actions/creditActions.ts` now resolves direct-or-inherited credit invoice lineage, so `listClientCredits(...)` and `getCreditDetails(...)` can keep showing canonical recurring source-invoice context even when a transferred credit’s own transaction has no direct `invoice_id`
+  - `transferCredit(...)` now stamps transfer transaction metadata and audit details with the source credit id plus source-invoice date basis and recurring service-period summary, which makes downstream reporting and audit trails explicit for transferred credits that originated from detail-backed recurring invoices
+  - the shared/server billing interfaces now expose additive lineage fields (`source_credit_id`, `source_invoice_id`, `lineage_origin`) on both transactions and credit rows
+  - `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` now proves a transferred credit keeps canonical recurring source lineage in both list and detail readers
+
+- (2026-03-17) Credit expiration and reconciliation now make their date basis explicit, which closes `F187` and `T218`:
+  - `packages/billing/src/actions/creditReconciliationActions.ts` now stamps reconciliation-report metadata with `reconciliation_date_basis: financial_document_date`, making the control rule explicit: expiration and remaining-amount reconciliation are driven by transaction/credit metadata such as `created_at` and `expiration_date`, not by invoice-header or recurring service-period dates
+  - the same metadata now preserves recurring lineage additively when available: inconsistent-remaining-amount reports carry the source credit invoice’s canonical recurring summary plus each application transaction’s target-invoice date basis and recurring summary fields
+  - `server/src/test/unit/billing/creditReconciliation.servicePeriods.test.ts` now proves both halves of that policy: expired negative-invoice credits reconcile on financial dates, and reconciliation reports for detail-backed credits preserve canonical recurring invoice lineage only as explanatory metadata
+
+- (2026-03-17) Credit application now distinguishes source-invoice versus applied-to-invoice recurring context, which closes `F186` and `T217`:
+  - `packages/billing/src/actions/creditActions.ts` now preserves the top-level credit summary on the source invoice while separately attaching invoice-number, status, date-basis, and canonical recurring service-period summary fields to each transaction entry returned by `getCreditDetails(...)`
+  - the same action now carries target-invoice context onto `CREDIT_NOTE_APPLIED` workflow payloads, so credit-application audit streams can tell whether the invoice receiving the credit is a canonical recurring-detail-backed invoice or a purely financial-date artifact
+  - `shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders.ts`, `shared/workflow/runtime/schemas/billingEventSchemas.ts`, `packages/event-schemas/src/schemas/domain/billingEventSchemas.ts`, and the shared/server `ITransaction` interfaces were expanded additively for that target-invoice context
+  - focused executable coverage now lives in `server/src/test/unit/billing/creditActions.servicePeriods.test.ts`, which proves the source credit keeps its original recurring summary while the later `credit_application` transaction carries the target invoice’s canonical recurring period metadata
+
+- (2026-03-17) Credit-note issuance metadata now makes source date basis explicit, which closes `F185` and `T216`:
+  - `shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders.ts`, `shared/workflow/runtime/schemas/billingEventSchemas.ts`, and `packages/event-schemas/src/schemas/domain/billingEventSchemas.ts` now carry additive credit-note source metadata: `sourceDocumentKind`, `sourceInvoiceId`, `sourceInvoiceNumber`, `sourceInvoiceStatus`, `sourceInvoiceDateBasis`, and optional source recurring service-period summary fields
+  - `packages/billing/src/actions/creditActions.ts` now tags prepayment-issued credits as `financial_document_date` artifacts and exposes `invoice_date_basis` alongside source recurring service-period summaries in `listClientCredits(...)` and `getCreditDetails(...)`
+  - `packages/billing/src/actions/invoiceModification.ts` now recalculates source invoice summary metadata before publishing `CREDIT_NOTE_CREATED` for negative invoices, so detail-backed recurring source invoices emit `canonical_recurring_service_period` while flat or non-service sources fall back to `financial_document_date`
+  - focused executable coverage now lives in `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` and `server/src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts`; `packages/billing/src/actions/creditActions.ts` type narrowing at the transaction reread seam was also tightened, which unblocked `npx tsc --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) `T100` remains open after this checkpoint even though the underlying integration harness moved forward:
+  - `server/src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts` and `server/src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts` now stop hardcoding `DB_PORT=5432` and include the auth/secret/db mock exports the current runtime imports require
+  - focused integration assertions for canonical recurring detail preservation (`T100`) and negative-invoice source date-basis lineage (`T216`) were added to those suites, but local execution is still blocked by older migration-heavy infrastructure harness drift in `prepaymentInvoice.test.ts` and by migration/test-context instability in `negativeInvoiceCredit.test.ts`
+
+- (2026-03-17) Negative-invoice offsets now have an explicit source-period policy, which closes `F184` and `T215`:
+  - `packages/billing/src/actions/creditActions.ts` now documents the offset rule at the source-invoice reader seam: a negative-invoice or prepayment credit keeps its recurring timing context on the source invoice, and later credit-application transactions are financial offsets rather than new service-period definitions
+  - `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` now proves that behavior explicitly for a negative-invoice credit later applied to `invoice-2`: the credit reader still reports the source invoice’s canonical recurring period while the transaction history separately records the later financial application
+- (2026-03-17) Prepayment invoices now have an explicit non-service period policy, which closes `F183` and `T214`:
+  - `packages/billing/src/actions/creditActions.ts` now states the intended boundary where prepayment invoices are created: they remain non-service financial artifacts, `billing_period_*` on the header tracks the immediate financial issuance window, and canonical recurring service periods stay absent
+  - `server/src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts` now proves the live prepayment creation path creates the financial invoice, transaction, and credit-tracking rows without touching `invoice_charge_details`, which locks the prepayment path away from accidental recurring-period coupling
+- (2026-03-17) Manual-to-recurring provenance is now explicit and advisory-only, which closes `F182` and `T213`:
+  - `packages/billing/src/services/invoiceService.ts` now states the intended provenance rule inline: a manual adjustment or manual percentage discount may point at an existing invoice charge, including a recurring parent charge, but that `applies_to_item_id` link is advisory manual provenance rather than canonical recurring timing data
+  - `server/src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts` now proves a manual discount targeted at an existing recurring parent charge keeps that linkage and recomputes from the recurring row amount, while still remaining periodless itself
+- (2026-03-17) Manual invoice lines now have an explicit periodless policy contract, which closes `F181` and `T211`:
+  - `packages/billing/src/services/invoiceService.ts` now documents the intended boundary at the persistence seam: manually entered invoice rows remain periodless financial rows and do not create canonical `invoice_charge_details` or claim recurring service-period truth
+  - `server/src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts` now proves both a manual line and a manual percentage discount persist without `service_period_*` or `billing_timing` fields while still calculating their net amounts correctly
+- (2026-03-17) Zero-dollar recurring invoice handling now preserves canonical persistence instead of treating every zero-dollar result like an empty billing window, which closes `F180` and `T210`:
+  - `packages/billing/src/actions/invoiceGeneration.ts` now treats `finalAmount === 0` as a dedicated policy seam: empty no-content windows can still be suppressed, but zero-dollar invoices with real charges/discounts/adjustments are still created so recurring detail-backed invoice content is not silently skipped
+  - the `finalized` zero-dollar setting is now live for that path via `finalizeInvoiceWithKnex(...)`, so a zero-dollar recurring invoice can still end the run in a finalized state after canonical persistence occurs
+  - focused executable coverage now lives in `server/src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts`, while `server/src/test/unit/billing/invoiceGeneration.emptyResult.test.ts` remains the guard that truly empty no-charge windows still respect the suppress setting
+- (2026-03-17) Percentage-discount recalculation now has an explicit service-period-first contract, which closes `F179` and `T209`:
+  - `packages/billing/src/services/invoiceService.ts` now recalculates manual percentage-discount rows from the current non-discount invoice subtotal or targeted line amount before tax and final totals are recomputed, so recurring detail-backed charges can change the discount base without losing their own canonical service-period provenance
+  - the policy is now explicit in code rather than accidental: percentage discount rows stay financial-only rows with no service-period truth of their own, while the recurring lines they discount keep the authoritative service-period metadata
+  - focused executable coverage now lives in `server/src/test/unit/billing/invoiceService.percentageDiscountRecalculation.test.ts`, which proves a recurring line plus manual percentage discount rehydrates to the correct discount amount and final invoice totals
+- (2026-03-17) Billed-through enforcement is now explicitly locked to canonical detail periods instead of invoice-header period fields, which closes `F171` and `T201`:
+  - `packages/billing/src/lib/billing/billingEngine.ts` was already reading duplicate-prevention state from `invoice_charge_details.service_period_start`, `invoice_charge_details.service_period_end`, and `invoice_charge_details.billing_timing` via `hasExistingServicePeriodCharge(...)`; this checkpoint made that lifecycle-enforcement contract explicit rather than leaving it implicit in the helper
+  - `server/src/test/unit/billing/billingEngine.billedThroughReader.test.ts` now proves the reader targets `invoice_charge_details as iid` plus detail-period fields and does not query `billing_period_end` from invoice headers, while the existing `T087` runtime regression in `server/src/test/unit/billing/billingEngine.timing.test.ts` remains the behavior-level guard that an already-persisted advance service period is skipped even when the enclosing invoice window metadata is later
+  - no production code changed in this checkpoint; the work was to convert the already-migrated billed-through reader into an executable contract before broader recurring lifecycle guards (`F172+`) build on it
+- (2026-03-17) Client contract-line mutation guards now treat canonical recurring detail periods as authoritative for edit/remove/replace safety checks, which closes `F172` and `T202`:
+  - `packages/clients/src/actions/clientContractLineActions.ts` now reads the latest recurring billed-through boundary from `invoice_charge_details.service_period_end` joined through `contract_line_service_configuration`, so contract-line mutation guards follow the same authoritative detail-period source as the recurring billed-through reader
+  - historical flat invoices are still protected during staged coexistence because the new helper falls back to the older invoice-header reader only when no canonical recurring detail periods exist yet
+  - mutation policy is now explicit in the client action layer: if canonical recurring detail periods already exist, replacing the assigned contract line (`contract_line_id` swap) is blocked and end-date/deactivation checks compare against the authoritative billed-through service-period end rather than invoice headers
+  - focused coverage now lives in `server/src/test/unit/billing/clientContractLineMutationGuards.test.ts`, proving both the deactivation guard and the replace-after-billing guard
+- (2026-03-17) Renewal and replacement identity is now explicit for superseded recurring lines, which closes `F173` and `T203`:
+  - `packages/clients/src/actions/clientContractLineActions.ts` now states the replacement policy directly in code: once a billed recurring line is superseded, the follow-on line must be created as a fresh `contract_lines` row so historical recurring detail periods stay attached to the old line identity
+  - `server/src/lib/api/services/ContractLineService.ts` now carries the same rule in the API assignment path, so renewed or replacement assignments are documented as fresh-line operations instead of in-place mutation of a billed line
+  - executable coverage now lives in `server/src/test/unit/billing/clientContractLineReplacementIdentity.test.ts`, which proves the client add-line flow creates a fresh generated line id before cloning template configuration and separately locks the server assign path to the same fresh-identity rule
+
+- (2026-03-17) Invoice workflow events and audit logs now carry recurring-detail provenance instead of relying implicitly on invoice headers alone, which closes `F170` and `T199`:
+  - `server/src/lib/api/services/invoiceWorkflowEvents.ts` now defines `summarizeInvoiceRecurringProvenance(...)`, which reduces hydrated invoice charges into one additive provenance summary: whether recurring timing is authoritative from canonical detail rows or only parent charge fields, how many detail-backed charges/periods exist, the recurring summary range, and whether timing is uniform or mixed
+  - `shared/workflow/runtime/schemas/billingEventSchemas.ts` now allows that `recurringProvenance` object on invoice workflow payloads such as sent, status-changed, due-date-changed, overdue, and written-off events, so workflow consumers can distinguish canonical recurring provenance from header-grouping dates without a schema fork
+  - `server/src/lib/api/services/InvoiceService.ts` now hydrates that same provenance summary from `InvoiceModel.getInvoiceCharges(...)` and attaches it to invoice audit-log details (`recurring_provenance`) plus the invoice workflow payload builders on invoice update, delete/cancel, finalize, send, payment, credit-application, refund, and bulk-status paths
+  - focused executable coverage now lives in `server/src/test/unit/invoiceWorkflowEvents.test.ts` for the builder/schema side and `server/src/test/unit/api/invoiceWorkflowRecurringProvenance.wiring.test.ts` for the service-layer audit/workflow wiring seam
+
+- (2026-03-17) Invoice API schemas now make the legacy-flat versus canonical-detail compatibility contract executable instead of only documenting it, which closes `F169` and `T198`:
+  - `server/src/lib/api/schemas/invoiceSchemas.ts` now accepts both old flat invoice payloads and new detail-backed recurring payloads explicitly: response rows can carry canonical `service_period_*`, `billing_timing`, `recurring_detail_periods`, and `recurring_projection`, while full invoice responses also accept the deprecated `invoice_items` alias alongside `invoice_charges`
+  - the same compatibility rule now exists in `server/src/lib/api/schemas/financialSchemas.ts`, so secondary financial API response validation does not reject canonical recurring detail-backed rows while the main invoice API accepts them
+  - the schema contract is intentionally stricter on half-migrated shapes: canonical `recurring_detail_periods` now require `recurring_projection`, and `detail_period_count` must match the hydrated detail array length
+  - `server/src/test/unit/api/invoiceResponseSchema.compatibility.test.ts` now proves three states explicitly: legacy flat invoice payloads still parse through the deprecated alias path, canonical detail-backed payloads parse through the new path, and half-migrated payloads are rejected instead of silently drifting through validation
+
+- (2026-03-17) Recurring invoice parent/detail projection is now explicit instead of being inferred from whatever summary fields happened to be populated, which closes `F161`, `F162`, `F163`, `T191`, and `T193`:
+  - `packages/types/src/interfaces/invoice.interfaces.ts` and `server/src/interfaces/invoice.interfaces.ts` now define additive `recurring_projection` metadata on `IInvoiceCharge`, documenting the stable contract for detail-backed recurring reads: `recurring_detail_periods` is authoritative, parent `service_period_start` / `service_period_end` is the summary range across those rows, and parent `billing_timing` is only populated when every detail row agrees
+  - `packages/billing/src/models/invoice.ts` now hydrates that projection metadata whenever canonical `invoice_charge_details` rows exist, so `Invoice.getById(...)`, `Invoice.getFullInvoiceById(...)`, and `getInvoiceLineItems(...)` all expose the same typed parent/detail semantics instead of an implicit summary-only shape
+  - `server/src/lib/api/services/InvoiceService.ts` now delegates invoice-item reads to the same detail-aware invoice model instead of the legacy `invoice_line_items` table reader, which keeps API `invoice_charges` payloads aligned with the canonical recurring read-model contract without changing the outer response shape
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now closes `T191` with a multi-detail recurring parent charge contract, and `server/src/test/unit/api/invoiceService.recurringDetailProjection.test.ts` closes `T193` by proving the API service reuses the same hydrated projection
+- (2026-03-17) Historical flat invoice hydration now has an explicit fallback rule instead of an accidental omission, which closes `F164` and `T192`:
+  - `packages/types/src/interfaces/invoice.interfaces.ts` and `server/src/interfaces/invoice.interfaces.ts` now state the fallback plainly: when `recurring_projection` and `recurring_detail_periods` are absent, readers must preserve any parent-level period fields they already have and must not synthesize canonical detail rows for old flat invoices
+  - `packages/billing/src/models/invoice.ts` now carries an inline guard comment on the no-detail branch so the intended behavior is visible at the exact hydration seam: historical flat invoices remain parent-only when no canonical `invoice_charge_details` rows exist
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now closes `T192` by proving a historical invoice with no detail rows still hydrates cleanly and intentionally omits synthesized recurring detail metadata
+- (2026-03-17) Preview rows now have an explicit multi-period projection contract instead of only a flattened summary range, which closes `F165` and `T194`:
+  - `packages/types/src/interfaces/billing.interfaces.ts` and `server/src/interfaces/billing.interfaces.ts` now allow runtime billing charges to carry additive `recurringDetailPeriods`, giving preview generation one shared shape for charges that summarize one or many canonical recurring periods
+  - `packages/types/src/lib/invoice-renderer/types.ts` now documents the preview-row rule explicitly: `servicePeriodStart` / `servicePeriodEnd` is the compatibility summary range, while `recurringDetailPeriods` is authoritative when present and `billingTiming` only survives there uniformly
+  - `packages/billing/src/actions/invoiceGeneration.ts` now normalizes preview recurring detail periods from either billing-charge or invoice-charge payloads, derives summary fields from that detail list when needed, and carries `recurringDetailPeriods` through the preview payload instead of flattening multi-period charges away
+  - `server/src/test/unit/billing/invoiceGeneration.preview.test.ts` now closes `T194` by proving one preview charge can summarize two canonical recurring periods while keeping both detail periods visible to renderer-facing consumers
+- (2026-03-17) Rendering adapters now have an explicit flatten-or-expand rule for canonical recurring detail periods, which closes `F166` and `T195`:
+  - `packages/billing/src/lib/adapters/invoiceAdapters.ts` now documents the adapter rule directly in code: rendered rows keep `recurringDetailPeriods` verbatim when available, flatten `servicePeriodStart` / `servicePeriodEnd` to a summary range for one-row template consumers, and flatten mixed timing to `null` instead of inventing a winner
+  - `packages/billing/src/lib/adapters/invoiceAdapters.test.ts` now closes `T195` with a mixed-timing case proving the adapter preserves the canonical detail-period list while exposing a compatibility summary range and a null summary timing
+- (2026-03-17) Client-portal invoice detail projection rules are now explicit for detail-backed, flattened, and omitted recurring period states, which closes `F167` and `T196`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now documents the portal policy inline: render the canonical detail-period list when multiple recurring periods exist, flatten to one `Service Period` line when only one detail or a parent summary range exists, and omit service-period copy entirely when no recurring period metadata is available
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` now closes `T196` by proving the two fallback branches explicitly: a legacy summary-only recurring row renders one flattened service-period label, while a manual adjustment row with no period metadata renders none
+- (2026-03-17) Multi-period recurring ordering and aggregation rules are now explicit instead of relying on upstream input order, which closes `F168` and `T197`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now sorts rendered recurring detail periods by canonical start/end before showing them, so client-visible multi-period lists stay deterministic even if an upstream reader returns the periods unsorted
+  - `packages/client-portal/src/components/billing/recurringServicePeriodSummary.ts` now sorts and de-duplicates recurring period labels before aggregating them into overview-style summaries, so invoice-level summary copy stays stable across detail-backed and flattened inputs
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` now proves the dialog renders unsorted canonical detail periods in chronological order, and `packages/client-portal/src/components/billing/recurringServicePeriodSummary.test.ts` closes `T197` by proving aggregated invoice summaries remain ordered and de-duplicated across mixed detail-backed and summary-backed rows
+- (2026-03-17) Shared invoice-candidate grouping now carries explicit split reasons for PO and financial/export constraints, which closes `F158`, `F159`, `F160`, `T189`, and `T190`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now lets scoped due selections carry PO scope, currency, tax source, and export-shape keys, while scoped candidate groups now expose `splitReasons` with `single_contract`, `purchase_order_scope`, and `financial_constraint`
+  - `shared/billingClients/recurringTiming.ts` now exports `groupDueServicePeriodsForInvoiceCandidates(...)`, which applies those split constraints within each due window and annotates the resulting candidate groups with the operator-visible reasons they were split
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now locks all three grouping cases: contract-scope splitting, PO-scope splitting, and financial/export splitting with explainability metadata
+- (2026-03-17) The first explicit invoice-split rule is now codified at the shared-domain layer, which closes `F157` and `T188`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now distinguishes scoped due selections and scoped invoice-candidate groups so grouping logic can carry contract-scope metadata explicitly instead of assuming one invoice window always means one invoice
+  - `shared/billingClients/recurringTiming.ts` now exports `groupDueServicePeriodsByInvoiceWindowAndContract(...)`, which keeps mixed due selections on the same invoice window together only when they also share the same `clientContractId`
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now proves two due selections on the same invoice window still split into separate candidate groups when their contract scopes differ, preserving the existing single-contract invoice invariant before broader PO/tax/export split rules land
+- (2026-03-17) Client-cadence and contract-cadence due-work selection are now both explicit scheduler inputs instead of implicit billing-cycle-only assumptions, which closes `F155`, `F156`, `T186`, and `T187`:
+  - `packages/billing/src/actions/recurringBillingRunActions.ts` now maps persisted `getAvailableBillingPeriods(...)` results into deterministic client-cadence recurring-run targets, selector inputs, and execution windows using the stored `period_start_date` / `period_end_date` boundaries rather than any current billing-setting anchor math
+  - `shared/billingClients/recurringRunExecutionIdentity.ts` now exports `selectContractCadenceRecurringRunTargets(...)`, which uses the shared contract-cadence service-period generators plus `resolveContractCadenceInvoiceWindowForServicePeriod(...)` to produce schedulable contract-owned due windows before invoice grouping occurs
+  - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` now proves client-cadence target selection stays deterministic on historical persisted billing-cycle windows, and `server/src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts` now proves contract-cadence due-work selection stays deterministic across anniversary-window boundary crossings
+- (2026-03-17) Comparison-mode drift traces now carry deterministic recurring execution identity metadata, which closes `F154` and `T185`:
+  - `packages/billing/src/actions/invoiceGeneration.ts` now routes comparison-mode logging through the selector-input contract and attaches `selectionKey`, `executionIdentityKeys`, and `executionWindowKinds` to legacy-vs-canonical drift warnings instead of logging only a billing-cycle placeholder
+  - this keeps comparison-mode safe for staged rollout when recurring selection is no longer defined purely by `billingCycleId`: contract-cadence or other future execution windows can now be compared with traceable identity metadata even before full scheduler cutover lands
+  - `server/src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts` now proves a contract-cadence selector input emits those deterministic trace fields when comparison mode detects drift
+- (2026-03-17) Recurring-run retries now carry deterministic due-work identity instead of relying on billing-cycle list order, which closes `F153` and `T184`:
+  - `shared/billingClients/recurringRunExecutionIdentity.ts` now derives `selectionKey` and `retryKey` from the sorted set of execution-window identity keys, so the same due-work selection yields the same retry scope even if callers pass targets in a different order
+  - `packages/billing/src/actions/recurringBillingRunActions.ts` now includes those deterministic keys in the recurring-run result and workflow payload inputs while still keeping event-bus publish idempotency keyed by the per-attempt `runId`, which avoids collapsing deliberate retry attempts into the original run record
+  - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` now proves two runs over the same mixed client/contract execution windows produce the same `selectionKey` and `retryKey` despite opposite target ordering
+- (2026-03-17) Background recurring selector inputs are now explicit instead of being implicit billing-cycle lookups, which closes `F152` and `T183`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringDueSelectionInput`, and `shared/billingClients/recurringRunExecutionIdentity.ts` now provides `buildBillingCycleDueSelectionInput(...)` plus `buildContractCadenceDueSelectionInput(...)` so background flows can describe the selector window independently from whether invoice persistence still needs a `billingCycleId`
+  - `packages/billing/src/actions/invoiceGeneration.ts` now exposes `calculateBillingForSelectionInput(...)`, which routes due recurring selection through the new selector-input contract and falls back to the execution-window identity key when no raw `billingCycleId` exists
+  - `server/src/lib/jobs/handlers/generateInvoiceHandler.ts` and `server/src/lib/jobs/index.ts` now accept optional `selectorInput` payloads alongside the execution-window metadata, with a guard that prevents mismatched selector and execution identities from silently diverging in background jobs
+  - `server/src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts` now locks the new contract by proving a contract-cadence selector input can preselect due recurring service periods without any raw `billingCycleId` in the selector path
+- (2026-03-17) Recurring-run execution identity is now additive and explicit instead of being only a raw `billingCycleId`, which closes `F151`, `T181`, and `T182`:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts` now defines `IRecurringRunExecutionWindowIdentity` plus explicit `billing_cycle_window` and `contract_cadence_window` kinds, so scheduling and workflow metadata can reference a typed recurring execution window instead of a bare string
+  - `shared/billingClients/recurringRunExecutionIdentity.ts` now builds stable execution-window identity keys for both current client billing-cycle windows and future contract-cadence windows, and `packages/billing/src/actions/recurringBillingRunActions.ts` now normalizes recurring-run targets through that identity layer before emitting workflow metadata
+  - `server/src/lib/jobs/index.ts` and `server/src/lib/jobs/handlers/generateInvoiceHandler.ts` now carry optional execution-window metadata on invoice-generation jobs while keeping the live execution bridge on `billingCycleId`; contract-cadence execution windows are therefore schedulable as typed payloads before later selector/job work (`F152+`, `F156+`) makes them fully executable
+  - focused validation lives in `server/src/test/unit/billing/recurringTiming.domain.test.ts`, `server/src/test/unit/billing/recurringBillingRunActions.test.ts`, and `server/src/test/unit/billing/recurringBillingRunWorkflowEvents.test.ts`; the shared-domain builder test file remains outside the repo's default Vitest include, so the server unit suites are the reliable executable guard for this checkpoint
+- (2026-03-17) Feature-to-subsystem traceability is now explicit in the plan artifacts, which closes `F150` and `T170`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/FEATURE_SUBSYSTEM_MAP.md` now groups the feature backlog into subsystem bands spanning architecture/parity, shared timing domain, runtime execution, invoice generation/persistence, storage/API reconciliation, authoring surfaces, downstream readers/exports, contract cadence, and the later materialized-service-period ledger
+  - the map also defines the tracking discipline for future checkpoints: every completed feature should name its primary subsystem, note cross-cut surfaces in `SCRATCHPAD.md`, and keep commit scope aligned to a coherent subsystem slice instead of only chronological feature order
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now enforces the existence of that mapping artifact and the required subsystem coverage as `T170`
+- (2026-03-17) Operator investigation guidance now has explicit runbook paths for cadence-owner disputes and header-versus-detail service-period mismatches, which closes `F149` and `T148`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RUNBOOK.md` now includes a dedicated `Cadence-Owner Dispute Investigation` section that tells operators to compare stored `contract_lines.cadence_owner`, the active run window, and the persisted `invoice_charge_details` row before deciding whether a line truly followed client cadence or contract cadence
+  - the same runbook now includes a `Service-Period Mismatch Investigation` section that makes the intended interpretation explicit: invoice headers stay invoice-window grouping dates, while canonical recurring detail rows stay the authoritative coverage dates for migrated recurring lines
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks those operator questions, SQL fragments, and escalation rules as `T148`, so runbook drift will fail fast instead of silently weakening mixed-cadence support guidance
+- (2026-03-17) Time-and-usage unification now has its own executable follow-on boundary contract, which closes `F148` and `T169`:
+  - the time/usage follow-on text was already present in `PRD.md` and `PASS0_RECURRING_TIMING_APPENDIX.md`, but `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks that scope boundary explicitly instead of leaving it as prose that could drift
+  - this checkpoint did not widen recurring v1 scope; it made the existing rule enforceable: time entries and usage records remain event-driven until a separate follow-on plan deliberately reopens canonical period or ledger semantics for those domains
+- (2026-03-17) Advanced service-period ledger extensions are now explicitly fenced off as follow-on work, which closes `F147` and `T168`:
+  - `PRD.md` and `PASS0_RECURRING_TIMING_APPENDIX.md` now both carry a dedicated `Advanced Service-Period Ledger Extensions` boundary that keeps long-range materialization, archival/cold-storage, performance denormalization, and bulk ledger reshaping out of recurring v1 unless the first-cut ledger proves insufficient
+  - the new boundary also names the trigger conditions for reopening that scope later: concrete horizon/regeneration cost, read-performance, or retention/storage failures, plus a requirement to define canonical-versus-derived truth, replay/repair, and rollback posture before any ledger extensions land
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks those phrases as `T168`, and `pass-0-source-inventory.json` was refreshed at the same time so the existing docs inventory contracts continue to match live `rg` output
+- (2026-03-17) Post-cutover source-plus-DB validation now proves the migrated live recurring path no longer depends on `billing_cycle_alignment` or `resolveServicePeriod`, which closes `F146`, `T166`, and `T167`:
+  - `server/src/test/unit/billing/billingEngine.cleanupSource.test.ts` remains the direct source contract: the billing engine file still does not contain the removed `resolveServicePeriod`, `_calculateProrationFactor`, or `applyProrationToPlan` seams
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now adds one DB-backed invariance test proving three otherwise-identical partial advance lines with `billing_cycle_alignment = start|end|prorated` all persist the same canonical `service_period_start`, `service_period_end`, and subtotal on the real invoice-generation path
+  - the same integration file now adds a DB-backed arrears partial-period test proving a mid-start monthly recurring line still persists `2025-02-10` through `2025-02-28` on the live invoice-generation path after the helper cleanup, which is the real-data closure for the old `resolveServicePeriod` seam
+  - local execution required overriding the stale `.env.localtest` `DB_PORT=5438` setting to `DB_PORT=57433`, because the active Postgres listener for this worktree is on `57433`
+- (2026-03-17) End-exclusive recurring boundary behavior now has explicit regression guards across mixed-cadence selection and pricing-schedule overlap, which closes `F145`, `T149`, and `T159`:
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now proves a contract-owned advance line whose first due window starts exactly at the active client invoice-window end is excluded from the current mixed-cadence selection set, so coexistence keeps `[start, end)` overlap semantics instead of treating touching windows as overlapping
+  - `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts` now proves fixed recurring pricing schedules remain end-exclusive on both sides of the canonical service period, excluding schedules that only start at the service-period end or end at the service-period start
+  - no production code changed in this checkpoint; the value was locking the already-correct selection/query boundaries in executable tests before later scheduler and reader work adds more mixed-cadence pressure
+- (2026-03-17) Billing dashboard invoice-generation surfaces now explain service-period-first recurring semantics consistently, which closes `F139` and adds `T332`:
+  - `packages/billing/src/components/billing-dashboard/Overview.tsx` now frames invoice management as invoice-window generation for recurring service periods plus separate manual/prepayment financial handling
+  - `packages/billing/src/components/billing-dashboard/invoicing/GenerateTab.tsx` now explains the semantic boundary for automatic, manual, and prepayment flows directly under the invoice-type selector
+  - `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx`, `ManualInvoices.tsx`, and `PrepaymentInvoices.tsx` now each state whether they create recurring service-period coverage, stay periodless, or create credit-only financial artifacts
+  - `packages/billing/tests/invoicingGenerateTab.recurringCopy.wiring.test.ts` was added because `F139` previously had no explicit regression item in `tests.json`; the new `T332` tracks this copy/UX contract without overloading unrelated recurring-engine tests
+- (2026-03-17) Obsolete recurring-timing terminology is now cleaned out of migrated live copy and implementation comments, which closes `F142` and `T165`:
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx`, `ContractLineDialog.tsx`, `contracts/CreateCustomContractLineDialog.tsx`, `contract-lines/FixedContractLineConfiguration.tsx`, `contract-lines/FixedContractLinePresetConfiguration.tsx`, and `service-configurations/FixedServiceConfigPanel.tsx` now use `Adjust for Partial Periods` / `Partial-Period Adjustment` instead of stale `Enable Proration` / `Proration` labels on migrated recurring surfaces
+  - the remaining readable legacy alignment selector now shows `Proportional Coverage` instead of the raw `Prorated` label where staged compatibility still exposes that choice
+  - `packages/client-portal/src/components/billing/PaymentSuccessContent.tsx` and `server/src/app/msp/licenses/purchase/success/page.tsx` no longer describe recurring invoice outcomes with `proration-only` or `prorated charges` copy; both now explain coverage in canonical partial-period language
+  - `packages/billing/src/actions/contractLineAction.ts` and `packages/billing/src/lib/billing/billingEngine.ts` now describe the remaining compatibility seam as legacy partial-period settings instead of proration-centric comments
+  - `packages/billing/tests/recurringTimingTerminology.cleanup.test.ts` now locks those migrated surfaces against stale recurring-timing wording drifting back in
+- (2026-03-17) Runtime rollout protection now blocks partial mixed-timing states before recurring charge-family execution begins, which closes `F143`, `T150`, and `T158`:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now always builds the canonical recurring timing selection set for the active invoice window and, when callers provide `recurringTimingSelections`, rejects missing, extra, or divergent line selections with an explicit `Recurring timing rollout guard blocked mixed legacy/canonical timing state` error
+  - this keeps the service-period-first seam honest during staged rollout: action-layer preselection cannot silently cover only some recurring lines while other fixed/product/license work falls back to a different timing path on the same invoice run
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now proves both guard modes explicitly: one test covers missing provided selections for one due recurring line in a mixed run, and the other covers a provided selection whose service period diverges from the engine's canonical result for that same line
+- (2026-03-17) Contract wizard draft/resume regression coverage now locks cadence-owner and partial-period defaults through both reread and re-save seams, which closes `F144` and adds `T337` / `T338`:
+  - `packages/billing/tests/draftContractForResumeActions.test.ts` now proves `getDraftContractForResume(...)` returns `cadence_owner`, `enable_proration`, and the fixed recurring base rate together for a resumed recurring draft instead of only partially rehydrating those defaults
+  - `packages/billing/tests/contractWizardResume.test.tsx` now drives a resumed fixed-fee wizard back through `Save Draft` and proves the emitted draft payload keeps the original `cadence_owner` while preserving a toggled partial-period setting
+  - no production code changed in this checkpoint; the draft/resume path was already behaving correctly, but it did not yet have an end-to-end regression guard covering both the action reread and the resumed save-draft emit path
+- (2026-03-17) Template-authored cadence-owner defaults now persist and clone through the real template storage layer, which closes `F138`, `T119`, and `T120`:
+  - `server/migrations/20260317213000_add_cadence_owner_to_contract_template_lines.cjs` adds `contract_template_lines.cadence_owner`, backfills it from matching `contract_lines` when possible, and defaults remaining legacy rows to `'client'`
+  - `packages/billing/src/repositories/contractLineRepository.ts` plus `server/src/lib/repositories/contractLineRepository.ts` now read, snapshot, update, and clone template-line `cadence_owner` instead of dropping it to `'client'` during template-to-contract instantiation
+  - `packages/billing/src/actions/contractWizardActions.ts` now lifts `cadence_owner` from any recurring template/draft line, not only the fixed-fee branch, so hourly-only and usage-only template snapshots and resumed drafts keep their authored cadence defaults
+  - adjacent package/server readers that still hardcoded template cadence to `'client'` were aligned as part of the same checkpoint: `packages/billing/src/actions/contractLineAction.ts`, `packages/billing/src/actions/contractLineMappingActions.ts`, `packages/billing/src/models/contractLineMapping.ts`, `packages/billing/src/models/contractTemplate.ts`, and `server/src/lib/api/services/ContractLineService.ts`
+  - focused coverage now lives in `server/src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts` and `packages/billing/tests/templateCadenceOwnerRoundTrip.actions.test.ts`, while the existing draft/template cadence-owner suites continue to pass on top of the storage change
+- (2026-03-17) `billing_cycle_alignment` is now non-executing on the migrated fixed recurring runtime path, which closes `F116`:
+  - `packages/billing/src/lib/billing/billingEngine.ts` no longer selects, defaults, or propagates `contract_lines.billing_cycle_alignment` during recurring fixed-charge execution; coverage settlement is now driven only by canonical service-period timing plus `enable_proration`
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` closes `T162` with an explicit invariance check showing `start`, `end`, and `prorated` legacy values all emit the same canonical fixed recurring charge and no longer appear on the generated charge payload
+  - compatibility storage and authoring surfaces intentionally remain in place for later staged-deprecation work (`F137+`); this checkpoint only removes live execution dependence, not the legacy column itself
+- (2026-03-17) Client-portal invoice preview now preserves canonical recurring detail metadata end to end, which closes `T088` without pretending broader portal-reader cutover is done:
+  - `packages/billing/src/lib/adapters/invoiceAdapters.ts` now carries `service_period_start`, `service_period_end`, and `billing_timing` from DB invoice-charge payloads into `WasmInvoiceViewModel.items`
+  - `packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx` proves the portal preview path receives those canonical recurring fields through the real adapter, so preview/pay-style rendering no longer strips them before template rendering
+  - this is a preview/read-model seam only; broader dashboard/portal invoice-query cleanup still belongs to `F126` and `F140`
+- (2026-03-17) Recurring invoice preselection now has an explicit mixed-invoice regression guard, which closes `T089`:
+  - `server/src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts` now proves `calculateBillingForInvoiceWindow(...)` still returns non-recurring hourly/usage charges untouched while applying canonical `recurringTimingSelections` only to the recurring timing seam
+  - this keeps the service-period-first preselection contract narrow: it chooses due recurring service periods first, but it does not narrow the eventual invoice payload to recurring charges only
+- (2026-03-17) Obsolete recurring timing helpers are now deleted from the live billing engine, which closes `F117`, `T163`, and `T164`:
+  - `packages/billing/src/lib/billing/billingEngine.ts` no longer carries the dead `resolveServicePeriod`, `_calculateProrationFactor`, or `applyProrationToPlan` helpers, and `calculateBillingInternal(...)` no longer runs a no-op fixed-charge proration pass before combining invoice charges
+  - focused timing/product/license tests now assert the old helper is absent rather than spying on it, and `server/src/test/unit/billing/billingEngine.cleanupSource.test.ts` adds a direct source contract proving the late-stage helper strings are gone from the runtime file
+  - the old helper-only regression file `server/src/test/unit/billing/billingEngine.prorationExclusive.test.ts` was removed because its only purpose was to test a private implementation seam that no longer exists
+- (2026-03-17) Pass-0 implementation artifacts now live in:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PASS0_RECURRING_TIMING_APPENDIX.md`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/pass-0-source-inventory.json`
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts`
+- (2026-03-17) Shared recurring-timing primitives now live in:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts`
+  - `shared/billingClients/recurringTiming.ts`
+  - `packages/billing/src/lib/billing/recurringTiming.ts`
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts`
+- (2026-03-17) Client-cadence service-period generation now lives in:
+  - `shared/billingClients/clientCadenceServicePeriods.ts`
+  - `server/src/test/unit/billing/clientCadenceServicePeriods.domain.test.ts`
+- (2026-03-17) The first checkpoint intentionally made the plan executable:
+  - source-backed file inventories now cover `resolveServicePeriod`, `billing_cycle_alignment`, persisted service-period readers, and downstream recurring timing consumers
+  - a docs contract test now fails if the pass-0 appendix drifts from live grep-backed source references
+- (2026-03-17) The second checkpoint intentionally kept the new timing domain additive and pure:
+  - canonical service periods and invoice windows are distinct types with explicit `kind` markers and shared `[start, end)` semantics
+  - cadence-owner defaults are centralized at `DEFAULT_CADENCE_OWNER = 'client'`
+  - activity-window intersection, coverage calculation, due-window mapping, and invoice-detail timing projection are defined without invoice creation side effects
+- (2026-03-17) Client-cadence service-period generation now preserves current anchor behavior while separating two cases explicitly:
+  - when no historical cycle is authoritative, generation returns the anchored period containing the requested date
+  - when a historical cycle ends exactly at the next cursor, generation treats that cursor as an authoritative transition boundary and moves forward without reaching back into pre-cutover periods
+- (2026-03-17) Shared recurring timing resolution now has one additive seam for the next cutover:
+  - `selectDueServicePeriodsForInvoiceWindow` chooses due service periods from a current invoice window without rebuilding separate advance vs arrears period definitions
+  - `resolveRecurringSettlementsForInvoiceWindow` intersects those due periods with line activity dates, returns covered periods, and computes one coverage ratio for fixed, product, and license families
+  - zero-coverage periods are filtered before any family-specific charge math runs, which is the intended bridge away from bespoke proration and skip branches
+- (2026-03-17) The first fixed-recurring runtime cutover now consumes a shared timing helper instead of calling `resolveServicePeriod` directly:
+  - `BillingEngine.calculateFixedPriceCharges` now resolves due periods via `resolveFixedRecurringChargeTiming`, which builds canonical current/previous service periods and intersects them with the line activity window
+  - an initial bug surfaced immediately in unit tests: subtracting raw day counts broke monthly arrears across month-length changes (`2025-02-01` had incorrectly mapped back to `2025-01-04`); the helper now subtracts billing-cycle calendar units instead
+  - the old arrears-specific skip/clamp branch is gone from the fixed path because empty coverage now returns `null` before charge generation
+  - the advance termination credit branch is still live when fixed-proration remains disabled; that is the next incomplete seam (`F044+`), not part of this checkpoint
+- (2026-03-17) The next fixed-recurring checkpoint removed the remaining advance-only special case:
+  - `BillingEngine.calculateFixedPriceCharges` no longer emits separate negative advance termination credit rows through `buildAdvanceTerminationCredits`
+  - fixed custom-rate, pricing-schedule override, and FMV allocation paths now flow through one post-generation settlement step when canonical coverage must scale amounts
+  - advance final periods without fixed-proration enabled now reuse the canonical coverage ratio with legacy net-of-unused rounding, so the resulting single positive charge matches prior net billing without carrying a synthetic arrears credit row
+  - this checkpoint also closed two previously hidden seams in the fixed path: custom-rate override charges and pricing-schedule override charges had been bypassing all shared post-processing after an early return
+- (2026-03-17) Fixed tax behavior is now regression-covered on the canonical timing path:
+  - taxable FMV allocations on a partial advance final period now have explicit unit coverage proving net tax amounts are preserved after coverage settlement
+  - service-level tax regions remain stable when one service provides an explicit region and another falls back to the client default; both still route through the same fixed recurring settlement path
+- (2026-03-17) Fixed recurring persistence now closes the remaining custom-rate and assignment-metadata seams:
+  - custom-rate and pricing-schedule override fixed plans now emit detail-backed fixed charges with `config_id`, `serviceId`, `client_contract_line_id`, and `client_contract_id` instead of collapsing into a parent-only charge that could not write canonical `invoice_charge_details`
+  - the legacy edge path for fixed-config services on non-`Fixed` plan types now preserves contract assignment metadata, which keeps PO-scoped grouping and downstream invoice persistence from losing `client_contract_id`
+  - existing fixed-detail persistence tests continue to prove canonical `service_period_start`, `service_period_end`, and `billing_timing` are written without subtotal drift once charges reach `persistFixedInvoiceCharges`
+- (2026-03-16) `packages/billing/src/lib/billing/billingEngine.ts` currently mixes several timing models:
+  - `resolveServicePeriod`
+  - advance vs arrears branching
+  - fixed-fee proration in one path
+  - product/license proration later in a different path
+- (2026-03-16) `billing_cycle_alignment` is surfaced across schema, repositories, APIs, and UI, but the execution model is not cleanly organized around it. This makes it a strong cleanup target once service periods are explicit.
+- (2026-03-16) Current invoice timing tests are effectively asserting service-period behavior already, especially in `server/src/test/integration/billingInvoiceTiming.integration.test.ts`.
+- (2026-03-16) The recurring-billing mental model shown to users today still leans on “enable proration for mid-month starts,” which is a symptom of implicit rather than canonical service periods.
+- (2026-03-17) The blast radius is substantially wider than the first draft plan represented. Additional impacted surfaces identified during replan:
+  - invoice generation and recurring billing runs
+  - invoice detail persistence and billed-through calculations
+  - credits, prepayment, and negative-invoice flows
+  - purchase-order and pricing-schedule dependencies
+  - accounting exports and service-period consumers
+  - client portal invoice/plan details
+  - reporting actions/definitions
+  - repositories/models/schemas/test helpers
+- (2026-03-17) Second-pass agent findings tightened the highest-risk seams:
+  - `billingCycleId` is still the true execution identity in recurring runs and job handlers
+  - invoice read models still hydrate mostly parent `invoice_charges`, not canonical detail rows
+  - export preview still derives service periods from invoice headers in some paths
+  - repository and model write paths normalize or silently drop timing fields inconsistently
+  - template and preset authoring paths are still not guaranteed to propagate future cadence semantics
+- (2026-03-17) Materialization adds a new class of risk the plan must own explicitly:
+  - generation horizon
+  - override provenance
+  - billed-period locking
+  - regeneration after contract edits
+  - future-period edit operations and conflict handling
+- (2026-03-17) The plan should explicitly avoid silently dragging time/usage into v1, while still specifying their compatibility boundaries and non-goals.
+- (2026-03-17) Resolve the v1 `cadence_owner` persistence question in favor of `contract_lines.cadence_owner`.
+  - Rationale: live recurring timing is already line-scoped on `contract_lines` (`billing_frequency`, `billing_timing`), while `client_contracts` only provides assignment windows and template lines remain a later authoring/defaults surface.
+- (2026-03-17) Fixed recurring metadata preservation now has an explicit persistence regression guard:
+  - `packages/billing/src/services/invoiceService.ts` was already carrying `client_contract_id` on grouped detailed fixed charges, but the consolidated parent `invoice_charges` insert dropped that assignment field entirely
+  - `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` now reproduces the issue without a database and verifies that canonical `invoice_charge_details` periods and `invoice_charge_fixed_details.allocated_amount` stay aligned with the parent fixed charge subtotal
+  - `packages/billing/src/services/invoiceService.ts` now persists `client_contract_id` on consolidated fixed parent rows, preserving assignment metadata for downstream invoice readers and PO-related invoice flows
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now adds explicit fixed-recurring parity coverage for full-period, mid-start, and mid-end monthly client-cadence scenarios
+  - `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts` now includes a PO + fixed-detail persistence regression test, but local execution remains blocked by the current Postgres socket permissions
+- (2026-03-17) Bucket overage timing now maps onto explicit allowance periods instead of invoice windows:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now groups `bucket_usage` rows by `period_start` + `period_end` and emits one bucket charge per explicit usage period
+  - bucket charge `servicePeriodStart` and `servicePeriodEnd` now follow the persisted bucket period boundaries, which is the first concrete definition for `F051`
+  - tax-date evaluation for bucket overages now uses the allowance period end date instead of the enclosing invoice window end, which keeps the charge aligned with the bucket period it represents
+  - `server/src/test/unit/billingEngine.test.ts` now covers multi-period bucket usage inside one invoice window and asserts that the emitted bucket charges preserve the two distinct service periods
+- (2026-03-17) Bucket rollover calculation now follows the same client-cadence boundary source in both writer paths:
+  - `packages/billing/src/services/bucketUsageService.ts` now prefers `client_billing_cycles` for the active allowance period and, when rollover is enabled, uses the previous client billing cycle before falling back to anchor math
+  - `packages/scheduling/src/services/bucketUsageService.ts` now mirrors that same client-cycle-aware rollover logic so time-entry writes and billing writes cannot materialize different `bucket_usage` periods for the same recurring obligation
+  - `server/src/test/unit/billing/bucketUsageService.periods.test.ts` and `packages/scheduling/tests/bucketUsageService.periods.test.ts` now lock the regression with a monthly client-cadence rollover scenario that would previously have reached back to the contract start anchor instead of the prior billing cycle
+- (2026-03-17) Bucket overage invoice-window attachment is now explicitly covered on the service-period-first path:
+  - `packages/billing/src/lib/billing/billingEngine.ts` continues to select `bucket_usage` rows by the active billing window, but the focused regression now proves that the emitted charge keeps the persisted allowance period instead of collapsing back to invoice-window dates
+  - `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts` now covers both the explicit service-period mapping and the invoice-window filter that keeps February allowance usage on the February invoice window instead of rebilling it elsewhere
+- (2026-03-17) Fixed recurring pricing schedules now evaluate against the canonical due service period, not the enclosing invoice window:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now resolves the due service-period `[start, end)` boundaries first and uses those exclusive boundaries when selecting `contract_pricing_schedules` for fixed recurring charges
+  - `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts` proves the intended arrears behavior explicitly: a January schedule still wins for a February invoice window when that invoice is billing the January service period, while a schedule starting exactly on February 1 is excluded from that January service period
+- (2026-03-17) Discount applicability now follows canonical recurring service periods when charge timing has already migrated:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now builds per-contract-line discount evaluation windows from emitted charge `servicePeriodStart`/`servicePeriodEnd` values and uses those windows to filter discount overlap in-memory after a broader candidate query
+  - the query still falls back to invoice-window overlap when no canonical charge service period exists for a contract line, which keeps non-migrated or non-recurring paths on current behavior
+  - `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts` now proves the intended arrears case explicitly: a January discount applies to the February invoice window when the fixed recurring line is billing the January service period, while February/March discounts do not
+- (2026-03-17) Fixed recurring PO association now has an executable unit guard in addition to the blocked DB integration:
+  - `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` now proves that detail-backed fixed recurring persistence keeps `client_contract_id` on the consolidated parent invoice line, which is the assignment linkage PO-scoped readers and invoice selection rely on
+  - the existing DB-backed regression in `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts` remains valuable, but local execution is still blocked by current Postgres permissions
+- (2026-03-17) Fixed recurring tax-date evaluation now follows the canonical service period instead of the enclosing invoice window:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now passes `servicePeriodEnd` into fixed recurring tax calculations for both the main FMV-allocation path and the legacy fixed-service edge path
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now asserts the tax service sees `2025-01-20` for a partial advance final period instead of the enclosing invoice window end, which closes `F056`
+- (2026-03-17) Negative recurring fixed totals and credit-generating allocations are now explicit, not implied by an inline comment:
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now proves a net-negative fixed recurring charge keeps its canonical service period metadata and that a mixed positive/negative FMV allocation can emit one negative detailed charge without breaking the settled period boundaries
+  - no runtime code change was needed for `F057`; the checkpoint was to turn previously implicit support into an executable contract before product/license migration reuses the same settlement model
+- (2026-03-17) The out-of-scope boundary for time, usage, and non-recurring bucket readers is now explicit in the plan artifacts:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PASS0_RECURRING_TIMING_APPENDIX.md` now spells out exactly which time-entry and usage-record behaviors stay event-driven in v1, and which bucket behaviors are in scope versus still deferred
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now enforces those explicit phrases so `T060` fails if the appendix drifts back toward vague scope language
+- (2026-03-17) A follow-up attempt to close `F058` uncovered a local-environment blocker rather than a product behavior decision:
+  - a targeted `prepaymentInvoice.test.ts` regression was drafted to prove prepayment credit application does not strip canonical recurring detail rows, but local execution is blocked by `ECONNREFUSED` to Postgres on `127.0.0.1:5432`
+  - that regression was intentionally not left in the tree or marked complete; `F058` remains open until the DB-backed path can be executed and verified
+- (2026-03-17) Prepayment-applied recurring invoice rereads now preserve canonical service-period metadata without waiting on the blocked DB path:
+  - `packages/billing/src/models/invoice.ts` now reattaches `service_period_start`, `service_period_end`, and `billing_timing` from `invoice_charge_details` when invoice charges are reread, so applying prepayment credit no longer collapses migrated recurring timing back to parent-only invoice rows
+  - `packages/types/src/interfaces/invoice.interfaces.ts` and `server/src/interfaces/invoice.interfaces.ts` now expose those recurring detail fields on `IInvoiceCharge`, which is the minimum shared contract needed for prepayment-applied invoice readers
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` closes `T096` and `T097` with source-level reread coverage for one and multiple prepayment-applied recurring cycles
+  - the DB-backed end-to-end prepayment flow is still unavailable locally because Postgres is not listening on `127.0.0.1:5432`; `T100` remains open for the broader integration seam
+- (2026-03-17) Manual invoice create/update flows now reread through the same canonical invoice reader contract used by recurring invoices:
+  - `packages/billing/src/actions/manualInvoiceActions.ts` now returns `Invoice.getFullInvoiceById(...)` after manual invoice creation and update instead of hand-building `invoice_charges` directly from `invoice_charges` rows
+  - this keeps manual flows on the same post-persist projection path as recurring invoices while still leaving manual lines periodless because `persistManualInvoiceCharges(...)` does not create `invoice_charge_details`
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now closes `T075` with a mixed recurring-plus-manual reread contract proving canonical service periods attach only to recurring detail-backed lines and do not leak onto manual adjustments
+  - a targeted `manualInvoice.test.ts` integration slice was attempted for this checkpoint, but the suite currently aborts before execution because its shared `@alga-psa/auth` mock omits `withAuth`; the checkpoint is therefore defended by the focused unit reread test plus a package TypeScript compile
+- (2026-03-17) Purchase-order follow-up is still open after recon:
+  - `server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx` is stale against `AutomaticInvoices`, which now calls `generateInvoicesAsRecurringBillingRun` instead of the older `generateInvoice` action the test spies on
+  - integration coverage for PO + recurring detail persistence already exists in `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, but local execution is still blocked by unavailable Postgres
+  - that leaves `F059` implementable, but not as the next low-risk checkpoint; product-path inventory (`F061`) is cleaner to land first
+- (2026-03-17) Purchase-order recurring safeguards are now regression-covered on the current UI execution path:
+  - `server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx` now imports `AutomaticInvoices` directly, mocks `generateInvoicesAsRecurringBillingRun`, and proves PO overage confirmations still gate batch and preview generation on the recurring-run path rather than the older per-cycle `generateInvoice` action
+  - `server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx` now imports `PurchaseOrderSummaryBanner` directly so the banner contract stays executable without pulling unrelated package-entry dependencies into the test graph
+  - no runtime code change was needed for `F059`; the recurring PO behavior and PO banner rendering were already correct, but the stale tests were no longer proving it after the recurring-run action cutover
+  - `T099` remains open because the broader credits-plus-PO interaction still depends on DB-backed coverage outside this UI regression seam
+- (2026-03-17) Purchase-order consumption and selection now stay stable when recurring invoices carry applied credits, which closes `F131`:
+  - `packages/billing/src/services/purchaseOrderService.ts#getPurchaseOrderConsumedCents(...)` now sums finalized PO consumption as `total_amount - credit_applied` instead of raw `total_amount`, so recurring invoices that are partially or fully settled by credits no longer overstate PO usage during overage checks
+  - aggregate PO consumption now floors at zero after summing net invoice amounts, which preserves the existing behavior that negative-credit corrections can reduce prior PO consumption but cannot drive the contract below zero consumed cents overall
+  - `packages/billing/tests/purchaseOrderService.creditConsumption.test.ts` now proves both sides of that contract: credit-applied recurring invoices reduce consumed PO cents before overage checks, and aggregate consumption cannot go negative when credits outweigh prior billed totals
+  - the existing recurring-run PO UI regressions in `server/src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx` and `server/src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx` remain green on top of the new service behavior, which is the executable closure for `T099`
+- (2026-03-17) Tax-source and external-tax consumers are now explicitly guarded against recurring service-period drift, which closes `F132`:
+  - `packages/billing/src/services/invoiceService.ts` now carries explicit comments on the `external` and `pending_external` tax branches stating that imported tax remains amount-authoritative even when recurring detail periods are present elsewhere on the invoice
+  - `packages/billing/src/actions/taxSourceActions.ts` now makes the complementary rule explicit for finalization: tax gating follows import state (`tax_source`) rather than recurring service-period metadata
+  - focused regression coverage now lives in `packages/billing/tests/invoiceService.externalTax.servicePeriods.wiring.test.ts` and `packages/billing/tests/taxSourceActions.servicePeriods.wiring.test.ts`, which lock those tax/import/reconciliation seams away from accidental service-period coupling
+- (2026-03-17) Recurring product timing now has an explicit migration target:
+  - `packages/billing/src/lib/billing/billingEngine.ts` still constructs product charges against the enclosing invoice window, stamps `servicePeriodStart/servicePeriodEnd` from `billingPeriod.startDate` / `billingPeriod.endDate`, and calculates initial tax from `billingPeriod.endDate`
+  - `BillingEngine.calculateBilling` still runs `applyProrationToPlan(...)` on `productCharges` after the charges are built when `enable_proration` is true
+  - `PASS0_RECURRING_TIMING_APPENDIX.md`, `pass-0-source-inventory.json`, and `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now treat that combination as the source-backed `F061/T061` seam to remove during `F062+`
+- (2026-03-17) Recurring product charges now follow canonical service-period timing under client cadence:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now resolves product due periods through the same shared recurring timing helper used by fixed recurring charges, so product `servicePeriodStart` / `servicePeriodEnd` now reflect the canonical due service period instead of the enclosing invoice window
+  - product coverage settlement now happens inside `calculateProductCharges(...)`, which removes the late-stage `applyProrationToPlan(...)` branch for products from `calculateBilling` while preserving the existing `enable_proration` gate and rounding behavior
+  - product tax evaluation now uses the canonical due service-period end date, and product charge tests now explicitly cover client-cadence timing (`T062`), override precedence (`T063`), and tax-date behavior (`T064`)
+- (2026-03-17) Recurring license timing is still a source-backed inventory seam rather than a real runtime migration:
+  - `packages/billing/src/lib/billing/billingEngine.ts` still leaves licenses on the late-stage `applyProrationToPlan(...)` branch in `calculateBilling`
+  - `calculateLicenseCharges(...)` still contains the unresolved license-source TODO and, if populated, would still stamp `period_start`, `period_end`, `servicePeriodStart`, and `servicePeriodEnd` from the enclosing invoice window while evaluating tax from `billingPeriod.endDate`
+  - `PASS0_RECURRING_TIMING_APPENDIX.md`, `pass-0-source-inventory.json`, and `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now treat that as the explicit `F065/T065` seam to remove before `F066+`
+- (2026-03-17) Recurring license timing now follows canonical service-period timing under client cadence:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now routes both product and license recurring charges through one shared quantity-charge helper that starts from `resolveRecurringChargeTiming(...)`, so licenses no longer depend on the late-stage `applyProrationToPlan(...)` branch in `calculateBilling`
+  - license selection is now explicit and source-backed: recurring products exclude `service_catalog.is_license = true`, while recurring licenses require `service_catalog.item_kind = 'product'` plus `is_license = true`, which closes the earlier placeholder TODO without changing contract-line authoring storage
+  - license coverage settlement now uses `applyQuantityChargeCoverageSettlement(...)` inside the canonical timing path, and license tax now evaluates from the canonical due service-period end date instead of the enclosing invoice window
+  - `server/src/test/unit/billing/billingEngine.licenseTiming.test.ts` now locks `T066`, `T067`, and `T068`, and the pass-0 appendix/inventory contract test was refreshed so the plan artifacts describe the migrated product/license timing status instead of the old placeholder seam
+- (2026-03-17) Product and license persistence now keep canonical detail metadata without forcing fixed-detail tax semantics onto non-fixed charges:
+  - `packages/billing/src/services/invoiceService.ts` now inserts one `invoice_charge_details` row for each recurring product or license parent charge, preserving `service_period_start`, `service_period_end`, and `billing_timing` for non-fixed recurring lines
+  - `calculateAndDistributeTax(...)` now treats only parents with matching `invoice_charge_fixed_details` rows as consolidated tax carriers, so product/license detail metadata can exist without making tax distribution skip their parent invoice rows
+  - `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts` now locks `T069` and `T070` alongside the existing fixed-detail regression coverage
+- (2026-03-17) The next boundary after `F070` is no longer a local billing-engine seam:
+  - `packages/billing/src/actions/invoiceGeneration.ts` still derives work from `billing_cycle_id`, reads one billing cycle window, and calls `BillingEngine.calculateBilling(client_id, cycleStart, cycleEnd, billing_cycle_id)` directly
+  - `packages/billing/src/actions/recurringBillingRunActions.ts` still treats a recurring run as a list of raw billing-cycle IDs, so `F071+` will need broader action/scheduler identity changes rather than another contained engine-only patch
+- (2026-03-17) Invoice generation now has an explicit due-service-period preselection seam before charge-family execution:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now supports an additive `recurringTimingSelections` option on `calculateBilling(...)` and exposes `selectDueRecurringServicePeriodsForBillingWindow(...)`, which precomputes one canonical timing selection per recurring contract line from the current billing window before fixed, product, and license charge paths run
+  - `calculateBillingInternal(...)` now builds those selections once per invoice window and threads them into the recurring charge families, so invoice generation no longer relies on each family rediscovering due periods independently inside its own path
+  - `packages/billing/src/actions/invoiceGeneration.ts` now routes preview, PO-overage inspection, and invoice generation through `calculateBillingForInvoiceWindow(...)`, making the action-layer contract explicit: select due recurring service periods first, then calculate billing with those selections
+  - direct unit tests that call private recurring helpers still work because the migrated fixed/product/license helpers now fall back to `getBillingCycle(...)` when no preselected billing cycle is provided; that preserves old test harness signatures while keeping live execution on the new preselection seam
+- (2026-03-17) Invoice headers and downstream invoice-generation hooks remain anchored to the invoice window after recurring details move onto canonical service periods:
+  - `packages/billing/src/actions/invoiceGeneration.ts` already persisted `billing_period_start` / `billing_period_end` from `cycleStart` / `cycleEnd`; `server/src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts` now turns that into an executable contract against a recurring charge whose canonical `servicePeriodStart` / `servicePeriodEnd` are different
+  - the same unit contract now proves `createInvoiceFromBillingResult(...)` still drives the existing downstream draft/finalization path: persisted-charge subtotal calculation, tax distribution, invoice total update, and invoice-generated analytics all continue to run on the service-period-first path without reinterpreting the invoice header dates from recurring detail periods
+  - the test harness surfaced one subtle implementation detail that is now explicit in the regression: invoice header billing-period fields are stored as `Temporal.PlainDate` values before insert, not raw strings, but they still stringify back to the invoice-window dates exactly
+- (2026-03-17) Empty recurring due-work selection now has an explicit action-layer contract:
+  - `server/src/test/unit/billing/invoiceGeneration.emptyResult.test.ts` closes `T077` by proving `generateInvoice(...)` returns `null` when `selectDueRecurringServicePeriodsForBillingWindow(...)` yields no due recurring work, `calculateBilling(...)` returns zero charges / zero final amount, and zero-dollar suppression is enabled
+  - the regression also proves the new due-period preselection seam still receives the expected invoice window bounds before the action exits on the empty-result path, which keeps `F071` and the future duplicate/billed-through work (`F080`) grounded in one explicit contract
+- (2026-03-17) Automatic recurring runs now have an executable delegation contract for the service-period-first path:
+  - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` proves `generateInvoicesAsRecurringBillingRun(...)` still fans out each selected `billingCycleId` through `generateInvoice(...)`, which is now the action path that performs due-service-period preselection before billing calculation
+  - the test also keeps the recurring-run workflow events stable on that migrated path, so automatic invoice generation remains wired through the same started/completed event contract while recurring timing semantics move underneath `generateInvoice(...)`
+  - no runtime code change was required for `F074`; the new seam landed in `generateInvoice(...)` during `F071`, and this checkpoint locks the automatic-run delegation onto that migrated action path
+- (2026-03-17) Preview generation now has an executable service-period-first contract without widening the preview payload shape yet:
+  - `server/src/test/unit/billing/invoiceGeneration.preview.test.ts` proves `previewInvoice(...)` constructs a `BillingEngine` preview through `calculateBillingForInvoiceWindow(...)`, so preview generation now preselects due recurring service periods before calculating recurring charges
+  - the preview regression intentionally keeps the current payload surface stable: preview totals and line items remain the same, but the underlying recurring charge source is now canonical service-period selection rather than per-family ad hoc timing math
+  - the "generate from preview" UI path already rides `generateInvoicesAsRecurringBillingRun(...)`, so `F074` plus the existing preview-dialog UI checks are the current guard that single-cycle generation stays on the same migrated execution path
+- (2026-03-17) The pass-0 source inventory needed a maintenance refresh after the last billing-engine/unit-test checkpoints:
+  - `pass-0-source-inventory.json` now includes the new `billing_cycle_alignment` reference in `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`
+  - the persisted-service-period reader inventory now also includes `server/src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts`, `server/src/test/unit/billing/billingEngine.bucketTiming.test.ts`, `server/src/test/unit/billing/billingEngine.discountPricingTiming.test.ts`, and `server/src/test/unit/billing/invoiceService.fixedPersistence.test.ts`
+- (2026-03-17) Negative-invoice and credit-application recurring safeguards are now locked as executable contracts without needing another runtime patch:
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now closes `T091`, `T094`, and `T095` by proving partial credit-applied recurring invoices, negative recurring invoices, and negative-source-plus-positive-target rereads all keep canonical `invoice_charge_details` service periods attached to recurring lines
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` now closes `T078` by proving advance duplicate-prevention checks use the canonical service-period end date (`2025-01-31`) instead of the enclosing invoice-window end (`2025-02-01`), which is the billed-through seam `F080` depends on
+  - no production code changed for `F077`; the existing runtime behavior already preserved these paths, but the plan had no focused regression contract proving it after the service-period-first cutover
+  - a targeted DB-backed run of `negativeInvoiceCredit.test.ts` is still blocked locally because its suite-level `@alga-psa/core/secrets` mock no longer exports `getSecret`, so this checkpoint uses focused unit coverage instead of widening that unrelated harness repair
+- (2026-03-17) Credit expiration and reconciliation now have focused recurring regression coverage, but `F078` is still not fully closed:
+  - `server/src/test/unit/billing/creditReconciliation.servicePeriods.test.ts` now closes `T092` and `T093` by proving two core invariants on the service-period-first path:
+    - a negative-invoice credit that is fully consumed by a later credit application still reconciles to `remaining_amount = 0` without any dependency on invoice-header timing
+    - an expired negative-invoice credit still expires from `transactions.expiration_date` / `credit_tracking.expiration_date`, marks the tracking row expired, and creates the same reconciliation-report signal when the client balance has not yet been corrected
+  - this checkpoint intentionally stops short of flipping `F078` because the broader credit-reader (`T098`) and DB-backed integration (`T100`) seams are still open
+- (2026-03-17) Contract wizard cadence-owner capture now reaches the live recurring create/resume UI instead of stopping in action-layer types:
+  - `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx` now carries `cadence_owner` in `ContractWizardData`, defaults new wizards to `'client'`, preserves the value when template snapshots are applied, and includes it in `buildSubmissionData()`
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx` now renders the same business-language cadence-owner chooser used by the fixed contract-line editor, with the contract-anniversary option visibly staged but disabled during rollout
+  - `packages/billing/tests/contractWizardResume.test.tsx` now proves both sides of the wizard contract: new recurring lines submit `cadence_owner: 'client'`, and resumed draft flows keep a stored `cadence_owner` value across step transitions
+  - `packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts` now locks the source-level seams so future edits cannot silently drop cadence owner from wizard defaults, template snapshot application, or fixed-fee UI copy
+- (2026-03-17) Template-authored recurring defaults now carry cadence owner instead of silently dropping it between wizard state and stored template lines:
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx` now defaults template wizard state to `cadence_owner: 'client'`, keeps that value through reset paths, and submits it in `buildSubmissionData()`
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.tsx` now renders the staged cadence-owner chooser in business language so template authors see the same client-schedule versus contract-anniversary framing as live contract authors
+  - `packages/billing/src/actions/contractWizardActions.ts` now persists `cadence_owner: submission.cadence_owner ?? 'client'` on all template-authored contract lines created by the wizard, which keeps future template snapshot and clone flows from losing the default at write time
+  - `packages/billing/tests/templateWizardBucketOverlay.test.ts` and `packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts` now prove the default submits as `'client'` and that the UI/state/write seams stay source-backed
+- (2026-03-17) Fixed recurring authoring copy now explains partial-period coverage without teaching proration as the primary timing workaround:
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx`, `packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration.tsx`, `packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLinePresetConfiguration.tsx`, `packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx`, and `packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx` now describe `enable_proration` as scaling a recurring fee to covered service-period time instead of as a mid-cycle workaround
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.tsx` now reflects that wording back to the user as `Partial-Period Adjustment`
+  - `packages/billing/src/components/billing-dashboard/service-configurations/FixedServiceConfigPanel.tsx` now explains billing-cycle alignment as a legacy coverage-calculation choice rather than a generic proration toggle
+  - `packages/billing/src/components/billing-dashboard/Overview.tsx`, `packages/billing/src/components/billing-dashboard/contracts/QuickStartGuide.tsx`, and `packages/billing/src/components/billing-dashboard/BillingCycles.tsx` now describe client billing schedules, invoice windows, and service periods in service-period-first language
+  - `packages/billing/tests/fixedRecurringPartialPeriodCopy.wiring.test.ts` and `packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts` lock those phrases so the old “enable proration for mid-month starts” guidance does not drift back in unnoticed
+- (2026-03-17) Cadence-owner persistence is now explicit in live code, not only in domain types:
+  - `server/migrations/20260317170000_add_cadence_owner_to_contract_lines.cjs` adds `contract_lines.cadence_owner` with default/backfill to `'client'` plus a check constraint for `client|contract`
+  - `packages/types/src/interfaces/billing.interfaces.ts`, `packages/types/src/interfaces/contract.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `server/src/interfaces/contract.interfaces.ts` now expose `cadence_owner` on live contract-line and mapping interfaces
+  - `server/src/lib/repositories/contractLineRepository.ts`, `shared/billingClients/contractLines.ts`, `packages/clients/src/actions/clientContractLineActions.ts`, `packages/billing/src/actions/contractLineAction.ts`, and `packages/billing/src/lib/billing/billingEngine.ts` now read/write `cadence_owner` from `contract_lines` and default missing legacy rows to `'client'`
+  - template lines were intentionally left out of the new schema in this checkpoint; repository reads still default template-backed responses to `'client'`, but persistence on template authoring remains follow-on work (`F093+`, `F138+`, `F212+`)
+- (2026-03-17) Server API cadence-owner handling now matches the live contract-line storage decision:
+  - `server/src/lib/api/schemas/contractLineSchemas.ts` and `server/src/lib/api/schemas/financialSchemas.ts` now accept `cadence_owner` only as `client|contract` on contract-line and client-contract-line request surfaces and require a valid cadence owner on line response schemas
+  - `server/src/lib/api/services/ContractLineService.ts` now defaults create/get/update responses to `'client'` when legacy rows lack the field, while still persisting explicit `cadence_owner` values on live contract-line writes
+  - template/billing-settings API surfaces were intentionally not widened in this checkpoint because v1 persistence is still line-scoped on `contract_lines`; later authoring/default surfaces stay queued behind `F086+` and `F121+`
+- (2026-03-17) Billing-package authoring actions now keep live cadence-owner semantics on the remaining contract-line creation paths:
+  - `packages/billing/src/actions/contractWizardActions.ts` now threads `submission.cadence_owner ?? 'client'` into all four live recurring line creates inside `createClientContractFromWizard(...)`, and `getDraftContractForResume(...)` / `getContractTemplateSnapshotForClientWizard(...)` now surface the fixed-line cadence owner back to the UI while defaulting missing legacy values to `'client'`
+  - `packages/billing/src/actions/contractLinePresetActions.ts` now accepts `cadence_owner` on `CreateCustomContractLineInput` and preset-copy overrides, so custom recurring lines and preset-instantiated live lines no longer drop cadence ownership at the action layer
+  - template authoring storage remains intentionally out of scope for this checkpoint; template snapshot reads expose cadence owner for compatibility, but no template write path claims persistence until the later template-default features land (`F093+`, `F138+`, `F212+`)
+  - `packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts`, `packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts`, and `packages/billing/tests/draftContractForResumeActions.test.ts` now close `T106` with a mix of action execution and focused wiring/readback coverage
+  - the existing draft-resume permission test was also corrected to assert the action's real `permissionError(...)` return shape instead of expecting a thrown exception; that was harness drift, not a product behavior change
+- (2026-03-17) Recurring timing fixtures now have one shared cadence-owner-aware test seam, which closes `F087`:
+  - `server/src/test/test-utils/recurringTimingFixtures.ts` now exports shared recurring obligation, service-period, invoice-window, and monthly recurring fixture builders with stable defaults for `cadenceOwner`, `duePosition`, and charge family
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now consumes those shared builders and closes `T107` with an explicit client-vs-contract cadence fixture contract instead of inline one-off setup
+  - `server/test-utils/billingTestHelpers.ts` now accepts `cadenceOwner` on `createFixedPlanAssignment(...)` and persists it to `contract_lines.cadence_owner`, so DB-backed invoice and credit fixtures can opt into contract-owned cadence later without rewriting helper internals
+  - `server/src/test/unit/billing/billingTestHelpers.recurringFixtures.test.ts` locks that DB-helper seam with a focused source contract so cadence owner cannot silently fall back out of shared fixture setup
+- (2026-03-17) Staged-rollout validation now blocks contract cadence writes before contract-owned runtime support exists, which closes `F088`:
+  - `shared/billingClients/cadenceOwnerRollout.ts` now defines one shared rollout guard message and helper so schema and service layers reject the same unsupported cadence-owner state consistently
+  - `server/src/lib/api/schemas/contractLineSchemas.ts` and `server/src/lib/api/schemas/financialSchemas.ts` now reject authoring payloads that set `cadence_owner: 'contract'`, while still allowing stored/read-model response payloads to expose `cadence_owner: 'contract'`
+  - `server/src/lib/api/services/ContractLineService.ts` now enforces the same staged-rollout guard on create/update paths, so API callers cannot bypass schema validation and persist contract cadence early
+  - this keeps the persistence/model plumbing from `F081-F087` intact for later rollout phases while making the current rollout posture explicit: client cadence is the only supported live write path until contract-cadence execution exists
+- (2026-03-17) Legacy cadence-owner compatibility is now explicit across package, client-action, and server-service read/write seams, which closes `F089`:
+  - `packages/billing/src/repositories/contractLineRepository.ts` now defaults missing live-line `cadence_owner` reads to `'client'`, persists `'client'` when cloning template lines into live contract lines, and backfills `'client'` on touched legacy updates instead of leaving `contract_lines.cadence_owner` unset
+  - `packages/billing/src/actions/contractLineMappingActions.ts` and `packages/billing/src/models/contractLineMapping.ts` now normalize legacy mapping payloads so template and live contract-line association flows return `cadence_owner: 'client'` when older rows do not yet carry the column, and touched live association writes preserve/backfill that default
+  - `server/src/lib/api/services/ContractLineService.ts` now normalizes `list`, `listWithOptions`, `getById`, and `setPlanActivation` responses through one cadence-owner compatibility helper and persists `'client'` on touched legacy update paths when callers omit cadence owner
+  - `packages/clients/src/actions/clientContractLineActions.ts` now preserves the existing cadence owner when editing client contract lines and backfills `'client'` when legacy rows are edited without an explicit cadence owner, instead of letting writes keep the column null
+- (2026-03-17) `billing_cycle_alignment` now has an explicit staged-deprecation seam instead of remaining an unconditional required write input, which closes `F090`:
+  - `shared/billingClients/billingCycleAlignmentCompatibility.ts` now defines one compatibility resolver for legacy alignment values, preserving explicit stored values when present and deriving a readable fallback from `enable_proration` when new writes omit the field
+  - `server/src/lib/api/schemas/contractLineSchemas.ts` now allows fixed-plan config create payloads to omit `billing_cycle_alignment`, which stops new API writes from treating the legacy field as mandatory while leaving response payloads readable
+  - `packages/billing/src/models/contractLineFixedConfig.ts` now uses the compatibility resolver on reads and on update/upsert writes, so fixed-config writes can omit the field without losing a readable legacy alignment value
+  - `server/src/lib/api/services/ContractLineService.ts` and both server/package contract-line repositories now route fixed-config and template-clone alignment handling through the same compatibility resolver rather than hard-coding `'start'` at each seam
+- (2026-03-17) The first live recurring contract-line configuration surface now presents cadence ownership in business language, which closes `F091`:
+  - `packages/billing/src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration.tsx` now shows a dedicated `Cadence Owner` section with `Invoice on client billing schedule` and `Invoice on contract anniversary` business labels instead of leaking internal field names into the UI
+  - the contract-anniversary option is currently rendered but disabled with rollout copy, which keeps the UI aligned with `F088`'s server-side contract-cadence guard instead of implying that the unsupported path is already available
+  - saves now carry the selected cadence-owner value through `updateContractLine(...)`, so the fixed recurring line editor remains the first coherent live configuration surface for cadence-owner semantics before wizard/template flows are updated
+- (2026-03-17) Credit-reader invoice context now stays on canonical recurring detail metadata, which closes `F078` without pretending the blocked DB integration is done:
+  - `packages/billing/src/actions/creditActions.ts` now loads source invoices through `Invoice.getById(...)` for both `getCreditDetails(...)` and the invoice-summary enrichment inside `listClientCredits(...)`, instead of rereading raw `invoices` rows that dropped recurring `invoice_charge_details`
+  - the credit list path now exposes `invoice_service_period_start` / `invoice_service_period_end` summary fields derived from hydrated recurring invoice charges, so credit-management screens and support tooling keep stable recurring period context even after credit issuance or application
+  - `server/src/test/unit/billing/creditActions.servicePeriods.test.ts` closes `T098` with one focused contract covering both the summary list path and the detailed credit reader against a recurring negative-invoice source
+  - `T100` remains open because the broader DB-backed credit/prepayment integration seam is still blocked locally and is shared with `F058`/`F077`
+- (2026-03-17) Recurring billing workflow-event metadata is now explicitly locked on the service-period-first path, which closes `F079`:
+  - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` now closes `T079` by proving the started/completed recurring billing run events keep stable `runId`, actor metadata, tenant correlation metadata, and completion counts even after recurring invoice generation moved to due-service-period preselection
+  - no production code change was needed for this checkpoint; the value was converting an already-correct event contract into an executable guard before broader scheduler-identity work (`F151+`)
+- (2026-03-17) Duplicate prevention and rerun idempotency now have an explicit action-layer contract, which closes `F080`:
+  - `packages/billing/src/actions/invoiceGeneration.ts` now throws an explicit duplicate error contract (`code = DUPLICATE_RECURRING_INVOICE`) when a billing cycle already has an invoice, instead of surfacing the misleading legacy `"No active contract lines for this period"` message
+  - `packages/billing/src/actions/recurringBillingRunActions.ts` now treats that duplicate error as an idempotent skip during reruns, so automatic recurring runs do not mark already-billed cycles as failures while still refusing to create a second invoice
+  - `server/src/test/unit/billing/invoiceGeneration.duplicate.test.ts` closes `T086` by proving the direct generate action blocks the second invoice for the same due window with the explicit duplicate error payload
+  - `server/src/test/unit/billing/recurringBillingRunActions.test.ts` closes `T082` by proving reruns skip duplicate cycles without incrementing `failedCount`
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts` closes `T087` by proving an already-persisted advance service period suppresses rebilling even when the enclosing invoice-window metadata is later, which keeps billed-through enforcement anchored to canonical service periods
+- (2026-03-17) Client billing schedule UI and preview flows now frame client cadence as one cadence-owner option instead of the only recurring timing source, which closes `F096`:
+  - `packages/billing/src/components/billing-dashboard/BillingCycles.tsx` now explains that the dashboard billing-schedule table previews invoice windows for client-cadence recurring lines only, while contract-anniversary lines can follow their own cadence outside this surface
+  - `packages/clients/src/components/clients/ClientBillingSchedule.tsx` now describes the per-client billing schedule as the client-cadence path, adds preview copy clarifying that the dialog shows client-cadence invoice windows, and explicitly states that contract-anniversary lines are previewed separately at the line level
+  - `packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts` and `server/src/test/unit/billing/ClientBillingSchedule.ui.test.tsx` now close `T117`, including a small harness repair so the client-schedule UI test imports the real package component and mocks its actual `billingHelpers` dependency
+- (2026-03-17) Client portal invoice and contract-line readers now surface recurring timing metadata instead of flattening it away, which closes `F097`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now renders canonical recurring `service_period_start` / `service_period_end` ranges and `billing_timing` badges directly on invoice line items, so client-visible invoice details keep the recurring coverage window instead of only showing pricing fields
+  - `packages/client-portal/src/actions/client-portal-actions/client-billing.ts` now selects `billing_timing` and `cadence_owner` for the client contract-line reader, and `packages/client-portal/src/components/billing/ContractLineDetailsDialog.tsx` now shows cadence-owner and billing-timing labels with a short recurring service-period explanation
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` and `packages/client-portal/src/components/billing/ContractLineDetailsDialog.servicePeriods.test.tsx` now close `T121` and `T122`
+- (2026-03-17) Client-portal billing metrics and recent invoice readers now keep canonical recurring period meaning instead of flattening back to invoice-header-only semantics, which closes `F130`:
+  - `packages/client-portal/src/actions/client-portal-actions/dashboard.ts` now aggregates recent invoice activity through `invoice_charge_details`, so invoice activity descriptions prefer canonical recurring `service_period_start` / `service_period_end` ranges when detail rows exist and fall back cleanly for historical invoices
+  - the same dashboard action now formats invoice totals as currency in recent activity descriptions instead of printing raw cents, which keeps the new service-period explanation readable for client users
+  - `packages/client-portal/src/actions/client-portal-actions/client-billing.ts#getCurrentUsage(...)` now uses explicit `[period_start, period_end)` bucket-period filtering (`period_start <= currentDate < period_end`) instead of the old inclusive `BETWEEN` predicate, aligning portal billing-overview usage with the canonical recurring boundary model
+  - `packages/client-portal/src/actions/client-portal-actions/client-billing-metrics.ts#getClientBucketUsage(...)` was already period-aware; `packages/client-portal/src/actions/client-portal-actions/client-billing.bucketPeriods.test.ts` now locks the remaining-units projection so portal bucket reporting stays tied to the explicit allowance period it represents
+  - focused regression coverage now lives in `packages/client-portal/src/actions/client-portal-actions/dashboard.recurringServicePeriods.test.ts`, `packages/client-portal/src/actions/client-portal-actions/client-billing.bucketPeriods.test.ts`, plus the existing detail/preview reader tests in `packages/client-portal/src/components/billing/*.servicePeriods.test.tsx`
+- (2026-03-17) Contract reporting now treats recurring YTD revenue as a service-period-based fact instead of an invoice-header-date fact, which closes `F098`:
+  - `packages/billing/src/actions/contractReportActions.ts` now aggregates contract revenue YTD from `invoice_charge_details.service_period_end` when canonical recurring detail rows exist, while falling back to `invoices.invoice_date` for historical/manual rows that still lack detail periods
+  - the fixed/product/license persistence assumptions are now explicit in reporting code: fixed detail-backed rows sum `invoice_charge_fixed_details.allocated_amount`, while current non-fixed recurring parents still rely on the existing one-detail-per-parent write contract
+  - `packages/reporting/src/lib/reports/definitions/contracts/revenue.ts` now matches that runtime behavior with a raw-SQL metric that uses canonical recurring service-period dates instead of invoice headers when detail rows exist
+  - `packages/reporting/src/lib/reports/definitions/contracts/expiration.ts` and `packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx` now clarify the reporting date basis in business language so contract-expiration reporting stays assignment-based while revenue reporting is explicitly service-period-based
+  - focused regression coverage now lives in `server/src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts`, `packages/reporting/src/lib/reports/definitions/contracts/revenue.servicePeriods.test.ts`, and `packages/billing/tests/ContractReports.revenueCopy.wiring.test.ts`
+- (2026-03-17) Contract reporting summary and adjacent report surfaces now make the clarified date basis visible instead of leaving it implicit, which closes `F129`:
+  - `packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx` now renders the already-computed `atRiskDecisionCount` as a fourth summary card (`Renewal Decisions Due`), so the summary surface exposes renewal-decision timing alongside the recurring YTD service-period metric
+  - `server/src/test/unit/contractReportActions.summary.servicePeriods.test.ts` now proves `getContractReportSummary()` combines canonical recurring `service_period_end` YTD totals with decision-due-date risk counts, instead of silently reverting the summary to invoice-header timing
+  - `server/src/test/unit/contractReportActions.expiration.servicePeriods.test.ts` now proves contract expiration rows remain assignment-end and renewal-decision based, independent of recurring invoice service-period projection
+  - `packages/reporting/src/lib/reports/definitions/contracts/expiration.servicePeriods.test.ts`, `packages/reporting/src/actions/reconciliationReportActions.servicePeriods.test.ts`, and `packages/billing/tests/ContractReports.summaryCopy.wiring.test.ts` now lock the remaining reporting seams: expiration remains assignment-based, reconciliation remains discrepancy-based, and the dashboard summary copy surfaces the new semantics explicitly
+- (2026-03-17) Accounting export line selection now preserves canonical recurring service periods instead of falling back to invoice header windows, which closes `F099`:
+  - `packages/billing/src/services/accountingExportInvoiceSelector.ts` now joins `invoice_charge_details`, collapses multiple detail rows back to one export preview line per charge, and prefers canonical detail-level `service_period_start` / `service_period_end` over `invoices.billing_period_start` / `billing_period_end`
+  - export preview and batch creation still preserve a safe fallback for historical/manual charges that do not have canonical detail rows yet, so export lines remain perioded without forcing detail backfills
+  - this makes the downstream adapter contract explicit instead of accidental: QuickBooks Online service dates and Xero payload service-period metadata now continue to consume the selector's canonical line periods rather than invoice headers
+  - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` now seeds `invoice_charge_details` for the multi-period export scenario so the intended DB-backed regression is in place, but local execution remains blocked by `ECONNREFUSED` to Postgres on `127.0.0.1:5438`
+  - executable local coverage for the same behavior now lives in `server/src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts`, `packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts`, and `packages/billing/tests/accountingExportAdapters.servicePeriods.wiring.test.ts`
+- (2026-03-17) Invoice template preview samples now carry canonical recurring service periods end to end, which closes `F133`:
+  - `packages/billing/src/utils/sampleInvoiceData.ts` now seeds recurring sample charges with `service_period_start`, `service_period_end`, `billing_timing`, and multi-period `recurring_detail_periods` instead of leaving preview/demo invoices periodless
+  - `packages/billing/src/utils/sampleInvoicePreview.ts` now centralizes sample-to-renderer mapping so preview/demo flows preserve canonical recurring period fields rather than dropping them in `InvoiceTemplateManager`
+  - `packages/billing/src/components/billing-dashboard/InvoiceTemplateManager.tsx` now initializes its sample preview state with `useEffect` and the shared mapper, which removes the old render-time state setter and keeps recurring sample metadata intact
+  - `packages/billing/src/components/invoice-designer/preview/sampleScenarios.ts` now includes canonical `servicePeriodStart`, `servicePeriodEnd`, `billingTiming`, and `recurringDetailPeriods` on preview demo items so designer previews can render the same recurring metadata shape as live invoice previews
+  - `packages/billing/tests/sampleInvoicePreview.test.ts` closes `T130` with source-backed coverage for both manager-backed sample invoices and designer preview sample scenarios
+- (2026-03-17) Remaining cadence-owner helper seams are now explicit in test utilities and migration fixtures, which closes `F134`:
+  - `server/src/test/test-utils/pricingScheduleHelpers.ts` now exports `buildRecurringPricingScheduleFixture(...)`, a shared cadence-owner-aware pricing-schedule fixture builder that composes the canonical monthly recurring fixture and exposes the resulting invoice window, service periods, and pricing-schedule dates in one place
+  - `server/migrations/utils/client_owned_contracts_simplification.cjs` now preserves explicit `cadence_owner` values and backfills legacy-null clone fixtures to `'client'`, so migration clone-plan tests no longer depend on incidental object spreads to keep recurring cadence semantics
+  - `server/src/test/unit/billing/pricingScheduleHelpers.recurringFixtures.test.ts` and `server/src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts` now lock those helper seams with client-cadence and contract-cadence fixture coverage
+- (2026-03-17) Cadence-owner backfill verification now has an explicit non-mutation contract, which closes `F135` and `T110`:
+  - `server/src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts` now asserts the `20260317170000_add_cadence_owner_to_contract_lines.cjs` migration never references `invoices`, `invoice_charges`, or `invoice_charge_details`, so the backfill stays scoped to `contract_lines`
+  - the same test still executes the migration against fake legacy `contract_lines` rows and proves the only mutation is null `cadence_owner` backfill to `'client'`, which makes the “safe for untouched tenants” claim explicit instead of only implied by earlier parity checks
+- (2026-03-17) Mixed-cadence rollout validation is now explicit across package actions, API schemas, and UI copy, which closes `F136`, `T143`, `T144`, and `T145`:
+  - `shared/billingClients/cadenceOwnerRollout.ts` now uses one explicit rollout message that names both contract-owned cadence and mixed-cadence billing as staged, so every layer rejects the same unsupported state with the same wording
+  - `packages/billing/src/actions/contractLineAction.ts`, `packages/billing/src/actions/contractLinePresetActions.ts`, and `packages/billing/src/actions/contractWizardActions.ts` now all call `assertSupportedCadenceOwnerDuringRollout(...)` before persisting live, preset-backed, or wizard-authored contract cadence writes
+  - `server/src/test/unit/api/contractLineCadenceOwner.schema.test.ts` now proves both create and update client-line schema writes reject contract cadence during rollout, while `server/src/test/unit/api/contractLineService.cadenceOwner.test.ts` continues to guard the API service layer
+  - `packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts` and `packages/billing/tests/cadenceOwnerRollout.actions.wiring.test.ts` now lock the package action layer, and `packages/billing/tests/fixedContractLineConfiguration.cadenceOwner.ui.test.tsx` now proves the UI explains the staged mixed-cadence block instead of only disabling the option silently
+- (2026-03-17) Fixed-config model/service compatibility now closes the remaining staged-deprecation seam for `billing_cycle_alignment`, which closes `F137` and `T161`:
+  - `packages/billing/src/models/contractLineFixedConfig.ts` now routes delete/reset behavior through `resolveBillingCycleAlignmentForCompatibility(...)` instead of hard-coding a raw alignment value, so every fixed-config write path uses the same compatibility resolver
+  - `server/src/lib/api/services/ContractLineService.ts` now resolves legacy alignment through the compatibility helper when creating fixed-plan configs and when copying fixed config between plans, which removes the last direct `?? 'start'` fallback from the service layer
+  - `packages/billing/tests/billingCycleAlignmentCompatibility.model.test.ts` and `server/src/test/unit/api/contractLineService.billingCycleAlignmentCompatibility.wiring.test.ts` now prove fixed-config writes and copies can omit `billing_cycle_alignment` while still keeping a readable compatibility value
+- (2026-03-17) Internal recurring-timing docs now describe the live service-period-first model and rollout defaults, which closes `F100`:
+  - `shared/billingClients/recurringTiming.ts` now carries a module-level architecture reference that spells out the current runtime truth chain: cadence owner -> service periods -> invoice windows -> invoice detail persistence, plus the staged default of `client` cadence
+  - `packages/reporting/src/actions/report-actions/README.md` now documents the reporting date-basis policy for the current rollout: recurring report actions should prefer canonical service-period detail fields when present, while historical/manual rows may still fall back to invoice dates
+  - focused docs contract coverage now lives in `packages/billing/tests/recurringTiming.architectureDocs.wiring.test.ts` and `packages/reporting/src/actions/report-actions/README.servicePeriods.test.ts`
+- (2026-03-17) Contract-owned cadence now has executable anniversary-based boundary definitions for monthly, quarterly, semi-annual, and annual recurring lines, which closes `F101` through `F104`:
+  - `shared/billingClients/contractCadenceServicePeriods.ts` now defines calendar-unit contract cadence helpers anchored to `anchorDate`, which is treated as the assignment-start anniversary rather than a client billing schedule anchor
+  - monthly, quarterly, semi-annual, and annual periods all compute each boundary from the original assignment anchor instead of chaining from the prior constrained date, which preserves anniversary intent across short months and longer calendar cycles
+  - this checkpoint remains intentionally domain-only: live writes, mixed-cadence selection, first/final invoice rules, and scheduler identity are still deferred to later contract-cadence features (`F106+`)
+  - the generator records `timingMetadata.anchorDate` plus `boundarySource = assignment_start_date`, which makes the contract-anchor rule explicit without changing invoice selection behavior yet
+  - focused regression coverage now lives in `server/src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts`, including the acceptance-shape `8th`-anchor scenarios for monthly, quarterly, semi-annual, and annual cycles plus the required-anchor guard
+- (2026-03-17) Contract-cadence lifecycle rules are now explicit for future starts and renewals, which closes `F105`:
+  - `shared/billingClients/contractCadenceServicePeriods.ts` now exports `resolveContractCadenceAnchorDate(...)`, which defines the rollout rule plainly: future-start assignments and renewed contracts anchor to the new assignment start, while renew-in-place preserves the prior anniversary anchor when one exists
+  - monthly contract-cadence generation already honored the future-start boundary by not emitting pre-anchor service periods; this checkpoint makes that behavior intentional and names the renewal-policy seam instead of leaving it to caller convention
+  - focused regression coverage for those lifecycle rules now lives in `server/src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts`, which proves both the future-start no-prebilling behavior and the split between renew-in-place versus renewed-contract anchor resolution
+- (2026-03-17) Contract-cadence first/final invoice behavior is now explicit before mixed-cadence scheduler work, which closes `F106` and `F107`:
+  - `shared/billingClients/contractCadenceServicePeriods.ts` now exports `resolveContractCadenceInvoiceWindowForServicePeriod(...)`, which makes the missing policy explicit: contract cadence owns the due invoice window as well as the service-period boundary
+  - for `advance`, the first and final invoices stay on the same anniversary window as the due service period; client billing cycles do not pull those invoices back to the enclosing client cycle
+  - for `arrears`, the first and final invoices stay on the next anniversary window after the covered service period ends, including a partial final period caused by termination mid-period
+  - `server/src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts` now closes `T137` and `T138` by proving both due-position variants against a monthly `8th`-anchor scenario without enabling live contract-cadence execution yet
+- (2026-03-17) Mixed cadence grouping policy is now explicit at the shared-domain layer before scheduler identity changes, which closes `F108` and `F109`:
+  - `shared/billingClients/recurringTiming.ts` now exports `groupDueServicePeriodsByInvoiceWindow(...)`, which groups due work by `[start, end)` invoice-window identity and carries the set of cadence owners on each group for explainability
+  - the rule is now explicit: cadence owner alone does not force a split when client-owned and contract-owned due work lands on the same invoice window, but differing invoice windows always produce separate invoice candidates
+  - this checkpoint intentionally stops before `F110`: live recurring runs still iterate raw `billingCycleId`s, but later scheduler work can now build on a stable grouping contract instead of re-deciding the product rule
+  - `server/src/test/unit/billing/recurringTiming.domain.test.ts` now closes `T141` and `T142`
+- (2026-03-17) Mixed-cadence live execution remains blocked on the current billing-cycle run identity:
+  - `packages/billing/src/actions/invoiceGeneration.ts` and `packages/billing/src/actions/recurringBillingRunActions.ts` still model one recurring run input as one `billingCycleId` / one client invoice window
+  - `packages/billing/src/lib/billing/billingEngine.ts` still builds live recurring timing selections around the current billing window, so mixed cadence that lands on different windows cannot be executed coherently until the later execution-identity work (`F110`, `F151+`)
+- (2026-03-17) Mixed-cadence selection is now deterministic on the current billing-cycle run path, which closes `F110` without claiming the later scheduler rewrite:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now branches recurring timing selection by `cadence_owner`, using client-cadence periods for `client` lines and the shared contract-cadence generator plus contract-owned invoice-window matching for `contract` lines
+  - on the current `billingCycleId`-driven run path, contract-owned lines are billed only when their contract-owned due window exactly matches the active invoice window; differing contract windows are skipped instead of being pulled into the enclosing client billing cycle
+  - recurring timing selections are now built in stable `client_contract_line_id` order, and `server/src/test/unit/billing/billingEngine.timing.test.ts` closes `T146` by proving the same mixed-cadence result is produced regardless of input order
+  - broader execution identity, background job payloads, and truly schedulable contract-cadence windows are still deferred to `F151+`; this checkpoint only makes the existing run path deterministic when mixed cadence data is present
+- (2026-03-17) The rollout order is now explicit enough to close `F111` and `T151`:
+  - `PASS0_RECURRING_TIMING_APPENDIX.md` now carries a dedicated `Staged Rollout Plan` section with five concrete stages: additive groundwork, client-cadence parity comparison, client-cadence cutover, contract-cadence enablement, and cleanup/deletion
+  - the rollout rule is now source-backed instead of implied: contract cadence stays blocked on live write paths through Stage 2 and Stage 3, and only becomes tenant-writable after client-cadence parity sign-off plus post-cutover stability checks
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now locks that rollout order as `T151`, so future edits cannot quietly reintroduce contract-cadence enablement ahead of client-cadence parity
+  - while landing that docs checkpoint, `pass-0-source-inventory.json` was refreshed to match current `billing_cycle_alignment` and persisted service-period reader references so the appendix contract suite is green again instead of hiding behind stale inventory drift
+- (2026-03-17) First-cutover guardrails now explicitly keep out-of-scope billing families out of recurring rollout comparison and preselection, which closes `F115`:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now skips `contract_line_type = Hourly|Usage` when precomputing `recurringTimingSelections`, so the service-period-first preselection seam only targets recurring fixed/product/license-style lines instead of every contract line
+  - `packages/billing/src/actions/invoiceGeneration.ts` now compares only recurring-backed charges in `RECURRING_BILLING_COMPARISON_MODE`, filtering to canonical recurring charge families with `client_contract_line_id` before building drift snapshots
+  - that means time entries, usage records, and client-scoped material charges cannot produce false rollout drift warnings or appear to be part of the recurring hard cutover just because they share an invoice window with recurring work
+  - manual-only invoice creation was already isolated from recurring selection in `T084`; this checkpoint keeps that existing boundary intact while tightening the live recurring engine and comparison seams
+- (2026-03-17) DB-backed client-cadence parity validation now closes `F112`, `T152`, and `T153`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now proves both monthly and annual client-cadence recurring invoices keep the same mixed advance/arrears service periods and persisted invoice-window headers under the service-period-first engine
+  - the integration fixture now creates a billing location with an email address and reuses one `client_contract_id` for mixed recurring lines, which keeps the test on the real `generateInvoice(...)` path without tripping unrelated billing-email or multi-contract invoice guards
+  - `server/test-utils/billingTestHelpers.ts#createFixedPlanAssignment(...)` now accepts optional existing `contractId` / `clientContractId` so DB-backed recurring tests can model multiple lines on one client contract instead of fabricating invalid multi-contract invoice fixtures
+  - local DB validation is now running successfully against the Docker Postgres listener on `127.0.0.1:57433`
+- (2026-03-17) Post-cutover DB-backed sanity coverage now reaches all currently migrated recurring families, which closes `F118` plus `T171`-`T174`:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts` now adds four focused end-to-end sanity cases on the real `generateInvoice(...)` path: monthly fixed, quarterly fixed, recurring product, and recurring license invoice generation all persist canonical recurring service periods under client cadence
+  - the new product/license fixture helper intentionally uses the same contract-line tables as live recurring execution and marks catalog rows with `service_catalog.item_kind = 'product'` plus `is_license`, so the integration tests exercise the migrated quantity-charge paths rather than a test-only shortcut
+  - those DB-backed tests surfaced one real runtime seam instead of a harness issue: recurring product/license charges were not carrying `config_id`, which made `invoice_charge_details.config_id` inserts fail on real persistence even though the unit tests had already proven the timing math
+  - `packages/billing/src/lib/billing/billingEngine.ts`, `packages/billing/src/services/invoiceService.ts`, `packages/types/src/interfaces/billing.interfaces.ts`, and `server/src/interfaces/billing.interfaces.ts` now thread `config_id` through recurring product/license charges and into detail persistence, which keeps canonical recurring detail rows writable for all migrated charge families
+- (2026-03-17) Operator/developer rollout guidance now has an executable runbook contract, which closes `F119` and `T160`:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RUNBOOK.md` now provides concrete parity-check commands, DB-backed sanity validation, comparison-mode guidance, mixed-cadence troubleshooting steps, inspection SQL, and rollback posture
+  - `server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts` now enforces that the runbook keeps those exact sections and command examples instead of drifting into non-actionable prose
+  - refreshing the runbook contract also forced a pass-0 inventory refresh in `pass-0-source-inventory.json`, which now matches the live grep-backed source after the recent cleanup and preview-reader checkpoints
+- (2026-03-17) The time-and-usage follow-on boundary is now explicit instead of remaining an unresolved v1 blur, which closes `F120`:
+  - `PRD.md` now states that time-entry billing and usage-record billing remain event-driven even after recurring materialized service periods land, and that any unification requires a separate follow-on plan
+  - `PASS0_RECURRING_TIMING_APPENDIX.md` now adds a dedicated `Follow-On Boundary — Full Time And Usage Unification` section that spells out the trigger conditions for such a follow-on and the implementation questions it must answer before those domains can adopt canonical service periods
+- (2026-03-17) Billing-settings defaults now expose recurring cadence rollout metadata without pretending contract cadence is configurable yet, which closes `F121`:
+  - `packages/billing/src/actions/billingSettingsActions.ts` now returns additive recurring cadence defaults on both tenant and client billing-settings readers: `defaultRecurringCadenceOwner = 'client'`, rollout state `client_only`, and the shared contract-cadence rollout-block message
+  - the same action now rejects any attempted `defaultRecurringCadenceOwner = 'contract'` write on update paths, so billing-settings surfaces cannot silently bypass the staged contract-cadence guard even though the settings shape now exposes the rollout posture explicitly
+  - `packages/types/src/interfaces/billing.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `server/src/lib/api/schemas/financialSchemas.ts` now carry the same additive default/rollout metadata on billing-settings read models and API schemas, keeping the contract consistent wherever billing defaults are read
+- (2026-03-17) Client billing schedule anchor actions now expose explicit client-cadence scope metadata instead of leaving that meaning as UI-only copy, which closes `F122`:
+  - `shared/billingClients/clientCadenceScheduleContext.ts` now defines one shared client-cadence schedule context with explicit change-scope, schedule, and preview messaging for client-owned invoice windows
+  - `shared/billingClients/billingSchedule.ts` and `packages/billing/src/actions/billingCycleAnchorActions.ts` now attach that context to `getClientBillingCycleAnchor(...)` and schedule-preview results, so action consumers can tell that these windows apply only to client-cadence recurring lines and that contract-anniversary lines are configured separately
+  - `packages/clients/src/components/clients/ClientBillingSchedule.tsx` now renders those messages from the returned action contract instead of hardcoding the cadence-owner explanation locally, which keeps the preview flow aligned with explicit cadence ownership at the data-contract layer as well as the UI layer
+- (2026-03-17) Preset-backed recurring cadence defaults now persist on the preset itself instead of being implicit or alignment-adjacent, which closes `F123` and `T118`:
+  - `server/migrations/20260317193000_add_cadence_owner_to_contract_line_presets.cjs` adds `contract_line_presets.cadence_owner` with safe backfill to `'client'` plus a `client|contract` check constraint, giving preset-backed recurring defaults their own storage surface instead of piggybacking on `billing_cycle_alignment`
+  - `packages/types/src/interfaces/billing.interfaces.ts`, `server/src/interfaces/billing.interfaces.ts`, and `packages/billing/src/models/contractLinePreset.ts` now expose and normalize preset `cadence_owner`, defaulting missing legacy rows to `'client'` on reads and preserving an existing stored cadence owner on updates when callers omit the field
+  - `packages/billing/src/actions/contractLinePresetActions.ts` now copies preset-backed recurring lines using `preset.cadence_owner ?? 'client'` when no override is provided, so preset reuse reads an explicit cadence-owner default instead of inferring anything from fixed-config `billing_cycle_alignment`
+- (2026-03-17) Contract-line mapping/disambiguation helpers now have an executable audit showing they no longer infer recurring timing from legacy fixed-config flags after the cadence-owner cutover, which closes `F124` and adds `T331`:
+  - `packages/billing/tests/contractLineMappingRecurringTiming.wiring.test.ts` now locks the intended boundary explicitly: after the template-snapshot seam, the mapping and disambiguation helpers must operate on explicit `cadence_owner` fields and may not branch on `billing_cycle_alignment` or `enable_proration`
+  - this checkpoint did not require a runtime patch because the mapping model/action code was already using explicit cadence-owner defaults; the missing work was the focused audit contract proving that the legacy fixed-config flags no longer participate in live mapping/disambiguation decisions
+- (2026-03-17) Full invoice-detail readers now expose canonical recurring period metadata more consistently instead of flattening everything down to one parent-level summary, which closes `F125` and `T090`:
+  - `packages/types/src/interfaces/invoice.interfaces.ts` and `server/src/interfaces/invoice.interfaces.ts` now expose additive `recurring_detail_periods` on `IInvoiceCharge`, preserving the canonical detail rows behind a recurring parent charge without breaking existing summary fields
+  - `packages/billing/src/models/invoice.ts` now attaches sorted `recurring_detail_periods` arrays to recurring invoice charges, keeps the existing aggregated `service_period_start` / `service_period_end` / `billing_timing` summary for compatibility, and orders invoice-charge reads chronologically by recurring service period before falling back to original charge order for manual or non-perioded rows
+  - that makes both `Invoice.getById(...)` and the dashboard-facing `getInvoiceLineItems(...)` path more stable: recurring invoice-detail queries can keep their canonical metadata while still presenting predictable line ordering to dialogs and editors
+- (2026-03-17) Renderer-facing invoice read paths now keep canonical recurring detail periods instead of collapsing them back to one flattened range, which closes `F126`:
+  - `packages/types/src/lib/invoice-renderer/types.ts` and `packages/billing/src/lib/adapters/invoiceAdapters.ts` now carry additive `recurringDetailPeriods` on rendered invoice items, deriving compatibility summary fields from those details only when needed so dashboard preview, client portal preview, PDF generation, and designer preview all keep the canonical detail structure available
+  - `packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx` and `packages/billing/src/lib/adapters/invoiceAdapters.test.ts` now lock that projection contract explicitly, including the case where a recurring parent line has more than one canonical detail period
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.tsx` now renders multiple recurring detail periods as an explicit list when present instead of always flattening back to one service-period badge, which keeps client-facing invoice reads aligned with the canonical detail hydration added in `F125`
+- (2026-03-17) Accounting export persistence now carries canonical recurring detail periods directly instead of reducing every export line to one legacy summary window, which closes `F127`:
+  - `packages/types/src/interfaces/accountingExport.interfaces.ts`, `packages/billing/src/repositories/accountingExportRepository.ts`, and `packages/billing/src/actions/accountingExportActions.ts` now expose additive `recurring_detail_periods` metadata on export preview lines and persisted `AccountingExportLine.payload`, giving repository and controller code one typed place to carry canonical recurring export detail without changing the existing summary `service_period_start` / `service_period_end` columns
+  - `packages/billing/src/services/accountingExportInvoiceSelector.ts` now selects `invoice_charge_details.billing_timing` alongside canonical start/end dates, emits sorted `recurringDetailPeriods` on preview rows, and persists those exact periods into export-line payloads during batch creation
+  - `server/src/lib/api/controllers/ApiCSVAccountingController.ts` now forwards the same canonical recurring detail payload when CSV export creates batch lines through the shared export service, keeping manual CSV-triggered batches on the same detail-aware contract as the dashboard export flow
+  - `server/src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts` now proves both seams: preview selection exposes canonical recurring detail periods, and `createBatchFromFilters(...)` persists them into the export-line payload that downstream adapters and rereads consume
+- (2026-03-17) Recurring billing workflow events now state their service-period-first selection basis explicitly instead of leaving it implicit in builder defaults, which closes `F128`:
+  - `shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders.ts` now defaults recurring billing run payloads to `selectionMode = 'due_service_periods'` and `windowIdentity = 'billing_cycle_window'`, making the current run contract explicit about how service-period-first billing still selects work during the billing-cycle-identity phase
+  - `shared/workflow/runtime/schemas/billingEventSchemas.ts` now requires those fields on recurring billing run started/completed/failed payloads, so schema consumers and future automation logic cannot treat the selection basis as an unstated convention
+  - `packages/billing/src/actions/recurringBillingRunActions.ts` now passes the same explicit fields at every publish site instead of relying on implicit builder defaults, keeping the emitted workflow events stable if the builders evolve later
+  - `server/src/test/unit/billing/recurringBillingRunWorkflowEvents.test.ts` and `server/src/test/unit/billing/recurringBillingRunActions.test.ts` now lock both sides: schema validation and action-layer publish inputs
+- (2026-03-17) Comparison-mode rollout control now closes `F113` and `T154` without changing live invoice persistence:
+  - `packages/billing/src/actions/invoiceGeneration.ts` now treats `RECURRING_BILLING_COMPARISON_MODE=legacy-vs-canonical` as an additive action-layer gate on `calculateBillingForInvoiceWindow(...)`
+  - when enabled, the action runs the canonical preselected recurring path first, then executes one legacy-style billing calculation without `recurringTimingSelections` and logs a structured drift warning if the comparison snapshot differs
+  - the canonical billing result is always returned and persisted, so comparison mode can be enabled for rollout validation without mutating live invoice outputs
+  - `server/src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts` now proves the guard calls both billing modes in order, emits drift logging, and still returns the canonical result object unchanged
+- (2026-03-17) Cadence-owner migration backfill is now explicitly validated, which closes `F114`, `T155`, and `T156`:
+  - `server/migrations/20260317170000_add_cadence_owner_to_contract_lines.cjs` was already adding `cadence_owner` with a default of `'client'`, but the migration contract had only been source-inspected before this checkpoint
+  - `server/src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts` now executes the migration against a fake Knex contract and proves the backfill writes `'client'` only to legacy null rows while preserving existing `'client'` and `'contract'` values
+  - together with the DB-backed client-cadence parity validation from `F112`, this makes the rollout claim concrete: untouched client-cadence tenants keep client defaults without invoice-output drift
+- (2026-03-17) Invoice reread stability now has an explicit regression guard, which closes `T080`:
+  - `server/src/test/unit/billing/invoiceModel.servicePeriods.test.ts` now proves that `Invoice.getById(...)`, `Invoice.getFullInvoiceById(...)`, and a second `Invoice.getById(...)` reread all preserve the same aggregated canonical service-period metadata for a multi-detail recurring charge
+  - this keeps invoice reload paths from drifting even when one recurring parent charge spans multiple canonical detail periods
+- (2026-03-17) Preview payloads now surface canonical recurring period metadata instead of hiding it behind totals-only preview rows, which closes `T083`:
+  - `packages/billing/src/actions/invoiceGeneration.ts` now threads `service_period_start`, `service_period_end`, and `billing_timing` from billing charges into preview invoice items and the `WasmInvoiceViewModel.items` payload
+  - `packages/types/src/lib/invoice-renderer/types.ts` now exposes those preview-item fields as optional renderer inputs, keeping the preview contract additive for existing consumers
+  - `server/src/test/unit/billing/invoiceGeneration.preview.test.ts` now proves preview state carries the canonical recurring period range and timing badge data alongside the existing totals
+- (2026-03-17) Manual invoice creation now has an executable isolation guard, which closes `T084`:
+  - `server/src/test/unit/billing/manualInvoiceActions.recurringIsolation.test.ts` executes `generateManualInvoice(...)` with focused mocks and proves the path persists manual items, returns the hydrated invoice, and never instantiates the recurring `BillingEngine` or calls due-service-period selection
+  - this keeps the service-period-first recurring rollout from silently leaking into manual invoice creation while invoice readers and preview payloads grow more detail-aware
+- (2026-03-17) Manual invoice edit/view paths now have a focused canonical-period compatibility contract, which closes `T085`:
+  - `server/src/test/unit/billing/manualInvoiceActions.viewing.test.ts` executes `updateManualInvoice(...)`, proves the action still deletes/replaces manual items and triggers recalculation, and confirms the returned reread invoice can still carry canonical recurring detail fields on its charge rows
+  - this gives the current manual invoice edit/view seam executable coverage without waiting on the blocked DB-backed manual-invoice suite
+- (2026-03-17) Client-portal overview and payment surfaces now carry canonical recurring service-period summaries, which closes `F140`, `T333`, and `T334`:
+  - `packages/billing/src/actions/invoiceQueries.ts` now projects invoice-level `service_period_start` / `service_period_end` summaries from `invoice_charge_details` into client-facing `InvoiceViewModel` reads, so portal overview/payment surfaces no longer have to infer recurring timing from invoice headers alone
+  - `packages/client-portal/src/actions/clientPaymentActions.ts` now returns the same canonical summary fields during payment verification, which lets the payment-success flow explain what recurring coverage was settled without rereading invoice headers or relying on proration-style copy
+  - `packages/client-portal/src/components/billing/BillingOverviewTab.tsx`, `packages/client-portal/src/components/billing/InvoicesTab.tsx`, and `packages/client-portal/src/components/billing/PaymentSuccessContent.tsx` now surface those canonical summaries in the overview, invoice-payment, and payment-success surfaces with explicit service-period-first wording
+  - `packages/client-portal/src/components/billing/BillingOverviewTab.servicePeriods.test.tsx` and `packages/client-portal/src/components/billing/PaymentSuccessContent.servicePeriods.test.tsx` lock the two new portal UI seams, while the existing invoice detail/preview portal tests remain green on top of the new summary surfaces
+- (2026-03-17) Company-sync, accounting-mapping, and export-validation audit is now executable, which closes `F141`, `T335`, and `T336`:
+  - `packages/billing/src/services/companySync/companySyncService.ts` and `packages/billing/src/services/accountingMappingResolver.ts` remain intentionally period-agnostic; the audit now locks that by source contract instead of leaving it implicit
+  - `packages/billing/src/services/accountingExportValidation.ts` now makes the boundary explicit in code comments and carries canonical `service_period_start` / `service_period_end` metadata through mapping, tax, realm, client-reference, and payment-term validation errors, so export triage keeps the line-level recurring timing context selected earlier in the export pipeline
+  - `packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts` now locks both sides of the audit: company sync + mapping stay free of header-period assumptions, and export validation continues to preserve canonical service-period context without falling back to invoice-header billing dates
+
+## Commands / Runbooks
+
+- (2026-03-18) DB-backed contract-cadence monthly and annual validation:
+  - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T276|T277" --hookTimeout 600000 --coverage.enabled false`
+
+- (2026-03-18) Report-output client-cadence parity validation:
+  - `cd server && npx vitest run src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts --coverage.enabled false`
+
+- (2026-03-18) Persisted service-period parity comparison validation:
+  - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodParity.domain.test.ts src/test/unit/billing/materializeClientCadenceServicePeriods.domain.test.ts src/test/unit/billing/materializeContractCadenceServicePeriods.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Persisted service-period due-selection contract validation:
+  - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Persisted service-period invoice linkage validation:
+  - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodInvoiceLinkage.domain.test.ts src/test/unit/migrations/recurringServicePeriodInvoiceLinkageMigration.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Persisted service-period lifecycle validation:
+  - `cd server && npx vitest run src/test/unit/billing/recurringServicePeriodLifecycle.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-18) Persisted service-period schema validation:
+  - `cd server && npx vitest run src/test/unit/migrations/recurringServicePeriodsMigration.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not by the recurring-service-period migration
+
+- (2026-03-18) Persisted service-period record contract validation:
+  - `cd server && npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/types/src/recurringServicePeriodRecord.typecheck.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+
+- (2026-03-17) Billing-timing default normalization validation:
+  - `npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not by the billing-timing normalization changes
+
+- (2026-03-17) Recurrence storage model validation:
+  - `npx vitest run src/test/unit/billing/recurrenceStorageModel.contract.test.ts src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not by the recurrence-storage-model changes
+
+- (2026-03-17) Template recurring authoring validation:
+  - `npx vitest run ../packages/billing/tests/templateWizardBucketOverlay.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-17) Preset recurring authoring validation:
+  - `npx vitest run ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/contractLinePresetRecurringAuthoring.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-17) Recurring authoring policy validation:
+  - `npx vitest run src/test/unit/billing/recurringAuthoringPolicy.domain.test.ts src/test/unit/api/contractLineService.cadenceOwnerCompatibility.wiring.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/contractLineCadenceOwnerCompatibility.repository.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the workspace alias config for package billing tests
+  - `npx vitest run ../packages/billing/tests/fixedContractLineConfiguration.recurringAuthoring.wiring.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts(1208,13)` narrowing error, not on the recurring authoring policy changes
+
+- (2026-03-17) Reporting date-basis policy validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts src/test/unit/contractReportActions.summary.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/actions/reconciliationReportActions.servicePeriods.test.ts --coverage.enabled false`
+    - run from `packages/reporting/`
+
+- (2026-03-17) Financial-artifact fallback validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run tests/creditManagement.financialArtifactContext.wiring.test.ts --coverage.enabled false`
+    - run from `packages/billing/`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-17) Credit-note source-date-basis validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts -t "T100" --coverage.enabled false`
+    - run from `server/`; currently still blocked by migration-heavy harness drift in that infrastructure suite after setup reaches the targeted test
+  - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts -t "T216" --coverage.enabled false`
+    - run from `server/`; current local run is still unstable because the older negative-invoice infrastructure suite tears down during migration/test-context setup
+  - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/infrastructure/billing/invoices/negativeInvoiceCredit.test.ts -t "T216|T100" --coverage.enabled false`
+    - run from `server/`; still blocked by `202409071803_initial_schema.cjs` migration bootstrap failure (`ROLLBACK - Connection terminated unexpectedly`)
+
+- (2026-03-17) Billing dashboard invoice-generation copy validation:
+  - `npx vitest run ../packages/billing/tests/invoicingGenerateTab.recurringCopy.wiring.test.ts ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Template cadence-owner storage and clone validation:
+  - `npx vitest run src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/billing/tests/templateCadenceOwnerRoundTrip.actions.test.ts ../packages/billing/tests/draftContractForResumeActions.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx vitest run src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not by the template cadence-owner changes
+- (2026-03-17) `billing_cycle_alignment` runtime cleanup and portal preview validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts -t "T162|T041|T042|T043|T044|T078|T087" --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/test/unit/billing/billingEngine.cleanupSource.test.ts src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/test/unit/billingEngine.test.ts -t "T021" --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/billing/src/lib/adapters/invoiceAdapters.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billingEngine.test.ts --coverage.enabled false`
+    - broad run still exposes pre-existing failures in `server/src/test/unit/billingEngine.test.ts` unrelated to this checkpoint (`this.knex.select` harness drift and missing mocked client lookups in older pricing-schedule tests)
+- (2026-03-16) Recon:
+  - `rg -n "resolveServicePeriod|applyProrationToPlan|_calculateProrationFactor|billing_cycle_alignment|billing_timing|client_billing_cycles" packages/billing/src/lib/billing server/src/test shared`
+  - `sed -n '220,470p' packages/billing/src/lib/billing/billingEngine.ts`
+  - `sed -n '2284,2595p' packages/billing/src/lib/billing/billingEngine.ts`
+  - `sed -n '60,210p' server/src/test/integration/billingInvoiceTiming.integration.test.ts`
+  - `sed -n '1,260p' shared/billingClients/createBillingCycles.ts`
+- (2026-03-17) Replan breadth inventory:
+  - `rg -n "billing_timing|service_period_start|service_period_end|billing_cycle_alignment|client_billing_cycles|generateInvoice|calculateBilling|billing_period_start|billing_period_end|proration" packages server shared`
+  - `find server/src/test -maxdepth 3 -type f | rg "billing|invoice|contract|renewal|pricing|credit|report"`
+  - `find packages -maxdepth 5 -type f | rg "billing|invoice|contract|renewal|report|pricing|accounting|BillingCycles|ContractLine|contractWizard|manualInvoice|quickBooks|xero"`
+- (2026-03-17) Second-pass critique prompts:
+  - runtime/dependent billing seams
+  - invoice/downstream consumer seams
+  - data model/API/UI/migration seams
+- (2026-03-17) Plan validation:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership`
+- (2026-03-17) Pass-0 appendix validation:
+  - `npm --prefix server test -- src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts`
+- (2026-03-17) Shared recurring-timing validation:
+  - `npm --prefix server test -- src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Client cadence validation:
+  - `npx vitest run src/test/unit/billing/clientCadenceServicePeriods.domain.test.ts src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Shared due-period/coverage validation:
+  - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Fixed timing seam validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts --coverage.enabled false`
+    - blocked locally by `ECONNREFUSED` to Postgres on `127.0.0.1:5438`
+- (2026-03-17) Fixed settlement follow-up validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+  - `npx vitest run src/test/unit/billingEngine.test.ts --coverage.enabled false`
+    - broad legacy unit file currently fails outside this seam because its harness no longer satisfies unrelated `BillingEngine` query expectations (`this.knex.select` in `calculateMaterialCharges`, missing client lookup mocks in older pricing-schedule tests)
+- (2026-03-17) Fixed tax regression validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+- (2026-03-17) Fixed detail persistence and metadata validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
+- (2026-03-17) Fixed metadata persistence validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/integration/billing/contractPurchaseOrderSupport.integration.test.ts --coverage.enabled false`
+    - blocked locally by `EPERM` to Postgres on `127.0.0.1:5438` and `127.0.0.1:5432`
+- (2026-03-17) Bucket period mapping validation:
+  - `npx vitest run src/test/unit/billingEngine.test.ts -t "calculate bucket overlay charges correctly|T056" --coverage.enabled false`
+- (2026-03-17) Bucket rollover validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.bucketTiming.test.ts src/test/unit/billing/bucketUsageService.periods.test.ts --coverage.enabled false`
+  - `npm test -- bucketUsageService.periods.test.ts`
+- (2026-03-17) Bucket invoice-window validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.bucketTiming.test.ts --coverage.enabled false`
+- (2026-03-17) Fixed discount and pricing-schedule parity validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.discountPricingTiming.test.ts --coverage.enabled false`
+- (2026-03-17) Discount applicability and PO-association validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.discountPricingTiming.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
+- (2026-03-17) Fixed tax-date and negative-recurring validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+- (2026-03-17) Product-path inventory validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Product recurring timing validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.productTiming.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.discountPricingTiming.test.ts --coverage.enabled false`
+- (2026-03-17) License-path inventory validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) License recurring timing validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.licenseTiming.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Product/license detail persistence validation:
+  - `npx vitest run src/test/unit/billing/invoiceService.fixedPersistence.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Explicit out-of-scope boundary validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Blocked prepayment follow-up:
+  - `npx vitest run src/test/infrastructure/billing/invoices/prepaymentInvoice.test.ts -t "T096" --coverage.enabled false`
+    - blocked locally by `ECONNREFUSED` to Postgres on `127.0.0.1:5432`
+- (2026-03-17) Prepayment recurring-detail reread validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Manual/recurring reread validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx vitest run src/test/infrastructure/billing/invoices/manualInvoice.test.ts -t "creates a manual invoice with single line item|correctly updates an invoice when new manual items are added" --coverage.enabled false`
+    - blocked locally by an existing Vitest module mock error: `@alga-psa/auth` is mocked without `withAuth`, so the suite fails during module evaluation before the targeted tests run
+- (2026-03-17) Purchase-order UI safeguard validation:
+  - `npx vitest run src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx --coverage.enabled false`
+- (2026-03-17) Purchase-order credit-consumption validation:
+  - `npx vitest run tests/purchaseOrderService.creditConsumption.test.ts --coverage.enabled false`
+    - run from `packages/billing/`
+  - `npx vitest run src/test/unit/billing/contractPurchaseOrderSupport.ui.test.tsx src/test/unit/billing/contractPurchaseOrderSupport.poBanner.ui.test.tsx --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Tax-source and external-tax service-period validation:
+  - `npx vitest run tests/invoiceService.externalTax.servicePeriods.wiring.test.ts tests/taxSourceActions.servicePeriods.wiring.test.ts --coverage.enabled false`
+    - run from `packages/billing/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Invoice-generation recurring preselection validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts --coverage.enabled false`
+- (2026-03-17) Invoice header/finalization validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts --coverage.enabled false`
+- (2026-03-17) Recurring-run delegation validation:
+  - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts --coverage.enabled false`
+- (2026-03-17) Preview recurring-timing validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts --coverage.enabled false`
+- (2026-03-17) Empty recurring-selection validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.emptyResult.test.ts --coverage.enabled false`
+- (2026-03-17) Credit-flow and billed-through regression validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+- (2026-03-17) Credit reconciliation / expiration validation:
+  - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts --coverage.enabled false`
+- (2026-03-17) Contract wizard cadence-owner validation:
+  - `npx vitest run ../packages/billing/tests/contractWizardResume.test.tsx ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Template wizard cadence-owner validation:
+  - `npx vitest run ../packages/billing/tests/templateWizardBucketOverlay.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Fixed recurring copy validation:
+  - `npx vitest run ../packages/billing/tests/fixedRecurringPartialPeriodCopy.wiring.test.ts ../packages/billing/tests/fixedContractLineConfiguration.cadenceOwner.ui.test.tsx --coverage.enabled false`
+  - `npx vitest run ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts ../packages/billing/tests/fixedRecurringPartialPeriodCopy.wiring.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Cadence-owner persistence validation:
+  - `npx vitest run src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx vitest run src/cadence-owner-contract-lines.typecheck.test.ts src/interfaces/barrel.test.ts --coverage.enabled false`
+    - run from `packages/types`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Cadence-owner API validation:
+  - `npx vitest run src/test/unit/api/contractLineCadenceOwner.schema.test.ts src/test/unit/api/contractLineService.cadenceOwner.test.ts src/test/unit/api/contractCreateOwnerClientSchema.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - blocked by an unrelated existing type error in `packages/billing/src/actions/creditActions.ts` (`IInvoice | null` narrowing), not by the cadence-owner API changes
+- (2026-03-17) Cadence-owner package authoring validation:
+  - `npx vitest run ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts ../packages/billing/tests/draftContractForResumeActions.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Recurring fixture-builder validation:
+  - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts src/test/unit/billing/billingTestHelpers.recurringFixtures.test.ts --coverage.enabled false`
+- (2026-03-17) Cadence-owner rollout validation:
+  - `npx vitest run src/test/unit/api/contractLineCadenceOwner.schema.test.ts src/test/unit/api/contractLineService.cadenceOwner.test.ts src/test/unit/api/contractCreateOwnerClientSchema.test.ts --coverage.enabled false`
+- (2026-03-17) Cadence-owner compatibility validation:
+  - `npx vitest run src/test/unit/api/contractLineService.cadenceOwner.test.ts src/test/unit/api/contractLineService.cadenceOwnerCompatibility.wiring.test.ts --coverage.enabled false`
+  - `npx vitest run ../packages/billing/tests/contractLineCadenceOwnerCompatibility.repository.test.ts ../packages/billing/tests/contractLineCadenceOwnerCompatibility.wiring.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json && npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Billing-cycle-alignment staged-deprecation validation:
+  - `npx vitest run src/test/unit/api/billingCycleAlignmentCompatibility.schema.test.ts src/test/unit/api/billingCycleAlignmentCompatibility.repository.wiring.test.ts src/test/unit/api/contractLineService.billingCycleAlignmentCompatibility.wiring.test.ts --coverage.enabled false`
+  - `npx vitest run ../packages/billing/tests/billingCycleAlignmentCompatibility.model.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked by an unrelated pre-existing type error in `packages/billing/src/actions/creditActions.ts:979` (`IInvoice | null` inferred against `null`)
+- (2026-03-17) Fixed recurring cadence-owner UI validation:
+  - `npx vitest run ../packages/billing/tests/fixedContractLineConfiguration.cadenceOwner.ui.test.tsx --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Credit-reader canonical invoice-context validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Recurring workflow-event metadata validation:
+  - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/invoiceGeneration.headerPeriods.test.ts --coverage.enabled false`
+- (2026-03-17) Duplicate-prevention and billed-through validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.duplicate.test.ts src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Post-cutover recurring-family sanity validation:
+  - `DB_PORT=57433 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T171|T172|T173|T174" --coverage.enabled false`
+  - `DB_PORT=57433 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts -t "T173|T174" --coverage.enabled false`
+    - first pass exposed a real persistence seam: product/license detail inserts were failing because runtime charges carried canonical service periods but not `config_id`
+  - `npx vitest run src/test/unit/billing/billingEngine.productTiming.test.ts src/test/unit/billing/billingEngine.licenseTiming.test.ts src/test/unit/billing/invoiceService.fixedPersistence.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json && npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Runbook and docs-inventory validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Time/usage follow-on boundary validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) Billing-settings cadence-default validation:
+  - `npx vitest run ../packages/billing/src/actions/billingSettingsActions.cadenceOwnerDefaultsWiring.test.ts ../packages/billing/src/actions/billingSettingsActions.renewalDefaultsWiring.test.ts --coverage.enabled false`
+    - run from `server/` so the workspace Vitest config can execute the source-level billing action wiring tests
+  - `npx vitest run src/test/unit/api/defaultBillingSettings.cadenceOwner.schema.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked by the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error, not by the billing-settings cadence-default changes
+- (2026-03-17) Billing-cycle anchor cadence-context validation:
+  - `npx vitest run src/test/unit/billing/previewClientBillingPeriods.test.ts src/test/unit/billing/ClientBillingSchedule.ui.test.tsx --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Preset cadence-owner persistence validation:
+  - `npx vitest run ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/contractLinePresetCadenceOwner.model.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+- (2026-03-17) Contract-line mapping recurring-timing audit validation:
+  - `npx vitest run ../packages/billing/tests/contractLineMappingRecurringTiming.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+- (2026-03-17) Invoice-detail recurring-period reader validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+- (2026-03-17) Renderer-facing canonical recurring-period validation:
+  - `npx vitest run ../packages/billing/src/lib/adapters/invoiceAdapters.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx vitest run src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `packages/client-portal/`
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Accounting export canonical-detail payload validation:
+  - `npx vitest run src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked by the unrelated pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not by the accounting-export payload changes
+- (2026-03-17) Recurring billing workflow-event schema validation:
+  - `npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts src/test/unit/billing/recurringBillingRunWorkflowEvents.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the unrelated pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error
+- (2026-03-17) Client billing schedule cadence-owner copy validation:
+  - `npx vitest run src/test/unit/billing/ClientBillingSchedule.ui.test.tsx ../packages/billing/tests/billingDashboardRecurringCopy.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest picks up the existing workspace alias config for both server and package tests
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Client portal recurring timing display validation:
+  - `npx vitest run ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/ContractLineDetailsDialog.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for client-portal package tests
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Client-portal billing metrics and recent invoice validation:
+  - `npx vitest run src/actions/client-portal-actions/dashboard.recurringServicePeriods.test.ts src/actions/client-portal-actions/client-billing.bucketPeriods.test.ts src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx src/components/billing/ContractLineDetailsDialog.servicePeriods.test.tsx src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `packages/client-portal/`
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+- (2026-03-17) Contract reporting service-period basis validation:
+  - `npx vitest run src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts ../packages/billing/tests/ContractReports.revenueCopy.wiring.test.ts ../packages/billing/tests/contractReportActions.summary.wiring.test.ts ../packages/billing/tests/contractReportActions.revenue.assignmentFact.test.ts ../packages/billing/tests/contractReportActions.expiration.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest picks up the existing workspace alias config for package billing tests
+  - `npx vitest run src/lib/reports/definitions/contracts/revenue.servicePeriods.test.ts --coverage.enabled false`
+    - run from `packages/reporting/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/reporting/tsconfig.json`
+- (2026-03-17) Contract reporting summary and expiration validation:
+  - `npx vitest run src/test/unit/contractReportActions.recurringServicePeriodBasis.test.ts src/test/unit/contractReportActions.expiration.servicePeriods.test.ts src/test/unit/contractReportActions.summary.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run tests/ContractReports.revenueCopy.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts tests/ContractReports.summaryCopy.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/contractReportActions.expiration.wiring.test.ts`
+    - run from `packages/billing/`
+  - `npx vitest run src/lib/reports/definitions/contracts/revenue.servicePeriods.test.ts src/lib/reports/definitions/contracts/expiration.servicePeriods.test.ts src/actions/reconciliationReportActions.servicePeriods.test.ts`
+    - run from `packages/reporting/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Accounting export service-period validation:
+  - `npx vitest run src/test/unit/accounting/accountingExportInvoiceSelector.servicePeriods.test.ts ../packages/billing/tests/accountingExportInvoiceSelector.servicePeriods.wiring.test.ts ../packages/billing/tests/accountingExportAdapters.servicePeriods.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest picks up the existing workspace alias config for package billing tests
+  - `npx vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts --coverage.enabled false`
+    - blocked locally by `ECONNREFUSED` to Postgres on `127.0.0.1:5438`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Internal recurring-timing docs validation:
+  - `npx vitest run ../packages/billing/tests/recurringTiming.architectureDocs.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest picks up the existing workspace alias config for package billing tests
+  - `npx vitest run src/actions/report-actions/README.servicePeriods.test.ts --coverage.enabled false`
+    - run from `packages/reporting/`
+- (2026-03-17) Contract-cadence boundary validation:
+  - `npx vitest run src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts ../packages/billing/tests/recurringTiming.architectureDocs.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest picks up the existing workspace alias config for package billing tests
+  - `npx vitest run src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts --coverage.enabled false`
+    - run from `server/` for the widened quarterly / semi-annual / annual cadence assertions plus future-start / renewal anchor rules
+  - `npx vitest run src/actions/report-actions/README.servicePeriods.test.ts --coverage.enabled false`
+    - run from `packages/reporting/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Contract-cadence first/final invoice validation:
+  - `npx vitest run src/test/unit/billing/contractCadenceServicePeriods.domain.test.ts --coverage.enabled false`
+- (2026-03-17) Mixed-cadence grouping validation:
+  - `npx vitest run src/test/unit/billing/recurringTiming.domain.test.ts --coverage.enabled false`
+- (2026-03-17) Invoice reread stability validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+- (2026-03-17) Preview service-period validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types`
+- (2026-03-17) Manual-invoice isolation validation:
+  - `npx vitest run src/test/unit/billing/manualInvoiceActions.recurringIsolation.test.ts --coverage.enabled false`
+- (2026-03-17) Manual-invoice edit/view validation:
+  - `npx vitest run src/test/unit/billing/manualInvoiceActions.viewing.test.ts --coverage.enabled false`
+- (2026-03-17) Mixed-cadence deterministic selection validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Staged-rollout plan validation:
+  - `npx vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts --coverage.enabled false`
+- (2026-03-17) First-cutover guardrail validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
+  - `npx vitest run src/test/unit/billing/billingEngine.timing.test.ts --coverage.enabled false`
+- (2026-03-17) DB-backed client-cadence parity validation:
+  - `DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/billingInvoiceTiming.integration.test.ts --coverage.enabled false`
+    - run from `server/`
+- (2026-03-17) Comparison-mode rollout validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.recurringSelection.test.ts --coverage.enabled false`
+    - run from `server/`
+- (2026-03-17) Cadence-owner backfill validation:
+  - `npx vitest run src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts --coverage.enabled false`
+    - run from `server/`
+- (2026-03-17) Invoice template preview sample validation:
+  - `npx vitest run tests/sampleInvoicePreview.test.ts --coverage.enabled false`
+    - run from `packages/billing/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Cadence-owner helper fixture validation:
+  - `npx vitest run src/test/unit/billing/pricingScheduleHelpers.recurringFixtures.test.ts src/test/unit/migrations/clientOwnedContractsSimplificationMigration.test.ts --coverage.enabled false`
+    - run from `server/`
+- (2026-03-17) Cadence-owner backfill non-mutation validation:
+  - `npx vitest run src/test/unit/billing/contractLineCadenceOwner.persistence.test.ts --coverage.enabled false`
+    - run from `server/`
+- (2026-03-17) Mixed-cadence rollout validation:
+  - `npx vitest run src/test/unit/api/contractLineCadenceOwner.schema.test.ts src/test/unit/api/contractLineService.cadenceOwner.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/billing/tests/contractLinePresetCadenceOwner.actions.test.ts ../packages/billing/tests/cadenceOwnerRollout.actions.wiring.test.ts ../packages/billing/tests/fixedContractLineConfiguration.cadenceOwner.ui.test.tsx --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Fixed-config alignment compatibility validation:
+  - `npx vitest run src/test/unit/api/contractLineService.billingCycleAlignmentCompatibility.wiring.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run ../packages/billing/tests/billingCycleAlignmentCompatibility.model.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Client-portal overview/payment service-period summary validation:
+  - `npx vitest run ../packages/client-portal/src/components/billing/BillingOverviewTab.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/PaymentSuccessContent.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/ClientInvoicePreview.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package client-portal tests
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - currently still fails on the pre-existing `packages/billing/src/actions/creditActions.ts(979,13)` type mismatch unrelated to `F140`
+- (2026-03-17) Accounting service-period audit validation:
+  - `npx vitest run ../packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Recurring parent/detail projection validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts src/test/unit/api/invoiceService.recurringDetailProjection.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still blocked only by the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error, not by the recurring projection changes
+- (2026-03-17) Historical flat invoice fallback validation:
+  - `npx vitest run src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types --coverage.enabled false`
+- (2026-03-17) Preview multi-period projection validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.preview.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx vitest run src/interfaces/barrel.test.ts --root packages/types --coverage.enabled false`
+  - `npx tsc --pretty false --noEmit -p packages/types/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Rendering-adapter multi-period projection validation:
+  - `npx vitest run ../packages/billing/src/lib/adapters/invoiceAdapters.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package source tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Client-portal projection policy validation:
+  - `npx vitest run ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package client-portal tests
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+- (2026-03-17) Multi-period recurring ordering/aggregation validation:
+  - `npx vitest run ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx ../packages/client-portal/src/components/billing/recurringServicePeriodSummary.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package client-portal tests
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+- (2026-03-17) Invoice schema compatibility validation:
+  - `npx vitest run src/test/unit/api/invoiceResponseSchema.compatibility.test.ts src/test/unit/api/invoiceService.recurringDetailProjection.test.ts src/test/unit/billing/invoiceModel.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not on the `F169` schema changes
+- (2026-03-17) Invoice workflow recurring-provenance validation:
+  - `npx vitest run src/test/unit/invoiceWorkflowEvents.test.ts src/test/unit/api/invoiceWorkflowRecurringProvenance.wiring.test.ts src/test/unit/api/invoiceResponseSchema.compatibility.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not on the `F170` workflow/audit provenance changes
+- (2026-03-17) Billed-through detail-reader validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.billedThroughReader.test.ts src/test/unit/billing/billingEngine.timing.test.ts -t "T201|T087" --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+    - still fails only on the pre-existing `packages/billing/src/actions/creditActions.ts:979` narrowing error (`IInvoice | null` vs `null`), not on the `F171` billed-through reader contract
+- (2026-03-17) Client contract-line mutation-guard validation:
+  - `npx vitest run src/test/unit/billing/clientContractLineMutationGuards.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Client contract-line renewal/replacement identity validation:
+  - `npx vitest run src/test/unit/billing/clientContractLineReplacementIdentity.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Client-contract termination/detail-period validation:
+  - `npx vitest run src/test/unit/clientContractActions.overlapExclusive.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/clients/tsconfig.json`
+- (2026-03-17) Invoice deletion/detail-period safeguard validation:
+  - `npx vitest run ../packages/billing/tests/invoiceModification.recurringDeletionGuard.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx vitest run src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Invoice recalculation/detail-period preservation validation:
+  - `npx vitest run src/test/unit/billing/billingEngine.recalculateInvoice.detailPeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Manual recurring-charge edit guard validation:
+  - `npx vitest run ../packages/billing/tests/invoiceModification.manualRecurringGuard.test.ts --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing tests
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Persisted-invoice preview refresh validation:
+  - `npx vitest run ../packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx -t "T208" --coverage.enabled false`
+    - run from `server/` so Vitest uses the existing workspace alias config for package billing component tests
+  - `npx vitest run ../packages/billing/tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+- (2026-03-17) Percentage-discount recalculation validation:
+  - `npx vitest run src/test/unit/billing/invoiceService.percentageDiscountRecalculation.test.ts src/test/unit/billing/billingEngine.recalculateInvoice.detailPeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Zero-dollar recurring finalization validation:
+  - `npx vitest run src/test/unit/billing/invoiceGeneration.emptyResult.test.ts src/test/unit/billing/invoiceGeneration.zeroDollarFinalization.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Manual invoice period-policy validation:
+  - `npx vitest run src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts src/test/unit/billing/invoiceService.percentageDiscountRecalculation.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Manual-to-recurring provenance validation:
+  - `npx vitest run src/test/unit/billing/invoiceService.manualPeriodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Prepayment financial-artifact validation:
+  - `npx vitest run src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Negative-invoice offset validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Credit application recurring-context validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Credit reconciliation date-basis validation:
+  - `npx vitest run src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Credit transfer lineage validation:
+  - `npx vitest run src/test/unit/billing/creditActions.servicePeriods.test.ts src/test/unit/billing/creditReconciliation.servicePeriods.test.ts src/test/unit/billing/prepaymentInvoice.periodPolicy.test.ts --coverage.enabled false`
+    - run from `server/`
+  - `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Financial-artifact display policy validation:
+  - `npx vitest run src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx src/components/billing/BillingOverviewTab.servicePeriods.test.tsx --coverage.enabled false`
+    - run from `packages/client-portal/`
+  - `npx vitest run tests/creditManagement.financialArtifactContext.wiring.test.ts --coverage.enabled false`
+    - run from `packages/billing/`
+  - `npx tsc --pretty false --noEmit -p packages/client-portal/tsconfig.json`
+
+- (2026-03-17) Client contract assignment-date validation now distinguishes canonical recurring coverage from historical invoice-window fallback, which closes `F174` and `T204`:
+  - `packages/clients/src/actions/clientContractActions.ts` now queries canonical `invoice_charge_details` coverage for the current `client_contract_id` before using legacy `client_billing_cycles` overlap logic, so end-date shortening and mid-cycle termination are enforced against billed recurring service periods rather than against the entire enclosing invoice window whenever authoritative detail rows exist
+  - the new rule is explicit and end-exclusive: the earliest billed recurring `service_period_start` still blocks moving the contract start later into already billed coverage, while the latest billed `service_period_end` is treated as exclusive and converted into the last already-billed service day when validating a shorter `end_date`
+  - historical flat invoices still keep the old fallback behavior because `updateClientContract(...)` only consults `client_billing_cycles` when no canonical recurring detail periods exist for the contract
+  - `server/src/test/unit/clientContractActions.overlapExclusive.test.ts` now proves all three boundary cases together: touching historical invoice-window boundaries still pass under `[start, end)` semantics, canonical partial service periods allow termination exactly on the last billed day, and shortening earlier than that day is rejected with a detail-period-specific error
+- (2026-03-17) Invoice deletion now preserves authoritative recurring detail periods instead of treating detail-backed invoices like disposable draft rows, which closes `F175` and `T205`:
+  - `packages/billing/src/actions/invoiceModification.ts` now blocks `hardDeleteInvoice(...)` as soon as canonical `invoice_charge_details` rows exist for the invoice, with an explicit error instructing callers to cancel instead of deleting
+  - `server/src/lib/api/services/InvoiceService.ts` now computes recurring provenance before delete-path branching and treats canonical-detail-backed invoices as soft-cancel candidates even when they have no payments yet, so the API delete path preserves the invoice plus its authoritative recurring detail history
+  - the safeguard intentionally distinguishes detail-backed recurring invoices from historical/manual invoices: invoices without canonical recurring detail periods still follow the existing delete behavior, while draft or finalized recurring invoices with canonical periods are preserved through cancellation semantics
+  - focused executable coverage now lives in `packages/billing/tests/invoiceModification.recurringDeletionGuard.test.ts` for the explicit hard-delete action and `server/src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts` for the API soft-cancel branch
+- (2026-03-17) Invoice recalculation is now explicitly defined as a financial-only pass that preserves canonical recurring detail periods, which closes `F176` and `T206`:
+  - `packages/billing/src/lib/billing/billingEngine.ts` now documents the intended contract inline at the recalculation seam: once an invoice exists, `invoice_charge_details` remains the authoritative recurring timing record and recalculation should only recompute tax distribution and invoice totals
+  - `server/src/test/unit/billing/billingEngine.recalculateInvoice.detailPeriods.test.ts` proves that contract directly by exercising `BillingEngine.recalculateInvoice(...)` with a fake invoice/client store, asserting it delegates only to `calculateAndDistributeTax(...)` and `updateInvoiceTotalsAndRecordTransaction(...)`, and failing if the recalculation path starts querying `invoice_charge_details`
+- (2026-03-17) Manual invoice edit flows now make recurring provenance policy explicit instead of silently ignoring edits against recurring parent charges, which closes `F177` and `T207`:
+  - `packages/billing/src/actions/invoiceModification.ts` now checks targeted update/remove item IDs before manual edits proceed and rejects any non-manual invoice charge targets up front
+  - the recurring-specific rule is stricter and explicit: if a targeted parent charge already has canonical `invoice_charge_details` rows, the action throws `Cannot manually edit recurring invoice charges once canonical detail periods exist...` and tells the caller to add a manual adjustment or cancel/regenerate instead of mutating the recurring line in place
+  - `packages/billing/tests/invoiceModification.manualRecurringGuard.test.ts` proves that recurring-detail-backed invoice charges trip that guard and that the action does not fall through into invoice recalculation after the rejected edit attempt
+- (2026-03-17) Post-persist rerender and preview-refresh flows are now explicitly split between summary-range readers and full detail-aware readers, which closes `F178` and `T208`:
+  - `packages/billing/src/actions/invoiceQueries.ts` now documents the intended split directly in code: paginated/list summary surfaces flatten canonical recurring detail rows to one summary range, while `getInvoiceForRendering(...)` must keep using `Invoice.getFullInvoiceById(...)` so persisted recurring detail periods survive rerender and preview refresh
+  - `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx` now proves the persisted existing-invoice preview path forwards `recurring_detail_periods` into `mapDbInvoiceToWasmViewModel(...)` instead of stripping them before preview rendering
+  - `packages/billing/tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts` now locks the reader split at the action layer so future refactors cannot collapse rerender flows back onto the summary-only invoice list projection
+- (2026-03-17) Template-to-contract cloning now propagates explicit recurring timing semantics instead of dropping them at the client wizard seam, which closes `F207` and `T236`:
+  - `packages/billing/src/actions/contractWizardActions.ts` now treats `billing_timing` as part of the client-wizard recurrence contract everywhere the template clone path crosses a boundary: `ClientTemplateSnapshot`, `ClientContractWizardSubmission`, and `DraftContractWizardData` all carry it explicitly; `getContractTemplateSnapshotForClientWizard(...)` and `getDraftContractForResume(...)` now reread it from detailed template/live lines; and `createClientContractFromWizard(...)` now passes `submission.billing_timing` into `resolveRecurringAuthoringPolicy(...)` before creating fixed, product, hourly, and usage lines
+  - `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx` now preserves that timing field through wizard state instead of flattening every template-derived clone back to the arrears default: default wizard state carries `billing_timing: 'arrears'`, template snapshot application copies `snapshot.billing_timing`, and save/create submission payloads emit `wizardData.billing_timing ?? 'arrears'`
+  - `packages/billing/tests/templateCadenceOwnerRoundTrip.actions.test.ts` now proves template snapshots and resumed drafts preserve both `cadence_owner` and `billing_timing` even when the authored recurring line is hourly/usage instead of fixed, which keeps the clone path from relying on incidental fixed-line-only behavior
+  - `packages/billing/tests/contractWizardResume.test.tsx` now proves the live client wizard clone seam carries template-authored `billing_timing: 'advance'` and `cadence_owner: 'contract'` into the eventual `createClientContractFromWizard(...)` save-draft payload after template selection, and the resumed-draft fixture coverage now keeps `billing_timing` stable across resave
+  - `packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts` now locks the additive source contract so template snapshots and wizard submissions cannot silently stop threading `billing_timing` alongside `cadence_owner`
+  - validation for this checkpoint used `cd server && npx vitest run ../packages/billing/tests/templateCadenceOwnerRoundTrip.actions.test.ts ../packages/billing/tests/contractWizardResume.test.tsx ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts --coverage.enabled false` plus `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Template-derived live contract lines now have explicit post-clone independence semantics, which closes `F208` and `T237`:
+  - `packages/billing/src/repositories/contractLineRepository.ts` and `server/src/lib/repositories/contractLineRepository.ts` now state the intended clone rule inline at `cloneTemplateLineToContract(...)`: cadence owner and billing timing are copied onto the new live `contract_lines` row at clone time, and later template edits are provenance only rather than retroactive live-line mutations
+  - `server/src/lib/api/services/ContractLineService.ts` now states the same service-layer rule where template lines are assigned to client contracts: `template_contract_line_id` remains lineage/provenance, but recurring cadence semantics on the live line stop inheriting from the template once the clone is created
+  - `packages/billing/src/actions/contractWizardActions.ts` now makes `client_contracts.template_contract_id` intent explicit for template-derived contracts: it is retained for draft/review provenance, while live recurring cadence semantics remain copied onto the contract lines themselves
+  - `server/src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts` now adds `T237`, proving a cloned live contract line keeps `cadence_owner: 'contract'` and `billing_timing: 'advance'` even after the source template row is later mutated to `client` / `arrears`
+  - validation for this checkpoint used `cd server && npx vitest run src/test/unit/billing/templateLineCadenceOwner.persistence.test.ts --coverage.enabled false` plus `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json` is still blocked by an unrelated pre-existing type error at `packages/billing/src/actions/creditActions.ts:1208` (`Type 'IInvoice | null' is not assignable to type 'null'`), so the checkpoint relies on the focused server unit seam rather than claiming a clean full-server compile
+- (2026-03-17) Pre-save recurring authoring previews now use one explicit copy contract for cadence-owner, timing, first-invoice, and partial-period outcomes, which closes `F209`, `T238`, and `T239`:
+  - `packages/billing/src/components/billing-dashboard/contracts/recurringAuthoringPreview.ts` now defines the authoritative preview vocabulary for recurring authoring: cadence-owner label/summary, billing-timing label/summary, first-invoice behavior, and partial-period outcome
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx` now renders a `Recurring Preview Before Save` block for live contract authoring, so billing staff can see client-schedule versus contract-anniversary outcomes plus advance/arrears and partial-period consequences before saving
+  - `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.tsx`, `packages/billing/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.tsx`, and `packages/billing/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.tsx` now reuse the same preview helper instead of drifting into per-surface wording, which keeps template authoring and contract authoring aligned
+  - `packages/billing/tests/recurringAuthoringPreview.test.ts` now proves both first-invoice families directly: client-cadence advance/arrears copy and contract-cadence advance/arrears copy
+  - `packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts` and `packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts` now lock the UI wiring so both authoring surfaces continue to render the shared preview contract
+  - validation for this checkpoint used `cd server && npx vitest run ../packages/billing/tests/recurringAuthoringPreview.test.ts ../packages/billing/tests/contractWizardCadenceOwner.wiring.test.ts ../packages/billing/tests/templateWizardCadenceOwner.wiring.test.ts --coverage.enabled false` plus `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+- (2026-03-17) Unsupported recurring authoring combinations now have one explicit early-validation boundary in the wizards, which closes `F210` and `T240`:
+  - `shared/billingClients/recurringAuthoringValidation.ts` now defines the shared unsupported-combination message contract across line type, cadence owner, billing timing, and billing frequency; during the current rollout it names the exact blocked combination instead of only saying contract cadence is generically unavailable
+  - `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx` now checks every present recurring family before finish/save-draft and surfaces the first unsupported combination message locally, so template-derived or resumed contract-cadence drafts fail before the action layer
+  - `packages/billing/src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx` now applies that same boundary on the review/publish step, so template authoring surfaces reject unsupported contract-cadence combinations with the same detailed message contract used by the client wizard
+  - `packages/billing/tests/recurringAuthoringValidation.wiring.test.ts` now proves both the detailed shared message shape (`lineType`, `cadenceOwner`, `billingTiming`, `billingFrequency`) and the fact that both wizard flows import and invoke the shared validator before persistence
+  - validation for this checkpoint used `cd server && npx vitest run ../packages/billing/tests/recurringAuthoringValidation.wiring.test.ts --coverage.enabled false` plus `npx tsc --pretty false --noEmit -p packages/billing/tsconfig.json`
+
+## Links / References
+
+- Related plans:
+  - `ee/docs/plans/2026-03-16-client-owned-contracts-simplification/`
+  - `ee/docs/plans/2026-03-16-contract-template-normalization/`
+- Pass-0 artifacts:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PASS0_RECURRING_TIMING_APPENDIX.md`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/pass-0-source-inventory.json`
+- Materialized-ledger artifacts:
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/PERSISTED_SERVICE_PERIOD_RECORD.md`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_DUE_SELECTION.md`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_INVOICE_LINKAGE.md`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_PARITY_COMPARISON.md`
+  - `ee/docs/plans/2026-03-16-service-period-first-billing-and-cadence-ownership/RECURRING_SERVICE_PERIOD_LIFECYCLE.md`
+- Key runtime files:
+  - `packages/types/src/interfaces/recurringTiming.interfaces.ts`
+  - `server/migrations/20260318120000_create_recurring_service_periods.cjs`
+  - `server/migrations/20260318143000_add_invoice_linkage_to_recurring_service_periods.cjs`
+  - `shared/billingClients/recurringServicePeriodDueSelection.ts`
+  - `shared/billingClients/recurringServicePeriodKeys.ts`
+  - `shared/billingClients/recurringServicePeriodLifecycle.ts`
+  - `shared/billingClients/recurringServicePeriodInvoiceLinkage.ts`
+  - `shared/billingClients/recurringServicePeriodParity.ts`
+  - `packages/billing/src/lib/billing/billingEngine.ts`
+  - `packages/billing/src/lib/billing/recurringTiming.ts`
+  - `shared/billingClients/createBillingCycles.ts`
+  - `shared/billingClients/clientCadenceServicePeriods.ts`
+  - `shared/billingClients/contractCadenceServicePeriods.ts`
+  - `shared/billingClients/recurrenceStorageModel.ts`
+  - `shared/billingClients/recurringTiming.ts`
+  - `packages/billing/src/actions/invoiceGeneration.ts`
+  - `packages/billing/src/actions/recurringBillingRunActions.ts`
+  - `packages/billing/src/repositories/accountingExportRepository.ts`
+- Key UI/config files:
+  - `packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx`
+  - `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`
+  - `packages/billing/src/components/billing-dashboard/contracts/QuickStartGuide.tsx`
+  - `packages/client-portal/src/actions/client-portal-actions/client-billing.ts`
+- Key tests:
+  - `server/src/test/integration/billingInvoiceTiming.integration.test.ts`
+  - `server/src/test/infrastructure/billing/invoices/*`
+  - `server/src/test/infrastructure/billing/credits/*`
+  - `server/src/test/unit/billing/recurringServicePeriodDueSelection.domain.test.ts`
+  - `server/src/test/unit/billing/recurringServicePeriodInvoiceLinkage.domain.test.ts`
+  - `server/src/test/unit/billing/recurringServicePeriodLifecycle.domain.test.ts`
+  - `server/src/test/unit/billing/recurringServicePeriodParity.domain.test.ts`
+  - `server/src/test/unit/migrations/recurringServicePeriodInvoiceLinkageMigration.test.ts`
+  - `server/src/test/unit/migrations/recurringServicePeriodsMigration.test.ts`
+  - `server/src/test/unit/billingEngine.test.ts`
+  - `server/src/test/unit/billing/billingEngine.timing.test.ts`
+
+## Open Questions
+
+- Which bucket/allowance behaviors must join v1 versus a follow-on?
+- Which exact service-period edit operations belong in v1 versus a follow-on?
+
+- (2026-03-18) Mixed-cadence portal/export coverage and header-vs-detail drift validation are now explicit, which closes `T147` and `T270`:
+  - `packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx` now covers a mixed invoice that contains both client-cadence and contract-cadence canonical recurring rows, so the portal detail dialog proves both shapes remain readable on one invoice instead of only exercising a single cadence path
+  - `server/src/test/integration/accounting/invoiceSelection.integration.test.ts` now carries `T147`, proving export preview persistence remains stable when one invoice contains both a client-cadence recurring detail row and a contract-cadence recurring detail row; both persisted export lines keep `service_period_source = canonical_detail_periods` with their distinct canonical date ranges intact
+  - `server/src/test/unit/accounting/accountingExportValidation.servicePeriodProjection.test.ts` now carries `T270` on a focused validation seam instead of a migration-heavy integration harness: it proves `AccountingExportValidation.ensureMappingsForBatch(...)` marks the batch `needs_attention` and records `service_period_projection_mismatch` when stored export-line summary dates drift away from canonical `invoice_charge_details`
+  - `pass-0-source-inventory.json` was refreshed in the same checkpoint because `T003` inventory coverage must follow the live persisted-reader set; deleting the abandoned integration seam and adding the focused unit seam changed that list
+  - the first DB-backed `T270` attempt was intentionally discarded because it added migration churn without improving the contract under test; the focused unit seam exercises the validator directly and keeps the actual mismatch rule explicit instead of burying it under unrelated bootstrap noise
+  - focused validation for this checkpoint used:
+    - `cd server && npx vitest run src/test/unit/accounting/accountingExportValidation.servicePeriodProjection.test.ts --coverage.enabled false`
+    - `cd server && npx vitest run ../packages/client-portal/src/components/billing/InvoiceDetailsDialog.servicePeriods.test.tsx --coverage.enabled false`
+    - `cd server && DB_HOST=127.0.0.1 DB_PORT=57433 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=postpass123 DB_USER_SERVER=app_user DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/accounting/invoiceSelection.integration.test.ts -t "T147" --hookTimeout 600000 --coverage.enabled false`

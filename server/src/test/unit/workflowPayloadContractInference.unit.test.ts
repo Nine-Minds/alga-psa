@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { z } from 'zod';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getSchemaRegistry, initializeWorkflowRuntimeV2, validateWorkflowDefinition } from '@shared/workflow/runtime';
+import { getSchemaRegistry, initializeWorkflowRuntimeV2, validateWorkflowDefinition } from '@alga-psa/workflows/runtime';
 import { ensureWorkflowRuntimeV2TestRegistrations, TEST_SCHEMA_REF } from '../helpers/workflowRuntimeV2TestHelpers';
 import { createHash } from 'crypto';
 

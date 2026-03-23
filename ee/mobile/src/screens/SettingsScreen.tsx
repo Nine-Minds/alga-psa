@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Linking, Modal, Platform, Pressable, Text, View } from "react-native";
+import { Alert, Linking, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import * as Application from "expo-application";
 import { useTranslation } from "react-i18next";
 import { getAppConfig } from "../config/appConfig";
@@ -12,6 +12,12 @@ import { tryBuildHostedPathUrl } from "../urls/hostedUrls";
 import { getHideSensitiveNotificationsEnabled, setHideSensitiveNotificationsEnabled } from "../settings/privacyPreferences";
 import { formatAppVersion } from "./settingsDiagnostics";
 import type { Theme } from "../ui/themes";
+import { phase2Features } from "../features/phase2";
+import { requestPushPermission, getExpoPushToken } from "../notifications/pushTokenService";
+import { registerPushToken, unregisterPushToken } from "../api/pushToken";
+import { createApiClient } from "../api";
+import { getStableDeviceId } from "../device/clientMetadata";
+import { secureStorage, getSecureJson, setSecureJson } from "../storage/secureStorage";
 
 export function SettingsScreen() {
   const { t } = useTranslation("settings");
@@ -29,19 +35,23 @@ export function SettingsScreen() {
   const [legalOpen, setLegalOpen] = useState(false);
   const [hideSensitiveEnabled, setHideSensitiveEnabled] = useState(false);
   const [hideSensitiveBusy, setHideSensitiveBusy] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
 
   useEffect(() => {
     let canceled = false;
     const run = async () => {
-      const [enabled, available, hideSensitive] = await Promise.all([
+      const [enabled, available, hideSensitive, storedPushToken] = await Promise.all([
         getBiometricGateEnabled(),
         canUseBiometrics(),
         getHideSensitiveNotificationsEnabled(),
+        getSecureJson<string>("alga.mobile.push.registeredToken"),
       ]);
       if (canceled) return;
       setBiometricEnabled(enabled);
       setBiometricAvailable(available);
       setHideSensitiveEnabled(hideSensitive);
+      setPushEnabled(Boolean(storedPushToken));
     };
     void run();
     return () => {
@@ -81,12 +91,8 @@ export function SettingsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background }}>
-      <Text style={{ ...theme.typography.title, marginBottom: theme.spacing.sm, color: theme.colors.text }}>
-        {t("title")}
-      </Text>
-
-      <View style={{ marginTop: theme.spacing.lg }}>
+    <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={{ padding: theme.spacing.lg }}>
+      <View>
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
           {t("sections.account")}
         </Text>
@@ -210,6 +216,85 @@ export function SettingsScreen() {
         </Text>
       </View>
 
+      {phase2Features.notifications ? (
+        <View style={{ marginTop: theme.spacing.xl }}>
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
+            {t("sections.notifications", "Notifications")}
+          </Text>
+          <ToggleRow
+            theme={theme}
+            label={t("notifications.pushNotifications", "Push Notifications")}
+            value={pushEnabled ? t("common:on") : t("common:off")}
+            disabled={pushBusy}
+            onPress={() => {
+              void (async () => {
+                if (pushBusy) return;
+                setPushBusy(true);
+                try {
+                  const appConfig = getAppConfig();
+                  if (!appConfig.ok || !session) return;
+
+                  if (pushEnabled) {
+                    // Disable: unregister token from server
+                    const deviceId = await getStableDeviceId();
+                    if (deviceId) {
+                      const client = createApiClient({
+                        baseUrl: appConfig.baseUrl,
+                        getTenantId: () => session.tenantId,
+                        getUserAgentTag: () => "mobile/settings",
+                      });
+                      await unregisterPushToken(client, { deviceId });
+                    }
+                    await secureStorage.deleteItem("alga.mobile.push.registeredToken");
+                    setPushEnabled(false);
+                  } else {
+                    // Enable: request permission + register
+                    const granted = await requestPushPermission();
+                    if (!granted) {
+                      Alert.alert(
+                        t("notifications.permissionDeniedTitle", "Notifications Disabled"),
+                        t("notifications.permissionDeniedMessage", "Enable notifications in your device settings to receive ticket alerts."),
+                        [
+                          { text: t("common:cancel"), style: "cancel" },
+                          { text: t("notifications.openSettings", "Open Settings"), onPress: () => void Linking.openSettings() },
+                        ],
+                      );
+                      return;
+                    }
+                    const [token, deviceId] = await Promise.all([
+                      getExpoPushToken(),
+                      getStableDeviceId(),
+                    ]);
+                    if (token && deviceId) {
+                      const client = createApiClient({
+                        baseUrl: appConfig.baseUrl,
+                        getTenantId: () => session.tenantId,
+                        getUserAgentTag: () => "mobile/settings",
+                      });
+                      const result = await registerPushToken(client, {
+                        expoPushToken: token,
+                        deviceId,
+                        platform: Platform.OS,
+                        appVersion: Application.nativeApplicationVersion ?? undefined,
+                      });
+                      if (result.ok) {
+                        await setSecureJson("alga.mobile.push.registeredToken", token);
+                        setPushEnabled(true);
+                      }
+                    }
+                  }
+                } finally {
+                  setPushBusy(false);
+                }
+              })();
+            }}
+          />
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
+            {t("notifications.pushHint", "Receive alerts when tickets are assigned, commented on, or updated.")}
+          </Text>
+        </View>
+      ) : null}
+
       <View style={{ marginTop: theme.spacing.xl }}>
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
           {t("sections.data")}
@@ -272,7 +357,7 @@ export function SettingsScreen() {
         privacyUrl={tryBuildHostedPathUrl(config.ok ? config.baseUrl : null, "/legal/privacy")}
         termsUrl={tryBuildHostedPathUrl(config.ok ? config.baseUrl : null, "/legal/terms")}
       />
-    </View>
+    </ScrollView>
   );
 }
 

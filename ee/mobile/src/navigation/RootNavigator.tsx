@@ -6,12 +6,16 @@ import { TicketDetailScreen } from "../screens/TicketDetailScreen";
 import { AuthCallbackScreen } from "../screens/AuthCallbackScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
+import { useNotifications } from "../notifications/useNotifications";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const theme = useTheme();
   const { t: tAuth } = useTranslation("auth");
+
+  // Register push token and handle notification taps (no-op when feature flag is off)
+  useNotifications();
   return (
     <Stack.Navigator
       screenOptions={{

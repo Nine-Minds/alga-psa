@@ -47,6 +47,8 @@
     "@alga-psa/event-bus": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/ui": "*",
+    "@alga-psa/workflow-streams": "*",
+    "@alga-psa/workflows": "*",
     "lucide-react": "^0.428.0"
   },
   "peerDependencies": {

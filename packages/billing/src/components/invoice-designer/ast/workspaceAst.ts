@@ -1,13 +1,18 @@
 import type {
   InvoiceTemplateAst,
   InvoiceTemplateNode,
+  InvoiceTemplatePrintSettings,
   InvoiceTemplateNodeStyleRef,
   InvoiceTemplateTableColumn,
   InvoiceTemplateTotalsRow,
   InvoiceTemplateValueExpression,
   InvoiceTemplateValueFormat,
 } from '@alga-psa/types';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import {
+  INVOICE_TEMPLATE_AST_VERSION,
+  normalizeInvoiceTemplatePrintSettings,
+  resolveInvoiceTemplatePrintSettings,
+} from '@alga-psa/types';
 import {
   decodeInvoiceTemplatePathExpression,
   encodeInvoiceTemplatePathExpression,
@@ -454,6 +459,24 @@ const coerceNumber = (value: unknown): number | undefined => {
   return undefined;
 };
 
+const parsePxLength = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed.length) {
+      return undefined;
+    }
+
+    const numeric = Number.parseFloat(trimmed.replace(/px$/i, '').trim());
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }
+
+  return undefined;
+};
+
 const coerceString = (value: unknown): string | undefined => {
   if (typeof value !== 'string') {
     return undefined;
@@ -750,6 +773,37 @@ const createBaseNode = (node: WorkspaceNode): Pick<InvoiceTemplateNode, 'id' | '
   style: createNodeStyle(node),
 });
 
+const getWorkspaceNodeSize = (node: WorkspaceNode | undefined): { width?: number; height?: number } => {
+  if (!node || !isRecord(node.props)) {
+    return {};
+  }
+
+  const props = node.props as UnknownRecord;
+  const size = isRecord(props.size) ? (props.size as UnknownRecord) : null;
+  const style = getWorkspaceNodeStyle(node);
+
+  return {
+    width: parsePxLength(size?.width) ?? parsePxLength(style.width),
+    height: parsePxLength(size?.height) ?? parsePxLength(style.height),
+  };
+};
+
+const getWorkspaceRootPrintSettings = (
+  rootMetadata: UnknownRecord
+): InvoiceTemplatePrintSettings | null => {
+  const explicitPrintSettings = isRecord(rootMetadata.printSettings)
+    ? (rootMetadata.printSettings as Partial<InvoiceTemplatePrintSettings>)
+    : null;
+  const importedTemplateMetadata = isRecord(rootMetadata.__astTemplateMetadata)
+    ? (rootMetadata.__astTemplateMetadata as UnknownRecord)
+    : null;
+  const importedPrintSettings = importedTemplateMetadata && isRecord(importedTemplateMetadata.printSettings)
+    ? (importedTemplateMetadata.printSettings as Partial<InvoiceTemplatePrintSettings>)
+    : null;
+
+  return normalizeInvoiceTemplatePrintSettings(explicitPrintSettings ?? importedPrintSettings);
+};
+
 const resolveCollectionSourceBindingId = (
   collectionPath: string,
   registerCollectionBinding: (path: string) => string,
@@ -1020,6 +1074,22 @@ export const exportWorkspaceToInvoiceTemplateAst = (
     (entries.find(([, node]) => (node as WorkspaceNode).type === 'document')?.[1] as WorkspaceNode | undefined) ??
     (entries[0]?.[1] as WorkspaceNode | undefined);
   const rootMetadata = root ? getWorkspaceNodeMetadata(root) : {};
+  const pageNode = root
+    ? root.children
+        .map((childId) => nodesById.get(childId))
+        .find((child): child is WorkspaceNode => child !== undefined && child.type === 'page')
+    : undefined;
+  const rootSize = getWorkspaceNodeSize(root);
+  const pageSize = getWorkspaceNodeSize(pageNode);
+  const pageLayout = pageNode ? getWorkspaceNodeLayout(pageNode) : undefined;
+  const resolvedPrintSettings = resolveInvoiceTemplatePrintSettings({
+    printSettings: getWorkspaceRootPrintSettings(rootMetadata),
+    pageWidthPx: pageSize.width,
+    pageHeightPx: pageSize.height,
+    documentWidthPx: rootSize.width,
+    documentHeightPx: rootSize.height,
+    pagePaddingPx: parsePxLength(pageLayout?.padding),
+  });
   const importedBindings = isRecord(rootMetadata.__astBindingCatalog)
     ? (rootMetadata.__astBindingCatalog as UnknownRecord)
     : null;
@@ -1147,12 +1217,23 @@ export const exportWorkspaceToInvoiceTemplateAst = (
         workspaceTransforms.outputBindingId
       )
     : null;
+  const nextTemplateMetadata = isRecord(rootMetadata.__astTemplateMetadata)
+    ? { ...(rootMetadata.__astTemplateMetadata as Record<string, unknown>) }
+    : {};
+  if (resolvedPrintSettings.source !== 'legacy-unresolved') {
+    nextTemplateMetadata.printSettings = {
+      paperPreset: resolvedPrintSettings.paperPreset,
+      marginMm: resolvedPrintSettings.marginMm,
+    };
+  } else {
+    delete nextTemplateMetadata.printSettings;
+  }
 
   return {
     kind: 'invoice-template-ast',
     version: INVOICE_TEMPLATE_AST_VERSION,
-    metadata: isRecord(rootMetadata.__astTemplateMetadata)
-      ? ({ ...(rootMetadata.__astTemplateMetadata as Record<string, unknown>) } as InvoiceTemplateAst['metadata'])
+    metadata: Object.keys(nextTemplateMetadata).length > 0
+      ? (nextTemplateMetadata as InvoiceTemplateAst['metadata'])
       : undefined,
     styles: isRecord(rootMetadata.__astStyleCatalog)
       ? ({ ...(rootMetadata.__astStyleCatalog as Record<string, unknown>) } as InvoiceTemplateAst['styles'])
@@ -1197,21 +1278,9 @@ const denormalizeBindingPath = (path: string): string => {
 
 const parseSizeFromStyle = (node: InvoiceTemplateNode): { width?: number; height?: number } => {
   const inline = node.style?.inline ?? {};
-  const parse = (value: unknown): number | undefined => {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return Math.max(1, value);
-    }
-    if (typeof value === 'string') {
-      const numeric = Number.parseFloat(value.replace('px', '').trim());
-      if (Number.isFinite(numeric)) {
-        return Math.max(1, numeric);
-      }
-    }
-    return undefined;
-  };
   return {
-    width: parse(inline.width),
-    height: parse(inline.height),
+    width: parsePxLength(inline.width),
+    height: parsePxLength(inline.height),
   };
 };
 
@@ -1233,6 +1302,16 @@ export const importInvoiceTemplateAstToWorkspace = (
     astPageSectionCandidate && isRecord(astPageSectionCandidate.style?.inline)
       ? (astPageSectionCandidate.style?.inline as Record<string, unknown>)
       : undefined;
+  const legacyDocumentSize = astDocument ? parseSizeFromStyle(astDocument) : {};
+  const legacyPageSize = astPageSectionCandidate ? parseSizeFromStyle(astPageSectionCandidate) : {};
+  const resolvedPrintSettings = resolveInvoiceTemplatePrintSettings({
+    printSettings: ast.metadata?.printSettings,
+    pageWidthPx: legacyPageSize.width,
+    pageHeightPx: legacyPageSize.height,
+    documentWidthPx: legacyDocumentSize.width,
+    documentHeightPx: legacyDocumentSize.height,
+    pagePaddingPx: parsePxLength(pageSectionInline?.padding),
+  });
 
   return {
     rootId: DOCUMENT_NODE_ID,
@@ -1248,7 +1327,14 @@ export const importInvoiceTemplateAstToWorkspace = (
           justifyContent: 'flex-start',
           alignItems: 'stretch',
         };
-      const documentStyle = coerceNodeStyleFromInlineStyle(documentInline);
+      const documentStyle =
+        resolvedPrintSettings.source === 'legacy-unresolved'
+          ? (coerceNodeStyleFromInlineStyle(documentInline) ?? {})
+          : {
+              ...(coerceNodeStyleFromInlineStyle(documentInline) ?? {}),
+              width: `${resolvedPrintSettings.pageWidthPx}px`,
+              height: `${resolvedPrintSettings.pageHeightPx}px`,
+            };
 
       const documentNode: WorkspaceNode = {
         id: DOCUMENT_NODE_ID,
@@ -1256,6 +1342,14 @@ export const importInvoiceTemplateAstToWorkspace = (
         props: {
           name: 'Document',
           metadata: {
+            ...(resolvedPrintSettings.source !== 'legacy-unresolved'
+              ? {
+                  printSettings: {
+                    paperPreset: resolvedPrintSettings.paperPreset,
+                    marginMm: resolvedPrintSettings.marginMm,
+                  },
+                }
+              : {}),
             __astImported: true,
             __astOriginalNodeId: astDocument?.id ?? DOCUMENT_NODE_ID,
             __astHadWidth: Boolean(documentInline && Object.prototype.hasOwnProperty.call(documentInline, 'width')),
@@ -1267,7 +1361,16 @@ export const importInvoiceTemplateAstToWorkspace = (
           },
           layout: documentLayout,
           style: documentStyle,
-          size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+          size: {
+            width:
+              resolvedPrintSettings.source === 'legacy-unresolved'
+                ? legacyDocumentSize.width ?? resolvedPrintSettings.pageWidthPx
+                : resolvedPrintSettings.pageWidthPx,
+            height:
+              resolvedPrintSettings.source === 'legacy-unresolved'
+                ? legacyDocumentSize.height ?? resolvedPrintSettings.pageHeightPx
+                : resolvedPrintSettings.pageHeightPx,
+          },
           position: { x: 0, y: 0 },
         },
         children: [],
@@ -1275,23 +1378,40 @@ export const importInvoiceTemplateAstToWorkspace = (
 
       // Always materialize a page node as the canvas root so sizing/margins are stable and consistent.
       // If the AST uses a single top-level section wrapper, treat it as the page node.
-      const pageLayout =
+      const pageLayoutBase =
         coerceContainerLayoutFromInlineStyle(pageSectionInline) ?? {
           display: 'flex',
           flexDirection: 'column',
           gap: '32px',
-          padding: '40px', // Page margins
+          padding: '40px',
           justifyContent: 'flex-start',
           alignItems: 'stretch',
         };
-      const pageStyle = coerceNodeStyleFromInlineStyle(pageSectionInline);
-      const pageSize = astPageSectionCandidate ? parseSizeFromStyle(astPageSectionCandidate) : null;
-      const resolvedPageSize = pageSize
-        ? {
-            width: Number.isFinite(pageSize.width) ? pageSize.width : DESIGNER_CANVAS_BOUNDS.width,
-            height: Number.isFinite(pageSize.height) ? pageSize.height : DESIGNER_CANVAS_BOUNDS.height,
-          }
-        : { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height };
+      const pageLayout =
+        resolvedPrintSettings.source === 'legacy-unresolved'
+          ? pageLayoutBase
+          : {
+              ...pageLayoutBase,
+              padding: `${resolvedPrintSettings.marginPx}px`,
+            };
+      const pageStyle =
+        resolvedPrintSettings.source === 'legacy-unresolved'
+          ? (coerceNodeStyleFromInlineStyle(pageSectionInline) ?? {})
+          : {
+              ...(coerceNodeStyleFromInlineStyle(pageSectionInline) ?? {}),
+              width: `${resolvedPrintSettings.pageWidthPx}px`,
+              height: `${resolvedPrintSettings.pageHeightPx}px`,
+            };
+      const resolvedPageSize = {
+        width:
+          resolvedPrintSettings.source === 'legacy-unresolved'
+            ? legacyPageSize.width ?? legacyDocumentSize.width ?? resolvedPrintSettings.pageWidthPx
+            : resolvedPrintSettings.pageWidthPx,
+        height:
+          resolvedPrintSettings.source === 'legacy-unresolved'
+            ? legacyPageSize.height ?? legacyDocumentSize.height ?? resolvedPrintSettings.pageHeightPx
+            : resolvedPrintSettings.pageHeightPx,
+      };
 
       const pageNode: WorkspaceNode = {
         id: astPageSectionCandidate?.id ?? 'page-root',

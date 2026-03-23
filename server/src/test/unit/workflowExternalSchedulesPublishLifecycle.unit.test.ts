@@ -6,7 +6,7 @@ import {
   registerWorkflowScheduleJobRunner,
   resetWorkflowScheduleJobRunner
 } from '@alga-psa/workflows/lib/jobRunnerProvider';
-import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
+import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
 import {
   buildWorkflowDefinition,
   ensureWorkflowRuntimeV2TestRegistrations,
@@ -68,7 +68,7 @@ vi.mock('@alga-psa/auth', () => ({
   preCheckDeletion: vi.fn()
 }));
 
-vi.mock('@shared/workflow/persistence/workflowDefinitionModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowDefinitionModelV2', () => ({
   default: {
     create: vi.fn(async (_knex: unknown, data: WorkflowRecord) => {
       workflowRecord = { ...data };
@@ -83,7 +83,7 @@ vi.mock('@shared/workflow/persistence/workflowDefinitionModelV2', () => ({
   }
 }));
 
-vi.mock('@shared/workflow/persistence/workflowDefinitionVersionModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2', () => ({
   default: {
     create: vi.fn(async (_knex: unknown, data: VersionRecord) => {
       const record = { ...data };
@@ -96,7 +96,7 @@ vi.mock('@shared/workflow/persistence/workflowDefinitionVersionModelV2', () => (
   }
 }));
 
-vi.mock('@shared/workflow/persistence/workflowScheduleStateModel', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowScheduleStateModel', () => ({
   default: {
     create: vi.fn(async (_knex: unknown, data: ScheduleRecord) => {
       const record = {
@@ -150,7 +150,7 @@ vi.mock('@alga-psa/workflows/models/eventCatalog', () => ({
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction
-} from '@alga-psa/workflows/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions-psa/workflows-runtime-v2-actions';
 
 const SCHEDULE_PUBLISH_V1_REF = 'payload.SchedulePublish.v1';
 const SCHEDULE_PUBLISH_V2_REF = 'payload.SchedulePublish.v2';

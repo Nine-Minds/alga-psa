@@ -68,6 +68,22 @@ export interface IBusinessHoursScheduleWithEntries extends IBusinessHoursSchedul
 // ============================================================================
 
 /**
+ * SLA Policy defines the service level agreements for tickets.
+ * A policy contains multiple targets (one per priority level) and can be
+ * linked to specific business hours schedules.
+ */
+export interface ISlaPolicy {
+  tenant?: string;
+  sla_policy_id: string;
+  policy_name: string;
+  description?: string | null;
+  is_default: boolean;
+  business_hours_schedule_id?: string | null;
+  created_at?: ISODateString;
+  updated_at?: ISODateString;
+}
+
+/**
  * SLA Policy Target defines response and resolution time targets
  * for a specific priority level within an SLA policy.
  */

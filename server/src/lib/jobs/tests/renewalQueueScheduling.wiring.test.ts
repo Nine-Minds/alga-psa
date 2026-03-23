@@ -101,8 +101,7 @@ describe('renewal queue scheduling wiring', () => {
   });
 
   it('calls workflow runtime tickets.create action for renewal ticket creation path', () => {
-    expect(renewalHandlerSource).toContain("import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime/init';");
-    expect(renewalHandlerSource).toContain("import { getActionRegistryV2 } from '@shared/workflow/runtime/registries/actionRegistry';");
+    expect(renewalHandlerSource).toContain("import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';");
     expect(renewalHandlerSource).toContain('const tryCreateRenewalTicketViaWorkflowAction = async (params: {');
     expect(renewalHandlerSource).toContain('initializeWorkflowRuntimeV2();');
     expect(renewalHandlerSource).toContain("const ticketCreateAction = getActionRegistryV2().get('tickets.create', 1);");

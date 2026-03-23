@@ -25,7 +25,7 @@ import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, X, HelpCircle, Save, AlertCircle, PauseCircle, Users } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, AlertCircle, PauseCircle, Users, Mail } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -36,14 +36,15 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { SlaStatusBadge } from '@alga-psa/sla/components';
-import type { SlaTimerStatus } from '@alga-psa/sla/types';
+import type { SlaTimerStatus } from '@alga-psa/types';
+import { useTicketCrossFeature } from '../../context/TicketCrossFeatureContext';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { ITeam } from '@alga-psa/types';
 import { useSession } from 'next-auth/react';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 
 
 interface TicketInfoProps {
@@ -77,7 +78,9 @@ interface TicketInfoProps {
   responseStateTrackingEnabled?: boolean;
   teams?: ITeam[];
   onAssignTeam?: (teamId: string) => Promise<void>;
+  onRemoveTeamAssignment?: () => Promise<void>;
   onClipboardImageUploaded?: () => Promise<void> | void;
+  onOpenEmailNotificationLogs?: () => void;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -108,10 +111,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   responseStateTrackingEnabled = true,
   teams = [],
   onAssignTeam,
+  onRemoveTeamAssignment,
   onClipboardImageUploaded,
+  onOpenEmailNotificationLogs,
 }) => {
   const { data: session } = useSession();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+  const { deleteDocument } = useDocumentsCrossFeature();
+  const { renderSlaStatusBadge } = useTicketCrossFeature();
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
@@ -136,6 +143,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
+  const [pendingTeamRemoval, setPendingTeamRemoval] = useState(false);
 
   // Capture original ticket values when form is initialized
   const [originalTicketValues, setOriginalTicketValues] = useState<Partial<ITicket>>(() => ({
@@ -240,8 +248,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     const hasTitleChange = titleValue !== ticket.title;
     const hasDescriptionChange = hasDescriptionContentChanged;
 
-    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange || pendingTeamId !== null;
-  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, hasDescriptionContentChanged, pendingTeamId]);
+    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange || pendingTeamId !== null || pendingTeamRemoval;
+  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, hasDescriptionContentChanged, pendingTeamId, pendingTeamRemoval]);
 
   // Register unsaved changes with the context
   useRegisterUnsavedChanges(`ticket-info-${id}`, hasUnsavedChanges);
@@ -340,26 +348,27 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     };
   }, [effectiveBoardId]);
 
-  // Fetch team avatar
+  // Fetch team avatar (for saved or pending team)
   useEffect(() => {
-    if (!ticket.assigned_team_id || !ticket.tenant) {
+    const effectiveTeamId = pendingTeamId || ticket.assigned_team_id;
+    if (!effectiveTeamId || !ticket.tenant) {
       setTeamAvatarUrl(null);
       return;
     }
     const fetchTeamAvatar = async () => {
       try {
-        const result = await getTeamAvatarUrlsBatchAction([ticket.assigned_team_id!], ticket.tenant);
+        const result = await getTeamAvatarUrlsBatchAction([effectiveTeamId], ticket.tenant);
         if (result && typeof (result as Map<string, string | null>).get === 'function') {
-          setTeamAvatarUrl((result as Map<string, string | null>).get(ticket.assigned_team_id!) ?? null);
+          setTeamAvatarUrl((result as Map<string, string | null>).get(effectiveTeamId) ?? null);
         } else {
-          setTeamAvatarUrl((result as unknown as Record<string, string | null>)[ticket.assigned_team_id!] ?? null);
+          setTeamAvatarUrl((result as unknown as Record<string, string | null>)[effectiveTeamId] ?? null);
         }
       } catch {
         setTeamAvatarUrl(null);
       }
     };
     fetchTeamAvatar();
-  }, [ticket.assigned_team_id, ticket.tenant]);
+  }, [pendingTeamId, ticket.assigned_team_id, ticket.tenant]);
 
   // Track current board's priority type in a ref
   const currentPriorityTypeRef = useRef(boardConfig.priority_type);
@@ -447,6 +456,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: discardDescriptionEdit,
+    deleteDocumentFn: deleteDocument,
   });
 
   useEffect(() => {
@@ -628,6 +638,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         setPendingTeamId(null);
       }
 
+      // Remove team if pending removal (user switched to individual agent)
+      if (pendingTeamRemoval && onRemoveTeamAssignment) {
+        await onRemoveTeamAssignment();
+        setPendingTeamRemoval(false);
+      }
+
       if (onSaveChanges) {
         const success = await onSaveChanges(allChanges);
         if (success) {
@@ -684,7 +700,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [hasUnsavedChanges, requiresDestinationStatusSelection, pendingChanges, pendingItilChanges, titleValue, ticket.title, isEditingDescription, pendingTeamId, onAssignTeam, onSaveChanges, onSelectChange, onItilFieldChange, finalizeSavedDescription, persistDescriptionChanges]);
+  }, [hasUnsavedChanges, requiresDestinationStatusSelection, pendingChanges, pendingItilChanges, titleValue, ticket.title, isEditingDescription, pendingTeamId, pendingTeamRemoval, onAssignTeam, onRemoveTeamAssignment, onSaveChanges, onSelectChange, onItilFieldChange, finalizeSavedDescription, persistDescriptionChanges]);
 
   // Handler for discarding all pending changes
   const discardNonDescriptionChanges = useCallback(() => {
@@ -694,6 +710,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setPendingBoardConfig(null);
     setPendingCategories(null);
     setPendingTeamId(null);
+    setPendingTeamRemoval(false);
     setIsEditingTitle(false);
   }, [ticket.title]);
 
@@ -955,7 +972,16 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 {teamsV2Enabled ? (
                   <UserAndTeamPicker
                     value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
-                    onValueChange={(value) => handlePendingChange('assigned_to', value)}
+                    onValueChange={(value) => {
+                      handlePendingChange('assigned_to', value);
+                      // Clear team when switching to an individual agent
+                      if (pendingTeamId) {
+                        setPendingTeamId(null);
+                      }
+                      if (ticket.assigned_team_id) {
+                        setPendingTeamRemoval(true);
+                      }
+                    }}
                     onTeamSelect={async (teamId) => {
                       // Defer team assignment to Save Changes (consistent with assigned_to)
                       setPendingTeamId(teamId);
@@ -991,8 +1017,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     disabled={workflowLocked}
                   />
                 )}
-                {teamsV2Enabled && ticket.assigned_team_id && (() => {
-                  const assignedTeam = teams.find(t => t.team_id === ticket.assigned_team_id);
+                {teamsV2Enabled && (() => {
+                  // Use pending team if set, otherwise saved team — but respect pending removal
+                  const effectiveTeamId = pendingTeamId || (pendingTeamRemoval ? null : ticket.assigned_team_id);
+                  if (!effectiveTeamId) return null;
+                  const assignedTeam = teams.find(t => t.team_id === effectiveTeamId);
                   return assignedTeam ? (
                     <Tooltip content={assignedTeam.team_name}>
                       <Badge variant="info" size="sm" className="gap-1 cursor-help">
@@ -1367,14 +1396,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <div className="col-span-2">
                 <h5 className="font-bold mb-2">SLA Status</h5>
                 <div className="flex items-center gap-3">
-                  <SlaStatusBadge
-                    status={slaStatus.status}
-                    responseRemainingMinutes={slaStatus.responseRemainingMinutes}
-                    resolutionRemainingMinutes={slaStatus.resolutionRemainingMinutes}
-                    isPaused={slaStatus.isPaused}
-                    size="md"
-                    showIcon={true}
-                  />
+                  {renderSlaStatusBadge({
+                    status: slaStatus.status,
+                    responseRemainingMinutes: slaStatus.responseRemainingMinutes,
+                    resolutionRemainingMinutes: slaStatus.resolutionRemainingMinutes,
+                    isPaused: slaStatus.isPaused,
+                    size: 'md',
+                    showIcon: true,
+                  })}
                   {ticket.sla_response_met === false && (
                     <span className="text-xs text-[rgb(var(--badge-error-text))] bg-[rgb(var(--badge-error-bg))] border border-[rgb(var(--badge-error-border))] px-2 py-1 rounded-full">
                       Response SLA breached
@@ -1488,6 +1517,21 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           {/* Save Changes Button - matching contracts behavior */}
           <div className="flex items-center gap-3 mt-6 pt-4 border-t border-gray-200">
             {renderProjectTaskActions?.({ ticket, additionalAgents })}
+            {ticket.ticket_id && onOpenEmailNotificationLogs ? (
+              <Tooltip content="View email notification logs">
+                <Button
+                  id={`${id}-open-email-notification-logs`}
+                  type="button"
+                  variant="soft"
+                  size="icon"
+                  onClick={onOpenEmailNotificationLogs}
+                  aria-label="View email notification logs"
+                  className="h-9 w-9"
+                >
+                  <Mail className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+            ) : null}
             <div className="flex-1" />
             <Button
               id={`${id}-cancel-btn`}

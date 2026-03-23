@@ -21,6 +21,8 @@
     "@huggingface/inference": "^3.3.3",
     "@huggingface/jinja": "^0.5.0",
     "@monaco-editor/react": "^4.7.0",
+    "@alga-psa/workflow-streams": "*",
+    "@alga-psa/workflows": "*",
     "@temporalio/client": "^1.12.3",
     "fzstd": "^0.1.1",
     "gm": "^1.25.0",

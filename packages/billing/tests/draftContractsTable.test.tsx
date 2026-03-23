@@ -106,7 +106,6 @@ vi.mock('../src/components/billing-dashboard/contracts/ContractDialog', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/contractActions', () => ({
-  checkClientHasActiveContract: vi.fn(async () => false),
   deleteContract: vi.fn(async () => undefined),
   getContractTemplates: vi.fn(async () => []),
   getContractsWithClients: vi.fn(async () => []),
@@ -138,8 +137,6 @@ describe('Drafts tab DataTable', () => {
     vi.clearAllMocks();
 
     const contractActions = await import('@alga-psa/billing/actions/contractActions');
-    vi.mocked(contractActions.checkClientHasActiveContract).mockReset();
-    vi.mocked(contractActions.checkClientHasActiveContract).mockResolvedValue(false);
     vi.mocked(contractActions.deleteContract).mockReset();
     vi.mocked(contractActions.deleteContract).mockResolvedValue(undefined);
     vi.mocked(contractActions.getContractTemplates).mockReset();

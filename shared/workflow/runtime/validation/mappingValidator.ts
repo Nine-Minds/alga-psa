@@ -8,7 +8,7 @@
 import type { PublishError, MappingValue, InputMapping } from '../types';
 import { isExpr, isSecretRef } from '../types';
 import { validateExpressionSource } from '../expressionEngine';
-import { secretNameSchema } from '@shared/workflow/secrets';
+import { secretNameSchema } from '../../secrets';
 
 /**
  * Options for mapping validation.

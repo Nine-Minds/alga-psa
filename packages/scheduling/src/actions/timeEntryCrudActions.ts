@@ -17,12 +17,20 @@ import {
   fetchTimeEntriesParamsSchema,
   FetchTimeEntriesParams,
   saveTimeEntryParamsSchema,
-  SaveTimeEntryParams
+  SaveTimeEntryParams,
+  updateTimeEntryApprovalStatusParamsSchema,
+  UpdateTimeEntryApprovalStatusParams,
 } from './timeEntrySchemas'; // Import schemas
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
 import { toPlainDate } from '@alga-psa/core';
+import {
+  createTimeEntryChangeRequestRecord,
+  fetchTimeEntryChangeRequestsForEntryIdsFromDb,
+  markTimeEntryChangeRequestsHandled,
+} from './timeEntryChangeRequestActions';
+import { attachTimeEntryChangeRequests } from '../lib/timeEntryChangeRequests';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -71,6 +79,14 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
     })
     .orderBy('start_time', 'desc')
     .select('*');
+
+  const changeRequestsByEntryId = await fetchTimeEntryChangeRequestsForEntryIdsFromDb(
+    db,
+    tenant,
+    timeEntries
+      .map((entry) => entry.entry_id)
+      .filter((entryId): entryId is string => Boolean(entryId)),
+  );
 
   // Fetch work item details for these time entries
   const workItemDetails = await Promise.all(timeEntries.map(async (entry): Promise<IWorkItem> => {
@@ -173,7 +189,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
         throw new Error(`Unknown work item type: ${entry.work_item_type}`);
     }
 
-    // Fetch service information with new schema (using billing_method instead of service_type)
+    // Fetch service information without treating billing mode as service identity/type.
     const [service] = await db('service_catalog as sc')
       .leftJoin('service_types as st', function() {
         this.on('sc.custom_service_type_id', '=', 'st.id')
@@ -185,7 +201,9 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
       })
       .select(
         'sc.service_name',
-        'sc.billing_method as service_type', // Use billing_method as service_type for backwards compatibility
+        'st.name as service_type',
+        'sc.billing_method as billing_mode',
+        'sc.item_kind',
         db.raw('CAST(sc.default_rate AS FLOAT) as default_rate')
       );
 
@@ -202,6 +220,8 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
         id: entry.service_id,
         name: service.service_name,
         type: service.service_type,
+        billing_mode: service.billing_mode,
+        item_kind: service.item_kind,
         default_rate: service.default_rate
       } : null
     };
@@ -209,7 +229,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
 
   const workItemMap = new Map(workItemDetails.map((item): [string, IWorkItem] => [item.work_item_id, item]));
 
-  return timeEntries.map((entry): ITimeEntryWithWorkItem => {
+  const entriesWithWorkItems = timeEntries.map((entry): ITimeEntryWithWorkItem => {
     const normalizedWorkItemId = normalizeFetchedWorkItemId(entry);
 
     return {
@@ -227,6 +247,8 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
       workItem: workItemMap.get(normalizedWorkItemId),
     };
   });
+
+  return attachTimeEntryChangeRequests(entriesWithWorkItems, changeRequestsByEntryId);
 });
 
 export const saveTimeEntry = withAuth(async (
@@ -263,7 +285,7 @@ export const saveTimeEntry = withAuth(async (
     if (validatedTimeEntry.entry_id) {
       const existing = await db('time_entries')
         .where({ entry_id: validatedTimeEntry.entry_id, tenant })
-        .select('user_id', 'invoiced')
+        .select('user_id', 'invoiced', 'time_sheet_id')
         .first();
 
       if (!existing) {
@@ -390,6 +412,7 @@ export const saveTimeEntry = withAuth(async (
     // If no contract line ID is provided, try to determine the default one
     if (!contract_line_id && service_id) {
       try {
+        const effectiveDateForContractResolution = work_date || start_time;
         const defaultPlanId = await determineDefaultContractLine(
           work_item_type === 'project_task' ?
             (await db('project_tasks')
@@ -415,7 +438,8 @@ export const saveTimeEntry = withAuth(async (
                   })
                   .first('client_id'))?.client_id
                 : null,
-          service_id
+          service_id,
+          effectiveDateForContractResolution
         );
 
         if (defaultPlanId) {
@@ -456,6 +480,23 @@ export const saveTimeEntry = withAuth(async (
 
         resultingEntry = updated;
         console.log('Updated entry:', resultingEntry);
+
+        if (updated.time_sheet_id) {
+          const timeSheetStatus = await trx('time_sheets')
+            .where({
+              id: updated.time_sheet_id,
+              tenant,
+            })
+            .first('approval_status');
+
+          if (timeSheetStatus?.approval_status === 'CHANGES_REQUESTED') {
+            await markTimeEntryChangeRequestsHandled(trx, {
+              tenant,
+              timeEntryId: entry_id,
+              handledBy: actorUserId,
+            });
+          }
+        }
 
         // If this is a project task, update the actual_hours in the project_tasks table
         if (work_item_type === 'project_task') {
@@ -848,6 +889,88 @@ export const saveTimeEntry = withAuth(async (
     }
     throw new Error('Failed to save time entry');
   }
+});
+
+export const updateTimeEntryApprovalStatus = withAuth(async (
+  user,
+  { tenant },
+  params: {
+    entryId: string;
+    approvalStatus: ITimeEntry['approval_status'];
+    changeRequestComment?: string;
+  }
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'timesheet', 'approve', db)) {
+    throw new Error('Permission denied: Cannot update time entry approval status');
+  }
+
+  const validatedParams = validateData<UpdateTimeEntryApprovalStatusParams>(
+    updateTimeEntryApprovalStatusParamsSchema,
+    params,
+  );
+
+  const existingEntry = await db('time_entries')
+    .where({
+      entry_id: validatedParams.entryId,
+      tenant,
+    })
+    .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id')
+    .first();
+
+  if (!existingEntry) {
+    throw new Error('Time entry not found');
+  }
+
+  await assertCanActOnBehalf(user, tenant, existingEntry.user_id, db);
+
+  if (existingEntry.invoiced) {
+    throw new Error('This time entry has already been invoiced and cannot be modified.');
+  }
+
+  await db.transaction(async (trx) => {
+    await trx('time_entries')
+      .where({
+        entry_id: validatedParams.entryId,
+        tenant,
+      })
+      .update({
+        approval_status: validatedParams.approvalStatus,
+        updated_at: new Date(),
+        updated_by: user.user_id,
+      });
+
+    if (
+      validatedParams.approvalStatus === 'CHANGES_REQUESTED' &&
+      existingEntry.time_sheet_id
+    ) {
+      await trx('time_sheets')
+        .where({
+          id: existingEntry.time_sheet_id,
+          tenant,
+        })
+        .update({
+          approval_status: 'CHANGES_REQUESTED',
+          approved_at: null,
+          approved_by: null,
+        });
+    }
+
+    if (
+      validatedParams.approvalStatus === 'CHANGES_REQUESTED' &&
+      validatedParams.changeRequestComment &&
+      existingEntry.time_sheet_id
+    ) {
+      await createTimeEntryChangeRequestRecord(trx, {
+        tenant,
+        timeEntryId: validatedParams.entryId,
+        timeSheetId: existingEntry.time_sheet_id,
+        comment: validatedParams.changeRequestComment,
+        createdBy: user.user_id,
+      });
+    }
+  });
 });
 
 export const deleteTimeEntry = withAuth(async (

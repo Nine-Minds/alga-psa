@@ -50,14 +50,21 @@ export const updateClientContractLine = withAuth(async (
       throw new Error(`Billing entry with ID ${billingId} not found`);
     }
 
+    const serviceCategory = billingData.service_category ?? existingBilling.service_category ?? null;
+    const proposedStartDate = new Date(billingData.start_date || existingBilling.start_date);
+    const proposedEndDateRaw = billingData.end_date ?? existingBilling.end_date;
+
     // Check for overlapping billing entries, excluding the current one
-    const overlappingBillings = await ClientContractLine.checkOverlappingBilling(
-      existingBilling.client_id,
-      existingBilling.service_category || '',
-      new Date(billingData.start_date || existingBilling.start_date),
-      new Date(billingData.end_date! || existingBilling.end_date!),
-      billingId
-    );
+    const overlappingBillings =
+      serviceCategory && proposedEndDateRaw
+        ? await ClientContractLine.checkOverlappingBilling(
+            existingBilling.client_id,
+            serviceCategory,
+            proposedStartDate,
+            new Date(proposedEndDateRaw),
+            billingId,
+          )
+        : [];
 
     if (overlappingBillings.length > 0) {
       const conflictingBilling = overlappingBillings[0];
@@ -76,10 +83,11 @@ export const updateClientContractLine = withAuth(async (
 export const getClientContractLine = withAuth(async (
   _user,
   { tenant },
-  clientId: string
+  clientId: string,
+  clientContractId?: string
 ): Promise<IClientContractLine[]> => {
   try {
-    const billings = await ClientContractLine.getByClientId(clientId);
+    const billings = await ClientContractLine.getByClientId(clientId, true, undefined, clientContractId);
     return billings;
   } catch (error) {
     console.error('Error fetching client billing:', error);
@@ -91,7 +99,7 @@ export const getOverlappingBillings = withAuth(async (
   _user,
   { tenant },
   clientId: string,
-  serviceCategory: string,
+  serviceCategory: string | null,
   startDate: Date,
   endDate: Date | null,
   excludeBillingId?: string

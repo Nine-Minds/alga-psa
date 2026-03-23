@@ -91,6 +91,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   const [priorityLookup, setPriorityLookup] = useState<Record<string, string>>({});
   const [serviceLookup, setServiceLookup] = useState<Record<string, string>>({});
   const [statusLookup, setStatusLookup] = useState<Record<string, string>>({});
+  const [statusLookupByPhase, setStatusLookupByPhase] = useState<Record<string, Record<string, string>>>({});
 
   // Status resolution state
   const [unmatchedStatuses, setUnmatchedStatuses] = useState<string[]>([]);
@@ -273,6 +274,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setPriorityLookup(validationResponse.priorityLookup);
       setServiceLookup(validationResponse.serviceLookup);
       setStatusLookup(validationResponse.statusLookup);
+      setStatusLookupByPhase(validationResponse.statusLookupByPhase || {});
       setUnmatchedStatuses(validationResponse.unmatchedStatuses);
       setUnmatchedAgents(validationResponse.unmatchedAgents);
 
@@ -357,7 +359,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         validationResponse.userLookup,
         validationResponse.priorityLookup,
         validationResponse.serviceLookup,
-        validationResponse.statusLookup
+        validationResponse.statusLookup,
+        validationResponse.statusLookupByPhase || {}
       );
       setGroupedPhases(grouped);
 
@@ -446,6 +449,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       priorityLookup,
       serviceLookup,
       statusLookup,
+      statusLookupByPhase,
       agentResolutions
     );
     setGroupedPhases(grouped);
@@ -455,7 +459,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     } else {
       handleImport();
     }
-  }, [validationResults, userLookup, priorityLookup, serviceLookup, statusLookup, agentResolutions, unmatchedStatuses, handleImport]);
+  }, [validationResults, userLookup, priorityLookup, serviceLookup, statusLookup, statusLookupByPhase, agentResolutions, unmatchedStatuses, handleImport]);
 
   const handleClose = useCallback(() => {
     if (!isProcessing) {

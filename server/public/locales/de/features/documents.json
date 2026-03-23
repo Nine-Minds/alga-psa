@@ -211,5 +211,12 @@
     "feedbackThanks": "Vielen Dank für Ihr Feedback!",
     "feedbackError": "Fehler beim Senden des Feedbacks",
     "filterByTags": "Nach Tags filtern..."
+  },
+  "visibility": {
+    "cascadeTitle": "Dokumentensichtbarkeit aktualisieren",
+    "cascadeMakeVisible": "Möchten Sie auch alle {{count}} Dokument(e) in \"{{name}}\" für das Kundenportal sichtbar machen?",
+    "cascadeMakeHidden": "Möchten Sie auch alle {{count}} Dokument(e) in \"{{name}}\" im Kundenportal ausblenden?",
+    "cascadeYes": "Ja, Dokumente aktualisieren",
+    "cascadeNo": "Nein, nur Ordner"
   }
 }

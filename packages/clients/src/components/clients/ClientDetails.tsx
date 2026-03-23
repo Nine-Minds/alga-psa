@@ -10,10 +10,9 @@ import { TagManager } from '@alga-psa/tags/components';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
 import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
-import { getSlaPolicies } from '@alga-psa/sla/actions';
-import { ISlaPolicy } from '@alga-psa/sla/types';
+import type { ISlaPolicy } from '@alga-psa/types';
 import { BillingCycleType } from '@alga-psa/types';
-import Documents from '@alga-psa/documents/components/Documents';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
@@ -60,7 +59,6 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
-import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
 import ClientContractLineDashboard from './ClientContractLineDashboard';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
@@ -206,7 +204,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   surveySummary = null
 }) => {
   const { t } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets, getSlaPolicies } = useClientCrossFeature();
+  const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -1414,19 +1413,17 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: "Documents",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          {currentUser ? (
-            <Documents
-              id={`${id}-documents`}
-              documents={documents}
-              gridColumns={3}
-              userId={currentUser.user_id}
-              entityId={client.client_id}
-              entityType="client"
-              onDocumentCreated={async () => {
+          {currentUser ? renderDocuments({
+              id: `${id}-documents`,
+              documents,
+              gridColumns: 3,
+              userId: currentUser.user_id,
+              entityId: client.client_id,
+              entityType: 'client',
+              onDocumentCreated: async () => {
                 memoizedRouter.refresh();
-              }}
-            />
-          ) : (
+              },
+          }) : (
             <div>Loading...</div>
           )}
         </div>

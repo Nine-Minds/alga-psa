@@ -4,6 +4,20 @@ import { createTenantKnex } from '@alga-psa/db';
 import type { IContractPricingSchedule } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 
+async function assertContractIsAuthorable(
+  knex: any,
+  tenant: string,
+  contractId: string,
+): Promise<void> {
+  const contract = await knex('contracts')
+    .where({ tenant, contract_id: contractId })
+    .first('is_system_managed_default');
+
+  if (contract?.is_system_managed_default === true) {
+    throw new Error('System-managed default contracts are attribution-only; pricing schedule authoring is disabled.');
+  }
+}
+
 
 /**
  * Get all pricing schedules for a contract
@@ -101,6 +115,7 @@ export const createPricingSchedule = withAuth(async (
   if (!tenant) {
     throw new Error('Tenant not found');
   }
+  await assertContractIsAuthorable(knex, tenant, scheduleData.contract_id);
 
   // Calculate end_date from duration if provided
   let endDate = scheduleData.end_date;
@@ -190,6 +205,7 @@ export const updatePricingSchedule = withAuth(async (
   if (!existingSchedule) {
     throw new Error('Pricing schedule not found');
   }
+  await assertContractIsAuthorable(knex, tenant, existingSchedule.contract_id);
 
   // Calculate end_date from duration if provided
   const effectiveDate = scheduleData.effective_date || existingSchedule.effective_date;
@@ -269,6 +285,16 @@ export const deletePricingSchedule = withAuth(async (
   if (!tenant) {
     throw new Error('Tenant not found');
   }
+  const existingSchedule = await knex('contract_pricing_schedules')
+    .where({
+      tenant,
+      schedule_id: scheduleId,
+    })
+    .first('contract_id');
+  if (!existingSchedule?.contract_id) {
+    return;
+  }
+  await assertContractIsAuthorable(knex, tenant, existingSchedule.contract_id);
 
   await knex('contract_pricing_schedules')
     .where({

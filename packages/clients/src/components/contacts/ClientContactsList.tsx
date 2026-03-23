@@ -16,7 +16,7 @@ import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import type { IClient } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
-import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import QuickAddContact from './QuickAddContact';
@@ -41,6 +41,7 @@ const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
 };
 
 const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clients }) => {
+  const { getDocumentsByEntity } = useDocumentsCrossFeature();
   const [contacts, setContacts] = useState<ContactWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});

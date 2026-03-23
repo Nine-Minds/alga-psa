@@ -3,6 +3,7 @@
  */
 
 export * from './timeEntryActions';
+export * from './timeEntryChangeRequestActions';
 export * from './timeEntrySchemas';
 export * from './timePeriodsActions';
 // Re-export timeSheetActions but exclude duplicate fetchTimeEntriesForTimeSheet

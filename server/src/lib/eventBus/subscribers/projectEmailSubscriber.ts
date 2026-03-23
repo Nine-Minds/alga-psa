@@ -11,6 +11,7 @@ import {
   TaskCommentAddedEvent
 } from '@alga-psa/event-schemas';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent, convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
@@ -149,6 +150,42 @@ async function sendNotificationIfEnabled(
     }
 
   } catch (error) {
+    const isEmailProviderError =
+      typeof error === 'object' &&
+      error !== null &&
+      (error as any).name === 'EmailProviderError' &&
+      typeof (error as any).isRetryable === 'boolean';
+
+    if (isEmailProviderError && (error as any).isRetryable === false) {
+      logger.warn('[ProjectEmailSubscriber] Non-retryable email send failure; skipping:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        subtypeName,
+        recipient: params.to,
+        tenantId: params.tenantId
+      });
+      return;
+    }
+
+    if (isEmailProviderError && (error as any).isRetryable === true) {
+      const queue = EventEmailRetryQueue.getInstance();
+      if (queue.isReady()) {
+        await queue.enqueue(params, {
+          retryAfterMs:
+            typeof (error as any).metadata?.retryAfterMs === 'number'
+              ? (error as any).metadata.retryAfterMs
+              : undefined,
+        });
+
+        logger.warn('[ProjectEmailSubscriber] Retryable email send failure queued for delayed retry:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          subtypeName,
+          recipient: params.to,
+          tenantId: params.tenantId
+        });
+        return;
+      }
+    }
+
     logger.error('[ProjectEmailSubscriber] Error in sendNotificationIfEnabled:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       subtypeName,

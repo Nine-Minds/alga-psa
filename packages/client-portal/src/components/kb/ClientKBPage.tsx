@@ -30,7 +30,7 @@ import {
   PaginatedClientKBArticles,
   ClientKBCategory,
 } from '../../actions/client-portal-actions/client-kb';
-import type { IKBArticleWithDocument, ArticleType } from '@alga-psa/documents/actions';
+import type { IKBArticleWithDocument, ArticleType } from '@alga-psa/types';
 import type { ITag } from '@alga-psa/types';
 
 const TYPE_ICONS: Record<ArticleType, React.ReactNode> = {

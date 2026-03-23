@@ -1,0 +1,157 @@
+{
+  "welcome": {
+    "title": "11111",
+    "description": "11111",
+    "titleCommunity": "11111",
+    "descriptionCommunity": "11111"
+  },
+  "features": {
+    "heading": "11111",
+    "comingSoon": "11111",
+    "tickets": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "monitoring": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "security": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "projects": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "reports": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "schedule": {
+      "title": "11111",
+      "description": "11111"
+    }
+  },
+  "knowledgeBase": {
+    "title": "11111",
+    "description": "11111",
+    "cta": "11111"
+  },
+  "onboarding": {
+    "completeTitle": "11111",
+    "incompleteTitle": "11111",
+    "completeDescription": "11111",
+    "incompleteDescription": "11111",
+    "stepLabel": "11111 {{index}} 11111",
+    "badges": {
+      "complete": "11111",
+      "notStarted": "11111",
+      "inProgress": "11111",
+      "blocked": "11111"
+    },
+    "progress": {
+      "label": "11111",
+      "steps": "11111 {{completed}} {{total}} 11111",
+      "messageStart": "11111",
+      "messageComplete": "11111",
+      "messageInProgress": "11111"
+    },
+    "substeps": {
+      "dataImport": "11111",
+      "identity": {
+        "addProvider": "11111",
+        "linkTeamMember": "11111"
+      },
+      "portal": {
+        "customDomain": "11111",
+        "branding": "11111",
+        "inviteFirstContact": "11111"
+      },
+      "createContacts": "11111",
+      "calendar": {
+        "addProvider": "11111",
+        "connectAuthorize": "11111"
+      },
+      "email": {
+        "configureInbound": "11111",
+        "configureOutboundDomain": "11111"
+      }
+    },
+    "cta": {
+      "completed": "11111",
+      "hiding": "11111",
+      "hide": "11111",
+      "dismiss": "11111 {{title}} 11111",
+      "restoring": "11111"
+    },
+    "hidden": {
+      "title": "11111 {{count}} 11111",
+      "subtitle": "11111"
+    },
+    "checklist": {
+      "title": "11111",
+      "progress": "11111 {{completed}} {{total}} 11111",
+      "completeTitle": "11111",
+      "completeDescription": "11111",
+      "inviteCta": "11111",
+      "viewButton": "11111"
+    },
+    "steps": {
+      "identity": {
+        "title": "11111",
+        "description": "11111",
+        "cta": "11111"
+      },
+      "portal": {
+        "title": "11111",
+        "description": "11111",
+        "cta": "11111"
+      },
+      "dataImport": {
+        "title": "11111",
+        "description": "11111",
+        "cta": "11111"
+      },
+      "calendar": {
+        "title": "11111",
+        "description": "11111",
+        "cta": "11111"
+      },
+      "email": {
+        "title": "11111",
+        "description": "11111",
+        "cta": "11111"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "11111",
+        "noLinkedUsers": "11111",
+        "addProviderCredentials": "11111",
+        "configurationUnavailable": "11111",
+        "loadFailed": "11111"
+      },
+      "portal": {
+        "loadFailed": "11111"
+      },
+      "import": {
+        "loadFailed": "11111"
+      },
+      "calendar": {
+        "providerAttention": "11111 {{provider}} 11111",
+        "loadFailed": "11111"
+      },
+      "email": {
+        "enterpriseOnly": "11111",
+        "tenantRequired": "11111",
+        "loadFailed": "11111",
+        "verificationFailed": "11111 {{domain}} 11111"
+      }
+    },
+    "errors": {
+      "dismissFailed": "11111",
+      "restoreFailed": "11111"
+    }
+  }
+}

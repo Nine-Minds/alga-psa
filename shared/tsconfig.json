@@ -15,7 +15,6 @@
     "jsx": "react-jsx",
     "paths": {
       "@shared/*": ["./*"],
-      "@shared/workflow/*": ["./workflow/*"],
       "@shared/lib/*": ["./lib/*"],
       "@alga-psa/shared/*": ["./*"],
       "@enterprise": ["../packages/ee/src"],

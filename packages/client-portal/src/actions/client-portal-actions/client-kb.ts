@@ -7,7 +7,7 @@ import { getConnection, withTransaction } from '@alga-psa/db';
 import type {
   IKBArticleWithDocument,
   ArticleType,
-} from '@alga-psa/documents/actions';
+} from '@alga-psa/types';
 import { getAuthenticatedClientId } from '../../lib/clientAuth';
 
 export interface ClientKBFilters {

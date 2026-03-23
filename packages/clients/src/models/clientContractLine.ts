@@ -1,11 +1,65 @@
 import { createTenantKnex } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClientContractLine, ITransaction } from '@alga-psa/types';
+import { v4 as uuidv4 } from 'uuid';
 
 class ClientContractLine {
+  private static parseClientContractLineIdentity(value: string): { clientContractId?: string; contractLineId: string } {
+    const match = value.match(/^contract-([0-9a-fA-F-]{36})-([0-9a-fA-F-]{36})$/);
+    if (!match) {
+      return { contractLineId: value };
+    }
+    return {
+      clientContractId: match[1],
+      contractLineId: match[2],
+    };
+  }
+
+  private static buildClientContractLineBaseQuery(
+    db: Knex,
+    tenant: string,
+  ): Knex.QueryBuilder {
+    return db('contract_lines as cl')
+      .join('client_contracts as cc', function(this: Knex.JoinClause) {
+        this.on('cc.contract_id', '=', 'cl.contract_id')
+          .andOn('cc.tenant', '=', 'cl.tenant');
+      })
+      .join('contracts as c', function(this: Knex.JoinClause) {
+        this.on('c.contract_id', '=', 'cl.contract_id')
+          .andOn('c.tenant', '=', 'cl.tenant');
+      })
+      .where('cl.tenant', tenant)
+      .where(function(this: Knex.QueryBuilder) {
+        this.whereNull('c.is_template').orWhere('c.is_template', false);
+      });
+  }
+
+  private static contractLineSelectColumns(db: Knex): Array<string | Knex.Raw> {
+    // template_contract_id is exposed only as provenance metadata for callers.
+    // Runtime reads and writes remain anchored on cc.contract_id / cl.contract_line_id.
+    return [
+      db.raw("concat('contract-', cc.client_contract_id, '-', cl.contract_line_id) as client_contract_line_id"),
+      'cc.client_id',
+      'cl.contract_line_id',
+      'cl.service_category',
+      'cc.start_date',
+      'cc.end_date',
+      'cl.is_active',
+      'cl.custom_rate',
+      'cc.client_contract_id',
+      'cc.template_contract_id',
+      'cl.contract_line_name',
+      'cl.billing_frequency',
+      'cl.billing_timing',
+      'cl.cadence_owner',
+      'cl.tenant',
+      db.raw("'contract' as source"),
+    ];
+  }
+
   static async checkOverlappingBilling(
     clientId: string,
-    serviceCategory: string,
+    serviceCategory: string | null,
     startDate: Date,
     endDate: Date | null,
     excludeContractLineId?: string,
@@ -17,48 +71,13 @@ class ClientContractLine {
       throw new Error('Tenant context is required for checking overlapping contract lines');
     }
 
-    const query = db('client_contract_lines')
-      .where({
-        client_id: clientId,
-        service_category: serviceCategory,
-        tenant
-      })
-      .where(function(this: Knex.QueryBuilder) {
-        this.where(function(this: Knex.QueryBuilder) {
-          this.where('start_date', '<=', startDate)
-            .where(function(this: Knex.QueryBuilder) {
-              this.where('end_date', '>=', startDate).orWhereNull('end_date');
-            });
-        }).orWhere(function() {
-          this.where('start_date', '>=', startDate)
-            .where('start_date', '<=', endDate || db.raw('CURRENT_DATE'));
-        });
-      });
-
-    if (excludeContractLineId) {
-      query.whereNot('client_contract_line_id', excludeContractLineId);
-    }
-
-    if (excludeContractId) {
-      query.where(function() {
-        this.whereNot('client_contract_id', excludeContractId)
-          .orWhereNull('client_contract_id');
-      });
-    }
-
-    const directOverlappingPlans = await query;
-
-    const contractAssociationQuery = db('client_contracts as cc')
-      .join('contract_lines as cl', function() {
-        this.on('cc.contract_id', '=', 'cl.contract_id')
-          .andOn('cl.tenant', '=', 'cc.tenant');
-      })
+    const query = this.buildClientContractLineBaseQuery(db, tenant)
       .where({
         'cc.client_id': clientId,
-        'cc.is_active': true,
-        'cc.tenant': tenant,
-        'cl.service_category': serviceCategory
+        'c.owner_client_id': clientId,
       })
+      .where('cc.is_active', true)
+      .where('cl.is_active', true)
       .where(function(this: Knex.QueryBuilder) {
         this.where(function(this: Knex.QueryBuilder) {
           this.where('cc.start_date', '<=', startDate)
@@ -71,36 +90,20 @@ class ClientContractLine {
         });
       });
 
-    if (excludeContractId) {
-      contractAssociationQuery.whereNot('cc.contract_id', excludeContractId);
+    if (serviceCategory) {
+      query.andWhere('cl.service_category', serviceCategory);
     }
 
-    const contractAssociationResults = await contractAssociationQuery
-      .select(
-        'cl.contract_line_id',
-        'cl.contract_line_name',
-        'cl.service_category',
-        'cc.start_date',
-        'cc.end_date',
-        'cc.client_contract_id',
-        'cl.custom_rate'
-      );
+    if (excludeContractLineId) {
+      const identity = this.parseClientContractLineIdentity(excludeContractLineId);
+      query.whereNot('cl.contract_line_id', identity.contractLineId);
+    }
 
-    const formattedContractAssociations = contractAssociationResults.map((plan: any) => ({
-      client_contract_line_id: `contract-${plan.client_contract_id}-${plan.contract_line_id}`,
-      client_id: clientId,
-      contract_line_id: plan.contract_line_id,
-      service_category: plan.service_category,
-      start_date: plan.start_date,
-      end_date: plan.end_date,
-      is_active: true,
-      custom_rate: plan.custom_rate,
-      client_contract_id: plan.client_contract_id,
-      contract_line_name: plan.contract_line_name,
-      tenant
-    }));
+    if (excludeContractId) {
+      query.whereNot('cc.client_contract_id', excludeContractId);
+    }
 
-    return [...directOverlappingPlans, ...formattedContractAssociations];
+    return query.select(this.contractLineSelectColumns(db)) as unknown as IClientContractLine[];
   }
 
   static async create(billingData: Omit<IClientContractLine, 'client_contract_line_id'>, tenantId?: string): Promise<IClientContractLine> {
@@ -110,14 +113,51 @@ class ClientContractLine {
     }
 
     try {
-      const { tenant: _, ...dataToInsert } = billingData;
+      if (!billingData.client_contract_id) {
+        throw new Error('client_contract_id is required');
+      }
 
-      const [createdContractLine] = await db('client_contract_lines')
-        .insert({
-          ...dataToInsert,
-          tenant
-        })
-        .returning('*');
+      const clientContract = await db('client_contracts')
+        .where({ tenant, client_contract_id: billingData.client_contract_id })
+        .first('contract_id');
+      if (!clientContract?.contract_id) {
+        throw new Error('Client contract not found');
+      }
+
+      const templateLine = await db('contract_lines')
+        .where({ tenant, contract_line_id: billingData.contract_line_id })
+        .first();
+      if (!templateLine) {
+        throw new Error(`Template contract line ${billingData.contract_line_id} not found`);
+      }
+
+      const createdContractLineId = uuidv4();
+      await db('contract_lines').insert({
+        contract_line_id: createdContractLineId,
+        tenant,
+        contract_id: clientContract.contract_id,
+        contract_line_name: templateLine.contract_line_name,
+        description: templateLine.description,
+        billing_frequency: templateLine.billing_frequency,
+        contract_line_type: templateLine.contract_line_type,
+        service_category: billingData.service_category ?? templateLine.service_category,
+        custom_rate: billingData.custom_rate ?? templateLine.custom_rate,
+        is_active: billingData.is_active ?? true,
+        is_custom: false,
+        billing_timing: billingData.billing_timing ?? templateLine.billing_timing,
+        cadence_owner: billingData.cadence_owner ?? templateLine.cadence_owner,
+        display_order: templateLine.display_order ?? 0,
+        enable_proration: templateLine.enable_proration ?? false,
+        enable_overtime: templateLine.enable_overtime ?? false,
+        overtime_rate: templateLine.overtime_rate,
+        overtime_threshold: templateLine.overtime_threshold,
+        enable_after_hours_rate: templateLine.enable_after_hours_rate ?? false,
+        after_hours_multiplier: templateLine.after_hours_multiplier,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+
+      const createdContractLine = await this.get(createdContractLineId, tenantId);
 
       if (!createdContractLine) {
         throw new Error('Failed to create contract line - no record returned');
@@ -137,18 +177,31 @@ class ClientContractLine {
     }
 
     try {
-      const { tenant: _, ...dataToUpdate } = billingData;
+      const {
+        client_contract_line_id,
+        client_id,
+        start_date,
+        end_date,
+        client_contract_id,
+        template_contract_id,
+        contract_line_name,
+        billing_frequency,
+        tenant: _tenant,
+        source,
+        ...lineUpdates
+      } = billingData as Partial<IClientContractLine> & { source?: string };
 
-      const [updatedContractLine] = await db('client_contract_lines')
+      await db('contract_lines')
         .where({
-          client_contract_line_id: contractLineId,
+          contract_line_id: contractLineId,
           tenant
         })
         .update({
-          ...dataToUpdate,
-          tenant
-        })
-        .returning('*');
+          ...lineUpdates,
+          updated_at: db.fn.now(),
+        });
+
+      const updatedContractLine = await this.get(contractLineId, tenantId);
 
       if (!updatedContractLine) {
         throw new Error(`Contract Line ${contractLineId} not found or belongs to different tenant`);
@@ -161,75 +214,36 @@ class ClientContractLine {
     }
   }
 
-  static async getByClientId(clientId: string, includeContractPlans: boolean = true, tenantId?: string): Promise<IClientContractLine[]> {
+  static async getByClientId(
+    clientId: string,
+    includeContractPlans: boolean = true,
+    tenantId?: string,
+    clientContractId?: string,
+  ): Promise<IClientContractLine[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error('Tenant context is required for fetching client contract lines');
     }
 
     try {
-      const directPlans = await db('client_contract_lines')
-        .join('contract_lines', function() {
-          this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
-            .andOn('contract_lines.tenant', '=', 'client_contract_lines.tenant');
-        })
-        .where({
-          'client_contract_lines.client_id': clientId,
-          'client_contract_lines.tenant': tenant
-        })
-        .select(
-          'client_contract_lines.*',
-          'contract_lines.contract_line_name',
-          'contract_lines.billing_frequency'
-        );
-
-      if (!includeContractPlans) {
-        return directPlans;
-      }
-
-      const contractPlans = await db('client_contracts as cc')
-        .join('contract_lines as cl', function() {
-          this.on('cc.contract_id', '=', 'cl.contract_id')
-            .andOn('cl.tenant', '=', 'cc.tenant');
-        })
-        .join('contracts as c', function() {
-          this.on('cc.contract_id', '=', 'c.contract_id')
-            .andOn('c.tenant', '=', 'cc.tenant');
-        })
+      const query = this.buildClientContractLineBaseQuery(db, tenant)
         .where({
           'cc.client_id': clientId,
           'cc.is_active': true,
-          'cc.tenant': tenant
+          'c.owner_client_id': clientId,
         })
-        .select(
-          'cl.contract_line_id',
-          'cl.contract_line_name',
-          'cl.billing_frequency',
-          'cl.service_category',
-          'cl.custom_rate',
-          'cc.start_date',
-          'cc.end_date',
-          'cc.client_contract_id',
-          db.raw("'contract' as source")
-        );
+        .select(this.contractLineSelectColumns(db))
+        .orderBy('cc.start_date', 'desc');
 
-      const formattedContractPlans = contractPlans.map((plan: any) => ({
-        client_contract_line_id: `contract-${plan.client_contract_id}-${plan.contract_line_id}`,
-        client_id: clientId,
-        contract_line_id: plan.contract_line_id,
-        service_category: plan.service_category,
-        start_date: plan.start_date,
-        end_date: plan.end_date,
-        is_active: true,
-        custom_rate: plan.custom_rate,
-        client_contract_id: plan.client_contract_id,
-        contract_line_name: plan.contract_line_name,
-        billing_frequency: plan.billing_frequency,
-        tenant,
-        source: plan.source
-      }));
+      if (clientContractId) {
+        query.andWhere('cc.client_contract_id', clientContractId);
+      }
 
-      return [...directPlans, ...formattedContractPlans];
+      if (!includeContractPlans) {
+        query.where('cl.is_active', true);
+      }
+
+      return query as unknown as IClientContractLine[];
     } catch (error) {
       console.error(`Error fetching contract lines for client ${clientId}:`, error);
       throw error;
@@ -242,14 +256,18 @@ class ClientContractLine {
       throw new Error('Tenant context is required for fetching contract line');
     }
 
-    const line = await db('client_contract_lines')
+    const identity = this.parseClientContractLineIdentity(contractLineId);
+    const query = this.buildClientContractLineBaseQuery(db, tenant)
       .where({
-        client_contract_line_id: contractLineId,
-        tenant
+        'cl.contract_line_id': identity.contractLineId,
       })
-      .first();
+      .select(this.contractLineSelectColumns(db));
+    if (identity.clientContractId) {
+      query.andWhere('cc.client_contract_id', identity.clientContractId);
+    }
+    const line = await query.first();
 
-    return line;
+    return line as IClientContractLine | undefined;
   }
 
   static async delete(contractLineId: string, tenantId?: string): Promise<void> {
@@ -258,12 +276,15 @@ class ClientContractLine {
       throw new Error('Tenant context is required for deleting contract line');
     }
 
-    await db('client_contract_lines')
+    await db('contract_lines')
       .where({
-        client_contract_line_id: contractLineId,
+        contract_line_id: contractLineId,
         tenant
       })
-      .del();
+      .update({
+        is_active: false,
+        updated_at: db.fn.now(),
+      });
   }
 
   static async checkExistingTransactions(
@@ -285,4 +306,3 @@ class ClientContractLine {
 }
 
 export default ClientContractLine;
-

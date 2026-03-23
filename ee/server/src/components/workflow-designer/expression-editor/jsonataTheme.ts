@@ -118,9 +118,9 @@ export const darkTheme: monaco.editor.IStandaloneThemeData = {
     { token: 'invalid', foreground: 'f87171', fontStyle: 'underline' },
   ],
   colors: {
-    'editor.background': '#1f2937',
+    'editor.background': '#161c30',
     'editor.foreground': '#d1d5db',
-    'editor.lineHighlightBackground': '#374151',
+    'editor.lineHighlightBackground': '#1e2844',
     'editorCursor.foreground': '#60a5fa',
     'editor.selectionBackground': '#3b82f680',
     'editor.inactiveSelectionBackground': '#4b5563',

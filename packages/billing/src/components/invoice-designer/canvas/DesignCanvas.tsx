@@ -1443,7 +1443,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           className="mx-auto"
           style={{
             width: canvasWidth * canvasScale,
-            height: Math.max(canvasHeight, DESIGNER_CANVAS_HEIGHT) * canvasScale,
+            height: canvasHeight * canvasScale,
           }}
         >
           <div
@@ -1456,7 +1456,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             style={{
               width: canvasWidth,
               height: canvasHeight,
-              minHeight: DESIGNER_CANVAS_HEIGHT,
+              minHeight: canvasHeight,
               transform: `scale(${canvasScale})`,
               transformOrigin: 'top left',
               ...backgroundStyle,

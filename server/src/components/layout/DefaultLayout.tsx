@@ -1,21 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { type NavMode } from "@/config/menuConfig";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ActivityDrawerProvider } from "@alga-psa/workflows/components";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
+import { PlatformNotificationBanner } from './PlatformNotificationBanner';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { MspSchedulingProvider } from '@alga-psa/msp-composition/scheduling';
 import { MspTicketIntegrationProvider, MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects';
 import { MspClientDrawerProvider, MspQuickAddClientProvider, MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients';
 import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets';
+import { MspTicketCrossFeatureProvider } from '@alga-psa/msp-composition/tickets';
+import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents';
+import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -23,6 +29,8 @@ interface DefaultLayoutProps {
 }
 
 export default function DefaultLayout({ children, initialSidebarCollapsed = false }: DefaultLayoutProps) {
+  const { t } = useTranslation('msp/core');
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
@@ -106,10 +114,15 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [quickAskOpen, setQuickAskOpen] = useState(false);
+  const [isChatInterruptible, setIsChatInterruptible] = useState(false);
+  const [pendingInterruptKind, setPendingInterruptKind] = useState<'close-sidebar' | 'navigate' | null>(null);
   const [sidebarHandoff, setSidebarHandoff] = useState<{ chatId: string | null; nonce: number }>({
     chatId: null,
     nonce: 0,
   });
+  const cancelActiveChatWorkRef = useRef<(() => void) | null>(null);
+  const pendingInterruptActionRef = useRef<(() => void) | null>(null);
+  const currentUrlRef = useRef('/');
 
   // Add state for Chat component props
   const [clientUrl, setClientUrl] = useState('');
@@ -120,6 +133,47 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [selectedAccount, setSelectedAccount] = useState('');
   const [auth_token, setAuthToken] = useState('');
   const [isTitleLocked] = useState(false);
+  const currentQueryString = searchParams?.toString() ?? '';
+  const currentRelativeUrl = `${pathname ?? '/'}${currentQueryString ? `?${currentQueryString}` : ''}`;
+
+  useEffect(() => {
+    currentUrlRef.current =
+      typeof window === 'undefined'
+        ? currentRelativeUrl
+        : `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  }, [currentRelativeUrl]);
+
+  const closeInterruptDialog = useCallback(() => {
+    pendingInterruptActionRef.current = null;
+    setPendingInterruptKind(null);
+  }, []);
+
+  const runInterruptGuard = useCallback(
+    (kind: 'close-sidebar' | 'navigate', action: () => void) => {
+      if (!isChatInterruptible) {
+        action();
+        return;
+      }
+
+      pendingInterruptActionRef.current = action;
+      setPendingInterruptKind(kind);
+    },
+    [isChatInterruptible]
+  );
+
+  const requestSidebarClose = useCallback(() => {
+    runInterruptGuard('close-sidebar', () => {
+      setRightSidebarOpen(false);
+    });
+  }, [runInterruptGuard]);
+
+  const confirmInterruptAction = useCallback(async () => {
+    const nextAction = pendingInterruptActionRef.current;
+    pendingInterruptActionRef.current = null;
+    setPendingInterruptKind(null);
+    cancelActiveChatWorkRef.current?.();
+    nextAction?.();
+  }, []);
 
   useEffect(() => {
     const loadAiAssistantEnabled = async () => {
@@ -142,6 +196,15 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   }, [aiAssistantEnabled]);
 
   useEffect(() => {
+    if (rightSidebarOpen) {
+      return;
+    }
+
+    setIsChatInterruptible(false);
+    cancelActiveChatWorkRef.current = null;
+  }, [rightSidebarOpen]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'l') {
         if (!aiAssistantEnabled) {
@@ -149,7 +212,12 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
         }
 
         event.preventDefault();
-        setRightSidebarOpen(prev => !prev);
+        if (rightSidebarOpen) {
+          requestSidebarClose();
+          return;
+        }
+
+        setRightSidebarOpen(true);
       }
 
       if ((event.metaKey || event.ctrlKey) && event.key === 'ArrowUp') {
@@ -206,7 +274,105 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [aiAssistantEnabled, rightSidebarOpen]);
+  }, [aiAssistantEnabled, requestSidebarClose, rightSidebarOpen]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isChatInterruptible) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isChatInterruptible]);
+
+  useEffect(() => {
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!isChatInterruptible || event.defaultPrevented || event.button !== 0) {
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      const anchor = event.target.closest('a[href]') as HTMLAnchorElement | null;
+      if (!anchor) {
+        return;
+      }
+      if ((anchor.target && anchor.target !== '_self') || anchor.hasAttribute('download')) {
+        return;
+      }
+
+      const href = anchor.getAttribute('href');
+      if (
+        !href ||
+        href.startsWith('#') ||
+        href.startsWith('mailto:') ||
+        href.startsWith('tel:') ||
+        href.startsWith('javascript:')
+      ) {
+        return;
+      }
+
+      const nextUrl = new URL(anchor.href, window.location.href);
+      const currentUrl = new URL(window.location.href);
+      if (nextUrl.origin !== currentUrl.origin) {
+        return;
+      }
+
+      const nextRelativeUrl = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+      const currentRelativeUrlWithHash = `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`;
+      if (nextRelativeUrl === currentRelativeUrlWithHash) {
+        return;
+      }
+
+      event.preventDefault();
+      runInterruptGuard('navigate', () => {
+        currentUrlRef.current = nextRelativeUrl;
+        router.push(nextRelativeUrl);
+      });
+    };
+
+    document.addEventListener('click', handleDocumentClick, true);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick, true);
+    };
+  }, [isChatInterruptible, router, runInterruptGuard]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const attemptedUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (!isChatInterruptible) {
+        currentUrlRef.current = attemptedUrl;
+        return;
+      }
+
+      const currentUrl = currentUrlRef.current || attemptedUrl;
+      if (attemptedUrl === currentUrl) {
+        return;
+      }
+
+      window.history.pushState(window.history.state, '', currentUrl);
+      runInterruptGuard('navigate', () => {
+        currentUrlRef.current = attemptedUrl;
+        router.push(attemptedUrl);
+      });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isChatInterruptible, router, runInterruptGuard]);
 
   const handleQuickAskClose = () => {
     setQuickAskOpen(false);
@@ -246,6 +412,9 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       <MspClientDrawerProvider>
       <MspClientCrossFeatureProvider>
       <MspAssetCrossFeatureProvider>
+      <MspTicketCrossFeatureProvider>
+      <MspDocumentsCrossFeatureProvider>
+      <MspSchedulingCrossFeatureProvider>
       <MspQuickAddClientProvider>
         <div className="flex h-screen overflow-hidden bg-gray-100">
           <SidebarWithFeatureFlags
@@ -263,12 +432,14 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               rightSidebarOpen={rightSidebarOpen}
               setRightSidebarOpen={setRightSidebarOpen}
             />
+            <PlatformNotificationBanner />
             <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
               {aiAssistantEnabled ? (
                 <RightSidebar
                   isOpen={rightSidebarOpen}
                   setIsOpen={setRightSidebarOpen}
+                  onRequestClose={requestSidebarClose}
                   clientUrl={clientUrl}
                   accountId={accountId}
                   messages={messages}
@@ -281,6 +452,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                   isTitleLocked={isTitleLocked}
                   handoffChatId={sidebarHandoff.chatId}
                   handoffNonce={sidebarHandoff.nonce}
+                  onInterruptibleStateChange={setIsChatInterruptible}
+                  onRegisterCancelHandler={(cancelHandler) => {
+                    cancelActiveChatWorkRef.current = cancelHandler;
+                  }}
                 />
               ) : null}
             </main>
@@ -304,8 +479,42 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             ) : null}
           </div>
         </div>
+        <ConfirmationDialog
+          isOpen={pendingInterruptKind !== null}
+          onClose={closeInterruptDialog}
+          onConfirm={confirmInterruptAction}
+          title={
+            pendingInterruptKind === 'navigate'
+              ? t('dialogs.aiInterrupt.navigate.title', { defaultValue: 'Leave page and cancel AI response?' })
+              : t('dialogs.aiInterrupt.closeChat.title', { defaultValue: 'Close chat and cancel AI response?' })
+          }
+          message={
+            pendingInterruptKind === 'navigate'
+              ? t('dialogs.aiInterrupt.navigate.message', {
+                  defaultValue:
+                    'An AI response or tool action is still in progress. Leaving this page now will cancel it.',
+                })
+              : t('dialogs.aiInterrupt.closeChat.message', {
+                  defaultValue:
+                    'An AI response or tool action is still in progress. Closing the chat now will cancel it.',
+                })
+          }
+          confirmLabel={
+            pendingInterruptKind === 'navigate'
+              ? t('dialogs.aiInterrupt.navigate.confirm', { defaultValue: 'Leave page' })
+              : t('dialogs.aiInterrupt.closeChat.confirm', { defaultValue: 'Close chat' })
+          }
+          cancelLabel={
+            pendingInterruptKind === 'navigate'
+              ? t('dialogs.aiInterrupt.navigate.cancel', { defaultValue: 'Stay on page' })
+              : t('dialogs.aiInterrupt.closeChat.cancel', { defaultValue: 'Keep chat open' })
+          }
+        />
         <DrawerOutlet />
       </MspQuickAddClientProvider>
+      </MspSchedulingCrossFeatureProvider>
+      </MspDocumentsCrossFeatureProvider>
+      </MspTicketCrossFeatureProvider>
       </MspAssetCrossFeatureProvider>
       </MspClientCrossFeatureProvider>
       </MspClientDrawerProvider>

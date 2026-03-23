@@ -12,6 +12,48 @@ import {
 } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 
+async function assertContractLineIsAuthorableByLineId(
+  knex: any,
+  tenant: string,
+  contractLineId: string,
+): Promise<void> {
+  const row = await knex('contract_lines as cl')
+    .join('contracts as c', function joinContracts(this: any) {
+      this.on('cl.contract_id', '=', 'c.contract_id')
+        .andOn('cl.tenant', '=', 'c.tenant');
+    })
+    .where('cl.tenant', tenant)
+    .andWhere('cl.contract_line_id', contractLineId)
+    .first('c.is_system_managed_default');
+
+  if (row?.is_system_managed_default === true) {
+    throw new Error('System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.');
+  }
+}
+
+async function assertContractLineIsAuthorableByConfigId(
+  knex: any,
+  tenant: string,
+  configId: string,
+): Promise<void> {
+  const row = await knex('contract_line_service_configuration as cfg')
+    .join('contract_lines as cl', function joinLines(this: any) {
+      this.on('cfg.contract_line_id', '=', 'cl.contract_line_id')
+        .andOn('cfg.tenant', '=', 'cl.tenant');
+    })
+    .join('contracts as c', function joinContracts(this: any) {
+      this.on('cl.contract_id', '=', 'c.contract_id')
+        .andOn('cl.tenant', '=', 'c.tenant');
+    })
+    .where('cfg.tenant', tenant)
+    .andWhere('cfg.config_id', configId)
+    .first('c.is_system_managed_default');
+
+  if (row?.is_system_managed_default === true) {
+    throw new Error('System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.');
+  }
+}
+
 export const getConfigurationWithDetails = withAuth(async (
   user,
   { tenant },
@@ -64,6 +106,7 @@ export const createConfiguration = withAuth(async (
   if (!tenant) {
     throw new Error('tenant context not found');
   }
+  await assertContractLineIsAuthorableByLineId(knex, tenant, baseConfig.contract_line_id);
   const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.createConfiguration(baseConfig, typeConfig, rateTiers as any, userTypeRates);
 });
@@ -80,6 +123,7 @@ export const updateConfiguration = withAuth(async (
   if (!tenant) {
     throw new Error('tenant context not found');
   }
+  await assertContractLineIsAuthorableByConfigId(knex, tenant, configId);
   const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.updateConfiguration(configId, baseConfig, typeConfig, rateTiers as any);
 });
@@ -93,6 +137,7 @@ export const deleteConfiguration = withAuth(async (
   if (!tenant) {
     throw new Error('tenant context not found');
   }
+  await assertContractLineIsAuthorableByConfigId(knex, tenant, configId);
   const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.deleteConfiguration(configId);
 });
@@ -108,6 +153,7 @@ export const upsertPlanServiceHourlyConfiguration = withAuth(async (
   if (!tenant) {
     throw new Error('tenant context not found');
   }
+  await assertContractLineIsAuthorableByLineId(knex, tenant, contractLineId);
   const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.upsertPlanServiceHourlyConfiguration(contractLineId, serviceId, hourlyConfigData);
 });
@@ -123,6 +169,7 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
   if (!tenant) {
     throw new Error('tenant context not found');
   }
+  await assertContractLineIsAuthorableByLineId(knex, tenant, contractLineId);
   const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.upsertPlanServiceBucketConfiguration(contractLineId, serviceId, bucketConfigData);
 });
@@ -146,6 +193,7 @@ export const upsertPlanServiceConfiguration = withAuth(async (
   if (!tenant) {
     throw new Error('tenant context not found');
   }
+  await assertContractLineIsAuthorableByLineId(knex, tenant, payload.contractLineId);
   const service = new ContractLineServiceConfigurationService(knex, tenant);
   const existing = await service.getConfigurationForService(payload.contractLineId, payload.serviceId);
 
@@ -192,6 +240,7 @@ export const upsertUserTypeRatesForConfig = withAuth(async (
   if (!tenant) {
     throw new Error('tenant context not found');
   }
+  await assertContractLineIsAuthorableByConfigId(knex, tenant, configId);
   const service = new ContractLineServiceConfigurationService(knex, tenant);
   return service.upsertUserTypeRates(configId, rates);
 });

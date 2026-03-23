@@ -14,11 +14,13 @@ export * from './lib/temporal';
 export * from './lib/interval-tracking';
 export * from './lib/invoice-renderer/types';
 export * from './lib/invoice-template-ast';
+export * from './lib/invoice-print-settings';
 export * from './lib/xeroCsvTaxImport';
 export * from './lib/companySync';
 export * from './lib/telemetry';
 export * from './lib/tenancy';
 export * from './lib/onboardingWizard';
+export * from './lib/knowledgeBase';
 export * from './deletion';
 export * from './constants';
 

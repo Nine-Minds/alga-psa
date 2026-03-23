@@ -3,7 +3,7 @@
 import React from 'react';
 
 import { MappingPanel, type ActionInputField, type WorkflowDataContext } from './mapping';
-import type { InputMapping } from '@shared/workflow/runtime/client';
+import type { InputMapping } from '@alga-psa/workflows/runtime';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 
 export const WorkflowActionInputSection: React.FC<{

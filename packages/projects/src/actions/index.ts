@@ -7,6 +7,7 @@
 export * from './projectActions';
 export * from './projectTaskActions';
 export * from './projectTaskCommentActions';
+export * from './projectTaskCommentReactionActions';
 export * from './projectTemplateActions';
 export * from './projectTemplateWizardActions';
 export * from './regenerateOrderKeys';

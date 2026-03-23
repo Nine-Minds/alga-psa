@@ -14,6 +14,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
+import type { IAggregatedReaction } from '@alga-psa/types';
 import { getCommentResponseSource } from '../../lib/responseSource';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
@@ -37,6 +39,9 @@ interface CommentItemProps {
   onDelete: (comment: IComment) => void;
   hideInternalTab?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
+  reactions?: IAggregatedReaction[];
+  onToggleReaction?: (commentId: string, emoji: string) => void;
+  userNames?: Record<string, string>;
 }
 
 function getInboundSenderIdentity(
@@ -108,7 +113,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onEdit,
   onDelete,
   hideInternalTab = false,
-  uploadFile
+  uploadFile,
+  reactions,
+  onToggleReaction,
+  userNames,
 }) => {
   const { t } = useTranslation('features/tickets');
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
@@ -185,7 +193,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
     if (!currentComment || !isEditing) return null;
 
     return (
-      <div>
+      <div className="min-w-0 max-w-full">
         {/* Toggle switches above the editor - same pattern as TicketConversation */}
         <div className="flex items-center space-x-4 mt-2 mb-4">
           {!hideInternalTab && (
@@ -220,7 +228,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           uploadFile={uploadFile}
         />
 
-        <div className="flex justify-end space-x-2 mt-1">
+        <div className="flex justify-end space-x-2 mt-1 min-w-0 max-w-full">
           <Button
             id={`${commentId}-save-btn`}
             onClick={handleSave}
@@ -270,8 +278,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
 
   return (
-    <div {...withDataAutomationId({ id: commentId })} className="rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]">
-      <div className="flex items-start mb-1">
+    <div {...withDataAutomationId({ id: commentId })} className="group/comment w-full max-w-full min-w-0 rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]">
+      <div className="flex items-start mb-1 min-w-0 max-w-full">
         <div className="mr-2">
           {/* Conditionally render UserAvatar or ContactAvatar */}
           {conversation.is_system_generated || resolvedAuthor.source === 'unknown' ? (
@@ -308,11 +316,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
             />
           )}
         </div>
-        <div className="flex-grow">
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="flex items-center gap-2">
-                <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))]">
+        <div className="flex-grow min-w-0 max-w-full">
+          <div className="flex justify-between items-start gap-2 min-w-0 max-w-full">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] break-words min-w-0">
                   {getAuthorName()}
                 </p>
                 {conversation.is_internal && (
@@ -339,13 +347,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   />
                 )}
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 {authorEmail && (
                   <p
                     {...withDataAutomationId({ id: `${commentId}-author-email` })}
-                    className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))]"
+                    className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))] break-words min-w-0"
                   >
-                    <a href={`mailto:${authorEmail}`} className="hover:text-indigo-600">
+                    <a href={`mailto:${authorEmail}`} className="hover:text-indigo-600 break-words">
                       {authorEmail}
                     </a>
                   </p>
@@ -385,9 +393,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
               </div>
             )}
           </div>
-          {isEditing && currentComment?.comment_id === conversation.comment_id ? (
-            editorContent
-          ) : (
+            {isEditing && currentComment?.comment_id === conversation.comment_id ? (
+              editorContent
+            ) : (
             (() => {
               const noteContent = conversation.note || '';
               const parsed = parseCommentNoteContent(noteContent, conversation.comment_id, 'display');
@@ -399,13 +407,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 blocks: Array.isArray(parsed) ? (parsed as PartialBlock[]).length : undefined,
               });
               return (
-                <div {...withDataAutomationId({ id: `${commentId}-content` })} className="prose max-w-none mt-1">
+                <div
+                  {...withDataAutomationId({ id: `${commentId}-content` })}
+                  className="prose max-w-none mt-1 w-full min-w-0 overflow-hidden break-words"
+                  style={{ overflowWrap: 'anywhere' }}
+                >
                   <RichTextViewer 
                     key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
-                    content={parsed as any} />
+                    content={parsed as any}
+                    className="w-full min-w-0 max-w-full"
+                  />
                 </div>
               );
             })()
+          )}
+          {reactions && onToggleReaction && (
+            <ReactionDisplay
+              id={`${commentId}-reactions`}
+              reactions={reactions}
+              onToggle={(emoji) => onToggleReaction(conversation.comment_id!, emoji)}
+              onAdd={(emoji) => onToggleReaction(conversation.comment_id!, emoji)}
+              userNames={userNames}
+            />
           )}
         </div>
       </div>

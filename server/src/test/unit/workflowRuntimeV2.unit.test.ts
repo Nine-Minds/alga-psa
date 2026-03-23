@@ -3,15 +3,15 @@ import { z } from 'zod';
 import {
   compileExpression,
   validateExpressionSource
-} from '@shared/workflow/runtime/expressionEngine';
-import { resolveExpressions } from '@shared/workflow/runtime/utils/expressionResolver';
-import { applyAssignments } from '@shared/workflow/runtime/utils/assignmentUtils';
-import { applyRedactions, enforceSnapshotSize } from '@shared/workflow/runtime/utils/redactionUtils';
-import { computeBackoffMs } from '@shared/workflow/runtime/utils/retryUtils';
-import { buildStepsPath, parseNodePath } from '@shared/workflow/runtime/utils/nodePathUtils';
-import { validateWorkflowDefinition } from '@shared/workflow/runtime/validation/publishValidation';
-import { getSchemaRegistry, getNodeTypeRegistry } from '@shared/workflow/runtime';
-import { generateIdempotencyKey } from '@shared/workflow/runtime/utils/idempotencyUtils';
+} from '@alga-psa/workflows/runtime/expressionEngine';
+import { resolveExpressions } from '@alga-psa/workflows/runtime/utils/expressionResolver';
+import { applyAssignments } from '@alga-psa/workflows/runtime/utils/assignmentUtils';
+import { applyRedactions, enforceSnapshotSize } from '@alga-psa/workflows/runtime/utils/redactionUtils';
+import { computeBackoffMs } from '@alga-psa/workflows/runtime/utils/retryUtils';
+import { buildStepsPath, parseNodePath } from '@alga-psa/workflows/runtime/utils/nodePathUtils';
+import { validateWorkflowDefinition } from '@alga-psa/workflows/runtime/validation/publishValidation';
+import { getSchemaRegistry, getNodeTypeRegistry } from '@alga-psa/workflows/runtime';
+import { generateIdempotencyKey } from '@alga-psa/workflows/runtime/utils/idempotencyUtils';
 import { ensureWorkflowRuntimeV2TestRegistrations, TEST_SCHEMA_REF } from '../helpers/workflowRuntimeV2TestHelpers';
 
 const baseEnv = {
@@ -281,6 +281,120 @@ describe('workflow runtime v2 unit tests', () => {
         })
       ])
     );
+  });
+
+  it('T027: AI publish validation rejects missing inline output schema config. Mocks: non-target dependencies.', () => {
+    const definition = {
+      id: 'wf',
+      version: 1,
+      name: 'AI Validation Missing Schema',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        {
+          id: 'ai-step',
+          type: 'action.call',
+          config: {
+            actionId: 'ai.infer',
+            version: 1,
+            inputMapping: {
+              prompt: 'Classify this ticket',
+            },
+          }
+        }
+      ]
+    } as any;
+
+    const result = validateWorkflowDefinition(definition);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          stepId: 'ai-step',
+          code: 'INVALID_AI_OUTPUT_SCHEMA',
+        })
+      ])
+    );
+  });
+
+  it('T028: AI publish validation rejects unsupported advanced schema constructs. Mocks: non-target dependencies.', () => {
+    const definition = {
+      id: 'wf',
+      version: 1,
+      name: 'AI Validation Unsupported Schema',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        {
+          id: 'ai-step',
+          type: 'action.call',
+          config: {
+            actionId: 'ai.infer',
+            version: 1,
+            inputMapping: {
+              prompt: 'Classify this ticket',
+            },
+            aiOutputSchemaMode: 'advanced',
+            aiOutputSchemaText: JSON.stringify({
+              type: 'object',
+              properties: {
+                result: {
+                  anyOf: [{ type: 'string' }, { type: 'number' }],
+                },
+              },
+            }),
+          }
+        }
+      ]
+    } as any;
+
+    const result = validateWorkflowDefinition(definition);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          stepId: 'ai-step',
+          code: 'INVALID_AI_OUTPUT_SCHEMA',
+          message: expect.stringContaining('anyOf'),
+        })
+      ])
+    );
+  });
+
+  it('T029: AI publish validation accepts valid inline schemas. Mocks: non-target dependencies.', () => {
+    const definition = {
+      id: 'wf',
+      version: 1,
+      name: 'AI Validation Valid Schema',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        {
+          id: 'ai-step',
+          type: 'action.call',
+          config: {
+            actionId: 'ai.infer',
+            version: 1,
+            inputMapping: {
+              prompt: 'Classify this ticket',
+            },
+            aiOutputSchemaMode: 'simple',
+            aiOutputSchema: {
+              type: 'object',
+              properties: {
+                category: { type: 'string' },
+              },
+              required: ['category'],
+              additionalProperties: false,
+            },
+          }
+        }
+      ]
+    } as any;
+
+    const result = validateWorkflowDefinition(definition);
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
   });
 
   it('Idempotency key normalization is stable for identical inputs. Mocks: non-target dependencies.', () => {

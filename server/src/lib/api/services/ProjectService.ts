@@ -9,6 +9,7 @@ import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/
 import { 
   IProject, 
   IProjectPhase, 
+  IProjectStatusMapping,
   IProjectTask, 
   ITaskChecklistItem,
   IProjectTicketLink,
@@ -35,13 +36,13 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
+} from '@alga-psa/workflow-streams';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCompletedPayload,
   buildProjectTaskCreatedPayload,
   buildProjectTaskStatusChangedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
+} from '@alga-psa/workflow-streams';
 
 async function resolveUserName(
   trx: Knex.Transaction,
@@ -1216,6 +1217,34 @@ export class ProjectService extends BaseService<IProject> {
   async getProjectTasks(projectId: string, context: ServiceContext): Promise<any[]> {
     // Use existing getTasks method
     return this.getTasks(projectId, context);
+  }
+
+  async getProjectTaskStatusMappings(
+    projectId: string,
+    context: ServiceContext,
+  ): Promise<IProjectStatusMapping[]> {
+    const { knex } = await this.getKnex();
+
+    const project = await this.getById(projectId, context);
+    if (!project) {
+      throw new NotFoundError('Project not found');
+    }
+
+    return knex('project_status_mappings as psm')
+      .where({ 'psm.project_id': projectId, 'psm.tenant': context.tenant })
+      .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+        this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+      })
+      .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
+        this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+      })
+      .select(
+        'psm.*',
+        knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+        knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
+        knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
+      )
+      .orderBy('psm.display_order');
   }
 
   async getProjectTickets(projectId: string, pagination: any, context: ServiceContext): Promise<{data: any[], total: number}> {

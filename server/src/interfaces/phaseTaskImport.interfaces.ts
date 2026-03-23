@@ -134,6 +134,7 @@ export interface IPhaseTaskValidationResponse {
   priorityLookup: Record<string, string>;  // name -> priority_id
   serviceLookup: Record<string, string>;   // name -> service_id
   statusLookup: Record<string, string>;    // name -> project_status_mapping_id
+  statusLookupByPhase?: Record<string, Record<string, string>>;
   unmatchedStatuses: string[];             // List of status names that don't match
   unmatchedAgents: string[];               // List of agent names that don't match
 }
@@ -148,12 +149,13 @@ export interface IImportReferenceData {
   users: Array<{ user_id: string; first_name: string; last_name: string }>;
   priorities: Array<{ priority_id: string; priority_name: string }>;
   services: Array<{ service_id: string; service_name: string }>;
-  statusMappings: Array<{ project_status_mapping_id: string; status_name: string; name: string; custom_name?: string; is_closed?: boolean }>;
+  statusMappings: Array<{ project_status_mapping_id: string; phase_id?: string; status_name: string; name: string; custom_name?: string; is_closed?: boolean }>;
   // Lookup maps for validation (case-insensitive name -> id)
   userLookup: Record<string, string>;
   priorityLookup: Record<string, string>;
   serviceLookup: Record<string, string>;
   statusLookup: Record<string, string>;
+  statusLookupByPhase?: Record<string, Record<string, string>>;
 }
 
 /**

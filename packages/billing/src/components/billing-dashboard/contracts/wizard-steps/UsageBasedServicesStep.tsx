@@ -147,7 +147,6 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                   value={service.service_id}
                   selectedLabel={service.service_name}
                   onSelect={(item) => handleServiceChange(index, item)}
-                  billingMethods={['usage']}
                   itemKinds={['service']}
                   placeholder="Select a service"
                 />

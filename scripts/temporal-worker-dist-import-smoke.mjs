@@ -36,11 +36,35 @@ function ensureEventSchemasDistBuilt() {
   run('npm', ['--prefix', 'packages/event-schemas', 'run', 'build']);
 }
 
+function buildWorkspaceIfScriptExists(relPath) {
+  const pkgPath = path.join(REPO_ROOT, relPath, 'package.json');
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  if (!pkg.scripts?.build) {
+    return;
+  }
+
+  console.log(`Building ${relPath} for dist import smoke test...`);
+  run('npm', ['--prefix', relPath, 'run', 'build']);
+}
+
 async function importModule(absPath) {
   await import(pathToFileURL(absPath).href);
 }
 
 async function main() {
+  for (const relPath of [
+    'packages/core',
+    'packages/types',
+    'packages/event-bus',
+    'packages/validation',
+    'packages/db',
+  ]) {
+    buildWorkspaceIfScriptExists(relPath);
+  }
+  console.log('Building shared for dist import smoke test...');
+  run('npm', ['--prefix', 'shared', 'run', 'build']);
+  console.log('Building ee/packages/workflows for dist import smoke test...');
+  run('npm', ['--prefix', 'ee/packages/workflows', 'run', 'build']);
   console.log('Building ee/temporal-workflows for dist import smoke test...');
   run('npm', ['--prefix', 'ee/temporal-workflows', 'run', 'build']);
   ensureEventSchemasDistBuilt();

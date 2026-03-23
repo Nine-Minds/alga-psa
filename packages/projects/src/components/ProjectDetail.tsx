@@ -10,7 +10,8 @@ import { useDrawer } from "@alga-psa/ui";
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
-import { getDocumentCountsForEntities } from '@alga-psa/documents/actions/documentActions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
+import { getTaskCommentCountsBatch } from '../actions/projectTaskCommentActions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
@@ -156,6 +157,7 @@ export default function ProjectDetail({
   onUrlUpdate
 }: ProjectDetailProps) {
   useTagPermissions(['project', 'project_task']);
+  const { getDocumentCountsForEntities } = useDocumentsCrossFeature();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
@@ -197,6 +199,7 @@ export default function ProjectDetail({
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
+  const [statusVersion, setStatusVersion] = useState(0);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<ProjectStatus | null>(null);
@@ -250,7 +253,7 @@ export default function ProjectDetail({
   const { tags: allTags } = useTags();
   const hasNotifiedParent = useRef(false);
   const hasOpenedInitialTask = useRef(false);
-  
+
   // Auto-select phase based on URL param or default to first phase
   useEffect(() => {
     // Don't auto-select if we have an initialTaskId - that case is handled separately
@@ -283,6 +286,31 @@ export default function ProjectDetail({
       }
     }
   }, [projectPhases, initialTaskId, initialPhaseId]); // Intentionally exclude selectedPhase to avoid re-triggering
+
+  useEffect(() => {
+    let stale = false;
+
+    const fetchStatusesForPhase = async () => {
+      if (!selectedPhase) {
+        setProjectStatuses(initialStatuses);
+        return;
+      }
+
+      try {
+        const statuses = await getProjectTaskStatuses(project.project_id, selectedPhase.phase_id);
+        if (!stale) {
+          setProjectStatuses(statuses);
+        }
+      } catch (error) {
+        if (!stale) {
+          console.error('Error fetching phase-effective statuses:', error);
+        }
+      }
+    };
+
+    fetchStatusesForPhase();
+    return () => { stale = true; };
+  }, [initialStatuses, project.project_id, selectedPhase?.phase_id, statusVersion]);
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -342,6 +370,7 @@ export default function ProjectDetail({
   const [taskTags, setTaskTags] = useState<Record<string, ITag[]>>({});
   const [allTaskTags, setAllTaskTags] = useState<ITag[]>([]);
   const [taskDocumentCounts, setTaskDocumentCounts] = useState<Map<string, number>>(new Map());
+  const [taskCommentCounts, setTaskCommentCounts] = useState<Record<string, number>>({});
 
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
@@ -424,11 +453,16 @@ export default function ProjectDetail({
     return tasks;
   }, [projectTasks, selectedPhase, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
 
+  const phaseStatusLookup = useMemo(
+    () => new Map(projectStatuses.map((status) => [status.project_status_mapping_id, status])),
+    [projectStatuses]
+  );
+
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
-      projectStatuses.find(status => status.project_status_mapping_id === task.project_status_mapping_id)?.is_closed === true
+      phaseStatusLookup.get(task.project_status_mapping_id)?.is_closed === true
     ).length;
-  }, [filteredTasks, projectStatuses]);
+  }, [filteredTasks, phaseStatusLookup]);
 
   // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
   useEffect(() => {
@@ -541,16 +575,36 @@ export default function ProjectDetail({
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
   const kanbanHeaderRef = useRef<HTMLDivElement>(null);
-  const scrollbarProxyRef = useRef<HTMLDivElement>(null);
+  const scrollbarTrackRef = useRef<HTMLDivElement>(null);
+  const scrollbarThumbRef = useRef<HTMLDivElement>(null);
+  const dragAbortRef = useRef<AbortController | null>(null);
   const stickyStatusStripRef = useRef<HTMLDivElement>(null);
-  const [boardScrollWidth, setBoardScrollWidth] = useState(0);
   const [kanbanHeaderHeight, setKanbanHeaderHeight] = useState(0);
+  const [phasesPanelHeight, setPhasesPanelHeight] = useState<number | null>(null);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedsRef = useRef<{ horizontal: number; vertical: number; column: HTMLElement | null }>({
     horizontal: 0,
     vertical: 0,
     column: null
   });
+  const phasesContainerRef = useRef<HTMLDivElement>(null);
+  const pageContainerRef = useRef<HTMLDivElement>(null);
+
+  // Dynamically set min-height on pageContainer so it fills exactly the remaining
+  // viewport, eliminating the dead-zone scroll caused by a static min-height: 100vh.
+  useEffect(() => {
+    const el = pageContainerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      el.style.minHeight = `calc(100dvh - ${top}px)`;
+    };
+
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -560,18 +614,46 @@ export default function ProjectDetail({
     };
   }, []);
 
+  useEffect(() => {
+    if (viewMode !== 'kanban') return;
+
+    const updatePhasesPanelHeight = () => {
+      const el = phasesContainerRef.current;
+      if (!el) return;
+
+      const rect = el.getBoundingClientRect();
+      const bottomGap = 4; // Keep panel nearly flush with viewport bottom.
+      const nextHeight = Math.max(260, Math.floor(window.innerHeight - rect.top - bottomGap));
+      setPhasesPanelHeight(nextHeight);
+    };
+
+    updatePhasesPanelHeight();
+    window.addEventListener('resize', updatePhasesPanelHeight);
+    window.addEventListener('scroll', updatePhasesPanelHeight, { passive: true });
+
+    return () => {
+      window.removeEventListener('resize', updatePhasesPanelHeight);
+      window.removeEventListener('scroll', updatePhasesPanelHeight);
+    };
+  }, [viewMode, isPhasesPanelVisible]);
+
   const kanbanColumnWidth = useMemo(() => calculateColumnWidth(kanbanZoomLevel), [kanbanZoomLevel]);
   const visibleKanbanStatuses = useMemo(
-    () => projectStatuses.filter((status) => status.is_visible),
+    () => projectStatuses
+      .filter((status) => status.is_visible)
+      .sort((a, b) => a.display_order - b.display_order),
     [projectStatuses]
   );
   const statusTaskCounts = useMemo(() => {
     return filteredTasks.reduce<Record<string, number>>((counts, task) => {
       const statusId = task.project_status_mapping_id;
+      if (!phaseStatusLookup.has(statusId)) {
+        return counts;
+      }
       counts[statusId] = (counts[statusId] ?? 0) + 1;
       return counts;
     }, {});
-  }, [filteredTasks]);
+  }, [filteredTasks, phaseStatusLookup]);
 
   const getStatusStripStyles = useCallback((status: ProjectStatus, index: number) => {
     if (status.color) {
@@ -642,63 +724,224 @@ export default function ProjectDetail({
     };
   }, [isDark]);
 
-  // Proxy scrollbar and sticky status strip: keep horizontal scroll positions in sync.
+  const getKanbanScrollbarGeometry = useCallback(() => {
+    const container = kanbanBoardRef.current;
+    const track = scrollbarTrackRef.current;
+    if (!container || !track) return null;
+
+    const scrollWidth = Math.max(container.scrollWidth, container.clientWidth);
+    const scrollRange = Math.max(0, scrollWidth - container.clientWidth);
+    const trackWidth = track.clientWidth;
+    if (trackWidth <= 0) return null;
+
+    if (scrollRange === 0) {
+      return {
+        container,
+        scrollRange,
+        thumbWidth: trackWidth,
+        maxThumbOffset: 0,
+        trackWidth
+      };
+    }
+
+    const proportionalThumbWidth = (container.clientWidth / scrollWidth) * trackWidth;
+    const thumbWidth = Math.min(trackWidth, Math.max(proportionalThumbWidth, 48));
+    return {
+      container,
+      scrollRange,
+      thumbWidth,
+      maxThumbOffset: Math.max(0, trackWidth - thumbWidth),
+      trackWidth
+    };
+  }, []);
+
+  const updateKanbanScrollbarThumb = useCallback(() => {
+    const thumb = scrollbarThumbRef.current;
+    const geometry = getKanbanScrollbarGeometry();
+    if (!thumb || !geometry) return;
+
+    if (geometry.scrollRange === 0 || geometry.maxThumbOffset === 0) {
+      thumb.style.width = '100%';
+      thumb.style.transform = 'translateX(0)';
+      thumb.classList.add(styles.kanbanScrollbarThumbStatic);
+      thumb.setAttribute('aria-valuenow', '0');
+      return;
+    }
+
+    const thumbOffset = (geometry.container.scrollLeft / geometry.scrollRange) * geometry.maxThumbOffset;
+    thumb.style.width = `${(geometry.thumbWidth / geometry.trackWidth) * 100}%`;
+    thumb.style.transform = `translateX(${thumbOffset}px)`;
+    thumb.classList.remove(styles.kanbanScrollbarThumbStatic);
+    thumb.setAttribute('aria-valuenow', String(Math.round((geometry.container.scrollLeft / geometry.scrollRange) * 100)));
+  }, [getKanbanScrollbarGeometry]);
+
+  const setKanbanScrollFromThumbOffset = useCallback((nextThumbOffset: number) => {
+    const geometry = getKanbanScrollbarGeometry();
+    if (!geometry) return;
+
+    if (geometry.scrollRange === 0 || geometry.maxThumbOffset === 0) {
+      geometry.container.scrollLeft = 0;
+      return;
+    }
+
+    const clampedThumbOffset = Math.min(Math.max(nextThumbOffset, 0), geometry.maxThumbOffset);
+    geometry.container.scrollLeft = (clampedThumbOffset / geometry.maxThumbOffset) * geometry.scrollRange;
+  }, [getKanbanScrollbarGeometry]);
+
+  const handleKanbanScrollbarTrackPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).dataset.kanbanScrollbarThumb === 'true') {
+      return;
+    }
+
+    const track = scrollbarTrackRef.current;
+    const geometry = getKanbanScrollbarGeometry();
+    if (!track || !geometry) return;
+
+    const rect = track.getBoundingClientRect();
+    const clickOffset = event.clientX - rect.left;
+    const targetThumbOffset = clickOffset - geometry.thumbWidth / 2;
+    setKanbanScrollFromThumbOffset(targetThumbOffset);
+  }, [getKanbanScrollbarGeometry, setKanbanScrollFromThumbOffset]);
+
+  const handleKanbanScrollbarThumbPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const geometry = getKanbanScrollbarGeometry();
+    if (!geometry || geometry.scrollRange === 0 || geometry.maxThumbOffset === 0) return;
+
+    // Abort any prior drag session still lingering
+    dragAbortRef.current?.abort();
+    const controller = new AbortController();
+    dragAbortRef.current = controller;
+    const { signal } = controller;
+
+    const startClientX = event.clientX;
+    const startScrollLeft = geometry.container.scrollLeft;
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const deltaX = moveEvent.clientX - startClientX;
+      const scrollDelta = (deltaX / geometry.maxThumbOffset) * geometry.scrollRange;
+      geometry.container.scrollLeft = startScrollLeft + scrollDelta;
+    };
+
+    const cleanUp = () => {
+      dragAbortRef.current = null;
+      controller.abort();
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, { signal });
+    window.addEventListener('pointerup', cleanUp, { signal });
+    window.addEventListener('pointercancel', cleanUp, { signal });
+  }, [getKanbanScrollbarGeometry]);
+
+  const SCROLL_STEP = 60;
+
+  const handleKanbanScrollbarKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const container = kanbanBoardRef.current;
+    if (!container) return;
+
+    let handled = true;
+    switch (event.key) {
+      case 'ArrowLeft':
+        container.scrollLeft -= SCROLL_STEP;
+        break;
+      case 'ArrowRight':
+        container.scrollLeft += SCROLL_STEP;
+        break;
+      case 'Home':
+        container.scrollLeft = 0;
+        break;
+      case 'End':
+        container.scrollLeft = container.scrollWidth;
+        break;
+      default:
+        handled = false;
+    }
+
+    if (handled) {
+      event.preventDefault();
+    }
+  }, []);
+
+  // Scrollbar metrics and sticky status strip: keep horizontal scroll positions in sync.
   useEffect(() => {
     const container = kanbanBoardRef.current;
-    const proxy = scrollbarProxyRef.current;
     const stickyStrip = stickyStatusStripRef.current;
-    if (!container || !proxy) return;
+    if (!container) return;
 
     let isSyncing = false;
+    let observedBoard: HTMLElement | null = null;
 
-    const syncScrollPositions = (source: 'container' | 'proxy' | 'sticky') => {
+    const ro = new ResizeObserver(() => {
+      updateKanbanScrollbarThumb();
+    });
+
+    const observeBoard = () => {
+      const board = container.querySelector('[data-kanban-board="true"]') as HTMLElement | null;
+      if (board === observedBoard) return;
+
+      if (observedBoard) {
+        ro.unobserve(observedBoard);
+      }
+      observedBoard = board;
+      if (observedBoard) {
+        ro.observe(observedBoard);
+      }
+    };
+
+    const syncScrollPositions = (source: 'container' | 'sticky') => {
       if (isSyncing) return;
       isSyncing = true;
       const nextLeft = source === 'container'
         ? container.scrollLeft
-        : source === 'proxy'
-          ? proxy.scrollLeft
-          : (stickyStrip?.scrollLeft ?? 0);
+        : (stickyStrip?.scrollLeft ?? 0);
 
       if (source !== 'container') container.scrollLeft = nextLeft;
-      if (source !== 'proxy') proxy.scrollLeft = nextLeft;
       if (stickyStrip && source !== 'sticky') stickyStrip.scrollLeft = nextLeft;
+      updateKanbanScrollbarThumb();
       isSyncing = false;
     };
 
     const onContainerScroll = () => syncScrollPositions('container');
-    const onProxyScroll = () => syncScrollPositions('proxy');
     const onStickyStripScroll = () => syncScrollPositions('sticky');
 
     container.addEventListener('scroll', onContainerScroll);
-    proxy.addEventListener('scroll', onProxyScroll);
     if (stickyStrip) {
       stickyStrip.addEventListener('scroll', onStickyStripScroll);
     }
+    ro.observe(container);
+    observeBoard();
     syncScrollPositions('container');
 
-    // Track the board's scroll width with ResizeObserver
-    const updateWidth = () => {
-      setBoardScrollWidth(container.scrollWidth);
-    };
-    updateWidth();
-
-    const ro = new ResizeObserver(updateWidth);
-    ro.observe(container);
-    // Also observe the first child (the kanban board) if it exists
-    if (container.firstElementChild) {
-      ro.observe(container.firstElementChild);
-    }
+    let nestedRafId: number | null = null;
+    const rafId = window.requestAnimationFrame(() => {
+      observeBoard();
+      updateKanbanScrollbarThumb();
+      nestedRafId = window.requestAnimationFrame(() => {
+        observeBoard();
+        updateKanbanScrollbarThumb();
+      });
+    });
 
     return () => {
       container.removeEventListener('scroll', onContainerScroll);
-      proxy.removeEventListener('scroll', onProxyScroll);
       if (stickyStrip) {
         stickyStrip.removeEventListener('scroll', onStickyStripScroll);
       }
+      window.cancelAnimationFrame(rafId);
+      if (nestedRafId !== null) {
+        window.cancelAnimationFrame(nestedRafId);
+      }
+      if (observedBoard) {
+        ro.unobserve(observedBoard);
+      }
       ro.disconnect();
+      // Clean up any in-flight drag listeners
+      dragAbortRef.current?.abort();
+      dragAbortRef.current = null;
     };
-  }, [showStickyStatusNames, viewMode]);
+  }, [showStickyStatusNames, viewMode, kanbanZoomLevel, visibleKanbanStatuses.length, selectedPhase?.phase_id, isLoadingTasks, updateKanbanScrollbarThumb]);
 
   // Track header height so the sticky status strip can stack below it when both are active
   useEffect(() => {
@@ -790,6 +1033,13 @@ export default function ProjectDetail({
       [taskId]: tags
     }));
   };
+
+  const handleCommentCountChange = useCallback((taskId: string, count: number) => {
+    setTaskCommentCounts(prev => ({
+      ...prev,
+      [taskId]: count
+    }));
+  }, []);
   
   // Fetch project completion metrics, tree data, priorities, and task types in parallel
   useEffect(() => {
@@ -909,7 +1159,7 @@ export default function ProjectDetail({
 
     fetchPhaseTasks();
     return () => { stale = true; };
-  }, [selectedPhase]);
+  }, [selectedPhase?.phase_id, statusVersion]);
 
   // Fetch avatar URLs for task resources (additional agents)
   useEffect(() => {
@@ -1067,6 +1317,32 @@ export default function ProjectDetail({
     };
 
     fetchDocumentCounts();
+    return () => { stale = true; };
+  }, [selectedPhase, phaseTaskIds]);
+
+  // Fetch comment counts once when phase tasks load
+  useEffect(() => {
+    let stale = false;
+    const fetchCommentCounts = async () => {
+      if (!selectedPhase || projectTasks.length === 0) {
+        setTaskCommentCounts({});
+        return;
+      }
+
+      try {
+        const taskIds = projectTasks.map(task => task.task_id);
+        const counts = await getTaskCommentCountsBatch(taskIds);
+        if (!stale) setTaskCommentCounts(counts);
+      } catch (error) {
+        if (!stale) {
+          console.error('Error fetching comment counts:', error);
+          toast.error('Failed to load comment counts');
+          setTaskCommentCounts({});
+        }
+      }
+    };
+
+    fetchCommentCounts();
     return () => { stale = true; };
   }, [selectedPhase, phaseTaskIds]);
 
@@ -2403,7 +2679,7 @@ export default function ProjectDetail({
             phaseTasks={filteredTasks}
             users={users}
             taskTypes={taskTypes}
-            statuses={projectStatuses}
+            statuses={visibleKanbanStatuses}
             isAddingTask={isAddingTask}
             selectedPhase={!!selectedPhase}
             ticketLinks={phaseTicketLinks}
@@ -2411,6 +2687,7 @@ export default function ProjectDetail({
             taskDependencies={phaseTaskDependencies}
             taskTags={taskTags}
             taskDocumentCounts={taskDocumentCounts}
+            taskCommentCounts={taskCommentCounts}
             allTaskTags={allTaskTags}
             priorities={priorities}
             projectTreeData={projectTreeData}
@@ -2422,6 +2699,7 @@ export default function ProjectDetail({
             searchCaseSensitive={searchCaseSensitive}
             searchWholeWord={searchWholeWord}
             zoomLevel={kanbanZoomLevel}
+            hideHeader={showStickyStatusNames}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onAddCard={handleAddCard}
@@ -2442,16 +2720,20 @@ export default function ProjectDetail({
   };
 
   return (
-    <div className={styles.pageContainer}>
+    <div ref={pageContainerRef} className={styles.pageContainer}>
       <Toaster position="top-right" />
-      <div 
+      <div
         className={styles.mainContent}
         onDragOver={handleDragOver}
       >
         <div className={styles.contentWrapper}>
           {/* Phases panel - collapsible in kanban view */}
           {viewMode === 'kanban' && (
-            <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
+            <div
+                ref={phasesContainerRef}
+                className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}
+                style={phasesPanelHeight && isPhasesPanelVisible ? { height: `${phasesPanelHeight}px`, maxHeight: `${phasesPanelHeight}px` } : undefined}
+              >
               {/* Toggle button */}
               <CollapseToggleButton
                 id="toggle-phases-panel"
@@ -2466,6 +2748,7 @@ export default function ProjectDetail({
               <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
                 <ProjectPhases
                   phases={projectPhases}
+                  projectId={project.project_id}
                   selectedPhase={selectedPhase}
                   isAddingTask={isAddingTask}
                   editingPhaseId={editingPhaseId}
@@ -2500,6 +2783,7 @@ export default function ProjectDetail({
                   onDrop={handlePhaseDropZone}
                   onDragStart={handlePhaseDragStart}
                   onDragEnd={handlePhaseDragEnd}
+                  onStatusesChanged={() => setStatusVersion(v => v + 1)}
                   onImport={() => setShowImportDialog(true)}
                 />
               </div>
@@ -2511,13 +2795,31 @@ export default function ProjectDetail({
               className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}
             >
               {renderHeader()}
-              {/* Proxy scrollbar — sits at the bottom edge of the header */}
-              <div className={styles.kanbanScrollbarProxy} ref={scrollbarProxyRef}>
-                <div className={styles.kanbanScrollbarProxyInner} style={{ width: boardScrollWidth }} />
+              <div className={styles.kanbanScrollbarShell}>
+                <div
+                  ref={scrollbarTrackRef}
+                  className={styles.kanbanScrollbarTrack}
+                  onPointerDown={handleKanbanScrollbarTrackPointerDown}
+                >
+                  <div
+                    data-kanban-scrollbar-thumb="true"
+                    ref={scrollbarThumbRef}
+                    className={styles.kanbanScrollbarThumb}
+                    onPointerDown={handleKanbanScrollbarThumbPointerDown}
+                    onKeyDown={handleKanbanScrollbarKeyDown}
+                    role="scrollbar"
+                    aria-controls="kanban-scroll-container"
+                    aria-orientation="horizontal"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={0}
+                    tabIndex={0}
+                  />
+                </div>
               </div>
             </div>
             {/* Independent sticky status strip */}
-            {showStickyStatusNames && (
+            {showStickyStatusNames && viewMode === 'kanban' && (
               <div
                 className={styles.kanbanStatusStripSticky}
                 style={{ top: isHeaderPinned ? `${kanbanHeaderHeight}px` : 0 }}
@@ -2564,7 +2866,7 @@ export default function ProjectDetail({
               </div>
             )}
             {/* Scrollable content area */}
-            <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
+            <div id="kanban-scroll-container" className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
               {renderContent()}
             </div>
           </div>
@@ -2572,45 +2874,32 @@ export default function ProjectDetail({
       </div>
 
       {(showQuickAdd && (currentPhase || selectedPhase)) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-3xl">
-            <Button
-              id="close-quick-add"
-              variant="ghost"
-              size="sm"
-              className="absolute top-2 right-2 p-1 h-auto w-auto text-gray-500 hover:text-gray-700"
-              onClick={handleCloseQuickAdd}
-              aria-label="Close"
-            >
-              ×
-            </Button>
-            {selectedTask ? (
-              <TaskEdit
-                task={selectedTask}
-                phase={currentPhase || selectedPhase!}
-                phases={projectPhases}
-                onClose={handleCloseQuickAdd}
-                onTaskUpdated={handleTaskUpdated}
-                projectStatuses={projectStatuses}
-                users={users}
-                projectTreeData={projectTreeData}
-              />
-            ) : (
-              <TaskQuickAdd
-                phase={currentPhase || selectedPhase!}
-                onClose={handleCloseQuickAdd}
-                onTaskAdded={handleAddTask}
-                onTaskUpdated={handleEmptyTaskUpdate}
-                projectStatuses={projectStatuses}
-                defaultStatus={defaultStatus || undefined}
-                onCancel={() => setIsAddingTask(false)}
-                users={users}
-                task={selectedTask || undefined}
-                projectTreeData={projectTreeData}
-              />
-            )}
-          </div>
-        </div>
+        selectedTask ? (
+          <TaskEdit
+            task={selectedTask}
+            phase={currentPhase || selectedPhase!}
+            phases={projectPhases}
+            onClose={handleCloseQuickAdd}
+            onTaskUpdated={handleTaskUpdated}
+            projectStatuses={projectStatuses}
+            users={users}
+            projectTreeData={projectTreeData}
+            onCommentCountChange={handleCommentCountChange}
+          />
+        ) : (
+          <TaskQuickAdd
+            phase={currentPhase || selectedPhase!}
+            onClose={handleCloseQuickAdd}
+            onTaskAdded={handleAddTask}
+            onTaskUpdated={handleEmptyTaskUpdate}
+            projectStatuses={projectStatuses}
+            defaultStatus={defaultStatus || undefined}
+            onCancel={() => setIsAddingTask(false)}
+            users={users}
+            task={selectedTask || undefined}
+            projectTreeData={projectTreeData}
+          />
+        )
       )}
 
       {showPhaseQuickAdd && (

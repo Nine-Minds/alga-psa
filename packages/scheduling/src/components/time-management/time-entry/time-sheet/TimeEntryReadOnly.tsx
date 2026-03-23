@@ -7,6 +7,7 @@ import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { Clock } from 'lucide-react';
 import { TimeEntryReadOnlyProps } from './types';
 import { formatTimeForInput, getServiceById } from './utils';
+import { TimeEntryChangeRequestIndicator } from './TimeEntryChangeRequestFeedback';
 
 const TimeEntryReadOnly = memo(function TimeEntryReadOnly({
   id,
@@ -39,6 +40,11 @@ const TimeEntryReadOnly = memo(function TimeEntryReadOnly({
       role="button"
       tabIndex={0}
     >
+      {entry?.change_requests?.length ? (
+        <div className="mb-3">
+          <TimeEntryChangeRequestIndicator changeRequests={entry.change_requests} showLabel />
+        </div>
+      ) : null}
       <div className="flex flex-col gap-3 md:grid md:grid-cols-[9.5rem_8.5rem_minmax(0,1fr)_auto] md:items-center md:gap-4">
         <div className="flex items-center gap-2 text-sm text-gray-900 md:min-w-0">
           <Clock className="h-4 w-4 shrink-0 text-gray-400" />

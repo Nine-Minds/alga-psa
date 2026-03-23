@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
-import { findTicketByEmailThread, type FindTicketByEmailThreadInput } from '@alga-psa/shared/workflow/actions/emailWorkflowActions';
+import { findTicketByEmailThread, type FindTicketByEmailThreadInput } from '@alga-psa/workflows/actions/emailWorkflowActions';
 
 describe('Message-ID Based Email Threading', () => {
   let knex: Knex;

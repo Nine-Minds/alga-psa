@@ -30,8 +30,8 @@
     "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
-    "@alga-psa/documents": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/storage": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",
     "swr": "^2.2.5"

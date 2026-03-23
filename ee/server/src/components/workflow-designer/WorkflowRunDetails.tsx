@@ -31,8 +31,8 @@ import {
   retryWorkflowRunAction
 } from '@alga-psa/workflows/actions';
 
-import type { WorkflowDefinition, Step, IfBlock, ForEachBlock, TryCatchBlock } from '@shared/workflow/runtime/client';
-import { pathDepth } from '@shared/workflow/runtime/utils/nodePathUtils';
+import type { WorkflowDefinition, Step, IfBlock, ForEachBlock, TryCatchBlock } from '@alga-psa/workflows/runtime/client';
+import { pathDepth } from '@alga-psa/workflows/authoring';
 import {
   getWorkflowRunTriggerLabel,
   getWorkflowScheduleStatusBadgeClass,

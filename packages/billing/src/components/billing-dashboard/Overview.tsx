@@ -228,17 +228,17 @@ const Overview = () => {
         <FeatureCard
           icon={Clock}
           title="Billing Cycles"
-          description="Manage recurring billing cycles, proration, and billing frequency settings"
+          description="Manage client billing schedules, cadence defaults, and invoice frequency settings"
         />
         <FeatureCard
           icon={Calendar}
           title="Service Periods"
-          description="Track service delivery periods and align them with billing cycles"
+          description="Review recurring service periods and understand how invoice windows group them"
         />
         <FeatureCard
           icon={FileText}
           title="Invoice Management"
-          description="Generate, customize, and send professional invoices to clients"
+          description="Generate invoice windows for recurring service periods and create manual or prepayment documents when financial handling differs from recurring coverage"
         />
         <FeatureCard
           icon={AlertCircle}

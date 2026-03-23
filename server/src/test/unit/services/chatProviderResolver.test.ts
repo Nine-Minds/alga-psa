@@ -41,6 +41,7 @@ vi.mock('google-auth-library', () => ({
 
 const MANAGED_ENV_KEYS = [
   'AI_CHAT_PROVIDER',
+  'GOOGLE_CLOUD_ACCESS_TOKEN',
   'OPENROUTER_API_KEY',
   'OPENROUTER_CHAT_MODEL',
   'VERTEX_PROJECT_ID',
@@ -163,6 +164,75 @@ describe('resolveChatProvider()', () => {
       apiKey: 'vertex-managed-access-token',
     });
     expect(typeof openAiConfigs.at(-1)?.fetch).toBe('function');
+  });
+
+  it('uses configured Google access token for Vertex requests when present', async () => {
+    process.env.AI_CHAT_PROVIDER = 'vertex';
+    setSecrets({
+      GOOGLE_CLOUD_ACCESS_TOKEN: 'configured-token',
+      VERTEX_PROJECT_ID: 'proj-configured',
+      VERTEX_LOCATION: 'global',
+    });
+
+    const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
+    await resolveChatProvider();
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+
+    await (openAiConfigs.at(-1)?.fetch as (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>)(
+      'https://example.invalid/chat/completions',
+      { method: 'POST', headers: {} },
+    );
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({
+      headers: expect.any(Headers),
+    });
+    expect(
+      (fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined)?.headers instanceof Headers,
+    ).toBe(true);
+    expect(
+      ((fetchSpy.mock.calls[0]?.[1] as RequestInit).headers as Headers).get('Authorization'),
+    ).toBe('Bearer configured-token');
+    fetchSpy.mockRestore();
+  });
+
+  it('retries Vertex request with ADC after a 401 from configured token', async () => {
+    process.env.AI_CHAT_PROVIDER = 'vertex';
+    setSecrets({
+      GOOGLE_CLOUD_ACCESS_TOKEN: 'stale-configured-token',
+      VERTEX_PROJECT_ID: 'proj-retry',
+      VERTEX_LOCATION: 'global',
+    });
+
+    const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
+    await resolveChatProvider();
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('', { status: 401 }))
+      .mockResolvedValueOnce(
+        new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+      );
+
+    const response = await (
+      openAiConfigs.at(-1)?.fetch as (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    )('https://example.invalid/chat/completions', {
+      method: 'POST',
+      headers: {},
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(
+      ((fetchSpy.mock.calls[0]?.[1] as RequestInit).headers as Headers).get('Authorization'),
+    ).toBe('Bearer stale-configured-token');
+    expect(
+      ((fetchSpy.mock.calls[1]?.[1] as RequestInit).headers as Headers).get('Authorization'),
+    ).toBe('Bearer adc-token');
+    fetchSpy.mockRestore();
   });
 
   it('uses explicit VERTEX_OPENAPI_BASE_URL when provided', async () => {

@@ -178,9 +178,9 @@ export class ApiInvoiceController extends ApiBaseController {
   }
 
   /**
-   * Generate invoice from billing cycle
+   * Generate recurring invoice from canonical selector input
    */
-  generateFromBillingCycle() {
+  generateRecurringInvoice() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
@@ -195,10 +195,7 @@ export class ApiInvoiceController extends ApiBaseController {
           const body = await req.json();
           const data = generateInvoiceSchema.parse(body);
           
-          const invoice = await this.invoiceService.generateFromBillingCycle(
-            data.billing_cycle_id, 
-            apiRequest.context
-          );
+          const invoice = await this.invoiceService.generateRecurringInvoice(data, apiRequest.context);
           
           return createSuccessResponse(invoice, 201);
         });
@@ -237,9 +234,9 @@ export class ApiInvoiceController extends ApiBaseController {
   }
 
   /**
-   * Preview invoice
+   * Preview recurring invoice from canonical selector input
    */
-  previewInvoice() {
+  previewRecurringInvoice() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate

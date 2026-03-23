@@ -1,19 +1,35 @@
 /* PaperInvoice.module.css */
 .paperContainer {
     width: 100%;
-    max-width: 800px;
     margin: 0 auto;
     padding: 12px;
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
     background-color: rgba(15, 23, 42, 0.04);
     border-radius: 12px;
   }
   
   .paper {
     background-color: white;
-    padding: 32px;
-    min-height: 1123px; /* A4 height in pixels */
-    width: 100%;
+    flex: 0 0 auto;
     border-radius: 8px;
+    position: relative;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .paper::after {
+    content: '';
+    position: absolute;
+    inset: var(--paper-printable-inset, 0px);
+    border: 1px dashed rgba(148, 163, 184, 0.7);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+
+  .paperContent {
+    position: relative;
+    min-height: 100%;
   }
   
   @media print {
@@ -25,6 +41,10 @@
   
     .paper {
       box-shadow: none;
+    }
+
+    .paper::after {
+      display: none;
     }
   }
   

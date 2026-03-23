@@ -320,6 +320,93 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     expect(rendered.html).toContain('font-size:20px');
   });
 
+  it('synthesizes printable inset padding for explicit print settings when the AST lacks a padded page wrapper', async () => {
+    const ast: InvoiceTemplateAst = {
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      metadata: {
+        printSettings: {
+          paperPreset: 'Letter',
+          marginMm: 12,
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        style: {
+          inline: {
+            width: '816px',
+            height: '1056px',
+          },
+        },
+        children: [
+          {
+            id: 'headline',
+            type: 'text',
+            content: { type: 'literal', value: 'Preview respects margin' },
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('padding:45px');
+    expect(rendered.html).toContain('box-sizing:border-box');
+    expect(rendered.html).toContain('Preview respects margin');
+  });
+
+  it('does not synthesize printable inset padding when the AST already has a padded page wrapper', async () => {
+    const ast: InvoiceTemplateAst = {
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      metadata: {
+        printSettings: {
+          paperPreset: 'Letter',
+          marginMm: 12,
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        style: {
+          inline: {
+            width: '816px',
+            height: '1056px',
+          },
+        },
+        children: [
+          {
+            id: 'page-root',
+            type: 'section',
+            style: {
+              inline: {
+                width: '816px',
+                height: '1056px',
+                padding: '45px',
+              },
+            },
+            children: [
+              {
+                id: 'headline',
+                type: 'text',
+                content: { type: 'literal', value: 'Existing page padding wins' },
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+
+    expect(rendered.html).not.toContain('box-sizing:border-box');
+    expect(rendered.html).toContain('padding:45px');
+    expect(rendered.html).toContain('Existing page padding wins');
+  });
+
   it('escapes unsafe text content in rendered HTML', async () => {
     const ast: InvoiceTemplateAst = {
       kind: 'invoice-template-ast',

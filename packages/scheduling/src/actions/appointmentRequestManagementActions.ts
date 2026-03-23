@@ -27,7 +27,7 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildAppointmentAssignedPayload,
   buildAppointmentCreatedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
+} from '@alga-psa/workflow-streams';
 import {
   getTenantSettings,
   generateICSLink,

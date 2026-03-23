@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, Text, View } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import {
   TicketMobileEditorBridgeClient,
@@ -18,6 +18,28 @@ import {
   TICKET_MOBILE_EDITOR_HTML,
 } from "./generatedEditorHtml";
 import { TicketRichTextToolbar } from "./TicketRichTextToolbar";
+
+/**
+ * Build a dark-mode style block to inject into the editor HTML source.
+ * By embedding it directly in the HTML (before `</head>`), we avoid the
+ * flash-of-white that happens when styles are injected asynchronously
+ * via `injectJavaScript` after the WebView finishes loading.
+ */
+function buildDarkModeStyleTag(colors: {
+  card: string;
+  text: string;
+  primary: string;
+  border: string;
+}): string {
+  return `<style id="rn-dark-mode">
+    :root { color-scheme: dark; }
+    html, body, #editor-root { background-color: ${colors.card} !important; color: ${colors.text} !important; }
+    .ProseMirror, .bn-editor, [class*="editor"] { background-color: transparent !important; color: ${colors.text} !important; }
+    a { color: ${colors.primary} !important; }
+    code { background-color: rgba(255,255,255,0.1) !important; }
+    blockquote { border-left-color: ${colors.border} !important; }
+  </style>`;
+}
 
 const EMPTY_EDITOR_STATE: TicketMobileEditorStatePayload = {
   ready: false,
@@ -66,9 +88,12 @@ export type TicketRichTextEditorProps = {
   onReadyChange?: (ready: boolean) => void;
   onStateChange?: (payload: TicketMobileEditorStatePayload) => void;
   onContentChange?: (payload: { html: string; json: unknown }) => void;
+  onContentHeight?: (payload: { height: number }) => void;
+  scrollEnabled?: boolean;
   onError?: (payload: { code: string; message: string; requestId?: string }) => void;
   onLinkPress?: (url: string) => void;
   qaAutoPressFirstLink?: boolean;
+  imageAuth?: { baseUrl: string; apiKey: string };
 };
 
 export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRichTextEditorProps>(
@@ -86,9 +111,12 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onReadyChange,
       onStateChange,
       onContentChange,
+      onContentHeight,
+      scrollEnabled: scrollEnabledProp,
       onError,
       onLinkPress,
       qaAutoPressFirstLink = false,
+      imageAuth,
     },
     ref,
   ) {
@@ -104,6 +132,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onReadyChange,
       onStateChange,
       onContentChange,
+      onContentHeight,
       onError,
       onLinkPress,
     });
@@ -111,9 +140,12 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onReadyChange,
       onStateChange,
       onContentChange,
+      onContentHeight,
       onError,
       onLinkPress,
     };
+    const imageAuthRef = useRef(imageAuth);
+    imageAuthRef.current = imageAuth;
 
     const [ready, setReady] = useState(false);
     const [state, setState] = useState<TicketMobileEditorStatePayload>({
@@ -153,9 +185,40 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
           callbacksRef.current.onStateChange?.(payload);
         },
         onContentChange(payload) {
+          // Update lastContentRef so the content prop effect doesn't
+          // push the same content back into the editor (which would
+          // destroy cursor position and strip trailing whitespace).
+          const serialized = JSON.stringify(payload.json);
+          lastContentRef.current = serialized;
           callbacksRef.current.onContentChange?.(payload);
         },
+        onContentHeight(payload) {
+          callbacksRef.current.onContentHeight?.(payload);
+        },
         onError: reportError,
+        onImageRequest(payload) {
+          const auth = imageAuthRef.current;
+          if (!auth) return;
+          const fetchUrl = `${auth.baseUrl}${payload.src}`;
+          fetch(fetchUrl, {
+            headers: { "x-api-key": auth.apiKey },
+          })
+            .then(async (resp) => {
+              if (!resp.ok) throw new Error(`Image fetch failed: ${resp.status}`);
+              const contentType = resp.headers.get("content-type") ?? "image/png";
+              const buf = await resp.arrayBuffer();
+              const bytes = new Uint8Array(buf);
+              let binary = "";
+              for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+              }
+              const base64 = btoa(binary);
+              bridgeRef.current?.sendImageData(payload.src, `data:${contentType};base64,${base64}`);
+            })
+            .catch(() => {
+              // Leave the broken image
+            });
+        },
       });
     }
 
@@ -251,16 +314,29 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       loadStartedAtRef.current = Date.now();
     };
 
+    // Pre-build themed HTML so the WebView renders with the correct
+    // background color from the very first paint (no flash of white).
+    const themedHtml = useMemo(() => {
+      if (theme.mode !== "dark") {
+        return TICKET_MOBILE_EDITOR_HTML;
+      }
+
+      const darkStyle = buildDarkModeStyleTag(theme.colors);
+      return TICKET_MOBILE_EDITOR_HTML.replace("</head>", `${darkStyle}\n</head>`);
+    }, [theme.mode, theme.colors]);
+
     const handleLoadEnd = () => {
       hasLoadedRef.current = true;
       lastContentRef.current = content;
       lastEditableRef.current = editable;
+
       bridgeRef.current?.initialize({
         content,
         editable,
         autofocus,
         placeholder,
         debounceMs,
+        imageAuth,
       });
     };
 
@@ -330,7 +406,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             ref={webViewRef}
             originWhitelist={["*"]}
             source={{
-              html: TICKET_MOBILE_EDITOR_HTML,
+              html: themedHtml,
               baseUrl: TICKET_MOBILE_EDITOR_BASE_URL,
             }}
             onLoadStart={handleLoadStart}
@@ -339,9 +415,10 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
             javaScriptEnabled
             domStorageEnabled
-            scrollEnabled={!editable}
+            scrollEnabled={scrollEnabledProp ?? !editable}
             setSupportMultipleWindows={false}
             javaScriptCanOpenWindowsAutomatically={false}
+            {...(Platform.OS === "android" ? { androidLayerType: "hardware" } : {})}
             style={{
               backgroundColor: "transparent",
               minHeight: height,

@@ -45,17 +45,34 @@ export const billingOverviewReport: ReportDefinition = {
         joins: [
           {
             type: 'inner',
-            table: 'client_contract_lines',
+            table: 'client_contracts',
             on: [
-              { left: 'clients.client_id', right: 'client_contract_lines.client_id' },
-              { left: 'clients.tenant', right: 'client_contract_lines.tenant' }
+              { left: 'clients.client_id', right: 'client_contracts.client_id' },
+              { left: 'clients.tenant', right: 'client_contracts.tenant' }
+            ]
+          },
+          {
+            type: 'inner',
+            table: 'contracts',
+            on: [
+              { left: 'client_contracts.contract_id', right: 'contracts.contract_id' },
+              { left: 'client_contracts.tenant', right: 'contracts.tenant' }
+            ]
+          },
+          {
+            type: 'inner',
+            table: 'contract_lines',
+            on: [
+              { left: 'contracts.contract_id', right: 'contract_lines.contract_id' },
+              { left: 'contracts.tenant', right: 'contract_lines.tenant' }
             ]
           }
         ],
         aggregation: 'count_distinct',
         fields: ['clients.client_id'],
         filters: [
-          { field: 'client_contract_lines.is_active', operator: 'eq', value: true },
+          { field: 'client_contracts.is_active', operator: 'eq', value: true },
+          { field: 'contract_lines.is_active', operator: 'eq', value: true },
           { field: 'clients.tenant', operator: 'eq', value: '{{tenant}}' }
         ]
       },

@@ -376,9 +376,35 @@ describe('ChatCompletionsService (unit)', () => {
       expect(promptContext).toContain('Ticket Details');
       expect(promptContext).toContain('ticket');
       expect(promptContext).toContain('#T-123 - Printer jam on floor 2');
+      expect(promptContext).toContain('treat phrases like "this ticket"');
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('builds prompt context with explicit active project reference guidance', async () => {
+    getProjectMock.mockResolvedValue({
+      project_id: 'project-123',
+      project_name: 'Emerald City Beautification',
+    });
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const promptContext = await (ChatCompletionsService as any).buildPromptContext({
+      pathname: '/msp/projects/project-123',
+      screen: {
+        key: 'projects.detail',
+        label: 'Project Details',
+      },
+      record: {
+        type: 'project',
+        id: 'project-123',
+      },
+    });
+
+    expect(promptContext).toContain('Project Details');
+    expect(promptContext).toContain('Emerald City Beautification');
+    expect(promptContext).toContain('treat phrases like "this project"');
   });
 
   it('appends resolved app context to the system prompt when provided', async () => {
@@ -1125,6 +1151,26 @@ describe('ChatCompletionsService (unit)', () => {
         'https://sebastian.msp.svc.cluster.local:3000',
       ),
     ).toBe(false);
+  });
+
+  it('rejects unresolved templated path segments before issuing a tool request', async () => {
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    expect(() =>
+      (ChatCompletionsService as any).buildFetchRequest(
+        {
+          ...registryEntry,
+          id: 'projects.task.get',
+          method: 'get',
+          path: '/api/v1/projects/tasks/{taskId}',
+          parameters: [],
+        },
+        {},
+        'https://example.invalid',
+        'api-key',
+        'tenant-1',
+      ),
+    ).toThrow('Unresolved path parameters for projects.task.get: taskId');
   });
 
   it('falls back to https when http-first tool call fails', async () => {
