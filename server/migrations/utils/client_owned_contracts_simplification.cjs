@@ -179,10 +179,6 @@ function buildSharedContractClonePlan(params, options = {}) {
         ...row,
         contract_id: newContractId,
         contract_line_id: newLineId,
-        cadence_owner:
-          typeof row.cadence_owner === 'string' && row.cadence_owner.length > 0
-            ? row.cadence_owner
-            : 'client',
       };
     });
 

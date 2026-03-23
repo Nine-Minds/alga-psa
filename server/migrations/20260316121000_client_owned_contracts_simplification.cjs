@@ -5,7 +5,8 @@ const {
   buildSharedContractClonePlan,
 } = require('./utils/client_owned_contracts_simplification.cjs');
 
-const CONTRACT_OWNER_FK = 'contracts_owner_client_fkey';
+const CONTRACT_OWNER_FK = 'contracts_owner_client_id_fkey';
+const LEGACY_CONTRACT_OWNER_FK = 'contracts_owner_client_fkey';
 const CONTRACT_OWNER_INDEX = 'idx_contracts_tenant_owner_client_id';
 
 const ensureSequentialMode = async (knex) => {
@@ -60,13 +61,16 @@ const ensureOwnerClientColumn = async (knex) => {
     `CREATE INDEX IF NOT EXISTS ${CONTRACT_OWNER_INDEX} ON contracts(tenant, owner_client_id)`
   );
 
-  if (!await hasConstraint(knex, CONTRACT_OWNER_FK)) {
+  const hasOwnerClientConstraint =
+    await hasConstraint(knex, CONTRACT_OWNER_FK) ||
+    await hasConstraint(knex, LEGACY_CONTRACT_OWNER_FK);
+
+  if (!hasOwnerClientConstraint) {
     await knex.raw(`
       ALTER TABLE contracts
       ADD CONSTRAINT ${CONTRACT_OWNER_FK}
       FOREIGN KEY (tenant, owner_client_id)
       REFERENCES clients (tenant, client_id)
-      ON DELETE SET NULL
     `);
   }
 };
@@ -400,7 +404,7 @@ exports.up = async function up(knex) {
           tenant: row.tenant,
           contract_id: row.contract_id,
         })
-        .andWhereNull('owner_client_id')
+        .whereNull('owner_client_id')
         .update({
           owner_client_id: row.owner_client_id,
           updated_at: knex.fn.now(),
