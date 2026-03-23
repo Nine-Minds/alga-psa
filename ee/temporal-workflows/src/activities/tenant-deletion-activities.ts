@@ -83,6 +83,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // User related details
   'user_notification_preferences', 'user_internal_notification_preferences', 'user_preferences',
   'role_permissions', 'user_roles', 'user_auth_accounts',
+  'mobile_push_tokens',
 
   // Schedule and team
   'schedule_entry_assignees', 'schedule_conflicts', 'team_members',
