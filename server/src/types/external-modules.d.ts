@@ -18,6 +18,7 @@ declare module '@alga-psa/product-extension-actions' {
 
 declare module '@product/extensions/entry' {
   export const metadata: any;
+  export function generateMetadata(...args: any[]): any;
   const _default: any;
   export default _default;
 }
