@@ -102,7 +102,7 @@
   {
     "id": "T041",
     "description": "2b-18: all 10 email provider files compile with useTranslation — no TypeScript errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F041", "F042"]
   },
   {

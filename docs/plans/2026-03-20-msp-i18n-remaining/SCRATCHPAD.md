@@ -248,6 +248,8 @@ done
 - (2026-03-23) Validation for `T032`: a focused Node assertion against [server/public/locales/xx/msp/jobs.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/jobs.json) confirmed 7 representative keys spanning the recent-jobs table, metrics cards, history/progress panels, drawer, and step history all resolve to `11111`.
 - (2026-03-23) Completed `T040`: re-verified the email-provider locale set against the final translation validation pass.
 - (2026-03-23) Validation for `T040`: the earlier email-provider locale generation under `F043` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/email-providers` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
+- (2026-03-23) Completed `T041`: confirmed the main email-provider form/configuration batch still compiles with the `msp/email-providers` namespace wiring.
+- (2026-03-23) Validation for `T041`: the targeted `npx tsc -p packages/integrations/tsconfig.json --noEmit` runs logged under `F041` and `F042` both passed after the provider-form/configuration rewrites, covering the 10 in-scope email-provider files with no TypeScript errors.
 
 ## Open Questions
 
