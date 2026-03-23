@@ -19,6 +19,8 @@ export interface TargetAudienceFilters {
   tenant_ids?: string[];
   user_types?: string[];
   email_search?: string;
+  subscription_statuses?: string[];
+  product_names?: string[];
 }
 
 export interface TargetAudience {
@@ -106,6 +108,8 @@ export interface ResolvedRecipient {
   last_name: string | null;
   roles: string[];
   user_type: string;
+  subscription_status: string | null;
+  product_name: string | null;
 }
 
 // ── Service ──
@@ -376,21 +380,94 @@ export class PlatformNotificationService {
       }
     }
 
-    let results: ResolvedRecipient[] = users.map((u: Record<string, unknown>) => ({
-      user_id: u.user_id as string,
-      tenant: u.tenant as string,
-      tenant_name: (u.tenant_name as string) || null,
-      email: u.email as string,
-      first_name: (u.first_name as string) || null,
-      last_name: (u.last_name as string) || null,
-      roles: userRolesMap.get(u.user_id as string) || [],
-      user_type: u.user_type as string,
-    }));
+    // Fetch subscription info per tenant
+    const tenantIds = [...new Set(users.map((u: { tenant: string }) => u.tenant))];
+    const tenantSubMap = new Map<string, { subscription_status: string; product_name: string }>();
+
+    if (tenantIds.length > 0) {
+      try {
+        const subRows = await knex('stripe_customers as sc')
+          .join('stripe_subscriptions as ss', function () {
+            this.on('sc.tenant', '=', 'ss.tenant')
+              .andOn('sc.stripe_customer_id', '=', 'ss.stripe_customer_id');
+          })
+          .join('stripe_prices as sp', function () {
+            this.on('ss.tenant', '=', 'sp.tenant')
+              .andOn('ss.stripe_price_id', '=', 'sp.stripe_price_id');
+          })
+          .join('stripe_products as sprod', function () {
+            this.on('sp.tenant', '=', 'sprod.tenant')
+              .andOn('sp.stripe_product_id', '=', 'sprod.stripe_product_id');
+          })
+          .whereIn('sc.tenant', tenantIds)
+          .select(
+            'sc.tenant',
+            'ss.status as subscription_status',
+            'sprod.name as product_name',
+            'ss.created_at'
+          )
+          .orderBy('ss.created_at', 'desc');
+
+        // Keep the most relevant subscription per tenant (active > trialing > others, then newest)
+        for (const row of subRows) {
+          const existing = tenantSubMap.get(row.tenant as string);
+          if (!existing) {
+            tenantSubMap.set(row.tenant as string, {
+              subscription_status: row.subscription_status as string,
+              product_name: row.product_name as string,
+            });
+          } else {
+            // Prefer active/trialing over other statuses
+            const priority: Record<string, number> = { active: 0, trialing: 1, past_due: 2, canceled: 3 };
+            const existingPrio = priority[existing.subscription_status] ?? 4;
+            const newPrio = priority[row.subscription_status as string] ?? 4;
+            if (newPrio < existingPrio) {
+              tenantSubMap.set(row.tenant as string, {
+                subscription_status: row.subscription_status as string,
+                product_name: row.product_name as string,
+              });
+            }
+          }
+        }
+      } catch {
+        // Stripe tables may not exist in CE — continue without subscription data
+      }
+    }
+
+    let results: ResolvedRecipient[] = users.map((u: Record<string, unknown>) => {
+      const sub = tenantSubMap.get(u.tenant as string);
+      return {
+        user_id: u.user_id as string,
+        tenant: u.tenant as string,
+        tenant_name: (u.tenant_name as string) || null,
+        email: u.email as string,
+        first_name: (u.first_name as string) || null,
+        last_name: (u.last_name as string) || null,
+        roles: userRolesMap.get(u.user_id as string) || [],
+        user_type: u.user_type as string,
+        subscription_status: sub?.subscription_status ?? null,
+        product_name: sub?.product_name ?? null,
+      };
+    });
 
     if (filters.roles && filters.roles.length > 0) {
       const rolesLower = filters.roles.map((r) => r.toLowerCase());
       results = results.filter((u) =>
         u.roles.some((r) => rolesLower.includes(r.toLowerCase()))
+      );
+    }
+
+    if (filters.subscription_statuses && filters.subscription_statuses.length > 0) {
+      const statusesLower = filters.subscription_statuses.map((s) => s.toLowerCase());
+      results = results.filter((u) =>
+        u.subscription_status && statusesLower.includes(u.subscription_status.toLowerCase())
+      );
+    }
+
+    if (filters.product_names && filters.product_names.length > 0) {
+      const namesLower = filters.product_names.map((n) => n.toLowerCase());
+      results = results.filter((u) =>
+        u.product_name && namesLower.includes(u.product_name.toLowerCase())
       );
     }
 
@@ -449,7 +526,7 @@ export class PlatformNotificationService {
     const knex = await getAdminConnection();
 
     const rows = await knex('platform_notification_recipients as r')
-      .join('users as u', function () {
+      .leftJoin('users as u', function () {
         this.on('r.tenant', '=', 'u.tenant').andOn('r.user_id', '=', 'u.user_id');
       })
       .leftJoin('tenants as t', 'r.tenant', 't.tenant')
