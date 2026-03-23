@@ -30,6 +30,7 @@
       "invoicing": "Rechnungsstellung",
       "invoiceTemplates": "Rechnungsvorlagen",
       "billingCycles": "Abrechnungszyklen",
+      "servicePeriods": "Leistungszeiträume",
       "serviceCatalog": "Servicekatalog",
       "products": "Produkte",
       "taxRates": "Steuersätze",
@@ -94,6 +95,9 @@
       "profile": "Profil",
       "security": "Sicherheit"
     }
+  },
+  "dashboard": {
+    "onboardingWizard": "Einrichtungsassistent"
   },
   "header": {
     "userFallback": "Benutzer",

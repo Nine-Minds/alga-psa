@@ -9,6 +9,7 @@ const computeWorkDateFieldsMock = vi.fn();
 const createTimeEntryChangeRequestRecordMock = vi.fn();
 const fetchTimeEntryChangeRequestsForEntryIdsFromDbMock = vi.fn();
 const markTimeEntryChangeRequestsHandledMock = vi.fn();
+const determineDefaultContractLineMock = vi.fn(async () => null);
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
@@ -26,7 +27,7 @@ vi.mock('../src/actions/timeEntryDelegationAuth', () => ({
 }));
 
 vi.mock('../src/lib/contractLineDisambiguation', () => ({
-  determineDefaultContractLine: vi.fn(async () => null),
+  determineDefaultContractLine: (...args: any[]) => determineDefaultContractLineMock(...args),
 }));
 
 vi.mock('../src/services/bucketUsageService', () => ({
@@ -84,6 +85,9 @@ function createDbStub(config: DbStubConfig) {
 
         if (table === 'time_sheets') {
           return Promise.resolve({ approval_status: config.timeSheetStatus ?? 'CHANGES_REQUESTED' });
+        }
+        if (table === 'tickets') {
+          return Promise.resolve({ client_id: 'client-1' });
         }
 
         throw new Error(`Unexpected first() call for table ${table}`);
@@ -403,6 +407,73 @@ describe('time entry change-request action integration', () => {
     );
 
     expect(markTimeEntryChangeRequestsHandledMock).not.toHaveBeenCalled();
+  });
+
+  it('T003: saveTimeEntry resolves default contract line using effective work date for backdated/current/future entries', async () => {
+    const { saveTimeEntry } = await import('../src/actions/timeEntryCrudActions');
+
+    const scenarios = [
+      { label: 'backdated', startTime: '2025-01-15T09:00:00.000Z', expectedEffectiveDate: '2025-01-15' },
+      { label: 'current', startTime: '2026-03-10T09:00:00.000Z', expectedEffectiveDate: '2026-03-10' },
+      { label: 'future', startTime: '2027-11-02T09:00:00.000Z', expectedEffectiveDate: '2027-11-02' },
+    ];
+
+    for (const scenario of scenarios) {
+      determineDefaultContractLineMock.mockClear();
+      determineDefaultContractLineMock.mockResolvedValueOnce(null);
+      const { db } = createDbStub({
+        existingEntry: {
+          entry_id: `entry-${scenario.label}`,
+          user_id: 'user-1',
+          invoiced: false,
+          time_sheet_id: 'sheet-1',
+        },
+        updatedEntry: {
+          entry_id: `entry-${scenario.label}`,
+          work_item_id: 'non-billable',
+          work_item_type: 'non_billable_category',
+          start_time: scenario.startTime,
+          end_time: scenario.startTime.replace('09:00:00.000Z', '10:00:00.000Z'),
+          created_at: scenario.startTime,
+          updated_at: scenario.startTime,
+          billable_duration: 60,
+          notes: `${scenario.label} update`,
+          user_id: 'user-1',
+          time_sheet_id: 'sheet-1',
+          approval_status: 'DRAFT',
+          service_id: 'service-1',
+          tenant: 'tenant-1',
+        },
+        timeSheetStatus: 'SUBMITTED',
+        initialBillableDuration: 60,
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: db });
+
+      await (saveTimeEntry as any)(
+        { user_id: 'user-1' },
+        { tenant: 'tenant-1' },
+        {
+          entry_id: `entry-${scenario.label}`,
+          work_item_id: 'non-billable',
+          work_item_type: 'non_billable_category',
+          start_time: scenario.startTime,
+          end_time: scenario.startTime.replace('09:00:00.000Z', '10:00:00.000Z'),
+          created_at: scenario.startTime,
+          updated_at: scenario.startTime,
+          billable_duration: 60,
+          notes: `${scenario.label} update`,
+          user_id: 'user-1',
+          approval_status: 'DRAFT',
+          service_id: 'service-1',
+        },
+      );
+
+      expect(determineDefaultContractLineMock).toHaveBeenCalledWith(
+        null,
+        'service-1',
+        scenario.expectedEffectiveDate,
+      );
+    }
   });
 
   it('rejects save payloads that omit service_id', async () => {

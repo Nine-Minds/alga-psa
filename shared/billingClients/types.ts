@@ -28,6 +28,7 @@ export interface PaginatedClientsResponse {
 export type ClientContractAssignmentCreateInput = {
   client_id: string;
   contract_id: string;
+  template_contract_id?: string | null;
   start_date: string;
   end_date: string | null;
   is_active: boolean;

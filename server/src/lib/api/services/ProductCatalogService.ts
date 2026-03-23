@@ -198,7 +198,7 @@ export class ProductCatalogService extends BaseService<IService> {
     const productData = {
       ...rest,
       item_kind: 'product',
-      billing_method: 'per_unit',
+      billing_method: 'usage',
       unit_of_measure: unit_of_measure ?? 'each',
       tenant,
       default_rate: typeof rest.default_rate === 'string'
@@ -240,7 +240,7 @@ export class ProductCatalogService extends BaseService<IService> {
       .update({
         ...updateData,
         item_kind: 'product',
-        billing_method: 'per_unit'
+        billing_method: 'usage'
       });
 
     // Update prices if provided

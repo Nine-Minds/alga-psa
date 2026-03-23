@@ -8,13 +8,19 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { assertBoardScopedTicketStatusSelection } from '@shared/lib/boardScopedTicketStatusValidation';
+import { CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE } from '@shared/billingClients/cadenceOwnerRollout';
+import { updateClientBillingSettings as updateClientBillingSettingsShared } from '@shared/billingClients/billingSettings';
+import type { CadenceOwner } from '@alga-psa/types';
 
 type RenewalMode = 'none' | 'manual' | 'auto';
 type RenewalDueDateActionPolicy = 'queue_only' | 'create_ticket';
+type RecurringCadenceRolloutState = 'mixed_enabled';
 
 const DEFAULT_RENEWAL_MODE: RenewalMode = 'manual';
 const DEFAULT_NOTICE_PERIOD_DAYS = 30;
 const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY: RenewalDueDateActionPolicy = 'create_ticket';
+const DEFAULT_RECURRING_CADENCE_OWNER: CadenceOwner = 'client';
+const DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE: RecurringCadenceRolloutState = 'mixed_enabled';
 const requireBillingSettingsUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing_settings', 'update')) {
     return permissionError('Permission denied: Cannot update billing settings');
@@ -35,6 +41,9 @@ export interface BillingSettings {
   renewalTicketStatusId?: string;
   renewalTicketPriority?: string;
   renewalTicketAssigneeId?: string;
+  defaultRecurringCadenceOwner?: CadenceOwner;
+  recurringCadenceRolloutState?: RecurringCadenceRolloutState;
+  recurringCadenceRolloutMessage?: string;
 }
 
 export const getDefaultBillingSettings = withAuth(async (
@@ -64,6 +73,9 @@ export const getDefaultBillingSettings = withAuth(async (
       renewalTicketStatusId: undefined,
       renewalTicketPriority: undefined,
       renewalTicketAssigneeId: undefined,
+      defaultRecurringCadenceOwner: DEFAULT_RECURRING_CADENCE_OWNER,
+      recurringCadenceRolloutState: DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE,
+      recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
     };
   }
 
@@ -93,6 +105,9 @@ export const getDefaultBillingSettings = withAuth(async (
     renewalTicketStatusId: settings.renewal_ticket_status_id ?? undefined,
     renewalTicketPriority: settings.renewal_ticket_priority ?? undefined,
     renewalTicketAssigneeId: settings.renewal_ticket_assignee_id ?? undefined,
+    defaultRecurringCadenceOwner: DEFAULT_RECURRING_CADENCE_OWNER,
+    recurringCadenceRolloutState: DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE,
+    recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
   };
 });
 
@@ -227,6 +242,9 @@ export const getClientContractLineSettings = withAuth(async (
     enableCreditExpiration: settings.enable_credit_expiration,
     creditExpirationDays: settings.credit_expiration_days,
     creditExpirationNotificationDays: settings.credit_expiration_notification_days,
+    defaultRecurringCadenceOwner: DEFAULT_RECURRING_CADENCE_OWNER,
+    recurringCadenceRolloutState: DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE,
+    recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
   };
 });
 
@@ -239,49 +257,20 @@ export const updateClientContractLineSettings = withAuth(async (
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // If data is null, remove the client override
-    if (data === null) {
-      return await trx('client_billing_settings')
-        .where({
-          client_id: clientId,
-          tenant
-        })
-        .delete();
-    }
-
-    const existingSettings = await trx('client_billing_settings')
-      .where({
-        client_id: clientId,
-        tenant
-      })
-      .first();
-
-    if (existingSettings) {
-      return await trx('client_billing_settings')
-        .where({
-          client_id: clientId,
-          tenant
-        })
-        .update({
-          zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,
-          suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices,
-          enable_credit_expiration: data.enableCreditExpiration,
-          credit_expiration_days: data.creditExpirationDays,
-          credit_expiration_notification_days: data.creditExpirationNotificationDays,
-          updated_at: trx.fn.now()
-        });
-    } else {
-      return await trx('client_billing_settings').insert({
-        client_id: clientId,
-        tenant,
-        zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,
-        suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices,
-        enable_credit_expiration: data.enableCreditExpiration,
-        credit_expiration_days: data.creditExpirationDays,
-        credit_expiration_notification_days: data.creditExpirationNotificationDays
-        // created_at and updated_at will be set by default values
-      });
-    }
+    await updateClientBillingSettingsShared(
+      trx,
+      tenant,
+      clientId,
+      data
+        ? {
+            zeroDollarInvoiceHandling: data.zeroDollarInvoiceHandling,
+            suppressZeroDollarInvoices: data.suppressZeroDollarInvoices,
+            enableCreditExpiration: data.enableCreditExpiration,
+            creditExpirationDays: data.creditExpirationDays,
+            creditExpirationNotificationDays: data.creditExpirationNotificationDays,
+          }
+        : null
+    );
   });
 
   return { success: true };

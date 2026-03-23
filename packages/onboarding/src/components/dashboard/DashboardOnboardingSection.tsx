@@ -3,8 +3,8 @@
 import React, { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePostHog } from 'posthog-js/react';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { cn } from '@alga-psa/ui/lib';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import type { ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -17,7 +17,7 @@ import {
   type OnboardingStepId,
   type OnboardingStepServerState,
 } from '@alga-psa/onboarding/actions';
-import { ArrowRight, CheckCircle2, Circle, EyeOff, RotateCcw } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Circle, EyeOff, RotateCcw, Sparkles } from 'lucide-react';
 
 interface OnboardingProgressSummary {
   completed: number;
@@ -319,8 +319,8 @@ export default function DashboardOnboardingSection({
   className,
   initialDismissedStepIds = EMPTY_DISMISSED_STEP_IDS,
 }: DashboardOnboardingSectionProps) {
+  const { t } = useTranslation('msp/core');
   const posthog = usePostHog();
-  const { t } = useTranslation('msp/dashboard');
   const [dismissedStepIds, setDismissedStepIds] = useState<OnboardingStepId[]>(() =>
     getInitialDismissedStepIds(stepStates, initialDismissedStepIds)
   );
@@ -476,7 +476,19 @@ export default function DashboardOnboardingSection({
                 })}
           </p>
         </div>
-        <ProgressSummaryCard completed={summary.completed} total={summary.total} t={t} />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/msp/onboarding"
+            className="flex h-full items-center gap-2 rounded-xl border border-[rgb(var(--color-border-200))] bg-white px-4 py-3 text-sm font-semibold shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-md"
+            style={{ color: 'rgb(var(--color-text-700))' }}
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: 'rgb(var(--color-primary-50))' }}>
+              <Sparkles className="h-4 w-4" style={{ color: 'rgb(var(--color-primary-500))' }} />
+            </div>
+            {t('dashboard.onboardingWizard')}
+          </Link>
+          <ProgressSummaryCard completed={summary.completed} total={summary.total} t={t} />
+        </div>
       </div>
       {!isOnboardingComplete ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -9,12 +9,22 @@ vi.mock('server/src/lib/db', () => ({
 
 describe('Contract Line Disambiguation Logic', () => {
   let mockKnex: any;
+  let serviceCatalogBuilder: any;
+  let eligibleLinesBuilder: any;
   const mockTenant = 'test_tenant';
   const mockClientId = 'test_client_id';
   const mockServiceId = 'test_service_id';
 
   beforeEach(() => {
-    mockKnex = {
+    serviceCatalogBuilder = {
+      where: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue({
+        category_id: null,
+        service_type_id: 'service-type-1',
+      }),
+    };
+
+    eligibleLinesBuilder = {
       join: vi.fn().mockReturnThis(),
       leftJoin: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
@@ -26,6 +36,18 @@ describe('Contract Line Disambiguation Logic', () => {
       andOnVal: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
     };
+
+    mockKnex = vi.fn((table: string) => {
+      if (table === 'service_catalog') {
+        return serviceCatalogBuilder;
+      }
+
+      if (table === 'client_contracts') {
+        return eligibleLinesBuilder;
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    });
 
     (createTenantKnex as Mock).mockResolvedValue({
       knex: mockKnex,
@@ -47,21 +69,36 @@ describe('Contract Line Disambiguation Logic', () => {
         {
           client_contract_line_id: 'contractLine2',
           contract_line_type: 'Fixed',
-          bucket_overlay: { remaining_minutes: 120 }
+          bucket_overlay: { config_id: 'bucket-config-2', total_minutes: 120 }
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await getEligibleContractLines(mockKnex, mockTenant, mockClientId, mockServiceId);
 
-      expect(result).toEqual(mockContractLines);
-      expect(mockKnex.join).toHaveBeenCalledTimes(2);
-      expect(mockKnex.leftJoin).toHaveBeenCalledTimes(2);
-      expect(mockKnex.where).toHaveBeenCalledWith({
-        'client_contract_lines.client_id': mockClientId,
-        'client_contract_lines.is_active': true,
-        'client_contract_lines.tenant': mockTenant,
+      expect(result).toEqual([
+        {
+          client_contract_line_id: 'contractLine1',
+          contract_line_type: 'Fixed',
+          start_date: '',
+          end_date: null,
+          bucket_overlay: undefined,
+        },
+        {
+          client_contract_line_id: 'contractLine2',
+          contract_line_type: 'Fixed',
+          start_date: '',
+          end_date: null,
+          bucket_overlay: { config_id: 'bucket-config-2', total_minutes: 120 },
+        },
+      ]);
+      expect(eligibleLinesBuilder.join).toHaveBeenCalledTimes(3);
+      expect(eligibleLinesBuilder.leftJoin).toHaveBeenCalledTimes(2);
+      expect(eligibleLinesBuilder.where).toHaveBeenCalledWith({
+        'client_contracts.client_id': mockClientId,
+        'client_contracts.is_active': true,
+        'client_contracts.tenant': mockTenant,
         'contract_line_services.service_id': mockServiceId,
       });
     });
@@ -76,7 +113,7 @@ describe('Contract Line Disambiguation Logic', () => {
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await determineDefaultContractLine(mockClientId, mockServiceId);
 
@@ -84,7 +121,7 @@ describe('Contract Line Disambiguation Logic', () => {
     });
 
     it('should return null when there are no eligible contract lines', async () => {
-      mockKnex.select.mockResolvedValue([]);
+      eligibleLinesBuilder.select.mockResolvedValue([]);
 
       const result = await determineDefaultContractLine(mockClientId, mockServiceId);
 
@@ -100,7 +137,7 @@ describe('Contract Line Disambiguation Logic', () => {
         {
           client_contract_line_id: 'contractLine2',
           contract_line_type: 'Fixed',
-          bucket_overlay: { remaining_minutes: 300 }
+          bucket_overlay: { config_id: 'bucket-config-2', total_minutes: 300 }
         },
         {
           client_contract_line_id: 'contractLine3',
@@ -108,7 +145,7 @@ describe('Contract Line Disambiguation Logic', () => {
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await determineDefaultContractLine(mockClientId, mockServiceId);
 
@@ -127,7 +164,7 @@ describe('Contract Line Disambiguation Logic', () => {
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await determineDefaultContractLine(mockClientId, mockServiceId);
 
@@ -139,16 +176,16 @@ describe('Contract Line Disambiguation Logic', () => {
         {
           client_contract_line_id: 'contractLine1',
           contract_line_type: 'Fixed',
-          bucket_overlay: { remaining_minutes: 180 }
+          bucket_overlay: { config_id: 'bucket-config-1', total_minutes: 180 }
         },
         {
           client_contract_line_id: 'contractLine2',
           contract_line_type: 'Fixed',
-          bucket_overlay: { remaining_minutes: 45 }
+          bucket_overlay: { config_id: 'bucket-config-2', total_minutes: 45 }
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await determineDefaultContractLine(mockClientId, mockServiceId);
 
@@ -166,11 +203,11 @@ describe('Contract Line Disambiguation Logic', () => {
         {
           client_contract_line_id: 'contractLine2',
           contract_line_type: 'Fixed',
-          bucket_overlay: { remaining_minutes: 120 }
+          bucket_overlay: { config_id: 'bucket-config-2', total_minutes: 120 }
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await validateContractLineForService(mockClientId, mockServiceId, 'contractLine1');
 
@@ -186,11 +223,11 @@ describe('Contract Line Disambiguation Logic', () => {
         {
           client_contract_line_id: 'contractLine2',
           contract_line_type: 'Fixed',
-          bucket_overlay: { remaining_minutes: 240 }
+          bucket_overlay: { config_id: 'bucket-config-2', total_minutes: 240 }
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await validateContractLineForService(mockClientId, mockServiceId, 'contractLine3');
 
@@ -207,7 +244,7 @@ describe('Contract Line Disambiguation Logic', () => {
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await shouldAllocateUnassignedEntry(mockClientId, mockServiceId, 'contractLine1');
 
@@ -223,7 +260,7 @@ describe('Contract Line Disambiguation Logic', () => {
         {
           client_contract_line_id: 'contractLine2',
           contract_line_type: 'Fixed',
-          bucket_overlay: { remaining_minutes: 600 }
+          bucket_overlay: { config_id: 'bucket-config-2', total_minutes: 600 }
         },
         {
           client_contract_line_id: 'contractLine3',
@@ -231,7 +268,7 @@ describe('Contract Line Disambiguation Logic', () => {
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await shouldAllocateUnassignedEntry(mockClientId, mockServiceId, 'contractLine2');
 
@@ -250,7 +287,7 @@ describe('Contract Line Disambiguation Logic', () => {
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await shouldAllocateUnassignedEntry(mockClientId, mockServiceId, 'contractLine1');
 
@@ -262,16 +299,16 @@ describe('Contract Line Disambiguation Logic', () => {
         {
           client_contract_line_id: 'contractLine1',
           contract_line_type: 'Fixed',
-          bucket_overlay: { remaining_minutes: 100 }
+          bucket_overlay: { config_id: 'bucket-config-1', total_minutes: 100 }
         },
         {
           client_contract_line_id: 'contractLine2',
           contract_line_type: 'Fixed',
-          bucket_overlay: { remaining_minutes: 50 }
+          bucket_overlay: { config_id: 'bucket-config-2', total_minutes: 50 }
         },
       ];
 
-      mockKnex.select.mockResolvedValue(mockContractLines);
+      eligibleLinesBuilder.select.mockResolvedValue(mockContractLines);
 
       const result = await shouldAllocateUnassignedEntry(mockClientId, mockServiceId, 'contractLine1');
 

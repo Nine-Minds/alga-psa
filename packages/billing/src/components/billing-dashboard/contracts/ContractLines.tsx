@@ -6,9 +6,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2 } from 'lucide-react';
 import { IContract } from '@alga-psa/types';
-import { updateContractLine, upsertContractLineTerms } from '@alga-psa/billing/actions/contractLineAction';
+import { updateContractLine } from '@alga-psa/billing/actions/contractLineAction';
 import {
   getDetailedContractLines,
   removeContractLine,
@@ -37,6 +37,7 @@ import { getCurrencySymbol } from '@alga-psa/core';
 interface ContractLinesProps {
   contract: IContract;
   onContractLinesChanged?: () => void;
+  isReadOnly?: boolean;
 }
 
 interface DetailedContractLineMapping {
@@ -49,6 +50,7 @@ interface DetailedContractLineMapping {
   contract_line_name: string;
   billing_frequency: string;
   billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: 'client' | 'contract';
   contract_line_type: string;
   default_rate?: number | null;
   minimum_billable_time?: number | null;
@@ -74,7 +76,12 @@ interface ServiceConfiguration {
   bucketConfig?: any; // Add bucketConfig property for merged bucket data
 }
 
-const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged }) => {
+const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged, isReadOnly = false }) => {
+  const cadenceOwnerOptions = [
+    { value: 'client', label: 'Client schedule' },
+    { value: 'contract', label: 'Contract anniversary' },
+  ] as const;
+
   const [contractLines, setContractLines] = useState<DetailedContractLineMapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +91,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showCreateCustomDialog, setShowCreateCustomDialog] = useState(false);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
+  const [savingLineId, setSavingLineId] = useState<string | null>(null);
   const [editLineData, setEditLineData] = useState<Partial<DetailedContractLineMapping>>({});
   const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
   const [editBucketConfigs, setEditBucketConfigs] = useState<Record<string, BucketOverlayInput | null>>({});
@@ -205,6 +213,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
       // Start editing - populate edit data from the line
       setEditingLineId(line.contract_line_id);
       setEditLineData({
+        billing_timing: line.billing_timing ?? 'arrears',
+        cadence_owner: line.cadence_owner ?? 'client',
         minimum_billable_time: line.minimum_billable_time,
         round_up_to_nearest: line.round_up_to_nearest,
       });
@@ -245,17 +255,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
   };
 
   const handleSaveContractLine = async (contractLineId: string) => {
+    setSavingLineId(contractLineId);
     try {
-      // Update contract line fields (billing_timing is handled separately via upsertContractLineTerms)
+      // Persist recurring authoring fields in one mutation so service periods
+      // are rematerialized once from the final contract-line state.
       await updateContractLine(contractLineId, {
+        billing_timing: editLineData.billing_timing,
+        cadence_owner: editLineData.cadence_owner,
         minimum_billable_time: editLineData.minimum_billable_time,
         round_up_to_nearest: editLineData.round_up_to_nearest,
       });
-
-      // Update billing_timing separately (stored in contract_line_template_terms table)
-      if (editLineData.billing_timing) {
-        await upsertContractLineTerms(contractLineId, editLineData.billing_timing);
-      }
 
       // Update all service configurations based on what was actually edited
       // Use editServiceConfigs keys to ensure we update the correct config_ids
@@ -334,6 +343,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     } catch (err) {
       console.error('Error updating contract line:', err);
       setError('Failed to update contract line');
+    } finally {
+      setSavingLineId((current) => (current === contractLineId ? null : current));
     }
   };
 
@@ -422,7 +433,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
           <div>
             <h3 className="text-lg font-medium">Contract Lines</h3>
             <p className="text-sm text-muted-foreground">
-              Manage the contract lines and services for this contract
+              {isReadOnly
+                ? 'This system-managed default contract is attribution-only. Contract line authoring is disabled.'
+                : 'Manage the contract lines and services for this contract'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -430,6 +443,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
               id="add-contract-line-from-preset-btn"
               variant="outline"
               onClick={() => setShowAddDialog(true)}
+              disabled={isReadOnly}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add from Presets
@@ -437,6 +451,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
             <Button
               id="create-custom-contract-line-btn"
               onClick={() => setShowCreateCustomDialog(true)}
+              disabled={isReadOnly}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Custom
@@ -462,6 +477,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
               const isExpanded = expandedLines[line.contract_line_id];
               const services = lineServices[line.contract_line_id] || [];
               const isLoadingServices = loadingServices[line.contract_line_id];
+              const isSavingLine = savingLineId === line.contract_line_id;
 
               return (
                 <div
@@ -536,6 +552,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           handleEditContractLine(line);
                         }}
                         className="h-8 text-muted-foreground hover:text-[rgb(var(--color-text-700))] hover:bg-muted"
+                        disabled={isReadOnly}
                       >
                         <Edit className="h-4 w-4 mr-1" />
                         Edit
@@ -549,6 +566,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           handleRemoveContractLine(line.contract_line_id);
                         }}
                         className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        disabled={isReadOnly}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
                         Remove
@@ -586,9 +604,19 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                     size="sm"
                                     onClick={() => handleSaveContractLine(line.contract_line_id)}
                                     className="gap-2"
+                                    disabled={isSavingLine}
                                   >
-                                    <Check className="h-4 w-4" />
-                                    Save
+                                    {isSavingLine ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Saving...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Check className="h-4 w-4" />
+                                        Save
+                                      </>
+                                    )}
                                   </Button>
                                   <Button
                                     id={`cancel-line-${line.contract_line_id}`}
@@ -597,6 +625,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                     variant="outline"
                                     onClick={handleCancelEdit}
                                     className="gap-2"
+                                    disabled={isSavingLine}
                                   >
                                     <X className="h-4 w-4" />
                                     Cancel
@@ -605,7 +634,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                               ) : null}
                             </div>
 
-                            {/* Billing Timing - applies to all line types */}
+                            {/* Billing timing and cadence owner - applies to all recurring line types */}
                             <div className="grid gap-4 md:grid-cols-2">
                               <div>
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -630,6 +659,29 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                     {(line.billing_timing || 'arrears') === 'advance'
                                       ? 'Advance (bill at start of period)'
                                       : 'Arrears (bill at end of period)'}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                  Cadence Owner
+                                </Label>
+                                {editingLineId === line.contract_line_id ? (
+                                  <CustomSelect
+                                    id={`cadence-owner-${line.contract_line_id}`}
+                                    value={editLineData.cadence_owner || line.cadence_owner || 'client'}
+                                    onValueChange={(value) => setEditLineData({
+                                      ...editLineData,
+                                      cadence_owner: value as 'client' | 'contract'
+                                    })}
+                                    options={[...cadenceOwnerOptions]}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+                                    {(line.cadence_owner || 'client') === 'contract'
+                                      ? 'Contract anniversary'
+                                      : 'Client schedule'}
                                   </p>
                                 )}
                               </div>
@@ -951,19 +1003,23 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         )}
       </Box>
 
-      <AddContractLinesDialog
-        isOpen={showAddDialog}
-        onClose={() => setShowAddDialog(false)}
-        contractId={contract.contract_id}
-        onAdd={handleAddContractLines}
-      />
+      {!isReadOnly ? (
+        <>
+          <AddContractLinesDialog
+            isOpen={showAddDialog}
+            onClose={() => setShowAddDialog(false)}
+            contractId={contract.contract_id}
+            onAdd={handleAddContractLines}
+          />
 
-      <CreateCustomContractLineDialog
-        isOpen={showCreateCustomDialog}
-        onClose={() => setShowCreateCustomDialog(false)}
-        contractId={contract.contract_id}
-        onCreated={handleAddContractLines}
-      />
+          <CreateCustomContractLineDialog
+            isOpen={showCreateCustomDialog}
+            onClose={() => setShowCreateCustomDialog(false)}
+            contractId={contract.contract_id}
+            onCreated={handleAddContractLines}
+          />
+        </>
+      ) : null}
     </Card>
   );
 };

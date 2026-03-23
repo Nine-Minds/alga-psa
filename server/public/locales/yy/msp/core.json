@@ -30,6 +30,7 @@
       "invoicing": "55555",
       "invoiceTemplates": "55555",
       "billingCycles": "55555",
+      "servicePeriods": "55555",
       "serviceCatalog": "55555",
       "products": "55555",
       "taxRates": "55555",
@@ -94,6 +95,9 @@
       "profile": "55555",
       "security": "55555"
     }
+  },
+  "dashboard": {
+    "onboardingWizard": "55555"
   },
   "header": {
     "userFallback": "55555",

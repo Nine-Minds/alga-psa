@@ -30,6 +30,7 @@
       "invoicing": "Facturatie",
       "invoiceTemplates": "Factuursjablonen",
       "billingCycles": "Facturatiecycli",
+      "servicePeriods": "Serviceperioden",
       "serviceCatalog": "Dienstencatalogus",
       "products": "Producten",
       "taxRates": "Belastingtarieven",
@@ -94,6 +95,9 @@
       "profile": "Profiel",
       "security": "Beveiliging"
     }
+  },
+  "dashboard": {
+    "onboardingWizard": "Installatiewizard"
   },
   "header": {
     "userFallback": "Gebruiker",

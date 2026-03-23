@@ -1,0 +1,122 @@
+[
+  {
+    "id": "F001",
+    "description": "Recurring due-work loading no longer joins `client_contract_lines` for persisted client-cadence rows.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F002",
+    "description": "Recurring materialization-gap detection no longer queries active client-cadence obligations from `client_contract_lines`.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F003",
+    "description": "`AutomaticInvoices` loads successfully in fully migrated environments where `client_contract_lines` does not exist.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F004",
+    "description": "Recurring preview selector normalization resolves client-cadence service periods without joining `client_contract_lines`.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F005",
+    "description": "Recurring generate selector normalization resolves client-cadence service periods without joining `client_contract_lines`.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "Recurring service-period inspection resolves client-cadence obligation metadata from the surviving client-owned structure.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "Client-cadence recurring regeneration loads obligations from the surviving structure instead of `client_contract_lines`.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F008",
+    "description": "Invoice-to-service-period linkage no longer derives live recurring obligation candidates from `client_contract_lines`.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "Bucket recurring period resolution no longer depends on `client_contract_lines`.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F010",
+    "description": "Contract wizard no longer inserts rows into dropped `client_contract_lines` or `client_contract_services` tables.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F011",
+    "description": "Contract line mutation/runtime service paths stop requiring the dropped `client_contract_lines` structure for live behavior.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F012",
+    "description": "Credit and other dependent billing flows stop reading dropped client-contract line tables in live paths.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F013",
+    "description": "Billing/report read models stop using `client_contract_lines` as a live fact source.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F014",
+    "description": "One canonical post-drop recurring obligation identity is defined and used consistently for client cadence.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Open Questions"]
+  },
+  {
+    "id": "F015",
+    "description": "Legacy `client_contract_line` identity, if retained at all, is limited to documented passive compatibility metadata rather than live table joins.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
+  },
+  {
+    "id": "F016",
+    "description": "Static tests and integration tests are updated so they no longer assert `client_contract_lines` as expected live runtime behavior.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F017",
+    "description": "Stale plan/runbook/docs references to `client_contract_lines` as a live runtime dependency are corrected or marked historical.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "No live runtime path crashes with `relation \\\"client_contract_lines\\\" does not exist` in a fully migrated environment.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F019",
+    "description": "Server-side contract-line service paths stop using `client_contract_lines` for live behaviors such as unassign/deactivate, usage analytics, in-use checks, overlap validation, and overview counts.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Reports / read models / API"]
+  },
+  {
+    "id": "F020",
+    "description": "Cleanup-only test fixtures, teardowns, tracked backup artifacts, and stale operational runbooks stop pointing active development flows at dropped client-contract line tables.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Tests and docs cleanup"]
+  }
+]

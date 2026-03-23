@@ -8,6 +8,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import Contract from '../src/models/contract';
 
+vi.mock('@alga-psa/shared/billingClients', () => ({
+  checkAndReactivateExpiredContract: vi.fn(),
+}));
+
 // Mock Knex to test validation logic without database
 const createMockKnex = () => {
   const mockInsert = vi.fn().mockReturnThis();
@@ -15,6 +19,7 @@ const createMockKnex = () => {
   const mockAndWhere = vi.fn().mockReturnThis();
   const mockWhereNot = vi.fn().mockReturnThis();
   const mockWhereIn = vi.fn().mockReturnThis();
+  const mockWhereNotNull = vi.fn().mockReturnThis();
   const mockWhereNull = vi.fn().mockReturnThis();
   const mockOrWhere = vi.fn().mockReturnThis();
   const mockFirst = vi.fn();
@@ -35,6 +40,7 @@ const createMockKnex = () => {
     andWhere: mockAndWhere,
     whereNot: mockWhereNot,
     whereIn: mockWhereIn,
+    whereNotNull: mockWhereNotNull,
     whereNull: mockWhereNull,
     orWhere: mockOrWhere,
     first: mockFirst,
@@ -63,6 +69,8 @@ const createMockKnex = () => {
       select: mockSelect,
       count: mockCount,
       pluck: mockPluck,
+      whereIn: mockWhereIn,
+      whereNotNull: mockWhereNotNull,
     },
   };
 };
@@ -88,16 +96,6 @@ describe('Contract Model', () => {
     });
   });
 
-  describe('hasActiveContractForClient', () => {
-    it('should throw error when tenant is not provided', async () => {
-      const { knex } = createMockKnex();
-
-      await expect(Contract.hasActiveContractForClient(knex, '', 'client-123')).rejects.toThrow(
-        'Tenant context is required for checking client active contracts'
-      );
-    });
-  });
-
   describe('delete', () => {
     it('should throw error when tenant is not provided', async () => {
       const { knex } = createMockKnex();
@@ -105,6 +103,22 @@ describe('Contract Model', () => {
       await expect(Contract.delete(knex, '', 'contract-123')).rejects.toThrow(
         'Tenant context is required for deleting contracts'
       );
+    });
+
+    it('deletes recurring service periods linked to contract lines before removing the contract lines', async () => {
+      const { knex, mocks } = createMockKnex();
+      mocks.first.mockResolvedValueOnce({ count: '0' });
+      mocks.pluck
+        .mockResolvedValueOnce(['client-contract-1'])
+        .mockResolvedValueOnce(['line-1', 'line-2'])
+        .mockResolvedValueOnce([]);
+      mocks.delete.mockResolvedValue(1);
+
+      await Contract.delete(knex, 'tenant-1', 'contract-123');
+
+      expect(knex).toHaveBeenCalledWith('recurring_service_periods');
+      expect(mocks.where).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+      expect(mocks.whereIn).toHaveBeenCalledWith('obligation_id', ['line-1', 'line-2']);
     });
   });
 
@@ -143,6 +157,7 @@ describe('Contract Model', () => {
       const { knex } = createMockKnex();
       const contract = {
         contract_name: 'Test Contract',
+        owner_client_id: 'client-123',
         billing_frequency: 'monthly',
         currency_code: 'USD',
         is_active: true,
@@ -151,6 +166,59 @@ describe('Contract Model', () => {
 
       await expect(Contract.create(knex, '', contract)).rejects.toThrow(
         'Tenant context is required for creating contracts'
+      );
+    });
+
+    it('rejects non-template contract creation without an owner client', async () => {
+      const { knex } = createMockKnex();
+
+      await expect(
+        Contract.create(knex, 'tenant-1', {
+          contract_name: 'Shared Contract',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          is_active: true,
+          status: 'draft',
+          is_template: false,
+        })
+      ).rejects.toThrow('Non-template contracts require an owning client');
+    });
+
+    it('allows template contract creation without an owner client', async () => {
+      const { knex, mocks } = createMockKnex();
+      mocks.returning.mockResolvedValue([
+        {
+          contract_id: 'template-1',
+          tenant: 'tenant-1',
+          contract_name: 'Template Contract',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          is_active: true,
+          status: 'published',
+          is_template: true,
+          owner_client_id: null,
+        },
+      ]);
+
+      await expect(
+        Contract.create(knex, 'tenant-1', {
+          contract_name: 'Template Contract',
+          billing_frequency: 'monthly',
+          currency_code: 'USD',
+          is_active: true,
+          status: 'published',
+          is_template: true,
+        })
+      ).resolves.toMatchObject({
+        contract_id: 'template-1',
+        is_template: true,
+      });
+
+      expect(mocks.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contract_name: 'Template Contract',
+          owner_client_id: null,
+        })
       );
     });
   });

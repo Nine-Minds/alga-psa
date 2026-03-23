@@ -16,9 +16,9 @@ export const ServiceForm: React.FC = () => {
   const [serviceTypeId, setServiceTypeId] = useState<string>('') // Store the selected service type ID
   const [defaultRate, setDefaultRate] = useState('')
   const [unitOfMeasure, setUnitOfMeasure] = useState('')
-  const [billingMethod, setBillingMethod] = useState<'fixed' | 'hourly' | 'usage' | 'per_unit'>('fixed')
+  const [billingMethod, setBillingMethod] = useState<'fixed' | 'hourly' | 'usage'>('fixed')
   const [description, setDescription] = useState('')
-  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard: boolean }[]>([])
+  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([])
   const [error, setError] = useState<string | null>(null)
   // Removed regionCode state and related hooks
   // Assuming tax_rate_id is handled by a dedicated component or passed in props now
@@ -146,11 +146,6 @@ export const ServiceForm: React.FC = () => {
         value={serviceTypeId}
         onValueChange={(value) => {
           setServiceTypeId(value)
-          // Optionally update billing method based on selected service type
-          const selectedType = serviceTypes.find(t => t.id === value)
-          if (selectedType) {
-            setBillingMethod(selectedType.billing_method)
-          }
         }}
         placeholder="Select Service Type"
       />

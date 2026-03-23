@@ -56,9 +56,55 @@ interface TimeSheetProps {
 
 import { Temporal } from '@js-temporal/polyfill';
 
-function parseLocalDate(dateStr: string): Date {
-    const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
+function toDateOnlyString(dateValue: unknown): string {
+    if (typeof dateValue === 'string') {
+        return dateValue.slice(0, 10);
+    }
+
+    if (dateValue instanceof Date) {
+        return formatISO(dateValue, { representation: 'date' });
+    }
+
+    if (dateValue && typeof dateValue === 'object') {
+        const temporalLike = dateValue as { year?: unknown; month?: unknown; day?: unknown; toString?: () => string };
+        if (
+            typeof temporalLike.year === 'number' &&
+            typeof temporalLike.month === 'number' &&
+            typeof temporalLike.day === 'number'
+        ) {
+            const y = String(temporalLike.year).padStart(4, '0');
+            const m = String(temporalLike.month).padStart(2, '0');
+            const d = String(temporalLike.day).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        if (typeof temporalLike.toString === 'function') {
+            const value = temporalLike.toString();
+            if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+                return value.slice(0, 10);
+            }
+        }
+    }
+
+    throw new Error(`Invalid date value: ${String(dateValue)}`);
+}
+
+function parseLocalDate(dateValue: unknown): Date {
+    const dateStr = toDateOnlyString(dateValue);
+    const [year, month, day] = dateStr.split('-').map(Number);
     return new Date(year, month - 1, day);
+}
+
+function normalizeOptionalDateInput(dateValue?: unknown): string | null {
+    if (dateValue == null) {
+        return null;
+    }
+
+    try {
+        return toDateOnlyString(dateValue);
+    } catch {
+        return null;
+    }
 }
 
 function getDatesInPeriod(timePeriod: ITimePeriodView): Date[] {
@@ -384,7 +430,7 @@ export function TimeSheet({
     };
 
   const openAddWorkItemDialog = useCallback((date?: string) => {
-    setAddWorkItemDate(date || null);
+    setAddWorkItemDate(normalizeOptionalDateInput(date));
     setIsAddWorkItemDialogOpen(true);
   }, []);
 

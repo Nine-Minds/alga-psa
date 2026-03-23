@@ -1,6 +1,6 @@
 /**
  * Invoice Generation API Route
- * POST /api/v1/invoices/generate - Generate invoice from billing cycle
+ * POST /api/v1/invoices/generate - Generate recurring invoice from selector input
  */
 
 import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
@@ -8,7 +8,7 @@ import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceC
 const controller = new ApiInvoiceController();
 
 export async function POST(request: Request) {
-  return controller.generateFromBillingCycle()(request as any);
+  return controller.generateRecurringInvoice()(request as any);
 }
 
 export const runtime = 'nodejs';

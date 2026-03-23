@@ -161,7 +161,6 @@ export function TemplateUsageBasedServicesStep({
                     value={service.service_id}
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
-                    billingMethods={['usage']}
                     itemKinds={['service']}
                     placeholder="Select a service"
                   />

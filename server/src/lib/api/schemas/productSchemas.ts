@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { uuidSchema } from './common';
 
-const billingMethodSchema = z.enum(['per_unit']);
+const billingMethodSchema = z.enum(['usage']);
 
 const defaultRateSchema = z.preprocess((value) => {
   if (typeof value === 'string') {
@@ -29,7 +29,7 @@ const priceSchema = z.object({
 const productShape = {
   service_name: z.string().min(1).max(255),
   custom_service_type_id: uuidSchema,
-  billing_method: billingMethodSchema.optional().default('per_unit'),
+  billing_method: billingMethodSchema.optional().default('usage'),
   default_rate: defaultRateSchema.optional().default(0),
   currency_code: currencyCodeSchema.optional(),
   unit_of_measure: z.string().min(1, 'Unit of measure is required').max(128),

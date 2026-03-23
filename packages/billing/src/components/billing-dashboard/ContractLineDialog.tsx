@@ -26,6 +26,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './contracts/BucketOverlayFields';
 import { BucketOverlayInput } from './contracts/ContractWizard';
 import { ServiceCatalogPicker } from './contracts/ServiceCatalogPicker';
+import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
@@ -45,7 +46,7 @@ interface ContractLineDialogProps {
   editingPlan?: IContractLinePreset | null;
   onClose?: () => void;
   triggerButton?: React.ReactNode;
-  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; is_standard: boolean }[];
+  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[];
 }
 
 export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
@@ -107,7 +108,12 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             if (cfg) {
               setBaseRate(cfg.base_rate ?? undefined);
               setEnableProration(!!cfg.enable_proration);
-              setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
+              setBillingCycleAlignment(
+                resolveBillingCycleAlignmentForCompatibility({
+                  billingCycleAlignment: cfg.billing_cycle_alignment,
+                  enableProration: cfg.enable_proration,
+                }) as any,
+              );
             }
           })
           .catch(() => {});
@@ -279,6 +285,8 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         preset_name: planName,
         billing_frequency: billingFrequency,
         contract_line_type: planType!,
+        billing_timing: planType === 'Fixed' ? billingTiming : 'arrears',
+        cadence_owner: 'client',
         tenant,
         // Add hourly-specific fields if this is an hourly preset
         ...(planType === 'Hourly' ? {
@@ -307,7 +315,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
           await updateContractLinePresetFixedConfig(savedPresetId, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
-            billing_cycle_alignment: 'start',
+            billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+              billingCycleAlignment: billingCycleAlignment,
+              enableProration: enableProration,
+            }),
           });
 
           // Save Fixed services
@@ -470,7 +481,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       setFixedServices(next);
                       markDirty();
                     }}
-                    billingMethods={['fixed', 'per_unit']}
+                    itemKinds={['service', 'product']}
                     placeholder="Select an item"
                     className="w-full"
                   />
@@ -631,7 +642,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       }
                       markDirty();
                     }}
-                    billingMethods={['hourly']}
+                    itemKinds={['service']}
                     placeholder="Select a service"
                     className="w-full"
                   />
@@ -844,9 +855,8 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         unit_of_measure: item.unit_of_measure,
                       })
                     }
-                    billingMethods={['usage']}
-                    itemKinds={['service', 'product']}
-                    placeholder="Search services/products..."
+                    itemKinds={['service']}
+                    placeholder="Search services..."
                     debounceMs={300}
                   />
                 </div>
@@ -1210,22 +1220,29 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                     <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
-                          Enable Proration
+                          Adjust for Partial Periods
                         </Label>
                         <Switch
                           id="enable-proration"
                           checked={enableProration}
                           onCheckedChange={(checked) => {
                             setEnableProration(checked);
+                            setBillingCycleAlignment((currentAlignment) =>
+                              checked
+                                ? currentAlignment === 'start'
+                                  ? 'prorated'
+                                  : currentAlignment
+                                : 'start',
+                            );
                             markDirty();
                           }}
                         />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        When enabled, the recurring fee will be prorated for partial billing periods based on the start/end date
-                      </p>
                     </div>
-                  </>
+                    <p className="text-xs text-muted-foreground">
+                      When enabled, the recurring fee scales to the covered portion of a service period when the contract starts or ends inside that period.
+                    </p>
+                  </div>
+                </>
                 )}
               </section>
             )}

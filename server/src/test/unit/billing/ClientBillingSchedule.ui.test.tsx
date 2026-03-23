@@ -4,7 +4,7 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { ClientBillingSchedule } from 'server/src/components/clients/ClientBillingSchedule';
+import { ClientBillingSchedule } from '../../../../../packages/clients/src/components/clients/ClientBillingSchedule';
 
 vi.mock('react-hot-toast', () => ({
   toast: {
@@ -52,30 +52,49 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 
 const mockGetClientBillingCycleAnchor = vi.fn(async () => ({
   billingCycle: 'monthly',
-  anchor: { dayOfMonth: 1, monthOfYear: null, dayOfWeek: null, referenceDate: null }
+  anchor: { dayOfMonth: 1, monthOfYear: null, dayOfWeek: null, referenceDate: null },
+  cadenceContext: {
+    cadenceOwner: 'client',
+    changeScopeDescription: 'Client-schedule edits affect future client-cadence windows only.',
+    scheduleDescription: 'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.',
+    previewDescription: 'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.',
+    previewHeading: 'Upcoming client-owned invoice windows (preview)',
+  }
 }));
 
-const mockPreviewBillingPeriodsForSchedule = vi.fn(async () => ([
-  { periodStartDate: '2026-01-01T00:00:00Z', periodEndDate: '2026-02-01T00:00:00Z' },
-  { periodStartDate: '2026-02-01T00:00:00Z', periodEndDate: '2026-03-01T00:00:00Z' },
-  { periodStartDate: '2026-03-01T00:00:00Z', periodEndDate: '2026-04-01T00:00:00Z' },
-]));
-
-vi.mock('@alga-psa/billing/actions', () => ({
-  getClientBillingCycleAnchor: (...args: any[]) => mockGetClientBillingCycleAnchor(...args),
-  previewBillingPeriodsForSchedule: (...args: any[]) => mockPreviewBillingPeriodsForSchedule(...args),
+const mockPreviewBillingPeriodsForSchedule = vi.fn(async () => ({
+  cadenceContext: {
+    cadenceOwner: 'client',
+    changeScopeDescription: 'Client-schedule edits affect future client-cadence windows only.',
+    scheduleDescription: 'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.',
+    previewDescription: 'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.',
+    previewHeading: 'Upcoming client-owned invoice windows (preview)',
+  },
+  periods: [
+    { periodStartDate: '2026-01-01T00:00:00Z', periodEndDate: '2026-02-01T00:00:00Z' },
+    { periodStartDate: '2026-02-01T00:00:00Z', periodEndDate: '2026-03-01T00:00:00Z' },
+    { periodStartDate: '2026-03-01T00:00:00Z', periodEndDate: '2026-04-01T00:00:00Z' },
+  ],
 }));
 
 const mockUpdateClientBillingSchedule = vi.fn(async () => ({ success: true }));
-
-vi.mock('@alga-psa/billing/actions', () => ({
-  updateClientBillingSchedule: (...args: any[]) => mockUpdateClientBillingSchedule(...args),
+const mockPreviewBillingHistoryBootstrap = vi.fn(async () => ({
+  requestedHistoryStartDate: '2025-01-15T00:00:00Z',
+  normalizedHistoryStartBoundary: '2025-01-01T00:00:00Z',
+  earliestInvoicedCycleStartBoundary: null,
+  status: 'eligible',
+  blockedReason: null,
+  affectedUninvoicedCycleCount: 0,
 }));
 
 const mockCreateNextBillingCycle = vi.fn(async () => ({ success: true }));
 
-vi.mock('@alga-psa/billing/actions', () => ({
-  createNextBillingCycle: (...args: any[]) => mockCreateNextBillingCycle(...args),
+vi.mock('../../../../../packages/clients/src/lib/billingHelpers', () => ({
+  getClientBillingCycleAnchorAsync: (...args: any[]) => mockGetClientBillingCycleAnchor(...args),
+  previewBillingPeriodsForScheduleAsync: (...args: any[]) => mockPreviewBillingPeriodsForSchedule(...args),
+  previewBillingHistoryBootstrapAsync: (...args: any[]) => mockPreviewBillingHistoryBootstrap(...args),
+  updateClientBillingScheduleAsync: (...args: any[]) => mockUpdateClientBillingSchedule(...args),
+  createNextBillingCycleAsync: (...args: any[]) => mockCreateNextBillingCycle(...args),
 }));
 
 describe('ClientBillingSchedule', () => {
@@ -95,6 +114,14 @@ describe('ClientBillingSchedule', () => {
     await waitFor(() => {
       expect(screen.getByText('Save Schedule')).toBeTruthy();
     });
+
+    expect(screen.getByText(
+      'Client cadence drives these invoice windows. Contract-anniversary lines keep their own cadence.'
+    )).toBeTruthy();
+    expect(screen.getByText(
+      'This preview is for client-cadence windows only. Contract cadence is previewed at the recurring line.'
+    )).toBeTruthy();
+    expect(screen.getByText('Upcoming client-owned invoice windows (preview)')).toBeTruthy();
 
     await waitFor(() => {
       expect(mockPreviewBillingPeriodsForSchedule).toHaveBeenCalled();
@@ -126,7 +153,8 @@ describe('ClientBillingSchedule', () => {
           monthOfYear: null,
           dayOfWeek: null,
           referenceDate: null
-        }
+        },
+        billingHistoryStartDate: null,
       });
     });
   });

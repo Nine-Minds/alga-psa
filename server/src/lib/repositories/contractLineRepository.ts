@@ -3,6 +3,15 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 import { IContractLineMapping } from 'server/src/interfaces/contract.interfaces';
+import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
+import {
+  DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+  resolveRecurringAuthoringPolicy,
+} from '@shared/billingClients/recurringAuthoringPolicy';
+import {
+  normalizeLiveRecurringStorage,
+  normalizeTemplateRecurringStorage,
+} from '@shared/billingClients/recurrenceStorageModel';
 
 export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
@@ -24,14 +33,16 @@ async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contra
 }
 
 function mapContractLineRow(row: any): IContractLineMapping {
+  const recurringStorage = normalizeLiveRecurringStorage(row);
   return {
-    tenant: row.tenant,
-    contract_id: row.contract_id,
-    contract_line_id: row.contract_line_id,
-    display_order: row.display_order ?? 0,
-    custom_rate: row.custom_rate ?? null,
-    billing_timing: row.billing_timing ?? 'arrears',
-    created_at: row.created_at,
+    tenant: recurringStorage.tenant,
+    contract_id: recurringStorage.contract_id,
+    contract_line_id: recurringStorage.contract_line_id,
+    display_order: recurringStorage.display_order ?? 0,
+    custom_rate: recurringStorage.custom_rate ?? null,
+    billing_timing: recurringStorage.billing_timing,
+    cadence_owner: recurringStorage.cadence_owner,
+    created_at: recurringStorage.created_at,
   };
 }
 
@@ -53,6 +64,7 @@ export async function fetchContractLineMappings(
         'display_order',
         'custom_rate',
         'billing_timing',
+        'cadence_owner',
         'created_at',
       ]);
     return rows.map(mapContractLineRow);
@@ -68,6 +80,7 @@ export async function fetchContractLineMappings(
       'display_order',
       'custom_rate',
       'billing_timing',
+      'cadence_owner',
       'created_at',
     ]);
   return rows.map(mapContractLineRow);
@@ -82,9 +95,6 @@ export async function fetchDetailedContractLines(
 
   if (template) {
     const rows = await knex('contract_template_lines as lines')
-      .leftJoin('contract_template_line_terms as terms', function joinTemplateTerms() {
-        this.on('terms.template_line_id', '=', 'lines.template_line_id').andOn('terms.tenant', '=', 'lines.tenant');
-      })
       .leftJoin('contract_template_line_fixed_config as fixed', function joinTemplateFixed() {
         this.on('fixed.template_line_id', '=', 'lines.template_line_id').andOn('fixed.tenant', '=', 'lines.tenant');
       })
@@ -96,11 +106,11 @@ export async function fetchDetailedContractLines(
         'lines.display_order',
         'lines.custom_rate',
         'lines.billing_timing',
+        'lines.cadence_owner',
         'lines.created_at',
         'lines.template_line_name as contract_line_name',
         'lines.line_type as contract_line_type',
         'lines.billing_frequency',
-        'terms.billing_timing as terms_billing_timing',
         'fixed.base_rate as default_rate',
         'fixed.enable_proration as template_enable_proration',
         'fixed.billing_cycle_alignment as template_billing_cycle_alignment',
@@ -108,12 +118,13 @@ export async function fetchDetailedContractLines(
       .orderBy('lines.display_order', 'asc');
 
     return rows.map((row: any) => ({
-      ...mapContractLineRow({
-        ...row,
-        custom_rate:
-          row.custom_rate ?? (row.default_rate != null ? Number(row.default_rate) : null),
-        billing_timing: row.billing_timing ?? row.terms_billing_timing ?? 'arrears',
-      }),
+      ...mapContractLineRow(
+        normalizeTemplateRecurringStorage({
+          ...row,
+          custom_rate:
+            row.custom_rate ?? (row.default_rate != null ? Number(row.default_rate) : null),
+        }),
+      ),
       contract_line_name: row.contract_line_name,
       contract_line_type: row.contract_line_type,
       billing_frequency: row.billing_frequency,
@@ -124,10 +135,10 @@ export async function fetchDetailedContractLines(
             ? Number(row.default_rate)
             : null,
       enable_proration: row.template_enable_proration ?? false,
-      billing_cycle_alignment: (row.template_billing_cycle_alignment ?? 'start') as
-        | 'start'
-        | 'end'
-        | 'prorated',
+      billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+        billingCycleAlignment: row.template_billing_cycle_alignment,
+        enableProration: row.template_enable_proration,
+      }),
     }));
   }
 
@@ -140,6 +151,7 @@ export async function fetchDetailedContractLines(
       'cl.display_order',
       'cl.custom_rate',
       'cl.billing_timing',
+      'cl.cadence_owner',
       'cl.created_at',
       'cl.contract_line_name',
       'cl.contract_line_type',
@@ -150,17 +162,21 @@ export async function fetchDetailedContractLines(
     .orderBy('cl.display_order', 'asc');
 
   return rows.map((row: any) => ({
-    ...mapContractLineRow({
-      ...row,
-      custom_rate: row.custom_rate ?? null,
-      billing_timing: row.billing_timing ?? 'arrears',
-    }),
-    contract_line_name: row.contract_line_name,
-    contract_line_type: row.contract_line_type,
-    billing_frequency: row.billing_frequency,
+      ...mapContractLineRow(
+        normalizeLiveRecurringStorage({
+          ...row,
+          custom_rate: row.custom_rate ?? null,
+        }),
+      ),
+      contract_line_name: row.contract_line_name,
+      contract_line_type: row.contract_line_type,
+      billing_frequency: row.billing_frequency,
     rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
     enable_proration: row.enable_proration ?? false,
-    billing_cycle_alignment: row.billing_cycle_alignment ?? 'start',
+    billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+      billingCycleAlignment: row.billing_cycle_alignment,
+      enableProration: row.enable_proration,
+    }),
   }));
 }
 
@@ -220,6 +236,7 @@ export async function ensureTemplateLineSnapshot(
     .first();
 
   const targetTemplateLineId = existingTemplateLine ? uuidv4() : contractLineId;
+  const baseRecurringStorage = normalizeLiveRecurringStorage(baseLine);
 
   await knex('contract_template_lines').insert({
     tenant,
@@ -242,7 +259,8 @@ export async function ensureTemplateLineSnapshot(
     updated_at: now,
     custom_rate: customRate ?? baseLine.custom_rate ?? null,
     display_order: baseLine.display_order ?? 0,
-    billing_timing: baseLine.billing_timing ?? 'arrears',
+    billing_timing: baseRecurringStorage.billing_timing,
+    cadence_owner: baseRecurringStorage.cadence_owner,
   });
 
   return targetTemplateLineId;
@@ -267,45 +285,51 @@ async function cloneTemplateLineToContract(
     .where({ tenant, template_line_id: templateLineId })
     .first();
 
-  // Query template terms to get any overridden values
-  const templateTerms = await trx('contract_template_line_terms')
-    .where({ tenant, template_line_id: templateLineId })
-    .first();
-
   const now = trx.fn.now();
   const newContractLineId = uuidv4();
   const effectiveRate =
     customRate ??
     templateLine.custom_rate ??
     (templateFixedConfig?.base_rate != null ? Number(templateFixedConfig.base_rate) : null);
+  const templateBillingCycleAlignment = resolveBillingCycleAlignmentForCompatibility({
+    billingCycleAlignment: templateFixedConfig?.billing_cycle_alignment,
+    enableProration: templateFixedConfig?.enable_proration,
+  });
+  const templateRecurringStorage = normalizeTemplateRecurringStorage({
+    billing_timing: templateLine.billing_timing,
+    cadence_owner: templateLine.cadence_owner,
+  });
 
-  // Insert directly into contract_lines with all values (terms columns are now inline)
+  // Template-derived live lines copy recurring timing at clone time.
+  // Later template edits are provenance only and must not retroactively rewrite
+  // cadence_owner or billing_timing on already-created contract lines.
   await trx('contract_lines').insert({
     tenant,
     contract_line_id: newContractLineId,
     contract_id: contractId,
     contract_line_name: templateLine.template_line_name,
     description: templateLine.description ?? null,
-    billing_frequency: templateTerms?.billing_frequency ?? templateLine.billing_frequency,
+    billing_frequency: templateLine.billing_frequency,
     is_custom: false,
     contract_line_type: templateLine.line_type ?? 'Fixed',
     service_category: templateLine.service_category ?? null,
     is_active: templateLine.is_active ?? true,
-    enable_overtime: templateTerms?.enable_overtime ?? templateLine.enable_overtime ?? false,
-    overtime_rate: templateTerms?.overtime_rate ?? templateLine.overtime_rate ?? null,
-    overtime_threshold: templateTerms?.overtime_threshold ?? templateLine.overtime_threshold ?? null,
-    enable_after_hours_rate: templateTerms?.enable_after_hours_rate ?? templateLine.enable_after_hours_rate ?? false,
-    after_hours_multiplier: templateTerms?.after_hours_multiplier ?? templateLine.after_hours_multiplier ?? null,
-    minimum_billable_time: templateTerms?.minimum_billable_time ?? templateLine.minimum_billable_time ?? null,
-    round_up_to_nearest: templateTerms?.round_up_to_nearest ?? templateLine.round_up_to_nearest ?? null,
+    enable_overtime: templateLine.enable_overtime ?? false,
+    overtime_rate: templateLine.overtime_rate ?? null,
+    overtime_threshold: templateLine.overtime_threshold ?? null,
+    enable_after_hours_rate: templateLine.enable_after_hours_rate ?? false,
+    after_hours_multiplier: templateLine.after_hours_multiplier ?? null,
+    minimum_billable_time: templateLine.minimum_billable_time ?? null,
+    round_up_to_nearest: templateLine.round_up_to_nearest ?? null,
     created_at: now,
     updated_at: now,
     is_template: false,
     custom_rate: effectiveRate,
     display_order: templateLine.display_order ?? 0,
-    billing_timing: templateTerms?.billing_timing ?? templateLine.billing_timing ?? 'arrears',
+    billing_timing: templateRecurringStorage.billing_timing,
+    cadence_owner: templateRecurringStorage.cadence_owner,
     enable_proration: templateFixedConfig?.enable_proration ?? false,
-    billing_cycle_alignment: templateFixedConfig?.billing_cycle_alignment ?? 'start',
+    billing_cycle_alignment: templateBillingCycleAlignment,
   });
 
   const templateServices = await trx('contract_template_line_services')
@@ -439,6 +463,7 @@ export async function addContractLine(
         'display_order',
         'custom_rate',
         'billing_timing',
+        'cadence_owner',
         'created_at',
       ]);
 
@@ -456,6 +481,7 @@ export async function addContractLine(
       'display_order',
       'custom_rate',
       'billing_timing',
+      'cadence_owner',
       'created_at',
     ]);
 
@@ -497,12 +523,23 @@ export async function updateContractLine(
   }
 
   if (template) {
+    const existingTemplateLine = await knex('contract_template_lines')
+      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+      .first(['cadence_owner', 'billing_timing']);
+    const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      cadenceOwner: payload.cadence_owner,
+      fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+      billingTiming: payload.billing_timing,
+      fallbackBillingTiming: existingTemplateLine?.billing_timing,
+    });
+
     await knex('contract_template_lines')
       .where({ tenant, template_id: contractId, template_line_id: contractLineId })
       .update({
         custom_rate: payload.custom_rate ?? null,
         display_order: payload.display_order ?? undefined,
-        billing_timing: payload.billing_timing ?? undefined,
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         updated_at: knex.fn.now(),
       });
 
@@ -515,17 +552,29 @@ export async function updateContractLine(
         'display_order',
         'custom_rate',
         'billing_timing',
+        'cadence_owner',
         'created_at',
       ]);
     return mapContractLineRow(row);
   }
+
+  const existingLine = await knex('contract_lines')
+    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+    .first(['cadence_owner', 'billing_timing']);
+  const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    cadenceOwner: payload.cadence_owner,
+    fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+    billingTiming: payload.billing_timing,
+    fallbackBillingTiming: existingLine?.billing_timing,
+  });
 
   await knex('contract_lines')
     .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
     .update({
       custom_rate: payload.custom_rate ?? null,
       display_order: payload.display_order ?? undefined,
-      billing_timing: payload.billing_timing ?? undefined,
+      billing_timing: recurringAuthoringPolicy.billingTiming,
+      cadence_owner: recurringAuthoringPolicy.cadenceOwner,
       updated_at: knex.fn.now(),
     });
 
@@ -538,6 +587,7 @@ export async function updateContractLine(
       'display_order',
       'custom_rate',
       'billing_timing',
+      'cadence_owner',
       'created_at',
     ]);
   return mapContractLineRow(row);
@@ -548,7 +598,8 @@ export async function fetchContractLineById(
   tenant: string,
   contractLineId: string
 ): Promise<IContractLine | undefined> {
-  return knex('contract_lines').where({ tenant, contract_line_id: contractLineId }).first();
+  const row = await knex('contract_lines').where({ tenant, contract_line_id: contractLineId }).first();
+  return row ? normalizeLiveRecurringStorage(row) : undefined;
 }
 
 export async function updateContractLineRate(
@@ -563,21 +614,39 @@ export async function updateContractLineRate(
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
+    const existingTemplateLine = await knex('contract_template_lines')
+      .where({ tenant, template_id: contractId, template_line_id: contractLineId })
+      .first(['billing_timing', 'cadence_owner']);
+    const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+      billingTiming,
+      fallbackBillingTiming: existingTemplateLine?.billing_timing,
+    });
+
     await knex('contract_template_lines')
       .where({ tenant, template_id: contractId, template_line_id: contractLineId })
       .update({
         custom_rate: rate,
-        billing_timing: billingTiming ?? undefined,
+        billing_timing: recurringAuthoringPolicy.billingTiming,
         updated_at: now,
       });
     return;
   }
 
+  const existingLine = await knex('contract_lines')
+    .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
+    .first(['billing_timing', 'cadence_owner']);
+  const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+    billingTiming,
+    fallbackBillingTiming: existingLine?.billing_timing,
+  });
+
   await knex('contract_lines')
     .where({ tenant, contract_id: contractId, contract_line_id: contractLineId })
     .update({
       custom_rate: rate,
-      billing_timing: billingTiming ?? undefined,
+      billing_timing: recurringAuthoringPolicy.billingTiming,
       updated_at: now,
     });
 }

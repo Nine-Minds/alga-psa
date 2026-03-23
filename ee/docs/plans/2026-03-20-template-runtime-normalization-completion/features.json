@@ -1,0 +1,72 @@
+[
+  {
+    "id": "F001",
+    "description": "Inventory the remaining live `template_contract_id` and mixed template/runtime references across `packages/clients`, `packages/billing`, `server/src/lib/api/services`, and `server/scripts`, and classify each as provenance-only, forbidden fallback, or legacy cleanup.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Document the authoritative semantics of `client_contracts.template_contract_id` for the post-cutover state, including whether it remains provenance-only metadata or is ready for later removal.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Remove `template_contract_id ?? contract_id` fallback source resolution from `packages/clients/src/actions/clientContractActions.ts` contract-application flows.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Remove mixed template/runtime fallback source resolution from `packages/clients/src/actions/clientContractLineActions.ts` line-add and line-clone flows.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Refactor `packages/clients/src/models/clientContractLine.ts` and related client-contract runtime shapes so `template_contract_id` is exposed only as explicit provenance metadata, not as a live runtime dependency.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Audit and align `server/src/lib/api/services/ContractLineService.ts` so contract-line mutation/setup paths no longer infer template source from runtime contract IDs or rely on fallback semantics.",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Audit runtime contract loaders in `packages/billing/src/models/contract.ts` and related actions so template joins are provenance-only and do not widen runtime contract identity or assignment lookup behavior.",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Rewrite or retire `server/scripts/contract-template-decoupling.ts` so it no longer backfills `template_contract_id` or preserves hybrid fallback semantics.",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Align shared interfaces and schemas that expose `template_contract_id` so their naming/comments/nullability communicate provenance-only semantics to callers.",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Remove or rewrite tests and fixtures that still encode template-fallback runtime behavior as valid post-normalization behavior.",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Add static source guards covering the remaining targeted packages and scripts for forbidden fallback patterns such as `template_contract_id ?? contract_id` and mixed live-ID template joins.",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Add DB-backed integration coverage proving contract application and contract-line setup flows operate from explicit instantiated/provenance data without template fallback reads.",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Define and test fail-closed behavior for flows that still require authoring provenance when the source template reference is missing or invalid.",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Record the final allowed provenance-only read surfaces and forbidden runtime surfaces in the plan/runbook so future cleanup can distinguish metadata from behavior.",
+    "implemented": true
+  }
+]

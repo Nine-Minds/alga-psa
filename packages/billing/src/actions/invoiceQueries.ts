@@ -72,6 +72,16 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
     tax: Number(invoice.tax),
     total: totalAmount, // Ensure it's a number
     total_amount: totalAmount, // Ensure it's a number
+    service_period_start: invoice.service_period_start
+      ? (typeof invoice.service_period_start === 'string'
+        ? toPlainDate(invoice.service_period_start)
+        : invoice.service_period_start)
+      : null,
+    service_period_end: invoice.service_period_end
+      ? (typeof invoice.service_period_end === 'string'
+        ? toPlainDate(invoice.service_period_end)
+        : invoice.service_period_end)
+      : null,
     credit_applied: Number(invoice.credit_applied || 0),
     is_manual: invoice.is_manual,
     finalized_at: invoice.finalized_at ? (typeof invoice.finalized_at === 'string' ? toPlainDate(invoice.finalized_at) : invoice.finalized_at) : undefined,
@@ -243,6 +253,27 @@ export const fetchInvoicesPaginated = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
+          // Invoice list and summary surfaces flatten canonical recurring detail rows to one
+          // summary range. Full rerender or preview-refresh flows must use the
+          // detail-aware reader below rather than relying on these list projections alone.
+          trx.raw(`(
+            SELECT MIN(iid.service_period_start)
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
+          ) as service_period_start`),
+          trx.raw(`(
+            SELECT MAX(iid.service_period_end)
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
+          ) as service_period_end`),
           'clients.client_name',
           'clients.properties',
           'client_locations.address_line1',
@@ -364,6 +395,24 @@ export const fetchInvoicesByClient = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
+          trx.raw(`(
+            SELECT MIN(iid.service_period_start)
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
+          ) as service_period_start`),
+          trx.raw(`(
+            SELECT MAX(iid.service_period_end)
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
+          ) as service_period_end`),
           'clients.client_name',
           'clients.properties',
           // Location fields
@@ -412,7 +461,7 @@ export const fetchInvoicesByClient = withAuth(async (
 
 /**
  * Fetch invoices for a specific contract assignment (client_contract_id)
- * @param contractId The contract ID (client_contract_id) to fetch invoices for
+ * @param contractId The contract assignment ID (client_contract_id) to fetch invoices for
  * @returns Array of invoice view models
  */
 export const fetchInvoicesByContract = withAuth(async (
@@ -434,7 +483,7 @@ export const fetchInvoicesByContract = withAuth(async (
             .andOn('invoices.tenant', '=', 'clients.tenant');
         })
         .where({
-          'client_contracts.contract_id': contractId,
+          'invoices.client_contract_id': contractId,
           'invoices.tenant': tenant
         })
         .select(
@@ -454,6 +503,24 @@ export const fetchInvoicesByContract = withAuth(async (
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
+          trx.raw(`(
+            SELECT MIN(iid.service_period_start)
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
+          ) as service_period_start`),
+          trx.raw(`(
+            SELECT MAX(iid.service_period_end)
+            FROM invoice_charges ic
+            JOIN invoice_charge_details iid
+              ON ic.item_id = iid.item_id
+             AND ic.tenant = iid.tenant
+            WHERE ic.invoice_id = invoices.invoice_id
+              AND ic.tenant = invoices.tenant
+          ) as service_period_end`),
           'clients.client_name',
           'clients.properties'
         )
@@ -485,6 +552,8 @@ export const getInvoiceForRendering = withAuth(async (
 
     const { knex } = await createTenantKnex();
 
+    // Existing-invoice preview refresh and rerender must hydrate through the full
+    // detail-aware reader so canonical recurring periods survive after persistence.
     return Invoice.getFullInvoiceById(knex, tenant, invoiceId);
   } catch (error) {
     console.error('Error fetching invoice for rendering:', error);

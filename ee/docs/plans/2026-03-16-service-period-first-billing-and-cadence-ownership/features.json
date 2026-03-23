@@ -1,0 +1,2432 @@
+[
+  {
+    "id": "F001",
+    "description": "Document the architecture thesis that recurring billing truth flows from cadence owner to service periods to due invoice windows to persisted invoice detail metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Architecture Thesis",
+      "Summary"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Document an explicit system-surface matrix covering runtime billing, invoice generation, credits, APIs, UI, portal, exports, reporting, migrations, and cleanup",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Summary"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Inventory every recurring timing control currently in use, including billing frequency, client anchors, assignment dates, billing_timing, enable_proration, and billing_cycle_alignment",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Inventory every persisted date/period field that participates in recurring billing or billed-through semantics across invoices, invoice details, and client billing cycles",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Inventory every consumer of service period metadata, including exports, portal views, reporting, credits, and invoice detail readers",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Explicitly mark time, usage, materials, and manual-only non-recurring flows as outside the first hard cut while documenting their compatibility boundaries",
+    "implemented": true,
+    "prdRefs": [
+      "Scope",
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Build a recurring-billing parity matrix spanning frequency, timing mode, start/end boundaries, pricing schedules, discounts, credits, and charge families",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Build parity harness infrastructure that can compare legacy and service-period-first outputs for client-cadence recurring scenarios before cutover",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Define cutover-blocking parity regressions separately from acceptable metadata-shape changes so rollout decisions are deterministic",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Define representative recurring fixture builders that cover monthly, quarterly, semi-annual, annual, advance, arrears, mid-period starts, mid-period ends, and mixed overlays",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Define a canonical service-period data structure with explicit start, end, cadence owner, source obligation, and timing metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Define a canonical invoice-window or due-window data structure separate from service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Define cadence-owner semantics and lifecycle defaults for recurring obligations",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Define a cadence-boundary generator interface with pluggable client-cadence and contract-cadence implementations",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Define activity-window intersection rules that combine generated service periods with assignment start and end dates",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Define partial-period settlement rules that replace duplicated proration math with one recurring coverage model",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Define due-position rules that map service periods to invoice windows for advance and arrears timing",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Define one inclusive/exclusive date semantic model across client billing cycles, service periods, assignment dates, and invoice detail persistence",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Define a shared persistence contract for invoice detail rows produced from canonical recurring service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Add shared recurring timing test utilities and factories that can assert canonical service-period behavior independently of invoice creation",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Implement monthly client-cadence service-period boundary generation using current client anchor-day behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Implement quarterly client-cadence service-period boundary generation using current anchor month/day behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Implement semi-annual client-cadence service-period boundary generation using current anchor month/day behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Implement annual client-cadence service-period boundary generation using current anchor month/day behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Implement weekly client-cadence service-period boundary generation with explicit [start, end) semantics",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Implement bi-weekly client-cadence service-period boundary generation with explicit [start, end) semantics",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Preserve current transition-period behavior when client billing anchors change on future non-invoiced cycles",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Preserve current [start, end) client billing cycle semantics when translating billing cycles into canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Define deterministic client-cadence service-period behavior when historical billing cycles exist but client billing settings changed later",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Define safe fallback behavior when legacy or partial client billing cycle data is encountered during service-period generation",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Map advance timing to the current service period on the current invoice window without separate service-period logic",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Map arrears timing to the previous service period on the current invoice window without separate service-period logic",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Replace mid-period start handling with activity-window intersection against generated service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Replace mid-period end handling with activity-window intersection against generated service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Replace fixed-charge proration factor logic with partial-period settlement derived from actual service-period coverage",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Replace product and license proration factor logic with the same partial-period settlement model",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Define first-period behavior for newly activated recurring lines under both advance and arrears timing",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Define final-period behavior for terminated recurring lines under both advance and arrears timing",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Define no-coverage and zero-length behavior so unsupported or empty service periods never create duplicate or spurious recurring charges",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Centralize recurring timing resolution so fixed, product, and license charge families no longer implement their own date math",
+    "implemented": true,
+    "prdRefs": [
+      "Architecture Thesis",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Refactor fixed recurring charge entry points in BillingEngine to consume canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Remove direct dependency on resolveServicePeriod for fixed recurring charges",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Remove arrears-specific skip branches in fixed recurring billing once service-period eligibility exists",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Replace advance termination credit special casing with canonical partial-period settlement for fixed recurring charges",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Preserve FMV allocation behavior while changing only the timing source for fixed recurring charges",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Preserve pricing-schedule override precedence for fixed recurring charges under service-period-first timing",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Preserve contract-level custom rate behavior for fixed recurring lines under service-period-first timing",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Preserve tax allocation and tax-region behavior for fixed recurring charges while timing semantics change",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Preserve purchase-order and assignment metadata behavior for fixed recurring charges after service-period-first cutover",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Persist fixed recurring invoice detail rows with canonical service-period metadata and parity-check them against legacy behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Define how bucket or allowance periods map onto canonical recurring service periods for recurring bucket contract lines",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Align remaining-bucket and rollover calculations with canonical service-period boundaries where recurring timing currently matters",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Preserve bucket overage charging behavior when bucket plans move onto service-period-first timing semantics",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Preserve discount applicability evaluation when recurring line timing is driven by canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Preserve pricing schedule effective-date evaluation when service periods, not ad hoc billing windows, drive recurring charges",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Preserve tax date-selection semantics when recurring charges are produced from canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Define behavior for negative recurring totals and credit-generating service allocations under canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Ensure prepayment and prepaid-invoice flows consume canonical recurring service-period metadata where they currently depend on recurring timing",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Ensure purchase-order support and PO banners continue to interpret recurring timing correctly after service-period cutover",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Explicitly document which bucket, time, and usage behaviors remain outside the first recurring service-period implementation",
+    "implemented": true,
+    "prdRefs": [
+      "Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Identify recurring product charge paths that currently rely on late-stage proration adjustment",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Refactor recurring product charges to derive timing entirely from canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Preserve catalog price lookup versus contract override precedence for recurring product charges under the new timing model",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Preserve recurring product tax behavior while moving products onto canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Identify recurring license charge paths that currently rely on late-stage proration adjustment",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Refactor recurring license charges to derive timing entirely from canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Preserve recurring license quantity, price, and renewal-related behavior while timing semantics change",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Preserve recurring license tax behavior while moving licenses onto canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Persist product invoice detail rows with canonical service-period metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Persist license invoice detail rows with canonical service-period metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Refactor invoice generation to select due recurring service periods for a billing cycle window instead of deriving recurring service periods inside each charge path",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Preserve invoice header billing_period_start and billing_period_end semantics while recurring line details adopt canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Preserve createInvoiceFromBillingResult and downstream invoice finalization behavior when recurring charges are service-period-first",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Update recurring billing run actions and automatic invoice generation flows to use the new recurring period selection model",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Update preview and generate-one-cycle actions to compare and display recurring charges sourced from canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Ensure manual invoice creation and editing flows continue to coexist with recurring service-period metadata without accidental coupling",
+    "implemented": true,
+    "prdRefs": [
+      "Scope",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Preserve negative-invoice and credit-application flows when recurring charge timing changes underneath invoice generation",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Preserve credit expiration and reconciliation behavior when recurring invoice detail periods become canonical and more explicit",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Ensure invoice workflow events and audit metadata remain correct when recurring charges derive from canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Ensure duplicate-invoice prevention and billed-through calculations still work when recurring selection is driven by due service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Decide and implement the v1 persistence location for cadence_owner",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Add cadence_owner to database schema with safe defaults and backfill for existing recurring records",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Update shared, server, and package interfaces to add cadence_owner and service-period-first recurring terminology",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Update repositories and models that read or write contract line billing config to surface cadence_owner and de-emphasize billing_cycle_alignment",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Update server API schemas and services that create or update contract lines, templates, or billing settings to accept cadence_owner safely",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Update package actions that create or update recurring contract lines, presets, templates, and wizards to persist cadence_owner",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Update test utilities and fixture builders to generate service-period-first recurring scenarios across timing modes and cadence owners",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Add validation rules preventing unsupported cadence-owner and timing combinations during staged rollout",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Add compatibility readers and writers so existing records lacking cadence_owner continue to behave as client cadence until migrated",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Prepare a staged deprecation path for billing_cycle_alignment in repositories, models, and API payloads without breaking rollout",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Update recurring contract line configuration UI to present cadence owner in business terms",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Update contract wizard and resume flows to capture cadence owner for newly created recurring lines",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Update template detail and template wizard recurring configuration UI to capture cadence-owner defaults for template-authored lines",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Update fixed recurring configuration panels to explain partial-period settlement instead of proration-as-workaround",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Update billing dashboard copy, quick-start guidance, and settings descriptions to reflect service-period-first semantics",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Update client billing schedule UI and preview flows to clarify that client cadence is one possible recurring service-period owner, not the only source of timing",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Update client portal invoice, contract-line, and billing-detail views to display canonical service-period metadata accurately",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "Update reporting actions and report definitions that summarize recurring invoices or contract billing periods to interpret canonical service periods correctly",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "Update accounting export repositories and adapters to continue mapping stable service-period fields after cutover",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Update internal docs, help text, and architecture references to describe the new recurring timing model and rollout defaults",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Define monthly contract-cadence semantics anchored to assignment start date",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Define quarterly contract-cadence semantics anchored to assignment start date",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Define semi-annual contract-cadence semantics anchored to assignment start date",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Define annual contract-cadence semantics anchored to assignment start date",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "Define contract-cadence behavior for future-start assignments, renew-in-place, and renewed contracts",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Define first-invoice behavior for contract-cadence lines that start in the middle of an existing client billing cycle",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Define final-invoice behavior for contract-cadence lines that end in the middle of a generated contract-owned period",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Define invoice grouping rules when a client has both client-cadence and contract-cadence recurring lines due in the same window",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "Define invoice grouping rules when mixed cadence-owner recurring lines are due in different windows or at different frequencies",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Update recurring billing selection and run logic to handle mixed cadence owners deterministically",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Build a staged rollout plan that enables client-cadence parity before contract cadence",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Add DB-backed pre-cutover validation proving existing client-cadence recurring invoices remain unchanged under the new engine",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "Add rollout controls or equivalent safety gates if needed to compare old and new recurring outputs before hard cutover",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Document and implement migration and backfill for cadence_owner defaults on existing recurring records",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Add regression guardrails to keep time, usage, materials, and manual-only flows outside the first hard cutover",
+    "implemented": true,
+    "prdRefs": [
+      "Scope",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Remove live execution dependence on billing_cycle_alignment once parity and contract-cadence rollout are complete",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "Remove obsolete recurring timing helpers, dead branches, and duplicated proration code after cutover",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "Add source and DB-backed post-cutover validation proving recurring timing now flows through the canonical service-period model",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "Add operator and developer runbooks for parity checks, mixed-cadence troubleshooting, and rollback posture",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "Capture follow-on plan boundaries for full time-and-usage unification once materialized recurring service periods are established in v1",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "Update billing settings actions and types to surface cadence-owner defaults, rollout semantics, and compatibility boundaries where recurring defaults are configured",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "Update billing cycle anchor actions and schedule-preview flows to coexist cleanly with explicit cadence ownership without implying that client cadence is universal",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "Update contract line preset actions and preset models to persist cadence-owner defaults independently from billing_cycle_alignment",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "Audit contract line mapping and disambiguation helpers so no recurring timing assumptions are inferred from legacy config flags after cutover",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "Update invoice models, services, and repository readers so full invoice detail APIs expose canonical service-period data consistently",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "Update invoice query and read actions used by dashboard and portal flows to preserve stable rendering semantics for canonical service periods",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "Update accounting export repositories and mapping schemas to consume canonical service-period metadata directly rather than legacy recurring timing assumptions",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "Update event schemas and billing workflow events that carry recurring invoice or billing detail so service-period-first semantics remain explicit and stable",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "Update contract revenue, expiration, reconciliation, and invoice-summary reporting surfaces to use canonical service-period meaning where recurring timing matters",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "Update client-portal billing metrics, remaining bucket unit actions, recent invoice readers, and line-detail actions to understand canonical service-period semantics",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "Update purchase-order service and PO-related invoice selection behavior if recurring service-period changes affect PO-scoped invoice validation",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "Update tax, external tax import, and tax reconciliation consumers if they rely on recurring service-period fields or charge timing assumptions",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "Update invoice template preview, sample invoice data, and related demo data generation so canonical service-period fields render correctly during previews",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "Update billing test helpers, pricing schedule helpers, and migration helpers to generate cadence-owner-aware recurring scenarios and parity fixtures",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "Add backfill verification that all existing recurring records receive client cadence defaults without mutating current invoice behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "Add explicit mixed-cadence validation at action, API, and UI layers for unsupported combinations during phased rollout",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "Update contract line fixed-config models and services to stage billing_cycle_alignment deprecation in favor of cadence-owner and partial-period semantics",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "Update template-authored recurring defaults and instantiation flows so cadence-owner defaults clone safely into instantiated contract lines",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "Update billing dashboard overview, automatic invoices, prepayment invoices, and manual invoices tabs to explain and surface the new recurring semantics consistently",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "Update client-portal payment and billing overview dialogs to render canonical service periods independently of old proration assumptions",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "Audit company-sync, accounting mapping, and export validation services for service-period field assumptions affected by recurring timing changes",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Detailed Requirements"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "Add systematic source cleanup for obsolete recurring timing terms in UI copy, docs, and implementation comments after cutover",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "Add runtime guardrails preventing partial rollout states where some recurring charge families use new timing and others still use old timing on the same execution path",
+    "implemented": true,
+    "prdRefs": [
+      "Risks",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "Add regression protection for contract wizard resume and draft flows so cadence-owner and recurring timing defaults survive draft save and resume",
+    "implemented": true,
+    "prdRefs": [
+      "System Surfaces In Scope",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F145",
+    "description": "Preserve end-exclusive query behavior and overlap semantics in billing-engine selection logic when service-period-first timing replaces legacy helper logic",
+    "implemented": true,
+    "prdRefs": [
+      "Detailed Requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F146",
+    "description": "Add post-cutover source and database validation proving recurring outputs no longer depend on resolveServicePeriod or billing_cycle_alignment in live paths",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F147",
+    "description": "Capture explicit follow-on work for advanced service-period ledger extensions such as long-range materialization, archival, or performance-oriented denormalization if v1 materialization proves insufficient",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F148",
+    "description": "Capture explicit follow-on work for time and usage unification if future product direction requires canonical service periods beyond recurring contract-backed charges",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Scope"
+    ]
+  },
+  {
+    "id": "F149",
+    "description": "Document an operational runbook for investigating cadence-owner disputes, service-period mismatches, and mixed-cadence invoice questions",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F150",
+    "description": "Add a feature-to-subsystem mapping discipline in the plan artifacts so implementation progress stays traceable across runtime, invoices, APIs, UI, and downstream consumers",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F151",
+    "description": "Define a recurring-run execution identity separate from raw billingCycleId so client-cadence and contract-cadence work can both be scheduled deterministically",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 5",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F152",
+    "description": "Define the job payload schema and selector inputs for choosing due recurring service periods in background invoice-generation flows",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 5",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F153",
+    "description": "Define idempotency keys and retry semantics for recurring runs once due service periods rather than billingCycleId drive execution",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 5",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F154",
+    "description": "Define comparison-mode execution identity and parity-trace metadata so legacy and canonical recurring outputs can be compared safely during rollout",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Inventory and parity requirements"
+    ]
+  },
+  {
+    "id": "F155",
+    "description": "Define schedulable due-work selection for client-cadence recurring obligations without assuming client cadence is the only recurring clock",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 5",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F156",
+    "description": "Define schedulable due-work selection for contract-cadence recurring obligations before they enter invoice grouping",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 7",
+      "Contract-cadence requirements"
+    ]
+  },
+  {
+    "id": "F157",
+    "description": "Define invoice grouping rules that preserve single-contract invoice constraints when multiple due service periods are selected together",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 5",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F158",
+    "description": "Define invoice grouping and split rules for purchase-order constrained recurring charges when due service periods coincide",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 5",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F159",
+    "description": "Define invoice grouping and split rules for tax-source, currency, or export-shape constraints that prevent otherwise coincident recurring work from sharing one invoice",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 5",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F160",
+    "description": "Define the operator-visible split policy and explainability metadata when one due window produces multiple invoices by design",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F161",
+    "description": "Define a stable projection contract between invoice parent charges and canonical invoice_charge_details for recurring lines",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F162",
+    "description": "Update invoice model hydration paths to read and preserve canonical recurring detail periods instead of only parent invoice charge rows",
+    "implemented": true,
+    "prdRefs": [
+      "Read-model and post-persist lifecycle requirements",
+      "System Surfaces In Scope"
+    ]
+  },
+  {
+    "id": "F163",
+    "description": "Update invoice query actions and API readers to expose canonical recurring detail periods without breaking existing invoice consumers",
+    "implemented": true,
+    "prdRefs": [
+      "Read-model and post-persist lifecycle requirements",
+      "Data model and API requirements"
+    ]
+  },
+  {
+    "id": "F164",
+    "description": "Define fallback hydration behavior for historical invoices that lack canonical recurring detail rows",
+    "implemented": true,
+    "prdRefs": [
+      "Read-model and post-persist lifecycle requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F165",
+    "description": "Define preview-row contracts for one charge mapping to one or many canonical recurring detail periods",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 5",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F166",
+    "description": "Define invoice rendering-adapter flattening or expansion rules when canonical recurring detail periods cannot be shown one-to-one in the rendered output",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F167",
+    "description": "Define client-portal invoice detail projection rules for canonical recurring periods, including omission and flattening behavior where appropriate",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F168",
+    "description": "Define ordering, aggregation, and display rules when multiple canonical recurring periods contribute to one invoice charge or invoice view",
+    "implemented": true,
+    "prdRefs": [
+      "Read-model and post-persist lifecycle requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F169",
+    "description": "Define invoice schema compatibility rules for old flat invoices and new detail-backed recurring invoices across shared interfaces and APIs",
+    "implemented": true,
+    "prdRefs": [
+      "Read-model and post-persist lifecycle requirements",
+      "Data model and API requirements"
+    ]
+  },
+  {
+    "id": "F170",
+    "description": "Define workflow-event and audit-log payload updates needed when recurring truth lives on canonical detail periods instead of invoice headers alone",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 5",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F171",
+    "description": "Replace header-period billed-through readers with detail-period billed-through readers for recurring invoice lifecycle enforcement",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F172",
+    "description": "Define contract-line mutation guards against authoritative detail periods for edit, remove, pause, and replace operations",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F173",
+    "description": "Define renewal and replacement behavior when historical recurring detail periods exist for the contract line being renewed or superseded",
+    "implemented": true,
+    "prdRefs": [
+      "Read-model and post-persist lifecycle requirements",
+      "Contract-cadence requirements"
+    ]
+  },
+  {
+    "id": "F174",
+    "description": "Define end-date shortening and mid-cycle termination behavior against canonical due or partially covered service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Runtime engine requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F175",
+    "description": "Define deletion and cancellation safeguards when recurring detail periods already exist for not-yet-finalized or finalized invoices",
+    "implemented": true,
+    "prdRefs": [
+      "Read-model and post-persist lifecycle requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F176",
+    "description": "Define how invoice recalculation preserves canonical recurring detail periods instead of treating them as derivable from invoice headers after persistence",
+    "implemented": true,
+    "prdRefs": [
+      "Read-model and post-persist lifecycle requirements",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F177",
+    "description": "Define how manual edits to recurring invoice charges preserve, merge, or invalidate canonical detail-period provenance",
+    "implemented": true,
+    "prdRefs": [
+      "Read-model and post-persist lifecycle requirements",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F178",
+    "description": "Define rerender, preview-refresh, and invoice-summary flows that consume canonical recurring detail periods after invoice persistence",
+    "implemented": true,
+    "prdRefs": [
+      "Read-model and post-persist lifecycle requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F179",
+    "description": "Define percentage-discount and net-total recalculation semantics when recurring invoice lines are backed by canonical detail periods",
+    "implemented": true,
+    "prdRefs": [
+      "Dependent recurring behavior requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F180",
+    "description": "Define zero-dollar invoice finalization behavior under service-period-first billing so recurring edge cases do not bypass canonical persistence rules",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F181",
+    "description": "Define the manual-invoice policy for service-period fields, including whether manually entered lines remain intentionally periodless or can carry canonical periods",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F182",
+    "description": "Define optional provenance rules when a manual invoice line is tied to a recurring contract line or service-period-backed obligation",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F183",
+    "description": "Define prepayment invoice service-period semantics and whether prepayment artifacts carry null periods, financial-date periods, or explicit non-service markers",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F184",
+    "description": "Define negative-invoice offset semantics relative to canonical recurring service periods when reversals affect future or prior recurring work",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "Dependent recurring behavior requirements"
+    ]
+  },
+  {
+    "id": "F185",
+    "description": "Define credit memo issuance metadata and date basis when source recurring invoices are detail-period-backed",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F186",
+    "description": "Define credit application behavior and invariants when applied-to invoices or source invoices use canonical recurring detail periods",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F187",
+    "description": "Define credit expiration and credit reconciliation date-basis rules after recurring timing no longer relies on invoice header periods alone",
+    "implemented": true,
+    "prdRefs": [
+      "Invoice and billing-flow requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F188",
+    "description": "Define credit transfer, reporting, and audit behavior when credit lineage originates from canonical recurring detail periods",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F189",
+    "description": "Define dashboard and portal display policy for non-service financial artifacts so they remain understandable alongside canonical recurring service periods",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F190",
+    "description": "Define failure-handling and fallback semantics when financial artifacts lack canonical service-period metadata during staged coexistence",
+    "implemented": true,
+    "prdRefs": [
+      "Risks",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F191",
+    "description": "Define report-date-basis policy for each billing and finance reporting family, distinguishing invoice-header dates from canonical recurring service-period dates",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F192",
+    "description": "Split billing overview, analytics, and dashboard summary surfaces by their intended date basis so service-period-first cutover does not silently change meaning",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F193",
+    "description": "Define contract revenue, expiration, reconciliation, and invoice-summary reporting semantics when recurring periods come from canonical detail rows",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Contract-cadence requirements"
+    ]
+  },
+  {
+    "id": "F194",
+    "description": "Define financial analytics and service-metrics semantics when invoice dates and service-period dates diverge more often under mixed cadence ownership",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F195",
+    "description": "Define the authoritative accounting-export repository read contract for canonical recurring detail periods and legacy fallback invoices",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F196",
+    "description": "Define stored export-batch persistence semantics when batches contain historical flat invoices and new detail-backed recurring invoices",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F197",
+    "description": "Define export-batch replay, retry, reread, and dashboard-inspection behavior after canonical recurring detail periods become authoritative",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Pass 8"
+    ]
+  },
+  {
+    "id": "F198",
+    "description": "Define QuickBooks adapter rules for canonical recurring period ranges, single service dates, and null-period fallbacks",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F199",
+    "description": "Define Xero adapter rules for canonical recurring period ranges, description flattening, and null-period fallbacks",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F200",
+    "description": "Define internal tax, external tax import, and reconciliation consumer behavior when canonical recurring detail periods become available",
+    "implemented": true,
+    "prdRefs": [
+      "Dependent recurring behavior requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F201",
+    "description": "Define one authoritative cadence-owner and timing-default policy across every recurring authoring path",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "Data model and API requirements"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "Update contract-wizard write paths so cadence-owner and timing semantics persist consistently with the canonical recurring model",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "Update contract-line dialog write paths so inline recurring edits persist cadence-owner and timing semantics consistently",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "Update custom recurring-line creation flows so cadence-owner and timing defaults match all other authoring paths",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "Update preset creation, preset editing, and preset reuse flows so they persist and replay canonical recurring cadence semantics",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "Data model and API requirements"
+    ]
+  },
+  {
+    "id": "F206",
+    "description": "Update template-line authoring flows so cadence-owner, timing, and first-invoice semantics are authored explicitly at the template level when supported",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F207",
+    "description": "Update template-to-contract cloning so cadence-owner and recurring timing semantics propagate explicitly rather than through incidental field copies",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "Pass 6"
+    ]
+  },
+  {
+    "id": "F208",
+    "description": "Define template-derived contract editing semantics after clone so future template edits do not create ambiguity about recurring cadence ownership on live lines",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "Define authoring preview and explainer behavior for first invoice, proration replacement, and cadence-owner outcomes before the contract is saved",
+    "implemented": true,
+    "prdRefs": [
+      "UI and downstream-consumer requirements",
+      "Authoring-path and storage-reconciliation requirements"
+    ]
+  },
+  {
+    "id": "F210",
+    "description": "Define unsupported authoring combinations by line type, billing frequency, cadence owner, and timing mode with clear validation boundaries",
+    "implemented": true,
+    "prdRefs": [
+      "Data model and API requirements",
+      "Authoring-path and storage-reconciliation requirements"
+    ]
+  },
+  {
+    "id": "F211",
+    "description": "Reconcile the authoritative recurrence-storage model across live contract lines, template lines, preset-backed flows, and shared billing interfaces",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "Data model and API requirements"
+    ]
+  },
+  {
+    "id": "F212",
+    "description": "Add cadence_owner schema and backfill coverage for template-line storage surfaces if template authoring supports canonical recurrence semantics in v1",
+    "implemented": true,
+    "prdRefs": [
+      "Data model and API requirements",
+      "Authoring-path and storage-reconciliation requirements"
+    ]
+  },
+  {
+    "id": "F213",
+    "description": "Add cadence_owner schema and backfill coverage for preset-backed or shared recurrence-default surfaces where those defaults must survive create-time propagation",
+    "implemented": true,
+    "prdRefs": [
+      "Data model and API requirements",
+      "Authoring-path and storage-reconciliation requirements"
+    ]
+  },
+  {
+    "id": "F214",
+    "description": "Normalize billing_timing defaults across all recurring write paths before layering cadence-owner defaults on top",
+    "implemented": true,
+    "prdRefs": [
+      "Data model and API requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F215",
+    "description": "Normalize legacy billing_cycle_alignment default mapping across all recurring write paths before deprecating it from execution",
+    "implemented": true,
+    "prdRefs": [
+      "Data model and API requirements",
+      "Cleanup requirements"
+    ]
+  },
+  {
+    "id": "F216",
+    "description": "Remove repository and model write-path behavior that silently drops or inconsistently normalizes recurring cadence fields",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "Cleanup requirements"
+    ]
+  },
+  {
+    "id": "F217",
+    "description": "Remove stale joins or reads against dropped recurrence-related tables before service-period-first implementation assumes a clean storage baseline",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "Cleanup requirements"
+    ]
+  },
+  {
+    "id": "F218",
+    "description": "Remove stale documentation and model references to dropped term-storage tables or superseded recurrence-storage assumptions",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "Cleanup requirements"
+    ]
+  },
+  {
+    "id": "F219",
+    "description": "Add compatibility readers and writers for partially migrated recurrence records across all authoring and read-model surfaces",
+    "implemented": true,
+    "prdRefs": [
+      "Data model and API requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F220",
+    "description": "Document a source-of-truth matrix for every recurrence field across tables, repositories, actions, APIs, and UI surfaces",
+    "implemented": true,
+    "prdRefs": [
+      "Authoring-path and storage-reconciliation requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F221",
+    "description": "Add source and DB validation proving live runtime no longer depends on dropped recurrence-related tables after cleanup lands",
+    "implemented": true,
+    "prdRefs": [
+      "Cleanup requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F222",
+    "description": "Add source and DB validation proving authoritative recurring readers no longer fall back to invoice header periods when canonical detail periods exist",
+    "implemented": true,
+    "prdRefs": [
+      "Cleanup requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F223",
+    "description": "Add source and DB validation proving contract-cadence execution paths are no longer blocked on billingCycleId-only scheduler assumptions",
+    "implemented": true,
+    "prdRefs": [
+      "Cleanup requirements",
+      "Contract-cadence requirements"
+    ]
+  },
+  {
+    "id": "F224",
+    "description": "Define the staged cutover order for readers, writers, scheduler identity, and grouping rules so coexistence phases are explicit and safe",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F225",
+    "description": "Define the staged cutover order for reporting, portal, and accounting exports after the canonical recurring read-model contract lands",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Sequence",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F226",
+    "description": "Define rollback posture and coexistence expectations when historical flat invoices and canonical detail-backed invoices both remain queryable for a long period",
+    "implemented": true,
+    "prdRefs": [
+      "Risks",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F227",
+    "description": "Document an operational runbook for diagnosing projection mismatches between invoice header periods and canonical recurring detail periods",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 8",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F228",
+    "description": "Document an operational runbook for diagnosing authoring-default drift across templates, presets, wizard flows, and custom recurring lines",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 8",
+      "Authoring-path and storage-reconciliation requirements"
+    ]
+  },
+  {
+    "id": "F229",
+    "description": "Capture a follow-on boundary for persisted recurring execution records if scheduler identity, retries, and operational traceability prove too implicit after v1 materialization",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F230",
+    "description": "Capture a follow-on boundary for invoice-schema versioning if dual old-shape and new-shape invoice support becomes long-lived after rollout",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F231",
+    "description": "Define the authoritative persisted service-period record shape for recurring billing, including identifiers, obligation linkage, cadence owner, boundaries, provenance, and lifecycle state",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Data model and API requirements"
+    ]
+  },
+  {
+    "id": "F232",
+    "description": "Add database schema, indexes, and integrity constraints for persisted recurring service-period records",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Data model and API requirements"
+    ]
+  },
+  {
+    "id": "F233",
+    "description": "Define the service-period lifecycle state model, including generated, edited, skipped, locked, billed, superseded, and archived states as applicable",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F234",
+    "description": "Define the persisted provenance model that distinguishes generated periods from user-edited periods and records why a period differs from source cadence rules",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F235",
+    "description": "Define the generation horizon and replenishment policy for future persisted recurring service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F236",
+    "description": "Generate persisted client-cadence service periods from existing recurring obligations under parity rules before invoice cutover",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 2",
+      "Pass 3"
+    ]
+  },
+  {
+    "id": "F237",
+    "description": "Generate persisted contract-cadence service periods from recurring obligations once contract-owned cadence is enabled",
+    "implemented": true,
+    "prdRefs": [
+      "Pass 2",
+      "Pass 8"
+    ]
+  },
+  {
+    "id": "F238",
+    "description": "Define and implement the regeneration algorithm that refreshes future unedited service periods when source recurrence rules change",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Pass 2"
+    ]
+  },
+  {
+    "id": "F239",
+    "description": "Define and implement override-preservation rules so user-edited future service periods are not silently overwritten by regeneration",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F240",
+    "description": "Define billed-period and locked-period immutability rules, including which corrective flows are allowed after invoice linkage exists",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F241",
+    "description": "Link persisted service periods to resulting invoice detail rows so billed history can be traced back to explicit period records",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F242",
+    "description": "Define the due-selection query contract so invoice generation reads due persisted service periods rather than deriving periods on demand",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F243",
+    "description": "Define parity comparison between legacy derived timing outputs and persisted service-period schedules during staged cutover",
+    "implemented": true,
+    "prdRefs": [
+      "Inventory and parity requirements",
+      "Materialized service-period requirements"
+    ]
+  },
+  {
+    "id": "F244",
+    "description": "Define backfill rules for initializing persisted future service periods from existing recurring lines without mutating billed history",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Implementation Sequence"
+    ]
+  },
+  {
+    "id": "F245",
+    "description": "Define the minimal v1 service-period edit operations supported for billing admins, including boundary adjustments",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F246",
+    "description": "Define and implement skip or defer operations for future persisted service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F247",
+    "description": "Define whether split and merge operations for future persisted service periods are supported in v1 and how they behave if supported",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F248",
+    "description": "Define overlap, gap, and continuity validation rules when a user edits future persisted service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Data model and API requirements"
+    ]
+  },
+  {
+    "id": "F249",
+    "description": "Define conflict handling when source-rule changes would invalidate or overlap user-edited future persisted service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F250",
+    "description": "Define UI and API surfaces for listing persisted future service periods independently of invoice generation",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F251",
+    "description": "Define UI and API surfaces for editing future persisted service periods with explicit provenance and validation feedback",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F252",
+    "description": "Define UI affordances that show whether a persisted future service period is generated, edited, skipped, locked, billed, or superseded",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F253",
+    "description": "Define permissions and audit requirements for viewing, editing, skipping, regenerating, and correcting persisted service periods",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F254",
+    "description": "Define service-period regeneration triggers for contract-line edits, contract assignment edits, cadence-owner changes, and billing schedule changes",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Authoring-path and storage-reconciliation requirements"
+    ]
+  },
+  {
+    "id": "F255",
+    "description": "Define the cut line between source recurrence rules and materialized service-period overrides so product semantics stay understandable",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Architecture Thesis"
+    ]
+  },
+  {
+    "id": "F256",
+    "description": "Refactor recurring billing runtime to consume persisted service-period records as the authoritative schedule instead of deriving periods on demand in live paths",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Runtime engine requirements"
+    ]
+  },
+  {
+    "id": "F257",
+    "description": "Define dashboard and operational views that let billing staff inspect upcoming materialized service periods before invoice generation",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F258",
+    "description": "Define how materialized service periods participate in schedule previews and explainers before a contract line is saved",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Authoring-path and storage-reconciliation requirements"
+    ]
+  },
+  {
+    "id": "F259",
+    "description": "Define import, repair, or administrative regeneration flows for persisted service periods when data drift or failed generation occurs",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Pass 9"
+    ]
+  },
+  {
+    "id": "F260",
+    "description": "Define migration and coexistence rules for tenants that will have historical invoices without persisted period records and future schedules with them",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F261",
+    "description": "Define how recurring product, license, and fixed charge families each map onto persisted service-period records without diverging lifecycle semantics",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Runtime engine requirements"
+    ]
+  },
+  {
+    "id": "F262",
+    "description": "Define how bucket or allowance semantics interact with persisted service periods when users edit or skip future periods",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Dependent recurring behavior requirements"
+    ]
+  },
+  {
+    "id": "F263",
+    "description": "Define how materialized service periods affect billed-through, renewal, and replacement logic once due work no longer needs to be derived on demand",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Read-model and post-persist lifecycle requirements"
+    ]
+  },
+  {
+    "id": "F264",
+    "description": "Define how service-period editing interacts with contract templates, presets, and new recurring-line authoring so generated schedules remain predictable after creation",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Authoring-path and storage-reconciliation requirements"
+    ]
+  },
+  {
+    "id": "F265",
+    "description": "Define how invoice grouping and due selection respond when users edit future service periods in ways that move work across invoice windows",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Invoice and billing-flow requirements"
+    ]
+  },
+  {
+    "id": "F266",
+    "description": "Define how persisted service-period edits are surfaced in client-facing explanations, invoice detail provenance, and support tooling",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "UI and downstream-consumer requirements"
+    ]
+  },
+  {
+    "id": "F267",
+    "description": "Add DB-backed validation proving persisted service-period generation, editing, regeneration, and invoice linkage remain coherent under staged rollout",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F268",
+    "description": "Document an operator runbook for materialized service-period generation failures, override conflicts, and regeneration troubleshooting",
+    "implemented": true,
+    "prdRefs": [
+      "Materialized service-period requirements",
+      "Pass 9"
+    ]
+  },
+  {
+    "id": "F269",
+    "description": "Capture a follow-on boundary for richer service-period editing such as mass editing, advanced split and merge workflows, or bulk schedule transforms if v1 keeps edits narrower",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Materialized service-period requirements"
+    ]
+  },
+  {
+    "id": "F270",
+    "description": "Capture a follow-on boundary for extending the materialized service-period ledger to time, usage, or other non-recurring billing domains after recurring cutover succeeds",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Scope"
+    ]
+  }
+]

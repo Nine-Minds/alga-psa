@@ -25,6 +25,8 @@ import { BucketOverlayInput } from '@alga-psa/billing/actions';
 interface ServiceConfigurationPanelProps {
   configuration: Partial<IContractLineServiceConfiguration>;
   service?: IService;
+  effectiveMode?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+  defaultSource?: 'catalog default' | 'contract override' | 'none';
   typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig> | null;
   planFixedConfig?: Partial<IContractLineFixedConfig>;
   rateTiers?: IContractLineServiceRateTier[];
@@ -49,6 +51,8 @@ interface ServiceConfigurationPanelProps {
 export function ServiceConfigurationPanel({
   configuration,
   service,
+  effectiveMode,
+  defaultSource,
   typeConfig,
   planFixedConfig = {},
   rateTiers = [],
@@ -166,6 +170,8 @@ export function ServiceConfigurationPanel({
       <BaseServiceConfigPanel
         configuration={configuration}
         service={service}
+        effectiveMode={effectiveMode || configurationType}
+        defaultSource={defaultSource}
         onConfigurationChange={handleConfigurationChange}
         onTypeChange={handleTypeChange}
         showTypeSelector={true}

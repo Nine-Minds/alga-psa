@@ -15,6 +15,8 @@ import { createApiClient } from "../api";
 import { refreshSession as refreshSessionApi, revokeSession } from "../api/mobileAuth";
 import { logger } from "../logging/logger";
 import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
+import { unregisterPushToken } from "../api/pushToken";
+import { getStableDeviceId } from "../device/clientMetadata";
 import { getBiometricGateEnabled, BIOMETRIC_GRACE_MS } from "../auth/biometricGate";
 import { BiometricLockView } from "./BiometricLockView";
 import { analytics } from "../analytics/analytics";
@@ -250,6 +252,15 @@ export function AppRoot() {
           baseUrl,
           getUserAgentTag: () => `mobile/${Platform.OS}`,
         });
+
+        // Unregister push token before revoking session
+        const deviceId = await getStableDeviceId();
+        if (deviceId) {
+          await unregisterPushToken(client, { deviceId }).catch((e) =>
+            logger.warn("Push token unregister failed", { error: e }),
+          );
+        }
+
         await revokeSession(client, { refreshToken: currentSession.refreshToken });
       }
     } catch (e) {

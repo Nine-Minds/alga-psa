@@ -31,7 +31,7 @@ export async function ensureServiceType(
     description: string | null;
   }> = {}
 ): Promise<string> {
-  const schemaBillingMethod = billingMethod === 'fixed' ? 'fixed' : 'per_unit';
+  const schemaBillingMethod = billingMethod === 'fixed' ? 'fixed' : 'usage';
 
   const existing = await db<{ id: string }>('service_types')
     .where({ tenant: tenantId, billing_method: schemaBillingMethod })

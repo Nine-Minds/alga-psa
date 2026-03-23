@@ -456,7 +456,6 @@ export class ApiFinancialController extends ApiBaseController {
             validatedData.client_id,
             validatedData.period_start!,
             validatedData.period_end!,
-            validatedData.billing_cycle_id,
             apiRequest.context!
           );
           return createSuccessResponse(result);

@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import type { IContractLineFixedConfig } from '@alga-psa/types';
+import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 
 export default class ContractLineFixedConfig {
   private knex: Knex;
@@ -52,7 +53,10 @@ export default class ContractLineFixedConfig {
       contract_line_id: row.contract_line_id,
       base_rate: row.custom_rate ?? null,
       enable_proration: row.enable_proration ?? false,
-      billing_cycle_alignment: row.billing_cycle_alignment ?? 'start',
+      billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+        billingCycleAlignment: row.billing_cycle_alignment,
+        enableProration: row.enable_proration,
+      }),
       tenant: this.tenant,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -72,6 +76,13 @@ export default class ContractLineFixedConfig {
   async update(planId: string, data: Partial<Omit<IContractLineFixedConfig, 'contract_line_id' | 'tenant' | 'created_at'>>): Promise<boolean> {
     await this.initKnex();
 
+    const existing = await this.knex(this.tableName)
+      .where({
+        contract_line_id: planId,
+        tenant: this.tenant,
+      })
+      .first(['enable_proration', 'billing_cycle_alignment']);
+
     const updateData: Record<string, unknown> = {
       updated_at: new Date(),
     };
@@ -82,9 +93,11 @@ export default class ContractLineFixedConfig {
     if (data.enable_proration !== undefined) {
       updateData.enable_proration = data.enable_proration;
     }
-    if (data.billing_cycle_alignment !== undefined) {
-      updateData.billing_cycle_alignment = data.billing_cycle_alignment;
-    }
+    updateData.billing_cycle_alignment = resolveBillingCycleAlignmentForCompatibility({
+      billingCycleAlignment: data.billing_cycle_alignment,
+      enableProration: data.enable_proration ?? existing?.enable_proration,
+      fallbackAlignment: existing?.billing_cycle_alignment,
+    });
 
     const result = await this.knex(this.tableName)
       .where({
@@ -104,6 +117,13 @@ export default class ContractLineFixedConfig {
 
     const { contract_line_id, base_rate, enable_proration, billing_cycle_alignment } = data;
 
+    const existing = await this.knex(this.tableName)
+      .where({
+        contract_line_id,
+        tenant: this.tenant,
+      })
+      .first(['enable_proration', 'billing_cycle_alignment']);
+
     const result = await this.knex(this.tableName)
       .where({
         contract_line_id,
@@ -112,7 +132,11 @@ export default class ContractLineFixedConfig {
       .update({
         custom_rate: base_rate ?? null,
         enable_proration: enable_proration ?? false,
-        billing_cycle_alignment: billing_cycle_alignment ?? 'start',
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          billingCycleAlignment: billing_cycle_alignment,
+          enableProration: enable_proration ?? existing?.enable_proration,
+          fallbackAlignment: existing?.billing_cycle_alignment,
+        }),
         updated_at: new Date(),
       });
 
@@ -133,7 +157,9 @@ export default class ContractLineFixedConfig {
       .update({
         custom_rate: null,
         enable_proration: false,
-        billing_cycle_alignment: 'start',
+        billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
+          enableProration: false,
+        }),
         updated_at: new Date(),
       });
 

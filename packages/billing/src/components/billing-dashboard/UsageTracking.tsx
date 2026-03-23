@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getEligibleContractLinesForUI } from '@alga-psa/billing/lib/contractLineDisambiguation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
@@ -76,6 +76,17 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  const usageServiceOptions = useMemo(
+    () =>
+      initialServices
+        .filter((service) => service.item_kind !== 'product')
+        .map((service) => ({
+          label: service.service_name,
+          value: service.service_id,
+        })),
+    [initialServices],
+  );
+
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
@@ -116,7 +127,11 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       }
 
       try {
-        const plans = await getEligibleContractLinesForUI(newUsage.client_id, newUsage.service_id);
+        const plans = await getEligibleContractLinesForUI(
+          newUsage.client_id,
+          newUsage.service_id,
+          newUsage.usage_date
+        );
         setEligibleContractLines(plans);
 
         // Always show the contract line selector, but set a default when appropriate
@@ -443,10 +458,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   placeholder="Filter by service"
                   options={[
                     { value: 'all_services', label: 'All Services' },
-                    ...initialServices.map(service => ({
-                      label: service.service_name,
-                      value: service.service_id
-                    }))
+                    ...usageServiceOptions,
                   ]}
                 />
               </div>
@@ -530,12 +542,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 value={newUsage.service_id}
                 onValueChange={(value: string) => setNewUsage({ ...newUsage, service_id: value })}
                 placeholder="Select service"
-                options={initialServices
-                  .filter(service => service.billing_method === 'usage')
-                  .map(service => ({
-                    label: service.service_name,
-                    value: service.service_id
-                  }))}
+                options={usageServiceOptions}
               />
             </div>
             <div>
@@ -587,7 +594,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                     <div
                       className="cursor-help"
                       title={!newUsage.client_id
-                        ? "Client information not available. The system will use the default contract line."
+                        ? "Client information not available. Usage will route to the system-managed default contract."
                         : eligibleContractLines.length > 1
                           ? "This service appears in multiple contract lines. Please select which contract line to use. Bucket contract lines are typically used first until depleted."
                           : eligibleContractLines.length === 1
@@ -609,7 +616,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   disabled={!newUsage.client_id || eligibleContractLines.length <= 1}
                   className={`${eligibleContractLines.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
                   placeholder={!newUsage.client_id
-                    ? "Using default contract line"
+                    ? "Using system-managed default contract"
                     : eligibleContractLines.length === 0
                       ? "No eligible contract lines"
                       : eligibleContractLines.length === 1
@@ -632,7 +639,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
                 {!newUsage.client_id ? (
                   <small className="text-muted-foreground mt-1">
-                    Client information not available. The system will use the default contract line.
+                    Client information not available. Usage will route to the system-managed default contract.
                   </small>
                 ) : eligibleContractLines.length === 0 ? (
                   <small className="text-muted-foreground mt-1">

@@ -294,6 +294,7 @@ export const billingNavigationSections: NavigationSection[] = [
       { name: 'Invoicing', translationKey: 'nav.billing.invoicing', icon: Receipt, href: '/msp/billing?tab=invoicing' },
       { name: 'Invoice Templates', translationKey: 'nav.billing.invoiceTemplates', icon: ReceiptText, href: '/msp/billing?tab=invoice-templates' },
       { name: 'Billing Cycles', translationKey: 'nav.billing.billingCycles', icon: CalendarClock, href: '/msp/billing?tab=billing-cycles' },
+      { name: 'Service Periods', translationKey: 'nav.billing.servicePeriods', icon: CalendarClock, href: '/msp/billing?tab=service-periods' },
     ]
   },
   {

@@ -37,7 +37,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 type ServiceTypeSelectionItem = {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit';
+  billing_method: 'fixed' | 'hourly' | 'usage';
   is_standard: boolean;
 };
 

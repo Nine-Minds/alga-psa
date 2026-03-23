@@ -14,6 +14,7 @@ import {
   IContractTemplateWithLines,
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
+import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
@@ -30,6 +31,41 @@ import {
   updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
 } from '../repositories/contractLineRepository';
+import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+
+const isBypassEnabled = (): boolean => process.env.E2E_AUTH_BYPASS === 'true';
+
+const assertBillingPermission = async (
+  user: unknown,
+  action: 'read' | 'create' | 'update' | 'delete',
+  context: string,
+): Promise<void> => {
+  if (isBypassEnabled()) {
+    return;
+  }
+
+  if (!await hasPermission(user as any, 'billing', action)) {
+    throw new Error(`Permission denied: Cannot ${context}`);
+  }
+};
+
+const assertNoSystemManagedIdentityMutation = (
+  payload: Record<string, unknown>,
+  operation: 'create' | 'update',
+): void => {
+  const protectedFields: Array<'is_system_managed_default' | 'owner_client_id'> = operation === 'create'
+    ? ['is_system_managed_default']
+    : ['is_system_managed_default', 'owner_client_id'];
+  const attemptedFields = protectedFields.filter(
+    (field) => Object.prototype.hasOwnProperty.call(payload, field) && payload[field] !== undefined,
+  );
+
+  if (attemptedFields.length > 0) {
+    throw new Error(
+      `Permission denied: ${operation} cannot mutate system-managed contract identity fields (${attemptedFields.join(', ')})`,
+    );
+  }
+};
 
 
 
@@ -60,6 +96,7 @@ async function isTemplateContract(knex: Knex, tenant: string, contractId: string
 
 export const getContracts = withAuth(async (user, { tenant }): Promise<IContract[]> => {
   try {
+    await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     return await Contract.getAll(knex, tenant);
@@ -74,6 +111,7 @@ export const getContracts = withAuth(async (user, { tenant }): Promise<IContract
 
 export const getContractTemplates = withAuth(async (user, { tenant }): Promise<IContract[]> => {
   try {
+    await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const templates = await ContractTemplateModel.getAll(tenant);
@@ -89,6 +127,7 @@ export const getContractTemplates = withAuth(async (user, { tenant }): Promise<I
 
 export const getContractsWithClients = withAuth(async (user, { tenant }): Promise<IContractWithClient[]> => {
   try {
+    await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     return await Contract.getAllWithClients(knex, tenant);
@@ -103,6 +142,7 @@ export const getContractsWithClients = withAuth(async (user, { tenant }): Promis
 
 export const getDraftContracts = withAuth(async (user, { tenant }): Promise<IContractWithClient[]> => {
   try {
+    await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const rows = await knex('contracts as co')
@@ -142,6 +182,7 @@ export const getDraftContracts = withAuth(async (user, { tenant }): Promise<ICon
 
 export const getContractById = withAuth(async (user, { tenant }, contractId: string): Promise<IContract | null> => {
   try {
+    await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const contract = await Contract.getById(knex, tenant, contractId);
@@ -189,7 +230,14 @@ export const addContractLine = withAuth(async (
   }
 
   return knex.transaction((trx: Knex.Transaction) =>
-    repoAddContractLine(trx, tenant, contractId, contractLineId, customRate)
+    repoAddContractLine(trx, tenant, contractId, contractLineId, customRate).then(async (mapping) => {
+      await syncRecurringServicePeriodsForContractLine(trx, {
+        tenant,
+        contractLineId: mapping.contract_line_id,
+        sourceRunPrefix: 'contract_add_line',
+      });
+      return mapping;
+    })
   );
 });
 
@@ -218,7 +266,15 @@ export const updateContractLineAssociation = withAuth(async (
     return permissionError('Permission denied: Cannot modify contract lines');
   }
 
-  return repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
+  const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
+  await knex.transaction(async (trx) => {
+    await syncRecurringServicePeriodsForContractLine(trx, {
+      tenant,
+      contractLineId,
+      sourceRunPrefix: 'contract_line_association_update',
+    });
+  });
+  return updated;
 });
 
 export const updateContractLineRate = withAuth(async (
@@ -238,6 +294,11 @@ export const updateContractLineRate = withAuth(async (
 
   await knex.transaction(async (trx) => {
     await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming);
+    await syncRecurringServicePeriodsForContractLine(trx, {
+      tenant,
+      contractLineId,
+      sourceRunPrefix: 'contract_line_rate_update',
+    });
   });
 });
 
@@ -255,7 +316,13 @@ export const createContract = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
-    const { tenant: _, ...safeContractData } = contractData as any;
+    await assertBillingPermission(user, 'create', 'create billing contracts');
+    assertNoSystemManagedIdentityMutation(contractData as Record<string, unknown>, 'create');
+    const {
+      tenant: _ignoredTenant,
+      is_system_managed_default: _ignoredSystemManagedMarker,
+      ...safeContractData
+    } = contractData as any;
     return await Contract.create(knex, tenant, safeContractData);
   } catch (error) {
     console.error('Error creating contract:', error);
@@ -275,6 +342,9 @@ export const updateContract = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
+    await assertBillingPermission(user, 'update', 'update billing contracts');
+    assertNoSystemManagedIdentityMutation(updateData as Record<string, unknown>, 'update');
+
     // Attempt to load standard contract first; fall back to template
     const currentContract = await Contract.getById(knex, tenant, contractId);
     if (!currentContract) {
@@ -311,6 +381,12 @@ export const updateContract = withAuth(async (
       return mapTemplateToContract(updatedTemplate);
     }
 
+    if (currentContract.is_system_managed_default === true) {
+      throw new Error(
+        'System-managed default contracts are attribution-only; contract authoring and lifecycle edits are disabled.',
+      );
+    }
+
     // Special handling for expired contracts
     if (currentContract.status === 'expired') {
       // If trying to manually change status of an expired contract (not through end date logic)
@@ -339,22 +415,12 @@ export const updateContract = withAuth(async (
       }
     }
 
-    // If trying to set contract to active, check if client already has an active contract
-    if (updateData.status === 'active') {
-      // Get all clients assigned to this contract
-      const clientContracts = await knex('client_contracts')
-        .where({ contract_id: contractId, tenant })
-        .select('client_id');
-
-      for (const cc of clientContracts) {
-        const hasActiveContract = await Contract.hasActiveContractForClient(knex, tenant, cc.client_id, contractId);
-        if (hasActiveContract) {
-          throw new Error('Client already has an active contract. To create a new active contract, terminate their current contract or save this contract as a draft.');
-        }
-      }
-    }
-
-    const { tenant: _, ...safeUpdateData } = updateData as any;
+    const {
+      tenant: _ignoredTenant,
+      is_system_managed_default: _ignoredSystemManagedMarker,
+      owner_client_id: _ignoredOwnerClientId,
+      ...safeUpdateData
+    } = updateData as any;
     const updated = await Contract.update(knex, tenant, contractId, safeUpdateData);
 
     // After updating, check if an expired contract should be reactivated based on end dates
@@ -397,6 +463,11 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
     if (templateExists) {
       await ContractTemplateModel.delete(contractId, tenant);
       return;
+    }
+
+    const currentContract = await Contract.getById(knex, tenant, contractId);
+    if (currentContract?.is_system_managed_default === true) {
+      throw new Error('System-managed default contracts cannot be deleted manually');
     }
 
     await Contract.delete(knex, tenant, contractId);
@@ -476,9 +547,7 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
     }
 
     const assignmentsRaw = await knex('client_contracts')
-      .where(function whereContractOrTemplate(this: any) {
-        this.where({ contract_id: contractId }).orWhere({ template_contract_id: contractId });
-      })
+      .where({ contract_id: contractId })
       .andWhere({ tenant })
       .select(assignmentColumns);
 
@@ -489,7 +558,13 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
     }));
 
     const totalAssignments = assignments.length;
-    const activeAssignments = assignments.filter((assignment) => assignment.is_active).length;
+    const activeAssignments = assignments.filter((assignment) =>
+      deriveClientContractStatus({
+        isActive: Boolean(assignment.is_active),
+        startDate: assignment.start_date,
+        endDate: assignment.end_date,
+      }) === 'active'
+    ).length;
     const poRequiredAssignments = assignments.filter((assignment) => assignment.po_required).length;
 
     const poNumbers = Array.from(
@@ -525,28 +600,6 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
       throw error;
     }
     throw new Error(`Failed to compute contract summary: ${error}`);
-  }
-});
-
-export const checkClientHasActiveContract = withAuth(async (user, { tenant }, clientId: string, excludeContractId?: string): Promise<boolean> => {
-  const { knex } = await createTenantKnex();
-
-  try {
-    return await Contract.hasActiveContractForClient(knex, tenant, clientId, excludeContractId);
-  } catch (error) {
-    console.error(`Error checking active contract for client ${clientId}:`, error);
-    throw error;
-  }
-});
-
-export const fetchClientIdsWithActiveContracts = withAuth(async (user, { tenant }, excludeContractId?: string): Promise<string[]> => {
-  const { knex } = await createTenantKnex();
-
-  try {
-    return await Contract.getClientIdsWithActiveContracts(knex, tenant, excludeContractId);
-  } catch (error) {
-    console.error('Error fetching client IDs with active contracts:', error);
-    throw error;
   }
 });
 
@@ -600,10 +653,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       .leftJoin('default_billing_settings as dbs', function joinDefaults() {
         this.on('cc.tenant', '=', 'dbs.tenant');
       })
-      .where(function whereContractOrTemplate(this: any) {
-        this.where({ 'cc.contract_id': contractId })
-          .orWhere({ 'cc.template_contract_id': contractId });
-      })
+      .where({ 'cc.contract_id': contractId })
       .andWhere({ 'cc.tenant': tenant })
       .select(selection)
       .orderBy('cc.start_date', 'asc');
@@ -648,6 +698,11 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
         client_contract_id: row.client_contract_id,
         client_id: row.client_id,
         client_name: row.client_name ?? null,
+        assignment_status: deriveClientContractStatus({
+          isActive: Boolean(row.is_active),
+          startDate: row.start_date,
+          endDate: row.end_date,
+        }),
         start_date: row.start_date ?? null,
         end_date: row.end_date ?? null,
         renewal_mode: renewalMode,

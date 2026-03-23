@@ -1,6 +1,6 @@
 import type { IClientContract } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate } from '@alga-psa/core';
+import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 
 type ChangeRecord = Record<string, { previous: unknown; new: unknown }>;
 
@@ -17,22 +17,12 @@ export function deriveClientContractWorkflowStatus(params: {
   endDate: string | null;
   now?: Temporal.PlainDate;
 }): 'draft' | 'active' | 'terminated' | 'expired' {
-  const now = params.now ?? Temporal.Now.plainDateISO();
-  const startDateOnly = getDateOnly(params.startDate) ?? params.startDate;
-  const endDateOnly = getDateOnly(params.endDate ?? undefined);
-
-  const start = toPlainDate(startDateOnly);
-  const end = endDateOnly ? toPlainDate(endDateOnly) : null;
-
-  if (!params.isActive) {
-    return Temporal.PlainDate.compare(start, now) > 0 ? 'draft' : 'terminated';
-  }
-
-  if (end && Temporal.PlainDate.compare(end, now) < 0) {
-    return 'expired';
-  }
-
-  return 'active';
+  return deriveClientContractStatus({
+    isActive: params.isActive,
+    startDate: getDateOnly(params.startDate) ?? params.startDate,
+    endDate: getDateOnly(params.endDate ?? undefined),
+    now: (params.now ?? Temporal.Now.plainDateISO()).toString(),
+  });
 }
 
 export function buildClientContractUpdatedFieldsAndChanges(params: {
@@ -66,4 +56,3 @@ export function buildClientContractUpdatedFieldsAndChanges(params: {
 
   return { updatedFields, changes };
 }
-

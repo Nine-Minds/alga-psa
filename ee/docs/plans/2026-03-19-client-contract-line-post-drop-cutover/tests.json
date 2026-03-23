@@ -1,0 +1,170 @@
+[
+  {
+    "id": "T001",
+    "description": "Integration: `getAvailableRecurringDueWork()` loads persisted client-cadence rows in a schema where `client_contract_lines` does not exist.",
+    "implemented": true,
+    "featureIds": ["F001", "F003", "F018"]
+  },
+  {
+    "id": "T002",
+    "description": "Integration: `getAvailableRecurringDueWork()` still loads contract-cadence rows in the same fully migrated schema.",
+    "implemented": true,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Integration: materialization-gap detection for client cadence resolves obligations from the surviving structure without querying `client_contract_lines`.",
+    "implemented": true,
+    "featureIds": ["F002", "F018"]
+  },
+  {
+    "id": "T004",
+    "description": "UI: `AutomaticInvoices` render path loads successfully in a fully migrated environment with no dropped-table errors.",
+    "implemented": true,
+    "featureIds": ["F003", "F018"]
+  },
+  {
+    "id": "T005",
+    "description": "Integration: recurring preview for a client-cadence selector-input window succeeds without joining `client_contract_lines`.",
+    "implemented": true,
+    "featureIds": ["F004", "F018"]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: recurring generate for a client-cadence selector-input window succeeds without joining `client_contract_lines`.",
+    "implemented": true,
+    "featureIds": ["F005", "F018"]
+  },
+  {
+    "id": "T007",
+    "description": "Integration: recurring preview/generate for contract cadence continues to work after client-line table removal cleanup.",
+    "implemented": true,
+    "featureIds": ["F004", "F005"]
+  },
+  {
+    "id": "T008",
+    "description": "Integration: service-period inspection resolves client-cadence obligation context without `client_contract_lines`.",
+    "implemented": true,
+    "featureIds": ["F006", "F018"]
+  },
+  {
+    "id": "T009",
+    "description": "Integration: client-cadence regeneration after billing schedule change loads obligations from surviving tables only.",
+    "implemented": true,
+    "featureIds": ["F007", "F014", "F018"]
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed integration: deleting or reversing a recurring invoice repairs service-period linkage in a fully migrated schema with no client-line table.",
+    "implemented": true,
+    "featureIds": ["F006", "F008", "F018"]
+  },
+  {
+    "id": "T011",
+    "description": "Integration: invoice linkage backfills billed recurring rows using the canonical post-drop obligation identity rather than `client_contract_lines` lookups.",
+    "implemented": true,
+    "featureIds": ["F008", "F014", "F015"]
+  },
+  {
+    "id": "T012",
+    "description": "Integration: bucket period resolution for client cadence works in a schema with no `client_contract_lines` table.",
+    "implemented": true,
+    "featureIds": ["F009", "F018"]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: contract wizard creates a client-owned contract and line successfully without inserting into dropped client-contract line tables.",
+    "implemented": true,
+    "featureIds": ["F010", "F018"]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: contract wizard create flow does not attempt to insert `client_contract_services` in a fully migrated schema.",
+    "implemented": true,
+    "featureIds": ["F010", "F018"]
+  },
+  {
+    "id": "T015",
+    "description": "Integration: live contract line mutation/update flows remain functional after removing dropped-table writes or reads.",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T016",
+    "description": "Integration: credit flow that previously looked up `client_contract_lines` still succeeds through the surviving client-owned structure.",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T017",
+    "description": "Integration: billing/report overview read model returns live data without querying `client_contract_lines`.",
+    "implemented": true,
+    "featureIds": ["F013", "F018"]
+  },
+  {
+    "id": "T018",
+    "description": "Design validation: recurring client-cadence obligation identity is defined in one canonical way across due-work, regeneration, and linkage codepaths.",
+    "implemented": true,
+    "featureIds": ["F014", "F015"]
+  },
+  {
+    "id": "T019",
+    "description": "Static validation: no live recurring/invoicing action under `packages/billing/src/actions` queries `client_contract_lines`.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F004", "F005", "F006", "F007", "F018"]
+  },
+  {
+    "id": "T020",
+    "description": "Static validation: no live billing service under `packages/billing/src/services` queries `client_contract_lines` for runtime logic.",
+    "implemented": true,
+    "featureIds": ["F008", "F009", "F012", "F018"]
+  },
+  {
+    "id": "T021",
+    "description": "Static validation: contract wizard/runtime create paths no longer insert into `client_contract_lines` or `client_contract_services`.",
+    "implemented": true,
+    "featureIds": ["F010", "F018"]
+  },
+  {
+    "id": "T022",
+    "description": "Static validation: server/package tests no longer assert `client_contract_lines` as expected live runtime behavior.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T023",
+    "description": "Documentation: new plan/runbook/docs language describes the post-drop client-owned structure without presenting `client_contract_lines` as a live dependency.",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T024",
+    "description": "DB-backed sanity: a fully migrated schema with no dropped client-contract line tables can complete the `AutomaticInvoices` happy path from due-work selection to invoice creation.",
+    "implemented": true,
+    "featureIds": ["F003", "F004", "F005", "F018"]
+  },
+  {
+    "id": "T025",
+    "description": "Regression: contract-cadence recurring happy path remains functional after the post-drop cleanup.",
+    "implemented": true,
+    "featureIds": ["F001", "F004", "F005", "F008"]
+  },
+  {
+    "id": "T026",
+    "description": "Regression: client-owned contract loading still resolves line/runtime behavior through `client_contracts -> contracts -> contract_lines` after cleanup.",
+    "implemented": true,
+    "featureIds": ["F011", "F014"]
+  },
+  {
+    "id": "T027",
+    "description": "Integration: server-side contract-line service behaviors that remain live no longer query `client_contract_lines` for unassign/deactivate, analytics, in-use checks, overlap validation, or overview counts.",
+    "implemented": true,
+    "featureIds": ["F019", "F018"]
+  },
+  {
+    "id": "T028",
+    "description": "Documentation and hygiene: stale runbook SQL, cleanup-only fixtures, and tracked backup artifacts that reference dropped client-contract line tables are removed or explicitly marked historical.",
+    "implemented": true,
+    "featureIds": ["F017", "F020"]
+  }
+]

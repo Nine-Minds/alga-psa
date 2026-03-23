@@ -12,12 +12,13 @@ import { ChevronDown, ChevronUp, Package, Trash2, Settings } from 'lucide-react'
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { 
-  getStandardServiceTypes, 
-  importServiceTypes, 
+import {
+  getStandardServiceTypes,
+  importServiceTypes,
   getTenantServiceTypes,
   createTenantServiceType,
 } from '@alga-psa/onboarding/actions';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { deleteReferenceDataItem } from '@alga-psa/reference-data/actions';
 import { useSession } from 'next-auth/react';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -140,7 +141,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">Create Your First Service</h2>
         <p className="text-sm text-gray-600">
-          Add a service type to your catalog. This will be used for time tracking. When billing becomes available, it will also be used for creating invoices.
+          Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior.
         </p>
       </div>
 
@@ -185,7 +186,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
               <span className="text-xs text-red-600 ml-2">(Required)</span>
             )}
           </Label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-[1fr_auto_auto] gap-2">
             <CustomSelect
               id="service-type-select"
               value={data.serviceTypeId || ''}
@@ -193,6 +194,13 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
               options={serviceTypeOptions}
               disabled={isLoadingTypes || serviceTypeOptions.length === 0}
               placeholder={serviceTypeOptions.length === 0 ? "Create or import service types" : "Select a service type"}
+            />
+            <CustomSelect
+              id="currency-select"
+              value={data.currencyCode || 'USD'}
+              onValueChange={(value) => updateData({ currencyCode: value })}
+              options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
+              className="min-w-[130px]"
             />
             <Button
               id="manage-service-types-button"
@@ -217,7 +225,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
           <div className="border rounded-lg p-4 space-y-4">
             <Alert variant="info" className="mb-4">
               <AlertDescription>
-                <span className="font-semibold">Note:</span> Service types define how services are billed. Fixed billing means a flat rate, hourly billing tracks time-based work, and usage billing charges per unit consumed.
+                <span className="font-semibold">Note:</span> Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service.
               </AlertDescription>
             </Alert>
             
@@ -560,13 +568,33 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="servicePrice">Default Rate</Label>
-          <Input
-            id="servicePrice"
-            value={data.servicePrice}
-            onChange={(e) => updateData({ servicePrice: e.target.value })}
-            placeholder="150"
+          <Label htmlFor="serviceBillingMode">Billing Mode</Label>
+          <CustomSelect
+            id="serviceBillingMode"
+            value={data.serviceBillingMode || 'usage'}
+            onValueChange={(value) => updateData({ serviceBillingMode: value as 'fixed' | 'hourly' | 'usage' })}
+            options={[
+              { value: 'fixed', label: 'Fixed' },
+              { value: 'hourly', label: 'Hourly' },
+              { value: 'usage', label: 'Usage' },
+            ]}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="servicePrice">Default Rate</Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">
+              {getCurrencySymbol(data.currencyCode || 'USD')}
+            </span>
+            <Input
+              id="servicePrice"
+              value={data.servicePrice}
+              onChange={(e) => updateData({ servicePrice: e.target.value })}
+              placeholder="150"
+              style={{ paddingLeft: `${getCurrencySymbol(data.currencyCode || 'USD').length * 0.6 + 0.75}rem` }}
+            />
+          </div>
         </div>
       </div>
 

@@ -132,6 +132,7 @@
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.7",
     "elkjs": "^0.10.0",
+    "expo-server-sdk": "^6.1.0",
     "express": "^5.1.0",
     "file-type": "^20.4.1",
     "fluent-ffmpeg": "^2.1.3",

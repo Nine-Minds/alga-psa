@@ -30,6 +30,7 @@
       "invoicing": "Invoicing",
       "invoiceTemplates": "Invoice Templates",
       "billingCycles": "Billing Cycles",
+      "servicePeriods": "Service Periods",
       "serviceCatalog": "Service Catalog",
       "products": "Products",
       "taxRates": "Tax Rates",
@@ -94,6 +95,9 @@
       "profile": "Profile",
       "security": "Security"
     }
+  },
+  "dashboard": {
+    "onboardingWizard": "Onboarding Wizard"
   },
   "header": {
     "userFallback": "User",
