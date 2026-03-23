@@ -232,6 +232,8 @@ done
 - (2026-03-23) Validation for `T012`: the `F014` audit on [server/public/locales/it/msp/schedule.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/schedule.json) found no accentless `puo`/`gia`/`verra`/`funzionalita`/`perche` regressions, so the Italian schedule locale passed unchanged.
 - (2026-03-23) Completed `T013`: verified representative schedule calendar/request/availability/entry-popup keys resolve to the pseudo-locale fill token in `xx`.
 - (2026-03-23) Validation for `T013`: a focused Node assertion against [server/public/locales/xx/msp/schedule.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/schedule.json) confirmed 8 representative keys spanning the calendar, appointment requests, availability settings, and entry popup all resolve to `11111`.
+- (2026-03-23) Completed `T020`: re-verified the knowledge-base locale set against the final translation validation pass.
+- (2026-03-23) Validation for `T020`: the earlier KB locale generation under `F023` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/knowledge-base` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
 
 ## Open Questions
 

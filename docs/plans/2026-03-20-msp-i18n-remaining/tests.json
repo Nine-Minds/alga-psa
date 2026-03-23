@@ -52,7 +52,7 @@
   {
     "id": "T020",
     "description": "validate-translations.cjs passes after 2b-15 (msp/knowledge-base keys consistent across all 9 locales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020", "F023"]
   },
   {
