@@ -1248,3 +1248,19 @@ export const regenerateQuotePdf = withAuth(async (
   const fileId = await storeQuotePdf(knex, tenant, quote, actorUserId);
   return fileId;
 });
+
+export const renderQuotePreview = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+): Promise<{ html: string; css: string } | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { QuotePDFGenerationService } = await import('../services/quotePdfGenerationService');
+  const service = new QuotePDFGenerationService(tenant);
+  const preview = await service.renderPreview({ quoteId });
+  return { html: preview.html, css: preview.css };
+});

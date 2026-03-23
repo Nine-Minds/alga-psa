@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, deleteQuote, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
+import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, createQuoteRevision, deleteQuote, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, getQuotePdfFileId, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
@@ -76,6 +76,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [approvalDialogMode, setApprovalDialogMode] = useState<'approve' | 'changes' | null>(null);
   const [approvalComment, setApprovalComment] = useState('');
+  const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [sendMessage, setSendMessage] = useState('');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
+  const [isPreviewLoading2, setIsPreviewLoading2] = useState(false);
 
   useEffect(() => {
     void loadQuote();
@@ -341,6 +346,107 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
+  const handleSendQuote = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      setNotice(null);
+      const result = await sendQuote(quote.quote_id, {
+        message: sendMessage.trim() || undefined,
+      });
+
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      setQuote(result);
+      setIsSendDialogOpen(false);
+      setSendMessage('');
+      setNotice('Quote sent to the client.');
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to send quote');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleReviseQuote = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      setNotice(null);
+      const result = await createQuoteRevision(quote.quote_id);
+
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      router.push(`/msp/billing?tab=quotes&quoteId=${result.quote_id}&mode=edit`);
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to create quote revision');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleViewPdf = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      const fileId = await getQuotePdfFileId(quote.quote_id);
+
+      if (fileId && typeof fileId === 'object' && 'permissionError' in fileId) {
+        throw new Error(fileId.permissionError);
+      }
+
+      if (!fileId) {
+        setError('No PDF has been generated for this quote yet. Send the quote first to generate a PDF.');
+        return;
+      }
+
+      window.open(`/api/files/${fileId}`, '_blank');
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to load quote PDF');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handlePreviewPdf = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsPreviewLoading2(true);
+      setError(null);
+      const result = await renderQuotePreview(quote.quote_id);
+
+      if (result && typeof result === 'object' && 'permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      setPreviewHtml(result as { html: string; css: string });
+      setIsPreviewOpen(true);
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to generate quote preview');
+    } finally {
+      setIsPreviewLoading2(false);
+    }
+  };
+
   const handleOpenConversionDialog = async (mode: ConversionMode) => {
     if (!quote) {
       return;
@@ -423,8 +529,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             {onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>Edit</Button> : null}
             {approvalRequired ? (
               <Button id="quote-detail-submit-approval" onClick={() => void handleSubmitForApproval()} disabled={isWorking}>Submit for Approval</Button>
-            ) : null}
-            <Button id="quote-detail-send" disabled>Send</Button>
+            ) : (
+              <Button id="quote-detail-send" onClick={() => setIsSendDialogOpen(true)} disabled={isWorking}>Send to Client</Button>
+            )}
             <Button id="quote-detail-delete" variant="outline" onClick={() => void handleDelete()} disabled={isWorking}>Delete</Button>
           </>
         );
@@ -438,7 +545,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       case 'sent':
         return (
           <>
-            <Button id="quote-detail-revise" disabled>Revise</Button>
+            <Button id="quote-detail-revise" onClick={() => void handleReviseQuote()} disabled={isWorking}>Revise</Button>
             <Button id="quote-detail-resend" variant="outline" onClick={() => void handleResendQuote()} disabled={isWorking}>Resend</Button>
             <Button id="quote-detail-reminder" variant="outline" onClick={() => void handleSendReminder()} disabled={isWorking}>Send Reminder</Button>
             <Button id="quote-detail-cancel" variant="outline" onClick={() => void handleCancelQuote()} disabled={isWorking}>Cancel</Button>
@@ -453,7 +560,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           </>
         );
       case 'approved':
-        return <Button id="quote-detail-send-approved" disabled>Send</Button>;
+        return <Button id="quote-detail-send-approved" onClick={() => setIsSendDialogOpen(true)} disabled={isWorking}>Send to Client</Button>;
       default:
         return onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>Edit</Button> : null;
     }
@@ -509,8 +616,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 <Button id="quote-detail-save-template" variant="outline" onClick={() => void handleSaveAsTemplate()} disabled={isWorking}>Save as Template</Button>
               </>
             ) : null}
-            <Button id="quote-detail-view-pdf" variant="outline" disabled>View PDF</Button>
-            <Button id="quote-detail-view-history" variant="outline" disabled>View History</Button>
+            <Button id="quote-detail-preview-pdf" variant="outline" onClick={() => void handlePreviewPdf()} disabled={isWorking || isPreviewLoading2}>
+              {isPreviewLoading2 ? 'Loading...' : 'Preview'}
+            </Button>
+            <Button id="quote-detail-view-pdf" variant="outline" onClick={() => void handleViewPdf()} disabled={isWorking}>Download PDF</Button>
           </div>
         </div>
 
@@ -806,6 +915,87 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             <Button id="quote-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>Cancel</Button>
             <Button id="quote-conversion-confirm" onClick={() => void handleConfirmConversion()} disabled={isWorking || !conversionPreview || (conversionMode === 'contract' && !conversionPreview.contract_items.length) || (conversionMode === 'invoice' && !conversionPreview.invoice_items.length) || (conversionMode === 'both' && (!conversionPreview.contract_items.length || !conversionPreview.invoice_items.length))}>
               {conversionMode === 'contract' ? 'Create Draft Contract' : conversionMode === 'invoice' ? 'Create Draft Invoice' : 'Create Both Records'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog id="quote-preview-dialog" isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} title="Quote Preview" className="max-w-4xl">
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          {previewHtml ? (
+            <div className="bg-white rounded border border-border p-4">
+              <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
+              <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />
+            </div>
+          ) : (
+            <div className="p-8 text-center text-sm text-muted-foreground">Loading preview...</div>
+          )}
+          <DialogFooter>
+            <Button id="quote-preview-close" variant="outline" onClick={() => setIsPreviewOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog id="quote-send-dialog" isOpen={isSendDialogOpen} onClose={() => setIsSendDialogOpen(false)} title="Send Quote to Client">
+        <DialogContent>
+          <DialogDescription>
+            This will email the quote to the client&apos;s billing contacts and change its status to &ldquo;Sent&rdquo;.
+          </DialogDescription>
+          <div className="space-y-3 py-2">
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Optional message to include in the email
+              <TextArea
+                value={sendMessage}
+                onChange={(event) => setSendMessage(event.target.value)}
+                rows={3}
+                placeholder="Add a personal note for the client..."
+              />
+            </label>
+          </div>
+          <DialogFooter>
+            <Button id="quote-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>Cancel</Button>
+            <Button id="quote-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
+              {isWorking ? 'Sending...' : 'Send Quote'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        id="quote-approval-dialog"
+        isOpen={approvalDialogMode !== null}
+        onClose={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
+        title={approvalDialogMode === 'approve' ? 'Approve Quote' : 'Request Changes'}
+      >
+        <DialogContent>
+          <DialogDescription>
+            {approvalDialogMode === 'approve'
+              ? 'Approve this quote so it can be sent to the client. You may add an optional comment.'
+              : 'Return this quote to draft with requested changes. Please describe what needs to be revised.'}
+          </DialogDescription>
+          <div className="space-y-3 py-2">
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              {approvalDialogMode === 'approve' ? 'Comment (optional)' : 'Requested changes'}
+              <TextArea
+                value={approvalComment}
+                onChange={(event) => setApprovalComment(event.target.value)}
+                rows={3}
+                placeholder={approvalDialogMode === 'approve' ? 'Add an optional note...' : 'Describe the changes needed...'}
+              />
+            </label>
+          </div>
+          <DialogFooter>
+            <Button
+              id="quote-approval-cancel"
+              variant="outline"
+              onClick={() => { setApprovalDialogMode(null); setApprovalComment(''); }}
+              disabled={isWorking}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="quote-approval-confirm"
+              onClick={() => void (approvalDialogMode === 'approve' ? handleApproveQuote() : handleRequestChanges())}
+              disabled={isWorking || (approvalDialogMode === 'changes' && !approvalComment.trim())}
+            >
+              {isWorking ? 'Processing...' : approvalDialogMode === 'approve' ? 'Approve' : 'Request Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>

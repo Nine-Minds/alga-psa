@@ -7,6 +7,7 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import type { ColumnDefinition, IQuote, IQuoteItem, IQuoteWithClient, QuoteStatus } from '@alga-psa/types';
 import { QUOTE_STATUS_METADATA } from '@alga-psa/types';
 import { acceptClientQuote, downloadClientQuotePdf, getClientQuoteById, getClientQuotes, rejectClientQuote, updateClientQuoteSelections } from '@alga-psa/client-portal/actions';
@@ -151,6 +152,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'accept' | 'reject' | null>(null);
 
   const selectedQuoteId = searchParams?.get('quoteId');
 
@@ -275,11 +277,6 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
       return;
     }
 
-    const confirmed = window.confirm('Accept this quote with your current optional item selections?');
-    if (!confirmed) {
-      return;
-    }
-
     setDecisionError(null);
     setIsSubmittingDecision(true);
 
@@ -288,6 +285,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
       setSelectedQuote(acceptedQuote);
       syncQuoteSummary(acceptedQuote);
       setRejectionReason('');
+      setConfirmAction(null);
     } catch (err) {
       console.error('Error accepting quote:', err);
       setDecisionError('Failed to accept the quote. Please try again.');
@@ -303,11 +301,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
 
     if (!rejectionReason.trim()) {
       setDecisionError('Please add a short comment before rejecting this quote.');
-      return;
-    }
-
-    const confirmed = window.confirm('Reject this quote and send your comment to the MSP?');
-    if (!confirmed) {
+      setConfirmAction(null);
       return;
     }
 
@@ -319,6 +313,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
       setSelectedQuote(rejectedQuote);
       syncQuoteSummary(rejectedQuote);
       setRejectionReason('');
+      setConfirmAction(null);
     } catch (err) {
       console.error('Error rejecting quote:', err);
       setDecisionError('Failed to reject the quote. Please try again.');
@@ -592,10 +587,10 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
                   </div>
                   <Button
                     id="accept-quote-button"
-                    onClick={handleAcceptQuote}
+                    onClick={() => setConfirmAction('accept')}
                     disabled={isUpdatingSelections || isSubmittingDecision}
                   >
-                    {isSubmittingDecision ? 'Submitting…' : 'Accept Quote'}
+                    Accept Quote
                   </Button>
                 </div>
 
@@ -616,10 +611,16 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
                     <Button
                       id="reject-quote-button"
                       variant="outline"
-                      onClick={handleRejectQuote}
+                      onClick={() => {
+                        if (!rejectionReason.trim()) {
+                          setDecisionError('Please add a short comment before rejecting this quote.');
+                          return;
+                        }
+                        setConfirmAction('reject');
+                      }}
                       disabled={isUpdatingSelections || isSubmittingDecision}
                     >
-                      {isSubmittingDecision ? 'Submitting…' : 'Reject Quote'}
+                      Reject Quote
                     </Button>
                   </div>
                 </div>
@@ -647,6 +648,38 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
           </div>
         </div>
       )}
+
+      <Dialog
+        id="quote-confirm-dialog"
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction === 'accept' ? 'Accept Quote' : 'Reject Quote'}
+      >
+        <DialogContent>
+          <DialogDescription>
+            {confirmAction === 'accept'
+              ? 'Accept this quote with your current optional item selections? Your choices will be sent to the MSP for review.'
+              : 'Reject this quote and send your comment to the MSP? They may revise and resend the quote.'}
+          </DialogDescription>
+          <DialogFooter>
+            <Button
+              id="quote-confirm-cancel"
+              variant="outline"
+              onClick={() => setConfirmAction(null)}
+              disabled={isSubmittingDecision}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="quote-confirm-submit"
+              onClick={() => void (confirmAction === 'accept' ? handleAcceptQuote() : handleRejectQuote())}
+              disabled={isSubmittingDecision}
+            >
+              {isSubmittingDecision ? 'Submitting...' : confirmAction === 'accept' ? 'Accept' : 'Reject'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

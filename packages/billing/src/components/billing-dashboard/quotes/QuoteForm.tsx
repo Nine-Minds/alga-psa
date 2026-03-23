@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
@@ -408,15 +409,23 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
             </div>
           )}
 
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Quote Date
-            <Input type="date" value={form.quote_date} onChange={(event) => handleChange('quote_date', event.target.value)} />
-          </label>
+          <div className="flex flex-col gap-1 text-sm font-medium">
+            <label htmlFor="quote-date">Quote Date</label>
+            <DatePicker
+              value={form.quote_date ? new Date(form.quote_date + 'T00:00:00') : undefined}
+              onChange={(date) => handleChange('quote_date', date ? date.toISOString().slice(0, 10) : '')}
+              className="w-full"
+            />
+          </div>
 
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Valid Until
-            <Input type="date" value={form.valid_until} onChange={(event) => handleChange('valid_until', event.target.value)} />
-          </label>
+          <div className="flex flex-col gap-1 text-sm font-medium">
+            <label htmlFor="quote-valid-until">Valid Until</label>
+            <DatePicker
+              value={form.valid_until ? new Date(form.valid_until + 'T00:00:00') : undefined}
+              onChange={(date) => handleChange('valid_until', date ? date.toISOString().slice(0, 10) : '')}
+              className="w-full"
+            />
+          </div>
 
           <label className="flex flex-col gap-1 text-sm font-medium md:col-span-2">
             PO Number
