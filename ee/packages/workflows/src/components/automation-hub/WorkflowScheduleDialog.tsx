@@ -16,6 +16,7 @@ import {
 } from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import {
   createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
   getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
@@ -960,19 +961,20 @@ export default function WorkflowScheduleDialog({
                           { value: 'monthly', label: 'Monthly' },
                         ]}
                       />
-                      <Input
-                        id="schedule-dialog-recurring-time"
-                        label="Time"
-                        type="time"
-                        value={recurringBuilder.time}
-                        onChange={(event) => {
-                          const nextTime = event.target.value;
-                          setRecurringBuilder((current) => ({
-                            ...current,
-                            time: nextTime,
-                          }));
-                        }}
-                      />
+                      <div>
+                        <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">Time</label>
+                        <TimePicker
+                          id="schedule-dialog-recurring-time"
+                          label="Time"
+                          value={recurringBuilder.time}
+                          onChange={(nextTime) => {
+                            setRecurringBuilder((current) => ({
+                              ...current,
+                              time: nextTime,
+                            }));
+                          }}
+                        />
+                      </div>
                       {recurringBuilder.frequency === 'monthly' ? (
                         <Input
                           id="schedule-dialog-recurring-day-of-month"
