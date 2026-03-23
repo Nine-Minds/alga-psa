@@ -222,6 +222,8 @@ done
 - (2026-03-23) Validation for `T002`: the targeted `npx tsc -p packages/surveys/tsconfig.json --noEmit` runs logged under `F002`, `F003`, and `F004` all passed after the survey rewrites, covering the 26 in-scope survey components with no TypeScript errors.
 - (2026-03-23) Completed `T003`: closed the survey Italian accent audit checkpoint.
 - (2026-03-23) Validation for `T003`: the `F006` audit on [server/public/locales/it/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/it/msp/surveys.json) found no accentless `puo`/`gia`/`verra`/`funzionalita`/`necessario` regressions, so the Italian survey locale passed unchanged.
+- (2026-03-23) Completed `T004`: verified representative survey dashboard/settings/response keys resolve to the pseudo-locale fill token in `xx`.
+- (2026-03-23) Validation for `T004`: a focused Node assertion against [server/public/locales/xx/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/xx/msp/surveys.json) confirmed 9 representative keys spanning the dashboard, triggers, templates, analytics, and responses surfaces all resolve to `11111`.
 
 ## Open Questions
 

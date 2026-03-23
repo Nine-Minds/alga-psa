@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "2b-13: Visual QA (xx) — survey dashboard, triggers, templates, responses all show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
 
