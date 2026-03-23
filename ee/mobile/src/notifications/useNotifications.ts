@@ -9,7 +9,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useAppResume } from "../hooks/useAppResume";
 import { useToast } from "../ui/toast/ToastProvider";
 import { requestPushPermission, getExpoPushToken } from "./pushTokenService";
-import { registerPushToken, unregisterPushToken } from "../api/pushToken";
+import { registerPushToken } from "../api/pushToken";
 import { createApiClient } from "../api";
 import { getAppConfig } from "../config/appConfig";
 import { getStableDeviceId } from "../device/clientMetadata";
