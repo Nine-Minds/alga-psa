@@ -828,18 +828,31 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     const handleAssignTeam = useCallback(async (teamId: string) => {
+        // Optimistically update UI before server call
+        const previousTicket = ticket;
+        const previousTeam = team;
+        const previousAgents = additionalAgents;
+
+        const teamDetails = teams.find(t => t.team_id === teamId) || null;
+        const assignedTo = ticket.assigned_to || teamDetails?.manager_id || ticket.assigned_to;
+
+        setTicket(prevTicket => ({
+            ...prevTicket,
+            assigned_team_id: teamId,
+            assigned_to: assignedTo
+        }));
+        if (teamDetails) {
+            setTeam(teamDetails);
+        }
+
         try {
             await assignTeamToTicket(ticket.ticket_id || '', teamId);
 
-            const teamDetails = teams.find(t => t.team_id === teamId) || await getTeamById(teamId);
-            const assignedTo = ticket.assigned_to || teamDetails?.manager_id || ticket.assigned_to;
-
-            setTicket(prevTicket => ({
-                ...prevTicket,
-                assigned_team_id: teamId,
-                assigned_to: assignedTo
-            }));
-            setTeam(teamDetails || null);
+            // If we didn't have team details from local state, fetch them
+            if (!teamDetails) {
+                const fetchedTeam = await getTeamById(teamId);
+                setTeam(fetchedTeam || null);
+            }
 
             if (ticket.ticket_id) {
                 const resources = await getTicketResources(ticket.ticket_id);
@@ -849,9 +862,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             toast.success('Team assigned successfully');
         } catch (error) {
             console.error('Error assigning team:', error);
+            // Revert on failure
+            setTicket(previousTicket);
+            setTeam(previousTeam);
+            setAdditionalAgents(previousAgents);
             toast.error('Failed to assign team');
         }
-    }, [ticket.ticket_id, ticket.assigned_to, teams]);
+    }, [ticket, team, additionalAgents, teams]);
 
     const handleRemoveTeamAssignment = useCallback(async (
         mode: 'remove_all' | 'keep_all' | 'selective',
@@ -2025,6 +2042,9 @@ const handleClose = () => {
                                     renderProjectTaskActions={renderCreateProjectTask}
                                     teams={teams}
                                     onAssignTeam={handleAssignTeam}
+                                    onRemoveTeamAssignment={async () => {
+                                        await handleRemoveTeamAssignment('remove_all');
+                                    }}
                                     onClipboardImageUploaded={refreshTicketDocuments}
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
                                     additionalAgents={additionalAgents.map(a => ({
