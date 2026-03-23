@@ -45,7 +45,7 @@
   {
     "id": "T013",
     "description": "2b-14: Visual QA (xx) — schedule calendar, entry popup, availability settings show '11111'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
 
