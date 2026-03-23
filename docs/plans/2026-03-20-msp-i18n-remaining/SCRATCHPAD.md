@@ -250,6 +250,8 @@ done
 - (2026-03-23) Validation for `T040`: the earlier email-provider locale generation under `F043` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming `msp/email-providers` matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
 - (2026-03-23) Completed `T041`: confirmed the main email-provider form/configuration batch still compiles with the `msp/email-providers` namespace wiring.
 - (2026-03-23) Validation for `T041`: the targeted `npx tsc -p packages/integrations/tsconfig.json --noEmit` runs logged under `F041` and `F042` both passed after the provider-form/configuration rewrites, covering the 10 in-scope email-provider files with no TypeScript errors.
+- (2026-03-23) Completed `T042`: checked the email-provider namespace boundary against the existing MSP settings/admin locale tree.
+- (2026-03-23) Validation for `T042`: a direct leaf-key comparison between [server/public/locales/en/msp/email-providers.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/email-providers.json) and [server/public/locales/en/msp/settings.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/en/msp/settings.json) found `285` email-provider leaves, `769` settings leaves, and `0` overlapping key paths, so the provider namespace does not collide with the existing MSP settings/admin copy.
 
 ## Open Questions
 

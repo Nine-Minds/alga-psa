@@ -108,7 +108,7 @@
   {
     "id": "T042",
     "description": "2b-18: no key collisions between msp/email-providers and msp/admin namespaces",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
