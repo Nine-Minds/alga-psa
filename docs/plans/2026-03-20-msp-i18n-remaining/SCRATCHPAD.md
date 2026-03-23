@@ -280,6 +280,8 @@ done
 - (2026-03-23) Validation for `T070`: the `F090` route-registry pass updated `ROUTE_NAMESPACES`, and the logged `getNamespacesForRoute()` spot checks confirmed the expected namespace arrays for the original batch routes plus the follow-up `/msp/settings/extensions`, `/msp/extensions`, and `/msp/licenses/purchase` prefixes.
 - (2026-03-23) Completed `T071`: closed the final cross-batch translation validator checkpoint.
 - (2026-03-23) Validation for `T071`: the final `node scripts/validate-translations.cjs` run under `F091` completed with `Errors: 0` and `Warnings: 0` across every newly-added MSP namespace and locale file.
+- (2026-03-23) Completed `T072`: closed the final cross-batch pseudo-locale regeneration checkpoint.
+- (2026-03-23) Validation for `T072`: the explicit `F092` pseudo refresh regenerated `xx` and `yy` for every newly-added MSP namespace, and the recorded leaf-count check confirmed each pseudo file still matches its English source structure.
 
 ## Open Questions
 

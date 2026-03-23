@@ -201,7 +201,7 @@
   {
     "id": "T072",
     "description": "Cross-batch: pseudo-locales regenerated for all newly-added MSP namespaces",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F092"]
   },
   {
