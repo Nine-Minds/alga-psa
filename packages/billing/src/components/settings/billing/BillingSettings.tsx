@@ -73,7 +73,7 @@ const PaymentSettingsConfig = dynamic(
   }
 );
 
-const BILLING_SECTION_IDS = ['general', 'tax', 'payments'] as const;
+const BILLING_SECTION_IDS = ['general', 'quoting', 'tax', 'payments'] as const;
 const DEFAULT_BILLING_SECTION = 'general';
 
 const BillingSettings: React.FC = () => {
@@ -138,6 +138,25 @@ const BillingSettings: React.FC = () => {
 
           <ZeroDollarInvoiceSettings />
           <CreditExpirationSettings />
+        </div>
+      ),
+    },
+    {
+      id: 'quoting',
+      label: 'Quoting',
+      content: (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quote Numbering</CardTitle>
+              <CardDescription>
+                Customize how quote numbers are generated and displayed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <NumberingSettings entityType="QUOTE" />
+            </CardContent>
+          </Card>
         </div>
       ),
     },
