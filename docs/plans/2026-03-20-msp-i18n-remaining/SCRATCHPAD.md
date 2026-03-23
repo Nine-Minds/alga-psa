@@ -276,6 +276,8 @@ done
 - (2026-03-23) Validation for `T066`: the `F074` validation already covered the EE entry rewrite with `npx eslint packages/product-extensions/ee/entry.tsx`, and the recorded `rg` sweep confirmed the old runtime/error strings now remain only as `defaultValue` fallbacks in the EE extension entry file.
 - (2026-03-23) Completed `T067`: re-verified the expanded EE extension locale set against the final translation validation pass.
 - (2026-03-23) Validation for `T067`: the expanded extensions locale generation under `F075` and the final `node scripts/validate-translations.cjs` run under `F091` both passed, confirming the 44-leaf `msp/extensions` namespace matches English across all 9 locales with `Errors: 0` and `Warnings: 0`.
+- (2026-03-23) Completed `T070`: closed the route-namespace registration checkpoint for the final MSP batches.
+- (2026-03-23) Validation for `T070`: the `F090` route-registry pass updated `ROUTE_NAMESPACES`, and the logged `getNamespacesForRoute()` spot checks confirmed the expected namespace arrays for the original batch routes plus the follow-up `/msp/settings/extensions`, `/msp/extensions`, and `/msp/licenses/purchase` prefixes.
 
 ## Open Questions
 
