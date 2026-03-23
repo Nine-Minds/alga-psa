@@ -13,6 +13,7 @@
     "description": "Add more user licenses to your AlgaPSA account"
   },
   "purchaseSuccess": {
+    "metaTitle": "Purchase Success",
     "scheduledTitle": "Change Scheduled Successfully!",
     "updatedTitle": "Update Successful!",
     "scheduledDescription": "Your license change has been scheduled and will take effect at the end of your current billing period.",
@@ -39,6 +40,7 @@
     "goToAccountManagement": "Go to Account Management"
   },
   "subscriptionForm": {
+    "title": "Manage License Subscription",
     "errors": {
       "loadPricing": "Failed to load pricing",
       "loadLicenseInformation": "Failed to load license information",
@@ -49,7 +51,8 @@
     "checkout": {
       "title": "Complete Your Purchase",
       "summary": "You are purchasing {{quantity}} {{licenseLabel}} at {{price}} per license per {{interval}}.",
-      "total": "Total: {{total}}/{{interval}}"
+      "total": "Total: {{total}}/{{interval}}",
+      "cancel": "Cancel"
     },
     "confirmation": {
       "title": "Confirm License Update",
@@ -64,11 +67,12 @@
       "paymentMethod": "Payment Method",
       "changePaymentMethod": "Change",
       "immediateChargeTitle": "Immediate charge",
-      "immediateChargeDescription": "You will be charged {{amountDue}} {{currency}} now for the prorated amount.",
+      "immediateChargeDescription": "You will be charged {{amountDue}} now for the prorated amount.",
       "prorationDescription": "Proration: {{amount}} for the remainder of this billing period",
       "scheduledTitle": "Scheduled for period end",
       "scheduledDescription": "License decrease will take effect on {{date}} at the end of your current billing period.",
       "scheduledKeepAccess": "You'll keep access to all {{count}} licenses until then.",
+      "cancel": "Cancel",
       "confirmPayNow": "Confirm & Pay Now",
       "confirmSchedule": "Confirm Schedule"
     },
@@ -148,6 +152,13 @@
     "licenseSingular": "license",
     "licensePlural": "licenses",
     "userSingular": "user",
-    "userPlural": "users"
+    "userPlural": "users",
+    "licenseCount": "{{count}} {{licenseLabel}}",
+    "perInterval": "{{amount}}/{{interval}}",
+    "none": "None",
+    "intervals": {
+      "month": "month",
+      "year": "year"
+    }
   }
 }
