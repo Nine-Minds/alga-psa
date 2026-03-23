@@ -286,6 +286,8 @@ done
 - (2026-03-23) Validation for `T073`: the full `npm run build` run recorded under `F093` completed with exit code `0`, including TypeScript, static generation, build traces, and final page optimization.
 - (2026-03-23) Completed `T074`: re-verified the feature-flag-off English fallback path for MSP i18n.
 - (2026-03-23) Validation for `T074`: a direct source assertion confirmed `packages/core/src/lib/featureFlagRuntime.ts` still defaults `'msp-i18n-enabled'` to `false`, the CE and EE MSP layouts still gate locale resolution behind `isMspI18nEnabled ? await getHierarchicalLocaleAction() : null`, and the CE MSP layout client still forces `initialLocale='en'` with pseudo-locales disabled when the flag is off.
+- (2026-03-23) Completed `T075`: closed the German overflow sanity check for the highest-risk MSP forms introduced by this plan.
+- (2026-03-23) Validation for `T075`: a focused Node assertion checked 10 overflow-sensitive German strings across [server/public/locales/de/msp/surveys.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/de/msp/surveys.json), [server/public/locales/de/msp/schedule.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/de/msp/schedule.json), [server/public/locales/de/msp/knowledge-base.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/de/msp/knowledge-base.json), and [server/public/locales/de/msp/email-providers.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/public/locales/de/msp/email-providers.json); all stayed within the defined length thresholds for survey forms, the schedule entry/availability flow, KB editor chrome, and email-provider form guidance.
 
 ## Open Questions
 

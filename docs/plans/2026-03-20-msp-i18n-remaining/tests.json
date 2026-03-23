@@ -219,7 +219,7 @@
   {
     "id": "T075",
     "description": "Cross-batch: German (de) — no overflow in survey forms, schedule entry popup, KB editor, email provider forms",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F013", "F023", "F043"]
   }
 ]
