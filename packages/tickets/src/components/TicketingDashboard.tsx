@@ -1745,10 +1745,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               <CustomSelect
                 id={`${id}-bulk-move-board`}
                 value={selectedDestinationBoardId}
-                options={boards.map((board) => ({
-                  value: board.board_id,
-                  label: board.board_name
-                }))}
+                options={boards
+                  .filter((board): board is IBoard & { board_id: string } => typeof board.board_id === 'string')
+                  .map((board) => ({
+                    value: board.board_id,
+                    label: board.board_name ?? 'Unnamed board',
+                  }))}
                 onValueChange={(value) => void handleBulkMoveBoardChange(value)}
                 placeholder="Select destination board..."
               />
