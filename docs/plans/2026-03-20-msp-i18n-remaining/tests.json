@@ -27,7 +27,7 @@
   {
     "id": "T010",
     "description": "validate-translations.cjs passes after 2b-14 (msp/schedule keys consistent across all 9 locales)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F013"]
   },
   {
