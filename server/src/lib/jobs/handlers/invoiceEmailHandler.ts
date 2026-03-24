@@ -2,9 +2,7 @@ import { JobService, JobStepResult } from 'server/src/services/job.service';
 import { PDFGenerationService, createPDFGenerationService } from 'server/src/services/pdf-generation.service';
 import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from 'server/src/lib/storage/StorageService';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getClientById } from '@alga-psa/clients/actions';
-import ContactModel from 'server/src/lib/models/contact';
+import { getClientById, getContactByContactNameId } from '@alga-psa/clients/actions';
 import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';
 import { JobStatus } from 'server/src/types/job';
@@ -90,8 +88,7 @@ export class InvoiceEmailHandler {
           let recipientName = client.client_name;
 
           if (client.billing_contact_id) {
-            const knex = await createTenantKnex();
-            const contact = await ContactModel.get(knex.knex, client.billing_contact_id);
+            const contact = await getContactByContactNameId(client.billing_contact_id);
             if (contact) {
               recipientEmail = contact.email || recipientEmail;
               recipientName = contact.full_name;
