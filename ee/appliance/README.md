@@ -80,6 +80,7 @@ ee/appliance/scripts/bootstrap-appliance.sh \
   --bootstrap-mode fresh \
   --node-ip 192.168.64.5 \
   --hostname alga-appliance \
+  --app-url https://psa.example.com \
   --interface enp0s1 \
   --network-mode dhcp \
   --repo-url https://github.com/Nine-Minds/alga-psa.git \
@@ -89,6 +90,8 @@ ee/appliance/scripts/bootstrap-appliance.sh \
   --email-service-tag 61e4a00e \
   --temporal-worker-tag 61e4a00e
 ```
+
+`--app-url` controls the public URLs injected into the app runtime, including `NEXTAUTH_URL`, `NEXT_PUBLIC_BASE_URL`, and `NEXT_PUBLIC_APP_URL`.
 
 If you already have a running cluster and kubeconfig, the same script can be used with `--kubeconfig` to skip Talos first-boot work.
 

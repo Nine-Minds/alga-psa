@@ -2,6 +2,7 @@ namespace: msp
 env: production
 edition: enterprise
 host: alga.local
+appUrl: https://alga.local
 domainSuffix: alga.local
 
 bootstrap:

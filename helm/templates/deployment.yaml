@@ -498,15 +498,15 @@ spec:
             value: "{{ .Values.token.expire }}"
 
           # ----------- AUTH ----------------
-          # NEXTAUTH_URL is configured via .env file to allow dynamic updates during port forwarding
+          {{- $publicAppUrl := .Values.appUrl | default (printf "https://%s" .Values.host) }}
           - name: NEXTAUTH_URL
-            value: "https://{{ .Values.host }}"
+            value: "{{ $publicAppUrl }}"
           # Public base URL for links in emails and client-side code
           - name: NEXT_PUBLIC_BASE_URL
-            value: "https://{{ .Values.host }}"
+            value: "{{ $publicAppUrl }}"
           # App URL for Stripe redirects (can differ from host for blue/green testing)
           - name: NEXT_PUBLIC_APP_URL
-            value: "https://{{ .Values.appUrl | default .Values.host }}"
+            value: "{{ $publicAppUrl }}"
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:

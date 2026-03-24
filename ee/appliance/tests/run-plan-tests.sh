@@ -73,6 +73,7 @@ bootstrap_dry_run_output="$(
     --bootstrap-mode fresh \
     --node-ip 192.0.2.10 \
     --hostname alga-appliance \
+    --app-url https://psa.example.test \
     --interface enp0s1 \
     --network-mode dhcp \
     --repo-url https://github.com/example/alga-psa.git \
@@ -90,6 +91,9 @@ require_text "$bootstrap_dry_run_output" "reset-appliance-data.sh"
 require_text "$bootstrap_dry_run_output" "create source git alga-appliance"
 require_text "$bootstrap_dry_run_output" "install-storage.sh --kubeconfig"
 require_text "$bootstrap_dry_run_output" "collect-support-bundle.sh"
+require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'appUrl: "https://psa.example.test"'
+require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'host: "psa.example.test"'
+require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'domainSuffix: ""'
 
 jq -e '.title == "Alga Talos Appliance Release Manifest"' "$ROOT/ee/appliance/releases/schema.json" >/dev/null
 jq -e '.channel == "candidate"' "$ROOT/ee/appliance/releases/channels/candidate.json" >/dev/null

@@ -7,6 +7,7 @@ RELEASE_VERSION=""
 BOOTSTRAP_MODE=""
 CLUSTER_NAME="alga-appliance"
 HOSTNAME_VALUE=""
+APP_URL=""
 NODE_IP=""
 NETWORK_MODE=""
 INTERFACE_NAME=""
@@ -44,6 +45,7 @@ Options:
   --bootstrap-mode <mode>        Bootstrap mode: fresh or recover
   --node-ip <ip>                 Talos node IP for first boot and ongoing access
   --hostname <name>              Appliance hostname
+  --app-url <url>               Public application URL (for example: https://psa.example.com)
   --cluster-name <name>          Talos cluster name (default: alga-appliance)
   --interface <name>             Network interface name to persist (for example: enp0s1)
   --network-mode <dhcp|static>   Network mode to persist in Talos config
@@ -135,6 +137,28 @@ PY
   fi
 }
 
+yaml_string() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+
+print(json.dumps(sys.argv[1]))
+PY
+}
+
+url_host() {
+  python3 - "$1" <<'PY'
+import sys
+from urllib.parse import urlparse
+
+raw = sys.argv[1]
+parsed = urlparse(raw)
+if not parsed.scheme or not parsed.netloc:
+    raise SystemExit(f"Invalid URL: {raw}")
+print(parsed.netloc)
+PY
+}
+
 run_cmd() {
   if $DRY_RUN; then
     printf '+'
@@ -215,6 +239,10 @@ resolve_runtime_inputs() {
     HOSTNAME_VALUE="$SITE_ID"
   fi
 
+  if [ -z "$APP_URL" ] && is_interactive; then
+    APP_URL="$(prompt_value "Public application URL" "https://alga.local")"
+  fi
+
   if [ -z "$RELEASE_VERSION" ]; then
     echo "Unable to resolve an appliance release version. Use --release-version." >&2
     exit 1
@@ -292,6 +320,10 @@ resolve_runtime_inputs() {
   if [ -z "$ALGA_CORE_TAG" ] || [ -z "$WORKFLOW_WORKER_TAG" ] || [ -z "$EMAIL_SERVICE_TAG" ] || [ -z "$TEMPORAL_WORKER_TAG" ]; then
     echo "Explicit tags are required for alga-core, workflow-worker, email-service, and temporal-worker." >&2
     exit 1
+  fi
+
+  if [ -n "$APP_URL" ]; then
+    url_host "$APP_URL" >/dev/null
   fi
 }
 
@@ -639,6 +671,13 @@ create_runtime_values_dir() {
   set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "bootstrap.mode" "$BOOTSTRAP_MODE"
   set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "setup.image.tag" "$ALGA_CORE_TAG"
   set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "server.image.tag" "$ALGA_CORE_TAG"
+  if [ -n "$APP_URL" ]; then
+    local app_host
+    app_host="$(url_host "$APP_URL")"
+    set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "appUrl" "$(yaml_string "$APP_URL")"
+    set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "host" "$(yaml_string "$app_host")"
+    set_yaml_value "$values_dir/alga-core.$PROFILE.yaml" "domainSuffix" '""'
+  fi
   set_yaml_value "$values_dir/workflow-worker.$PROFILE.yaml" "image.tag" "$WORKFLOW_WORKER_TAG"
   set_yaml_value "$values_dir/email-service.$PROFILE.yaml" "image.tag" "$EMAIL_SERVICE_TAG"
   set_yaml_value "$values_dir/temporal-worker.$PROFILE.yaml" "image.tag" "$TEMPORAL_WORKER_TAG"
@@ -769,7 +808,25 @@ install_gitops_sync() {
     --export | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
 
   kubectl --kubeconfig "$KUBECONFIG_PATH" -n flux-system wait --for=condition=Ready --timeout=5m gitrepository/alga-appliance
-  kubectl --kubeconfig "$KUBECONFIG_PATH" -n flux-system wait --for=condition=Ready --timeout=10m kustomization/alga-appliance
+}
+
+wait_for_alga_core_release() {
+  local attempt
+
+  if $DRY_RUN; then
+    echo "+ wait for helmrelease/alga-core to be created in namespace alga-system"
+    return 0
+  fi
+
+  for attempt in $(seq 1 120); do
+    if kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system get helmrelease/alga-core >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 5
+  done
+
+  echo "Timed out waiting for Flux to create helmrelease/alga-core" >&2
+  exit 1
 }
 
 prepull_images() {
@@ -798,6 +855,7 @@ EOF
     return 0
   fi
 
+  wait_for_alga_core_release
   kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system wait --for=condition=Ready --timeout=30m helmrelease/alga-core
   local bootstrap_job
   bootstrap_job="$(kubectl --kubeconfig "$KUBECONFIG_PATH" -n msp get jobs -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | grep '^alga-core-sebastian-bootstrap' | tail -n 1 || true)"
@@ -831,6 +889,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --hostname)
       HOSTNAME_VALUE="$2"
+      shift 2
+      ;;
+    --app-url)
+      APP_URL="$2"
       shift 2
       ;;
     --cluster-name)
