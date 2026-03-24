@@ -1,4 +1,3 @@
-import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { PreviewPipelinePhaseStatus, PreviewSourceKind } from './previewSessionState';
 
 export type PreviewPipelineStatusSnapshot = {
@@ -10,8 +9,8 @@ export type PreviewPipelineStatusSnapshot = {
 export const hasValidPreviewSelectionForSource = (params: {
   sourceKind: PreviewSourceKind;
   selectedInvoiceId: string | null;
-  selectedInvoiceData: WasmInvoiceViewModel | null;
-  previewData: WasmInvoiceViewModel | null;
+  selectedInvoiceData: unknown;
+  previewData: unknown;
 }): boolean => {
   if (params.sourceKind === 'sample') {
     return Boolean(params.previewData);
@@ -20,7 +19,7 @@ export const hasValidPreviewSelectionForSource = (params: {
 };
 
 export const hasRenderablePreviewOutput = (params: {
-  previewData: WasmInvoiceViewModel | null;
+  previewData: unknown;
   renderStatus: 'idle' | 'success' | 'error';
   html: string | null;
 }): boolean =>

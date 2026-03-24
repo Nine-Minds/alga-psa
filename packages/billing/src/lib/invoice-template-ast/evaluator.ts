@@ -413,9 +413,11 @@ export const evaluateInvoiceTemplateAst = (
       message: error.message,
       path: error.path,
     }));
+    const details = issues.map((i) => `${i.path ?? '<root>'}: ${i.message}`).join('; ');
+    console.error('[evaluateInvoiceTemplateAst] Schema validation failed:', details);
     throw new InvoiceTemplateEvaluationError(
       'SCHEMA_VALIDATION_FAILED',
-      'Invoice template AST schema validation failed.',
+      `Invoice template AST schema validation failed: ${details}`,
       undefined,
       issues
     );

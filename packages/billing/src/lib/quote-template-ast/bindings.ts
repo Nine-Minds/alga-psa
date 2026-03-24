@@ -25,8 +25,11 @@ export const QUOTE_TEMPLATE_VALUE_BINDINGS: QuoteTemplateValueBindings = {
   clientNotes: { id: 'clientNotes', kind: 'value', path: 'client_notes', fallback: '' },
   version: { id: 'version', kind: 'value', path: 'version' },
   clientName: { id: 'clientName', kind: 'value', path: 'client.name', fallback: 'Client' },
+  clientAddress: { id: 'clientAddress', kind: 'value', path: 'client.address', fallback: '' },
   contactName: { id: 'contactName', kind: 'value', path: 'contact.name', fallback: '' },
   tenantName: { id: 'tenantName', kind: 'value', path: 'tenant.name', fallback: 'Your Company' },
+  tenantAddress: { id: 'tenantAddress', kind: 'value', path: 'tenant.address', fallback: '' },
+  tenantLogo: { id: 'tenantLogo', kind: 'value', path: 'tenant.logo_url' },
 };
 
 export const QUOTE_TEMPLATE_COLLECTION_BINDINGS: QuoteTemplateCollectionBindings = {
