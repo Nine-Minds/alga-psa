@@ -44,7 +44,126 @@
   },
   "assetDashboardClient": {
     "title": "Asset Dashboard Client",
-    "description": "Main asset list page with filters, table and grid views, bulk actions, and drawer flows"
+    "description": "Main asset list page with filters, table and grid views, bulk actions, and drawer flows",
+    "reflection": {
+      "label": "Asset Dashboard"
+    },
+    "errors": {
+      "loadDrawerFailed": "Unable to load asset details right now. Please try again."
+    },
+    "details": {
+      "noIp": "No IP",
+      "network": "Network",
+      "local": "Local",
+      "noDetails": "No details available",
+      "unassigned": "Unassigned"
+    },
+    "selection": {
+      "selectAllVisibleAssets": "Select all visible assets",
+      "selectAsset": "Select asset {{name}}",
+      "selectedAssets": "{{count}} asset{{suffix}} selected",
+      "clearSelection": "Clear selection",
+      "bulkActionsComingSoon": "Bulk actions coming soon"
+    },
+    "actions": {
+      "openActionsForAsset": "Open actions for asset {{name}}",
+      "viewDetails": "View details",
+      "editAsset": "Edit asset",
+      "createTicket": "Create ticket",
+      "refreshData": "Refresh data"
+    },
+    "table": {
+      "name": "Name",
+      "tag": "Tag",
+      "type": "Type",
+      "details": "Details",
+      "status": "Status",
+      "agent": "Agent",
+      "client": "Client",
+      "location": "Location",
+      "actions": "Actions"
+    },
+    "metrics": {
+      "totalAssets": {
+        "title": "Total Assets",
+        "helper": "Across all clients"
+      },
+      "filteredView": {
+        "title": "Filtered view",
+        "helper": "Matching active filters"
+      },
+      "automationReady": {
+        "title": "Automation ready",
+        "helper": "Active maintenance schedules",
+        "upcoming": "Upcoming: {{count}}",
+        "overdue": "Overdue: {{count}}"
+      },
+      "activeSchedules": {
+        "title": "Active Schedules",
+        "helper": "Lifecycle automation"
+      },
+      "overdueMaintenance": {
+        "title": "Maintenance Overdue",
+        "helper": "Needs attention"
+      },
+      "upcomingMaintenance": {
+        "title": "Upcoming Maintenance",
+        "helper": "Next 30 days"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Search by name, tag, or serial number",
+      "reset": "Reset",
+      "status": "Status",
+      "type": "Type",
+      "agent": "Agent",
+      "columns": "Columns",
+      "client": {
+        "loading": "Loading clients…",
+        "placeholder": "Client",
+        "clear": "Clear client filter"
+      },
+      "rmmManaged": {
+        "managed": "RMM Managed",
+        "unmanaged": "Not Managed"
+      },
+      "agentStatuses": {
+        "online": "Online",
+        "offline": "Offline",
+        "overdue": "Overdue",
+        "unknown": "Unknown"
+      }
+    },
+    "activeFilters": {
+      "status": "Status: {{value}}",
+      "type": "Type: {{value}}",
+      "client": "Client: {{value}}",
+      "agent": "Agent: {{value}}"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "types": {
+      "workstation": "Workstation",
+      "server": "Server",
+      "network_device": "Network Device",
+      "mobile_device": "Mobile Device",
+      "printer": "Printer"
+    },
+    "columns": {
+      "select": "select",
+      "name": "name",
+      "asset_tag": "asset tag",
+      "asset_type": "asset type",
+      "details": "details",
+      "status": "status",
+      "agent_status": "agent status",
+      "client_name": "client name",
+      "location": "location",
+      "actions": "actions"
+    }
   },
   "assetDashboardGrid": {
     "title": "Asset Dashboard Grid",
@@ -68,7 +187,95 @@
   },
   "assetDetails": {
     "title": "Asset Details",
-    "description": "Full asset details page with summary cards, associations, documents, and operational actions"
+    "description": "Full asset details page with summary cards, associations, documents, and operational actions",
+    "assetTag": "Asset Tag: {{tag}}",
+    "loading": {
+      "details": "Loading details..."
+    },
+    "fields": {
+      "status": "Status",
+      "serialNumber": "Serial Number",
+      "location": "Location",
+      "client": "Client",
+      "purchaseDate": "Purchase Date",
+      "warrantyEnd": "Warranty End",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Storage",
+      "gpu": "GPU",
+      "lastLogin": "Last Login",
+      "managementIp": "Management IP",
+      "portCount": "Port Count",
+      "powerDraw": "Power Draw",
+      "firmwareVersion": "Firmware Version",
+      "poeSupport": "PoE Support",
+      "type": "Type",
+      "hypervisor": "Hypervisor",
+      "primaryIp": "Primary IP",
+      "operatingSystem": "Operating System",
+      "imei": "IMEI",
+      "phoneNumber": "Phone Number",
+      "carrier": "Carrier",
+      "supervisionStatus": "Supervision Status",
+      "ipAddress": "IP Address",
+      "networkPrinter": "Network Printer",
+      "colorSupport": "Color Support",
+      "duplexSupport": "Duplex Support",
+      "monthlyDutyCycle": "Monthly Duty Cycle"
+    },
+    "sections": {
+      "basicInformation": "Basic Information",
+      "workstation": "Workstation Details",
+      "networkDevice": "Network Device Details",
+      "server": "Server Details",
+      "mobileDevice": "Mobile Device Details",
+      "printer": "Printer Details",
+      "relatedAssets": "Related Assets"
+    },
+    "maintenance": {
+      "activeSchedules": "Active Schedules",
+      "overdue": "Overdue",
+      "upcoming": "Upcoming"
+    },
+    "tabs": {
+      "details": "Details",
+      "relatedAssets": "Related Assets",
+      "documents": "Documents"
+    },
+    "relationships": {
+      "parentOf": "Parent of",
+      "childOf": "Child of"
+    },
+    "empty": {
+      "notSpecified": "Not specified",
+      "unassigned": "Unassigned",
+      "never": "Never",
+      "noAdditionalDetails": "No additional details available",
+      "noRelatedAssets": "No related assets found"
+    },
+    "values": {
+      "virtual": "Virtual",
+      "physical": "Physical",
+      "supervised": "Supervised",
+      "unsupervised": "Unsupervised",
+      "pagesUnit": "pages"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "deviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Firewall",
+      "access_point": "Access Point",
+      "load_balancer": "Load Balancer"
+    },
+    "relationshipTypes": {
+      "affected": "Affected",
+      "related": "Related"
+    }
   },
   "assetDocuments": {
     "title": "Asset Documents",
@@ -76,7 +283,113 @@
   },
   "assetForm": {
     "title": "Asset Form",
-    "description": "Primary asset create and edit form with identity, lifecycle, contract, and metadata fields"
+    "description": "Primary asset create and edit form with identity, lifecycle, contract, and metadata fields",
+    "heading": "Edit Asset",
+    "loading": {
+      "assetDetails": "Loading asset details..."
+    },
+    "errors": {
+      "assetNotFound": "Asset not found",
+      "loadFailed": "Failed to load asset details",
+      "clientsLoadFailed": "Unable to load clients",
+      "locationsLoadFailed": "Unable to load locations for this client",
+      "updateFailed": "Failed to update asset"
+    },
+    "actions": {
+      "viewClient": "View client",
+      "manageClientLocations": "Manage client locations",
+      "saveChanges": "Save Changes"
+    },
+    "alerts": {
+      "noLocationsSaved": "This client doesn’t have any saved locations yet. Use custom entry or create one from the client record."
+    },
+    "sections": {
+      "basicInformation": "Basic Information",
+      "clientAndLocation": "Client & Location",
+      "assetBasics": "Asset Basics"
+    },
+    "fields": {
+      "customLocationOption": "Custom location",
+      "osType": "OS Type",
+      "osVersion": "OS Version",
+      "cpuModel": "CPU Model",
+      "cpuCores": "CPU Cores",
+      "ramGb": "RAM (GB)",
+      "storageType": "Storage Type",
+      "storageCapacityGb": "Storage Capacity (GB)",
+      "gpuModel": "GPU Model",
+      "deviceType": "Device Type",
+      "managementIp": "Management IP",
+      "portCount": "Port Count",
+      "firmwareVersion": "Firmware Version",
+      "powerDrawWatts": "Power Draw (Watts)",
+      "supportsPoe": "Supports PoE",
+      "primaryIp": "Primary IP",
+      "raidConfig": "RAID Config",
+      "virtualMachine": "Virtual Machine",
+      "hypervisor": "Hypervisor",
+      "model": "Model",
+      "imei": "IMEI",
+      "phoneNumber": "Phone Number",
+      "carrier": "Carrier",
+      "supervisedDevice": "Supervised Device",
+      "ipAddress": "IP Address",
+      "monthlyDutyCycle": "Monthly Duty Cycle",
+      "networkPrinter": "Network Printer",
+      "colorSupport": "Color Support",
+      "duplexSupport": "Duplex Support",
+      "client": "Client",
+      "primaryLocation": "Primary Location",
+      "name": "Name",
+      "assetTag": "Asset Tag",
+      "serialNumber": "Serial Number",
+      "status": "Status",
+      "purchaseDate": "Purchase Date",
+      "warrantyEndDate": "Warranty End Date"
+    },
+    "placeholders": {
+      "loadingClients": "Loading clients…",
+      "selectClient": "Select client",
+      "loadingLocations": "Loading locations…",
+      "selectLocation": "Select a location",
+      "selectClientFirst": "Select a client first",
+      "customLocation": "Enter a custom location or area",
+      "selectPurchaseDate": "Select purchase date",
+      "selectWarrantyEndDate": "Select warranty end date"
+    },
+    "statusOptions": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "maintenance": "Maintenance"
+    },
+    "networkDeviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Firewall",
+      "access_point": "Access Point",
+      "load_balancer": "Load Balancer"
+    },
+    "storageTypes": {
+      "ssd": "SSD",
+      "hdd": "HDD",
+      "nvme": "NVMe"
+    },
+    "osTypes": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    },
+    "typeDetails": {
+      "workstation": "Workstation Details",
+      "networkDevice": "Network Device Details",
+      "server": "Server Details",
+      "mobileDevice": "Mobile Device Details",
+      "printer": "Printer Details"
+    }
   },
   "assetFormClient": {
     "title": "Asset Form Client",
