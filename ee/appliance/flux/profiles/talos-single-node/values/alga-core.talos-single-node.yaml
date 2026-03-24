@@ -13,6 +13,8 @@ setup:
   runSeeds: true
   applianceBootstrap:
     enabled: true
+    waitTimeoutSeconds: 300
+    retryIntervalSeconds: 2
   image:
     name: ghcr.io/nine-minds/alga-psa-ee
     is_private: false

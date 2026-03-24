@@ -52,6 +52,8 @@ setup:
   runSeeds: true
   applianceBootstrap:
     enabled: false
+    waitTimeoutSeconds: 300
+    retryIntervalSeconds: 2
 
 server:
   image:

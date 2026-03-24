@@ -74,6 +74,10 @@ data:
       local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
       local pg_password
       local output
+      local timeout_seconds="${BOOTSTRAP_WAIT_TIMEOUT_SECONDS:-300}"
+      local retry_seconds="${BOOTSTRAP_WAIT_RETRY_SECONDS:-2}"
+      local started_at
+      local now
 
       pg_password="$(get_admin_password)"
       if [ -z "$pg_password" ]; then
@@ -81,8 +85,11 @@ data:
         exit 1
       fi
 
+      started_at="$(date +%s)"
+
       while true; do
         output="$(PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d postgres -c '\q' 2>&1)" && break
+        now="$(date +%s)"
 
         case "$output" in
           *"password authentication failed"*|*"no password supplied"*|*"SASL authentication failed"*|*"role \""* )
@@ -90,16 +97,16 @@ data:
             log "ERROR: Existing appliance data may not match the current db-credentials secret. Reuse the original credentials in recover mode or wipe appliance data before a fresh install."
             exit 1
             ;;
-          *"could not translate host name"*|*"Name or service not known"*|*"Temporary failure in name resolution"* )
-            log "ERROR: PostgreSQL DNS resolution failed for ${pg_admin_host}"
-            log "ERROR: ${output}"
-            exit 1
-            ;;
           *)
-            log "PostgreSQL is unavailable at ${pg_admin_host}:${pg_admin_port} - sleeping"
+            if [ $((now - started_at)) -ge "${timeout_seconds}" ]; then
+              log "ERROR: PostgreSQL did not become reachable within ${timeout_seconds}s at ${pg_admin_host}:${pg_admin_port}"
+              log "ERROR: ${output}"
+              exit 1
+            fi
+            log "PostgreSQL is not ready yet at ${pg_admin_host}:${pg_admin_port} - retrying"
             ;;
         esac
-        sleep 1
+        sleep "${retry_seconds}"
       done
 
       log "PostgreSQL is up and running"

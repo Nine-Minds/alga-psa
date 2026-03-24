@@ -209,6 +209,10 @@ spec:
               value: {{ ternary "true" "false" .Values.setup.runSeeds | quote }}
             - name: BOOTSTRAP_MODE
               value: {{ .Values.bootstrap.mode | default "recover" | quote }}
+            - name: BOOTSTRAP_WAIT_TIMEOUT_SECONDS
+              value: {{ .Values.setup.applianceBootstrap.waitTimeoutSeconds | default 300 | quote }}
+            - name: BOOTSTRAP_WAIT_RETRY_SECONDS
+              value: {{ .Values.setup.applianceBootstrap.retryIntervalSeconds | default 2 | quote }}
 
             # Secret provider configuration for setup jobs
             - name: SECRET_READ_CHAIN
