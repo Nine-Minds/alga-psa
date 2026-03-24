@@ -70,6 +70,7 @@
 - (2026-03-24) Completed `F006`: created `server/public/locales/{de,es,fr,it,nl,pl}/msp/clients.json` with translated `msp/clients` content based on the finalized English namespace, then generated `server/public/locales/{xx,yy}/msp/clients.json` via `node scripts/generate-pseudo-locales.cjs` (`xx=11111`, `yy=55555`). Restored unrelated pseudo-locale noise from previously existing MSP namespaces so this feature commit stays scoped to the new clients namespace. Validation:
   - `for f in server/public/locales/{de,es,fr,it,nl,pl,xx,yy}/msp/clients.json; do node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$f" || exit 1; done` returned `json-ok`
   - `node scripts/validate-translations.cjs` → `PASSED` (`Errors: 0`, `Warnings: 0`)
+- (2026-03-24) Completed `F007`: ran a targeted Italian accent audit on `server/public/locales/it/msp/clients.json` using `rg -n '\\b(puo|gia|verra|funzionalita|perche|cosi|piu|e necessario|e possibile|e richiesto|e richiesta|e configurato|e configurata)\\b' server/public/locales/it/msp/clients.json`. The audit returned no matches, and spot checks of higher-risk translated strings (renewal defaults help, language preference success copy, tax-source help) confirmed accented forms were preserved correctly.
 
 ## Commands / Runbooks
 
