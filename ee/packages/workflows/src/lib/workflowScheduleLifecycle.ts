@@ -11,6 +11,7 @@ import {
   getWorkflowScheduleJobRunner,
   type WorkflowScheduleJobResult as ScheduleJobResult
 } from './jobRunnerProvider';
+import { computeNextFireAtForSchedule } from './computeNextFireAt';
 
 export const WORKFLOW_ONE_TIME_TRIGGER_JOB = 'workflow-time-trigger-once';
 export const WORKFLOW_RECURRING_TRIGGER_JOB = 'workflow-time-trigger-recurring';
@@ -47,6 +48,14 @@ const workflowScheduleSingletonKey = (workflowId: string, scheduleId: string): s
   `workflow-schedule:${workflowId}:${scheduleId}`;
 
 const TERMINAL_JOB_STATUSES = new Set(['completed', 'failed']);
+
+const computeNextFireAtForDesired = (desired: DesiredWorkflowSchedule): string | null =>
+  computeNextFireAtForSchedule({
+    triggerType: desired.triggerType,
+    cron: desired.cron,
+    timezone: desired.timezone,
+    enabled: desired.enabled
+  });
 
 const isTimeTriggerDefinition = (trigger: WorkflowDefinition['trigger']): trigger is WorkflowTimeTrigger =>
   trigger?.type === 'schedule' || trigger?.type === 'recurring';
@@ -211,7 +220,8 @@ async function restorePreviousScheduleRegistration(
     job_id: restored?.jobId ?? null,
     runner_schedule_id: restored?.externalId ?? null,
     enabled: true,
-    status: desired.status
+    status: desired.status,
+    next_fire_at: computeNextFireAtForDesired(desired)
   });
 }
 
@@ -239,6 +249,7 @@ async function persistScheduleCreate(
     status: params.record.desired.status,
     job_id: params.scheduled?.jobId ?? null,
     runner_schedule_id: params.scheduled?.externalId ?? null,
+    next_fire_at: computeNextFireAtForDesired(params.record.desired),
     last_error: null
   });
 }
@@ -264,6 +275,7 @@ async function persistScheduleUpdate(
     status: params.record.desired.status,
     job_id: params.scheduled?.jobId ?? null,
     runner_schedule_id: params.scheduled?.externalId ?? null,
+    next_fire_at: computeNextFireAtForDesired(params.record.desired),
     last_error: null
   });
 }
@@ -531,7 +543,8 @@ export async function syncWorkflowScheduleState(
         status: 'disabled',
         name: existing.name ?? LEGACY_INLINE_SCHEDULE_NAME,
         job_id: null,
-        runner_schedule_id: null
+        runner_schedule_id: null,
+        next_fire_at: null
       });
     } catch (error) {
       await restorePreviousScheduleRegistration(knex, existing).catch(() => undefined);
@@ -557,7 +570,8 @@ export async function syncWorkflowScheduleState(
         enabled: params.desired.enabled,
         status: params.desired.status,
         job_id: scheduled?.jobId ?? null,
-        runner_schedule_id: scheduled?.externalId ?? null
+        runner_schedule_id: scheduled?.externalId ?? null,
+        next_fire_at: computeNextFireAtForDesired(params.desired)
       });
     } catch (error) {
       if (scheduled?.jobId) {
@@ -571,7 +585,8 @@ export async function syncWorkflowScheduleState(
     return WorkflowScheduleStateModel.update(knex, existing.id, {
       workflow_version: params.desired.workflowVersion,
       name: existing.name ?? LEGACY_INLINE_SCHEDULE_NAME,
-      status: params.desired.status
+      status: params.desired.status,
+      next_fire_at: computeNextFireAtForDesired(params.desired)
     });
   }
 
@@ -610,6 +625,7 @@ export async function syncWorkflowScheduleState(
       status: params.desired.status,
       job_id: scheduledReplacement?.jobId ?? null,
       runner_schedule_id: scheduledReplacement?.externalId ?? null,
+      next_fire_at: computeNextFireAtForDesired(params.desired),
       last_error: null
     });
   } catch (error) {
