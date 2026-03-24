@@ -2,7 +2,7 @@
 
 import type { ITag } from '@alga-psa/types';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, throwPermissionError } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { Knex } from 'knex';
@@ -301,7 +301,7 @@ export const exportProjectTasksToCSV = withAuth(async (
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const hasRead = await hasPermission(_user, 'project', 'read', trx);
     if (!hasRead) {
-      throw new Error('Permission denied: Cannot read project');
+      throwPermissionError('read project');
     }
 
     // Get phases for this project, filtered to selected ones
