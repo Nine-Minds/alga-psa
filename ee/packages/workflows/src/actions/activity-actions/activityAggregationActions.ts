@@ -15,7 +15,7 @@ import {
   timeEntryToActivity,
   workflowTaskToActivity,
 } from '@alga-psa/types';
-import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
+import { getAllScheduleEntries } from '@alga-psa/core/lib/scheduleEntryRegistry';
 import { withAuth } from '@alga-psa/auth';
 import { ISO8601String } from '@alga-psa/types';
 import { IProjectTask } from '@alga-psa/types';
@@ -185,7 +185,7 @@ export async function fetchScheduleActivities(
     if (!tenant) {
       throw new Error("Tenant is required");
     }
-    const entries = await ScheduleEntry.getAll(knex, tenant, start, end);
+    const entries = await getAllScheduleEntries(knex, tenant, start, end);
     
     // Filter entries assigned to the user
     let userEntries = entries.filter(entry =>

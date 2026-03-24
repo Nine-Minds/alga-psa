@@ -45,6 +45,10 @@
     "./config/deletion": {
       "import": "./src/config/deletion/index.ts",
       "types": "./src/config/deletion/index.ts"
+    },
+    "./lib/scheduleEntryRegistry": {
+      "import": "./src/lib/scheduleEntryRegistry.ts",
+      "types": "./src/lib/scheduleEntryRegistry.ts"
     }
   },
   "scripts": {
