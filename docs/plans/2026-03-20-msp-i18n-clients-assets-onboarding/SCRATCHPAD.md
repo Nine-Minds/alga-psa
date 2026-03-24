@@ -95,6 +95,9 @@
   - `for f in server/public/locales/{de,es,fr,it,nl,pl}/msp/contacts.json; do node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(process.argv[1]+': ok')" "$f" || exit 1; done` reported all six locale files as `ok`
   - `node scripts/validate-translations.cjs` → `PASSED` (`Errors: 0`, `Warnings: 0`)
   - `node -e` spot check over `server/public/locales/{xx,yy}/msp/contacts.json` confirmed representative contact keys resolve to `11111` / `55555`
+- (2026-03-24) Completed `F015`: ran a targeted Italian accent audit on `server/public/locales/it/msp/contacts.json`. The strict dropped-accent scan (`pou/gia/verra/funzionalita/perche/cosi/piu`, plus the common `e necessario`-style phrases) returned no matches, and representative spot checks confirmed accented forms are present in the locale file (`Sì`, `è`, `più`). Validation:
+  - `rg -n '\b(puo|gia|verra|funzionalita|perche|cosi|piu)\b| e necessario| e possibile| e richiesto| e richiesta| e configurato| e configurata' server/public/locales/it/msp/contacts.json` returned no matches
+  - `rg -n 'Sì| è |più|funzionalità' server/public/locales/it/msp/contacts.json` returned representative accented strings
 
 ## Commands / Runbooks
 
