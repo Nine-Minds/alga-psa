@@ -18,9 +18,9 @@ import type { DeletionValidationResult } from '@alga-psa/types';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   getDefaultRatingLabels,
-  RatingButton,
   type RatingType,
 } from '../shared/RatingDisplay';
+import SurveyPreviewPanel from './SurveyPreviewPanel';
 
 interface TemplateFormProps {
   template?: SurveyTemplate;
@@ -269,9 +269,10 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
     ? t('surveys.settings.templateForm.actions.save', 'Save changes')
     : t('surveys.settings.templateForm.actions.create', 'Create template');
 
-  const title = template
-    ? t('surveys.settings.templateForm.titleEdit', 'Edit survey template')
-    : t('surveys.settings.templateForm.titleCreate', 'Create survey template');
+  const parsedRatingLabels = useMemo(
+    () => parseRatingLabels(formState.ratingLabelsText),
+    [formState.ratingLabelsText]
+  );
 
   const ratingScaleOptionsLocal = useMemo<SelectOption[]>(
     () =>
@@ -284,179 +285,166 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
 
   return (
     <>
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-name`}>
-            {t('surveys.settings.templateForm.labels.name', 'Template name')}
-          </label>
-          <Input
-            id={`${formInstanceId}-name`}
-            value={formState.templateName}
-            onChange={(event) => handleChange('templateName', event.target.value)}
-            required
-          />
-        </div>
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* Left column: Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-name`}>
+              {t('surveys.settings.templateForm.labels.name', 'Template name')}
+            </label>
+            <Input
+              id={`${formInstanceId}-name`}
+              value={formState.templateName}
+              onChange={(event) => handleChange('templateName', event.target.value)}
+              required
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-rating-type`}>
-            {t('surveys.settings.templateForm.labels.ratingType', 'Rating type')}
-          </label>
-          <CustomSelect
-            id={`${formInstanceId}-rating-type`}
-            options={ratingTypeOptions}
-            value={formState.ratingType}
-            onValueChange={(value) => handleChange('ratingType', value as RatingType)}
-          />
-        </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-rating-type`}>
+              {t('surveys.settings.templateForm.labels.ratingType', 'Rating type')}
+            </label>
+            <CustomSelect
+              id={`${formInstanceId}-rating-type`}
+              options={ratingTypeOptions}
+              value={formState.ratingType}
+              onValueChange={(value) => handleChange('ratingType', value as RatingType)}
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-rating-scale`}>
-            {t('surveys.settings.templateForm.labels.ratingScale', 'Rating scale')}
-          </label>
-          <CustomSelect
-            id={`${formInstanceId}-rating-scale`}
-            options={ratingScaleOptionsLocal}
-            value={String(formState.ratingScale)}
-            onValueChange={(value) => handleChange('ratingScale', Number(value))}
-          />
-        </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-rating-scale`}>
+              {t('surveys.settings.templateForm.labels.ratingScale', 'Rating scale')}
+            </label>
+            <CustomSelect
+              id={`${formInstanceId}-rating-scale`}
+              options={ratingScaleOptionsLocal}
+              value={String(formState.ratingScale)}
+              onValueChange={(value) => handleChange('ratingScale', Number(value))}
+            />
+          </div>
 
-        <div className="space-y-2 md:col-span-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-rating-labels`}>
-            {t('surveys.settings.templateForm.labels.ratingLabels', 'Rating labels')}
-          </label>
-          <TextArea
-            id={`${formInstanceId}-rating-labels`}
-            value={formState.ratingLabelsText}
-            onChange={(event) => handleChange('ratingLabelsText', event.target.value)}
-            className="h-32"
-            placeholder={t(
-              'surveys.settings.templateForm.placeholders.ratingLabels',
-              'Example:\nVery Poor\nPoor\nAverage\nGood\nExcellent'
-            )}
-          />
-          <p className="text-xs text-gray-500">
-            {t(
-              'surveys.settings.templateForm.help.ratingLabels',
-              'Provide one label per line, in order from lowest to highest rating.'
-            )}
-          </p>
-        </div>
-
-        {/* Rating Preview */}
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 md:col-span-2">
-          <h3 className="mb-3 text-sm font-medium text-gray-700">
-            {t('surveys.settings.templateForm.labels.preview', 'Preview')}
-          </h3>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-            {Array.from({ length: formState.ratingScale }, (_, index) => {
-              const rating = index + 1;
-              const labels = parseRatingLabels(formState.ratingLabelsText);
-              const label = labels[String(rating)];
-              return (
-                <RatingButton
-                  key={rating}
-                  rating={rating}
-                  type={formState.ratingType}
-                  scale={formState.ratingScale}
-                  label={label}
-                  selected={false}
-                  disabled
-                  onClick={() => {}}
-                  className="cursor-default opacity-100"
-                />
-              );
-            })}
+          <div className="space-y-2 sm:col-span-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-rating-labels`}>
+              {t('surveys.settings.templateForm.labels.ratingLabels', 'Rating labels')}
+            </label>
+            <TextArea
+              id={`${formInstanceId}-rating-labels`}
+              value={formState.ratingLabelsText}
+              onChange={(event) => handleChange('ratingLabelsText', event.target.value)}
+              className="h-32"
+              placeholder={t(
+                'surveys.settings.templateForm.placeholders.ratingLabels',
+                'Example:\nVery Poor\nPoor\nAverage\nGood\nExcellent'
+              )}
+            />
+            <p className="text-xs text-gray-500">
+              {t(
+                'surveys.settings.templateForm.help.ratingLabels',
+                'Provide one label per line, in order from lowest to highest rating.'
+              )}
+            </p>
           </div>
         </div>
-      </div>
 
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-prompt`}>
-            {t('surveys.settings.templateForm.labels.promptText', 'Survey prompt')}
-          </label>
-          <TextArea
-            id={`${formInstanceId}-prompt`}
-            value={formState.promptText}
-            onChange={(event) => handleChange('promptText', event.target.value)}
-            className="min-h-[96px]"
-          />
-        </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-prompt`}>
+              {t('surveys.settings.templateForm.labels.promptText', 'Survey prompt')}
+            </label>
+            <TextArea
+              id={`${formInstanceId}-prompt`}
+              value={formState.promptText}
+              onChange={(event) => handleChange('promptText', event.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-comment`}>
-            {t('surveys.settings.templateForm.labels.commentPrompt', 'Comment prompt')}
-          </label>
-          <TextArea
-            id={`${formInstanceId}-comment`}
-            value={formState.commentPrompt}
-            onChange={(event) => handleChange('commentPrompt', event.target.value)}
-            className="min-h-[96px]"
-          />
-        </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-comment`}>
+              {t('surveys.settings.templateForm.labels.commentPrompt', 'Comment prompt')}
+            </label>
+            <TextArea
+              id={`${formInstanceId}-comment`}
+              value={formState.commentPrompt}
+              onChange={(event) => handleChange('commentPrompt', event.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-thank-you`}>
-            {t('surveys.settings.templateForm.labels.thankYouText', 'Thank-you message')}
-          </label>
-          <TextArea
-            id={`${formInstanceId}-thank-you`}
-            value={formState.thankYouText}
-            onChange={(event) => handleChange('thankYouText', event.target.value)}
-            className="min-h-[96px]"
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col gap-3">
-          <Switch
-            id={`${formInstanceId}-default`}
-            checked={formState.isDefault}
-            onCheckedChange={(checked) => handleChange('isDefault', Boolean(checked))}
-            label={t('surveys.settings.templateForm.labels.isDefault', 'Set as default template')}
-          />
-          <Switch
-            id={`${formInstanceId}-enabled`}
-            checked={formState.enabled}
-            onCheckedChange={(checked) => handleChange('enabled', Boolean(checked))}
-            label={t('surveys.settings.templateForm.labels.enabled', 'Template enabled')}
-          />
-        </div>
-
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          {template && (
-            <Button
-              id={`${formInstanceId}-delete`}
-              type="button"
-              variant="accent"
-              onClick={handleDelete}
-              disabled={isDeleting || isSubmitting}
-            >
-              {isDeleting
-                ? t('surveys.settings.templateForm.actions.delete', 'Delete template')
-                : t('surveys.settings.templateForm.actions.delete', 'Delete template')}
-            </Button>
-          )}
-          <div className="flex items-center gap-2">
-            <Button
-              id={`${formInstanceId}-cancel`}
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
-              {t('actions.cancel', 'Cancel')}
-            </Button>
-            <Button id={`${formInstanceId}-submit`} type="submit" disabled={isSubmitting}>
-              {isSubmitting ? `${submitLabel}…` : submitLabel}
-            </Button>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor={`${formInstanceId}-thank-you`}>
+              {t('surveys.settings.templateForm.labels.thankYouText', 'Thank-you message')}
+            </label>
+            <TextArea
+              id={`${formInstanceId}-thank-you`}
+              value={formState.thankYouText}
+              onChange={(event) => handleChange('thankYouText', event.target.value)}
+              className="min-h-[80px]"
+            />
           </div>
         </div>
+
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3">
+            <Switch
+              id={`${formInstanceId}-default`}
+              checked={formState.isDefault}
+              onCheckedChange={(checked) => handleChange('isDefault', Boolean(checked))}
+              label={t('surveys.settings.templateForm.labels.isDefault', 'Set as default template')}
+            />
+            <Switch
+              id={`${formInstanceId}-enabled`}
+              checked={formState.enabled}
+              onCheckedChange={(checked) => handleChange('enabled', Boolean(checked))}
+              label={t('surveys.settings.templateForm.labels.enabled', 'Template enabled')}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            {template && (
+              <Button
+                id={`${formInstanceId}-delete`}
+                type="button"
+                variant="accent"
+                onClick={handleDelete}
+                disabled={isDeleting || isSubmitting}
+              >
+                {t('surveys.settings.templateForm.actions.delete', 'Delete template')}
+              </Button>
+            )}
+            <div className="flex items-center gap-2">
+              <Button
+                id={`${formInstanceId}-cancel`}
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isSubmitting}
+              >
+                {t('actions.cancel', 'Cancel')}
+              </Button>
+              <Button id={`${formInstanceId}-submit`} type="submit" disabled={isSubmitting}>
+                {isSubmitting ? `${submitLabel}…` : submitLabel}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      {/* Right column: Live preview */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <SurveyPreviewPanel
+          ratingType={formState.ratingType}
+          ratingScale={formState.ratingScale}
+          ratingLabels={parsedRatingLabels}
+          promptText={formState.promptText}
+          commentPrompt={formState.commentPrompt}
+          thankYouText={formState.thankYouText}
+        />
       </div>
-    </form>
+    </div>
+
     <DeleteEntityDialog
       id={template ? `delete-survey-template-${template.templateId}` : 'delete-survey-template-dialog'}
       isOpen={isDeleteDialogOpen}

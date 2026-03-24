@@ -396,7 +396,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
             ? t('surveys.settings.templateForm.titleEdit', 'Edit survey template')
             : t('surveys.settings.templateForm.titleCreate', 'Create survey template')
         }
-        className="max-w-3xl"
+        className="max-w-6xl"
       >
         <TemplateForm
           template={editingTemplate ?? undefined}
@@ -416,6 +416,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
       />
+
     </Card>
   );
 }
