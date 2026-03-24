@@ -54,6 +54,9 @@
 - (2026-03-24) Completed `F002`: wired `packages/clients/src/components/clients/Clients.tsx` and `packages/clients/src/components/clients/ClientDetails.tsx` to `useTranslation('msp/clients')`. The list/detail chrome, main filter controls, view labels, bulk-delete dialogs, core detail tab labels, major field labels, save/delete/reactivate toasts, and deactivate/reactivate confirmations now use `t(..., { defaultValue })` while preserving stable tab ids/query-param values. Expanded `server/public/locales/en/msp/clients.json` with the new list/detail keys needed by those two files. Validation:
   - `npx eslint packages/clients/src/components/clients/Clients.tsx packages/clients/src/components/clients/ClientDetails.tsx` (warnings only, no errors)
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-24) Completed `F003`: wired `packages/clients/src/components/clients/QuickAddClient.tsx`, `packages/clients/src/components/clients/ClientLocations.tsx`, and `packages/clients/src/components/clients/ClientsImportDialog.tsx` to `msp/clients`. `QuickAddClient` now translates its section headings, primary labels/placeholders, CTA buttons, and metadata-loading errors; `ClientLocations` now resolves its existing `clients.locations.*` keys from the new namespace instead of `common`; `ClientsImportDialog` now translates the main import flow headings, action buttons, and confirmation copy. Expanded `server/public/locales/en/msp/clients.json` with the additional import-flow keys used by these surfaces. Validation:
+  - `npx eslint packages/clients/src/components/clients/QuickAddClient.tsx packages/clients/src/components/clients/ClientLocations.tsx packages/clients/src/components/clients/ClientsImportDialog.tsx` (warnings only, no errors)
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
 
 ## Commands / Runbooks
 

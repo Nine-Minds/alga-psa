@@ -106,7 +106,7 @@ const LocationDetailField: React.FC<{
 };
 
 const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete, onSetDefault, formatAddress, showActions = true }) => {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('msp/clients');
   const locationLabel = location.location_name || t('clients.locations.card.unnamed', 'Unnamed Location');
   const formattedAddress = formatAddress(location);
 
@@ -284,7 +284,7 @@ const initialFormData: LocationFormData = {
 };
 
 export default function ClientLocations({ clientId, isEditing }: ClientLocationsProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('msp/clients');
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [isLocationsLoading, setIsLocationsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

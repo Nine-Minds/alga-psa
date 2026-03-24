@@ -549,7 +549,19 @@
     "importing": "Importing...",
     "clientNameRequired": "Client name is required",
     "invalidEmail": "Invalid email format",
-    "creditLimitNumber": "Credit limit must be a number"
+    "creditLimitNumber": "Credit limit must be a number",
+    "clientField": "Client Field",
+    "selectCsvColumn": "Select CSV Column",
+    "notMapped": "Not mapped",
+    "recordsMessage": "You are importing {{count}} records. Processing may take a moment.",
+    "processing": "Processing...",
+    "updateExistingLabel": "Update existing clients",
+    "exists": "Exists",
+    "email": "Email",
+    "clientName": "Client Name",
+    "importCompleteMessage": "Successfully imported {{count}} clients",
+    "updateExistingTitle": "Update Existing Clients",
+    "updateExistingMessage": "{{count}} clients already exist. Do you want to update them with the new data?"
   },
   "clientsList": {
     "name": "Name",
