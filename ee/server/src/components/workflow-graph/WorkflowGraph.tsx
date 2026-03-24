@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTheme } from 'next-themes';
 import { Droppable } from '@hello-pangea/dnd';
 import ReactFlow, {
+  BaseEdge,
   Background,
   Controls,
   Handle,
@@ -11,6 +12,8 @@ import ReactFlow, {
   Position,
   type ReactFlowInstance,
   type Edge,
+  type EdgeProps,
+  type EdgeTypes,
   type Node,
   type NodeProps,
   type NodeTypes
@@ -19,7 +22,7 @@ import 'reactflow/dist/style.css';
 
 import { buildWorkflowGraph, type WorkflowGraphNodeData } from './buildWorkflowGraph';
 import { getStepTypeColor, getStepTypeIcon } from '../workflow-designer/pipeline/PipelineComponents';
-import { Link2, Plus, Trash2 } from 'lucide-react';
+import { Link2, Play, Plus, Trash2 } from 'lucide-react';
 
 type WorkflowGraphProps<TStep> = {
   steps: TStep[];
@@ -187,17 +190,12 @@ const InsertNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
           ref={provided.innerRef}
           {...provided.droppableProps}
           data-pipe-path={pipePath}
-          onClick={(event) => {
-            event.stopPropagation();
-            data.onRequestInsert?.(pipePath, insertIndex);
-          }}
           className={[
             'flex items-center justify-center',
             'rounded-md border shadow-sm bg-white dark:bg-[rgb(var(--color-card))]',
             snapshot.isDraggingOver
               ? 'border-[rgb(var(--color-primary-400))] ring-2 ring-[rgb(var(--color-primary-200))]'
-              : 'border-[rgb(var(--color-border-200))]',
-            'cursor-copy'
+              : 'border-dashed border-[rgb(var(--color-border-200))]'
           ].join(' ')}
           style={{ width: 30, height: 30, boxSizing: 'border-box' }}
           title="Drop a step here to insert"
@@ -222,11 +220,22 @@ const InsertNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
   );
 };
 
+const AlignedVerticalEdge: React.FC<EdgeProps> = ({ id, sourceX, sourceY, targetX, targetY, markerEnd, style }) => {
+  const centerX = Math.round(((sourceX + targetX) / 2) * 2) / 2;
+  const path = `M ${centerX},${sourceY} L ${centerX},${targetY}`;
+
+  return <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />;
+};
+
 const nodeTypes: NodeTypes = {
   workflowStart: StartNode,
   workflowJoin: JoinNode,
   workflowStep: StepNode,
   workflowInsert: InsertNode
+};
+
+const edgeTypes: EdgeTypes = {
+  workflowAlignedVertical: AlignedVerticalEdge
 };
 
 export default function WorkflowGraph<TStep extends { id: string; type: string }>(props: WorkflowGraphProps<TStep>) {
@@ -303,7 +312,6 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
         const graph = await buildWorkflowGraph(steps as any, {
           getLabel: (step) => getLabelRef.current(step as any),
           getSubtitle: getSubtitleRef.current ? (step) => (getSubtitleRef.current?.(step as any) ?? null) : undefined,
-          includeInsertions: editable,
           getPipePathForRoot: () => rootPipePath
         });
         if (cancelled) return;
@@ -379,6 +387,19 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     );
   }
 
+  if (steps.length === 0) {
+    return (
+      <div className={`w-full h-full flex flex-col items-center justify-center text-center ${className ?? ''}`}>
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-success/15 border-2 border-success mb-4">
+          <Play className="h-5 w-5 text-success ml-0.5" />
+        </div>
+        <p className="text-sm text-gray-500">
+          Select a step from the panel to get started.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
@@ -399,6 +420,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
         nodes={displayNodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         className="!bg-white dark:!bg-[rgb(var(--color-card))]"
         style={{ width: '100%', height: '100%' }}
         minZoom={0.25}

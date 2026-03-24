@@ -3817,45 +3817,26 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   })()}
 
                   <div id="workflow-designer-contract-section" className="mt-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <Label>Workflow input data</Label>
-                        <div className="text-xs text-gray-500">
-                          {activeDefinition?.trigger?.type === 'event' ? (
-                            'Your steps read data from the selected trigger.'
-                          ) : isTimeTrigger(activeDefinition?.trigger) ? (
-                            <>
-                              This workflow receives a fixed synthetic clock payload. The contract is pinned to{' '}
-                              <span className="font-mono">{WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF}</span>.
-                            </>
-                          ) : (
-                            <>
-                              No trigger uses <span className="font-mono">{EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF}</span> by default. Change it in Advanced schema settings if this workflow needs a different manual contract.
-                            </>
-                          )}
-                        </div>
-                        {activeDefinition?.trigger?.type === 'event' && triggerPayloadMappingInfo.mappingRequired && !contractSettingsExpanded && (
-                          <div className="mt-1 text-xs text-warning-foreground">
-                            Trigger mapping is required. Open Advanced schema settings to configure it.
-                          </div>
+                    <div>
+                      <Label>Workflow input data</Label>
+                      <div className="text-xs text-gray-500">
+                        {activeDefinition?.trigger?.type === 'event' ? (
+                          'Your steps read data from the selected trigger.'
+                        ) : isTimeTrigger(activeDefinition?.trigger) ? (
+                          <>
+                            This workflow receives a fixed synthetic clock payload. The contract is pinned to{' '}
+                            <span className="font-mono">{WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF}</span>.
+                          </>
+                        ) : (
+                          <>
+                            No trigger uses <span className="font-mono">{EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF}</span> by default. Change it in Advanced schema settings if this workflow needs a different manual contract.
+                          </>
                         )}
                       </div>
-                      {activeDefinition?.trigger?.type !== 'event' && (
-                        <Button
-                          id="workflow-designer-select-trigger"
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          className="text-xs"
-                          onClick={() => {
-                            const triggerElement = document.getElementById('workflow-designer-trigger-type');
-                            if (!triggerElement) return;
-                            triggerElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            triggerElement.focus();
-                          }}
-                        >
-                          Select trigger
-                        </Button>
+                      {activeDefinition?.trigger?.type === 'event' && triggerPayloadMappingInfo.mappingRequired && !contractSettingsExpanded && (
+                        <div className="mt-1 text-xs text-warning-foreground">
+                          Trigger mapping is required. Open Advanced schema settings to configure it.
+                        </div>
                       )}
                     </div>
 
