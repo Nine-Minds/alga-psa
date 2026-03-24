@@ -33,6 +33,7 @@ export default defineConfig({
   clean: true,
   outDir: 'dist',
   external: [
+    'react',
     /^@alga-psa\//,
     /^@shared\//,
   ],
