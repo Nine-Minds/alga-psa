@@ -3,7 +3,6 @@
 import type { IUser, IBoard, ITicketStatus, IPriority, IClient, IContact } from '@alga-psa/types';
 import { getAllUsers } from '@alga-psa/user-composition/actions';
 import { getAllBoards } from './board-actions';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions';
 import { getAllClients, getClientById, getContactsByClient } from './clientLookupActions';
 import { withTransaction } from '@alga-psa/db';
@@ -28,17 +27,13 @@ export interface TicketFormData {
 export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?: string): Promise<TicketFormData> => {
   try {
     // Fetch required data first
-    const [users, boards, statuses, priorities, clients] = await Promise.all([
+    const [users, boards, priorities, clients] = await Promise.all([
       getAllUsers(false).catch(error => {
         console.error('Error fetching users:', error);
         return [];
       }),
       getAllBoards().catch(error => {
         console.error('Error fetching boards:', error);
-        return [];
-      }),
-      getTicketStatuses().catch(error => {
-        console.error('Error fetching statuses:', error);
         return [];
       }),
       getAllPriorities('ticket').catch(error => {
@@ -70,7 +65,7 @@ export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?
     return {
       users: users || [],
       boards: boards || [],
-      statuses: statuses || [],
+      statuses: [],
       priorities: priorities || [],
       clients: clients || [],
       contacts: contacts.length > 0 ? contacts : undefined,

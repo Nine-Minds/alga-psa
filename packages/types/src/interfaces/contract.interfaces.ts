@@ -79,6 +79,11 @@ export interface IClientContract extends TenantEntity {
   notice_period_days?: number;
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
+  renewal_due_date_action_policy?: 'queue_only' | 'create_ticket' | null;
+  renewal_ticket_board_id?: string | null;
+  renewal_ticket_status_id?: string | null;
+  renewal_ticket_priority?: string | null;
+  renewal_ticket_assignee_id?: string | null;
   effective_renewal_mode?: 'none' | 'manual' | 'auto';
   effective_notice_period_days?: number;
   evergreen_review_anchor_date?: ISO8601String | null;
@@ -134,6 +139,11 @@ export interface IContractAssignmentSummary extends TenantEntity {
   notice_period_days?: number;
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
+  renewal_due_date_action_policy?: 'queue_only' | 'create_ticket' | null;
+  renewal_ticket_board_id?: string | null;
+  renewal_ticket_status_id?: string | null;
+  renewal_ticket_priority?: string | null;
+  renewal_ticket_assignee_id?: string | null;
   effective_renewal_mode?: 'none' | 'manual' | 'auto';
   effective_notice_period_days?: number;
   decision_due_date?: ISO8601String | null;

@@ -495,18 +495,33 @@ export class TicketService extends BaseService<ITicket> {
         }
       });
 
-      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
-        const status = await trx('statuses')
-          .where({
-            status_id: cleanedData.status_id,
-            tenant: context.tenant,
-            status_type: 'ticket'
-          })
-          .first();
+      const isBoardChange =
+        cleanedData.board_id !== undefined &&
+        cleanedData.board_id !== currentTicket.board_id;
 
-        if (!status) {
+      if (isBoardChange && !cleanedData.status_id) {
+        throw new ValidationError('Validation failed', [
+          { path: ['status_id'], message: 'Changing the board requires selecting a status for the destination board' }
+        ]);
+      }
+
+      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
+        const effectiveBoardId = cleanedData.board_id ?? currentTicket.board_id;
+        const statusResult = effectiveBoardId
+          ? await TicketModel.validateStatusBelongsToBoard(
+            cleanedData.status_id,
+            effectiveBoardId,
+            context.tenant,
+            trx
+          )
+          : {
+            valid: false,
+            error: 'Invalid status: board_id is required when selecting a ticket status'
+          };
+
+        if (!statusResult.valid) {
           throw new ValidationError('Validation failed', [
-            { path: ['status_id'], message: 'Status not found' }
+            { path: ['status_id'], message: statusResult.error || 'Status not found' }
           ]);
         }
       }
@@ -890,7 +905,13 @@ export class TicketService extends BaseService<ITicket> {
 
     // Execute query
     const tickets = await query
-      .select('t.*', 'comp.client_name', 'cont.full_name as contact_name')
+      .select(
+        't.*',
+        'comp.client_name',
+        'cont.full_name as contact_name',
+        'stat.name as status_name',
+        'stat.is_closed as status_is_closed'
+      )
       .limit(searchData.limit || 25)
       .orderBy('t.entered_at', 'desc');
 
@@ -968,8 +989,8 @@ export class TicketService extends BaseService<ITicket> {
               .andOn('t.tenant', '=', 's.tenant');
         })
         .where('t.tenant', context.tenant)
-        .groupBy('s.name')
-        .select('s.name as status_name', knex.raw('COUNT(*) as count')),
+        .groupBy('s.status_id', 's.name')
+        .select('s.status_id', 's.name as status_name', knex.raw('COUNT(*) as count')),
 
       // Tickets by priority
       knex('tickets as t')
@@ -1020,7 +1041,8 @@ export class TicketService extends BaseService<ITicket> {
       unassigned_tickets: parseInt(totalStats.unassigned_tickets),
       overdue_tickets: 0, // Would need SLA configuration to calculate
       tickets_by_status: statusStats.reduce((acc: any, row: any) => {
-        acc[row.status_name] = parseInt(row.count);
+        const key = row.status_id || row.status_name || 'unknown';
+        acc[key] = parseInt(row.count);
         return acc;
       }, {}),
       tickets_by_priority: priorityStats.reduce((acc: any, row: any) => {

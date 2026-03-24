@@ -10,6 +10,7 @@ import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { NumberingSettings } from '@alga-psa/reference-data/components';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
+import RenewalAutomationSettings from './RenewalAutomationSettings';
 import { TaxSourceSettings } from '../tax/TaxSourceSettings';
 import { TaxRegionsManager } from '../tax/TaxRegionsManager';
 
@@ -138,6 +139,7 @@ const BillingSettings: React.FC = () => {
 
           <ZeroDollarInvoiceSettings />
           <CreditExpirationSettings />
+          <RenewalAutomationSettings />
         </div>
       ),
     },

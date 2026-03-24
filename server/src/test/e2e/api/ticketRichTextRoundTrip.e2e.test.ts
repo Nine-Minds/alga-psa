@@ -69,21 +69,25 @@ function configureTicketTestDatabase(): void {
 }
 
 async function resolveTicketDefaults(db: Knex, tenant: string): Promise<void> {
-  const [board, openStatus, inProgressStatus, closedStatus, lowPriority, mediumPriority, highPriority] = await Promise.all([
-    db('boards').where({ tenant, is_default: true }).first(),
-    db('statuses').where({ tenant, name: 'New', status_type: 'ticket' }).first(),
-    db('statuses').where({ tenant, name: 'In Progress', status_type: 'ticket' }).first(),
-    db('statuses').where({ tenant, name: 'Closed', status_type: 'ticket' }).first(),
+  const board = await db('boards').where({ tenant, is_default: true }).first();
+  if (!board) {
+    throw new Error('Ticket E2E defaults were not created by setupE2ETestEnvironment');
+  }
+
+  boardId = board.board_id;
+
+  const [openStatus, inProgressStatus, closedStatus, lowPriority, mediumPriority, highPriority] = await Promise.all([
+    db('statuses').where({ tenant, board_id: boardId, name: 'New', status_type: 'ticket' }).first(),
+    db('statuses').where({ tenant, board_id: boardId, name: 'In Progress', status_type: 'ticket' }).first(),
+    db('statuses').where({ tenant, board_id: boardId, name: 'Closed', status_type: 'ticket' }).first(),
     db('priorities').where({ tenant, priority_name: 'Low' }).first(),
     db('priorities').where({ tenant, priority_name: 'Medium' }).first(),
     db('priorities').where({ tenant, priority_name: 'High' }).first(),
   ]);
 
-  if (!board || !openStatus || !inProgressStatus || !closedStatus || !lowPriority || !mediumPriority || !highPriority) {
+  if (!openStatus || !inProgressStatus || !closedStatus || !lowPriority || !mediumPriority || !highPriority) {
     throw new Error('Ticket E2E defaults were not created by setupE2ETestEnvironment');
   }
-
-  boardId = board.board_id;
   statusIds = {
     open: openStatus.status_id,
     inProgress: inProgressStatus.status_id,

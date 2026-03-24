@@ -43,6 +43,7 @@ import type { ITeam } from '@alga-psa/types';
 import { useSession } from 'next-auth/react';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 
 
@@ -198,6 +199,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Get the effective board ID (pending or saved)
   const effectiveBoardId = pendingChanges.board_id ?? originalTicketValues.board_id;
+  const hasPendingStatusOverride = Object.prototype.hasOwnProperty.call(pendingChanges, 'status_id');
+  const pendingStatusValue = hasPendingStatusOverride
+    ? (pendingChanges.status_id ?? '')
+    : (originalTicketValues.status_id ?? '');
+  const requiresDestinationStatusSelection = Boolean(
+    pendingChanges.board_id &&
+    pendingChanges.board_id !== originalTicketValues.board_id &&
+    !pendingChanges.status_id
+  );
 
   // Get the effective board config (pending or current)
   const effectiveBoardConfig = pendingBoardConfig ?? boardConfig;
@@ -258,6 +268,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Track loading state for board config
   const [isLoadingBoardConfig, setIsLoadingBoardConfig] = useState(false);
+  const [isLoadingStatusOptions, setIsLoadingStatusOptions] = useState(false);
+  const [boardScopedStatusOptions, setBoardScopedStatusOptions] = useState(statusOptions);
   const fetchingBoardIdRef = useRef<string | null>(null);
   const saveSuccessTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -293,6 +305,48 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     };
     fetchAvatars();
   }, [additionalAgents, ticket.tenant]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadBoardStatuses = async () => {
+      if (!effectiveBoardId) {
+        setBoardScopedStatusOptions([]);
+        setIsLoadingStatusOptions(false);
+        return;
+      }
+
+      setIsLoadingStatusOptions(true);
+      try {
+        const statuses = await getTicketStatuses(effectiveBoardId);
+        if (!isMounted) {
+          return;
+        }
+
+        setBoardScopedStatusOptions(
+          statuses.map((status) => ({
+            value: status.status_id,
+            label: status.name ?? '',
+          }))
+        );
+      } catch (error) {
+        console.error('Error loading board ticket statuses:', error);
+        if (isMounted) {
+          setBoardScopedStatusOptions([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingStatusOptions(false);
+        }
+      }
+    };
+
+    loadBoardStatuses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveBoardId]);
 
   // Fetch team avatar (for saved or pending team)
   useEffect(() => {
@@ -552,7 +606,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Handler for saving all pending changes
   const handleSaveChanges = useCallback(async () => {
-    if (!hasUnsavedChanges) return;
+    if (!hasUnsavedChanges || requiresDestinationStatusSelection) return;
 
     setIsSaving(true);
     try {
@@ -646,7 +700,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, isEditingDescription, pendingTeamId, pendingTeamRemoval, onAssignTeam, onRemoveTeamAssignment, onSaveChanges, onSelectChange, onItilFieldChange, finalizeSavedDescription, persistDescriptionChanges]);
+  }, [hasUnsavedChanges, requiresDestinationStatusSelection, pendingChanges, pendingItilChanges, titleValue, ticket.title, isEditingDescription, pendingTeamId, pendingTeamRemoval, onAssignTeam, onRemoveTeamAssignment, onSaveChanges, onSelectChange, onItilFieldChange, finalizeSavedDescription, persistDescriptionChanges]);
 
   // Handler for discarding all pending changes
   const discardNonDescriptionChanges = useCallback(() => {
@@ -899,13 +953,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             <div>
               <h5 className="font-bold mb-2">Status</h5>
               <CustomSelect
-                value={pendingChanges.status_id ?? originalTicketValues.status_id ?? ''}
-                options={statusOptions}
+                value={pendingStatusValue}
+                options={boardScopedStatusOptions}
                 onValueChange={(value) => handlePendingChange('status_id', value)}
                 customStyles={customStyles}
                 className="!w-fit"
-                disabled={workflowLocked}
+                disabled={workflowLocked || !effectiveBoardId || isLoadingStatusOptions}
               />
+              {requiresDestinationStatusSelection && (
+                <p className="mt-2 text-sm text-amber-700">
+                  Select a status for the new board before saving.
+                </p>
+              )}
             </div>
             <div>
               <h5 className="font-bold mb-2">Assigned To</h5>
@@ -1009,6 +1068,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 options={boardOptions}
                 onValueChange={(value) => {
                   handlePendingChange('board_id', value);
+                  if (value && value !== originalTicketValues.board_id) {
+                    handlePendingChange('status_id', null);
+                  } else {
+                    handlePendingChange('status_id', originalTicketValues.status_id ?? null);
+                  }
                   handlePendingChange('category_id', null);
                   handlePendingChange('subcategory_id', null);
                 }}
@@ -1482,7 +1546,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               id={`${id}-save-changes-btn`}
               type="button"
               onClick={handleSaveChanges}
-              disabled={isSaving}
+              disabled={isSaving || requiresDestinationStatusSelection}
             >
               <span className={hasUnsavedChanges ? 'font-bold' : ''}>
                 {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}

@@ -241,7 +241,10 @@ vi.mock('@alga-psa/integrations/actions', () => ({
         { id: 'board-1', name: 'Support Board' },
         { id: 'board-2', name: 'Projects Board' },
       ],
-      statuses: [{ id: 'status-1', name: 'New' }],
+      statuses: [
+        { id: 'status-1', name: 'New' },
+        { id: 'status-2', name: 'Planning' },
+      ],
       priorities: [{ id: 'priority-1', name: 'High' }],
       categories: [
         { id: 'category-1', name: 'Hardware', parent_id: null, board_id: 'board-1' },
@@ -259,6 +262,17 @@ vi.mock('@alga-psa/integrations/actions', () => ({
         { id: 'location-2', name: 'Globex Office', client_id: 'client-2' },
       ],
     },
+  }),
+  getAvailableStatuses: vi.fn().mockImplementation(async (boardId: string | null) => {
+    if (boardId === 'board-1') {
+      return { statuses: [{ id: 'status-1', name: 'New' }] };
+    }
+
+    if (boardId === 'board-2') {
+      return { statuses: [{ id: 'status-2', name: 'Planning' }] };
+    }
+
+    return { statuses: [] };
   }),
 }));
 
@@ -347,6 +361,20 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
 }));
 
+vi.mock('@alga-psa/tickets/actions', () => ({
+  getTicketById: vi.fn().mockImplementation(async (ticketId: string) => {
+    if (ticketId === 'ticket-1') {
+      return { ticket_id: 'ticket-1', board_id: 'board-1' };
+    }
+
+    if (ticketId === 'ticket-2') {
+      return { ticket_id: 'ticket-2', board_id: 'board-2' };
+    }
+
+    return null;
+  }),
+}));
+
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
 import type { MappingPositionsHandlers } from '../mapping/useMappingPositions';
 
@@ -413,7 +441,11 @@ describe('InputMappingEditor picker-backed fields', () => {
             {
               name: 'status_id',
               type: 'string',
-              picker: { kind: 'ticket-status', allowsDynamicReference: true },
+              picker: {
+                kind: 'ticket-status',
+                dependencies: ['board_id'],
+                allowsDynamicReference: true,
+              },
             },
             {
               name: 'priority_id',
@@ -517,6 +549,15 @@ describe('InputMappingEditor picker-backed fields', () => {
     expect(
       document.getElementById('mapping-step-ticket-pickers-contact_id-literal-str')
     ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(getSelectValues('mapping-step-ticket-pickers-status_id-literal-picker')).toEqual([
+        '',
+        'status-1',
+      ])
+    );
+    expect(
+      screen.getByTestId('mapping-step-ticket-pickers-status_id-literal-picker')
+    ).toHaveValue('status-1');
   });
 
   it('T167/T168/T191/T192/T193/T194/T195/T196/T197/T198/T199/T309: picker-backed fields can switch to reference and back to fixed without losing picker UI', async () => {
@@ -652,6 +693,15 @@ describe('InputMappingEditor picker-backed fields', () => {
         picker: { kind: 'board', allowsDynamicReference: true },
       },
       {
+        name: 'status_id',
+        type: 'string',
+        picker: {
+          kind: 'ticket-status',
+          dependencies: ['board_id'],
+          allowsDynamicReference: true,
+        },
+      },
+      {
         name: 'category_id',
         type: 'string',
         picker: {
@@ -677,6 +727,7 @@ describe('InputMappingEditor picker-backed fields', () => {
         contact_id: 'contact-1',
         location_id: 'location-1',
         board_id: 'board-1',
+        status_id: 'status-1',
         category_id: 'category-1',
         subcategory_id: 'subcategory-1',
       });
@@ -718,6 +769,13 @@ describe('InputMappingEditor picker-backed fields', () => {
     expect(
       screen.getByTestId('mapping-step-dependent-pickers-category_id-literal-picker')
     ).toHaveValue('category-1');
+    expect(getSelectValues('mapping-step-dependent-pickers-status_id-literal-picker')).toEqual([
+      '',
+      'status-1',
+    ]);
+    expect(
+      screen.getByTestId('mapping-step-dependent-pickers-status_id-literal-picker')
+    ).toHaveValue('status-1');
     expect(getSelectValues('mapping-step-dependent-pickers-subcategory_id-literal-picker')).toEqual([
       '',
       'subcategory-1',
@@ -749,6 +807,13 @@ describe('InputMappingEditor picker-backed fields', () => {
         target: { value: 'board-2' },
       });
     });
+
+    await waitFor(() =>
+      expect(getSelectValues('mapping-step-dependent-pickers-status_id-literal-picker')).toEqual([
+        '',
+        'status-2',
+      ])
+    );
 
     await waitFor(() =>
       expect(getSelectValues('mapping-step-dependent-pickers-category_id-literal-picker')).toEqual([
@@ -846,6 +911,49 @@ describe('InputMappingEditor picker-backed fields', () => {
     expect(screen.getByText('Choose a fixed Board first to load category options.')).toBeVisible();
     expect(screen.getByTestId('mapping-step-missing-scope-subcategory_id-literal-picker')).toBeDisabled();
     expect(screen.getByText('Choose a fixed Board first to load subcategory options.')).toBeVisible();
+  });
+
+  it('loads ticket status options from a fixed ticket context when the picker depends on ticket_id', async () => {
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{
+            ticket_id: 'ticket-1',
+            status_id: 'status-1',
+          }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'ticket_id',
+              type: 'string',
+            },
+            {
+              name: 'status_id',
+              type: 'string',
+              picker: {
+                kind: 'ticket-status',
+                dependencies: ['ticket_id'],
+                allowsDynamicReference: true,
+              },
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-ticket-status-by-ticket"
+          positionsHandlers={positionsHandlers}
+        />
+      );
+    });
+
+    await waitFor(() =>
+      expect(getSelectValues('mapping-step-ticket-status-by-ticket-status_id-literal-picker')).toEqual([
+        '',
+        'status-1',
+      ])
+    );
+
+    expect(
+      screen.getByTestId('mapping-step-ticket-status-by-ticket-status_id-literal-picker')
+    ).toHaveValue('status-1');
   });
 
   it('T210/T211/T212/T213/T218/T219/T312: dynamic upstream references keep dependent fixed pickers disabled while still allowing a switch back to Reference mode', async () => {
