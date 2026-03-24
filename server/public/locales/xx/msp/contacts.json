@@ -1,0 +1,573 @@
+{
+  "common": {
+    "actions": {
+      "add": "11111",
+      "back": "11111",
+      "cancel": "11111",
+      "close": "11111",
+      "create": "11111",
+      "delete": "11111",
+      "downloadCsv": "11111",
+      "edit": "11111",
+      "import": "11111",
+      "reactivate": "11111",
+      "remove": "11111",
+      "retry": "11111",
+      "save": "11111",
+      "saving": "11111",
+      "search": "11111",
+      "select": "11111",
+      "update": "11111",
+      "uploadCsv": "11111",
+      "view": "11111"
+    },
+    "states": {
+      "active": "11111",
+      "inactive": "11111",
+      "loading": "11111",
+      "na": "11111",
+      "none": "11111"
+    },
+    "no": "11111",
+    "yes": "11111"
+  },
+  "contactsPage": {
+    "title": "11111",
+    "description": "11111",
+    "heading": "11111",
+    "addContact": "11111",
+    "actions": "11111",
+    "searchPlaceholder": "11111",
+    "resetFilters": "11111",
+    "unknownClient": "11111",
+    "noClient": "11111",
+    "thisContact": "11111",
+    "actionsMenuSrOnly": "11111",
+    "quickView": "11111",
+    "deleteValidationError": "11111",
+    "deleteSuccess": "11111 {{name}} 11111",
+    "deleteError": "11111",
+    "markInactiveSuccess": "11111 {{name}} 11111",
+    "markInactiveError": "11111",
+    "statusOptions": {
+      "all": "11111",
+      "active": "11111",
+      "inactive": "11111"
+    },
+    "table": {
+      "name": "11111",
+      "created": "11111",
+      "email": "11111",
+      "phoneNumber": "11111",
+      "client": "11111",
+      "tags": "11111",
+      "actions": "11111"
+    },
+    "lastPhoneTypeUsage": {
+      "title": "11111",
+      "message": "11111 {{suffix}} {{labels}} {{definitionSuffix}} 11111",
+      "deleteType": "11111",
+      "keepType": "11111"
+    }
+  },
+  "contactDetails": {
+    "title": "11111",
+    "description": "11111",
+    "backToContacts": "11111",
+    "inactiveBadge": "11111",
+    "actions": {
+      "goToContact": "11111",
+      "saveChanges": "11111"
+    },
+    "tabs": {
+      "details": "11111",
+      "tickets": "11111",
+      "documents": "11111",
+      "interactions": "11111",
+      "notes": "11111",
+      "portal": "11111"
+    },
+    "fields": {
+      "fullName": "11111",
+      "client": "11111",
+      "email": "11111",
+      "role": "11111",
+      "inboundTicketDestinationOverride": "11111",
+      "useClientDestination": "11111",
+      "inboundTicketDestinationHelp": "11111",
+      "tags": "11111",
+      "notes": "11111"
+    },
+    "status": {
+      "label": "11111",
+      "helper": "11111",
+      "active": "11111",
+      "inactive": "11111"
+    },
+    "loading": {
+      "destinations": "11111",
+      "ticketFilters": "11111"
+    },
+    "empty": {
+      "notSet": "11111",
+      "unknownClient": "11111"
+    },
+    "client": {
+      "noClientAssigned": "11111"
+    },
+    "delete": {
+      "successTitle": "11111",
+      "successDescription": "11111",
+      "validationFailed": "11111",
+      "failed": "11111"
+    },
+    "deactivate": {
+      "successTitle": "11111",
+      "successDescription": "11111"
+    },
+    "reactivate": {
+      "successTitle": "11111",
+      "successDescription": "11111"
+    },
+    "update": {
+      "successTitle": "11111",
+      "successDescription": "11111"
+    },
+    "saveFailed": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "error": {
+      "title": "11111"
+    },
+    "errors": {
+      "permissionDenied": "11111",
+      "markInactiveFailed": "11111",
+      "reactivateFailed": "11111"
+    }
+  },
+  "contactsImportDialog": {
+    "title": "11111",
+    "description": "11111",
+    "fields": {
+      "name": "11111",
+      "email": "11111",
+      "defaultPhoneNumber": "11111",
+      "client": "11111",
+      "tags": "11111",
+      "role": "11111",
+      "notes": "11111"
+    },
+    "unassigned": "11111",
+    "errors": {
+      "emptyCsv": "11111",
+      "readingCsv": "11111 {{message}} 11111",
+      "unknownError": "11111",
+      "requiredFieldNotMapped": "11111 {{field}} 11111",
+      "nameRequired": "11111",
+      "emailRequired": "11111",
+      "invalidEmail": "11111",
+      "processingCsv": "11111",
+      "importFailed": "11111"
+    },
+    "importOptions": {
+      "updateExisting": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "skipInvalid": {
+        "title": "11111",
+        "description": "11111"
+      }
+    },
+    "results": {
+      "title": "11111",
+      "downloadFailedRecords": "11111"
+    },
+    "table": {
+      "status": "11111",
+      "name": "11111",
+      "email": "11111",
+      "message": "11111",
+      "exists": "11111",
+      "issues": "11111"
+    },
+    "tooltips": {
+      "importSuccessful": "11111",
+      "importFailed": "11111",
+      "validReady": "11111",
+      "invalidHasErrors": "11111"
+    },
+    "upload": {
+      "help": "11111",
+      "requiredLabel": "11111",
+      "contactFieldsLabel": "11111",
+      "contactFieldsDescription": "11111",
+      "clientFieldLabel": "11111",
+      "clientFieldDescription": "11111",
+      "noteLabel": "11111",
+      "noteDescription": "11111",
+      "downloadTemplate": "11111"
+    },
+    "mapping": {
+      "title": "11111",
+      "description": "11111",
+      "contactFieldHeader": "11111",
+      "csvColumnHeader": "11111",
+      "notMapped": "11111",
+      "requiredFieldsNote": "11111",
+      "largeImportWarning": "11111 {{count}} 11111",
+      "processing": "11111",
+      "preview": "11111"
+    },
+    "preview": {
+      "title": "11111",
+      "totalRecords": "11111",
+      "valid": "11111",
+      "invalid": "11111"
+    },
+    "importing": {
+      "title": "11111",
+      "processing": "11111 {{current}} {{total}} 11111",
+      "currentItem": "11111 {{item}} 11111"
+    },
+    "complete": {
+      "title": "11111",
+      "successMessage": "11111 {{count}} 11111"
+    },
+    "confirmUpdate": {
+      "title": "11111",
+      "message": "11111 {{count}} 11111"
+    }
+  },
+  "contactPhoneNumbersEditor": {
+    "title": "11111",
+    "description": "11111",
+    "actions": {
+      "addPhone": "11111"
+    },
+    "empty": "11111",
+    "phoneTypes": {
+      "work": "11111",
+      "mobile": "11111",
+      "home": "11111",
+      "fax": "11111",
+      "other": "11111",
+      "custom": "11111"
+    },
+    "row": {
+      "title": "11111 {{number}} 11111",
+      "defaultDescription": "11111",
+      "secondaryDescription": "11111",
+      "defaultLabel": "11111",
+      "moveUp": "11111 {{number}} 11111",
+      "moveDown": "11111 {{number}} 11111",
+      "remove": "11111 {{number}} 11111"
+    },
+    "fields": {
+      "phoneNumber": "11111",
+      "phoneType": "11111",
+      "customPhoneType": "11111",
+      "customTypePlaceholder": "11111",
+      "customTypeSearchPlaceholder": "11111",
+      "customTypeEmpty": "11111",
+      "customTypeUseValue": "11111 {{value}} 11111"
+    },
+    "validation": {
+      "selectExactlyOneDefault": "11111",
+      "phoneRow": "11111 {{number}} 11111",
+      "enterCompletePhoneNumber": "11111",
+      "enterCustomPhoneType": "11111",
+      "customTypesUnique": "11111"
+    },
+    "lastTypeUsage": {
+      "title": "11111",
+      "message": "11111 {{label}} 11111",
+      "removeAndDelete": "11111",
+      "removeAndKeep": "11111"
+    }
+  },
+  "contactPortalTab": {
+    "title": "11111",
+    "description": "11111",
+    "loadingDescription": "11111",
+    "information": "11111",
+    "activeAccess": "11111",
+    "noAccess": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "portalAdmin": {
+      "label": "11111",
+      "helper": "11111"
+    },
+    "roles": {
+      "label": "11111",
+      "none": "11111",
+      "placeholder": "11111",
+      "addButton": "11111"
+    },
+    "userStatus": {
+      "label": "11111",
+      "active": "11111",
+      "inactive": "11111"
+    },
+    "lastLogin": {
+      "label": "11111",
+      "via": "11111 {{method}} 11111"
+    },
+    "history": {
+      "title": "11111",
+      "description": "11111",
+      "empty": "11111",
+      "sentPrefix": "11111",
+      "expiresPrefix": "11111",
+      "usedPrefix": "11111",
+      "status": {
+        "pending": "11111",
+        "used": "11111",
+        "expired": "11111",
+        "revoked": "11111"
+      }
+    },
+    "actions": {
+      "sendInvitation": "11111",
+      "sending": "11111",
+      "refresh": "11111",
+      "refreshing": "11111",
+      "resend": "11111",
+      "resending": "11111",
+      "revoke": "11111"
+    },
+    "toast": {
+      "successTitle": "11111",
+      "errorTitle": "11111",
+      "permissionDeniedTitle": "11111",
+      "loadError": "11111",
+      "refreshHistoryError": "11111",
+      "sendInvitePermissionDenied": "11111",
+      "sendInviteSuccess": "11111",
+      "sendInviteFailed": "11111",
+      "revokeInviteSuccess": "11111",
+      "revokeInviteFailed": "11111",
+      "resendInviteSuccess": "11111",
+      "resendInviteFailed": "11111",
+      "updatePortalSettingsPermissionDenied": "11111",
+      "portalAdminEnabled": "11111",
+      "portalAdminDisabled": "11111",
+      "updatePortalAdminFailed": "11111",
+      "updateAdminFailed": "11111",
+      "updateRolesPermissionDenied": "11111",
+      "roleAdded": "11111",
+      "addRoleFailed": "11111",
+      "roleRemoved": "11111",
+      "removeRoleFailed": "11111",
+      "updateStatusPermissionDenied": "11111",
+      "userActivated": "11111",
+      "userDeactivated": "11111",
+      "updateUserStatusFailed": "11111"
+    }
+  },
+  "quickAddContact": {
+    "title": "11111",
+    "description": "11111",
+    "dialog": {
+      "title": "11111"
+    },
+    "errorFallback": {
+      "title": "11111",
+      "tryAgain": "11111"
+    },
+    "actions": {
+      "submit": "11111"
+    },
+    "fields": {
+      "fullName": "11111",
+      "email": "11111",
+      "clientOptional": "11111",
+      "role": "11111",
+      "rolePlaceholder": "11111",
+      "notes": "11111",
+      "notesPlaceholder": "11111"
+    },
+    "status": {
+      "label": "11111",
+      "active": "11111",
+      "inactive": "11111"
+    },
+    "validation": {
+      "alertIntro": "11111",
+      "fullNameRequired": "11111",
+      "fullNameEmpty": "11111",
+      "fullNameSpaces": "11111",
+      "emailRequired": "11111",
+      "emailSpaces": "11111",
+      "roleSpaces": "11111",
+      "roleLength": "11111",
+      "roleCharacters": "11111",
+      "notesSpaces": "11111"
+    },
+    "toasts": {
+      "warningTitle": "11111",
+      "tagsFailed": "11111 {{count}} 11111",
+      "contactCreated": "11111",
+      "contactAdded": "11111 {{name}} 11111"
+    },
+    "errors": {
+      "createContactTitle": "11111",
+      "unexpected": "11111",
+      "validationTitle": "11111",
+      "emailExistsTitle": "11111",
+      "invalidReferenceTitle": "11111",
+      "systemTitle": "11111",
+      "genericTitle": "11111",
+      "closeMessage": "11111",
+      "createContactHeading": "11111",
+      "validationPrefix": "11111",
+      "emailExistsPrefix": "11111",
+      "invalidReferencePrefix": "11111",
+      "systemPrefix": "11111"
+    }
+  },
+  "contactDetailsEdit": {
+    "title": "11111 {{name}} 11111",
+    "heading": "11111 {{name}} 11111",
+    "inactiveBadge": "11111",
+    "description": "11111",
+    "validation": {
+      "fullNameRequired": "11111",
+      "emailRequired": "11111",
+      "invalidEmail": "11111"
+    },
+    "errors": {
+      "validationPrefix": "11111",
+      "emailExists": "11111",
+      "invalidReferencePrefix": "11111",
+      "systemPrefix": "11111",
+      "saveFailed": "11111",
+      "unexpected": "11111"
+    },
+    "fields": {
+      "fullName": "11111",
+      "email": "11111",
+      "role": "11111",
+      "rolePlaceholder": "11111",
+      "phoneNumbers": "11111",
+      "inboundTicketDestinationOverride": "11111",
+      "inboundTicketDestinationHelp": "11111",
+      "useClientDestination": "11111",
+      "client": "11111",
+      "status": "11111",
+      "notes": "11111",
+      "notesPlaceholder": "11111",
+      "tags": "11111"
+    },
+    "loading": {
+      "destinations": "11111"
+    },
+    "status": {
+      "active": "11111",
+      "inactive": "11111"
+    }
+  },
+  "contactDetailsView": {
+    "title": "11111 {{name}} 11111",
+    "description": "11111",
+    "actions": {
+      "goToContact": "11111"
+    },
+    "empty": {
+      "notSet": "11111",
+      "unknownClient": "11111"
+    },
+    "phoneTypes": {
+      "work": "11111",
+      "mobile": "11111",
+      "home": "11111",
+      "fax": "11111",
+      "other": "11111"
+    },
+    "fields": {
+      "fullName": "11111",
+      "email": "11111",
+      "phone": "11111",
+      "defaultPhone": "11111",
+      "client": "11111",
+      "noClientAssigned": "11111",
+      "role": "11111",
+      "status": "11111",
+      "createdAt": "11111",
+      "updatedAt": "11111",
+      "notes": "11111",
+      "tags": "11111"
+    },
+    "status": {
+      "active": "11111",
+      "inactive": "11111"
+    },
+    "sections": {
+      "documents": "11111"
+    },
+    "errors": {
+      "loadTagsSystem": "11111",
+      "loadTagsFailed": "11111",
+      "unexpected": "11111",
+      "clientNotFound": "11111",
+      "loadClientSystem": "11111",
+      "clientMissing": "11111",
+      "loadClientFailed": "11111",
+      "updateClientFailedWithMessage": "11111 {{message}} 11111",
+      "updateClientFailed": "11111"
+    }
+  },
+  "clientContactsList": {
+    "title": "11111",
+    "description": "11111",
+    "table": {
+      "name": "11111",
+      "email": "11111",
+      "phoneNumber": "11111",
+      "actions": "11111"
+    },
+    "filter": {
+      "show": "11111",
+      "active": "11111",
+      "inactive": "11111",
+      "all": "11111"
+    },
+    "actions": {
+      "openMenu": "11111",
+      "quickView": "11111",
+      "addNewContact": "11111"
+    },
+    "errors": {
+      "loadFailed": "11111",
+      "loadingTitle": "11111",
+      "retryFailed": "11111"
+    }
+  },
+  "contactsLayout": {
+    "title": "11111",
+    "description": "11111"
+  },
+  "contactsSkeleton": {
+    "title": "11111",
+    "description": "11111"
+  },
+  "contactAvatarUpload": {
+    "title": "11111",
+    "description": "11111"
+  },
+  "contactNotesPanel": {
+    "title": "11111",
+    "description": "11111",
+    "legacy": {
+      "initialNote": "11111"
+    },
+    "errors": {
+      "loadTitle": "11111",
+      "unknown": "11111"
+    },
+    "lastUpdated": "11111 {{date}} 11111"
+  }
+}

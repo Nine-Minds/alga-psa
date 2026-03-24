@@ -91,6 +91,10 @@
   - `npx eslint packages/clients/src/components/contacts/ClientContactsList.tsx packages/clients/src/components/contacts/ContactDetailsEdit.tsx packages/clients/src/components/contacts/ContactDetailsView.tsx packages/clients/src/components/contacts/panels/ContactNotesPanel.tsx` (warnings only, no errors)
   - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false`
   - key-presence audit over the four files against `server/public/locales/en/msp/contacts.json` reported `contacts F013 keys ok`
+- (2026-03-24) Completed `F014`: created `server/public/locales/{de,es,fr,it,nl,pl}/msp/contacts.json` with translated `msp/contacts` content based on the finalized English namespace, then generated `server/public/locales/{xx,yy}/msp/contacts.json` using the pseudo-locale replacement logic that preserves `{{variables}}`. The six production locale files were added via parallel worker passes split across `{de,es,fr}` and `{it,nl,pl}`; afterwards generated the two pseudo locale files locally so the contact batch has the full 9-locale set required by the PRD. Validation:
+  - `for f in server/public/locales/{de,es,fr,it,nl,pl}/msp/contacts.json; do node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); console.log(process.argv[1]+': ok')" "$f" || exit 1; done` reported all six locale files as `ok`
+  - `node scripts/validate-translations.cjs` → `PASSED` (`Errors: 0`, `Warnings: 0`)
+  - `node -e` spot check over `server/public/locales/{xx,yy}/msp/contacts.json` confirmed representative contact keys resolve to `11111` / `55555`
 
 ## Commands / Runbooks
 
