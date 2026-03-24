@@ -49,6 +49,9 @@ jobs:
         run: |
           cp .env.example server/.env
 
+      - name: Build pre-built packages
+        run: npx nx run-many --target=build --output-style=static
+
       - name: Build server (EE)
         env:
           EDITION: ee
