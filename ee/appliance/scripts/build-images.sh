@@ -18,13 +18,18 @@ SCHEMATIC_ID_OVERRIDE="${EE_APPLIANCE_SCHEMATIC_ID_OVERRIDE:-}"
 usage() {
   cat <<'EOF'
 Usage:
-  build-images.sh --release-version <version> --talos-version <version> --kubernetes-version <version> --app-version <version> [options]
+  build-images.sh --release-version <version> --talos-version <version> --kubernetes-version <version> --app-version <version> --app-release-branch <branch> --alga-core-tag <tag> --workflow-worker-tag <tag> --email-service-tag <tag> --temporal-worker-tag <tag> [options]
 
 Options:
   --release-version <version>   Appliance release version (x.y.z)
   --talos-version <version>     Talos version (for example: v1.12.0)
   --kubernetes-version <ver>    Kubernetes version (for example: v1.31.4)
   --app-version <version>       Alga application version/tag carried by the release manifest
+  --app-release-branch <name>   App release branch (for example: release/1.0-rc3)
+  --alga-core-tag <tag>         Published image tag for alga-core/setup image
+  --workflow-worker-tag <tag>   Published image tag for workflow-worker
+  --email-service-tag <tag>     Published image tag for email-service
+  --temporal-worker-tag <tag>   Published image tag for temporal-worker
   --schematic <path>            Schematic YAML path (default: ee/appliance/schematics/metal-amd64.yaml)
   --out <dir>                   Artifact output directory root (default: dist/appliance)
   --values-profile <name>       Appliance values profile name (default: talos-single-node)
@@ -107,12 +112,17 @@ render_manifest() {
   local talos_version="$2"
   local kubernetes_version="$3"
   local app_version="$4"
-  local schematic_id="$5"
-  local iso_url="$6"
-  local iso_local_path="$7"
-  local iso_sha256="$8"
-  local installer_image="$9"
-  local installer_digest="${10:-}"
+  local app_release_branch="$5"
+  local alga_core_tag="$6"
+  local workflow_worker_tag="$7"
+  local email_service_tag="$8"
+  local temporal_worker_tag="$9"
+  local schematic_id="${10}"
+  local iso_url="${11}"
+  local iso_local_path="${12}"
+  local iso_sha256="${13}"
+  local installer_image="${14}"
+  local installer_digest="${15:-}"
 
   jq -n \
     --arg releaseVersion "$release_version" \
@@ -127,6 +137,11 @@ render_manifest() {
     --arg installerImage "$installer_image" \
     --arg installerDigest "$installer_digest" \
     --arg appVersion "$app_version" \
+    --arg appReleaseBranch "$app_release_branch" \
+    --arg algaCoreTag "$alga_core_tag" \
+    --arg workflowWorkerTag "$workflow_worker_tag" \
+    --arg emailServiceTag "$email_service_tag" \
+    --arg temporalWorkerTag "$temporal_worker_tag" \
     --arg valuesProfile "$VALUES_PROFILE" \
     --arg channel "$CHANNEL" \
     '
@@ -159,7 +174,14 @@ render_manifest() {
       },
       app: {
         version: $appVersion,
-        valuesProfile: $valuesProfile
+        releaseBranch: $appReleaseBranch,
+        valuesProfile: $valuesProfile,
+        images: {
+          algaCore: $algaCoreTag,
+          workflowWorker: $workflowWorkerTag,
+          emailService: $emailServiceTag,
+          temporalWorker: $temporalWorkerTag
+        }
       },
       channel: $channel
     }
@@ -182,6 +204,26 @@ while [ "$#" -gt 0 ]; do
       ;;
     --app-version)
       APP_VERSION="$2"
+      shift 2
+      ;;
+    --app-release-branch)
+      APP_RELEASE_BRANCH="$2"
+      shift 2
+      ;;
+    --alga-core-tag)
+      ALGA_CORE_TAG="$2"
+      shift 2
+      ;;
+    --workflow-worker-tag)
+      WORKFLOW_WORKER_TAG="$2"
+      shift 2
+      ;;
+    --email-service-tag)
+      EMAIL_SERVICE_TAG="$2"
+      shift 2
+      ;;
+    --temporal-worker-tag)
+      TEMPORAL_WORKER_TAG="$2"
       shift 2
       ;;
     --schematic)
@@ -220,7 +262,7 @@ require_command curl
 require_command jq
 require_command shasum
 
-if [ -z "${RELEASE_VERSION:-}" ] || [ -z "${TALOS_VERSION:-}" ] || [ -z "${KUBERNETES_VERSION:-}" ] || [ -z "${APP_VERSION:-}" ]; then
+if [ -z "${RELEASE_VERSION:-}" ] || [ -z "${TALOS_VERSION:-}" ] || [ -z "${KUBERNETES_VERSION:-}" ] || [ -z "${APP_VERSION:-}" ] || [ -z "${APP_RELEASE_BRANCH:-}" ] || [ -z "${ALGA_CORE_TAG:-}" ] || [ -z "${WORKFLOW_WORKER_TAG:-}" ] || [ -z "${EMAIL_SERVICE_TAG:-}" ] || [ -z "${TEMPORAL_WORKER_TAG:-}" ]; then
   echo "Missing required arguments" >&2
   usage >&2
   exit 1
@@ -260,6 +302,11 @@ if [ "$DRY_RUN" -eq 1 ]; then
     "$TALOS_VERSION" \
     "$KUBERNETES_VERSION" \
     "$APP_VERSION" \
+    "$APP_RELEASE_BRANCH" \
+    "$ALGA_CORE_TAG" \
+    "$WORKFLOW_WORKER_TAG" \
+    "$EMAIL_SERVICE_TAG" \
+    "$TEMPORAL_WORKER_TAG" \
     "$SCHEMATIC_ID" \
     "$ISO_URL" \
     "" \
@@ -291,6 +338,11 @@ render_manifest \
   "$TALOS_VERSION" \
   "$KUBERNETES_VERSION" \
   "$APP_VERSION" \
+  "$APP_RELEASE_BRANCH" \
+  "$ALGA_CORE_TAG" \
+  "$WORKFLOW_WORKER_TAG" \
+  "$EMAIL_SERVICE_TAG" \
+  "$TEMPORAL_WORKER_TAG" \
   "$SCHEMATIC_ID" \
   "$ISO_URL" \
   "$ISO_RELATIVE_PATH" \

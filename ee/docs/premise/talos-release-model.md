@@ -40,7 +40,9 @@ The release manifest records:
 - Kubernetes version paired with that Talos release
 - ISO URL, local path, and SHA-256
 - installer image reference and digest when available
-- application version marker
+- customer-facing application version marker
+- source app release branch, using the existing `release/<version>` naming scheme
+- exact pinned component image tags used by the appliance upgrade/bootstrap path
 - appliance values profile name
 - release channel
 

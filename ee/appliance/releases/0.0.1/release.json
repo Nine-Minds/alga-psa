@@ -23,8 +23,15 @@
     }
   },
   "app": {
-    "version": "main",
-    "valuesProfile": "talos-single-node"
+    "version": "1.0-rc4",
+    "releaseBranch": "release/1.0-rc4",
+    "valuesProfile": "talos-single-node",
+    "images": {
+      "algaCore": "1b87cf5b",
+      "workflowWorker": "61e4a00e",
+      "emailService": "61e4a00e",
+      "temporalWorker": "61e4a00e"
+    }
   },
   "channel": "candidate"
 }

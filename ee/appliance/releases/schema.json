@@ -104,15 +104,42 @@
     "app": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["version", "valuesProfile"],
+      "required": ["version", "releaseBranch", "valuesProfile", "images"],
       "properties": {
         "version": {
           "type": "string",
           "minLength": 1
         },
+        "releaseBranch": {
+          "type": "string",
+          "pattern": "^release/.+$"
+        },
         "valuesProfile": {
           "type": "string",
           "minLength": 1
+        },
+        "images": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algaCore", "workflowWorker", "emailService", "temporalWorker"],
+          "properties": {
+            "algaCore": {
+              "type": "string",
+              "minLength": 1
+            },
+            "workflowWorker": {
+              "type": "string",
+              "minLength": 1
+            },
+            "emailService": {
+              "type": "string",
+              "minLength": 1
+            },
+            "temporalWorker": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         }
       }
     },

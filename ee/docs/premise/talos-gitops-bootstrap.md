@@ -68,8 +68,9 @@ Its intended responsibilities are:
 - install the single-node storage prerequisite before application reconciliation
 - install Flux when it is not already present
 - create or reuse `msp/alga-psa-shared`
-- require explicit per-service image tags
+- resolve the selected appliance release manifest, including its app release branch and pinned component tags
 - render runtime values into cluster-managed `ConfigMap`s
+- record the selected appliance release in a cluster-side release selection object
 - create the Flux Git source and `Kustomization` for `ee/appliance/flux/base`
 - wait for the first-run `alga-core` bootstrap sequence to complete
 
@@ -77,12 +78,12 @@ Its intended responsibilities are:
 
 ## Runtime Values Injection
 
-The durable GitOps topology lives in `ee/appliance/flux/base/`. Runtime values such as per-service image tags are injected separately as cluster `ConfigMap`s rather than being committed back into the repo.
+The durable GitOps topology lives in `ee/appliance/flux/base/`. Runtime values such as the selected appliance release and its pinned component tags are injected separately as cluster `ConfigMap`s rather than being committed back into the repo.
 
 That split is intentional:
 
 1. the release topology remains GitOps-managed
-2. per-site image tags stay explicit and operator-chosen
+2. per-site release selection stays explicit and operator-chosen
 3. the appliance bootstrap path does not need to rewrite committed profile files
 
 The profile values under `ee/appliance/flux/profiles/talos-single-node/values/` remain the source templates for those generated runtime `ConfigMap`s.
@@ -91,14 +92,14 @@ The profile values under `ee/appliance/flux/profiles/talos-single-node/values/` 
 
 The appliance bootstrap path should not default application images to `latest`.
 
-The script requires explicit tags for:
+Each published appliance release should pin tags for:
 
 - `alga-core`
 - `workflow-worker`
 - `email-service`
 - `temporal-worker`
 
-This rule exists to keep appliance deployments deterministic and auditable. A fresh install should not silently drift because a registry moved `latest`.
+This rule exists to keep appliance deployments deterministic and auditable. A fresh install or upgrade should not silently drift because a registry moved `latest`.
 
 ## Secrets Model
 
@@ -122,5 +123,5 @@ These docs define the GitOps model generically. A local `alga-talos` skill can l
 
 - which branch to point Flux at
 - which release or candidate channel is under test
-- which image tags to use for a particular checkpoint
+- which appliance release manifest is selected for a particular checkpoint
 - which temporary workdir holds the current `talosconfig` and `kubeconfig`

@@ -11,10 +11,10 @@ spec:
   install:
     createNamespace: true
     remediation:
-      retries: 3
+      retries: 0
   upgrade:
     remediation:
-      retries: 3
+      retries: 0
   chart:
     spec:
       chart: ./helm

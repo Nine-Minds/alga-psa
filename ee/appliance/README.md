@@ -35,7 +35,12 @@ ee/appliance/scripts/build-images.sh \
   --release-version 0.0.1 \
   --talos-version v1.12.0 \
   --kubernetes-version v1.31.4 \
-  --app-version main
+  --app-version 1.0-rc3 \
+  --app-release-branch release/1.0-rc3 \
+  --alga-core-tag 1b0a9c0b \
+  --workflow-worker-tag 61e4a00e \
+  --email-service-tag 61e4a00e \
+  --temporal-worker-tag 61e4a00e
 ```
 
 Dry-run example:
@@ -46,7 +51,12 @@ ee/appliance/scripts/build-images.sh \
   --release-version 0.0.1 \
   --talos-version v1.12.0 \
   --kubernetes-version v1.31.4 \
-  --app-version main \
+  --app-version 1.0-rc3 \
+  --app-release-branch release/1.0-rc3 \
+  --alga-core-tag 1b0a9c0b \
+  --workflow-worker-tag 61e4a00e \
+  --email-service-tag 61e4a00e \
+  --temporal-worker-tag 61e4a00e \
   --dry-run
 ```
 
@@ -68,7 +78,7 @@ It can:
 - bootstrap Talos and write durable `talosconfig` and `kubeconfig`
 - install the local-path storage prerequisite and verify it
 - install Flux and point it at `ee/appliance/flux/base`
-- render runtime values with explicit per-service image tags
+- render runtime values from the selected appliance release manifest
 - create or reuse the shared application secret
 - wait for the first-run `alga-core` bootstrap job and app rollout
 
@@ -84,14 +94,33 @@ ee/appliance/scripts/bootstrap-appliance.sh \
   --interface enp0s1 \
   --network-mode dhcp \
   --repo-url https://github.com/Nine-Minds/alga-psa.git \
-  --repo-branch feature/on-prem-enterprise-helm-install \
-  --alga-core-tag 1b0a9c0b \
-  --workflow-worker-tag 61e4a00e \
-  --email-service-tag 61e4a00e \
-  --temporal-worker-tag 61e4a00e
+  --repo-branch release/1.0-rc3
 ```
 
 `--app-url` controls the public URLs injected into the app runtime, including `NEXTAUTH_URL`, `NEXT_PUBLIC_BASE_URL`, and `NEXT_PUBLIC_APP_URL`.
+
+The appliance release manifest now carries the customer-facing app release branch and exact component image tags. `bootstrap-appliance.sh` consumes those values by default, and the per-service tag flags are only needed for one-off overrides.
+
+## Customer-controlled upgrades
+
+Use `ee/appliance/scripts/upgrade-appliance.sh` to move an installed appliance to a published appliance release version.
+
+Example:
+
+```bash
+ee/appliance/scripts/upgrade-appliance.sh \
+  --release-version 0.0.1 \
+  --kubeconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/kubeconfig
+```
+
+The script:
+
+- reads the selected appliance release manifest
+- updates the cluster-side appliance values `ConfigMap`s with the pinned component tags for that release
+- records the chosen appliance release in `alga-system/appliance-release-selection`
+- triggers a Flux/Helm reconcile for `alga-core`
+
+Appliance `HelmRelease`s are configured with remediation retries disabled. Failed upgrades stop in place for support investigation instead of auto-rolling back through multiple attempts.
 
 If you already have a running cluster and kubeconfig, the same script can be used with `--kubeconfig` to skip Talos first-boot work.
 

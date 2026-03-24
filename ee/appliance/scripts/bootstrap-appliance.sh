@@ -31,6 +31,8 @@ DRY_RUN=false
 PREPULL_IMAGES=false
 TEMP_WORK_DIR=""
 TEMP_PROFILE_DIR=""
+RELEASE_APP_VERSION=""
+RELEASE_APP_BRANCH=""
 REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)"
 
 usage() {
@@ -59,10 +61,10 @@ Options:
   --repo-url <url>               Git repository URL for Flux source
   --repo-branch <branch>         Git repository branch for Flux source
   --repo-path <path>             Repo path for Flux kustomization (default: ee/appliance/flux/base)
-  --alga-core-tag <tag>          Tag for alga-core server/setup image
-  --workflow-worker-tag <tag>    Tag for workflow-worker image
-  --email-service-tag <tag>      Tag for email-service image
-  --temporal-worker-tag <tag>    Tag for temporal-worker image
+  --alga-core-tag <tag>          Override manifest tag for alga-core server/setup image
+  --workflow-worker-tag <tag>    Override manifest tag for workflow-worker image
+  --email-service-tag <tag>      Override manifest tag for email-service image
+  --temporal-worker-tag <tag>    Override manifest tag for temporal-worker image
   --alga-auth-key <value>        ALGA_AUTH_KEY value for msp/alga-psa-shared
   --prepull-images               Pre-pull large app images onto the Talos node before GitOps apply
   --dry-run                      Print the planned commands without mutating cluster state
@@ -71,7 +73,8 @@ Options:
 If kubeconfig is not supplied, the script will generate Talos config, apply it to
 the node, bootstrap the cluster, persist talosconfig and kubeconfig under
 ~/nm-kube-config/alga-psa/talos/<site-id>/, install storage, install Flux, apply
-runtime values, and wait for the first-run Alga bootstrap to complete.
+runtime values derived from the appliance release manifest, and wait for the
+first-run Alga bootstrap to complete.
 
 Bootstrap modes:
   fresh    Wipes existing appliance namespaces and local-path data before reinstall
@@ -253,6 +256,22 @@ resolve_runtime_inputs() {
     exit 1
   fi
 
+  RELEASE_APP_VERSION="$(release_field '.app.version')"
+  RELEASE_APP_BRANCH="$(release_field '.app.releaseBranch')"
+
+  if [ -z "$ALGA_CORE_TAG" ] || [ "$ALGA_CORE_TAG" = "null" ]; then
+    ALGA_CORE_TAG="$(release_field '.app.images.algaCore')"
+  fi
+  if [ -z "$WORKFLOW_WORKER_TAG" ] || [ "$WORKFLOW_WORKER_TAG" = "null" ]; then
+    WORKFLOW_WORKER_TAG="$(release_field '.app.images.workflowWorker')"
+  fi
+  if [ -z "$EMAIL_SERVICE_TAG" ] || [ "$EMAIL_SERVICE_TAG" = "null" ]; then
+    EMAIL_SERVICE_TAG="$(release_field '.app.images.emailService')"
+  fi
+  if [ -z "$TEMPORAL_WORKER_TAG" ] || [ "$TEMPORAL_WORKER_TAG" = "null" ]; then
+    TEMPORAL_WORKER_TAG="$(release_field '.app.images.temporalWorker')"
+  fi
+
   if [ -z "$REPO_URL" ]; then
     REPO_URL="$(prompt_value "Git repository URL")"
   fi
@@ -318,7 +337,7 @@ resolve_runtime_inputs() {
   fi
 
   if [ -z "$ALGA_CORE_TAG" ] || [ -z "$WORKFLOW_WORKER_TAG" ] || [ -z "$EMAIL_SERVICE_TAG" ] || [ -z "$TEMPORAL_WORKER_TAG" ]; then
-    echo "Explicit tags are required for alga-core, workflow-worker, email-service, and temporal-worker." >&2
+    echo "Release manifest or CLI overrides must provide tags for alga-core, workflow-worker, email-service, and temporal-worker." >&2
     exit 1
   fi
 
@@ -719,6 +738,28 @@ configMapGenerator:
 EOF
 }
 
+apply_release_selection() {
+  local release_branch
+  release_branch="${RELEASE_APP_BRANCH:-unknown}"
+
+  if $DRY_RUN; then
+    echo "+ kubectl create/apply configmap alga-system/appliance-release-selection"
+    return 0
+  fi
+
+  ensure_namespace "alga-system"
+
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system create configmap appliance-release-selection \
+    --from-literal=releaseVersion="$RELEASE_VERSION" \
+    --from-literal=appVersion="$RELEASE_APP_VERSION" \
+    --from-literal=releaseBranch="$release_branch" \
+    --from-literal=algaCoreTag="$ALGA_CORE_TAG" \
+    --from-literal=workflowWorkerTag="$WORKFLOW_WORKER_TAG" \
+    --from-literal=emailServiceTag="$EMAIL_SERVICE_TAG" \
+    --from-literal=temporalWorkerTag="$TEMPORAL_WORKER_TAG" \
+    --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
+}
+
 reset_appliance_state_if_requested() {
   if [ "$BOOTSTRAP_MODE" != "fresh" ]; then
     return 0
@@ -1015,6 +1056,7 @@ install_flux_if_needed
 configure_coredns_upstreams
 ensure_alga_auth_secret
 apply_runtime_values
+apply_release_selection
 prepull_images
 install_gitops_sync
 wait_for_bootstrap
