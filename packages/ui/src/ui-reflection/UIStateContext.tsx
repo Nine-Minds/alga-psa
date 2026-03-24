@@ -442,15 +442,23 @@ export function UIStateProvider({ children, initialPageState }: {
    * Update a component's metadata by partial fields.
    */
   const updateComponent = useCallback((id: string, partial: Partial<UIComponent>) => {
-    const dict = { ...componentDictRef.current };
+    const dict = componentDictRef.current;
     const existing = dict[id];
 
     if (!existing) {
       return;
     }
-    
+
+    // Bail out if nothing actually changed
+    const keys = Object.keys(partial) as (keyof UIComponent)[];
+    const hasChanges = keys.some(k => k !== 'type' && k !== 'children' && k !== 'ordinal' && existing[k] !== partial[k]);
+    if (!hasChanges) {
+      return;
+    }
+
     // Merge partial update, but preserve type, children & ordinal
-    dict[id] = {
+    const newDict = { ...dict };
+    newDict[id] = {
       ...existing,
       ...partial,
       type: existing.type,
@@ -458,8 +466,8 @@ export function UIStateProvider({ children, initialPageState }: {
       ordinal: existing.ordinal
     } as UIComponent;
 
-    componentDictRef.current = dict;
-    const newRoot = rebuildTreeFromDictionary(dict);
+    componentDictRef.current = newDict;
+    const newRoot = rebuildTreeFromDictionary(newDict);
     var newPageState: PageState | null = {
       id: pageState?.id || 'page',
       title: pageState?.title || '',
@@ -469,12 +477,12 @@ export function UIStateProvider({ children, initialPageState }: {
     setPageState(newPageState);
   }, []);
 
-  // Provide context
-  const value = {
+  // Provide context — memoize to avoid re-rendering all consumers on every state change
+  const value = React.useMemo(() => ({
     registerComponent,
     unregisterComponent,
     updateComponent
-  };
+  }), [registerComponent, unregisterComponent, updateComponent]);
 
   return (
     <UIStateContext value={value}>
