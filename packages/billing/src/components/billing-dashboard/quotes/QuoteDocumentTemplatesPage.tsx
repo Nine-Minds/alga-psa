@@ -76,24 +76,24 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Quote Document Templates</h2>
-          <p className="text-sm text-muted-foreground">Design the templates used to render quote PDFs and previews.</p>
+          <h2 className="text-xl font-semibold text-foreground">Quote Layouts</h2>
+          <p className="text-sm text-muted-foreground">Design the layouts used to render quote PDFs and previews.</p>
         </div>
         <Button id="quote-document-templates-new" onClick={() => handleNavigateToEditor('new')}>
-          New Template
+          New Layout
         </Button>
       </div>
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Quote Document Templates</AlertTitle>
+          <AlertTitle>Quote Layouts</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       <Card>
         <CardHeader>
-          <CardTitle>Available Templates</CardTitle>
+          <CardTitle>Available Layouts</CardTitle>
         </CardHeader>
         <CardContent>
           <DataTable

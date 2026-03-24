@@ -252,10 +252,10 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
        <CardHeader>
          <div className="flex items-center">
            <BackNav>
-             ← Back to Templates List
+             ← Back to Layouts List
            </BackNav>
          </div>
-         <h2 className="text-xl font-semibold mt-2">{isNewTemplate ? 'Create New Invoice Template' : `Edit Template: ${template?.name || templateId}`}</h2>
+         <h2 className="text-xl font-semibold mt-2">{isNewTemplate ? 'Create New Invoice Layout' : `Edit Layout: ${template?.name || templateId}`}</h2>
        </CardHeader>
        <CardContent>
          <div className="mt-4">

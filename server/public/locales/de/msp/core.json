@@ -28,7 +28,7 @@
       "clientContracts": "Kundenverträge",
       "contractLinePresets": "Vertragspositionsvorlagen",
       "invoicing": "Rechnungsstellung",
-      "invoiceTemplates": "Rechnungsvorlagen",
+      "invoiceLayouts": "Rechnungslayouts",
       "billingCycles": "Abrechnungszyklen",
       "servicePeriods": "Leistungszeiträume",
       "serviceCatalog": "Servicekatalog",

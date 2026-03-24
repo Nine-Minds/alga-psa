@@ -309,6 +309,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             selectedLabel=""
             onSelect={handleAddService}
             disabled={disabled}
+            currencyCode={currencyCode}
             placeholder="Search services or products"
           />
         </div>

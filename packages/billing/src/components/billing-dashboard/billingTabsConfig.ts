@@ -44,7 +44,7 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
   },
   {
     value: 'quote-templates',
-    label: 'Quote Templates',
+    label: 'Quote Layouts',
     href: '/msp/billing?tab=quote-templates',
     icon: FileMinus
   },
@@ -74,7 +74,7 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
   },
   {
     value: 'invoice-templates',
-    label: 'Invoice Templates',
+    label: 'Invoice Layouts',
     href: '/msp/billing?tab=invoice-templates',
     icon: FileMinus
   },

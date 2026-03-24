@@ -292,7 +292,7 @@ export const billingNavigationSections: NavigationSection[] = [
     translationKey: 'nav.billing.sections.invoicing',
     items: [
       { name: 'Invoicing', translationKey: 'nav.billing.invoicing', icon: Receipt, href: '/msp/billing?tab=invoicing' },
-      { name: 'Invoice Templates', translationKey: 'nav.billing.invoiceTemplates', icon: ReceiptText, href: '/msp/billing?tab=invoice-templates' },
+      { name: 'Invoice Layouts', translationKey: 'nav.billing.invoiceLayouts', icon: ReceiptText, href: '/msp/billing?tab=invoice-templates' },
       { name: 'Billing Cycles', translationKey: 'nav.billing.billingCycles', icon: CalendarClock, href: '/msp/billing?tab=billing-cycles' },
       { name: 'Service Periods', translationKey: 'nav.billing.servicePeriods', icon: CalendarClock, href: '/msp/billing?tab=service-periods' },
     ]
@@ -302,7 +302,7 @@ export const billingNavigationSections: NavigationSection[] = [
     translationKey: 'nav.billing.sections.quotes',
     items: [
       { name: 'Quotes', translationKey: 'nav.billing.quotes', icon: FileText, href: '/msp/billing?tab=quotes' },
-      { name: 'Quote Templates', translationKey: 'nav.billing.quoteTemplates', icon: LayoutTemplate, href: '/msp/billing?tab=quote-templates' },
+      { name: 'Quote Layouts', translationKey: 'nav.billing.quoteLayouts', icon: LayoutTemplate, href: '/msp/billing?tab=quote-templates' },
     ]
   },
   {

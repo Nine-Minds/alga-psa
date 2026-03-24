@@ -82,7 +82,7 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem): DraftQ
     billing_method: item.billing_method,
     description: item.service_name,
     quantity: 1,
-    unit_price: Number(item.default_rate ?? 0),
+    unit_price: Number(item.currency_rate ?? item.default_rate ?? 0),
     unit_of_measure: item.unit_of_measure ?? null,
     phase: null,
     is_optional: false,

@@ -55,7 +55,11 @@ const EMPTY_FORM: QuoteFormState = {
   currency_code: 'USD',
 };
 
-const toDateInputValue = (value?: string | null): string => value ? value.slice(0, 10) : '';
+const toDateInputValue = (value?: string | Date | null): string => {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return typeof value === 'string' ? value.slice(0, 10) : String(value).slice(0, 10);
+};
 
 const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => {
   const isEditMode = Boolean(quoteId && quoteId !== 'new');

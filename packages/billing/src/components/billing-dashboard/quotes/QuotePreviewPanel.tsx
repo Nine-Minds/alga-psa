@@ -158,8 +158,9 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
                     width: `${baseWidth}px`,
                     transition: 'transform 0.2s ease-out',
                     colorScheme: 'light',
+                    backgroundColor: 'white',
+                    color: 'black',
                   }}
-                  className="bg-white text-black"
                 >
                   <style dangerouslySetInnerHTML={{ __html: previewHtml.css }} />
                   <div dangerouslySetInnerHTML={{ __html: previewHtml.html }} />

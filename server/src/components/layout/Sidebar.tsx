@@ -239,7 +239,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         ...section,
         items: section.items.filter((item) =>
           item.translationKey !== 'nav.billing.quotes' &&
-          item.translationKey !== 'nav.billing.quoteTemplates'
+          item.translationKey !== 'nav.billing.quoteLayouts'
         )
       })).filter((section) => section.items.length > 0);
 

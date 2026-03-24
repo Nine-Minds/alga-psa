@@ -285,7 +285,7 @@ const handleDeleteTemplate = async () => {
 return (
   <Card>
     <CardHeader>
-        <h3 className="text-lg font-semibold">Invoice Templates</h3>
+        <h3 className="text-lg font-semibold">Invoice Layouts</h3>
       </CardHeader>
       <CardContent>
         {error && (
@@ -298,7 +298,7 @@ return (
             layout="stacked"
             className="py-10 text-muted-foreground"
             spinnerProps={{ size: 'md' }}
-            text="Loading invoice templates"
+            text="Loading invoice layouts"
           />
         ) : (
           <div className="space-y-4">
@@ -307,7 +307,7 @@ return (
                 id="create-new-template-button"
                 onClick={() => handleNavigateToEditor('new')}
               >
-                Create New Template
+                Create New Layout
               </Button>
             </div>
             <DataTable

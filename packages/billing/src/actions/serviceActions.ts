@@ -48,6 +48,8 @@ export interface CatalogPickerSearchOptions {
   is_active?: boolean;
   item_kinds?: Array<'service' | 'product'>;
   billing_methods?: Array<'fixed' | 'hourly' | 'usage'>;
+  /** When provided, includes the currency-specific rate from service_prices (if available). */
+  currency_code?: string;
 }
 
 export type CatalogPickerItem = Pick<
@@ -55,6 +57,8 @@ export type CatalogPickerItem = Pick<
   'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku'
 > & {
   default_rate: number;
+  /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
+  currency_rate?: number | null;
 };
 
 export const searchServiceCatalogForPicker = withAuth(async (
@@ -100,7 +104,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
 
     const totalCount = parseInt(countResult?.count as string) || 0;
 
-    const rows = await base
+    const query = base
       .clone()
       .select(
         'sc.service_id',
@@ -110,7 +114,19 @@ export const searchServiceCatalogForPicker = withAuth(async (
         'sc.item_kind',
         'sc.sku',
         trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate')
-      )
+      );
+
+    if (options.currency_code) {
+      query
+        .leftJoin('service_prices as sp', function () {
+          this.on('sp.service_id', 'sc.service_id')
+            .andOn('sp.tenant', 'sc.tenant')
+            .andOn('sp.currency_code', trx.raw('?', [options.currency_code]));
+        })
+        .select(trx.raw('CAST(sp.rate AS FLOAT) as currency_rate'));
+    }
+
+    const rows = await query
       .orderBy('sc.service_name', 'asc')
       .limit(limit)
       .offset(offset);

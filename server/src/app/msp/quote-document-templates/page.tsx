@@ -3,7 +3,7 @@ import QuoteDocumentTemplatesPage from '@alga-psa/billing/components/billing-das
 import FeatureFlagPageWrapper from '@alga-psa/ui/components/feature-flags/FeatureFlagPageWrapper';
 
 export const metadata: Metadata = {
-  title: 'Quote Document Templates',
+  title: 'Quote Layouts',
 };
 
 export default function QuoteDocumentTemplatesRoute() {

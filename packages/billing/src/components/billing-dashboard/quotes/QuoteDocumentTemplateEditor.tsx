@@ -348,29 +348,29 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">{isNewTemplate ? 'New Quote Document Template' : 'Edit Quote Document Template'}</h1>
-          <p className="text-sm text-muted-foreground">Design the quote document layout using the visual editor, then preview with sample data.</p>
+          <h1 className="text-2xl font-semibold text-foreground">{isNewTemplate ? 'New Quote Layout' : 'Edit Quote Layout'}</h1>
+          <p className="text-sm text-muted-foreground">Design the quote layout using the visual editor, then preview with sample data.</p>
         </div>
         <div className="flex gap-2">
           <Button id="quote-template-editor-back" variant="outline" onClick={() => handleBack()}>
-            Back to Templates
+            Back to Layouts
           </Button>
           <Button id="quote-template-editor-save" onClick={() => void handleSave()} disabled={isSaving || isLoading}>
-            {isSaving ? 'Saving...' : 'Save Template'}
+            {isSaving ? 'Saving...' : 'Save Layout'}
           </Button>
         </div>
       </div>
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Quote Template Editor</AlertTitle>
+          <AlertTitle>Quote Layout Editor</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       <Card>
         <CardHeader>
-          <CardTitle>Template Details</CardTitle>
+          <CardTitle>Layout Details</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground">

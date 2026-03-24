@@ -143,10 +143,10 @@ Controls access to the quoting functionality in the billing area.
 
 **Affected Areas:**
 - **MSP Portal:**
-  - Billing sidebar: Quotes and Quote Templates navigation items (hidden when disabled)
-  - Billing dashboard: Quotes and Quote Templates tabs (hidden when disabled)
+  - Billing sidebar: Quotes and Quote Layouts navigation items (hidden when disabled)
+  - Billing dashboard: Quotes and Quote Layouts tabs (hidden when disabled)
   - Quote Approvals page at `/msp/quote-approvals` (shows construction placeholder when disabled)
-  - Quote Document Templates page at `/msp/quote-document-templates` (shows construction placeholder when disabled)
+  - Quote Layouts page at `/msp/quote-document-templates` (shows construction placeholder when disabled)
   - Billing Settings: Quoting tab with Quote Numbering settings (hidden when disabled)
 
 **Behavior:**

@@ -84,11 +84,28 @@ const QuoteItem = {
         throw new Error(`Service ${item.service_id} not found in tenant ${tenant}`);
       }
 
+      // Look up currency-specific price from service_prices when unit_price not explicitly provided
+      let resolvedUnitPrice = resolvedItem.unit_price;
+      if (resolvedUnitPrice == null) {
+        const quote = await knexOrTrx('quotes')
+          .where({ tenant, quote_id: item.quote_id })
+          .select('currency_code')
+          .first();
+        const currencyCode = quote?.currency_code ?? 'USD';
+
+        const priceRow = await knexOrTrx('service_prices')
+          .where({ tenant, service_id: item.service_id, currency_code: currencyCode })
+          .select('rate')
+          .first();
+
+        resolvedUnitPrice = priceRow ? Number(priceRow.rate) : Number(service.default_rate ?? 0);
+      }
+
       resolvedItem = {
         ...resolvedItem,
         service_name: resolvedItem.service_name ?? service.service_name,
         service_sku: resolvedItem.service_sku ?? service.sku ?? null,
-        unit_price: resolvedItem.unit_price ?? Number(service.default_rate ?? 0),
+        unit_price: resolvedUnitPrice,
         unit_of_measure: resolvedItem.unit_of_measure ?? service.unit_of_measure ?? null,
         billing_method: resolvedItem.billing_method ?? service.billing_method ?? null,
         service_item_kind: resolvedItem.service_item_kind ?? service.item_kind ?? 'service',
