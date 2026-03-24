@@ -82,14 +82,14 @@ const BillingSettings: React.FC = () => {
   const sectionParam = searchParams?.get('section');
   const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
 
-  const billingSectionIds = isQuotingEnabled
-    ? ['general', 'quoting', 'tax', 'payments'] as const
-    : ['general', 'tax', 'payments'] as const;
+  const billingSectionIds: readonly string[] = isQuotingEnabled
+    ? ['general', 'quoting', 'tax', 'payments']
+    : ['general', 'tax', 'payments'];
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
     const requestedTab = sectionParam?.toLowerCase();
-    return requestedTab && billingSectionIds.includes(requestedTab as typeof billingSectionIds[number])
+    return requestedTab && billingSectionIds.includes(requestedTab)
       ? requestedTab
       : DEFAULT_BILLING_SECTION;
   });
@@ -97,7 +97,7 @@ const BillingSettings: React.FC = () => {
   // Update active tab when URL parameter changes
   useEffect(() => {
     const requestedTab = sectionParam?.toLowerCase();
-    const targetTab = requestedTab && billingSectionIds.includes(requestedTab as typeof billingSectionIds[number])
+    const targetTab = requestedTab && billingSectionIds.includes(requestedTab)
       ? requestedTab
       : DEFAULT_BILLING_SECTION;
     if (targetTab !== activeTab) {
