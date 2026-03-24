@@ -12,6 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContractLinesProps {
     clientContractLines: IClientContractLine[];
@@ -43,6 +44,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
     formatDateForDisplay,
     clientId
 }) => {
+    const { t } = useTranslation('msp/clients');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     // Pagination state
@@ -56,36 +58,36 @@ const ContractLines: React.FC<ContractLinesProps> = ({
     };
     const columns: ColumnDefinition<IClientContractLine>[] = [
         {
-            title: 'Plan',
+            title: t('contractLines.plan', { defaultValue: 'Plan' }),
             dataIndex: 'contract_line_id',
             render: (value) => {
                 const plan = contractLines.find(p => p.contract_line_id === value);
-                return plan ? plan.contract_line_name : 'Unknown Plan';
+                return plan ? plan.contract_line_name : t('contractLines.unknownPlan', { defaultValue: 'Unknown Plan' });
             }
         },
         {
-            title: 'Category',
+            title: t('contractLines.category', { defaultValue: 'Category' }),
             dataIndex: 'service_category',
             render: (value) => {
                 if (value === null || value === undefined) {
-                    return 'All categories';
+                    return t('contractLines.allCategories', { defaultValue: 'All categories' });
                 }
                 const category = serviceCategories.find(c => c.category_id === value);
-                return category ? category.category_name : 'Unknown Category';
+                return category ? category.category_name : t('contractLines.unknownCategory', { defaultValue: 'Unknown Category' });
             }
         },
         {
-            title: 'Start Date',
+            title: t('contractLines.startDate', { defaultValue: 'Start Date' }),
             dataIndex: 'start_date',
             render: (value) => formatDateForDisplay(value)
         },
         {
-            title: 'End Date',
+            title: t('contractLines.endDate', { defaultValue: 'End Date' }),
             dataIndex: 'end_date',
-            render: (value) => value ? formatDateForDisplay(value) : 'Ongoing'
+            render: (value) => value ? formatDateForDisplay(value) : t('contractLines.ongoing', { defaultValue: 'Ongoing' })
         },
         {
-            title: 'Actions',
+            title: t('contractLines.actions', { defaultValue: 'Actions' }),
             dataIndex: 'client_contract_line_id',
             render: (value, record) => (
                 <DropdownMenu>
@@ -96,7 +98,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                             className="h-8 w-8 p-0"
                             onClick={(e) => e.stopPropagation()} // Prevent row click when opening menu
                         >
-                            <span className="sr-only">Open menu</span>
+                            <span className="sr-only">{t('contractLines.openMenu', { defaultValue: 'Open menu' })}</span>
                             <MoreVertical className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -108,7 +110,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                                 onEdit(record);
                             }}
                         >
-                            Edit
+                            {t('contractLines.edit', { defaultValue: 'Edit' })}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             id={`delete-client-contract-line-menu-item-${value}`}
@@ -118,7 +120,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                                 onDelete(value);
                             }}
                         >
-                            Remove Plan
+                            {t('contractLines.removePlan', { defaultValue: 'Remove Plan' })}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -130,7 +132,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
-                    Contract Lines
+                    {t('contractLines.title', { defaultValue: 'Contract Lines' })}
                 </h3>
                 <div className="flex items-center gap-2">
                     <div className="w-72">
@@ -140,9 +142,15 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                             onValueChange={(value) => onSelectedClientContractChange(value || null)}
                             options={assignments.map((assignment) => ({
                                 value: assignment.client_contract_id!,
-                                label: `Assignment ${assignment.client_contract_id?.slice(0, 8)} • Contract ${assignment.contract_id} (${assignment.start_date} → ${assignment.end_date ?? 'ongoing'})`,
+                                label: t('contractLines.assignmentLabel', {
+                                    defaultValue: 'Assignment {{assignmentId}} • Contract {{contractId}} ({{startDate}} → {{endDate}})',
+                                    assignmentId: assignment.client_contract_id?.slice(0, 8),
+                                    contractId: assignment.contract_id,
+                                    startDate: assignment.start_date,
+                                    endDate: assignment.end_date ?? t('contractLines.ongoing', { defaultValue: 'ongoing' })
+                                }),
                             }))}
-                            placeholder="Select assignment..."
+                            placeholder={t('contractLines.selectAssignment', { defaultValue: 'Select assignment...' })}
                         />
                     </div>
                     <Button
@@ -158,7 +166,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({
                         className="bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] flex items-center gap-2"
                     >
                         <Plus className="h-4 w-4" />
-                        Add New Plan
+                        {t('contractLines.addNewPlan', { defaultValue: 'Add New Plan' })}
                     </Button>
                 </div>
             </div>
