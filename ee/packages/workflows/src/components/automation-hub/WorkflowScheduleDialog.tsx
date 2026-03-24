@@ -450,23 +450,23 @@ export default function WorkflowScheduleDialog({
       return {
         value: workflow.workflow_id,
         label: (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-900">{workflow.name}</span>
+          <div className="flex items-center gap-2 overflow-hidden flex-nowrap">
+            <span className="font-medium text-gray-900 truncate">{workflow.name}</span>
+            <span className="flex-shrink-0">
               {workflow.published_version ? (
                 <Badge variant="info" size="sm">v{workflow.published_version}</Badge>
               ) : (
                 <Badge variant="warning" size="sm">Unpublished</Badge>
               )}
-              {String(workflow.payload_schema_mode ?? 'pinned') !== 'pinned' && (
+            </span>
+            {String(workflow.payload_schema_mode ?? 'pinned') !== 'pinned' && (
+              <span className="flex-shrink-0">
                 <Badge variant="warning" size="sm">Inferred schema</Badge>
-              )}
-            </div>
-            {eligibilityMessage && (
-              <div className="text-[11px] text-gray-500">{eligibilityMessage}</div>
+              </span>
             )}
           </div>
         ),
+        dropdownHint: eligibilityMessage || undefined,
         textValue: workflow.name
       };
     }),
