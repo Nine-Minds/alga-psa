@@ -32,7 +32,7 @@
   },
   {
     "id": "T011",
-    "description": "2b-11: all 12 contact files compile with useTranslation — no TypeScript errors",
+    "description": "2b-11: all contact UI files (+ ContactNotesPanel) compile after useTranslation wiring — no TypeScript errors",
     "implemented": false,
     "featureIds": ["F011", "F012", "F013"]
   },

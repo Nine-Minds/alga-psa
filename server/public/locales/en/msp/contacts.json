@@ -241,7 +241,7 @@
     }
   },
   "contactPhoneNumbersEditor": {
-    "title": "Contact Phone Numbers",
+    "title": "Phone Numbers",
     "description": "Phone number editor with type management, validation, defaults, and extension support",
     "actions": {
       "addPhone": "Add phone"
@@ -430,16 +430,121 @@
     }
   },
   "contactDetailsEdit": {
-    "title": "Edit Contact",
-    "description": "Editable contact form used from the detail view and drawer flows"
+    "title": "Edit Contact - {{name}}",
+    "heading": "Edit Contact: {{name}}",
+    "inactiveBadge": "inactive",
+    "description": "Editable contact form used from the detail view and drawer flows",
+    "validation": {
+      "fullNameRequired": "Full name is required",
+      "emailRequired": "Email address is required",
+      "invalidEmail": "Please enter a valid email address"
+    },
+    "errors": {
+      "validationPrefix": "Please fix the following:",
+      "emailExists": "Email already exists: A contact with this email address already exists in the system",
+      "invalidReferencePrefix": "Invalid reference:",
+      "systemPrefix": "System error:",
+      "saveFailed": "An error occurred while saving. Please try again.",
+      "unexpected": "An unexpected error occurred. Please try again."
+    },
+    "fields": {
+      "fullName": "Full Name",
+      "email": "Email",
+      "role": "Role",
+      "rolePlaceholder": "e.g., Manager, Developer, etc.",
+      "phoneNumbers": "Phone numbers:",
+      "inboundTicketDestinationOverride": "Inbound ticket destination override:",
+      "inboundTicketDestinationHelp": "Precedence: Contact override -> Client destination -> Provider default.",
+      "useClientDestination": "Use client destination",
+      "client": "Client:",
+      "status": "Status:",
+      "notes": "Notes:",
+      "notesPlaceholder": "Add any additional notes about the contact...",
+      "tags": "Tags:"
+    },
+    "loading": {
+      "destinations": "Loading destinations..."
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
   },
   "contactDetailsView": {
-    "title": "Contact Summary",
-    "description": "Read-oriented contact summary with associated client, phones, and metadata"
+    "title": "Contact Details - {{name}}",
+    "description": "Read-oriented contact summary with associated client, phones, and metadata",
+    "actions": {
+      "goToContact": "Go to contact"
+    },
+    "empty": {
+      "notSet": "Not set",
+      "unknownClient": "Unknown Client"
+    },
+    "phoneTypes": {
+      "work": "Work",
+      "mobile": "Mobile",
+      "home": "Home",
+      "fax": "Fax",
+      "other": "Other"
+    },
+    "fields": {
+      "fullName": "Full Name",
+      "email": "Email",
+      "phone": "Phone:",
+      "defaultPhone": "Default",
+      "client": "Client:",
+      "noClientAssigned": "No client assigned",
+      "role": "Role",
+      "status": "Status",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "notes": "Notes:",
+      "tags": "Tags:"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "sections": {
+      "documents": "Documents"
+    },
+    "errors": {
+      "loadTagsSystem": "An unexpected error occurred while loading tags. Please try again or contact support.",
+      "loadTagsFailed": "Failed to load tags. Please try refreshing the page.",
+      "unexpected": "An unexpected error occurred. Please try again.",
+      "clientNotFound": "Client not found. The client may have been deleted.",
+      "loadClientSystem": "An unexpected error occurred while loading client details. Please try again or contact support.",
+      "clientMissing": "The client no longer exists in the system.",
+      "loadClientFailed": "Failed to load client details. Please try again.",
+      "updateClientFailedWithMessage": "Failed to update client: {{message}}",
+      "updateClientFailed": "Failed to update client. Please try again."
+    }
   },
   "clientContactsList": {
     "title": "Client Contacts",
-    "description": "Embedded client-specific contacts list with filters and row actions"
+    "description": "Embedded client-specific contacts list with filters and row actions",
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "actions": "Actions"
+    },
+    "filter": {
+      "show": "Show:",
+      "active": "Active Contacts",
+      "inactive": "Inactive Contacts",
+      "all": "All Contacts"
+    },
+    "actions": {
+      "openMenu": "Open menu",
+      "quickView": "Quick View",
+      "addNewContact": "Add New Contact"
+    },
+    "errors": {
+      "loadFailed": "Failed to load contacts.",
+      "loadingTitle": "Error loading contacts",
+      "retryFailed": "Failed to load contacts. Please try again."
+    }
   },
   "contactsLayout": {
     "title": "Contacts Layout",
@@ -454,7 +559,15 @@
     "description": "Avatar upload affordance for contact profile images"
   },
   "contactNotesPanel": {
-    "title": "Contact Notes",
-    "description": "Rich text notes panel with legacy note display and save/retry actions"
+    "title": "Notes & Quick Info",
+    "description": "Rich text notes panel with legacy note display and save/retry actions",
+    "legacy": {
+      "initialNote": "Initial Note"
+    },
+    "errors": {
+      "loadTitle": "Notes failed to load",
+      "unknown": "Unknown error"
+    },
+    "lastUpdated": "Last updated: {{date}}"
   }
 }
