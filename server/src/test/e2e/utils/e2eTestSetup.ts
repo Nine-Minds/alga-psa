@@ -134,11 +134,6 @@ export async function setupE2ETestEnvironment(options: {
           .where('tenant', tenantId)
           .delete();
           
-        // Clean up boards (they reference tenants)
-        await db('boards')
-          .where('tenant', tenantId)
-          .delete();
-          
         // Clean up priorities (they reference users via created_by)
         await db('priorities')
           .where('tenant', tenantId)
@@ -156,6 +151,11 @@ export async function setupE2ETestEnvironment(options: {
           
         // Clean up statuses (they reference users via created_by)
         await db('statuses')
+          .where('tenant', tenantId)
+          .delete();
+
+        // Clean up boards after board-owned ticket statuses are removed
+        await db('boards')
           .where('tenant', tenantId)
           .delete();
           
@@ -389,6 +389,37 @@ export async function withDatabaseTransaction<T>(
  * Create default statuses for projects and tickets
  */
 async function createDefaultStatuses(db: Knex, tenantId: string, userId: string): Promise<void> {
+  let defaultBoardId: string | null = null;
+  const existingDefaultBoard = await db('boards')
+    .where({ tenant: tenantId, is_default: true })
+    .first<{ board_id: string }>('board_id');
+
+  if (existingDefaultBoard?.board_id) {
+    defaultBoardId = existingDefaultBoard.board_id;
+  } else {
+    const existingBoard = await db('boards')
+      .where({ tenant: tenantId })
+      .orderBy('display_order', 'asc')
+      .orderBy('board_name', 'asc')
+      .first<{ board_id: string }>('board_id');
+
+    if (existingBoard?.board_id) {
+      defaultBoardId = existingBoard.board_id;
+      await db('boards')
+        .where({ tenant: tenantId, board_id: defaultBoardId })
+        .update({ is_default: true });
+    } else {
+      defaultBoardId = uuidv4();
+      await db('boards').insert({
+        board_id: defaultBoardId,
+        tenant: tenantId,
+        board_name: 'Default',
+        is_default: true,
+        display_order: 1
+      });
+    }
+  }
+
   // Check if statuses already exist for this tenant
   const existingStatuses = await db('statuses').where({ tenant: tenantId }).count('* as count');
   if (parseInt(existingStatuses[0].count) > 0) {
@@ -414,6 +445,7 @@ async function createDefaultStatuses(db: Knex, tenantId: string, userId: string)
       name: status.name,
       status_type: status.item_type, // Still required as NOT NULL
       item_type: status.item_type, // Also set this for future compatibility
+      ...(status.item_type === 'ticket' ? { board_id: defaultBoardId } : {}),
       order_number: status.order,
       created_by: userId,
       created_at: new Date(),
@@ -421,19 +453,7 @@ async function createDefaultStatuses(db: Knex, tenantId: string, userId: string)
       is_default: status.is_default || false
     });
   }
-  
-  // Create a default board for tickets
-  const existingBoards = await db('boards').where({ tenant: tenantId }).count('* as count');
-  if (parseInt(existingBoards[0].count) === 0) {
-    await db('boards').insert({
-      board_id: uuidv4(),
-      tenant: tenantId,
-      board_name: 'Default',
-      is_default: true,
-      display_order: 1
-    });
-  }
-  
+
   // Create default priorities for tickets
   const existingPriorities = await db('priorities').where({ tenant: tenantId }).count('* as count');
   if (parseInt(existingPriorities[0].count) === 0) {

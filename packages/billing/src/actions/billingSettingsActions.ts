@@ -7,6 +7,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { assertBoardScopedTicketStatusSelection } from '@shared/lib/boardScopedTicketStatusValidation';
 import { CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE } from '@shared/billingClients/cadenceOwnerRollout';
 import { updateClientBillingSettings as updateClientBillingSettingsShared } from '@shared/billingClients/billingSettings';
 import type { CadenceOwner } from '@alga-psa/types';
@@ -142,6 +143,14 @@ export const updateDefaultBillingSettings = withAuth(async (
     const existingSettings = await trx('default_billing_settings')
       .where({ tenant })
       .first();
+
+    await assertBoardScopedTicketStatusSelection({
+      trx,
+      tenant,
+      boardId: hasRenewalTicketBoardColumn ? data.renewalTicketBoardId ?? null : null,
+      statusId: hasRenewalTicketStatusColumn ? data.renewalTicketStatusId ?? null : null,
+      statusLabel: 'Renewal ticket status',
+    });
 
     const renewalUpdates: Record<string, unknown> = {};
     if (hasDefaultRenewalModeColumn) {

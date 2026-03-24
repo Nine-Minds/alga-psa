@@ -23,6 +23,7 @@ import type {
   IContract,
   IContractAssignmentSummary,
   IDocument,
+  IStatus,
   IInvoiceTemplate,
   InvoiceViewModel as BillingInvoiceViewModel
 } from '@alga-psa/types';
@@ -39,6 +40,8 @@ import {
   updateClientContractForBilling,
   getClientByIdForBilling,
 } from '@alga-psa/billing/actions/billingClientsActions';
+import { getAllBoards } from '@alga-psa/tickets/actions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
@@ -188,6 +191,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
   const [editAssignments, setEditAssignments] = useState<Record<string, IContractAssignmentSummary>>({});
   const [preEditSnapshot, setPreEditSnapshot] = useState<IContractAssignmentSummary | null>(null);
+  const [renewalTicketBoards, setRenewalTicketBoards] = useState<Array<{ value: string; label: string }>>([]);
+  const [renewalTicketStatuses, setRenewalTicketStatuses] = useState<Array<{ value: string; label: string }>>([]);
+  const [loadingRenewalTicketStatuses, setLoadingRenewalTicketStatuses] = useState(false);
 
   // Contract fields editing state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -234,6 +240,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   );
   const primaryAssignmentNoticePeriod =
     primaryAssignment?.effective_notice_period_days ?? primaryAssignment?.notice_period_days;
+  const editingAssignment = editingAssignmentId ? editAssignments[editingAssignmentId] : null;
+  const editingRenewalTicketBoardId = editingAssignment?.renewal_ticket_board_id ?? null;
 
   // Sync tab state FROM URL changes (e.g., browser back/forward)
   // Don't include activeTab in deps - handleTabChange handles state → URL direction
@@ -259,6 +267,106 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setCurrentUserId(serverUserId);
     }
   }, [serverUserId]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadRenewalTicketBoards = async () => {
+      try {
+        const boards = await getAllBoards(true);
+        if (!active) {
+          return;
+        }
+
+        setRenewalTicketBoards(
+          boards.map((board) => ({
+            value: board.board_id ?? '',
+            label: board.board_name ?? 'Unnamed board',
+          }))
+        );
+      } catch (loadError) {
+        if (active) {
+          console.error('Failed to load renewal ticket boards:', loadError);
+          setRenewalTicketBoards([]);
+        }
+      }
+    };
+
+    loadRenewalTicketBoards();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadRenewalTicketStatuses = async () => {
+      if (!editingRenewalTicketBoardId) {
+        setRenewalTicketStatuses([]);
+        return;
+      }
+
+      try {
+        setLoadingRenewalTicketStatuses(true);
+        const statuses: IStatus[] = await getTicketStatuses(editingRenewalTicketBoardId);
+        if (!active) {
+          return;
+        }
+
+        setRenewalTicketStatuses(
+          statuses.map((status) => ({
+            value: status.status_id,
+            label: status.name,
+          }))
+        );
+
+        setEditAssignments((current) => {
+          if (!editingAssignmentId) {
+            return current;
+          }
+
+          const currentAssignment = current[editingAssignmentId];
+          if (!currentAssignment?.renewal_ticket_status_id) {
+            return current;
+          }
+
+          const hasSelectedStatus = statuses.some(
+            (status) => status.status_id === currentAssignment.renewal_ticket_status_id
+          );
+          if (hasSelectedStatus) {
+            return current;
+          }
+
+          return {
+            ...current,
+            [editingAssignmentId]: {
+              ...currentAssignment,
+              renewal_ticket_status_id: null,
+            },
+          };
+        });
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
+
+        console.error('Failed to load renewal ticket statuses:', loadError);
+        setRenewalTicketStatuses([]);
+      } finally {
+        if (active) {
+          setLoadingRenewalTicketStatuses(false);
+        }
+      }
+    };
+
+    loadRenewalTicketStatuses();
+
+    return () => {
+      active = false;
+    };
+  }, [editingAssignmentId, editingRenewalTicketBoardId]);
 
   const updateContractViewParam = useCallback((tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
@@ -676,6 +784,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         if (editedAssignment.renewal_term_months !== originalAssignment.renewal_term_months) {
           updatePayload.renewal_term_months = editedAssignment.renewal_term_months;
         }
+        if (editedAssignment.renewal_ticket_board_id !== originalAssignment.renewal_ticket_board_id) {
+          updatePayload.renewal_ticket_board_id = editedAssignment.renewal_ticket_board_id ?? null;
+        }
+        if (editedAssignment.renewal_ticket_status_id !== originalAssignment.renewal_ticket_status_id) {
+          updatePayload.renewal_ticket_status_id = editedAssignment.renewal_ticket_status_id ?? null;
+        }
 
         // Only update if there are changes
         if (Object.keys(updatePayload).length > 1) { // More than just tenant
@@ -720,6 +834,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         Number.isInteger(dataToEdit.renewal_term_months) && Number(dataToEdit.renewal_term_months) > 0
           ? Number(dataToEdit.renewal_term_months)
           : undefined,
+      renewal_ticket_board_id: dataToEdit.renewal_ticket_board_id ?? null,
+      renewal_ticket_status_id: dataToEdit.renewal_ticket_status_id ?? null,
     };
 
     // Save a snapshot of the data at the start of this edit session
@@ -782,13 +898,21 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     field: keyof IContractAssignmentSummary,
     value: any
   ) => {
-    setEditAssignments(prev => ({
-      ...prev,
-      [assignmentId]: {
+    setEditAssignments(prev => {
+      const nextAssignment = {
         ...prev[assignmentId],
         [field]: value
+      } as IContractAssignmentSummary;
+
+      if (field === 'renewal_ticket_board_id') {
+        nextAssignment.renewal_ticket_status_id = null;
       }
-    }));
+
+      return {
+        ...prev,
+        [assignmentId]: nextAssignment
+      };
+    });
   };
 
   const convertToDatePickerValue = (value: string | null | undefined): Date | undefined => {
@@ -1743,6 +1867,55 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                         />
                                       </div>
                                     )}
+
+                                  {editData.use_tenant_renewal_defaults === false && (
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`assignment-renewal-ticket-board-${assignment.client_contract_id}`} className="text-sm">
+                                        Renewal Ticket Board
+                                      </Label>
+                                      <CustomSelect
+                                        id={`assignment-renewal-ticket-board-${assignment.client_contract_id}`}
+                                        options={renewalTicketBoards}
+                                        value={editData.renewal_ticket_board_id ?? ''}
+                                        onValueChange={(value) =>
+                                          handleAssignmentFieldChange(
+                                            assignment.client_contract_id,
+                                            'renewal_ticket_board_id',
+                                            value || null
+                                          )
+                                        }
+                                        className="w-full"
+                                        placeholder="Select board"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {editData.use_tenant_renewal_defaults === false && (
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`assignment-renewal-ticket-status-${assignment.client_contract_id}`} className="text-sm">
+                                        Renewal Ticket Status
+                                      </Label>
+                                      <CustomSelect
+                                        id={`assignment-renewal-ticket-status-${assignment.client_contract_id}`}
+                                        options={renewalTicketStatuses}
+                                        value={editData.renewal_ticket_status_id ?? ''}
+                                        onValueChange={(value) =>
+                                          handleAssignmentFieldChange(
+                                            assignment.client_contract_id,
+                                            'renewal_ticket_status_id',
+                                            value || null
+                                          )
+                                        }
+                                        className="w-full"
+                                        placeholder={
+                                          editData.renewal_ticket_board_id
+                                            ? (loadingRenewalTicketStatuses ? 'Loading statuses...' : 'Select status')
+                                            : 'Select a board first'
+                                        }
+                                        disabled={!editData.renewal_ticket_board_id || loadingRenewalTicketStatuses}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="space-y-1">

@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ISlaSettings, IStatusSlaPauseConfig } from '../types';
-import { IStatus } from '@alga-psa/types';
+import { ISlaSettings } from '../types';
 import {
   getSlaSettings,
   updateSlaSettings,
   getStatusSlaPauseConfigs,
+  getBoardOwnedTicketStatusesForSlaPauseConfig,
   bulkUpdateStatusSlaPauseConfigs,
 } from '../actions';
-import { getStatuses } from '@alga-psa/reference-data/actions';
 import { getResponseStateTrackingSetting, updateResponseStateTrackingSetting } from '../actions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -23,6 +22,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 interface StatusPauseState {
   statusId: string;
   statusName: string;
+  boardName: string;
   pausesSla: boolean;
   originalPausesSla: boolean;
 }
@@ -46,7 +46,7 @@ export function SlaPauseSettings() {
         const [settings, pauseConfigs, allStatuses, responseStateEnabled] = await Promise.all([
           getSlaSettings(),
           getStatusSlaPauseConfigs(),
-          getStatuses('ticket'),
+          getBoardOwnedTicketStatusesForSlaPauseConfig(),
           getResponseStateTrackingSetting(),
         ]);
 
@@ -60,15 +60,21 @@ export function SlaPauseSettings() {
         });
 
         // Create status pause states for each ticket status
-        const states: StatusPauseState[] = allStatuses.map((status: IStatus) => ({
+        const states: StatusPauseState[] = allStatuses.map((status) => ({
           statusId: status.status_id,
           statusName: status.name,
+          boardName: status.board_name,
           pausesSla: pauseConfigMap.get(status.status_id) ?? false,
           originalPausesSla: pauseConfigMap.get(status.status_id) ?? false,
         }));
 
-        // Sort by order_number or name
-        states.sort((a, b) => a.statusName.localeCompare(b.statusName));
+        states.sort((a, b) => {
+          if (a.boardName !== b.boardName) {
+            return a.boardName.localeCompare(b.boardName);
+          }
+
+          return a.statusName.localeCompare(b.statusName);
+        });
 
         setStatusPauseStates(states);
       } catch (err) {
@@ -285,7 +291,8 @@ export function SlaPauseSettings() {
                       htmlFor={`status-pause-${state.statusId}`}
                       className="flex-1 cursor-pointer"
                     >
-                      {state.statusName}
+                      <span className="block font-medium">{state.statusName}</span>
+                      <span className="block text-xs text-muted-foreground">{state.boardName}</span>
                     </Label>
                     {state.pausesSla !== state.originalPausesSla && (
                       <span className="text-xs text-amber-600 font-medium">Modified</span>

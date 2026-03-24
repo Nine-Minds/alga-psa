@@ -8,6 +8,8 @@ import { Knex } from 'knex';
 import { ItilStandardsService } from '../../services/itilStandardsService';
 import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { v4 as uuidv4 } from 'uuid';
+import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -15,6 +17,67 @@ export interface FindBoardByNameOutput {
   description: string;
   is_default: boolean;
   is_inactive: boolean;
+}
+
+export interface CreateBoardInput extends Omit<IBoard, 'board_id' | 'tenant'> {
+  copy_ticket_statuses_from_board_id?: string | null;
+  ticket_statuses?: BoardTicketStatusInput[];
+}
+
+export interface UpdateBoardInput extends Partial<Omit<IBoard, 'tenant'>> {
+  ticket_statuses?: BoardTicketStatusInput[];
+}
+
+function stripStatusIdsForNewBoard(
+  statuses: BoardTicketStatusInput[]
+): BoardTicketStatusInput[] {
+  return statuses.map(({ status_id: _ignoredStatusId, ...status }) => status);
+}
+
+export async function copyBoardTicketStatuses(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceBoardId: string,
+  targetBoardId: string,
+  userId: string
+): Promise<number> {
+  const statusColumns = await trx('statuses').columnInfo();
+  const hasStatusColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(statusColumns, columnName);
+  const sourceStatuses = await trx('statuses')
+    .where({
+      tenant,
+      board_id: sourceBoardId,
+      status_type: 'ticket'
+    })
+    .orderBy('order_number', 'asc')
+    .orderBy('name', 'asc');
+
+  if (sourceStatuses.length === 0) {
+    throw new Error('Select a source board that has ticket statuses to copy');
+  }
+
+  const now = new Date().toISOString();
+  const clonedStatuses = sourceStatuses.map((status) => ({
+    status_id: uuidv4(),
+    tenant,
+    board_id: targetBoardId,
+    name: status.name,
+    status_type: status.status_type,
+    ...(hasStatusColumn('item_type') ? { item_type: status.item_type || 'ticket' } : {}),
+    is_closed: status.is_closed,
+    is_default: status.is_default,
+    order_number: status.order_number,
+    created_by: userId,
+    ...(hasStatusColumn('standard_status_id') ? { standard_status_id: status.standard_status_id || null } : {}),
+    ...(hasStatusColumn('is_custom') ? { is_custom: status.is_custom } : {}),
+    ...(hasStatusColumn('color') ? { color: status.color || null } : {}),
+    ...(hasStatusColumn('icon') ? { icon: status.icon || null } : {}),
+    ...(hasStatusColumn('created_at') ? { created_at: status.created_at || now } : {}),
+    ...(hasStatusColumn('updated_at') ? { updated_at: now } : {}),
+  }));
+
+  await trx('statuses').insert(clonedStatuses);
+  return clonedStatuses.length;
 }
 
 export const findBoardById = withAuth(async (_user, { tenant }, id: string): Promise<IBoard | undefined> => {
@@ -47,7 +110,7 @@ export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boole
   }
 });
 
-export const createBoard = withAuth(async (user, { tenant }, boardData: Omit<IBoard, 'board_id' | 'tenant'>): Promise<IBoard> => {
+export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBoardInput): Promise<IBoard> => {
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -141,6 +204,24 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: Omit<IBo
         boardData.category_type,
         boardData.priority_type
       );
+
+      if (boardData.ticket_statuses && boardData.ticket_statuses.length > 0) {
+        await saveBoardTicketStatusesForBoard(
+          trx,
+          tenant,
+          newBoard.board_id,
+          user.user_id,
+          stripStatusIdsForNewBoard(boardData.ticket_statuses)
+        );
+      } else if (boardData.copy_ticket_statuses_from_board_id) {
+        await copyBoardTicketStatuses(
+          trx,
+          tenant,
+          boardData.copy_ticket_statuses_from_board_id,
+          newBoard.board_id,
+          user.user_id
+        );
+      }
 
       return newBoard;
     });
@@ -385,7 +466,7 @@ export async function deleteBoardLegacy(boardId: string): Promise<boolean> {
   return true;
 }
 
-export const updateBoard = withAuth(async (user, { tenant }, boardId: string, boardData: Partial<Omit<IBoard, 'tenant'>>): Promise<IBoard> => {
+export const updateBoard = withAuth(async (user, { tenant }, boardId: string, boardData: UpdateBoardInput): Promise<IBoard> => {
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -423,9 +504,11 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         sanitizedData.sla_policy_id = sanitizedData.sla_policy_id || null;
       }
 
+      const { ticket_statuses: ticketStatuses, ...boardUpdateData } = sanitizedData;
+
       const [updatedBoard] = await trx('boards')
         .where({ board_id: boardId, tenant })
-        .update(sanitizedData)
+        .update(boardUpdateData)
         .returning('*');
 
       // Handle ITIL type changes
@@ -448,6 +531,16 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
             (priorityTypeChanged && currentBoard.priority_type === 'itil')) {
           await ItilStandardsService.cleanupUnusedItilStandards(trx, tenant);
         }
+      }
+
+      if (ticketStatuses) {
+        await saveBoardTicketStatusesForBoard(
+          trx,
+          tenant,
+          boardId,
+          user.user_id,
+          ticketStatuses
+        );
       }
 
       return updatedBoard;

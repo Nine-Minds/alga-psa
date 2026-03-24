@@ -10,6 +10,7 @@ import { createClientContact } from '@alga-psa/clients/actions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
 
 export interface OnboardingActionResult {
   success: boolean;
@@ -148,7 +149,6 @@ export const addSingleTeamMember = withAuth(async (
 ): Promise<OnboardingActionResult> => {
   try {
     // Check license limits for MSP (internal) users
-    const { getLicenseUsage } = await import('@alga-psa/licensing');
     const usage = await getLicenseUsage(tenant);
 
     if (usage.limit !== null && usage.used >= usage.limit) {
@@ -276,7 +276,6 @@ export const addTeamMembers = withAuth(async (
   try {
     // Check license limits for  MSP (internal) users
     const { knex } = await createTenantKnex();
-    const { getLicenseUsage } = await import('@alga-psa/licensing');
     const usage = await getLicenseUsage(tenant);
     
     // Determine how many users we can actually add
@@ -782,6 +781,7 @@ export const configureTicketing = withAuth(async (
         // This is a manually created board
         boardId = require('crypto').randomUUID();
         const shouldBeDefault = data.isDefaultBoard || false;
+        const boardColumns = await trx('boards').columnInfo();
         
         // If setting as default, clear any existing defaults first
         if (shouldBeDefault) {
@@ -797,8 +797,9 @@ export const configureTicketing = withAuth(async (
           board_id: boardId,
           tenant,
           board_name: data.boardName,
-          email: data.supportEmail,
-          is_active: true,
+          ...(Object.prototype.hasOwnProperty.call(boardColumns, 'email') ? { email: data.supportEmail } : {}),
+          ...(Object.prototype.hasOwnProperty.call(boardColumns, 'is_active') ? { is_active: true } : {}),
+          ...(Object.prototype.hasOwnProperty.call(boardColumns, 'is_inactive') ? { is_inactive: false } : {}),
           is_default: shouldBeDefault
         });
         
@@ -866,6 +867,10 @@ export const configureTicketing = withAuth(async (
 
       // Create statuses - only ones that don't exist
       if (data.statuses && data.statuses.length > 0) {
+        if (!boardId) {
+          throw new Error('Select or create a board before adding ticket statuses.');
+        }
+
         // Check if any status (imported or manual) should be the default
         const defaultStatus = data.statuses.find(s => s.is_default);
         
@@ -874,7 +879,8 @@ export const configureTicketing = withAuth(async (
           await trx('statuses')
             .where({ 
               tenant, 
-              item_type: 'ticket',
+              board_id: boardId,
+              status_type: 'ticket',
               is_default: true
             })
             .update({ is_default: false });
@@ -888,7 +894,8 @@ export const configureTicketing = withAuth(async (
               await trx('statuses')
                 .where({
                   tenant,
-                  status_id: status.status_id
+                  status_id: status.status_id,
+                  board_id: boardId
                 })
                 .update({ is_default: true });
             }
@@ -900,7 +907,8 @@ export const configureTicketing = withAuth(async (
             .where({ 
               tenant, 
               name: status.name,
-              status_type: 'ticket'
+              status_type: 'ticket',
+              board_id: boardId
             })
             .first();
 
@@ -909,6 +917,7 @@ export const configureTicketing = withAuth(async (
             await trx('statuses').insert({
               status_id: statusId,
               tenant,
+              board_id: boardId,
               name: status.name,
               is_closed: status.is_closed || false,
               is_default: status.is_default || false,
@@ -1009,7 +1018,8 @@ export const validateOnboardingDefaults = withAuth(async (
         .where({ 
           is_default: true,
           status_type: 'ticket',
-          tenant
+          tenant,
+          board_id: defaultBoard.board_id
         })
         .first();
       
@@ -1140,26 +1150,22 @@ export const getTenantTicketingData = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const [boards, categories, statuses, priorities] = await Promise.all([
-      // Get boards
-      knex('boards')
-        .where({ tenant })
-        .orderBy('display_order', 'asc')
-        .orderBy('board_name', 'asc'),
+    const boards = await knex('boards')
+      .where({ tenant })
+      .orderBy('display_order', 'asc')
+      .orderBy('board_name', 'asc');
 
-      // Get categories
+    const [categories, statuses, priorities] = await Promise.all([
       knex('categories')
         .where({ tenant })
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
-
-      // Get statuses
       knex('statuses')
         .where({ tenant, status_type: 'ticket' })
+        .whereNotNull('board_id')
+        .orderBy('board_id', 'asc')
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
-
-      // Get priorities
       knex('priorities')
         .where({ tenant, item_type: 'ticket' })
         .orderBy('order_number', 'asc')

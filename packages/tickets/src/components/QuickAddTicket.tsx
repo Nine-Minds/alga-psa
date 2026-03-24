@@ -53,6 +53,7 @@ import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../lib/ticketRichText';
 import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
 import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -87,18 +88,6 @@ const formatLocationDisplay = (location: IClientLocation): string => {
   }
   
   return parts.join(' - ') || 'Unnamed Location';
-};
-
-const getDefaultBoard = (availableBoards: IBoard[]): IBoard | null => {
-  const activeBoards = availableBoards.filter(board => !board.is_inactive);
-
-  return (
-    activeBoards.find(board => board.is_default) ||
-    activeBoards[0] ||
-    availableBoards.find(board => board.is_default) ||
-    availableBoards[0] ||
-    null
-  );
 };
 
 const getDefaultStatus = (availableStatuses: ITicketStatus[]): ITicketStatus | null => {
@@ -235,6 +224,7 @@ export function QuickAddTicket({
   const [users, setUsers] = useState<IUser[]>([]);
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [statuses, setStatuses] = useState<ITicketStatus[]>([]);
+  const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -327,46 +317,8 @@ export function QuickAddTicket({
         setPriorities(formData.priorities);
         setClients(formData.clients);
 
-        if (Array.isArray(formData.statuses) && formData.statuses.length > 0) {
-          setStatuses(formData.statuses);
-        }
-
         const availableBoards = formData.boards || [];
-        const availableStatuses = Array.isArray(formData.statuses) ? formData.statuses : [];
         const availablePriorities = formData.priorities || [];
-
-        const defaultBoard = getDefaultBoard(availableBoards);
-        const defaultStatus = getDefaultStatus(availableStatuses);
-        const defaultPriorityType = defaultBoard?.priority_type || 'custom';
-        const defaultPriorityId = getBoardDefaultPriorityId(defaultBoard || undefined, availablePriorities);
-
-        if (defaultBoard?.board_id) {
-          setBoardId(defaultBoard.board_id);
-
-          // If no prefilled assignee was provided, prefer board-level defaults.
-          if (!prefilledAssignedTo) {
-            if (defaultBoard.default_assigned_team_id) {
-              setAssignedTeamId(defaultBoard.default_assigned_team_id);
-            }
-            if (defaultBoard.default_assigned_to) {
-              setAssignedTo(defaultBoard.default_assigned_to);
-            }
-          }
-        }
-
-        if (defaultStatus?.status_id) {
-          setStatusId(defaultStatus.status_id);
-        }
-
-        if (defaultPriorityId) {
-          setPriorityId(defaultPriorityId);
-        }
-
-        if (defaultPriorityType === 'itil') {
-          // Default ITIL tickets to medium impact/urgency for quick entry.
-          setItilImpact(3);
-          setItilUrgency(3);
-        }
 
         if (formData.selectedClient) {
           setIsPrefilledClient(true);
@@ -470,6 +422,63 @@ export function QuickAddTicket({
   }, [clientId, isPrefilledClient]);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const fetchStatusesForBoard = async () => {
+      if (!boardId) {
+        if (isMounted) {
+          setStatuses([]);
+          setStatusId('');
+          setIsLoadingStatuses(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsLoadingStatuses(true);
+      }
+      try {
+        const boardStatuses = await getTicketStatuses(boardId);
+        if (isMounted) {
+          setStatuses(boardStatuses);
+        }
+      } catch (error) {
+        console.error('Error fetching board statuses:', error);
+        if (isMounted) {
+          setStatuses([]);
+          setStatusId('');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingStatuses(false);
+        }
+      }
+    };
+
+    fetchStatusesForBoard();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [boardId]);
+
+  useEffect(() => {
+    if (!boardId || isLoadingStatuses) {
+      return;
+    }
+
+    const currentStatusIsValid = statuses.some((status) => status.status_id === statusId);
+    if (currentStatusIsValid) {
+      return;
+    }
+
+    const nextStatusId = getDefaultStatus(statuses)?.status_id || '';
+    if (nextStatusId !== statusId) {
+      setStatusId(nextStatusId);
+    }
+  }, [boardId, statuses, statusId, isLoadingStatuses]);
+
+  useEffect(() => {
     const fetchCategories = async () => {
       if (boardId) {
         try {
@@ -548,6 +557,8 @@ export function QuickAddTicket({
 
   const handleBoardChange = (newBoardId: string) => {
     setBoardId(newBoardId);
+    setStatuses([]);
+    setStatusId('');
     setSelectedCategories([]);
     setShowPriorityMatrix(false);
     setPriorityId('');
@@ -630,6 +641,7 @@ export function QuickAddTicket({
     );
     setTeamAvatarUrl(null);
     setBoardId('');
+    setStatuses([]);
     setStatusId('');
     setPriorityId('');
     setClientId(prefilledClient?.id || '');
@@ -1264,6 +1276,7 @@ export function QuickAddTicket({
                     options={memoizedStatusOptions}
                     placeholder="Select Status *"
                     className={hasAttemptedSubmit && !statusId ? 'border-red-500' : ''}
+                    disabled={!boardId || isLoadingStatuses}
                   />
 
                   {/* Priority Section - Show different UI based on board priority type */}
