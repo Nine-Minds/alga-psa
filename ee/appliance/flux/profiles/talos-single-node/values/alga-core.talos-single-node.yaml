@@ -25,6 +25,7 @@ server:
     is_private: false
     credentials: ""
     tag: latest
+  hostNetwork: true
   replicaCount: 1
   service:
     type: ClusterIP

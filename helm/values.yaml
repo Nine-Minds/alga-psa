@@ -59,6 +59,7 @@ server:
     is_private: true
     credentials: harbor-credentials
     tag: "4023e8f"
+  hostNetwork: false
   verify_email: true
   # Maximum body size for Next.js server actions (e.g., extension uploads)
   serverActionsBodyLimit: "200mb"
