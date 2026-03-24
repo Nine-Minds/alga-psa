@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "clean": "rimraf dist",
-    "build": "npx alga build --skip-install",
+    "build": "alga build --skip-install",
     "postbuild": "node ./scripts/postbuild.mjs",
-    "pack": "npx alga pack",
+    "pack": "alga pack",
     "test": "vitest"
   },
   "dependencies": {

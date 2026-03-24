@@ -199,6 +199,7 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
+    "@bytecodealliance/wizer": "^10.0.0",
     "@eslint/js": "^9.17.0",
     "@nx/docker": "22.3.3",
     "@nx/eslint": "22.3.3",

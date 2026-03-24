@@ -40,24 +40,21 @@ jobs:
 
       - name: Install dependencies
         run: |
-          if ! npm ci --include=optional; then
+          if ! npm ci; then
             echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install --legacy-peer-deps --include=optional
+            npm install --legacy-peer-deps
           fi
 
       - name: Provide build-time env
         run: |
           cp .env.example server/.env
 
-      - name: Build pre-built packages
-        run: npx nx run-many --target=build --output-style=static
-
       - name: Build server (EE)
         env:
           EDITION: ee
           NEXT_PUBLIC_EDITION: enterprise
           NODE_OPTIONS: '--max-old-space-size=8192'
-        run: npm -w server run build:enterprise
+        run: npx nx build server --output-style=static
 
       - name: "Guard: legacy workflows shims removed"
         run: node scripts/guard-no-legacy-workflows-shims.mjs
