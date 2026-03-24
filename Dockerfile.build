@@ -59,20 +59,9 @@ RUN rm -f /app/server/src/scripts/check-extension.ts
 
 RUN npm install --include=optional
 
-# Build shared module first
-WORKDIR /app/shared
-RUN npm run build
-
-# Build pre-built packages (flipped from source transpilation to dist/)
-RUN cd /app/packages/types && npx tsup && \
-    cd /app/packages/core && npx tsup && \
-    cd /app/packages/validation && npx tsup && \
-    cd /app/packages/formatting && npx tsup && \
-    cd /app/packages/event-schemas && npx tsup && \
-    cd /app/packages/clients && npx tsup && \
-    cd /app/packages/sla && npx tsup && \
-    cd /app/packages/assets && npx tsup && \
-    cd /app/packages/tags && npx tsup
+# Build all upstream packages (shared + pre-built) via Nx (handles dependency ordering)
+WORKDIR /app
+RUN npx nx build-deps server
 
 # Increase Node.js memory limit for the build process
 ENV NODE_OPTIONS="--max-old-space-size=8192"
