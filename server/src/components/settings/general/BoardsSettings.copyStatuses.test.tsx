@@ -140,6 +140,42 @@ vi.mock('@alga-psa/ui/components/Switch', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/ui/components/ToggleGroup', () => ({
+  ToggleGroup: ({
+    children,
+    onValueChange,
+  }: {
+    children: React.ReactNode;
+    onValueChange?: (value: string) => void;
+  }) => (
+    <div>
+      {React.Children.map(children, (child) => {
+        if (!React.isValidElement<{ value?: string }>(child)) {
+          return child;
+        }
+
+        return React.cloneElement(child as React.ReactElement<any>, {
+          onClick: () => {
+            if (child.props.value) {
+              onValueChange?.(child.props.value);
+            }
+          },
+        });
+      })}
+    </div>
+  ),
+  ToggleGroupItem: ({
+    children,
+    value,
+    onClick,
+    id,
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { value: string; id?: string }) => (
+    <button type="button" data-testid={id} onClick={onClick} data-value={value}>
+      {children}
+    </button>
+  ),
+}));
+
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   __esModule: true,
   default: ({
@@ -197,6 +233,12 @@ describe('BoardsSettings ticket status copy flow', () => {
         display_order: 10,
         is_inactive: false,
       },
+      {
+        board_id: 'board-other',
+        board_name: 'Field Ops',
+        display_order: 20,
+        is_inactive: false,
+      },
     ]);
     createBoardMock.mockResolvedValue({ board_id: 'board-new' });
     getBoardTicketStatusesMock.mockResolvedValue([]);
@@ -206,7 +248,30 @@ describe('BoardsSettings ticket status copy flow', () => {
     getTeamsMock.mockResolvedValue([]);
   });
 
-  it('passes the selected source board when creating a board that copies ticket statuses', async () => {
+  it('loads copied board statuses into the embedded editor and saves edited statuses', async () => {
+    getBoardTicketStatusesMock.mockImplementation(async (boardId: string) => {
+      if (boardId === 'board-source') {
+        return [
+          {
+            status_id: 'status-open',
+            name: 'Support Open',
+            is_closed: false,
+            is_default: true,
+            order_number: 10,
+          },
+          {
+            status_id: 'status-closed',
+            name: 'Support Closed',
+            is_closed: true,
+            is_default: false,
+            order_number: 20,
+          },
+        ];
+      }
+
+      return [];
+    });
+
     render(<BoardsSettings />);
 
     await waitFor(() => {
@@ -221,6 +286,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     fireEvent.change(screen.getByTestId('copy-ticket-statuses-select'), {
       target: { value: 'board-source' },
     });
+    await waitFor(() => {
+      expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+    });
+
+    fireEvent.change(document.getElementById('inline-ticket-status-name-0') as HTMLInputElement, {
+      target: { value: 'Escalations Open' },
+    });
 
     fireEvent.click(screen.getByTestId('save-board-button'));
 
@@ -229,9 +301,72 @@ describe('BoardsSettings ticket status copy flow', () => {
         expect.objectContaining({
           board_name: 'Escalations',
           copy_ticket_statuses_from_board_id: 'board-source',
+          ticket_statuses: [
+            expect.objectContaining({ name: 'Escalations Open', is_closed: false, is_default: true, order_number: 10 }),
+            expect.objectContaining({ name: 'Support Closed', is_closed: true, is_default: false, order_number: 20 }),
+          ],
         })
       );
     });
+  });
+
+  it('replaces copied draft statuses when the source board selection changes', async () => {
+    getBoardTicketStatusesMock.mockImplementation(async (boardId: string) => {
+      if (boardId === 'board-source') {
+        return [
+          {
+            status_id: 'status-source-open',
+            name: 'Support Open',
+            is_closed: false,
+            is_default: true,
+            order_number: 10,
+          },
+        ];
+      }
+
+      if (boardId === 'board-other') {
+        return [
+          {
+            status_id: 'status-other-open',
+            name: 'Field Ops New',
+            is_closed: false,
+            is_default: true,
+            order_number: 10,
+          },
+        ];
+      }
+
+      return [];
+    });
+
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    fireEvent.click(screen.getByTestId('add-board-button'));
+    fireEvent.change(screen.getByTestId('copy-ticket-statuses-select'), {
+      target: { value: 'board-source' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Support Open')).toBeInTheDocument();
+    });
+
+    fireEvent.change(document.getElementById('inline-ticket-status-name-0') as HTMLInputElement, {
+      target: { value: 'Custom Support Open' },
+    });
+
+    fireEvent.change(screen.getByTestId('copy-ticket-statuses-select'), {
+      target: { value: 'board-other' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Field Ops New')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByDisplayValue('Custom Support Open')).not.toBeInTheDocument();
   });
 
   it('passes inline-authored ticket statuses when creating a board from a new inline lifecycle', async () => {
@@ -246,9 +381,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
       target: { value: 'Internal Ops' },
     });
-    fireEvent.change(screen.getByTestId('ticket-status-seed-mode-select'), {
-      target: { value: 'create_inline' },
-    });
+    fireEvent.click(screen.getByTestId('ticket-status-seed-mode-create-inline'));
     fireEvent.change(document.getElementById('inline-ticket-status-name-0') as HTMLInputElement, {
       target: { value: 'Queued' },
     });
@@ -283,9 +416,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
       target: { value: 'Problem Board' },
     });
-    fireEvent.change(screen.getByTestId('ticket-status-seed-mode-select'), {
-      target: { value: 'create_inline' },
-    });
+    fireEvent.click(screen.getByTestId('ticket-status-seed-mode-create-inline'));
     fireEvent.click(screen.getByTestId('inline-ticket-status-closed-0'));
 
     expect(screen.getByTestId('ticket-status-validation-error')).toHaveTextContent(

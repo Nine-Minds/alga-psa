@@ -110,18 +110,18 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
         setIsLoadingStatuses(true);
 
         getTicketStatuses(board)
-            .then((fetchedStatuses) => {
+            .then((fetchedStatuses: IStatus[]) => {
                 if (cancelled) {
                     return;
                 }
 
                 setStatuses(fetchedStatuses);
                 setStatus((currentStatus) => {
-                    if (currentStatus && fetchedStatuses.some((entry) => entry.status_id === currentStatus)) {
+                    if (currentStatus && fetchedStatuses.some((entry: IStatus) => entry.status_id === currentStatus)) {
                         return currentStatus;
                     }
 
-                    const defaultStatus = fetchedStatuses.find((entry) => entry.is_default);
+                    const defaultStatus = fetchedStatuses.find((entry: IStatus) => entry.is_default);
                     return defaultStatus?.status_id ?? fetchedStatuses[0]?.status_id ?? '';
                 });
             })

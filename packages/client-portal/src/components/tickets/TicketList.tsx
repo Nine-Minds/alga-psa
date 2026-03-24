@@ -16,6 +16,7 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTicketCategories } from '@alga-psa/tickets/actions';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ITicketListItem, ITicketCategory, TicketResponseState } from '@alga-psa/types';
+import type { IStatus } from '@alga-psa/types';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { CategoryPicker } from '@alga-psa/tickets/components';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
@@ -153,7 +154,7 @@ export function TicketList() {
     const loadOptions = async () => {
       try {
         const [statuses, priorities, categories] = await Promise.all([
-          getTicketStatuses(),
+          getTicketStatuses() as Promise<IStatus[]>,
           getAllPriorities('ticket'),
           getTicketCategories()
         ]);
@@ -162,7 +163,7 @@ export function TicketList() {
           { value: 'all', label: t('filters.allStatuses') },
           { value: 'open', label: t('filters.allOpen') },
           { value: 'closed', label: t('filters.allClosed') },
-          ...statuses.map((status: { status_id: string; name: string | null; is_closed: boolean }): SelectOption => ({
+          ...statuses.map((status: IStatus): SelectOption => ({
             value: status.status_id!,
             label: status.name ?? "",
             className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined
@@ -207,10 +208,10 @@ export function TicketList() {
       try {
         const boardStatusEntries = await Promise.all(
           uniqueBoardIds.map(async (boardId) => {
-            const statuses = await getTicketStatuses(boardId);
+            const statuses: IStatus[] = await getTicketStatuses(boardId);
             return [
               boardId,
-              statuses.map((status): SelectOption => ({
+              statuses.map((status: IStatus): SelectOption => ({
                 value: status.status_id!,
                 label: status.name ?? '',
                 className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,

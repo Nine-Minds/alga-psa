@@ -69,6 +69,18 @@
     "./documents/*": {
       "import": "./src/documents/*.tsx",
       "types": "./src/documents/*.tsx"
+    },
+    "./workflows": {
+      "import": "./src/workflows/index.ts",
+      "types": "./src/workflows/index.ts"
+    },
+    "./workflows/*": {
+      "import": "./src/workflows/*.tsx",
+      "types": "./src/workflows/*.tsx"
+    },
+    "./workflows/registerScheduleEntryIntegration": {
+      "import": "./src/workflows/registerScheduleEntryIntegration.ts",
+      "types": "./src/workflows/registerScheduleEntryIntegration.ts"
     }
   },
   "dependencies": {

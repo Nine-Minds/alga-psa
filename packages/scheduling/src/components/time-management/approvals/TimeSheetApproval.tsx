@@ -5,6 +5,7 @@ import {
   ITimeEntryWithWorkItem, 
   TimeSheetStatus 
 } from '@alga-psa/types';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { addCommentToTimeSheet, fetchTimeSheetComments } from '../../../actions/timeSheetActions';
 import { Check, Clock, Undo, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { IWorkItem } from '@alga-psa/types';
@@ -42,38 +43,61 @@ interface TimeEntryDetailPanelProps {
 
 interface StatusIconProps {
   status: TimeSheetStatus;
+  t: ReturnType<typeof useTranslation>['t'];
 }
 
 // Badge variants align with TimePeriodList, TimeSheetHeader, and ManagerApprovalDashboard
-const statusConfig: Record<string, { icon: typeof Check; iconColor: string; label: string; badgeVariant: 'secondary' | 'success' | 'warning' | 'outline' }> = {
-  SUBMITTED: { icon: Send, iconColor: 'text-secondary-600', label: 'Submitted', badgeVariant: 'secondary' },
-  APPROVED: { icon: Check, iconColor: 'text-green-800', label: 'Approved', badgeVariant: 'success' },
-  CHANGES_REQUESTED: { icon: Undo, iconColor: 'text-orange-800', label: 'Changes Requested', badgeVariant: 'warning' },
-};
+const getStatusConfig = (
+  status: string,
+  t: ReturnType<typeof useTranslation>['t']
+) =>
+  ({
+    SUBMITTED: {
+      icon: Send,
+      iconColor: 'text-secondary-600',
+      label: t('common.states.submitted', { defaultValue: 'Submitted' }),
+      badgeVariant: 'secondary' as const
+    },
+    APPROVED: {
+      icon: Check,
+      iconColor: 'text-green-800',
+      label: t('common.states.approved', { defaultValue: 'Approved' }),
+      badgeVariant: 'success' as const
+    },
+    CHANGES_REQUESTED: {
+      icon: Undo,
+      iconColor: 'text-orange-800',
+      label: t('common.states.changesRequested', { defaultValue: 'Changes Requested' }),
+      badgeVariant: 'warning' as const
+    },
+  }[status] ?? {
+    icon: Clock,
+    iconColor: 'text-gray-500',
+    label: t('common.states.unknown', { defaultValue: 'Unknown' }),
+    badgeVariant: 'outline' as const
+  });
 
-const getStatusConfig = (status: string) =>
-  statusConfig[status] ?? { icon: Clock, iconColor: 'text-gray-500', label: status, badgeVariant: 'outline' as const };
-
-const StatusIcon: React.FC<StatusIconProps> = ({ status }) => {
-  const config = getStatusConfig(status);
+const StatusIcon: React.FC<StatusIconProps> = ({ status, t }) => {
+  const config = getStatusConfig(status, t);
   const Icon = config.icon;
   return <Icon className={`w-5 h-5 ${config.iconColor}`} />;
 };
 
-const StatusBadge: React.FC<StatusIconProps> = ({ status }) => {
-  const config = getStatusConfig(status);
+const StatusBadge: React.FC<StatusIconProps> = ({ status, t }) => {
+  const config = getStatusConfig(status, t);
   return <Badge variant={config.badgeVariant} className="py-1">{config.label}</Badge>;
 };
 
-const formatDuration = (decimalHours: number) => {
+const formatDuration = (decimalHours: number, t: ReturnType<typeof useTranslation>['t']) => {
   const h = Math.floor(decimalHours);
   const m = Math.round((decimalHours - h) * 60);
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
+  if (h === 0) return `${m}${t('common.units.minutesShort', { defaultValue: 'm' })}`;
+  if (m === 0) return `${h}${t('common.units.hoursShort', { defaultValue: 'h' })}`;
+  return `${h}${t('common.units.hoursShort', { defaultValue: 'h' })} ${m}${t('common.units.minutesShort', { defaultValue: 'm' })}`;
 };
 
 const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUpdateApprovalStatus }) => {
+  const { t } = useTranslation('msp/time-entry');
   const [changeRequestComment, setChangeRequestComment] = useState('');
 
   const handleStatusChange = async (newStatus: TimeSheetStatus) => {
@@ -94,8 +118,18 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
     label: string;
     variant: 'default' | 'destructive' | 'outline';
   }> = [
-    { status: 'APPROVED', icon: Check, label: 'Approve', variant: 'default' },
-    { status: 'CHANGES_REQUESTED', icon: Undo, label: 'Request Changes', variant: 'destructive' },
+    {
+      status: 'APPROVED',
+      icon: Check,
+      label: t('common.actions.approve', { defaultValue: 'Approve' }),
+      variant: 'default'
+    },
+    {
+      status: 'CHANGES_REQUESTED',
+      icon: Undo,
+      label: t('common.actions.requestChanges', { defaultValue: 'Request Changes' }),
+      variant: 'destructive'
+    },
   ];
 
   const formatType = (type: string) =>
@@ -104,30 +138,50 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
   return (
     <div className="p-4 bg-[rgb(var(--color-border-100))] border-t border-b border-[rgb(var(--color-border-200))]">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-semibold text-[rgb(var(--color-text-900))]">Time Entry Details</h4>
-        <StatusBadge status={entry.approval_status} />
+        <h4 className="font-semibold text-[rgb(var(--color-text-900))]">
+          {t('approval.sections.timeEntryDetails', { defaultValue: 'Time Entry Details' })}
+        </h4>
+        <StatusBadge status={entry.approval_status} t={t} />
       </div>
       <div className="grid grid-cols-2 gap-y-2 text-sm mb-3">
-        <span className="font-medium text-[rgb(var(--color-text-900))]">Work Item</span>
-        <span className="text-[rgb(var(--color-text-700))]">{entry.workItem ? `${entry.workItem.name} (${formatType(entry.workItem.type)})` : 'N/A'}</span>
-        <span className="font-medium text-[rgb(var(--color-text-900))]">Duration</span>
-        <span className="text-[rgb(var(--color-text-700))]">{formatDuration((new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / (1000 * 60 * 60))}</span>
-        <span className="font-medium text-[rgb(var(--color-text-900))]">Billable</span>
-        <span className="text-[rgb(var(--color-text-700))]">{formatDuration(entry.billable_duration / 60)}</span>
+        <span className="font-medium text-[rgb(var(--color-text-900))]">
+          {t('approval.labels.workItem', { defaultValue: 'Work Item' })}
+        </span>
+        <span className="text-[rgb(var(--color-text-700))]">
+          {entry.workItem
+            ? `${entry.workItem.name} (${formatType(entry.workItem.type)})`
+            : t('common.fallbacks.na', { defaultValue: 'N/A' })}
+        </span>
+        <span className="font-medium text-[rgb(var(--color-text-900))]">
+          {t('approval.labels.duration', { defaultValue: 'Duration' })}
+        </span>
+        <span className="text-[rgb(var(--color-text-700))]">
+          {formatDuration((new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / (1000 * 60 * 60), t)}
+        </span>
+        <span className="font-medium text-[rgb(var(--color-text-900))]">
+          {t('approval.labels.billable', { defaultValue: 'Billable' })}
+        </span>
+        <span className="text-[rgb(var(--color-text-700))]">{formatDuration(entry.billable_duration / 60, t)}</span>
       </div>
       {entry.notes && (
         <div className="mb-3">
-          <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">Notes</span>
+          <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+            {t('approval.labels.notes', { defaultValue: 'Notes' })}
+          </span>
           <p className="text-sm whitespace-pre-wrap text-[rgb(var(--color-text-600))] mt-1">{entry.notes}</p>
         </div>
       )}
       <TimeEntryChangeRequestPanel changeRequests={entry.change_requests} />
       <div className="mb-3">
-        <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">Entry Change Suggestion</span>
+        <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+          {t('approval.labels.entryChangeSuggestion', { defaultValue: 'Entry Change Suggestion' })}
+        </span>
         <TextArea
           value={changeRequestComment}
           onChange={(event) => setChangeRequestComment(event.target.value)}
-          placeholder="Tell the employee exactly what to fix on this entry"
+          placeholder={t('approval.changeSuggestionPlaceholder', {
+            defaultValue: 'Tell the employee exactly what to fix on this entry'
+          })}
         />
       </div>
       <div className="flex space-x-2 pt-3 border-t border-[rgb(var(--color-border-200))]">
@@ -156,6 +210,8 @@ export function TimeSheetApproval({
   onRequestChanges,
   onReverseApproval
 }: TimeSheetApprovalProps) {
+  const { t } = useTranslation('msp/time-entry');
+  const { formatDate } = useFormatters();
   const [timeSheet, setTimeSheet] = useState<ITimeSheetApprovalView>(initialTimeSheet);
   const [newComment, setNewComment] = useState('');
   const [entriesWithWorkItems, setEntriesWithWorkItems] = useState<ITimeEntryWithWorkItem[]>([]);
@@ -306,7 +362,7 @@ export function TimeSheetApproval({
   };
 
   const formatWorkItem = (workItem?: IWorkItem) => {
-    if (!workItem) return 'N/A';
+    if (!workItem) return t('common.fallbacks.na', { defaultValue: 'N/A' });
     return `${workItem.name} (${workItem.type})`;
   };
 
@@ -314,9 +370,9 @@ export function TimeSheetApproval({
     type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   const formatSubmittedDate = (date?: Date | string | null) => {
-    if (!date) return 'N/A';
+    if (!date) return t('common.fallbacks.na', { defaultValue: 'N/A' });
     const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+    return formatDate(d, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   return (
@@ -324,15 +380,30 @@ export function TimeSheetApproval({
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Time Sheet Approval for {timeSheet.employee_name}</CardTitle>
-            <StatusBadge status={timeSheet.approval_status} />
+            <CardTitle>
+              {t('approval.titleFor', {
+                defaultValue: 'Time Sheet Approval for {{name}}',
+                name: timeSheet.employee_name
+              })}
+            </CardTitle>
+            <StatusBadge status={timeSheet.approval_status} t={t} />
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-y-2 text-sm text-[rgb(var(--color-text-700))]">
-            <span className="font-medium text-[rgb(var(--color-text-900))]">Period</span>
-            <span>{timeSheet.time_period?.start_date ? parseISO(timeSheet.time_period.start_date).toLocaleDateString() : "N/A"} – {timeSheet.time_period?.end_date ? parseISO(timeSheet.time_period.end_date).toLocaleDateString() : "N/A"}</span>
-            <span className="font-medium text-[rgb(var(--color-text-900))]">Submitted</span>
+            <span className="font-medium text-[rgb(var(--color-text-900))]">
+              {t('approval.labels.period', { defaultValue: 'Period' })}
+            </span>
+            <span>
+              {timeSheet.time_period?.start_date
+                ? formatDate(parseISO(timeSheet.time_period.start_date), { dateStyle: 'medium' })
+                : t('common.fallbacks.na', { defaultValue: 'N/A' })} – {timeSheet.time_period?.end_date
+                ? formatDate(parseISO(timeSheet.time_period.end_date), { dateStyle: 'medium' })
+                : t('common.fallbacks.na', { defaultValue: 'N/A' })}
+            </span>
+            <span className="font-medium text-[rgb(var(--color-text-900))]">
+              {t('approval.labels.submitted', { defaultValue: 'Submitted' })}
+            </span>
             <span>{formatSubmittedDate(timeSheet.submitted_at)}</span>
           </div>
         </CardContent>
@@ -340,21 +411,21 @@ export function TimeSheetApproval({
 
       <Card>
         <CardHeader>
-          <CardTitle>Summary</CardTitle>
+          <CardTitle>{t('approval.sections.summary', { defaultValue: 'Summary' })}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 rounded-lg bg-[rgb(var(--color-border-100))]">
-              <p className="text-2xl font-bold text-[rgb(var(--color-text-900))]">{formatDuration(totalHours)}</p>
-              <p className="text-xs text-[rgb(var(--color-text-600))]">Total</p>
+              <p className="text-2xl font-bold text-[rgb(var(--color-text-900))]">{formatDuration(totalHours, t)}</p>
+              <p className="text-xs text-[rgb(var(--color-text-600))]">{t('approval.labels.total', { defaultValue: 'Total' })}</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-[rgb(var(--color-border-100))]">
-              <p className="text-2xl font-bold text-[rgb(var(--color-primary-500))]">{formatDuration(totalBillableHours)}</p>
-              <p className="text-xs text-[rgb(var(--color-text-600))]">Billable</p>
+              <p className="text-2xl font-bold text-[rgb(var(--color-primary-500))]">{formatDuration(totalBillableHours, t)}</p>
+              <p className="text-xs text-[rgb(var(--color-text-600))]">{t('approval.labels.billable', { defaultValue: 'Billable' })}</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-[rgb(var(--color-border-100))]">
-              <p className="text-2xl font-bold text-[rgb(var(--color-text-600))]">{formatDuration(totalNonBillableHours)}</p>
-              <p className="text-xs text-[rgb(var(--color-text-600))]">Non-Billable</p>
+              <p className="text-2xl font-bold text-[rgb(var(--color-text-600))]">{formatDuration(totalNonBillableHours, t)}</p>
+              <p className="text-xs text-[rgb(var(--color-text-600))]">{t('approval.labels.nonBillable', { defaultValue: 'Non-Billable' })}</p>
             </div>
           </div>
         </CardContent>
@@ -362,14 +433,16 @@ export function TimeSheetApproval({
 
       <Card>
         <CardHeader>
-          <CardTitle>Breakdown by Work Item Type</CardTitle>
+          <CardTitle>
+            {t('approval.sections.breakdownByWorkItemType', { defaultValue: 'Breakdown by Work Item Type' })}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {Object.entries(entriesByType).map(([type, hours]): React.JSX.Element => (
               <div key={type} className="flex items-center justify-between py-1.5 border-b border-[rgb(var(--color-border-200))] last:border-0">
                 <span className="text-sm text-[rgb(var(--color-text-700))]">{formatWorkItemType(type)}</span>
-                <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">{formatDuration(hours)}</span>
+                <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">{formatDuration(hours, t)}</span>
               </div>
             ))}
           </div>
@@ -378,14 +451,16 @@ export function TimeSheetApproval({
 
       <Card>
         <CardHeader>
-          <CardTitle>Daily Breakdown</CardTitle>
+          <CardTitle>{t('approval.sections.dailyBreakdown', { defaultValue: 'Daily Breakdown' })}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {Object.entries(entriesByDate).map(([date, hours]): React.JSX.Element => (
               <div key={date} className="flex items-center justify-between py-1.5 border-b border-[rgb(var(--color-border-200))] last:border-0">
-                <span className="text-sm text-[rgb(var(--color-text-700))]">{new Date(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">{formatDuration(hours)}</span>
+                <span className="text-sm text-[rgb(var(--color-text-700))]">
+                  {formatDate(new Date(date), { weekday: 'short', month: 'short', day: 'numeric' })}
+                </span>
+                <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">{formatDuration(hours, t)}</span>
               </div>
             ))}
           </div>
@@ -395,18 +470,18 @@ export function TimeSheetApproval({
 
       <Card>
         <CardHeader>
-          <CardTitle>Detailed Time Entries</CardTitle>
+          <CardTitle>{t('approval.sections.detailedEntries', { defaultValue: 'Detailed Time Entries' })}</CardTitle>
         </CardHeader>
         <CardContent>
           <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))]">
             <thead>
               <tr className="text-left text-xs font-medium text-[rgb(var(--color-text-600))] uppercase tracking-wider">
-                <th className="py-2 pr-3">Date</th>
-                <th className="py-2 pr-3">Work Item</th>
-                <th className="py-2 pr-3">Start</th>
-                <th className="py-2 pr-3">End</th>
-                <th className="py-2 pr-3">Billable</th>
-                <th className="py-2 pr-3 text-center">Status</th>
+                <th className="py-2 pr-3">{t('approval.table.date', { defaultValue: 'Date' })}</th>
+                <th className="py-2 pr-3">{t('approval.table.workItem', { defaultValue: 'Work Item' })}</th>
+                <th className="py-2 pr-3">{t('approval.table.start', { defaultValue: 'Start' })}</th>
+                <th className="py-2 pr-3">{t('approval.table.end', { defaultValue: 'End' })}</th>
+                <th className="py-2 pr-3">{t('approval.table.billable', { defaultValue: 'Billable' })}</th>
+                <th className="py-2 pr-3 text-center">{t('approval.table.status', { defaultValue: 'Status' })}</th>
                 <th className="py-2"></th>
               </tr>
             </thead>
@@ -417,14 +492,20 @@ export function TimeSheetApproval({
                     className="cursor-pointer hover:bg-[rgb(var(--color-border-100))] text-sm text-[rgb(var(--color-text-700))]"
                     onClick={() => toggleEntryDetails(entry.entry_id as string)}
                   >
-                    <td className="py-2.5 pr-3">{new Date(entry.start_time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+                    <td className="py-2.5 pr-3">
+                      {formatDate(new Date(entry.start_time), { month: 'short', day: 'numeric' })}
+                    </td>
                     <td className="py-2.5 pr-3">{formatWorkItem(entry.workItem)}</td>
-                    <td className="py-2.5 pr-3">{new Date(entry.start_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</td>
-                    <td className="py-2.5 pr-3">{new Date(entry.end_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</td>
-                    <td className="py-2.5 pr-3 font-medium">{formatDuration(entry.billable_duration / 60)}</td>
+                    <td className="py-2.5 pr-3">
+                      {formatDate(new Date(entry.start_time), { hour: 'numeric', minute: '2-digit' })}
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      {formatDate(new Date(entry.end_time), { hour: 'numeric', minute: '2-digit' })}
+                    </td>
+                    <td className="py-2.5 pr-3 font-medium">{formatDuration(entry.billable_duration / 60, t)}</td>
                     <td className="py-2.5 pr-3 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <StatusIcon status={entry.approval_status} />
+                        <StatusIcon status={entry.approval_status} t={t} />
                         <TimeEntryChangeRequestIndicator changeRequests={entry.change_requests} />
                       </div>
                     </td>
@@ -436,7 +517,9 @@ export function TimeSheetApproval({
                           e.stopPropagation();
                           toggleEntryDetails(entry.entry_id as string);
                         }}
-                        title={expandedEntryId === entry.entry_id ? "Hide Details" : "Show Details"}
+                        title={expandedEntryId === entry.entry_id
+                          ? t('common.actions.hideDetails', { defaultValue: 'Hide Details' })
+                          : t('common.actions.showDetails', { defaultValue: 'Show Details' })}
                       >
                         {expandedEntryId === entry.entry_id ? (
                           <ChevronUp className="h-4 w-4" />
@@ -466,9 +549,11 @@ export function TimeSheetApproval({
       <Card className={timeSheet.approval_status === 'CHANGES_REQUESTED' ? 'bg-orange-50' : ''}>
         <CardHeader>
           <CardTitle>
-            Comments {timeSheet.approval_status === 'CHANGES_REQUESTED' && 
+            {t('approval.sections.comments', { defaultValue: 'Comments' })} {timeSheet.approval_status === 'CHANGES_REQUESTED' && 
               <span className="text-sm font-normal text-orange-600">
-                (Changes have been requested - please review comments)
+                {t('approval.comments.changesRequestedHint', {
+                  defaultValue: '(Changes have been requested - please review comments)'
+                })}
               </span>
             }
           </CardTitle>
@@ -492,15 +577,17 @@ export function TimeSheetApproval({
                     </p>
                     {comment.is_approver ? (
                       <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
-                        Approver
+                        {t('approval.labels.approver', { defaultValue: 'Approver' })}
                       </span>
                     ) : (
                       <span className="text-xs bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 px-2 py-1 rounded">
-                        Employee
+                        {t('approval.labels.employee', { defaultValue: 'Employee' })}
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500">{new Date(comment.created_at).toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">
+                    {formatDate(new Date(comment.created_at), { dateStyle: 'medium', timeStyle: 'short' })}
+                  </p>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap">{comment.comment}</p>
               </div>
@@ -511,8 +598,8 @@ export function TimeSheetApproval({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder={timeSheet.approval_status === 'CHANGES_REQUESTED' ? 
-                "Add your response to the requested changes..." : 
-                "Add a comment..."}
+                t('approval.comments.responsePlaceholder', { defaultValue: 'Add your response to the requested changes...' }) : 
+                t('approval.comments.placeholder', { defaultValue: 'Add a comment...' })}
               className={timeSheet.approval_status === 'CHANGES_REQUESTED' ? 
                 "border-orange-200 focus:border-orange-500" : ""}
             />
@@ -523,9 +610,9 @@ export function TimeSheetApproval({
                 'bg-orange-500 hover:bg-orange-600' : ''}`}
               disabled={isAddingComment}
             >
-              {isAddingComment ? 'Adding...' : 
+              {isAddingComment ? t('common.actions.adding', { defaultValue: 'Adding...' }) : 
                 timeSheet.approval_status === 'CHANGES_REQUESTED' ? 
-                'Respond to Changes' : 'Add Comment'}
+                t('approval.comments.respondToChanges', { defaultValue: 'Respond to Changes' }) : t('common.actions.addComment', { defaultValue: 'Add Comment' })}
             </Button>
           </div>
         </CardContent>
@@ -538,7 +625,7 @@ export function TimeSheetApproval({
             onClick={onReverseApproval}
             variant="destructive"
           >
-            Reverse Approval
+            {t('common.actions.reverseApproval', { defaultValue: 'Reverse Approval' })}
           </Button>
         ) : (
           <>
@@ -548,7 +635,7 @@ export function TimeSheetApproval({
               variant="default"
               disabled={timeSheet.approval_status === 'APPROVED'}
             >
-              Approve
+              {t('common.actions.approve', { defaultValue: 'Approve' })}
             </Button>
             <Button
               id="timesheet-request-changes-btn"
@@ -556,7 +643,7 @@ export function TimeSheetApproval({
               variant="outline"
               disabled={timeSheet.approval_status === 'APPROVED'}
             >
-              Request Changes
+              {t('common.actions.requestChanges', { defaultValue: 'Request Changes' })}
             </Button>
           </>
         )}

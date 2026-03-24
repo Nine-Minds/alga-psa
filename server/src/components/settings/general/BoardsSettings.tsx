@@ -32,6 +32,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
@@ -63,6 +64,29 @@ function createManagedTicketStatus(index: number): ManagedTicketStatus {
     color: null,
     icon: null,
   };
+}
+
+function mapBoardStatusesToManagedStatuses(
+  statuses: Array<{
+    status_id?: string;
+    name: string;
+    is_closed: boolean;
+    is_default?: boolean;
+    order_number?: number;
+    color?: string | null;
+    icon?: string | null;
+  }>
+): ManagedTicketStatus[] {
+  return statuses.map((status, index) => ({
+    status_id: status.status_id,
+    temp_id: status.status_id || `board-status-${Date.now()}-${index}`,
+    name: status.name,
+    is_closed: status.is_closed,
+    is_default: Boolean(status.is_default),
+    order_number: status.order_number || ((index + 1) * 10),
+    color: status.color || null,
+    icon: status.icon || null,
+  }));
 }
 
 function normalizeManagedTicketStatuses(statuses: ManagedTicketStatus[]) {
@@ -277,6 +301,23 @@ const BoardsSettings: React.FC = () => {
     }
   };
 
+  const loadManagedTicketStatusesFromBoard = async (boardId: string) => {
+    setIsLoadingBoardStatuses(true);
+
+    try {
+      const boardStatuses = await getBoardTicketStatuses(boardId);
+      setFormData((prev) => ({
+        ...prev,
+        ticket_statuses: mapBoardStatusesToManagedStatuses(boardStatuses),
+      }));
+    } catch (loadError) {
+      console.error('Error loading board ticket statuses:', loadError);
+      setError(loadError instanceof Error ? loadError.message : 'Failed to load board ticket statuses.');
+    } finally {
+      setIsLoadingBoardStatuses(false);
+    }
+  };
+
   const startEditing = async (board: IBoard) => {
     setEditingBoard(board);
     setFormData({
@@ -299,27 +340,7 @@ const BoardsSettings: React.FC = () => {
     setError(null);
     setIsLoadingBoardStatuses(true);
 
-    try {
-      const boardStatuses = await getBoardTicketStatuses(board.board_id!);
-      setFormData((prev) => ({
-        ...prev,
-        ticket_statuses: boardStatuses.map((status, index) => ({
-          status_id: status.status_id,
-          temp_id: status.status_id || `board-status-${index}`,
-          name: status.name,
-          is_closed: status.is_closed,
-          is_default: Boolean(status.is_default),
-          order_number: status.order_number || ((index + 1) * 10),
-          color: status.color || null,
-          icon: status.icon || null,
-        })),
-      }));
-    } catch (loadError) {
-      console.error('Error loading board ticket statuses:', loadError);
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load board ticket statuses.');
-    } finally {
-      setIsLoadingBoardStatuses(false);
-    }
+    await loadManagedTicketStatusesFromBoard(board.board_id!);
   };
 
   const updateManagedTicketStatus = (tempId: string, updates: Partial<ManagedTicketStatus>) => {
@@ -454,7 +475,10 @@ const BoardsSettings: React.FC = () => {
     }
   };
 
-  const shouldManageTicketStatuses = Boolean(editingBoard) || formData.status_seed_mode === 'create_inline';
+  const shouldManageTicketStatuses =
+    Boolean(editingBoard) ||
+    formData.status_seed_mode === 'create_inline' ||
+    (formData.status_seed_mode === 'copy_existing' && Boolean(formData.copy_ticket_statuses_from_board_id));
   const ticketStatusValidationError = useMemo(() => (
     shouldManageTicketStatuses ? getManagedTicketStatusValidationError(formData.ticket_statuses) : null
   ), [formData.ticket_statuses, shouldManageTicketStatuses]);
@@ -472,7 +496,7 @@ const BoardsSettings: React.FC = () => {
       const categoryType = editingBoard ? formData.category_type : (formData.is_itil_compliant ? 'itil' : 'custom');
       const priorityType = editingBoard ? formData.priority_type : (formData.is_itil_compliant ? 'itil' : 'custom');
       const isCreatingBoard = !editingBoard;
-      const isInlineStatusMode = isCreatingBoard && formData.status_seed_mode === 'create_inline';
+      const shouldPersistManagedStatuses = isCreatingBoard && shouldManageTicketStatuses;
       const normalizedTicketStatuses = normalizeManagedTicketStatuses(formData.ticket_statuses);
       const shouldRequireStatusCopySource =
         isCreatingBoard &&
@@ -517,8 +541,10 @@ const BoardsSettings: React.FC = () => {
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null,
-          copy_ticket_statuses_from_board_id: isInlineStatusMode ? null : (formData.copy_ticket_statuses_from_board_id || null),
-          ticket_statuses: isInlineStatusMode ? normalizedTicketStatuses : undefined,
+          copy_ticket_statuses_from_board_id: formData.status_seed_mode === 'copy_existing'
+            ? (formData.copy_ticket_statuses_from_board_id || null)
+            : null,
+          ticket_statuses: shouldPersistManagedStatuses ? normalizedTicketStatuses : undefined,
         });
         toast.success(t('ticketing.boards.messages.success.created'));
       }
@@ -1059,11 +1085,14 @@ const BoardsSettings: React.FC = () => {
 
             {!editingBoard && (
               <div>
-                <Label htmlFor="ticket-status-seed-mode-select">Ticket status setup</Label>
-                <CustomSelect
-                  id="ticket-status-seed-mode-select"
+                <Label>Ticket status setup</Label>
+                <ToggleGroup
+                  type="single"
                   value={formData.status_seed_mode}
                   onValueChange={(value) => {
+                    if (value !== 'copy_existing' && value !== 'create_inline') {
+                      return;
+                    }
                     const nextMode = value as TicketStatusSeedMode;
                     setFormData((prev) => ({
                       ...prev,
@@ -1073,12 +1102,24 @@ const BoardsSettings: React.FC = () => {
                         : prev.ticket_statuses,
                     }));
                   }}
-                  options={[
-                    { value: 'copy_existing', label: 'Copy from existing board' },
-                    { value: 'create_inline', label: 'Create statuses inline' },
-                  ]}
-                  placeholder="Select a setup mode"
-                />
+                  aria-label="Ticket status setup"
+                  className="mt-2 w-full"
+                >
+                  <ToggleGroupItem
+                    id="ticket-status-seed-mode-copy-existing"
+                    value="copy_existing"
+                    className="flex-1 min-w-0"
+                  >
+                    Copy from existing board
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    id="ticket-status-seed-mode-create-inline"
+                    value="create_inline"
+                    className="flex-1 min-w-0"
+                  >
+                    Create statuses inline
+                  </ToggleGroupItem>
+                </ToggleGroup>
                 <p className="text-xs text-muted-foreground mt-1">
                   Choose whether this board starts from an existing lifecycle or a new inline status list.
                 </p>
@@ -1091,7 +1132,20 @@ const BoardsSettings: React.FC = () => {
                 <CustomSelect
                   id="copy-ticket-statuses-select"
                   value={formData.copy_ticket_statuses_from_board_id}
-                  onValueChange={(value) => setFormData({ ...formData, copy_ticket_statuses_from_board_id: value })}
+                  onValueChange={async (value) => {
+                    setError(null);
+                    setFormData((prev) => ({
+                      ...prev,
+                      copy_ticket_statuses_from_board_id: value,
+                      ticket_statuses: value ? prev.ticket_statuses : [],
+                    }));
+
+                    if (!value) {
+                      return;
+                    }
+
+                    await loadManagedTicketStatusesFromBoard(value);
+                  }}
                   options={[
                     { value: '', label: boards.length > 0 ? 'Select a source board' : 'No source boards available' },
                     ...boards
@@ -1115,11 +1169,19 @@ const BoardsSettings: React.FC = () => {
               <div className="space-y-3 rounded-md border border-gray-200 p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>{editingBoard ? 'Board ticket statuses' : 'Inline ticket statuses'}</Label>
+                    <Label>
+                      {editingBoard
+                        ? 'Board ticket statuses'
+                        : formData.status_seed_mode === 'copy_existing'
+                          ? 'Copied ticket statuses'
+                          : 'Inline ticket statuses'}
+                    </Label>
                     <p className="text-xs text-muted-foreground mt-1">
                       {editingBoard
                         ? 'Edit the ticket lifecycle for this board only.'
-                        : 'Author the board&apos;s initial ticket lifecycle before saving.'}
+                        : formData.status_seed_mode === 'copy_existing'
+                          ? 'Review and adjust the copied lifecycle before saving the new board.'
+                          : 'Author the board&apos;s initial ticket lifecycle before saving.'}
                     </p>
                   </div>
                   <Button id="add-inline-ticket-status-button" type="button" variant="outline" onClick={addManagedTicketStatus}>

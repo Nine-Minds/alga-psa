@@ -1,0 +1,259 @@
+{
+  "common": {
+    "actions": {
+      "save": "Einstellungen speichern",
+      "saving": "Wird gespeichert...",
+      "reset": "Zurücksetzen",
+      "refresh": "Aktualisieren",
+      "close": "Schließen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleting": "Wird gelöscht…",
+      "verify": "Überprüfen"
+    },
+    "states": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "loading": "Wird geladen..."
+    }
+  },
+  "telemetry": {
+    "loading": {
+      "title": "Telemetrieeinstellungen der Organisation",
+      "description": "Wird geladen..."
+    },
+    "empty": {
+      "title": "Telemetrieeinstellungen der Organisation",
+      "description": "Fehler beim Laden der Einstellungen",
+      "body": "Telemetrieeinstellungen konnten nicht geladen werden"
+    },
+    "page": {
+      "title": "Telemetrie und Analysen der Organisation",
+      "description": "Konfigurieren Sie die Telemetrieeinstellungen für Ihre gesamte Organisation. Telemetrie ist standardmäßig aktiviert, um die Plattform zu verbessern, aber Benutzer können sich individuell abmelden, sofern Sie diese Option nicht deaktivieren."
+    },
+    "toggles": {
+      "enableTelemetry": {
+        "title": "Telemetrie aktivieren",
+        "description": "Das Erfassen anonymer Nutzungsdaten zur Verbesserung der Plattform erlauben (standardmäßig aktiviert)"
+      },
+      "allowUserOptOut": {
+        "title": "Benutzerabmeldung zulassen",
+        "description": "Einzelnen Benutzern erlauben, die Telemetrieerfassung abzulehnen"
+      }
+    },
+    "alerts": {
+      "enabled": "✓ Telemetrie aktiviert. Alle Kategorien sind für neue Benutzer standardmäßig aktiviert, sie können sich jedoch bei Bedarf individuell abmelden.",
+      "centralizedControl": "Zentrale Steuerung: Benutzer können sich nicht individuell abmelden. Stellen Sie die Einhaltung lokaler Datenschutzbestimmungen sicher."
+    },
+    "anonymization": {
+      "title": "Grad der Datenanonymisierung",
+      "description": "Wählen Sie aus, wie stark Daten vor der Erfassung anonymisiert werden sollen",
+      "options": {
+        "none": {
+          "title": "Keine Anonymisierung",
+          "description": "Daten unverändert erfassen (nicht empfohlen)"
+        },
+        "partial": {
+          "title": "Teilweise Anonymisierung",
+          "description": "PII entfernen, Korrelations-IDs beibehalten"
+        },
+        "full": {
+          "title": "Vollständige Anonymisierung",
+          "description": "Maximale Privatsphäre, minimale Korrelation"
+        }
+      }
+    },
+    "compliance": {
+      "title": "Compliance-Hinweise"
+    },
+    "privacy": {
+      "collectTitle": "Was wir erfassen",
+      "collectItems": {
+        "errors": "• Fehlerinformationen (keine sensiblen Daten)",
+        "performance": "• Leistungsmetriken (Seitenladezeiten, API-Antwortzeiten)",
+        "usage": "• Nutzungsmuster von Funktionen (welche Funktionen verwendet werden)",
+        "system": "• Systemmetriken (zur Infrastruktur-Optimierung)"
+      },
+      "excludeTitle": "Was wir NICHT erfassen",
+      "excludeItems": {
+        "personalInfo": "• Persönliche Informationen (Namen, E-Mails, Adressen)",
+        "clientData": "• Kundendaten oder Geschäftsinformationen",
+        "passwords": "• Passwörter oder Authentifizierungs-Token",
+        "files": "• Datei- oder Dokumentinhalte"
+      }
+    },
+    "footer": {
+      "lastUpdated": "Zuletzt aktualisiert: {{value}}",
+      "updatedBy": " von {{user}}"
+    },
+    "errors": {
+      "loadTenantTelemetrySettings": "Telemetrieeinstellungen der Organisation konnten nicht geladen werden",
+      "loadSettings": "Einstellungen konnten nicht geladen werden",
+      "saveTelemetrySettings": "Telemetrieeinstellungen konnten nicht gespeichert werden",
+      "saveSettings": "Einstellungen konnten nicht gespeichert werden"
+    }
+  },
+  "email": {
+    "loading": "E-Mail-Einstellungen werden geladen...",
+    "error": "Fehler: {{error}}",
+    "tabs": {
+      "inbound": "Eingehende E-Mail",
+      "outbound": "Ausgehende E-Mail"
+    },
+    "descriptions": {
+      "outbound": "Konfigurieren Sie SMTP- oder API-Einstellungen zum Senden von E-Mails aus Ihrer Anwendung",
+      "inbound": "Konfigurieren Sie E-Mail-Anbieter, um E-Mails als Tickets zu empfangen und zu verarbeiten"
+    },
+    "providerConfig": {
+      "title": "E-Mail-Anbieterkonfiguration",
+      "providerLabel": "E-Mail-Anbieter",
+      "options": {
+        "smtp": "SMTP (traditioneller E-Mail-Server)",
+        "resend": "Resend (moderner API-Dienst)"
+      },
+      "placeholder": "E-Mail-Anbieter auswählen",
+      "descriptions": {
+        "smtp": "Konfigurieren Sie die klassischen SMTP-E-Mail-Servereinstellungen",
+        "resend": "Konfigurieren Sie die Resend-API für moderne E-Mail-Zustellung"
+      },
+      "status": {
+        "provider": "{{provider}}-Anbieter"
+      }
+    },
+    "smtp": {
+      "host": {
+        "label": "SMTP-Host",
+        "placeholder": "smtp.example.com"
+      },
+      "port": {
+        "label": "Port",
+        "placeholder": "587"
+      },
+      "username": {
+        "label": "Benutzername",
+        "placeholder": "ihre-email@example.com"
+      },
+      "password": {
+        "label": "Passwort",
+        "placeholder": "Passwort eingeben"
+      },
+      "fromAddress": {
+        "label": "Absenderadresse",
+        "placeholder": "noreply@example.com"
+      }
+    },
+    "resend": {
+      "apiKey": {
+        "label": "Resend-API-Schlüssel",
+        "placeholder": "re_xxxxxxxxxxxxxxxxxx",
+        "helpPrefix": "Ihren API-Schlüssel erhalten Sie unter"
+      },
+      "fromAddress": {
+        "label": "Absenderadresse",
+        "placeholder": "noreply@yourdomain.com",
+        "help": "Muss von einer verifizierten Domain stammen. Verwenden Sie den Reiter Domains, um benutzerdefinierte Domains hinzuzufügen."
+      }
+    },
+    "domains": {
+      "verified": "Verifiziert",
+      "failed": "Fehlgeschlagen",
+      "pending": "Ausstehend",
+      "requiredDnsRecords": "Erforderliche DNS-Einträge:"
+    },
+    "general": {
+      "title": "Allgemeine Einstellungen",
+      "trackingEnabled": "E-Mail-Tracking aktivieren",
+      "dailyLimit": "Tägliches E-Mail-Limit"
+    },
+    "errors": {
+      "loadEmailSettings": "E-Mail-Einstellungen konnten nicht geladen werden",
+      "saveSettings": "Einstellungen konnten nicht gespeichert werden",
+      "addDomain": "Domain konnte nicht hinzugefügt werden",
+      "verifyDomain": "Domain konnte nicht überprüft werden"
+    }
+  },
+  "microsoft365": {
+    "title": {
+      "microsoft": "Microsoft 365-Diagnose",
+      "default": "Diagnose"
+    },
+    "description": "Führt eine Live-Graph-Prüfung aus (einschließlich Erstellen und Löschen von Abonnements), um Postfach-, Ordner- und Berechtigungsprobleme zu diagnostizieren.",
+    "note": {
+      "label": "Hinweis:",
+      "body": "Die Diagnose erstellt ein temporäres Microsoft-Graph-Abonnement und löscht es anschließend wieder. Falls das Löschen fehlschlägt, müssen Sie das Abonnement möglicherweise manuell in Microsoft 365 entfernen."
+    },
+    "labels": {
+      "provider": "Anbieter:",
+      "mailbox": "Postfach:",
+      "overall": "Gesamt:",
+      "resource": "Ressource: {{resource}}",
+      "recommendations": "Empfehlungen",
+      "error": "Fehler"
+    },
+    "actions": {
+      "copySupportBundle": "Supportpaket kopieren",
+      "copied": "Kopiert"
+    },
+    "states": {
+      "running": "Diagnose wird ausgeführt...",
+      "diagnosticsFailed": "Diagnose fehlgeschlagen"
+    },
+    "statuses": {
+      "pass": "Bestanden",
+      "warn": "Warnung",
+      "fail": "Fehlgeschlagen",
+      "skip": "Übersprungen"
+    }
+  },
+  "inboundDefaults": {
+    "loading": "Ticket-Standardwerte werden geladen...",
+    "header": {
+      "title": "Standardwerte für eingehende Tickets",
+      "description": "Konfigurieren Sie Standardwerte für Tickets, die durch E-Mail-Verarbeitung erstellt werden"
+    },
+    "actions": {
+      "addDefaults": "Standardwerte hinzufügen"
+    },
+    "form": {
+      "editTitle": "Ticket-Standardwerte bearbeiten",
+      "createTitle": "Ticket-Standardwerte erstellen",
+      "description": "Konfigurieren Sie die Standardwerte, die auf Tickets angewendet werden, die durch E-Mail-Verarbeitung erstellt werden"
+    },
+    "empty": {
+      "title": "Keine Ticket-Standardwerte konfiguriert",
+      "description": "Erstellen Sie Ihre erste Konfiguration, um Standardwerte für per E-Mail erzeugte Tickets festzulegen"
+    },
+    "badges": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "fields": {
+      "board": "Board:",
+      "status": "Status:",
+      "priority": "Priorität:",
+      "enteredBy": "Erfasst von:"
+    },
+    "fallbacks": {
+      "notSet": "Nicht festgelegt",
+      "system": "System"
+    },
+    "menu": {
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleting": "Wird gelöscht…"
+    },
+    "help": {
+      "title": "So funktioniert es",
+      "items": {
+        "providerReference": "• Jeder E-Mail-Anbieter kann auf eine Ticket-Standardwertkonfiguration verweisen",
+        "requiredValues": "• Wenn eine E-Mail ein Ticket erstellt, liefern diese Standardwerte die erforderlichen Feldwerte",
+        "systemCreator": "• Systemgenerierte Tickets zeigen \"System\" als Ersteller an, wenn entered_by null ist",
+        "scenarios": "• Sie können unterschiedliche Standardwerte für verschiedene E-Mail-Szenarien erstellen (Support, Abrechnung usw.)"
+      }
+    },
+    "errors": {
+      "load": "Ticket-Standardwerte konnten nicht geladen werden",
+      "delete": "Ticket-Standardwerte konnten nicht gelöscht werden"
+    }
+  }
+}

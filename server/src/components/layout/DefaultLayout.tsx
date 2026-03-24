@@ -22,6 +22,7 @@ import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets';
 import { MspTicketCrossFeatureProvider } from '@alga-psa/msp-composition/tickets';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents';
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
+import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -415,6 +416,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       <MspTicketCrossFeatureProvider>
       <MspDocumentsCrossFeatureProvider>
       <MspSchedulingCrossFeatureProvider>
+      {/* <MspActivityCrossFeatureProvider> */}
       <MspQuickAddClientProvider>
         <div className="flex h-screen overflow-hidden bg-gray-100">
           <SidebarWithFeatureFlags
@@ -512,6 +514,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
         />
         <DrawerOutlet />
       </MspQuickAddClientProvider>
+      {/* </MspActivityCrossFeatureProvider> */}
       </MspSchedulingCrossFeatureProvider>
       </MspDocumentsCrossFeatureProvider>
       </MspTicketCrossFeatureProvider>

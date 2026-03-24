@@ -1,5 +1,6 @@
 'use client'
 import React, { useMemo } from 'react';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { WorkItemWithStatus, WorkItemType } from '@alga-psa/types';
 
 interface MetaLinesProps {
@@ -19,11 +20,15 @@ const MetaLines: React.FC<MetaLinesProps> = ({
   additionalUserIds,
   workItemType
 }) => {
+  const { t } = useTranslation('msp/time-entry');
+  const { formatDate } = useFormatters();
 
   const assignedDisplay = useMemo(() => {
     // For interactions, just show the assigned user name as before
     if (workItemType === 'interaction') {
-      return assignedToName ? assignedToName : (assignedToName === undefined ? null : 'Unassigned');
+      return assignedToName
+        ? assignedToName
+        : (assignedToName === undefined ? null : t('common.fallbacks.unassigned', { defaultValue: 'Unassigned' }));
     }
 
     // For tickets and project tasks, calculate total unique assigned users
@@ -38,12 +43,19 @@ const MetaLines: React.FC<MetaLinesProps> = ({
 
     // No assigned name and no users
     if (!assignedToName && totalUsers === 0) {
-      return assignedToName === undefined ? null : 'Unassigned';
+      return assignedToName === undefined
+        ? null
+        : t('common.fallbacks.unassigned', { defaultValue: 'Unassigned' });
     }
 
     // No assigned name but have users
     if (!assignedToName && totalUsers > 0) {
-      return totalUsers === 1 ? '1 user assigned' : `${totalUsers} users assigned`;
+      return totalUsers === 1
+        ? t('workItemList.assignment.oneUser', { defaultValue: '1 user assigned' })
+        : t('workItemList.assignment.multipleUsers', {
+            defaultValue: '{{count}} users assigned',
+            count: totalUsers
+          });
     }
 
     // Have assigned name
@@ -53,13 +65,21 @@ const MetaLines: React.FC<MetaLinesProps> = ({
       }
       // Show primary user plus count of additional users
       const additionalUsersCount = totalUsers - 1;
-      return `${assignedToName}, +${additionalUsersCount} user${
-        additionalUsersCount === 1 ? '' : 's'
-      }`;
+      return additionalUsersCount === 1
+        ? t('workItemList.assignment.additionalUsers', {
+            defaultValue: '{{name}}, +{{count}} user',
+            name: assignedToName,
+            count: additionalUsersCount
+          })
+        : t('workItemList.assignment.additionalUsersOther', {
+            defaultValue: '{{name}}, +{{count}} users',
+            name: assignedToName,
+            count: additionalUsersCount
+          });
     }
 
     return null;
-  }, [assignedToName, assignedUserIds, additionalUserIds, workItemType]);
+  }, [assignedToName, assignedUserIds, additionalUserIds, t, workItemType]);
 
   return (
     <>
@@ -70,12 +90,20 @@ const MetaLines: React.FC<MetaLinesProps> = ({
       )}
       {assignedDisplay !== null && (
         <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-          Assigned to: {assignedDisplay}
+          {t('workItemList.meta.assignedTo', {
+            defaultValue: 'Assigned to: {{value}}',
+            value: assignedDisplay
+          })}
         </div>
       )}
       {dueDate !== undefined && (
         <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-          Due Date: {dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}
+          {t('workItemList.meta.dueDate', {
+            defaultValue: 'Due Date: {{value}}',
+            value: dueDate
+              ? formatDate(new Date(dueDate), { dateStyle: 'medium' })
+              : t('common.fallbacks.noDueDate', { defaultValue: 'No due date' })
+          })}
         </div>
       )}
     </>
@@ -103,6 +131,8 @@ export function WorkItemList({
   onPageChange,
   onSelect
 }: WorkItemListProps) {
+  const { t } = useTranslation('msp/time-entry');
+  const { formatDate } = useFormatters();
 
   const renderItemContent = (item: WorkItemWithStatus) => {
     if (item.type === 'ticket') {
@@ -110,7 +140,7 @@ export function WorkItemList({
       return (
         <>
           <div className="font-medium text-[rgb(var(--color-text-900))] text-lg mb-1">
-            {item.ticket_number} - {item.title || 'Untitled'}
+            {item.ticket_number} - {item.title || t('common.fallbacks.untitled', { defaultValue: 'Untitled' })}
           </div>
           <MetaLines
             clientName={item.client_name}
@@ -122,18 +152,20 @@ export function WorkItemList({
           />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))]">
-              Ticket
+              {t('common.types.ticket', { defaultValue: 'Ticket' })}
             </span>
             {item.is_billable && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-800))]">
-                Billable
+                {t('common.types.billable', { defaultValue: 'Billable' })}
               </span>
             )}
           </div>
           {isBundledTicket && (
             <div className="text-sm text-[rgb(var(--color-text-600))] mt-2 italic">
-              Bundled ticket — log time on the master ticket
-              {item.master_ticket_number ? ` #${item.master_ticket_number}` : ''}.
+              {t('workItemList.bundledTicket', {
+                defaultValue: 'Bundled ticket — log time on the master ticket{{suffix}}.',
+                suffix: item.master_ticket_number ? ` #${item.master_ticket_number}` : ''
+              })}
             </div>
           )}
         </>
@@ -157,11 +189,11 @@ export function WorkItemList({
           />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))]">
-              Project Task
+              {t('common.types.projectTask', { defaultValue: 'Project Task' })}
             </span>
             {item.is_billable && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-800))]">
-                Billable
+                {t('common.types.billable', { defaultValue: 'Billable' })}
               </span>
             )}
           </div>
@@ -175,7 +207,16 @@ export function WorkItemList({
           </div>
           {item.scheduled_start && item.scheduled_end && (
             <div className="text-sm text-[rgb(var(--color-text-600))]">
-              Scheduled end: {new Date(item.scheduled_end).toLocaleString('en-US', {month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
+              {t('workItemList.meta.scheduledEnd', {
+                defaultValue: 'Scheduled end: {{value}}',
+                value: formatDate(new Date(item.scheduled_end), {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              })}
             </div>
           )}
           <MetaLines
@@ -184,11 +225,11 @@ export function WorkItemList({
           />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-border-200))] text-[rgb(var(--color-border-900))]">
-              Ad-hoc Entry
+              {t('common.types.adHocEntry', { defaultValue: 'Ad-hoc Entry' })}
             </span>
             {item.is_billable && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-800))]">
-                Billable
+                {t('common.types.billable', { defaultValue: 'Billable' })}
               </span>
             )}
           </div>
@@ -201,11 +242,20 @@ export function WorkItemList({
             {item.title || item.name}
           </div>
           <div className="text-sm text-[rgb(var(--color-text-600))]">
-            {item.interaction_type && `${item.interaction_type} • `}{item.client_name}
+            {item.interaction_type
+              ? t('workItemList.interactionType', {
+                  defaultValue: '{{type}} • {{client}}',
+                  type: item.interaction_type,
+                  client: item.client_name
+                })
+              : item.client_name}
           </div>
           {item.contact_name && (
             <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-              Contact: {item.contact_name}
+              {t('workItemList.meta.contact', {
+                defaultValue: 'Contact: {{value}}',
+                value: item.contact_name
+              })}
             </div>
           )}
           <MetaLines
@@ -214,11 +264,11 @@ export function WorkItemList({
           />
           <div className="flex items-center gap-2 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-300">
-              Interaction
+              {t('common.types.interaction', { defaultValue: 'Interaction' })}
             </span>
             {item.is_billable && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-800))]">
-                Billable
+                {t('common.types.billable', { defaultValue: 'Billable' })}
               </span>
             )}
           </div>
@@ -268,10 +318,15 @@ export function WorkItemList({
                     className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     id="previous-page-btn"
                   >
-                    Previous
+                    {t('workItemList.pagination.previous', { defaultValue: 'Previous' })}
                   </button>
                   <span className="text-sm text-[rgb(var(--color-text-700))]">
-                    Page {currentPage} of {Math.max(1, totalPages)} ({total} total records)
+                    {t('workItemList.pagination.pageInfo', {
+                      defaultValue: 'Page {{current}} of {{total}} ({{records}} total records)',
+                      current: currentPage,
+                      total: Math.max(1, totalPages),
+                      records: total
+                    })}
                   </span>
                   <button
                     onClick={() => onPageChange(currentPage + 1)}
@@ -279,14 +334,16 @@ export function WorkItemList({
                     className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     id="next-page-btn"
                   >
-                    Next
+                    {t('workItemList.pagination.next', { defaultValue: 'Next' })}
                   </button>
                 </div>
               </div>
             </div>
           ) : (
             <div className="p-4 text-center text-[rgb(var(--color-text-500))]">
-              {isSearching ? 'Searching...' : 'No work items found'}
+              {isSearching
+                ? t('workItemPicker.empty.searching', { defaultValue: 'Searching...' })
+                : t('workItemPicker.empty.noWorkItems', { defaultValue: 'No work items found' })}
             </div>
           )}
         </div>

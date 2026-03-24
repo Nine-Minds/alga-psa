@@ -28,6 +28,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 enableMapSet();
 
@@ -51,6 +52,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 }) => {
   const { data: session } = useSession();
   const currentUser = session?.user;
+  const { t } = useTranslation('msp/dispatch');
 
   const [selectedPriority, setSelectedPriority] = useState('All');
   const [users, setUsers] = useState<Omit<IUser, 'tenant'>[]>([]); // Changed type here
@@ -145,9 +147,9 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       setTotalItems(result.total);
     } catch (err) {
       console.error('Error searching work items:', err);
-      setError('Failed to search work items');
+      setError(t('dashboard.errors.searchWorkItems', { defaultValue: 'Failed to search work items' }));
     }
-  }, [date, filterWorkItemType, filterWorkItemId, currentUser, canEdit, canView]);
+  }, [date, filterWorkItemType, filterWorkItemId, currentUser, canEdit, canView, t]);
 
   // Fetch status options on mount
   useEffect(() => {
@@ -156,16 +158,22 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         const options = await getWorkItemStatusOptions(['ticket']);
         setStatusFilterOptions(options);
       } catch (err) {
-        handleError(err, 'Failed to load status filter options.');
+        handleError(err, t('dashboard.errors.loadStatusFilterOptions', { defaultValue: 'Failed to load status filter options.' }));
         // Set default basic options as fallback
         setStatusFilterOptions([
-          { value: 'all_open', label: 'All Open' },
-          { value: 'all_closed', label: 'All Closed' },
+          {
+            value: 'all_open',
+            label: t('dashboard.filters.allOpen', { defaultValue: 'All Open' }),
+          },
+          {
+            value: 'all_closed',
+            label: t('dashboard.filters.allClosed', { defaultValue: 'All Closed' }),
+          },
         ]);
       }
     };
     fetchStatusOptions();
-  }, []);
+  }, [t]);
 
 
   const refreshAllData = useCallback(async () => {
@@ -178,13 +186,14 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       if (scheduleResult.success && scheduleResult.entries) {
         setEvents(scheduleResult.entries);
       } else {
-         setError('Failed to refresh schedule entries');
-         toast.error('Failed to refresh schedule entries');
+         const message = t('dashboard.errors.refreshScheduleEntries', { defaultValue: 'Failed to refresh schedule entries' });
+         setError(message);
+         toast.error(message);
       }
     } catch (err) {
-      handleError(err, 'Failed to refresh data');
+      handleError(err, t('dashboard.errors.refreshData', { defaultValue: 'Failed to refresh data' }));
     }
-  }, [performSearch, searchQuery, date, viewMode]);
+  }, [performSearch, searchQuery, date, viewMode, t]);
 
 
   const debouncedSearch = useCallback((query: string) => {
@@ -240,7 +249,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         }
       } catch (err) {
         console.error('Error fetching permissions:', err);
-        setPermissionError('Failed to load permissions.');
+        setPermissionError(t('dashboard.errors.loadPermissions', { defaultValue: 'Failed to load permissions.' }));
         setCanView(false);
         setCanEdit(false);
       } finally {
@@ -248,7 +257,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       }
     };
     fetchPermissionsAndAdminStatus();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (isLoadingPermissions || !canView) return;
@@ -269,18 +278,18 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         if (scheduleResult.success && scheduleResult.entries) {
           setEvents(scheduleResult.entries);
         } else {
-          setError('Failed to fetch schedule entries');
+          setError(t('dashboard.errors.fetchScheduleEntries', { defaultValue: 'Failed to fetch schedule entries' }));
         }
         await performSearch(searchQuery);
 
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Failed to fetch data');
+        setError(t('dashboard.errors.fetchData', { defaultValue: 'Failed to fetch data' }));
       }
     };
 
     fetchInitialData();
-  }, [date, viewMode, isLoadingPermissions, canView, canEdit, performSearch, searchQuery]);
+  }, [date, viewMode, isLoadingPermissions, canView, canEdit, performSearch, searchQuery, t]);
 
 
   useEffect(() => {
@@ -308,20 +317,22 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         });
 
         if (!result.success) {
-          setError('Failed to update schedule');
+          setError(t('dashboard.errors.updateSchedule', { defaultValue: 'Failed to update schedule' }));
         }
       } catch (err) {
         console.error('Error updating schedule:', err);
-        setError('Failed to update schedule');
+        setError(t('dashboard.errors.updateSchedule', { defaultValue: 'Failed to update schedule' }));
       }
     }, 500);
-  }, []);
+  }, [t]);
 
   const handleDrop = useCallback(async (dropEvent: DropEvent) => {
     const canPerformDrop = canEdit || (currentUser && dropEvent.techId === currentUser.id);
 
     if (!canPerformDrop) {
-      toast.error("You don't have permission to schedule for this technician.");
+      toast.error(t('dashboard.messages.permissionDeniedSchedule', {
+        defaultValue: "You don't have permission to schedule for this technician.",
+      }));
       setHighlightedSlots(null);
       return;
     }
@@ -349,11 +360,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
             setEvents((prevEvents) => [...prevEvents, result.entry]);
             setError(null);
           } else {
-            setError('Failed to create schedule entry');
+            setError(t('dashboard.errors.createScheduleEntry', { defaultValue: 'Failed to create schedule entry' }));
           }
         } catch (err) {
           console.error('Error creating schedule entry:', err);
-          setError('Failed to create schedule entry');
+          setError(t('dashboard.errors.createScheduleEntry', { defaultValue: 'Failed to create schedule entry' }));
         }
       }
     } else {
@@ -374,7 +385,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         await debouncedSaveSchedule(dropEvent.eventId, dropEvent.techId, dropEvent.startTime, endTime);
       }
     }
-  }, [workItems, events, debouncedSaveSchedule]);
+  }, [workItems, events, debouncedSaveSchedule, canEdit, currentUser, t]);
 
   const { openDrawer, closeDrawer } = useDrawer();
   
@@ -481,7 +492,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         setEvents((prevEvents) => prevEvents.filter(event => event.entry_id !== eventId));
         setError(null);
       } else {
-        const message = result.error || result.message || 'Failed to delete schedule entry';
+        const message = result.error || result.message || t('dashboard.errors.deleteScheduleEntry', { defaultValue: 'Failed to delete schedule entry' });
         if (!result.isPrivateError) {
           setError(message);
         }
@@ -491,17 +502,17 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       console.error('Error deleting schedule entry:', err);
       const fallback = {
         success: false as const,
-        error: 'Failed to delete schedule entry',
+        error: t('dashboard.errors.deleteScheduleEntry', { defaultValue: 'Failed to delete schedule entry' }),
         canDelete: false as const,
         code: 'VALIDATION_FAILED' as const,
-        message: 'Failed to delete schedule entry',
+        message: t('dashboard.errors.deleteScheduleEntry', { defaultValue: 'Failed to delete schedule entry' }),
         dependencies: [] as DeletionDependency[],
         alternatives: [] as DeletionAlternative[]
       };
       setError(fallback.error);
       return fallback;
     }
-  }, []);
+  }, [t]);
 
   const handleViewChange = (newViewMode: 'day' | 'week') => {
     setViewMode(newViewMode);
@@ -577,6 +588,30 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
+  const translatedStatusFilterOptions = useMemo(() => {
+    return statusFilterOptions.map((option) => {
+      if (option.value === 'all_open') {
+        return {
+          ...option,
+          label: t('dashboard.filters.allOpen', {
+            defaultValue: option.label || 'All Open',
+          }),
+        };
+      }
+
+      if (option.value === 'all_closed') {
+        return {
+          ...option,
+          label: t('dashboard.filters.allClosed', {
+            defaultValue: option.label || 'All Closed',
+          }),
+        };
+      }
+
+      return option;
+    });
+  }, [statusFilterOptions, t]);
+
   const displayedTechnicians = useMemo(() => {
     if (isLoadingPermissions || !currentUser) {
       return [];
@@ -638,10 +673,10 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         onTaskUpdate={async (updatedTask) => {
           try {
             await refreshAllData();
-            toast.success('Task updated successfully');
+            toast.success(t('dashboard.success.taskUpdated', { defaultValue: 'Task updated successfully' }));
             closeDrawer();
           } catch (err) {
-            handleError(err, 'Failed to update task');
+            handleError(err, t('dashboard.errors.updateTask', { defaultValue: 'Failed to update task' }));
           }
         }}
         onScheduleUpdate={async (entryData) => {
@@ -662,10 +697,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                 setEvents(prevEvents => prevEvents.map(ev =>
                   ev.entry_id === existingEvent.entry_id ? updatedEntry : ev
                 ));
-                toast.success('Schedule entry updated successfully');
+                toast.success(t('dashboard.success.scheduleEntryUpdated', { defaultValue: 'Schedule entry updated successfully' }));
               } else {
-                setError('Failed to update schedule entry');
-                toast.error('Failed to update schedule entry');
+                const message = t('dashboard.errors.updateScheduleEntry', { defaultValue: 'Failed to update schedule entry' });
+                setError(message);
+                toast.error(message);
               }
             } else if (item.type !== 'ad_hoc') {
               // Create new entry
@@ -682,21 +718,22 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
               if (createResult.success && createResult.entry) {
                 const newEntry = createResult.entry as Omit<IScheduleEntry, 'tenant'>;
                 setEvents(prevEvents => [...prevEvents, newEntry]);
-                toast.success('Schedule entry created successfully');
+                toast.success(t('dashboard.success.scheduleEntryCreated', { defaultValue: 'Schedule entry created successfully' }));
               } else {
-                setError('Failed to create schedule entry');
-                toast.error('Failed to create schedule entry');
+                const message = t('dashboard.errors.createScheduleEntry', { defaultValue: 'Failed to create schedule entry' });
+                setError(message);
+                toast.error(message);
               }
             }
           } catch (err) {
-            handleError(err, 'Failed to save schedule entry');
-            setError('Failed to save schedule entry');
+            handleError(err, t('dashboard.errors.saveScheduleEntry', { defaultValue: 'Failed to save schedule entry' }));
+            setError(t('dashboard.errors.saveScheduleEntry', { defaultValue: 'Failed to save schedule entry' }));
           }
           closeDrawer();
         }}
       />
     );
-  }, [openDrawer, closeDrawer, refreshAllData, events, updateScheduleEntry, addScheduleEntry]);
+  }, [openDrawer, closeDrawer, refreshAllData, events, updateScheduleEntry, addScheduleEntry, t]);
 
   const handleEventClick = useCallback(async (event: Omit<IScheduleEntry, 'tenant'>) => {
     try {
@@ -711,7 +748,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         // Create a modified version of the event with "Busy" title for non-owners
         const privateEvent = {
           ...event,
-          title: "Busy",
+          title: t('events.fallbacks.busy', { defaultValue: 'Busy' }),
           notes: ""
         };
         
@@ -748,7 +785,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       const workItemDetails = await getWorkItemById(workItemId, event.work_item_type);
 
       if (!workItemDetails) {
-        toast.error('Could not load work item details.');
+        toast.error(t('dashboard.messages.couldNotLoadWorkItemDetails', { defaultValue: 'Could not load work item details.' }));
         return;
       }
 
@@ -762,10 +799,10 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           onTaskUpdate={async (updatedTask) => {
             try {
               await refreshAllData();
-              toast.success('Task updated successfully');
+              toast.success(t('dashboard.success.taskUpdated', { defaultValue: 'Task updated successfully' }));
               closeDrawer();
             } catch (err) {
-              handleError(err, 'Failed to update task');
+              handleError(err, t('dashboard.errors.updateTask', { defaultValue: 'Failed to update task' }));
             }
           }}
           onScheduleUpdate={async (entryData) => {
@@ -789,23 +826,24 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                 setEvents(prevEvents => prevEvents.map(e =>
                   e.entry_id === event.entry_id ? updatedEntry : e
                 ));
-                toast.success('Schedule entry updated successfully');
+                toast.success(t('dashboard.success.scheduleEntryUpdated', { defaultValue: 'Schedule entry updated successfully' }));
               } else {
-                setError('Failed to update schedule entry');
-                toast.error('Failed to update schedule entry');
+                const message = t('dashboard.errors.updateScheduleEntry', { defaultValue: 'Failed to update schedule entry' });
+                setError(message);
+                toast.error(message);
               }
             } catch (err) {
-              handleError(err, 'Failed to save schedule entry');
-              setError('Failed to save schedule entry');
+              handleError(err, t('dashboard.errors.saveScheduleEntry', { defaultValue: 'Failed to save schedule entry' }));
+              setError(t('dashboard.errors.saveScheduleEntry', { defaultValue: 'Failed to save schedule entry' }));
             }
             closeDrawer();
           }}
         />
       );
     } catch (err) {
-      handleError(err, 'Failed to open work item details.');
+      handleError(err, t('dashboard.errors.openWorkItemDetails', { defaultValue: 'Failed to open work item details.' }));
     }
-  }, [openDrawer, closeDrawer, refreshAllData, getWorkItemById, updateScheduleEntry]);
+  }, [openDrawer, closeDrawer, refreshAllData, getWorkItemById, updateScheduleEntry, session?.user?.id, t]);
 
 
   if (isLoadingPermissions || isViewModeLoading) {
@@ -821,7 +859,9 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       <div className="p-4">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{permissionError || 'An unknown error occurred.'}</AlertDescription>
+          <AlertDescription>
+            {permissionError || t('dashboard.messages.unknownError', { defaultValue: 'An unknown error occurred.' })}
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -832,7 +872,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       <div className="p-4">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Access Denied: You do not have permission to view the Technician Dispatch dashboard.</AlertDescription>
+          <AlertDescription>
+            {t('dashboard.messages.accessDenied', {
+              defaultValue: 'Access Denied: You do not have permission to view the Technician Dispatch dashboard.',
+            })}
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -843,7 +887,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       {filterWorkItemId && (
         <div className="p-2 mx-4 mt-2 rounded border bg-[rgb(var(--color-primary-50))] border-[rgb(var(--color-primary-200))]">
           <p className="text-[rgb(var(--color-primary-800))] font-medium">
-            Showing filtered work items
+            {t('page.filteredWorkItems', { defaultValue: 'Showing filtered work items' })}
           </p>
         </div>
       )}
@@ -857,7 +901,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           selectedStatusFilter={selectedStatusFilter}
           filterUnscheduled={filterUnscheduled}
           sortOrder={sortOrder}
-          statusFilterOptions={statusFilterOptions}
+          statusFilterOptions={translatedStatusFilterOptions}
           onSearchChange={(query) => {
             setSearchQuery(query);
             setCurrentPage(1);

@@ -10,6 +10,7 @@ import { View, NavigateAction } from 'react-big-calendar';
 import { withDragAndDropProps } from 'react-big-calendar/lib/addons/dragAndDrop';
 import { XCircle } from 'lucide-react';
 import moment from 'moment';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ScheduleViewPanelProps {
   viewMode: 'day' | 'week';
@@ -58,6 +59,11 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
   showInactiveUsers = false,
   onShowInactiveUsersChange,
 }) => {
+  const { t } = useTranslation('msp/dispatch');
+  const { formatDate } = useFormatters();
+  const currentModeLabel = viewMode === 'day'
+    ? t('schedule.viewDay', { defaultValue: 'Day' })
+    : t('schedule.viewWeek', { defaultValue: 'Week' });
 
   const handleNavigate = (newDate: Date, view: string, action: string) => {
     // We only care about the action ('PREV', 'NEXT', 'TODAY', 'DATE') for the parent
@@ -142,11 +148,13 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
       {/* Header Section */}
       <div className="flex flex-col mb-4 gap-4 pb-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-[rgb(var(--color-text-900))]">Technician Dispatch</h2>
+          <h2 className="text-xl font-bold text-[rgb(var(--color-text-900))]">
+            {t('page.title', { defaultValue: 'Technician Dispatch' })}
+          </h2>
           <div className="flex items-center gap-4">
             {/* Show Inactive Users Switch */}
             <SwitchWithLabel
-              label="Show Inactive Users"
+              label={t('schedule.showInactive', { defaultValue: 'Show Inactive Users' })}
               checked={showInactiveUsers}
               onCheckedChange={onShowInactiveUsersChange || (() => {})}
             />
@@ -161,10 +169,13 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => onNavigate('prev')}
-                aria-label={`Previous ${viewMode}`}
+                aria-label={t('schedule.prevAria', {
+                  defaultValue: 'Previous {{mode}}',
+                  mode: currentModeLabel,
+                })}
                 className="px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
               >
-                {'< Prev'}
+                {t('schedule.prev', { defaultValue: '< Prev' })}
               </Button>
               <Button
                 id="dispatch-today-button"
@@ -173,17 +184,20 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
                 onClick={() => onNavigate('today')}
                 className="px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
               >
-                Today
+                {t('schedule.today', { defaultValue: 'Today' })}
               </Button>
               <Button
                 id="dispatch-next-button"
                 variant="ghost"
                 size="sm"
                 onClick={() => onNavigate('next')}
-                aria-label={`Next ${viewMode}`}
+                aria-label={t('schedule.nextAria', {
+                  defaultValue: 'Next {{mode}}',
+                  mode: currentModeLabel,
+                })}
                 className="px-3 py-1 rounded-none text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
               >
-                {'Next >'}
+                {t('schedule.next', { defaultValue: 'Next >' })}
               </Button>
             </div>
           </div>
@@ -191,7 +205,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
           {/* Date Display - Center */}
           <div className="text-[rgb(var(--color-text-800))] font-medium text-center min-w-[250px] flex-grow flex items-center justify-center">
             <span>
-              {date.toLocaleDateString('en-US', {
+              {formatDate(date, {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
@@ -208,7 +222,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
               onClick={() => onViewChange('day')}
               className={`px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] ${viewMode === 'day' ? 'text-white hover:bg-[rgb(var(--color-primary-600))]' : 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]'}`}
             >
-              Day
+              {t('schedule.viewDay', { defaultValue: 'Day' })}
             </Button>
             <Button
               id="dispatch-week-view-button"
@@ -217,7 +231,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
               onClick={() => onViewChange('week')}
               className={`px-3 py-1 rounded-none ${viewMode === 'week' ? 'text-white hover:bg-[rgb(var(--color-primary-600))]' : 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]'}`}
             >
-              Week
+              {t('schedule.viewWeek', { defaultValue: 'Week' })}
             </Button>
           </div>
         </div>

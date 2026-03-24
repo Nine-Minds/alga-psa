@@ -1,0 +1,259 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save Settings",
+      "saving": "Saving...",
+      "reset": "Reset",
+      "refresh": "Refresh",
+      "close": "Close",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleting": "Deleting\u2026",
+      "verify": "Verify"
+    },
+    "states": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "loading": "Loading..."
+    }
+  },
+  "telemetry": {
+    "loading": {
+      "title": "Organization Telemetry Settings",
+      "description": "Loading..."
+    },
+    "empty": {
+      "title": "Organization Telemetry Settings",
+      "description": "Error loading settings",
+      "body": "Failed to load telemetry settings"
+    },
+    "page": {
+      "title": "Organization Telemetry & Analytics",
+      "description": "Configure telemetry settings for your entire organization. Telemetry is enabled by default to improve the platform, but users can opt-out individually unless you disable this option."
+    },
+    "toggles": {
+      "enableTelemetry": {
+        "title": "Enable Telemetry",
+        "description": "Allow collection of anonymous usage data to improve the platform (enabled by default)"
+      },
+      "allowUserOptOut": {
+        "title": "Allow User Opt-Out",
+        "description": "Allow individual users to opt-out of telemetry collection"
+      }
+    },
+    "alerts": {
+      "enabled": "\u2713 Telemetry enabled. All categories are enabled by default for new users, but they can opt-out individually if desired.",
+      "centralizedControl": "Centralized control: Users cannot opt-out individually. Ensure compliance with local privacy regulations."
+    },
+    "anonymization": {
+      "title": "Data Anonymization Level",
+      "description": "Choose how much data to anonymize before collection",
+      "options": {
+        "none": {
+          "title": "No Anonymization",
+          "description": "Collect data as-is (not recommended)"
+        },
+        "partial": {
+          "title": "Partial Anonymization",
+          "description": "Remove PII, keep correlation IDs"
+        },
+        "full": {
+          "title": "Full Anonymization",
+          "description": "Maximum privacy, minimal correlation"
+        }
+      }
+    },
+    "compliance": {
+      "title": "Compliance Notes"
+    },
+    "privacy": {
+      "collectTitle": "What We Collect",
+      "collectItems": {
+        "errors": "\u2022 Error information (no sensitive data)",
+        "performance": "\u2022 Performance metrics (page load times, API response times)",
+        "usage": "\u2022 Feature usage patterns (which features are used)",
+        "system": "\u2022 System metrics (for infrastructure optimization)"
+      },
+      "excludeTitle": "What We DON'T Collect",
+      "excludeItems": {
+        "personalInfo": "\u2022 Personal information (names, emails, addresses)",
+        "clientData": "\u2022 Client data or business information",
+        "passwords": "\u2022 Passwords or authentication tokens",
+        "files": "\u2022 File contents or documents"
+      }
+    },
+    "footer": {
+      "lastUpdated": "Last updated: {{value}}",
+      "updatedBy": " by {{user}}"
+    },
+    "errors": {
+      "loadTenantTelemetrySettings": "Failed to load tenant telemetry settings",
+      "loadSettings": "Failed to load settings",
+      "saveTelemetrySettings": "Failed to save telemetry settings",
+      "saveSettings": "Failed to save settings"
+    }
+  },
+  "email": {
+    "loading": "Loading email settings...",
+    "error": "Error: {{error}}",
+    "tabs": {
+      "inbound": "Inbound Email",
+      "outbound": "Outbound Email"
+    },
+    "descriptions": {
+      "outbound": "Configure SMTP or API settings for sending emails from your application",
+      "inbound": "Configure email providers to receive and process emails as tickets"
+    },
+    "providerConfig": {
+      "title": "Email Provider Configuration",
+      "providerLabel": "Email Provider",
+      "options": {
+        "smtp": "SMTP (Traditional Email Server)",
+        "resend": "Resend (Modern API Service)"
+      },
+      "placeholder": "Select email provider",
+      "descriptions": {
+        "smtp": "Configure traditional SMTP email server settings",
+        "resend": "Configure Resend API for modern email delivery"
+      },
+      "status": {
+        "provider": "{{provider}} Provider"
+      }
+    },
+    "smtp": {
+      "host": {
+        "label": "SMTP Host",
+        "placeholder": "smtp.example.com"
+      },
+      "port": {
+        "label": "Port",
+        "placeholder": "587"
+      },
+      "username": {
+        "label": "Username",
+        "placeholder": "your-email@example.com"
+      },
+      "password": {
+        "label": "Password",
+        "placeholder": "Enter password"
+      },
+      "fromAddress": {
+        "label": "From Address",
+        "placeholder": "noreply@example.com"
+      }
+    },
+    "resend": {
+      "apiKey": {
+        "label": "Resend API Key",
+        "placeholder": "re_xxxxxxxxxxxxxxxxxx",
+        "helpPrefix": "Get your API key from"
+      },
+      "fromAddress": {
+        "label": "From Address",
+        "placeholder": "noreply@yourdomain.com",
+        "help": "Must be from a verified domain. Use the Domains tab to add custom domains."
+      }
+    },
+    "domains": {
+      "verified": "Verified",
+      "failed": "Failed",
+      "pending": "Pending",
+      "requiredDnsRecords": "Required DNS Records:"
+    },
+    "general": {
+      "title": "General Settings",
+      "trackingEnabled": "Enable Email Tracking",
+      "dailyLimit": "Daily Email Limit"
+    },
+    "errors": {
+      "loadEmailSettings": "Failed to load email settings",
+      "saveSettings": "Failed to save settings",
+      "addDomain": "Failed to add domain",
+      "verifyDomain": "Failed to verify domain"
+    }
+  },
+  "microsoft365": {
+    "title": {
+      "microsoft": "Microsoft 365 Diagnostics",
+      "default": "Diagnostics"
+    },
+    "description": "Runs a live Graph check (including create+delete subscription) to diagnose mailbox, folder, and permission issues.",
+    "note": {
+      "label": "Note:",
+      "body": "Diagnostics will create a temporary Microsoft Graph subscription and then delete it. If deletion fails, you may need to manually remove the subscription in Microsoft 365."
+    },
+    "labels": {
+      "provider": "Provider:",
+      "mailbox": "Mailbox:",
+      "overall": "Overall:",
+      "resource": "Resource: {{resource}}",
+      "recommendations": "Recommendations",
+      "error": "Error"
+    },
+    "actions": {
+      "copySupportBundle": "Copy Support Bundle",
+      "copied": "Copied"
+    },
+    "states": {
+      "running": "Running diagnostics...",
+      "diagnosticsFailed": "Diagnostics failed"
+    },
+    "statuses": {
+      "pass": "Pass",
+      "warn": "Warn",
+      "fail": "Fail",
+      "skip": "Skip"
+    }
+  },
+  "inboundDefaults": {
+    "loading": "Loading ticket defaults...",
+    "header": {
+      "title": "Inbound Ticket Defaults",
+      "description": "Configure default values for tickets created from email processing"
+    },
+    "actions": {
+      "addDefaults": "Add Defaults"
+    },
+    "form": {
+      "editTitle": "Edit Ticket Defaults",
+      "createTitle": "Create Ticket Defaults",
+      "description": "Configure the default values that will be applied to tickets created from email processing"
+    },
+    "empty": {
+      "title": "No ticket defaults configured",
+      "description": "Create your first configuration to define default values for email-generated tickets"
+    },
+    "badges": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "fields": {
+      "board": "Board:",
+      "status": "Status:",
+      "priority": "Priority:",
+      "enteredBy": "Entered By:"
+    },
+    "fallbacks": {
+      "notSet": "Not set",
+      "system": "System"
+    },
+    "menu": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleting": "Deleting\u2026"
+    },
+    "help": {
+      "title": "How It Works",
+      "items": {
+        "providerReference": "\u2022 Each email provider can reference one ticket defaults configuration",
+        "requiredValues": "\u2022 When an email creates a ticket, these defaults provide required field values",
+        "systemCreator": "\u2022 System-generated tickets will show \"System\" as the creator when entered_by is null",
+        "scenarios": "\u2022 You can create different defaults for different email scenarios (support, billing, etc.)"
+      }
+    },
+    "errors": {
+      "load": "Failed to load ticket defaults",
+      "delete": "Failed to delete ticket defaults"
+    }
+  }
+}
