@@ -12,6 +12,8 @@ export interface SelectOption {
   label: string | React.JSX.Element;
   /** Plain-text value used by Radix for the trigger display when label is JSX */
   textValue?: string;
+  /** Additional content shown only in the dropdown, not in the trigger */
+  dropdownHint?: string | React.JSX.Element;
   className?: string;
   is_inactive?: boolean;
 }
@@ -254,6 +256,7 @@ const CustomSelect = ({
             disabled:pointer-events-none disabled:cursor-not-allowed
             disabled:bg-muted disabled:text-muted-foreground disabled:border-border
             disabled:hover:bg-muted disabled:hover:text-muted-foreground
+            overflow-hidden
             ${className}
             ${customStyles?.trigger || ''}
           `}
@@ -268,9 +271,9 @@ const CustomSelect = ({
         >
           <RadixSelect.Value
             placeholder={placeholder}
-            className="flex-1 text-left"
+            className="flex-1 text-left min-w-0 overflow-hidden"
           >
-            <span className={!selectedOption || disabled ? 'text-muted-foreground' : ''}>
+            <span className={`block truncate ${!selectedOption || disabled ? 'text-muted-foreground' : ''}`}>
               {selectedOption?.label || placeholder}
             </span>
           </RadixSelect.Value>
@@ -334,15 +337,19 @@ const CustomSelect = ({
                   value={option.radixValue}
                   textValue={option.textValue ?? (typeof option.label === 'string' ? option.label : undefined)}
                   className={`
-                    relative flex items-center px-3 py-2 text-sm rounded text-foreground
+                    relative flex px-3 py-2 text-sm rounded text-foreground
                     cursor-pointer hover:bg-muted focus:bg-muted
-                    focus:outline-none select-none whitespace-nowrap
+                    focus:outline-none select-none
                     data-[highlighted]:bg-muted
+                    ${option.dropdownHint ? 'flex-col items-start' : 'items-center whitespace-nowrap'}
                     ${option.className || 'bg-background'}
                     ${customStyles?.item || ''}
                   `}
                 >
                   <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
+                  {option.dropdownHint && (
+                    <div className="text-[11px] text-gray-500 mt-0.5 whitespace-normal">{option.dropdownHint}</div>
+                  )}
                   {customStyles?.itemIndicator && (
                     <RadixSelect.ItemIndicator className={customStyles.itemIndicator}>
                       <ChevronDown className="w-4 h-4 text-muted-foreground" />
