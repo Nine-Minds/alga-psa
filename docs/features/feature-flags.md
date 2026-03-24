@@ -138,6 +138,21 @@ Controls which tenants are allowed to enable the AI Assistant from Settings → 
 - When disabled: The AI Assistant toggle is disabled and cannot be saved on for that tenant, even if the tenant previously had the experimental setting stored.
 - When enabled: The tenant may turn on the existing `experimentalFeatures.aiAssistant` setting, which continues to gate Quick Ask, chat sidebar access, and AI chat APIs.
 
+### 10. `quoting-enabled`
+Controls access to the quoting functionality in the billing area.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Billing sidebar: Quotes and Quote Templates navigation items (hidden when disabled)
+  - Billing dashboard: Quotes and Quote Templates tabs (hidden when disabled)
+  - Quote Approvals page at `/msp/quote-approvals` (shows construction placeholder when disabled)
+  - Quote Document Templates page at `/msp/quote-document-templates` (shows construction placeholder when disabled)
+  - Billing Settings: Quoting tab with Quote Numbering settings (hidden when disabled)
+
+**Behavior:**
+- When disabled (default): Quote-related sidebar items and billing tabs are hidden. Standalone quote pages show construction placeholder if accessed directly.
+- When enabled: Full quoting UI is accessible. Backend (models, actions, migrations) is always available regardless of flag state.
+
 ## Implementation Details
 
 ### User Identification

@@ -279,14 +279,6 @@ export const extensionsNavigationSections: NavigationSection[] = [
 // Billing navigation sections - used when sidebar is in 'billing' mode
 export const billingNavigationSections: NavigationSection[] = [
   {
-    title: 'Quotes',
-    translationKey: 'nav.billing.sections.quotes',
-    items: [
-      { name: 'Quotes', translationKey: 'nav.billing.quotes', icon: FileText, href: '/msp/billing?tab=quotes' },
-      { name: 'Quote Templates', translationKey: 'nav.billing.quoteTemplates', icon: LayoutTemplate, href: '/msp/billing?tab=quote-templates' },
-    ]
-  },
-  {
     title: 'Contracts',
     translationKey: 'nav.billing.sections.contracts',
     items: [
@@ -303,6 +295,14 @@ export const billingNavigationSections: NavigationSection[] = [
       { name: 'Invoice Templates', translationKey: 'nav.billing.invoiceTemplates', icon: ReceiptText, href: '/msp/billing?tab=invoice-templates' },
       { name: 'Billing Cycles', translationKey: 'nav.billing.billingCycles', icon: CalendarClock, href: '/msp/billing?tab=billing-cycles' },
       { name: 'Service Periods', translationKey: 'nav.billing.servicePeriods', icon: CalendarClock, href: '/msp/billing?tab=service-periods' },
+    ]
+  },
+  {
+    title: 'Quotes',
+    translationKey: 'nav.billing.sections.quotes',
+    items: [
+      { name: 'Quotes', translationKey: 'nav.billing.quotes', icon: FileText, href: '/msp/billing?tab=quotes' },
+      { name: 'Quote Templates', translationKey: 'nav.billing.quoteTemplates', icon: LayoutTemplate, href: '/msp/billing?tab=quote-templates' },
     ]
   },
   {

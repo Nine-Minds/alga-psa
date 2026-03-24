@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { IClient, IService } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Import all the components
 import ContractLinesOverview from './contract-lines/ContractLinesOverview';
@@ -53,7 +54,14 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
 
-  const tabDefinitions = useMemo(() => billingTabDefinitions, []);
+  const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
+
+  const tabDefinitions = useMemo(() => {
+    if (isQuotingEnabled) return billingTabDefinitions;
+    return billingTabDefinitions.filter(
+      (tab) => tab.value !== 'quotes' && tab.value !== 'quote-templates'
+    );
+  }, [isQuotingEnabled]);
 
   const initialSearchParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -150,13 +158,17 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <AccountingExportsTab />
         </Tabs.Content>
 
-        <Tabs.Content value="quotes">
-          <QuotesTab />
-        </Tabs.Content>
+        {isQuotingEnabled && (
+          <Tabs.Content value="quotes">
+            <QuotesTab />
+          </Tabs.Content>
+        )}
 
-        <Tabs.Content value="quote-templates">
-          <QuoteDocumentTemplatesPage />
-        </Tabs.Content>
+        {isQuotingEnabled && (
+          <Tabs.Content value="quote-templates">
+            <QuoteDocumentTemplatesPage />
+          </Tabs.Content>
+        )}
 
         <Tabs.Content value="reports">
           <ContractReports />

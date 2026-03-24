@@ -8,6 +8,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteListItem } from '@alga-psa/types';
@@ -64,6 +66,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
   const [templates, setTemplates] = useState<IQuoteListItem[]>([]);
   const [lineItems, setLineItems] = useState<DraftQuoteItem[]>([]);
   const [persistedQuoteItemIds, setPersistedQuoteItemIds] = useState<string[]>([]);
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -360,30 +364,33 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
 
           <div className="flex flex-col gap-1 text-sm font-medium">
             <label htmlFor="quote-client">Client</label>
-            <CustomSelect
+            <ClientPicker
               id="quote-client"
-              value={form.client_id || undefined}
-              onValueChange={(value) => handleChange('client_id', value)}
+              clients={clients}
+              selectedClientId={form.client_id || null}
+              onSelect={(clientId) => {
+                handleChange('client_id', clientId || '');
+                if (clientId !== form.client_id) {
+                  handleChange('contact_id', '');
+                }
+              }}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
               placeholder="Select client"
-              options={clients.map((client) => ({
-                value: client.client_id,
-                label: client.client_name,
-              }))}
             />
           </div>
 
           <div className="flex flex-col gap-1 text-sm font-medium">
-            <label htmlFor="quote-contact">Contact</label>
-            <CustomSelect
+            <ContactPicker
               id="quote-contact"
-              value={form.contact_id || undefined}
+              contacts={availableContacts}
+              value={form.contact_id || ''}
               onValueChange={(value) => handleChange('contact_id', value)}
+              clientId={form.client_id || undefined}
               placeholder="Select contact"
-              allowClear
-              options={availableContacts.map((contact) => ({
-                value: contact.contact_name_id,
-                label: contact.full_name,
-              }))}
+              buttonWidth="full"
             />
           </div>
 
