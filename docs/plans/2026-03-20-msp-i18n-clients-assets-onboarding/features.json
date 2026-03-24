@@ -8,7 +8,7 @@
   {"id": "F007", "description": "Italian accent audit on it/msp/clients.json", "implemented": true, "prdRefs": ["2b-10"]},
 
   {"id": "F010", "description": "Create en/msp/contacts.json with all keys for 12 contact components", "implemented": true, "prdRefs": ["2b-11"]},
-  {"id": "F011", "description": "Wire useTranslation('msp/contacts') in ContactDetails.tsx, Contacts.tsx, ContactsImportDialog.tsx", "implemented": false, "prdRefs": ["2b-11"]},
+  {"id": "F011", "description": "Wire useTranslation('msp/contacts') in ContactDetails.tsx, Contacts.tsx, ContactsImportDialog.tsx", "implemented": true, "prdRefs": ["2b-11"]},
   {"id": "F012", "description": "Wire useTranslation in ContactPhoneNumbersEditor.tsx, ContactPortalTab.tsx, QuickAddContact.tsx", "implemented": false, "prdRefs": ["2b-11"]},
   {"id": "F013", "description": "Wire useTranslation in remaining 6 contact files (ContactDetailsEdit, ContactDetailsView, ClientContactsList, ContactsLayout, ContactAvatarUpload, ContactsSkeleton)", "implemented": false, "prdRefs": ["2b-11"]},
   {"id": "F014", "description": "Generate msp/contacts translations for 6 non-English locales + 2 pseudo-locales", "implemented": false, "prdRefs": ["2b-11"]},

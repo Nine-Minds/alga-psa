@@ -33,15 +33,212 @@
   },
   "contactsPage": {
     "title": "Contacts Page",
-    "description": "Main contacts management page with search, filters, list view, and bulk actions"
+    "description": "Main contacts management page with search, filters, list view, and bulk actions",
+    "heading": "Contacts",
+    "addContact": "+ Add Contact",
+    "actions": "Actions",
+    "searchPlaceholder": "Search contacts",
+    "resetFilters": "Reset",
+    "unknownClient": "Unknown Client",
+    "noClient": "No Client",
+    "thisContact": "this contact",
+    "actionsMenuSrOnly": "Open menu",
+    "quickView": "Quick View",
+    "deleteValidationError": "Failed to validate deletion. Please try again.",
+    "deleteSuccess": "{{name}} has been deleted successfully.",
+    "deleteError": "Failed to delete contact. Please try again.",
+    "markInactiveSuccess": "{{name}} has been marked as inactive successfully.",
+    "markInactiveError": "An error occurred while marking the contact as inactive. Please try again.",
+    "statusOptions": {
+      "all": "All contacts",
+      "active": "Active contacts",
+      "inactive": "Inactive contacts"
+    },
+    "table": {
+      "name": "Name",
+      "created": "Created",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "client": "Client",
+      "tags": "Tags",
+      "actions": "Actions"
+    },
+    "lastPhoneTypeUsage": {
+      "title": "Last Phone Type Usage",
+      "message": "The following custom phone type{{suffix}} no longer used by any contact: {{labels}}. Delete the type definition{{definitionSuffix}}, or keep for future use?",
+      "deleteType": "Delete Type",
+      "keepType": "Keep Type"
+    }
   },
   "contactDetails": {
     "title": "Contact Details",
-    "description": "Contact detail view with tabs, inline editing, portal access, tags, and notes"
+    "description": "Contact detail view with tabs, inline editing, portal access, tags, and notes",
+    "backToContacts": "Back to Contacts",
+    "inactiveBadge": "inactive",
+    "actions": {
+      "goToContact": "Go to contact",
+      "saveChanges": "Save Changes"
+    },
+    "tabs": {
+      "details": "Details",
+      "tickets": "Tickets",
+      "documents": "Documents",
+      "interactions": "Interactions",
+      "notes": "Notes",
+      "portal": "Portal"
+    },
+    "fields": {
+      "fullName": "Full Name",
+      "client": "Client",
+      "email": "Email",
+      "role": "Role",
+      "inboundTicketDestinationOverride": "Inbound ticket destination override",
+      "useClientDestination": "Use client destination",
+      "inboundTicketDestinationHelp": "If set, this overrides the client destination for this exact sender contact. Precedence: Contact override -> Client destination -> Provider default.",
+      "tags": "Tags",
+      "notes": "Notes"
+    },
+    "status": {
+      "label": "Status",
+      "helper": "Set contact status as active or inactive",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "loading": {
+      "destinations": "Loading destinations...",
+      "ticketFilters": "Loading ticket filters..."
+    },
+    "empty": {
+      "notSet": "Not set",
+      "unknownClient": "Unknown Client"
+    },
+    "client": {
+      "noClientAssigned": "No client assigned"
+    },
+    "delete": {
+      "successTitle": "Contact Deleted",
+      "successDescription": "Contact has been deleted successfully.",
+      "validationFailed": "Failed to validate deletion. Please try again.",
+      "failed": "Failed to delete contact. Please try again."
+    },
+    "deactivate": {
+      "successTitle": "Contact Deactivated",
+      "successDescription": "Contact has been marked as inactive successfully."
+    },
+    "reactivate": {
+      "successTitle": "Contact Reactivated",
+      "successDescription": "Contact has been reactivated successfully."
+    },
+    "update": {
+      "successTitle": "Contact Updated",
+      "successDescription": "Contact details have been saved successfully."
+    },
+    "saveFailed": {
+      "title": "Save Failed",
+      "description": "Could not save contact details. Please try again."
+    },
+    "error": {
+      "title": "Error"
+    },
+    "errors": {
+      "permissionDenied": "Permission denied. Please contact your administrator if you need additional access.",
+      "markInactiveFailed": "An error occurred while marking the contact as inactive. Please try again.",
+      "reactivateFailed": "An error occurred while reactivating the contact. Please try again."
+    }
   },
   "contactsImportDialog": {
     "title": "Import Contacts",
-    "description": "CSV import dialog for contact mapping, preview, validation, and results"
+    "description": "CSV import dialog for contact mapping, preview, validation, and results",
+    "fields": {
+      "name": "Name *",
+      "email": "Email *",
+      "defaultPhoneNumber": "Default Phone Number",
+      "client": "Client",
+      "tags": "Tags",
+      "role": "Role",
+      "notes": "Notes"
+    },
+    "unassigned": "Select field",
+    "errors": {
+      "emptyCsv": "CSV file is empty or invalid",
+      "readingCsv": "Error reading CSV file: {{message}}",
+      "unknownError": "Unknown error",
+      "requiredFieldNotMapped": "Required field \"{{field}}\" is not mapped",
+      "nameRequired": "Name is required",
+      "emailRequired": "Email is required",
+      "invalidEmail": "Invalid email format",
+      "processingCsv": "Error processing CSV data",
+      "importFailed": "Import failed"
+    },
+    "importOptions": {
+      "updateExisting": {
+        "title": "Update existing contacts",
+        "description": "Replace data for existing contacts"
+      },
+      "skipInvalid": {
+        "title": "Skip invalid records",
+        "description": "Continue import even if some records have validation errors"
+      }
+    },
+    "results": {
+      "title": "Import Results",
+      "downloadFailedRecords": "Download Failed Records"
+    },
+    "table": {
+      "status": "Status",
+      "name": "Name",
+      "email": "Email",
+      "message": "Message",
+      "exists": "Exists",
+      "issues": "Issues"
+    },
+    "tooltips": {
+      "importSuccessful": "Import successful",
+      "importFailed": "Import failed",
+      "validReady": "Valid - Ready to import",
+      "invalidHasErrors": "Invalid - Has errors"
+    },
+    "upload": {
+      "help": "Upload a CSV file with contact data",
+      "requiredLabel": "Required:",
+      "contactFieldsLabel": "Contact fields:",
+      "contactFieldsDescription": "phone_number (imports as the default work phone), role, notes, tags",
+      "clientFieldLabel": "Client field:",
+      "clientFieldDescription": "client (matches existing clients by name)",
+      "noteLabel": "Note:",
+      "noteDescription": "CSV import/export in v1 handles one default phone number per contact. Tags should be comma-separated values.",
+      "downloadTemplate": "Download CSV Template"
+    },
+    "mapping": {
+      "title": "Map Contact Fields to CSV Columns",
+      "description": "Select which CSV column contains the data for each contact field. Fields marked with * are required.",
+      "contactFieldHeader": "Contact Field",
+      "csvColumnHeader": "Select CSV Column",
+      "notMapped": "Not mapped",
+      "requiredFieldsNote": "* Required fields must be mapped for import to proceed",
+      "largeImportWarning": "You are importing {{count}} records. Processing may take a moment.",
+      "processing": "Processing...",
+      "preview": "Preview"
+    },
+    "preview": {
+      "title": "Preview Import",
+      "totalRecords": "Total records:",
+      "valid": "Valid:",
+      "invalid": "Invalid:"
+    },
+    "importing": {
+      "title": "Importing Contacts",
+      "processing": "Processing: {{current}} of {{total}}",
+      "currentItem": "Currently processing: {{item}}"
+    },
+    "complete": {
+      "title": "Import Complete",
+      "successMessage": "Successfully imported {{count}} contacts"
+    },
+    "confirmUpdate": {
+      "title": "Update Existing Contacts",
+      "message": "{{count}} contacts already exist. Do you want to update them with the new data?"
+    }
   },
   "contactPhoneNumbersEditor": {
     "title": "Contact Phone Numbers",
