@@ -1485,6 +1485,7 @@ type RawLinkedTicket = {
     relationship_type?: string | null;
     linked_at: string | Date;
     ticket_id: string | null;
+    ticket_number: string | null;
     title: string | null;
     status_id: string | null;
     status_name: string | null;
@@ -1670,6 +1671,7 @@ async function fetchAssetLinkedTickets(
             'aa.relationship_type',
             'aa.created_at as linked_at',
             't.ticket_id',
+            't.ticket_number',
             't.title',
             't.status_id',
             's.name as status_name',
@@ -1690,6 +1692,7 @@ async function fetchAssetLinkedTickets(
 
         return {
             ticket_id: ticketId,
+            ticket_number: row.ticket_number || undefined,
             title: row.title || 'Linked ticket unavailable',
             status_id: row.status_id || 'unknown',
             status_name: row.status_name || 'Unknown',

@@ -71,7 +71,7 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
                         className="font-medium text-primary-600 cursor-pointer hover:text-primary-700 hover:underline"
                         onClick={() => handleTicketClick(ticket.ticket_id)}
                       >
-                        #{ticket.ticket_id.substring(0, 8)}
+                        #{ticket.ticket_number || ticket.ticket_id.substring(0, 8)}
                       </TableCell>
                       <TableCell className="text-[rgb(var(--color-text-900))]">{ticket.title}</TableCell>
                       <TableCell>

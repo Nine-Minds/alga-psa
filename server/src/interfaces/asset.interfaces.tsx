@@ -239,6 +239,7 @@ export interface AssetAssociation {
 
 export interface AssetTicketSummary {
   ticket_id: string;
+  ticket_number?: string;
   title: string;
   status_id: string;
   status_name: string;
