@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useIsCompactEvent } from '@alga-psa/ui/hooks';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WeeklyScheduleEventProps {
   event: IScheduleEntry;
@@ -36,6 +37,8 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   onResizeStart,
   technicianMap = {},
 }) => {
+  const { t } = useTranslation('msp/dispatch');
+  const { formatDate } = useFormatters();
   const [isNarrow, setIsNarrow] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const eventRef = useRef<HTMLDivElement>(null);
@@ -125,8 +128,10 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   // Find assigned technician names for tooltip
   const assignedTechnicians = event.assigned_user_ids?.map(userId => {
     const tech = technicianMap[userId];
-    return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
-  }).join(', ') || 'Unassigned';
+    return tech
+      ? `${tech.first_name} ${tech.last_name}`
+      : t('events.fallbacks.unknown', { defaultValue: 'Unknown' });
+  }).join(', ') || t('events.fallbacks.unassigned', { defaultValue: 'Unassigned' });
 
   // Format date and time for tooltip
   const startMoment = new Date(event.scheduled_start);
@@ -134,7 +139,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
 
   // Format start and end date/time
   const formatDateTime = (date: Date) => {
-    return date.toLocaleString([], {
+    return formatDate(date, {
       month: 'numeric',
       day: 'numeric',
       year: 'numeric',
@@ -150,8 +155,18 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
 
   // Construct detailed tooltip - show limited info for private events
   const tooltipTitle = isPrivateNonOwner
-    ? `Busy\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}`
-    : `${event.title}\nAssigned to: ${assignedTechnicians}\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}`;
+    ? t('events.tooltip.privateEvent', {
+        defaultValue: 'Busy\nStart: {{start}}\nEnd: {{end}}',
+        start: formatDateTime(startMoment),
+        end: formatDateTime(endMoment),
+      })
+    : t('events.tooltip.eventDetails', {
+        defaultValue: '{{title}}\nAssigned to: {{assigned}}\nStart: {{start}}\nEnd: {{end}}',
+        title: event.title,
+        assigned: assignedTechnicians,
+        start: formatDateTime(startMoment),
+        end: formatDateTime(endMoment),
+      });
 
   return (
     <div
@@ -212,7 +227,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
                 size="icon"
                 className={`${compactClasses.button} details-button`}
                 onClick={handleViewDetails}
-                title="View Details"
+                title={t('events.actions.viewDetails', { defaultValue: 'View Details' })}
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <ExternalLink className={`${compactClasses.button} pointer-events-none`} />
@@ -224,7 +239,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
                 size="icon"
                 className={`${compactClasses.button} delete-button`}
                 onClick={handleDeleteClick}
-                title="Delete schedule entry"
+                title={t('events.actions.deleteScheduleEntry', { defaultValue: 'Delete schedule entry' })}
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <Trash className={`${compactClasses.button} pointer-events-none`} />
@@ -270,7 +285,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
                     }}
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    View Details
+                    {t('events.actions.viewDetails', { defaultValue: 'View Details' })}
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={(e) => {
@@ -280,7 +295,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
                     }}
                   >
                     <Trash className="w-4 h-4 mr-2" />
-                    Delete
+                    {t('events.actions.delete', { defaultValue: 'Delete' })}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -295,14 +310,18 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
           // For short events, show text with minimal padding
           <div className="flex items-center">
             <div className={`font-medium truncate flex-1 ${compactClasses.text}`}>
-              {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
+              {isPrivateNonOwner
+                ? t('events.fallbacks.busy', { defaultValue: 'Busy' })
+                : (event.title?.split(':')[0] || t('events.fallbacks.untitled', { defaultValue: 'Untitled' }))}
             </div>
           </div>
         ) : (
           // For normal events, show two lines
           <>
             <div className="font-semibold truncate text-sm">
-              {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
+              {isPrivateNonOwner
+                ? t('events.fallbacks.busy', { defaultValue: 'Busy' })
+                : (event.title?.split(':')[0] || t('events.fallbacks.untitled', { defaultValue: 'Untitled' }))}
             </div>
             {!isPrivateNonOwner && event.title?.split(':').slice(1).join(':').trim() && (
               <div className="truncate text-xs mt-0.5">

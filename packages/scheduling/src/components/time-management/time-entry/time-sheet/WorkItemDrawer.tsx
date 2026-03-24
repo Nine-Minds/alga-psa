@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { IExtendedWorkItem, IInteraction, IScheduleEntry } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { toast } from 'react-hot-toast';
@@ -35,18 +36,25 @@ function EmptyState({ message }: { message: string }): React.JSX.Element {
     );
 }
 
-function ErrorState(): React.JSX.Element {
+function ErrorState({
+    title,
+    description
+}: {
+    title: string;
+    description: string;
+}): React.JSX.Element {
     return (
         <div className="min-w-auto h-full bg-white p-4">
             <div className="flex flex-col items-center justify-center h-full text-red-500">
-                <div className="text-lg mb-2">Error loading content</div>
-                <div className="text-sm">Please try again</div>
+                <div className="text-lg mb-2">{title}</div>
+                <div className="text-sm">{description}</div>
             </div>
         </div>
     );
 }
 
 function InteractionDrawerContent({ workItemId }: { workItemId: string }) {
+    const { t } = useTranslation('msp/time-entry');
     const { getInteractionById, renderInteractionDetails } = useSchedulingCrossFeature();
     const [interaction, setInteraction] = React.useState<IInteraction | null>(null);
     const [loading, setLoading] = React.useState(true);
@@ -61,7 +69,9 @@ function InteractionDrawerContent({ workItemId }: { workItemId: string }) {
                     setInteraction(interactionData);
                 }
             } catch (error) {
-                handleError(error, 'Failed to load interaction details');
+                handleError(error, t('workItemDrawer.errors.failedInteraction', {
+                    defaultValue: 'Failed to load interaction details'
+                }));
             } finally {
                 if (isMounted) {
                     setLoading(false);
@@ -80,7 +90,7 @@ function InteractionDrawerContent({ workItemId }: { workItemId: string }) {
     }
 
     if (!interaction) {
-        return <EmptyState message="Interaction not found" />;
+        return <EmptyState message={t('workItemDrawer.errors.interactionNotFound', { defaultValue: 'Interaction not found' })} />;
     }
 
     return <>{renderInteractionDetails({ interaction, isInDrawer: true })}</>;
@@ -92,6 +102,7 @@ export function WorkItemDrawer({
     onTaskUpdate,
     onScheduleUpdate
 }: WorkItemDrawerProps): React.JSX.Element {
+    const { t } = useTranslation('msp/time-entry');
     const {
         getConsolidatedTicketData,
         getTaskById,
@@ -115,12 +126,12 @@ export function WorkItemDrawer({
                     ]);
 
                     if (!currentUser) {
-                        toast.error('No user session found');
+                        toast.error(t('workItemDrawer.errors.noUserSession', { defaultValue: 'No user session found' }));
                         return null;
                     }
 
                     if (!ticketData) {
-                        toast.error('Failed to load ticket');
+                        toast.error(t('workItemDrawer.errors.failedTicket', { defaultValue: 'Failed to load ticket' }));
                         return null;
                     }
 
@@ -138,13 +149,13 @@ export function WorkItemDrawer({
                 case 'project_task': {
                     const taskData = await getTaskById(workItem.work_item_id);
                     if (!taskData) {
-                        toast.error('Failed to load task');
+                        toast.error(t('workItemDrawer.errors.failedTask', { defaultValue: 'Failed to load task' }));
                         return null;
                     }
 
                     const phase = await getProjectPhase(taskData.phase_id);
                     if (!phase) {
-                        toast.error('Failed to load task phase');
+                        toast.error(t('workItemDrawer.errors.failedTaskPhase', { defaultValue: 'Failed to load task phase' }));
                         return null;
                     }
 
@@ -154,7 +165,9 @@ export function WorkItemDrawer({
                     ]);
 
                     if (!projectMetadata || !('phases' in projectMetadata) || !('users' in projectMetadata)) {
-                        toast.error('Failed to load task project metadata');
+                        toast.error(t('workItemDrawer.errors.failedTaskProjectMetadata', {
+                            defaultValue: 'Failed to load task project metadata'
+                        }));
                         return null;
                     }
 
@@ -182,12 +195,12 @@ export function WorkItemDrawer({
                     ]);
 
                     if (!currentUser) {
-                        toast.error('No user session found');
+                        toast.error(t('workItemDrawer.errors.noUserSession', { defaultValue: 'No user session found' }));
                         return null;
                     }
 
                     if (!adHocData) {
-                        toast.error('Failed to load ad-hoc entry data');
+                        toast.error(t('workItemDrawer.errors.failedAdHoc', { defaultValue: 'Failed to load ad-hoc entry data' }));
                         return null;
                     }
 
@@ -233,18 +246,23 @@ export function WorkItemDrawer({
                 default:
                     return (
                         <div className="min-w-auto h-full bg-white p-4">
-                            <div>Unsupported work item type</div>
+                            <div>{t('workItemDrawer.errors.unsupportedType', { defaultValue: 'Unsupported work item type' })}</div>
                         </div>
                     );
             }
         } catch (error) {
             console.error('Error loading content:', error);
-            return <ErrorState />;
+            return (
+                <ErrorState
+                    title={t('workItemDrawer.errors.genericTitle', { defaultValue: 'Error loading content' })}
+                    description={t('workItemDrawer.errors.genericDescription', { defaultValue: 'Please try again' })}
+                />
+            );
         }
     }, [
         workItem, onClose, onTaskUpdate, onScheduleUpdate,
         getConsolidatedTicketData, getTaskById, getProjectPhase,
-        getProjectMetadata, getProjectTreeData, renderTicketDetails, renderTaskEdit
+        getProjectMetadata, getProjectTreeData, renderTicketDetails, renderTaskEdit, t
     ]);
 
     React.useEffect(() => {

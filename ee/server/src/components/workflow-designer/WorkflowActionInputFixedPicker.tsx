@@ -9,9 +9,10 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
-import { getTicketFieldOptions } from '@alga-psa/integrations/actions';
+import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction, getTeamsBasic } from '@alga-psa/teams/actions';
+import { getTicketById } from '@alga-psa/tickets/actions';
 import type {
   IBoard,
   IClient,
@@ -68,6 +69,16 @@ const EMPTY_PICKER_DATA: WorkflowPickerData = {
   contacts: [],
   users: [],
   teams: [],
+};
+
+const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
+  boards: [],
+  statuses: [],
+  priorities: [],
+  categories: [],
+  clients: [],
+  users: [],
+  locations: [],
 };
 
 const TICKET_PICKER_DEPENDENCY_HINTS: Partial<Record<string, Record<string, string>>> = {
@@ -358,6 +369,34 @@ const loadWorkflowPickerData = async (
   dependencies: DependencyResolution[]
 ): Promise<WorkflowPickerData> => {
   switch (kind) {
+    case 'ticket-status': {
+      const fixedBoard = dependencies.find((dependency) => dependency.path === 'board_id');
+      const fixedTicket = dependencies.find((dependency) => dependency.path === 'ticket_id');
+      let boardId: string | null = null;
+
+      if (fixedBoard?.status === 'fixed' && fixedBoard.value) {
+        boardId = fixedBoard.value;
+      } else if (fixedTicket?.status === 'fixed' && fixedTicket.value) {
+        const ticket = await getTicketById(fixedTicket.value);
+        boardId = ticket?.board_id ?? null;
+      }
+
+      if (!boardId) {
+        return {
+          ...EMPTY_PICKER_DATA,
+          ticketOptions: EMPTY_TICKET_FIELD_OPTIONS,
+        };
+      }
+
+      const { statuses } = await getAvailableStatuses(boardId);
+      return {
+        ...EMPTY_PICKER_DATA,
+        ticketOptions: {
+          ...EMPTY_TICKET_FIELD_OPTIONS,
+          statuses,
+        },
+      };
+    }
     case 'contact': {
       const fixedClient = dependencies.find((dependency) => dependency.path === 'client_id');
       const contacts = fixedClient?.status === 'fixed' && fixedClient.value

@@ -1,0 +1,175 @@
+{
+  "page": {
+    "title": "Rapports"
+  },
+  "actions": {
+    "refresh": "Actualiser"
+  },
+  "placeholders": {
+    "selectContract": "Sélectionner un contrat..."
+  },
+  "units": {
+    "hoursShort": "h",
+    "days": "jours",
+    "percent": "%",
+    "dash": "\u2014"
+  },
+  "reportsPage": {
+    "cards": {
+      "timeUtilization": {
+        "title": "Utilisation du temps",
+        "placeholder": "[Espace réservé au graphique d'utilisation du temps]"
+      },
+      "projectProgress": {
+        "title": "Avancement des projets",
+        "placeholder": "[Espace réservé au graphique d'avancement des projets]"
+      },
+      "revenueByClient": {
+        "title": "Chiffre d'affaires par client",
+        "placeholder": "[Espace réservé au graphique du chiffre d'affaires par client]"
+      },
+      "teamPerformance": {
+        "title": "Performance de l'équipe",
+        "placeholder": "[Espace réservé au graphique de performance de l'équipe]"
+      }
+    }
+  },
+  "contractReports": {
+    "title": "Rapports de contrats",
+    "description": "Analyser la performance des contrats, le chiffre d'affaires et les indicateurs d'utilisation",
+    "errors": {
+      "loadingTitle": "Erreur lors du chargement des rapports",
+      "loadData": "Impossible de charger les données du rapport"
+    },
+    "summary": {
+      "totalMRR": {
+        "title": "MRR total",
+        "subtitle": "Revenu récurrent mensuel"
+      },
+      "ytdRevenue": {
+        "title": "Chiffre d'affaires cumulé",
+        "subtitle": "Cumul annuel par périodes de service facturées"
+      },
+      "activeContracts": {
+        "title": "Contrats actifs",
+        "subtitle": "Affectations actives"
+      },
+      "renewalDecisions": {
+        "title": "Décisions de renouvellement à prendre",
+        "subtitle": "Échéances de décision dans les 90 prochains jours"
+      }
+    },
+    "tabs": {
+      "revenue": "Chiffre d'affaires des contrats",
+      "expiration": "Expiration",
+      "bucketUsage": "Heures de forfait",
+      "profitability": "Rentabilité"
+    },
+    "sections": {
+      "revenue": {
+        "title": "Rapport de chiffre d'affaires des contrats",
+        "description": "Vue d'ensemble du revenu récurrent mensuel et des périodes de service facturées depuis le début de l'année par contrat.",
+        "empty": "Aucune donnée de chiffre d'affaires des contrats disponible"
+      },
+      "expiration": {
+        "title": "Expiration des contrats et décisions de renouvellement",
+        "description": "Suivre les expirations de contrats à venir et les dates d'échéance des décisions de renouvellement.",
+        "empty": "Aucune expiration de contrat ni décision de renouvellement à court terme"
+      },
+      "bucketUsage": {
+        "title": "Utilisation des heures de forfait",
+        "description": "Surveiller l'utilisation des heures de forfait et identifier les dépassements",
+        "empty": "Aucun contrat basé sur un forfait trouvé"
+      },
+      "profitability": {
+        "title": "Rapport de rentabilité simplifié",
+        "description": "Analyse de base des marges bénéficiaires et du chiffre d'affaires par rapport aux coûts par contrat",
+        "empty": "Aucune donnée de rentabilité disponible"
+      }
+    },
+    "table": {
+      "contract": "Contrat",
+      "client": "Client",
+      "monthlyRecurring": "Récurrent mensuel",
+      "totalBilledYtd": "Total facturé (CDA)",
+      "status": "Statut",
+      "endDate": "Date de fin",
+      "daysUntilExpiration": "Jours avant expiration",
+      "monthlyValue": "Valeur mensuelle",
+      "autoRenew": "Renouvellement automatique",
+      "totalHours": "Heures totales",
+      "usedHours": "Heures utilisées",
+      "remaining": "Restant",
+      "utilization": "Utilisation",
+      "overage": "Dépassement",
+      "revenueYtd": "Chiffre d'affaires (CDA)",
+      "costYtd": "Coût (CDA)",
+      "profit": "Profit",
+      "margin": "Marge"
+    },
+    "statusValues": {
+      "active": "Actif",
+      "upcoming": "À venir",
+      "yes": "Oui",
+      "no": "Non"
+    }
+  },
+  "contractPerformance": {
+    "title": "Indicateurs de performance des contrats",
+    "errors": {
+      "loadData": "Impossible de charger les données du contrat"
+    },
+    "metrics": {
+      "totalClients": "Clients totaux",
+      "activeClients": "Clients actifs",
+      "totalPlans": "Plans totaux",
+      "averagePlansPerClient": "Moy. de plans par client",
+      "totalRevenue": "Chiffre d'affaires total",
+      "averageRevenuePerClient": "Moy. de chiffre d'affaires par client"
+    },
+    "empty": {
+      "selectContract": "Sélectionnez un contrat pour voir les indicateurs de performance",
+      "noContracts": "Aucun contrat disponible"
+    },
+    "comparison": {
+      "title": "Comparaison des contrats",
+      "table": {
+        "contract": "Contrat",
+        "clients": "Clients",
+        "plans": "Plans",
+        "revenue": "Chiffre d'affaires"
+      }
+    }
+  },
+  "contractUsage": {
+    "title": "Rapport d'utilisation des contrats",
+    "errors": {
+      "loadInitialData": "Impossible de charger les données initiales",
+      "loadUsageData": "Impossible de charger les données d'utilisation du contrat"
+    },
+    "empty": {
+      "noClientsUsingContract": "Aucun client n'utilise ce contrat",
+      "selectContract": "Sélectionnez un contrat pour voir les données d'utilisation"
+    },
+    "table": {
+      "client": "Client",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "contractLines": "Lignes de contrat",
+      "totalBilled": "Total facturé",
+      "status": "Statut"
+    },
+    "statusValues": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "ongoing": "En cours",
+      "unknownClient": "Client inconnu"
+    },
+    "summary": {
+      "title": "Résumé",
+      "totalClients": "Clients totaux",
+      "activeAssignments": "Affectations actives",
+      "totalBilled": "Total facturé"
+    }
+  }
+}

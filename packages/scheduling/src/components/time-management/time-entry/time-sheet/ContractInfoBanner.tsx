@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useEffect, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Info, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
@@ -38,6 +39,7 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
   entryDate,
   clientId: propClientId
 }: ContractInfoBannerProps) {
+  const { t } = useTranslation('msp/time-entry');
   const [contractInfo, setContractInfo] = useState<{
     contractName?: string;
     contractLineName?: string;
@@ -143,7 +145,9 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
         <div className="flex items-center">
           <Info className="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" />
           <p className="text-sm text-gray-600">
-            No contract line found for this service. Time will be routed to the system-managed default contract.
+            {t('contractInfo.noContract', {
+              defaultValue: 'No contract line found for this service. Time will be routed to the system-managed default contract.'
+            })}
           </p>
         </div>
       </div>
@@ -166,11 +170,21 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
       <FileText className="h-5 w-5" />
       <AlertDescription>
         <p className="font-medium">
-          Contract: {contractInfo.contractName || 'System-managed default contract'}
+          {t('contractInfo.contract', {
+            defaultValue: 'Contract: {{name}}',
+            name: contractInfo.contractName || t('contractInfo.defaultContract', { defaultValue: 'System-managed default contract' })
+          })}
         </p>
         <p className="text-xs mt-0.5">
           {contractInfo.contractLineName} ({contractInfo.contractLineType})
         </p>
+        {contractInfo.multipleLines && (
+          <p className="text-xs mt-1 italic">
+            {t('contractInfo.multipleLines', {
+              defaultValue: 'Multiple contract lines available - using default selection'
+            })}
+          </p>
+        )}
       </AlertDescription>
     </Alert>
   );

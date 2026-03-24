@@ -24,6 +24,9 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextEditor } from '@alga-psa/ui/editor';
 import { toast } from 'react-hot-toast';
@@ -184,6 +187,23 @@ export function QuickAddTicket({
   const [descriptionEditorInstanceKey, setDescriptionEditorInstanceKey] = useState(0);
   const [assignedTo, setAssignedTo] = useState(prefilledAssignedTo || '');
   const [assignedTeamId, setAssignedTeamId] = useState<string | null>(null);
+  const [tempAdditionalAgents, setTempAdditionalAgents] = useState<
+    { user_id: string; first_name: string; last_name: string; temp_id: string }[]
+  >(() => {
+    if (prefilledAdditionalAgents?.length) {
+      return prefilledAdditionalAgents.map(agent => {
+        const nameParts = (agent.name || '').split(' ');
+        return {
+          user_id: agent.user_id,
+          first_name: nameParts[0] || '',
+          last_name: nameParts.slice(1).join(' ') || '',
+          temp_id: `temp-${Date.now()}-${agent.user_id}`,
+        };
+      });
+    }
+    return [];
+  });
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [boardId, setBoardId] = useState('');
   const [statusId, setStatusId] = useState('');
@@ -402,38 +422,61 @@ export function QuickAddTicket({
   }, [clientId, isPrefilledClient]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchStatusesForBoard = async () => {
       if (!boardId) {
-        setStatuses([]);
-        setStatusId('');
-        setIsLoadingStatuses(false);
+        if (isMounted) {
+          setStatuses([]);
+          setStatusId('');
+          setIsLoadingStatuses(false);
+        }
         return;
       }
 
-      setIsLoadingStatuses(true);
+      if (isMounted) {
+        setIsLoadingStatuses(true);
+      }
       try {
         const boardStatuses = await getTicketStatuses(boardId);
-        setStatuses(boardStatuses);
-
-        const defaultStatus = getDefaultStatus(boardStatuses);
-        const currentStatusIsValid = boardStatuses.some((status) => status.status_id === statusId);
-
-        if (defaultStatus?.status_id && !currentStatusIsValid) {
-          setStatusId(defaultStatus.status_id);
-        } else if (!currentStatusIsValid) {
-          setStatusId('');
+        if (isMounted) {
+          setStatuses(boardStatuses);
         }
       } catch (error) {
         console.error('Error fetching board statuses:', error);
-        setStatuses([]);
-        setStatusId('');
+        if (isMounted) {
+          setStatuses([]);
+          setStatusId('');
+        }
       } finally {
-        setIsLoadingStatuses(false);
+        if (isMounted) {
+          setIsLoadingStatuses(false);
+        }
       }
     };
 
     fetchStatusesForBoard();
+
+    return () => {
+      isMounted = false;
+    };
   }, [boardId]);
+
+  useEffect(() => {
+    if (!boardId || isLoadingStatuses) {
+      return;
+    }
+
+    const currentStatusIsValid = statuses.some((status) => status.status_id === statusId);
+    if (currentStatusIsValid) {
+      return;
+    }
+
+    const nextStatusId = getDefaultStatus(statuses)?.status_id || '';
+    if (nextStatusId !== statusId) {
+      setStatusId(nextStatusId);
+    }
+  }, [boardId, statuses, statusId, isLoadingStatuses]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -557,6 +600,25 @@ export function QuickAddTicket({
     }
   };
 
+  // Fetch team avatar URL when assigned team changes
+  useEffect(() => {
+    if (!assignedTeamId) {
+      setTeamAvatarUrl(null);
+      return;
+    }
+    const team = teams.find(t => t.team_id === assignedTeamId);
+    if (!team?.tenant) return;
+
+    getTeamAvatarUrlsBatchAction([assignedTeamId], team.tenant)
+      .then(result => {
+        if (result instanceof Map) {
+          setTeamAvatarUrl(result.get(assignedTeamId) ?? null);
+        } else {
+          setTeamAvatarUrl((result as Record<string, string | null>)[assignedTeamId] ?? null);
+        }
+      })
+      .catch(() => setTeamAvatarUrl(null));
+  }, [assignedTeamId, teams]);
 
   function resetForm() {
     setTitle(prefilledTitle || '');
@@ -564,6 +626,20 @@ export function QuickAddTicket({
     setDescriptionEditorInstanceKey((current) => current + 1);
     setAssignedTo(prefilledAssignedTo || '');
     setAssignedTeamId(null);
+    setTempAdditionalAgents(
+      prefilledAdditionalAgents?.length
+        ? prefilledAdditionalAgents.map(agent => {
+            const nameParts = (agent.name || '').split(' ');
+            return {
+              user_id: agent.user_id,
+              first_name: nameParts[0] || '',
+              last_name: nameParts.slice(1).join(' ') || '',
+              temp_id: `temp-${Date.now()}-${agent.user_id}`,
+            };
+          })
+        : []
+    );
+    setTeamAvatarUrl(null);
     setBoardId('');
     setStatuses([]);
     setStatusId('');
@@ -795,8 +871,8 @@ export function QuickAddTicket({
       }
 
       // Add additional agents as ticket resources
-      if (prefilledAdditionalAgents?.length && newTicket.ticket_id) {
-        for (const agent of prefilledAdditionalAgents) {
+      if (tempAdditionalAgents.length > 0 && newTicket.ticket_id) {
+        for (const agent of tempAdditionalAgents) {
           try {
             await addTicketResource(newTicket.ticket_id, agent.user_id, 'support');
           } catch (agentError) {
@@ -1002,50 +1078,165 @@ export function QuickAddTicket({
                       showPlaceholderInDropdown={false}
                     />
                   )}
-                  {teamsV2Enabled ? (
-                    <UserAndTeamPicker
-                      value={assignedTo}
-                      onValueChange={(value) => {
-                        setAssignedTo(value);
-                        setAssignedTeamId(null);
-                        clearErrorIfSubmitted();
-                      }}
-                      onTeamSelect={(teamId) => {
-                        const team = teams.find(t => t.team_id === teamId);
-                        if (team?.manager_id) {
-                          setAssignedTo(team.manager_id);
-                        }
-                        setAssignedTeamId(teamId);
-                        clearErrorIfSubmitted();
-                      }}
-                      users={users.map(user => ({
-                        ...user,
-                        roles: []
-                      }))}
-                      teams={teams}
-                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                      getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                      buttonWidth="full"
-                      size="sm"
-                      placeholder="Assign To"
-                    />
-                  ) : (
-                    <UserPicker
-                      value={assignedTo}
-                      onValueChange={(value) => {
-                        setAssignedTo(value);
-                        clearErrorIfSubmitted();
-                      }}
-                      users={users.map(user => ({
-                        ...user,
-                        roles: []
-                      }))}
-                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                      buttonWidth="full"
-                      size="sm"
-                      placeholder="Assign To"
-                    />
-                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                      {teamsV2Enabled ? (
+                        <UserAndTeamPicker
+                          value={assignedTo}
+                          onValueChange={(value) => {
+                            setAssignedTo(value);
+                            setAssignedTeamId(null);
+                            clearErrorIfSubmitted();
+                          }}
+                          onTeamSelect={(teamId) => {
+                            const team = teams.find(t => t.team_id === teamId);
+                            if (team?.manager_id) {
+                              setAssignedTo(team.manager_id);
+                            }
+                            setAssignedTeamId(teamId);
+                            // Expand team members into additional agents
+                            const members = team?.members || [];
+                            const managerId = team?.manager_id || '';
+                            const newAgents = members
+                              .filter(m => m.user_id !== managerId)
+                              .filter(m => !tempAdditionalAgents.some(a => a.user_id === m.user_id))
+                              .map(m => ({
+                                user_id: m.user_id,
+                                first_name: m.first_name || '',
+                                last_name: m.last_name || '',
+                                temp_id: `temp-${Date.now()}-${m.user_id}`,
+                              }));
+                            if (newAgents.length > 0) {
+                              setTempAdditionalAgents(prev => [...prev, ...newAgents]);
+                            }
+                            clearErrorIfSubmitted();
+                          }}
+                          users={users
+                            .filter(u => !tempAdditionalAgents.some(a => a.user_id === u.user_id))
+                            .map(user => ({ ...user, roles: [] }))}
+                          teams={teams}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                          buttonWidth="full"
+                          size="sm"
+                          placeholder="Assign To"
+                        />
+                      ) : (
+                        <UserPicker
+                          value={assignedTo}
+                          onValueChange={(value) => {
+                            setAssignedTo(value);
+                            clearErrorIfSubmitted();
+                          }}
+                          users={users
+                            .filter(u => !tempAdditionalAgents.some(a => a.user_id === u.user_id))
+                            .map(user => ({ ...user, roles: [] }))}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          buttonWidth="full"
+                          size="sm"
+                          placeholder="Assign To"
+                        />
+                      )}
+                      {assignedTeamId && (() => {
+                        const assignedTeam = teams.find(t => t.team_id === assignedTeamId);
+                        return assignedTeam ? (
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <TeamAvatar
+                              teamId={assignedTeam.team_id}
+                              teamName={assignedTeam.team_name}
+                              avatarUrl={teamAvatarUrl}
+                              size="xs"
+                            />
+                            <span className="text-xs text-gray-500 truncate">{assignedTeam.team_name}</span>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Additional Agents</label>
+                      {teamsV2Enabled ? (
+                        <MultiUserAndTeamPicker
+                          id={`${id}-additional-agents`}
+                          values={tempAdditionalAgents.map(a => a.user_id)}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                          teams={teams}
+                          teamSectionLabel="Add Team Members"
+                          onTeamValuesChange={(selectedTeamIds) => {
+                            for (const teamId of selectedTeamIds) {
+                              const team = teams.find(t => t.team_id === teamId);
+                              if (team?.manager_id) {
+                                setAssignedTo(team.manager_id);
+                              }
+                              setAssignedTeamId(teamId);
+                              const members = team?.members || [];
+                              const newAgents = members
+                                .filter(m => m.user_id !== (team?.manager_id || assignedTo))
+                                .filter(m => !tempAdditionalAgents.some(a => a.user_id === m.user_id))
+                                .map(m => ({
+                                  user_id: m.user_id,
+                                  first_name: m.first_name || '',
+                                  last_name: m.last_name || '',
+                                  temp_id: `temp-${Date.now()}-${m.user_id}`,
+                                }));
+                              if (newAgents.length > 0) {
+                                setTempAdditionalAgents(prev => [...prev, ...newAgents]);
+                              }
+                            }
+                          }}
+                          onValuesChange={(newUserIds) => {
+                            const currentUserIds = tempAdditionalAgents.map(a => a.user_id);
+                            const addedUserIds = newUserIds.filter(uid => !currentUserIds.includes(uid));
+                            const newAgents = addedUserIds.map(uid => {
+                              const user = users.find(u => u.user_id === uid);
+                              return {
+                                user_id: uid,
+                                first_name: user?.first_name || '',
+                                last_name: user?.last_name || '',
+                                temp_id: `temp-${Date.now()}-${uid}`,
+                              };
+                            });
+                            const removedUserIds = currentUserIds.filter(uid => !newUserIds.includes(uid));
+                            setTempAdditionalAgents(prev => [
+                              ...prev.filter(a => !removedUserIds.includes(a.user_id)),
+                              ...newAgents,
+                            ]);
+                          }}
+                          users={users.filter(u => u.user_id !== assignedTo)}
+                          size="sm"
+                          placeholder="Additional agents..."
+                        />
+                      ) : (
+                        <MultiUserPicker
+                          id={`${id}-additional-agents`}
+                          values={tempAdditionalAgents.map(a => a.user_id)}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          onValuesChange={(newUserIds) => {
+                            const currentUserIds = tempAdditionalAgents.map(a => a.user_id);
+                            const addedUserIds = newUserIds.filter(uid => !currentUserIds.includes(uid));
+                            const newAgents = addedUserIds.map(uid => {
+                              const user = users.find(u => u.user_id === uid);
+                              return {
+                                user_id: uid,
+                                first_name: user?.first_name || '',
+                                last_name: user?.last_name || '',
+                                temp_id: `temp-${Date.now()}-${uid}`,
+                              };
+                            });
+                            const removedUserIds = currentUserIds.filter(uid => !newUserIds.includes(uid));
+                            setTempAdditionalAgents(prev => [
+                              ...prev.filter(a => !removedUserIds.includes(a.user_id)),
+                              ...newAgents,
+                            ]);
+                          }}
+                          users={users.filter(u => u.user_id !== assignedTo)}
+                          size="sm"
+                          placeholder="Additional agents..."
+                        />
+                      )}
+                    </div>
+                  </div>
 
                   <div className={hasAttemptedSubmit && !boardId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <BoardPicker

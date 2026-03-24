@@ -1,0 +1,152 @@
+{
+  "page": {
+    "title": "Dyspozycja technik\u00f3w",
+    "filteredWorkItems": "Pokazywanie przefiltrowanych zada\u0144"
+  },
+  "workItems": {
+    "title": "Zadania",
+    "searchPlaceholder": "Szukaj zada\u0144...",
+    "filterPlaceholder": "Filtruj wed\u0142ug statusu...",
+    "status": {
+      "unscheduled": "Niezaplanowane",
+      "scheduled": "Zaplanowane"
+    },
+    "pagination": {
+      "previous": "Wstecz",
+      "next": "Dalej",
+      "pageInfo": "Strona {{current}} z {{total}}",
+      "showing": "Pokazywanie {{count}} z {{total}} element\u00f3w"
+    }
+  },
+  "schedule": {
+    "showInactive": "Poka\u017c nieaktywnych u\u017cytkownik\u00f3w",
+    "prev": "< Wstecz",
+    "next": "Dalej >",
+    "today": "Dzisiaj",
+    "viewDay": "Dzie\u0144",
+    "viewWeek": "Tydzie\u0144",
+    "prevAria": "Poprzedni {{mode}}",
+    "nextAria": "Nast\u0119pny {{mode}}",
+    "viewWeekTooltip": "Poka\u017c tydzie\u0144",
+    "viewWeekAria": "Poka\u017c tydzie\u0144 dla {{name}}",
+    "viewWeekAriaInactive": "Poka\u017c tydzie\u0144 dla {{name}} (nieaktywny)",
+    "compareAll": "Por\u00f3wnaj wszystkie",
+    "clearAll": "Wyczy\u015b\u0107 wszystkie",
+    "compare": "Por\u00f3wnaj",
+    "stopComparing": "Zatrzymaj por\u00f3wnywanie",
+    "compareAria": "Por\u00f3wnaj {{name}}",
+    "compareAriaInactive": "Por\u00f3wnaj {{name}} (nieaktywny)"
+  },
+  "details": {
+    "appointmentRequest": {
+      "title": "Szczeg\u00f3\u0142y pro\u015bby o wizyt\u0119"
+    },
+    "sections": {
+      "approvalInformation": "Informacje o zatwierdzeniu"
+    },
+    "fields": {
+      "service": "Us\u0142uga",
+      "status": "Status",
+      "client": "Klient",
+      "contact": "Kontakt",
+      "company": "Firma",
+      "requester": "Wnioskodawca",
+      "email": "E-mail",
+      "phone": "Telefon",
+      "requestedDate": "Ż\u0105dana data",
+      "requestedTime": "\u017b\u0105dany czas",
+      "duration": "Czas trwania",
+      "preferredTechnician": "Preferowany technik",
+      "description": "Opis",
+      "declineReason": "Pow\u00f3d odrzucenia",
+      "approvedBy": "Zatwierdzi\u0142:",
+      "approvedAt": "Zatwierdzono:"
+    },
+    "messages": {
+      "notAvailable": "N/D",
+      "unsupportedWorkItemType": "Nieobs\u0142ugiwany typ zadania"
+    },
+    "toasts": {
+      "noUsersAvailable": "Brak dost\u0119pnych u\u017cytkownik\u00f3w w systemie",
+      "noUserSession": "Nie znaleziono sesji u\u017cytkownika",
+      "failedToLoadTicketData": "Nie uda\u0142o si\u0119 wczyta\u0107 danych zg\u0142oszenia",
+      "failedToLoadProjectTaskData": "Nie uda\u0142o si\u0119 wczyta\u0107 danych zadania projektu",
+      "failedToLoadAdHocEntryData": "Nie uda\u0142o si\u0119 wczyta\u0107 danych wpisu ad hoc",
+      "failedToLoadInteractionData": "Nie uda\u0142o si\u0119 wczyta\u0107 danych interakcji",
+      "failedToLoadAppointmentRequestData": "Nie uda\u0142o si\u0119 wczyta\u0107 danych pro\u015bby o wizyt\u0119"
+    },
+    "errors": {
+      "loadUsers": "Nie uda\u0142o si\u0119 wczyta\u0107 u\u017cytkownik\u00f3w. Od\u015bwie\u017c stron\u0119 i spr\u00f3buj ponownie.",
+      "loadingContent": "B\u0142\u0105d podczas wczytywania tre\u015bci",
+      "tryAgain": "Spr\u00f3buj ponownie"
+    },
+    "units": {
+      "minutes": "minut"
+    }
+  },
+  "dashboard": {
+    "filters": {
+      "allOpen": "Wszystkie otwarte",
+      "allClosed": "Wszystkie zamkni\u0119te"
+    },
+    "messages": {
+      "accessDenied": "Odmowa dost\u0119pu: nie masz uprawnie\u0144 do wy\u015bwietlenia pulpitu dyspozycji technik\u00f3w.",
+      "unknownError": "Wyst\u0105pi\u0142 nieznany b\u0142\u0105d.",
+      "permissionDeniedSchedule": "Nie masz uprawnie\u0144 do planowania dla tego technika.",
+      "couldNotLoadWorkItemDetails": "Nie uda\u0142o si\u0119 wczyta\u0107 szczeg\u00f3\u0142\u00f3w zadania."
+    },
+    "errors": {
+      "searchWorkItems": "Nie uda\u0142o si\u0119 wyszuka\u0107 zada\u0144",
+      "loadStatusFilterOptions": "Nie uda\u0142o si\u0119 wczyta\u0107 opcji filtra statusu.",
+      "refreshScheduleEntries": "Nie uda\u0142o si\u0119 od\u015bwie\u017cy\u0107 wpis\u00f3w harmonogramu",
+      "refreshData": "Nie uda\u0142o si\u0119 od\u015bwie\u017cy\u0107 danych",
+      "loadPermissions": "Nie uda\u0142o si\u0119 wczyta\u0107 uprawnie\u0144.",
+      "fetchScheduleEntries": "Nie uda\u0142o si\u0119 pobra\u0107 wpis\u00f3w harmonogramu",
+      "fetchData": "Nie uda\u0142o si\u0119 pobra\u0107 danych",
+      "updateSchedule": "Nie uda\u0142o si\u0119 zaktualizowa\u0107 harmonogramu",
+      "createScheduleEntry": "Nie uda\u0142o si\u0119 utworzy\u0107 wpisu harmonogramu",
+      "deleteScheduleEntry": "Nie uda\u0142o si\u0119 usun\u0105\u0107 wpisu harmonogramu",
+      "updateTask": "Nie uda\u0142o si\u0119 zaktualizowa\u0107 zadania",
+      "updateScheduleEntry": "Nie uda\u0142o si\u0119 zaktualizowa\u0107 wpisu harmonogramu",
+      "saveScheduleEntry": "Nie uda\u0142o si\u0119 zapisa\u0107 wpisu harmonogramu",
+      "openWorkItemDetails": "Nie uda\u0142o si\u0119 otworzy\u0107 szczeg\u00f3\u0142\u00f3w zadania."
+    },
+    "success": {
+      "taskUpdated": "Zadanie zosta\u0142o pomy\u015blnie zaktualizowane",
+      "scheduleEntryUpdated": "Wpis harmonogramu zosta\u0142 pomy\u015blnie zaktualizowany",
+      "scheduleEntryCreated": "Wpis harmonogramu zosta\u0142 pomy\u015blnie utworzony"
+    }
+  },
+  "events": {
+    "actions": {
+      "viewDetails": "Poka\u017c szczeg\u00f3\u0142y",
+      "delete": "Usu\u0144",
+      "deleteScheduleEntry": "Usu\u0144 wpis harmonogramu"
+    },
+    "fallbacks": {
+      "busy": "Zaj\u0119ty",
+      "unknown": "Nieznany",
+      "unassigned": "Nieprzypisane",
+      "unknownAgent": "Nieznany pracownik",
+      "untitled": "Bez tytu\u0142u",
+      "thisScheduleEntry": "ten wpis harmonogramu"
+    },
+    "tooltip": {
+      "privateEvent": "Zaj\u0119ty\nStart: {{start}}\nKoniec: {{end}}",
+      "eventDetails": "{{title}}\nPrzypisano do: {{assigned}}\nStart: {{start}}\nKoniec: {{end}}"
+    },
+    "errors": {
+      "validateDeletion": "Nie uda\u0142o si\u0119 sprawdzi\u0107 usuni\u0119cia. Spr\u00f3buj ponownie."
+    }
+  },
+  "badges": {
+    "needsDispatch": "Wymaga dyspozycji",
+    "needsDispatchFor": "Wymaga dyspozycji dla: {{agents}}"
+  },
+  "time": {
+    "suffixes": {
+      "am": " AM",
+      "pm": " PM"
+    }
+  }
+}

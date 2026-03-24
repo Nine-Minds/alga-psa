@@ -110,7 +110,7 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
         setIsLoadingStatuses(true);
 
         getTicketStatuses(board)
-            .then((fetchedStatuses) => {
+            .then((fetchedStatuses: IStatus[]) => {
                 if (cancelled) {
                     return;
                 }

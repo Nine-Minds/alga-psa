@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ITimeSheetComment, TimeSheetStatus } from '@alga-psa/types';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 
@@ -20,6 +21,8 @@ export function TimeSheetComments({
     timeSheetId,
     onCommentsUpdate
 }: TimeSheetCommentsProps): React.JSX.Element {
+    const { t } = useTranslation('msp/time-entry');
+    const { formatDate } = useFormatters();
     const [newComment, setNewComment] = useState<string>('');
     const [isAddingComment, setIsAddingComment] = useState<boolean>(false);
 
@@ -45,13 +48,13 @@ export function TimeSheetComments({
         if (isApprover) {
             return {
                 className: 'text-orange-600',
-                text: 'Approver',
+                text: t('approval.labels.approver', { defaultValue: 'Approver' }),
                 wrapperClassName: 'text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded'
             };
         }
         return {
             className: '',
-            text: 'Employee',
+            text: t('approval.labels.employee', { defaultValue: 'Employee' }),
             wrapperClassName: 'text-xs bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 px-2 py-1 rounded'
         };
     };
@@ -77,7 +80,10 @@ export function TimeSheetComments({
                                 </span>
                             </div>
                             <p className="text-sm text-gray-500">
-                                {new Date(comment.created_at).toLocaleString()}
+                                {formatDate(new Date(comment.created_at), {
+                                    dateStyle: 'medium',
+                                    timeStyle: 'short'
+                                })}
                             </p>
                         </div>
                         <p className="mt-1 whitespace-pre-wrap">{comment.comment}</p>
@@ -89,8 +95,8 @@ export function TimeSheetComments({
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder={timeSheetStatus === 'CHANGES_REQUESTED' ? 
-                        "Respond to the requested changes..." : 
-                        "Add a comment..."}
+                        t('comments.responsePlaceholder', { defaultValue: 'Respond to the requested changes...' }) : 
+                        t('comments.placeholder', { defaultValue: 'Add a comment...' })}
                     className={timeSheetStatus === 'CHANGES_REQUESTED' ? 
                         'border-orange-200 focus:border-orange-500' : ''}
                 />
@@ -101,9 +107,9 @@ export function TimeSheetComments({
                     className={`mt-2 ${timeSheetStatus === 'CHANGES_REQUESTED' ? 
                         'bg-orange-500 hover:bg-orange-600' : ''}`}
                 >
-                    {isAddingComment ? 'Adding...' : 
+                    {isAddingComment ? t('common.actions.adding', { defaultValue: 'Adding...' }) : 
                         timeSheetStatus === 'CHANGES_REQUESTED' ? 
-                        'Respond to Changes' : 'Add Comment'}
+                        t('comments.respondToChanges', { defaultValue: 'Respond to Changes' }) : t('common.actions.addComment', { defaultValue: 'Add Comment' })}
                 </Button>
             </div>
         </div>

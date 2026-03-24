@@ -7,6 +7,7 @@ import { getAllBoards } from '@alga-psa/tickets/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getDefaultBillingSettings, updateDefaultBillingSettings } from '@alga-psa/billing/actions';
 import type { BillingSettings } from '@alga-psa/billing/actions';
+import type { IStatus } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -105,7 +106,7 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
 
       try {
         setLoadingStatuses(true);
-        const statuses = await getTicketStatuses(settings.renewalTicketBoardId);
+        const statuses: IStatus[] = await getTicketStatuses(settings.renewalTicketBoardId);
         if (!active) {
           return;
         }

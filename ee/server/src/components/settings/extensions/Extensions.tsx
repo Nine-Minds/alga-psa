@@ -11,9 +11,10 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
-import { CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
+import { CheckCircleIcon, XCircleIcon, Settings, EyeIcon, Terminal } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Button } from '@alga-psa/ui/components/Button';
 import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } from '../../../lib/actions/extRegistryV2Actions';
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -138,7 +139,7 @@ export default function Extensions() {
     <ReflectionContainer id="extensions-page" label="Extensions Management">
       <div className="p-6" {...automationIdProps}>
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Extensions</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Extensions</h1>
         </div>
         
         {loading && (
@@ -161,16 +162,16 @@ export default function Extensions() {
         )}
         
         {!loading && !error && extensions.length === 0 && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No extensions installed</h3>
-            <p className="text-gray-600 mb-4">
+          <div className="bg-card border border-border rounded-lg p-8 text-center">
+            <h3 className="text-lg font-medium text-foreground mb-2">No extensions installed</h3>
+            <p className="text-muted-foreground mb-4">
               Install extensions to add new features and functionality to Alga PSA.
             </p>
           </div>
         )}
         
         {!loading && !error && extensions.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-card rounded-lg border border-border overflow-hidden">
             <ExtensionsTable
               rows={extensions}
               installInfo={installInfo}
@@ -242,17 +243,17 @@ function ExtensionsTable({
       title: 'Extension',
       dataIndex: 'name',
       width: '320px',
-      headerClassName: 'sticky left-0 bg-white z-20',
-      cellClassName: 'sticky left-0 bg-white z-10',
+      headerClassName: 'sticky left-0 bg-card z-20',
+      cellClassName: 'sticky left-0 bg-card z-10',
       render: (_v, extension) => (
         <div className="min-w-0">
-          <div className="text-sm font-medium text-gray-900 truncate">
+          <div className="text-sm font-medium text-foreground truncate">
             <Link href={`/msp/settings/extensions/${extension.id}`} className="hover:text-primary-600">
               {extension.name}
             </Link>
           </div>
           {extension.description && (
-            <div className="text-sm text-gray-500 truncate">{extension.description}</div>
+            <div className="text-sm text-muted-foreground truncate">{extension.description}</div>
           )}
           <div className="mt-1 flex items-center gap-2">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -285,7 +286,7 @@ function ExtensionsTable({
       dataIndex: ['manifest','version'],
       width: '40px',
       render: (value) => (
-        <span className="text-sm text-gray-900">{String(value ?? '—')}</span>
+        <span className="text-sm text-foreground">{String(value ?? '—')}</span>
       )
     },
     {
@@ -294,16 +295,15 @@ function ExtensionsTable({
       width: '40px',
       render: (value) => {
         const label = typeof value === 'string' ? value : (value?.name ?? '—');
-        return <span className="text-sm text-gray-900">{label}</span>;
+        return <span className="text-sm text-foreground">{label}</span>;
       }
     },
     {
       title: 'Domain',
       dataIndex: 'id',
-      // No fixed width: allow Domain column to flex and absorb remaining space
       render: (_v, extension) => (
         <div className="flex flex-col gap-1">
-          <div className="text-sm text-gray-900 truncate">
+          <div className="text-sm text-foreground truncate">
             {installInfo[extension.id]?.domain ? (
               <a
                 href={`https://${installInfo[extension.id]?.domain}`}
@@ -315,7 +315,7 @@ function ExtensionsTable({
               </a>
             ) : '—'}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-muted-foreground">
             {(installInfo[extension.id]?.status?.state) ? String(installInfo[extension.id]?.status?.state) : ''}
           </div>
         </div>
@@ -325,40 +325,45 @@ function ExtensionsTable({
       title: 'Actions',
       dataIndex: 'id',
       width: '380px',
-      headerClassName: 'text-right sticky right-0 bg-white z-20',
-      cellClassName: 'sticky right-0 bg-white z-10',
+      headerClassName: 'text-right sticky right-0 bg-card z-20',
+      cellClassName: 'sticky right-0 bg-card z-10',
       render: (_v, extension) => (
         <div className="grid grid-cols-2 gap-2 justify-items-stretch">
-          <button
+          <Button
+            id={`extension-view-${extension.id}`}
+            variant="outline"
+            size="xs"
             onClick={() => onView(extension)}
-            className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
-            data-automation-id={`extension-view-${extension.id}`}
           >
             <EyeIcon className="h-3.5 w-3.5 mr-1" />
             View
-          </button>
-          <Link
-            href={`/msp/settings/extensions/${extension.id}/settings`}
-            className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-info/15 text-info-foreground hover:bg-info/25"
-            data-automation-id={`extension-settings-${extension.id}`}
+          </Button>
+          <Button
+            id={`extension-settings-${extension.id}`}
+            variant="soft"
+            size="xs"
+            asChild
           >
-            <Settings className="h-3.5 w-3.5 mr-1" />
-            Settings
-          </Link>
+            <Link href={`/msp/settings/extensions/${extension.id}/settings`}>
+              <Settings className="h-3.5 w-3.5 mr-1" />
+              Settings
+            </Link>
+          </Button>
           {installInfo[extension.id]?.domain ? null : (
-            <button
+            <Button
+              id={`extension-provision-${extension.id}`}
+              variant="outline"
+              size="xs"
               onClick={() => onReprovision(extension.id)}
-              className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-warning/15 text-warning-foreground hover:bg-warning/25"
             >
               Provision
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            id={`extension-toggle-${extension.id}`}
+            variant="secondary"
+            size="xs"
             onClick={() => { void onToggle(extension.id, extension.is_enabled); }}
-            className={`inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md ${
-              extension.is_enabled ? 'bg-warning/15 text-warning-foreground hover:bg-warning/25' : 'bg-success/15 text-success hover:bg-success/25'
-            }`}
-            data-automation-id={`extension-toggle-${extension.id}`}
           >
             {extension.is_enabled ? (
               <>
@@ -371,25 +376,26 @@ function ExtensionsTable({
                 Enable
               </>
             )}
-          </button>
-          <button
+          </Button>
+          <Button
+            id={`extension-remove-${extension.id}`}
+            variant="destructive"
+            size="xs"
             onClick={() => { void onRemove(extension.id); }}
-            className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-destructive/15 text-destructive hover:bg-destructive/25"
-            data-automation-id={`extension-remove-${extension.id}`}
           >
             Remove
-          </button>
-          {/* Per-extension debug console entrypoint.
-              Uses only the extension id; tenant scoping is enforced server-side
-              based on the authenticated session in /api/ext-debug/stream. */}
-          <Link
-            href={`/msp/extensions/${extension.id}/debug`}
-            className="inline-flex items-center justify-center px-3 py-1 border border-violet-500/30 text-violet-600 bg-violet-500/10 hover:bg-violet-500/20 hover:border-violet-500/40 text-[10px] font-medium transition-colors"
-            data-automation-id={`extension-debug-${extension.id}`}
+          </Button>
+          <Button
+            id={`extension-debug-${extension.id}`}
+            variant="ghost"
+            size="xs"
+            asChild
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            Debug
-          </Link>
+            <Link href={`/msp/extensions/${extension.id}/debug`}>
+              <Terminal className="h-3.5 w-3.5 mr-1" />
+              Debug
+            </Link>
+          </Button>
         </div>
       )
     }

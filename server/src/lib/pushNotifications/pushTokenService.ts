@@ -16,6 +16,7 @@ export async function upsertPushToken(
   platform: string,
   appVersion?: string,
 ): Promise<void> {
+  const now = new Date().toISOString();
   const db = await getConnection(tenant);
   await db('mobile_push_tokens')
     .insert({
@@ -26,8 +27,8 @@ export async function upsertPushToken(
       platform,
       app_version: appVersion ?? null,
       is_active: true,
-      updated_at: db.fn.now(),
-      last_used_at: db.fn.now(),
+      updated_at: now,
+      last_used_at: now,
     })
     .onConflict(['tenant', 'user_id', 'device_id'])
     .merge({
@@ -35,8 +36,8 @@ export async function upsertPushToken(
       platform,
       app_version: appVersion ?? null,
       is_active: true,
-      updated_at: db.fn.now(),
-      last_used_at: db.fn.now(),
+      updated_at: now,
+      last_used_at: now,
     });
 }
 
@@ -48,7 +49,7 @@ export async function deactivatePushToken(
   const db = await getConnection(tenant);
   await db('mobile_push_tokens')
     .where({ tenant, user_id: userId, device_id: deviceId })
-    .update({ is_active: false, updated_at: db.fn.now() });
+    .update({ is_active: false, updated_at: new Date().toISOString() });
 }
 
 export async function getActivePushTokensForUser(
@@ -70,7 +71,7 @@ export async function deactivateInvalidTokens(
   await db('mobile_push_tokens')
     .where({ tenant })
     .whereIn('expo_push_token', expoPushTokens)
-    .update({ is_active: false, updated_at: db.fn.now() });
+    .update({ is_active: false, updated_at: new Date().toISOString() });
 
   logger.info('[PushTokenService] Deactivated invalid tokens', {
     tenant,

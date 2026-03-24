@@ -28,6 +28,12 @@ export interface UpdateBoardInput extends Partial<Omit<IBoard, 'tenant'>> {
   ticket_statuses?: BoardTicketStatusInput[];
 }
 
+function stripStatusIdsForNewBoard(
+  statuses: BoardTicketStatusInput[]
+): BoardTicketStatusInput[] {
+  return statuses.map(({ status_id: _ignoredStatusId, ...status }) => status);
+}
+
 export async function copyBoardTicketStatuses(
   trx: Knex.Transaction,
   tenant: string,
@@ -205,7 +211,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           tenant,
           newBoard.board_id,
           user.user_id,
-          boardData.ticket_statuses
+          stripStatusIdsForNewBoard(boardData.ticket_statuses)
         );
       } else if (boardData.copy_ticket_statuses_from_board_id) {
         await copyBoardTicketStatuses(

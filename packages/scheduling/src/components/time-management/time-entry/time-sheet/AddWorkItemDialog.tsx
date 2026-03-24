@@ -1,4 +1,5 @@
 'use client'
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { IWorkItem } from '@alga-psa/types';
 import { WorkItemPicker } from './WorkItemPicker';
@@ -16,6 +17,7 @@ interface AddWorkItemDialogProps {
 }
 
 export function AddWorkItemDialog({ isOpen, onClose, onAdd, availableWorkItems, timePeriod }: AddWorkItemDialogProps) {
+  const { t } = useTranslation('msp/time-entry');
   const handleSelect = (workItem: IWorkItem | null) => {
     if (workItem) {
       onAdd(workItem);
@@ -26,15 +28,15 @@ export function AddWorkItemDialog({ isOpen, onClose, onAdd, availableWorkItems, 
   const { automationIdProps: dialogProps } = useAutomationIdAndRegister<DialogComponent>({
     type: 'dialog',
     id: 'add-work-item-dialog',
-    title: 'Add Work Item',
+    title: t('addWorkItemDialog.title', { defaultValue: 'Add Work Item' }),
     open: isOpen,
   }, () => [
-    CommonActions.close('Close add work item dialog'),
-    CommonActions.focus('Focus on add work item dialog'),
+    CommonActions.close(t('addWorkItemDialog.close', { defaultValue: 'Close add work item dialog' })),
+    CommonActions.focus(t('addWorkItemDialog.focus', { defaultValue: 'Focus on add work item dialog' })),
     {
       type: 'select' as const,
       available: true,
-      description: 'Select a work item to add to timesheet',
+      description: t('addWorkItemDialog.description', { defaultValue: 'Select a work item to add to timesheet' }),
       parameters: [
         {
           name: 'workItemId',
@@ -50,7 +52,7 @@ export function AddWorkItemDialog({ isOpen, onClose, onAdd, availableWorkItems, 
     <Dialog 
       isOpen={isOpen} 
       onClose={onClose}
-      title="Add Work Item"
+      title={t('addWorkItemDialog.title', { defaultValue: 'Add Work Item' })}
       {...dialogProps}
     >
       <DialogContent className="z-[500]">

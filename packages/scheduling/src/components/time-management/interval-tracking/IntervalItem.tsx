@@ -1,5 +1,6 @@
 import React from 'react';
 import { TicketInterval } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatDuration } from './utils';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -18,6 +19,7 @@ export function IntervalItem({
   isSelected,
   onSelect
 }: IntervalItemProps) {
+  const { t } = useTranslation('msp/time-entry');
   // Calculate duration if not provided
   const duration = interval.duration ?? (
     interval.endTime
@@ -29,7 +31,7 @@ export function IntervalItem({
   const startTime = new Date(interval.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const endTime = interval.endTime 
     ? new Date(interval.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : 'Now';
+    : t('intervalItem.now', { defaultValue: 'Now' });
   const startDate = new Date(interval.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' });
   
   return (
@@ -57,10 +59,14 @@ export function IntervalItem({
         <div className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-400))] flex items-center">
           <span>{startDate}</span>
           {interval.autoClosed && (
-            <Badge variant="warning" size="sm" className="ml-2">Auto-closed</Badge>
+            <Badge variant="warning" size="sm" className="ml-2">
+              {t('intervalItem.autoClosed', { defaultValue: 'Auto-closed' })}
+            </Badge>
           )}
           {!interval.endTime && (
-            <Badge variant="success" size="sm" className="ml-2">Active</Badge>
+            <Badge variant="success" size="sm" className="ml-2">
+              {t('intervalItem.active', { defaultValue: 'Active' })}
+            </Badge>
           )}
         </div>
       </div>
